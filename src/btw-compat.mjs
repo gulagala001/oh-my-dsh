@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { symbols } from '@deepseek-ai/cordis';
 import { isDeepStrictEqual } from 'node:util';
+import { sourceName } from './message-source.mjs';
 import { installRequestProjection } from './llm-request-projection.mjs';
 import { isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { BTW_LABEL_PREFIX, btwCreation, markBtwSession, isBtwSession, completedBtwPrefix,
@@ -20,11 +21,24 @@ export function createBtwCompatibility(ctx) {
   // append only the child's side question to that immutable request history.
   installRequestProjection(ctx, options => {
     const state = stateOf({ id: options.sessionId });
-    if (!state?.useRequestContext || options.purpose) return options;
+    if (!state || options.purpose) return options;
+    const requestOnlyContext = state.reference.messages.some(message => sourceName(message.source) === 'trisoul-x:bc-state');
+    if (!state.useRequestContext && !requestOnlyContext) return options;
     const question = options.messages?.findLast(m => m.role === 'user' && m.source?.kind === 'user');
     if (!question) throw Error('/btw 缺少侧问消息；已停止请求。');
+    let suffix = [question];
+    if (!state.useRequestContext) {
+      // BC's current-state row exists on the request, not in the durable fork.
+      // Restore that exact prefix, then retain the completed parent response
+      // and the child's question from the native seed. Never edit the parent.
+      const ids = new Set(state.reference.messages.map(message => message.id));
+      const boundary = options.messages.findLastIndex(message => ids.has(message.id));
+      if (boundary < 0) throw Error('/btw 无法对齐已完成请求与当前分支；原会话保持。');
+      suffix = options.messages.slice(boundary + 1);
+      if (!suffix.some(message => message.id === question.id)) throw Error('/btw 缺少独立侧问后缀。');
+    }
     const projected = Object.freeze({ ...options, toolHistory: state.reference.toolHistory,
-      messages: Object.freeze([...state.reference.messages, question]) });
+      messages: Object.freeze([...state.reference.messages, ...suffix]) });
     return isAgentLoopRequest(options) ? markAgentLoopRequest(projected) : projected;
   });
   ctx.effect(() => {

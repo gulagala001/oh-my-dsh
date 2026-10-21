@@ -25,16 +25,19 @@ import { bindSettingsNavigation } from './settings-nav.mjs';
 import { applyHistorySize } from './history-settings.jsx';
 import { applySkins } from './skins/settings.jsx';
 import { applyConversationRecords } from './conversation-records.jsx';
+import { applyEvidenceRecords } from './context-evidence.jsx';
 import { applyFeatureClients } from './recommended-plugins.jsx';
 import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 import { applyModelPanel } from './model-panel.jsx';
 import { applySubscriptionFast } from './subscription-fast.jsx';
 import { applyMemoryPermissions } from './permission-memory.jsx';
+import { acquirePersonaClient } from '../../plugins/persona/src/client/index.jsx';
 import { useMainConversation } from './main-conversation.mjs';
 import { apply as applyWorkflowClient } from '../../vendor/workflow/src/client/index.jsx';
 import { applySessionOverview } from './session-overview.jsx';
 import { applyProjectlessWorkspaces } from './projectless-workspaces.jsx';
 import { apply as applyDeepSeekWorkbench } from '../../plugins/deepseek-workbench/src/client/index.jsx';
+import { apply as applyExtensions, inject as extensionsInject } from '../../plugins/dsh-extensions/src/client/index.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 
@@ -91,9 +94,10 @@ const hostConversation = createConversation(require), hostChat = createChat(requ
 // Waiting for either here would prevent their provider from ever starting.
 export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', 'remote.session', 'remote.subagents', 'remote.agentPresets', ...hostConversation.inject, ...hostChat.inject, ...rewindInject])].filter(name => name !== 'uiConversation' && name !== 'conversation');
 export async function apply(ctx) {
+  const persona = acquirePersonaClient(ctx, { embedded: true });
   ctx.provide('omdConversationLifecycle', installConversationLifecycle(ctx));
   applySessionTimeZone(ctx);
-  applyFeatureClients(ctx, { 'dsh-deepseek-workbench': applyDeepSeekWorkbench });
+  applyFeatureClients(ctx, { 'dsh-deepseek-workbench': applyDeepSeekWorkbench, 'dsh-extensions': { apply: applyExtensions, inject: extensionsInject } });
   ctx.inject(['commandUi', 'sidebarRight', 'sidebarRightTabs'], installTemporaryChat);
   applyHistorySize(ctx);
   installDesktopLifecycle(ctx);
@@ -125,11 +129,12 @@ export async function apply(ctx) {
     return () => { off(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
   });
   applyAppearanceBrand(ctx, getAppearanceRuntime);
-  applyOmdSettings(ctx, { optimizer: optimizer.preferences });
+  applyOmdSettings(ctx, { optimizer: optimizer.preferences, persona });
   ctx.effect(() => bindSettingsNavigation(ctx));
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({ name: 'conversation.session.header.utilities', id: 'trisoul-running', order: 25 }, RunningMarker));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));
   applyConsole(ctx, { composerStats: JSON.parse(__OMD_COMPOSER_STATS__),
     performanceMode: { get: () => chatSettings.getSnapshot()?.value?.performanceUsage, subscribe: listener => chatSettings.subscribe(listener) } });
   applyConversationRecords(ctx);
+  applyEvidenceRecords(ctx);
 }

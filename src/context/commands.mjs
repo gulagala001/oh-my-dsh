@@ -10,6 +10,18 @@ export function compactionMessage(operation, outcome) {
 }
 
 export function registerContextCommands(ctx, hub) {
+  ctx.effect(() => ctx.commands.register({ name: 'compact', description: '应用当前会话已准备的压缩方案',
+    async handler({ agent, signal, commandId, rawInput }) {
+      if (rawInput.trim()) return { kind: 'error', text: '用法：/compact（不接受参数）' };
+      const run = async ownSignal => {
+        signal?.throwIfAborted(); ownSignal?.throwIfAborted();
+        const result = await hub.context.applyReady(agent, { manual: true, sourceCommandId: commandId });
+        return { kind: 'success', text: result ? '已应用准备结果；原文和资料保持可回查。' : '没有可应用的准备结果。',
+          ...(result?.summarySeq != null ? { sourceEventSeq: result.summarySeq } : {}) };
+      };
+      return agent.runMaintenance ? agent.runMaintenance(run) : run();
+    },
+  }));
   const commands = [
     ['compact-p', 'processed', '已处理片段仅摘要：全部已准备片段改为纯摘要，不调用模型'],
     ['compact-f', 'full', '全量压缩：保留必要提示词，将整个对话重新汇总为一份摘要'],

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "扩展管理",
+    "description": "在插件页管理 Skill、MCP 服务器、指令文件、自定义命令和 Hooks。"
+  }
+}

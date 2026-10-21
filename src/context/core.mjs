@@ -61,6 +61,7 @@ export function recordText(record, mode = 'detail') {
     + ((record.decisions || []).length ? '\n[Historical user decisions]\n' + record.decisions.map(d => `[event ${d.seq}] ${d.text}`).join('\n') : '')
     + (mode === 'detail' && record.documents.length ? '\n\n' + record.documents.map(d => `## ${d.title}\n${d.text}`).join('\n\n') : '')
     + ((record.assets || []).length ? `\n[${record.assets.length} saved attachments; recall with id and asset (1-based) to reopen one.]` : '')
+    + (record.evidenceRefs?.length ? `\n[Immutable tool originals: ${record.evidenceRefs.join(', ')}; use recall(rawRef).]` : '')
     + `\n[${record.documents.length ? "Saved documents" : "Archived record"}: recall({"id":"${record.id}"})]`;
 }
 export function activeRecords(state) { return state.records.filter(r => !r.mergedInto); }

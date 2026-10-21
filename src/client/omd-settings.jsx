@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSy
 import { Button, Checkbox, Choice, Input, SegmentedControl, Switch } from './native-controls.jsx';
 import { Icon } from './native-icons.jsx';
 import { contextFrequencyOf, contextFrequencyPatch, contextRouteMode } from './context-client.mjs';
-import { PERSONALITY_PRESETS, personalityPreset, personalityText, personalityPatch, savedPersonalityPresets, savePersonalityPreset, deletePersonalityPreset } from '../cc-adaptation/personality.mjs';
+import { PersonaSettings } from '../../plugins/persona/src/client/settings.jsx';
 import { recommendedPlugins } from './recommended-plugins.mjs';
 import { pluginApi } from './recommended-plugins.jsx';
 import { usePollingAction } from './use-polling-action.mjs';
@@ -87,7 +87,7 @@ function useConfig(report) {
   }, []);
   useEffect(() => { alive.current = true; void load(); return () => { alive.current = false; }; }, [load]);
   const commit = useCallback(patch => {
-    if (!patch || !Object.keys(patch).length) return queue.current;
+    if (!patch || !Object.keys(patch).length) return queue.current.then(() => true);
     setView(view => ({ ...view, config: { ...view.config, ...patch } }));
     inflight.current++;
     queue.current = queue.current.then(async () => {
@@ -95,9 +95,11 @@ function useConfig(report) {
         const next = await api('/settings', patch);
         window.dispatchEvent(new CustomEvent('omd:settings-saved', { detail: next }));
         if (alive.current && inflight.current === 1) setView(view => ({ ...view, config: { ...next } }));
+        return true;
       } catch (error) {
         report('保存失败，已恢复原值：' + error.message);
         try { const state = await api('/state'); if (alive.current) setView(view => ({ ...view, config: { ...state.config } })); } catch {}
+        return false;
       } finally { inflight.current--; }
     });
     return queue.current;
@@ -173,45 +175,6 @@ function CodeGraphRow({ components }) {
   return <Row title="代码理解" hint="为项目建立 CodeGraph 索引，修改后自动同步；索引保存在项目的 .codegraph 目录。" extra={lines}>
     <Switch label="代码理解" checked={cg?.enabled === true} disabled={!cg || busy} onChange={next => void act({ action: 'settings', patch: { codegraphEnabled: next } })}/>
   </Row>;
-}
-
-// ---- Personality --------------------------------------------------------------
-
-function Personality({ config, commit }) {
-  const preset = personalityPreset(config), saved = savedPersonalityPresets(config), selected = saved.find(value => value.id === preset);
-  const builtin = Object.hasOwn(PERSONALITY_PRESETS, preset), editable = preset === 'custom' || !!selected;
-  const source = selected ? selected.text : personalityText(config);
-  const [draft, setDraft] = useState(null), [name, setName] = useState(null), [error, setError] = useState('');
-  useEffect(() => { setDraft(null); setName(null); setError(''); }, [preset]);
-  const text = draft ?? source, label = name ?? selected?.name ?? '';
-  const run = makePatch => {
-    let patch;
-    try { patch = makePatch(config); } catch (e) { setError(e.message); return; }
-    setError(''); setDraft(null); setName(null); void commit(patch);
-  };
-  const custom = value => ({ identityPreset: 'custom', identityPrompt: value, identityCustomPrompt: value });
-  const options = [{ value: 'custom', label: '自定义' }, ...Object.entries(PERSONALITY_PRESETS).map(([value, item]) => ({ value, label: item.name })),
-    ...saved.map(item => ({ value: item.id, label: item.name })), { value: 'off', label: '关闭人格' }];
-  return <>
-    <Row title="人格预设" hint="切换内置预设或关闭人格都会保留自定义内容。">
-      <Choice aria-label="人格预设" value={preset} options={options} onChange={value => run(c => personalityPatch(c, value))}/>
-    </Row>
-    {preset === 'off' ? <Row title="已关闭人格描述" hint="仍保留原有工作能力和执行规则。"/> : <div className="omd-set-row">
-      <label className="omd-set-field omd-set-wide"><span>身份提示词</span>
-        <textarea aria-label="身份提示词" rows={8} readOnly={!editable} value={text} placeholder="描述助手是谁，以及主要帮助你做什么" onChange={event => { setDraft(event.target.value); setError(''); }}/>
-        <small>{builtin ? '这是内置预设原文，可复制到自定义后修改。' : '保存后作用于后续请求。'}</small>
-      </label>
-      {editable && <Input className="omd-set-name" aria-label="预设名称" value={label} maxLength={80} placeholder="为这份人设起个名字" onChange={event => { setName(event.target.value); setError(''); }}/>}
-      <Status error>{error}</Status>
-      <div className="omd-set-actions">
-        {builtin && <Button type="button" size="sm" variant="outline" onClick={() => run(c => custom(personalityText(c)))}>复制到自定义</Button>}
-        {preset === 'custom' && <Button type="button" size="sm" variant="primary" disabled={draft === null || draft === source} onClick={() => run(() => custom(text))}>保存</Button>}
-        {selected && <Button type="button" size="sm" variant="primary" disabled={!label.trim() || (draft === null && name === null)} onClick={() => run(c => savePersonalityPreset(c, { id: selected.id, name: label, text }))}>更新预设</Button>}
-        {editable && <Button type="button" size="sm" variant="outline" disabled={!label.trim()} onClick={() => run(c => savePersonalityPreset(c, { name: label, text }))}>{selected ? '另存为新预设' : '保存为预设'}</Button>}
-        {selected && <Button type="button" size="sm" variant="ghost" onClick={() => run(c => deletePersonalityPreset({ ...c, identityPrompt: text }, preset))}>删除预设</Button>}
-      </div>
-    </div>}
-  </>;
 }
 
 // ---- Context & memory ---------------------------------------------------------
@@ -409,7 +372,7 @@ function ThirdParty({ features, onBack }) {
   </>;
 }
 
-export function applyOmdSettings(ctx, { optimizer }) {
+export function applyOmdSettings(ctx, { optimizer, persona }) {
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'omd-settings'; tag.textContent = css; document.head.append(tag);
     return () => tag.remove();
@@ -471,8 +434,9 @@ export function applyOmdSettings(ctx, { optimizer }) {
           <span className="omd-set-copy"><strong>第三方功能</strong><small>社区作者制作的功能，开启即自动安装。</small></span><Icon name="chevron" size={16}/>
         </button>
       </Group>
-      <Group title="人格"><Personality config={c} commit={commit}/></Group>
+      <Group title="人格"><PersonaSettings client={persona}/></Group>
       <Group title="上下文与记忆" anchor="context">
+        <Toggle title="上下文优化" hint="默认开启：精简重复内容、按需加载工具，保留原文供回查。关闭不影响 CodeGraph、历史压缩和记忆。" checked={c.contextOptimizationEnabled !== false} onChange={v => commit({ contextOptimizationEnabled: v })}/>
         <Toggle title="后台预处理与中枢" hint="提前生成基础摘要和详细资料，再判断如何替换。" checked={c.contextEnabled} onChange={v => commit({ contextEnabled: v })}/>
         <Toggle title="自动应用已完成决定" hint="在请求边界应用；关闭后仍可手动替换。" checked={c.automaticReplace} onChange={v => commit({ automaticReplace: v })}/>
         <Frequency config={c} commit={commit}/>

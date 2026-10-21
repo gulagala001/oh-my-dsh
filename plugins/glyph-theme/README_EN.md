@@ -43,6 +43,7 @@ The theme uses deep black and bright white and follows the host’s light/dark p
 | --- | --- |
 | Background, navigation and outer controls | Character-grid styling and motion. |
 | Message text and composer | Readable native text and interaction, with motion kept away from content. |
+| Settings, menus and dialogs | Solid reading surfaces; character controls follow native scrolling, clipping and popup stacking. |
 | Images, video, PDFs, iframes and code editors | Original content rendering; surrounding controls follow the theme. |
 | Reduced motion | Follows the system preference and can be lowered or disabled in Settings → Glyph. |
 

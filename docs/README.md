@@ -28,6 +28,7 @@
 | 跟进任务、要求与证据 | [日常使用](usage.md#日常使用) |
 | 了解后台任务、预算与运行状态 | [运行状态](runtime-state-background.md) |
 | 打开 DeepSeek 网页入口、导入可提取历史 | [DeepSeek Workbench](deepseek-workbench.md) |
+| 管理 Skill、MCP、指令文件、命令与 Hooks | [扩展管理](extensions.md) |
 | 使用 CodeGraph、侧问与可选插件 | [使用指南](usage.md) · [OpenDesign](open-design.md) |
 | 安装其他插件 | [兼容说明](plugin-compatibility.md) |
 | 备份、升级、迁移或回退 | [安装与升级](upgrade.md) |

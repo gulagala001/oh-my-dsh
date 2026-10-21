@@ -1,4 +1,6 @@
 import { installOmaaEnhancement, omaaWorkflowComposition, omaaIdentityPrompt } from './omaa-enhancement.mjs';
+import { installResultReduction } from './result-reduction/service.mjs';
+import { acquirePersona } from '../plugins/persona/src/index.mjs';
 import { readJsonBody as readBody, rejectUntrusted, sendJson as send } from './http.mjs';
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
 import { legacySettings } from './legacy-settings.mjs';
@@ -72,7 +74,7 @@ export async function apply(ctx, config) {
   installToolCancellationPresentation(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });
   hub.omaaWorkflowComposition = omaaWorkflowComposition;
-  hub.omaaIdentityPrompt = () => omaaIdentityPrompt(hub);
+  hub.omaaIdentityPrompt = session => omaaIdentityPrompt(hub, session);
   const projectless = createProjectlessWorkspaceService({
     root: legacy.value.projectlessWorkspaceRoot || hub.config().projectlessWorkspaceRoot || join(homedir(), 'Documents', 'DSH'),
     storeDir: join(await realpath(hub.store.dir), 'projectless-workspaces'),
@@ -81,6 +83,7 @@ export async function apply(ctx, config) {
   const liveConfig = hub.getConfig;
   let importing = true;
   hub.getConfig = () => ({ ...liveConfig(), ...(importing ? legacy.current() : {}) });
+  hub.persona = acquirePersona(ctx, { legacy: hub });
   legacy.persist(() => { importing = false; });
   ctx.effect(() => { void hub.dream.start().catch(error => hub.dream.notice(error)); });
   hub.budgets = new TaskBudgets(hub);
@@ -147,6 +150,7 @@ export async function apply(ctx, config) {
   mountRecommendedPlugins(ctx, hub);
   const isX = session => ['trisoul-x', 'omd-ptc'].includes(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
+  installResultReduction(ctx, hub, session => isX(session) || isOmaaEnhanced(session));
   hub.ultracode = new UltracodeControl(ctx, session => isX(session) || (isOmaaEnhanced(session) && ctx.get('omaa').modeFor(session) === 'default'), hub.store);
   hub.omaaWorkMode = {
     inspect: (session, agent) => hub.ultracode.inspectView(session, agent),
@@ -171,6 +175,7 @@ export async function apply(ctx, config) {
   installCommandCodeCompatibility(ctx, isX);
   installComputerUseImageCompatibility(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);
+  hub.bc.install(ctx, isX);
   installAdaptiveCapture(ctx, session => isX(session) && !isBtwSession(session), hub.context);
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
     if (context?.agent) hub.prepareBackground(context.agent);

@@ -6,12 +6,13 @@ import { originalEvent } from '../context/original-search.mjs';
 import { messageOf } from '../context/materials.mjs';
 import { digest, splitSource, summaryIdentity, summaryFingerprint } from './core.mjs';
 import { isBtwSession, btwDescriptor } from '../btw-policy.mjs';
+import { BC_REFERENCE_TOOLS } from '../context/bc-policy.mjs';
 
-const ignoredTools = new Set(['recall', 'memory_search', 'todo_write', 'verify_link', 'todos']);
+const ignoredTools = new Set(['recall', 'memory_search', 'todo_write', 'verify_link', 'todos', ...BC_REFERENCE_TOOLS]);
 const unreadableSessionErrors = new Set(['SessionPersistenceCorruptionError', 'SessionFormatUnsupportedError']);
 // Successful reads persist their source revision so restarts skip unchanged
 // archives. Bump when inspection output changes, to rebuild every index entry.
-const INSPECTION_RULES = 'v1:';
+const INSPECTION_RULES = 'v2:';
 // Activity is a coarse ordering signal; coalesce per-event writes.
 const ACTIVITY_FLUSH_MS = 2000;
 // Source text is encoded in input JSON, then again inside the request message.

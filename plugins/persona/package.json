@@ -1,0 +1,25 @@
+{
+  "name": "@gulagala001/dsh-persona-plugin",
+  "version": "0.1.0-dsh.0.2.1-rc.2",
+  "description": "Create, import and manage AI personalities with global and per-conversation choices in DeepSeek Harness.",
+  "type": "module",
+  "license": "MIT",
+  "author": "gulagala001",
+  "main": "src/index.mjs",
+  "exports": { ".": "./src/index.mjs", "./client": "./lib/client.js", "./package.json": "./package.json" },
+  "engines": { "node": ">=22.19", "dsh": "0.2.1-rc.2" },
+  "keywords": ["dsh-plugin", "deepseek-harness", "persona", "personality", "presets"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check:public": "node scripts/check-public-files.mjs",
+    "prepack": "npm run build && npm run check:public"
+  },
+  "files": ["src", "lib", "cordis.patch.yml", "README.md", "README_EN.md", "LICENSE", "THIRD_PARTY_NOTICES.md", "docs", "scripts/build.mjs", "scripts/build-permission-native.mjs", "scripts/check-public-files.mjs"],
+  "peerDependencies": { "@deepseek-ai/cordis": "4.0.5" },
+  "devDependencies": { "@deepseek-ai/dsh": "0.2.1-rc.2", "esbuild": "0.25.12", "react": "18.3.1" },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-client-connection", "@deepseek-ai/dsh-client-ui-slots", "@deepseek-ai/dsh-client-ui-settings", "@deepseek-ai/dsh-client-ui-primitives", "@deepseek-ai/dsh-client-ui-conversation", "@deepseek-ai/dsh-client-ui-permission-presets", "@deepseek-ai/dsh-client-store"] }
+  }
+}

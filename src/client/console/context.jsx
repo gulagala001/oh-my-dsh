@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api, qs, usePoll, useReader, useAction, Card, Stat, Tag, Seg, Table, Steps, StackBar, Ring, Empty, Skeleton, Alert, Button, KV, Icon, Drawer } from './ui.jsx';
 import { k, ago, clock, composition } from './model.mjs';
 import { Checkbox } from '../native-controls.jsx';
+import { OptimizationCard } from '../context-evidence.jsx';
 
 const MODE = { raw: ['原文', 'gray'], detail: ['摘要＋资料', 'blue'], brief: ['仅摘要', 'green'] };
 const CHOICE = { keep: '保留原文', detail: '摘要＋资料', brief: '仅摘要' };
@@ -9,6 +10,11 @@ const retryText = r => ({ 'waiting-main': '等待主会话成功后恢复', 'wai
 
 /** Pipeline lights shared by the overview, this section and the dock popover. */
 export function pipelineSteps(c) {
+  if (c.bc?.backend === 'bc') return [
+    { key: 'prepare', title: '资料准备', running: c.preparing, tone: c.failures?.prepare ? 'red' : 'blue', text: c.preparing ? '正在归档' : c.failures?.prepare?.message || '保留事实、用户原话与资料' },
+    { key: 'archive', title: '档案', tone: 'green', text: `${c.records?.length ?? c.recordCount ?? 0} 段 · Dream 与回查可用` },
+    { key: 'bc', title: 'BC 压缩', tone: c.bc.error ? 'red' : 'green', text: c.bc.error || (c.bc.pendingBackend ? '等待切换' : '由 Billion Context 管理') },
+  ];
   const adaptive = c.compressionMode === 'adaptive', a = c.adaptive || {};
   const prepareError = c.failures?.prepare, coordError = c.failures?.coordinate;
   const cacheWait = c.memoryCache?.enabled && c.memoryCache.waitingReason;
@@ -45,26 +51,38 @@ export function ContextSection({ sessionId, visible, go, params }) {
   const s = (path, body, ok) => action.run(path, () => api(`${path}?${qs({ session: sessionId })}`, body), ok);
   const locked = Boolean(action.busy || c.manualOperation);
   const adaptive = c.compressionMode === 'adaptive';
+  const bc = c.bc?.backend === 'bc';
   const records = (c.records || []).filter(r => !r.mergedInto);
   const shown = records.filter(r => filter === 'all' || (filter === 'raw' ? r.mode === 'raw' : r.mode !== 'raw'));
-  const m = meter.data, current = m?.meter?.totalTokens, cap = m?.contextCapacity;
-  const { parts, estimatedTokens, adjustmentTokens } = composition(m?.frame, current, m?.toolsTokens);
+  const m = meter.data, hostCurrent = m?.meter?.totalTokens, current = bc ? c.bc.status?.sentTokens : hostCurrent, cap = bc ? c.bc.status?.contextLimit : m?.contextCapacity;
+  const { parts, estimatedTokens, adjustmentTokens } = composition(m?.frame, hostCurrent, m?.toolsTokens);
   const pending = c.estimate?.pending, compactEst = c.estimate?.compact;
-  const after = current != null && pending && !pending.error ? current - pending.estimatedSavedTokens : null;
+  const after = !bc && current != null && pending && !pending.error ? current - pending.estimatedSavedTokens : null;
   const rawLive = records.filter(r => r.live && r.mode === 'raw').length;
   const last = c.lastReplacement;
   const openDoc = id => documents.read(`/context/document?${qs({ session: sessionId, id })}`);
 
   return <div className="omc-section">
+    <OptimizationCard key={sessionId} sessionId={sessionId} enabled={visible}/>
     <div className="omc-toolbar">
+      <Seg label="上下文管理" value={bc ? 'bc' : 'omd'} options={[['omd', 'OMD'], ['bc', 'Billion Context']]}
+        onChange={backend => !locked && backend !== c.bc?.backend && s('/context/backend', { backend }, result => result.queued ? '已排队，当前请求结束后切换' : '上下文管理方式已切换')}/>
+      {!bc && <>
       <Seg label="异步压缩模式" value={adaptive ? 'adaptive' : 'pipeline'} options={[['pipeline', '原版异步'], ['adaptive', '主动异步']]}
         onChange={mode => !locked && mode !== c.compressionMode && s('/context/mode', { mode }, `已切换为${mode === 'adaptive' ? '主动异步' : '原版异步'}`)}/>
+      </>}
       <span className="omc-spacer"/>
       <Button icon="spark" busy={action.busy === '/context/prepare'} disabled={locked || (adaptive ? c.adaptive?.running : c.preparing)}
         onClick={() => s('/context/prepare', {}, '已开始')}>{adaptive ? '检查整理' : '准备摘要'}</Button>
-      {!adaptive && <Button icon="hub" busy={action.busy === '/context/coordinate'} disabled={locked || c.coordinating} onClick={() => s('/context/coordinate', {}, '中枢已开始判断')}>运行中枢</Button>}
+      {!adaptive && !bc && <Button icon="hub" busy={action.busy === '/context/coordinate'} disabled={locked || c.coordinating} onClick={() => s('/context/coordinate', {}, '中枢已开始判断')}>运行中枢</Button>}
     </div>
-    <Alert tone="info">{action.notice}</Alert><Alert>{action.error || documents.error}</Alert>
+    {bc && <Card title="Billion Context"><p>BC 管理自动压缩；资料归档、Dream、任务与原文回查继续运行。</p>
+      <KV rows={[
+        ['BC 发送上下文估算', c.bc.status?.sentTokens == null ? '等待请求读数' : `≈${k(c.bc.status.sentTokens)} tokens`],
+        ['本地历史', hostCurrent == null ? '未知' : `≈${k(hostCurrent)} tokens`],
+        ['状态', c.bc.error || (c.bc.pendingBackend ? '等待切换' : '已启用')],
+      ]}/></Card>}
+    <Alert tone="info">{action.notice || (c.bc?.pendingBackend ? `已排队：切换为 ${c.bc.pendingBackend === 'bc' ? 'Billion Context' : 'OMD'}` : '')}</Alert><Alert>{action.error || documents.error || c.bc?.switchError}</Alert>
 
     <div className="omc-grid-2">
       <Card title="上下文占用" icon="context" extra={cap ? <span className="omc-muted">窗口 {k(cap)}</span> : null}>
@@ -79,10 +97,10 @@ export function ContextSection({ sessionId, visible, go, params }) {
         </div>
         {parts.some(p => p.value) && <>
           <StackBar parts={parts} format={value => `≈${k(value)}`}/>
-          <p className="omc-hint">色条为内容构成占比，不是窗口占用比例；计量差额不计入色条。{m?.toolsTokens == null ? '工具定义读数暂不可用，未混入其他项。' : ''}</p>
+          <p className="omc-hint">{bc ? '色条展示本地历史构成；圆环展示 BC 发送估算。' : '色条为内容构成占比，不是窗口占用比例；计量差额不计入色条。'}{m?.toolsTokens == null ? '工具定义读数暂不可用，未混入其他项。' : ''}</p>
         </>}
       </Card>
-      <Card title={adaptive ? '主动异步整理' : '预处理 → 中枢 → 替换'} icon="hub">
+      <Card title={bc ? '资料归档与 BC 压缩' : adaptive ? '主动异步整理' : '预处理 → 中枢 → 替换'} icon="hub">
         <Steps steps={pipelineSteps(c)}/>
         {!adaptive && c.memoryCache?.enabled && <p className="omc-hint">记忆缓存模式 · 最近预处理缓存读取：{c.memoryCache.cacheReadTokens == null ? '渠道未返回' : `${k(c.memoryCache.cacheReadTokens)} tokens`}。</p>}
         {pending && !pending.error ? <div className="omc-callout omc-callout-green">

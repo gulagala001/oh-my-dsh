@@ -41,7 +41,8 @@ export async function apply(ctx) {
         const definition = createMcpToolDefinition(ctx, {
           name: `mcp__codegraph__${tool.name}`, rawName: tool.name,
           description: tool.description, inputSchema: parameters, outputSchema: tool.outputSchema,
-          call: (args, { agent, signal }) => runtime.call(tool.name, args, { cwd: currentDirectory(ctx, agent.session), signal }),
+          call: (args, { agent, signal }) => runtime.call(tool.name, args, { cwd: currentDirectory(ctx, agent.session), signal,
+            sessionKey: ctx.trisoulX.optimization?.graphScope(agent) ?? agent.session.id }),
         });
         if (!owner.active()) return;
         ctx.tools.register(definition);

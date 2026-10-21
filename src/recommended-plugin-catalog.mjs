@@ -2,6 +2,15 @@
 // Bundled features use their existing host entry instead of installing a second copy.
 export const recommendedPlugins = [
   {
+    id: 'billion-context', name: 'Billion Context', packageName: 'billion-context', author: 'ranxianglei',
+    description: '管理长会话的上下文压缩、原文恢复和缓存诊断；在 OMD 上下文页按会话切换。',
+    category: '上下文管理', url: 'https://github.com/ranxianglei/billion-context',
+    requireReviewedVersion: true, supportedHostVersions: ['0.2.1-rc.2'],
+    review: { version: '0.1.202', dsh: '0.2.1-rc.2',
+      sha256: 'b42958e6bed13ee0afd5460ed9b88cabb10072254abe0d2b7e9f1ea45cc4f397',
+      note: '原作者固定 npm 包。按会话切换压缩后端，保留归档、Dream、任务和回查。BC 自身自动更新独立于此目录；更改版本后需重新核验适配。' },
+  },
+  {
     id: 'dsh-ops', name: 'dsh-ops', packageName: 'dsh-ops', versionSuffix: 'ops',
     author: '原作者：T-Auto · 兼容适配：gulagala001',
     description: '增强文件、文档与命令操作，按需加载工具并复用结果；支持普通模式和 PTC，保留原生工具。',
@@ -17,6 +26,12 @@ export const recommendedPlugins = [
     description: '使用 DeepSeek 网页聊天、临时侧栏与开放平台，将网页历史导入 DSH 后继续对话。',
     category: '内置工作台', bundled: true,
     url: 'https://github.com/gulagala001/dsh-deepseek-workbench',
+  },
+  {
+    id: 'dsh-extensions', name: '扩展管理', section: 'features', moduleName: 'trisoul_x/extensions', packageName: 'dsh-extensions', author: 'gulagala001',
+    description: '在插件页管理 Skill、MCP、指令文件、自定义命令和 Hooks。',
+    category: '内置扩展管理', bundled: true,
+    url: 'https://github.com/gulagala001/dsh-extensions',
   },
   {
     id: 'dsh-intelligent-ui', name: '智能交互回答', section: 'features', versionSuffix: 'iui', packageName: 'dsh-intelligent-ui', author: 'gulagala001',
@@ -130,6 +145,8 @@ export const recommendedPlugins = [
 ];
 
 export function resolveRecommendedPlugin(plugin, hostVersion) {
+  if (plugin.supportedHostVersions && !plugin.supportedHostVersions.includes(hostVersion)) return { ...plugin,
+    unavailable: `此适配当前支持 DSH ${plugin.supportedHostVersions.join('、')}；其他宿主暂不提供安装或更新。已有安装仍可停用或卸载。`, unavailableHosts: undefined };
   if (!plugin.hostBuilds) return plugin;
   const supportedHosts = Object.keys(plugin.hostBuilds);
   const review = typeof hostVersion === 'string' && Object.hasOwn(plugin.hostBuilds, hostVersion) ? plugin.hostBuilds[hostVersion] : undefined;

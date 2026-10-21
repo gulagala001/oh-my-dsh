@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { personalityText } from './personality.mjs';
+import { sessionPersonality } from '../personality-session.mjs';
 import { createHash } from 'node:crypto';
 
 import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
@@ -77,7 +77,7 @@ export function transformAssembly(assembly, context, options = {}) {
     changedSchemas.set(tool.name, { ...tool, description });
     applied.add(tool.name);
   }
-  let persona = options.main ?? buildMainPrompt(options.identityPrompt, { toolMode });
+  let persona = options.main ?? buildMainPrompt(options.identityPrompt, { toolMode, personalityModules: options.personalityModules });
   if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '');
   if (options.stateHintsEnabled && known.has('runtime_status')) persona += '\n\n' + load('runtime/state-guidance.md');
   if (options.backgroundTasksEnabled && known.has('job_output')) {
@@ -155,11 +155,14 @@ export function installPromptAdapter(ctx) {
       if (!renderSdk) throw new Error(`Unsupported PTC SDK language: ${language}`);
     }
     const config = ctx.trisoulX.config();
+    const personality = sessionPersonality(ctx.trisoulX, context.agent.session);
     const result = transformAssembly(assembly, context, {
-      identityPrompt: personalityText(config), todoConstraintFirst: config.todoConstraintFirst, stateHintsEnabled: config.stateHintsEnabled,
+      identityPrompt: personality.modules.identity, personalityModules: personality.modules,
+      todoConstraintFirst: config.todoConstraintFirst, stateHintsEnabled: config.stateHintsEnabled,
       backgroundTasksEnabled: ctx.trisoulX.backgroundOptions?.(context.agent)?.interruptibleWait === true,
       schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent),
     });
+    if (ctx.trisoulX.persona) result.assembly.sections.push({ name: 'dsh-persona:applied', text: '', interpolate: false });
     const key = sha(result.audit);
     if (!seen.has(key)) {
       seen.add(key);

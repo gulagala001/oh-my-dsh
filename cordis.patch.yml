@@ -3,6 +3,8 @@
       name: trisoul_x
     - id: omd-deepseek-workbench
       name: trisoul_x/deepseek-workbench
+    - id: omd-extensions
+      name: trisoul_x/extensions
     - id: omd-opencu
       name: trisoul_x/opencu
     - id: omd-rewind

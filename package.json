@@ -37,16 +37,22 @@
     "prepack": "node scripts/check-public-files.mjs"
   },
   "dependencies": {
+    "@ast-grep/wasm": "0.51.0",
     "@colbymchenry/codegraph": "1.6.0",
     "@deepseek-ai/dsh-mcp-client": "0.2.1-rc.2",
     "@modelcontextprotocol/client": "2.2.0",
+    "@mozilla/readability": "0.6.0",
+    "@toon-format/toon": "4.4.0",
+    "@vscode/tree-sitter-wasm": "0.3.1",
     "acorn": "8.18.0",
     "diff": "9.0.0",
     "html-to-text": "10.0.1",
     "htmlparser2": "10.1.0",
+    "jsdom": "26.1.0",
     "marked": "18.0.12",
     "playwright": "1.63.0",
     "sharp": "0.35.5",
+    "web-tree-sitter": "0.26.0",
     "ws": "8.21.3",
     "yaml": "2.8.1",
     "zod": "4.5.4"
@@ -67,6 +73,7 @@
     "./host/*": "./lib/host/*.mjs",
     "./host/ui-chat": "./src/host/ui-chat.mjs",
     "./deepseek-workbench": "./plugins/deepseek-workbench/src/index.mjs",
+    "./extensions": "./plugins/dsh-extensions/src/index.mjs",
     "./workflow": "./vendor/workflow/src/index.mjs",
     "./rewind": "./vendor/rewind/src/index.mjs"
   },
@@ -98,7 +105,8 @@
         "@deepseek-ai/dsh-api-workspace-controller",
         "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-input-trigger",
-        "@deepseek-ai/dsh-client-ui-commands"
+        "@deepseek-ai/dsh-client-ui-commands",
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
       ]
     }
   },

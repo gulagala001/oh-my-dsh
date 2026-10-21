@@ -31,6 +31,14 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
     for (const seq of selectedSeqs) changedSources.add(seq);
     for (const seq of output.originalSeqs || output.sourceSeqs) origins.add(seq);
     selectedRecords++;
+    if (cfg.contextOptimizationEnabled !== false) {
+      // References come from the exact selected logged tool events and remain
+      // inside this existing atomic replacement transaction, never a second writer.
+      const refs = new Set([...(output.evidenceRefs ?? []), ...(pricing.evidenceRefsFor?.(output.originalSeqs || output.sourceSeqs) ?? [])]);
+      // Avoid turning an old checkpoint into a new giant directory. Every
+      // original remains discoverable through recall(search="evidence").
+      output.evidenceRefs = [...refs].slice(0, 16);
+    }
     output.assets = combineAssets(output.assets || [], ...selectedSeqs.map(seq => attachmentsOf(sourceMessage(seq)?.content, session.id, seq)));
     const content = recordBlocks(output, output.mode), text = recordText(output, output.mode);
     const groups = splitGroups(index.nodes, selectedSeqs, index);

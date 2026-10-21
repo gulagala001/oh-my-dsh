@@ -39,7 +39,7 @@ export class ContextPipeline {
     this.cachedPreparation = new CachedPreparation(this);
   }
   config() { return contextConfig(this.hub.config()); }
-  mode(session) { return this.store.peek(session.id)?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline'; }
+  mode(session) { return !this.hub.bc?.active(session) && this.store.peek(session.id)?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline'; }
   setMode(session, mode) {
     if (!['pipeline', 'adaptive'].includes(mode)) throw Error('压缩模式只能是 pipeline 或 adaptive');
     if (delegated(session)) throw Error('请在主会话中选择压缩模式');
@@ -299,9 +299,9 @@ export class ContextPipeline {
       data: { count: s.failures[kind].count, recoverable: s.failures[kind].recoverable, code: s.failures[kind].code } });
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
   }
-  async prepare(agent, force = false, { retry = false, mainSuccess } = {}) {
+  async prepare(agent, force = false, { retry = false, mainSuccess, handoff = false } = {}) {
     if (this.mode(agent.session) === 'adaptive') return this.adaptive.check(agent, { force });
-    if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
+    if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || (!handoff && !this.config().contextEnabled)) return;
     const session = agent.session, key = session.id + ':prepare';
     if (this.jobs.has(key)) return this.jobs.get(key);
     const s = this.state(session);
@@ -403,6 +403,7 @@ export class ContextPipeline {
     this.hub.action(session, 'contextDecisionsDiscarded', 1);
   }
   async coordinate(agent, force = false, { retry = false, mainSuccess } = {}) {
+    if (this.hub.bc?.active(agent.session)) return;
     if (this.mode(agent.session) === 'adaptive') return;
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || !this.config().contextEnabled) return;
     // Review a completed preparation batch once instead of reviewing
@@ -494,6 +495,7 @@ export class ContextPipeline {
     const session = agent.session, s = this.state(session), cfg = this.config();
     if (manual && this.manualSessions.get(session.id) === 'auto-compact' && source !== 'auto-compact') throw Error('本会话正在 Auto Compact，请稍候');
     if (s.transaction) return applyTransaction(session, s, s.transaction, this.store, this.adapter);
+    if (!manual && this.hub.bc?.active(session)) return null;
     if (!manual && (this.manualSessions.has(session.id) || !cfg.contextEnabled || !cfg.automaticReplace || (!ignoreCooldown && s.steps - s.lastReplacementStep < cfg.surgeryCooldownSteps))) return null;
     const index = createSurfaceIndex(session);
     let plan = s.pending;
@@ -550,6 +552,7 @@ export class ContextPipeline {
     return outcome;
   }
   replacementEvent(session, outcome, manual) {
+    if (manual && this.hub.bc?.active(session)) this.hub.bc.rebase(session, '手动资料表示已更新');
     if (!outcome?.stats && outcome?.inputTokens == null) return;
     const kind = outcome.source === 'compact-f' ? 'compactFull' : outcome.source === 'compact-p' ? 'compactProcessed' : 'replace';
     const st = outcome.stats || {};
@@ -612,6 +615,7 @@ export class ContextPipeline {
   async preStep(agent, signal, route) {
     if (delegated(agent.session)) return;
     this.agents.set(agent.session.id, agent);
+    await this.hub.bc?.applyChoice(agent.session, signal);
     const s = this.state(agent.session); s.steps++; this.store.touch(s);
     // agent/request is a proposal; adapter defaults are resolved by the native
     // host afterwards. Compare the same effective knobs as llm/stream capture.
@@ -787,7 +791,7 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
   view(session, { compact = false } = {}) {
     const s = this.state(session), index = createSurfaceIndex(session);
     const spans = new Map(s.records.map(record => [record, liveSpan(session, record, index)]));
-    return { schema: 1, compressionMode: this.mode(session), autoCompact: { ...s.autoCompact, enabled: this.config().autoCompactEnabled,
+    return { schema: 1, compressionMode: this.mode(session), bc: this.hub.bc?.view(session), autoCompact: { ...s.autoCompact, enabled: this.config().autoCompactEnabled,
       threshold: this.config().autoCompactThreshold, mode: this.config().autoCompactMode, running: this.jobs.has(session.id + ':autoCompact') },
       adaptive: { running: this.jobs.has(session.id + ':adaptive'), lastAt: s.adaptive?.lastAt ?? null,
       lastDecision: s.adaptive?.lastDecision ?? null, reason: s.adaptive?.reason ?? null, error: s.adaptive?.error ?? null,

@@ -3,6 +3,8 @@ import { installPromptAdapter } from './cc-adaptation/adapter.mjs';
 import { mainPrompt as MAIN_PERSONA } from './cc-adaptation/texts.mjs';
 import { ReplacementCanvas } from './context/host.mjs';
 import { registerContextRecall } from './context/recall.mjs';
+import { installCatalog } from './result-reduction/catalog.mjs';
+import { registerContextViews } from './result-reduction/views.mjs';
 import { NOTE_DESCRIPTION } from './context/prompts.mjs';
 import { registerTasks } from './tasks.mjs';
 import { registerRuntimeStatus } from './runtime-state.mjs';
@@ -21,6 +23,8 @@ export function apply(ctx) {
     async execute({ text }, { agent }) { const state = hub.store.state(agent.session.id); state.notes.push({ text, at: Date.now() }); hub.store.save(state); return text; },
   });
   registerContextRecall(ctx, hub);
+  installCatalog(ctx, hub);
+  registerContextViews(ctx, hub);
   registerRuntimeStatus(ctx, hub);
   ctx.inject(['commands'], commandCtx => { registerContextCommands(commandCtx, hub); registerBudgetCommand(commandCtx, hub); });
 }

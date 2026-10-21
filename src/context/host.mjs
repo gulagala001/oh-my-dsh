@@ -12,7 +12,12 @@ export function createHostAdapter(hub) {
     if (!capacity) return null;
     const available = capacity - (route?.maxTokens ?? info?.defaultMaxTokens ?? 0);
     const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
-    return { available, usable: available - headroom, used: hub.ctx.tokenMeter.measure(session).totalTokens };
+    const hostTokens = hub.ctx.tokenMeter.measure(session).totalTokens;
+    const request = hub.optimization?.state(session).lastRequest;
+    // BC owns the transmitted-history estimate. The local optimization meter
+    // still sees the uncompressed host log and must not replace that estimate.
+    const optimizedTokens = hub.bc?.active(session) ? 0 : request?.used ?? 0;
+    return { available, usable: available - headroom, used: Math.max(hub.bc?.effectiveTokens(session, hostTokens) ?? hostTokens, optimizedTokens) };
   };
   return {
     contextCapacity(session) {
@@ -23,6 +28,7 @@ export function createHostAdapter(hub) {
       const config = session.requestHeader?.()?.config;
       const llm = hub.ctx.get?.('llm') || hub.ctx.llm;
       return { imagePricing: config && llm?.imageRequestPricing?.(config.provider, config.model),
+        evidenceRefsFor: seqs => hub.optimization?.refsFor(session, seqs) ?? [],
         fileText: llm?.fileRequestText ? ref => llm.fileRequestText(ref) : undefined };
     },
     pairing: { before: toolPairingBalancedBefore, after: toolPairingBalancedAfter },
@@ -115,7 +121,7 @@ export function installContextErrorRecovery(ctx, hub, isX) {
     // pi-ai currently classifies this confirmed provider overflow wording as INVALID_REQUEST.
     const overflow = failure.code === CONTEXT_WINDOW_EXCEEDED_CODE || (failure.code === 'INVALID_REQUEST'
       && failure.message.includes("The input is longer than the model's context length"));
-    if (isX(agent.session) && overflow && !signal.aborted) {
+    if (isX(agent.session) && !hub.bc?.active(agent.session) && overflow && !signal.aborted) {
       const changed = await hub.context.applyReady(agent, { ignoreCooldown: true });
       if (changed) return { kind: 'retry' };
       ctx.logger.warn('上下文已达容量上限，但没有可应用的摘要。原文保留；没有现场调用摘要模型。');

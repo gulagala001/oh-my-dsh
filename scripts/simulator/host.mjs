@@ -44,11 +44,13 @@ export function cleanEnvironment(root, home) {
 }
 
 export class SimulationHost {
-  constructor({ root, provider, models = ['simulation'], omd = {}, clock = 'virtual', isolation = 'native', dshCli, signal, trace = () => {} }) {
+  constructor({ root, provider, models = ['simulation'], omd = {}, clock = 'virtual', isolation = 'native', dshCli, signal, trace = () => {}, loopbackPorts = [], environment = {} }) {
     this.root = realpathSync(root); this.home = join(this.root, 'home'); this.workspace = join(this.root, 'workspace');
     this.provider = provider; this.models = models; this.omd = omd; this.clockMode = clock; this.isolation = isolation;
     this.cli = resolve(dshCli || process.env.OMD_DSH_CLI || join(repoRoot, 'node_modules/@deepseek-ai/dsh/lib/bin.js'));
     this.signal = signal; this.trace = trace; this.boots = 0; this.log = ''; this.closed = false;
+    if (loopbackPorts.some(port => !Number.isInteger(port) || port < 1 || port > 65535)) throw Error('Invalid isolated loopback port');
+    this.loopbackPorts = loopbackPorts; this.environment = environment;
     this.hostTrace = join(this.root, 'host.jsonl');
     this.monitors = [];
     this.anchor = createRequire(realpathSync(join(dirname(this.cli), '../package.json')));
@@ -100,7 +102,9 @@ export class SimulationHost {
     if (this.closed) throw Error('Simulation host is closed');
     this.signal?.throwIfAborted();
     const env = cleanEnvironment(this.root, this.home);
-    env.OMD_SIM_ALLOW_PORTS = new URL(this.provider.baseURL).port;
+    Object.assign(env, this.environment);
+    const allowedPorts = [...new Set([Number(new URL(this.provider.baseURL).port), ...this.loopbackPorts])];
+    env.OMD_SIM_ALLOW_PORTS = allowedPorts.join(',');
     if (process.platform !== 'win32') {
       const ackDirectory = realpathSync(await mkdtemp(join(tmpdir(), 'omd-simulation-monitor-')));
       try {
@@ -114,7 +118,7 @@ export class SimulationHost {
     let command = process.execPath, argv = args;
     if (this.isolation === 'native') {
       if (process.platform !== 'darwin') throw Object.assign(Error('Native isolation currently requires macOS sandbox-exec. Use process isolation only when its documented boundary is acceptable.'), { code: 'ISOLATION_UNAVAILABLE' });
-      const profile = '(version 1) (allow default) (deny network-outbound) (allow network-outbound (remote ip "localhost:' + new URL(this.provider.baseURL).port + '")) (deny signal) (allow signal (target self) (target children) (target same-sandbox)) (deny file-write*) (allow file-write* (subpath ' + JSON.stringify(this.root) + ') (literal "/dev/null") (literal "/dev/tty"))';
+      const profile = '(version 1) (allow default) (deny network-outbound) (allow network-outbound ' + allowedPorts.map(port => '(remote ip "localhost:' + port + '")').join(' ') + ') (deny signal) (allow signal (target self) (target children) (target same-sandbox)) (deny file-write*) (allow file-write* (subpath ' + JSON.stringify(this.root) + ') (literal "/dev/null") (literal "/dev/tty"))';
       command = '/usr/bin/sandbox-exec'; argv = ['-p', profile, process.execPath, ...args];
     } else if (this.isolation !== 'process') throw Error('Unknown isolation: ' + this.isolation);
     this.boots++; this.log = ''; this.spawnError = undefined;

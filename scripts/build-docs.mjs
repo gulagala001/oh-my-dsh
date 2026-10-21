@@ -17,7 +17,7 @@ const guides = [
   'claude-cli-terminal.md', 'google-material-expressive.md', 'context-workflow.md',
   'monitoring.md', 'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
   'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md',
-  'plugin-compatibility.md', 'development.md', 'deepseek-workbench.md',
+  'plugin-compatibility.md', 'development.md', 'deepseek-workbench.md', 'extensions.md',
   'upstream-patches/README.md', 'site/README.md',
   'README_EN.md', 'install_EN.md', 'getting-started_EN.md', 'usage_EN.md', 'upgrade_EN.md',
   'troubleshooting_EN.md', 'showcase_EN.md', 'plugin-compatibility_EN.md',

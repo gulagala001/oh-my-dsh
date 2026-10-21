@@ -8,7 +8,7 @@ export const ORIGINAL_SEARCH_MAX_LIMIT = 20;
 export const ORIGINAL_SEARCH_MAX_QUERY = 512;
 export const ORIGINAL_SEARCH_MAX_PAGE_BYTES = 24 * 1024;
 const CHUNK_SIZE = 32 * 1024, SNIPPET_SIZE = 360;
-const echoTools = new Set(['recall', 'memory_search']);
+const echoTools = new Set(['recall', 'memory_search', 'decompress', 'search_context', 'acp_status', 'acp_cache', 'acp_retrieve', 'acp_read_original_image']);
 const messageTypes = new Set(['user/message', 'assistant/message', 'tool/result']);
 const fold = text => text.replace(/[A-Z][\x00-\x7f]*/g, value => value.toLowerCase());
 const digest = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');

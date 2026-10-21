@@ -26,7 +26,7 @@ for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) {
   }
 }
 await writeFile(path, JSON.stringify(manifest, null, 2) + '\n');
-for (const name of ['plugins/deepseek-workbench/package.json']) {
+for (const name of ['plugins/deepseek-workbench/package.json', 'plugins/dsh-extensions/package.json']) {
   const file = join(root, name), plugin = JSON.parse(await readFile(file, 'utf8'));
   for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) for (const key of Object.keys(plugin[section] ?? {})) {
     if (/^@deepseek-ai\/dsh(?:-|$)/.test(key)) plugin[section][key] = version;

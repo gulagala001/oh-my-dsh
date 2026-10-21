@@ -1,0 +1,88 @@
+# DSH Extensions — 使用说明
+
+[English](usage_EN.md) · [返回首页](../README.md)
+
+所有页面都在左侧栏 **插件** 页顶部的标签中：Skill、MCP、指令、命令、Hooks。Skill、指令和命令页左上角的范围选择器可切换到某个工作区，查看该项目中的文件；选择会在各页之间共用。
+
+## Skill
+
+- 列表按来源分组：项目（`.dsh/skills`、`.agents/skills`）、个人（`~/.dsh/skills`、`~/.agents/skills`）、自定义目录、内置、插件提供。
+- 行末开关同时控制“模型可调用”和“可手动调用”；在详情页可分别设置。设置写入 `SKILL.md` 头信息中的 `disable-model-invocation` 和 `user-invocable`。
+- **新建 Skill** 填写名称、描述和说明，生成 `<目录>/<名称>/SKILL.md`。名称使用小写字母、数字和连字符。
+- **导入** 复制一个包含 `SKILL.md` 的文件夹（会跳过 `.git` 和 `node_modules`）。
+- **编辑** 直接修改整个 `SKILL.md`；保存前检查头信息中的 `name` 与 `description`。
+- 删除会移除整个 Skill 文件夹。内置和插件提供的 Skill 只读。
+
+## MCP
+
+- 服务器保存在 `~/.dsh/mcp.json`（设置了 `DSH_HOME` 时为 `$DSH_HOME/mcp.json`），格式为常见的：
+
+  ```json
+  {
+    "mcpServers": {
+      "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/Documents"] },
+      "remote": { "type": "http", "url": "https://example.com/mcp", "headers": { "Authorization": "Bearer …" } }
+    }
+  }
+  ```
+
+- **添加服务器** 支持本地命令（stdio）和远程地址（Streamable HTTP）。**粘贴 JSON** 可一次添加 MCP 服务器说明中给出的多个配置。
+- 连接成功后，工具以 `mcp__服务器名__工具名` 提供给模型。详情页可逐个关闭工具；关闭的工具记录在该服务器的 `disabledTools` 中。
+- 关闭服务器会断开连接并写入 `"disabled": true`。修改配置后自动重连；连接失败时可在菜单中 **重新连接**。
+- 手动修改 `mcp.json` 后，回到页面或点刷新即可应用。
+- 已写在 profile 配置中的 MCP 服务器显示在“配置文件中的服务器”分组，只能开关。
+- 环境变量和请求头的值不会显示在列表和详情中。
+
+## 指令
+
+- 个人：`~/.dsh/AGENTS.md`；存在时也显示 `~/.agents/AGENTS.md`。
+- 项目：从项目根目录（含 `.git` 的目录）到工作区目录，每一级的 `AGENTS.md`、`CLAUDE.md`，以及本地文件 `AGENTS.local.md`、`CLAUDE.local.md`。工作区目录中尚未创建的 `AGENTS.md` 会显示 **创建** 按钮。
+- 文件名和项目根标记跟随 DSH 当前的指令配置。超过 1 MiB 的文件 DSH 不会加载，页面也不会打开编辑。
+
+## 命令
+
+- 个人命令保存在 `~/.dsh/commands/<名称>.md`，项目命令保存在 `<项目根>/.dsh/commands/<名称>.md`。同名时项目命令在该项目的会话中优先。
+- 文件内容就是提示词模板，可选的头信息：
+
+  ```markdown
+  ---
+  description: 审查改动
+  argument-hint: <路径>
+  ---
+
+  审查 $ARGUMENTS 的改动，列出问题和修改建议。
+  ```
+
+- 在输入框输入 `/名称 参数` 发送。`$ARGUMENTS` 替换为全部参数，`$1`…`$9` 替换为按空格分开的单个参数（可用引号包住含空格的参数）；模板未使用参数时，参数附在末尾。附件会一起发送。
+- 不能与 DSH 或其他插件已有的命令重名；重名的文件会标记为未生效。
+- “DSH 与插件提供”分组列出当前可用的其他命令，只读。
+
+## Hooks
+
+- 配置保存在 `~/.dsh/hooks.json`，结构与 Claude Code 相同：
+
+  ```json
+  {
+    "hooks": {
+      "PreToolUse": [
+        { "matcher": "bash", "hooks": [{ "type": "command", "command": "~/.dsh/hooks/check-bash.sh", "timeout": 30 }] }
+      ]
+    }
+  }
+  ```
+
+- 支持的事件：
+
+  | 事件 | 运行时机 | 可以做什么 |
+  | --- | --- | --- |
+  | `SessionStart` | 新建、恢复、清空或压缩会话 | 标准输出作为上下文；匹配 `startup`、`resume`、`clear`、`compact` |
+  | `UserPromptSubmit` | 消息发送给模型前 | 退出码 2 拦截；标准输出作为上下文 |
+  | `PreToolUse` | 工具执行前 | 退出码 2 拒绝并把标准错误告诉模型；JSON 中 `permissionDecision` 为 `deny` 或 `ask` |
+  | `PostToolUse` | 工具执行后 | 退出码 2 把标准错误作为反馈；`additionalContext` 补充上下文 |
+  | `Stop` | 模型准备结束回合 | 退出码 2 或 `"decision": "block"` 让模型按原因继续，每回合最多 3 次 |
+  | `SessionEnd` | 会话关闭 | 仅运行，不影响会话 |
+
+- 命令通过系统 shell 运行，事件数据以 JSON 写入标准输入（含 `session_id`、`cwd`、`hook_event_name` 及事件字段，如 `tool_name`、`tool_input`、`prompt`），工作目录为会话目录，并提供环境变量 `DSH_PROJECT_DIR` 与 `CLAUDE_PROJECT_DIR`。默认超时 60 秒。
+- `PreToolUse` 返回 `allow` 不会跳过 DSH 自己的审批。子代理不运行会话、消息和回合结束事件的 Hook。
+- 编辑窗口中的 **测试运行** 用示例数据运行一次命令，不影响任何会话。页面底部显示最近 50 次运行。
+- 每条 Hook 可单独关闭（写入 `"enabled": false`），顶部开关对应 `disableAllHooks`。

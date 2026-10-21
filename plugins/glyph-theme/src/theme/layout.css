@@ -49,8 +49,16 @@ html[data-omd-layout="glyph-motion"] :is(button, [role="button"]):focus-visible 
   outline-offset: 4px;
 }
 html[data-omd-layout="glyph-motion"] svg[data-glyph-icon] { visibility: visible !important; }
-html[data-omd-layout="glyph-motion"] svg[data-glyph-icon] > :not([data-glyph-content]) { visibility: hidden !important; }
+html[data-omd-layout="glyph-motion"] svg[data-glyph-icon] > :not([data-glyph-content]) { opacity: 0 !important; }
 html[data-omd-layout="glyph-motion"] [data-glyph-content] { pointer-events: none; user-select: none; -webkit-user-select: none; }
+html[data-omd-layout="glyph-motion"] [data-glyph-anchor] { position: relative; }
+html[data-omd-layout="glyph-motion"] [data-glyph-chrome-host] { isolation: isolate; }
+html[data-omd-layout="glyph-motion"] canvas.omd-glyph-chrome {
+  position: absolute !important; display: block !important; visibility: visible !important;
+  pointer-events: none !important; user-select: none; -webkit-user-select: none;
+  z-index: 4; margin: 0 !important; padding: 0 !important; border: 0 !important;
+  background: transparent !important; contain: strict;
+}
 /* Keep the host's shared sidebar geometry, including its 56px collapsed rail.
    A separate margin on each section breaks their common icon column. */
 html[data-omd-layout="glyph-motion"] [data-omd-nav-part="create"] {
@@ -82,6 +90,12 @@ html[data-omd-layout="glyph-motion"] [data-composer-card] {
   margin-top: 18px;
   overflow: visible;
 }
+html[data-omd-layout="glyph-motion"] .omd-glyph-caption {
+  position: absolute; left: 2px; top: -21px;
+  font: 9px/14px var(--omd-font-mono); color: var(--omd-muted); pointer-events: none;
+}
+html[data-omd-layout="glyph-motion"] .omd-glyph-caption::before { content: '○  YOUR NEXT MOVE'; }
+html[data-omd-layout="glyph-motion"] [data-composer-card]:focus-within > .omd-glyph-caption::before { content: '●  COMPOSING'; color: var(--omd-accent); }
 html[data-omd-layout="glyph-motion"] [data-composer-input] {
   font-size: 14px;
   line-height: 1.9;
@@ -144,7 +158,16 @@ html[data-omd-layout="glyph-motion"] [class*="_previewBadge"] {
 
 /* All native/third-party UI chrome shares the character surface. Embedded
    documents, code editors and media keep their own rendering and semantics. */
-html[data-omd-layout="glyph-motion"] *:not(:where([data-glyph-external], [data-glyph-external] *, .monaco-editor, .monaco-editor *, .cm-editor, .cm-editor *)) {
+html[data-omd-layout="glyph-motion"] *:not(:where(
+  [data-glyph-external], [data-glyph-external] *, [data-message-attachments], [data-message-attachments] *,
+  [data-document-preview], [data-document-preview] *, [data-file-preview], [data-file-preview] *,
+  .monaco-editor, .monaco-editor *, .cm-editor, .cm-editor *,
+  .katex, .katex *, .MathJax, .MathJax *, mjx-container, mjx-container *, math, math *,
+  .mermaid, .mermaid *, svg:not([data-glyph-icon]), svg:not([data-glyph-icon]) *,
+  .iui-chart, .iui-chart *, .iui-diagram, .iui-diagram *, .iui-figure-content, .iui-figure-content *,
+  .omc-chart, .omc-chart *, .omc-hbars, .omc-hbars *, .omc-stackbar, .omc-stackbar *, .omc-strip, .omc-strip *, .omc-ring,
+  pre, pre *, code, code *, [contenteditable="true"], [contenteditable="true"] *
+)) {
   box-shadow: none !important;
   text-shadow: none !important;
   border-color: transparent !important;
@@ -154,20 +177,19 @@ html[data-omd-layout="glyph-motion"] *:not(:where([data-glyph-external], [data-g
   animation: none !important;
   transition: none !important;
 }
-html[data-omd-layout="glyph-motion"] :is(button, [role="button"], [role="tab"], [role="option"], [role="menuitem"], input, textarea, select, pre, code, [data-disclosure-row], .omd-ultra-submodes, .omd-ultra-submodes span) {
+html[data-omd-layout="glyph-motion"] :is(button, [role="button"], [role="tab"], [role="option"], [role="menuitem"], input, textarea, select, [data-disclosure-row], .omd-ultra-submodes, .omd-ultra-submodes span):not(:where(svg *, .omc-strip *, .omc-chart *, .omc-hbars *, .iui-chart *, .iui-diagram *, .iui-figure-content *, [data-glyph-external] *, [data-document-preview] *, [data-file-preview] *, .monaco-editor *, .cm-editor *)) {
   background-color: transparent !important;
   color: var(--omd-text);
 }
-html[data-omd-layout="glyph-motion"] :is([role="dialog"], [role="menu"], [role="listbox"], [role="tooltip"], .VOzbGW_panel, .omd-model-panel) {
+html[data-omd-layout="glyph-motion"] :is(dialog, [role="dialog"], [role="alertdialog"], [aria-modal="true"], [role="menu"], [role="listbox"], [role="tooltip"], [popover], [data-menu-material], [data-glyph-opaque], [data-sonner-toast], .VOzbGW_panel, .omd-model-panel) {
   background: var(--omd-surface-solid) !important;
   color: var(--omd-text);
   font-family: var(--omd-font-ui);
-  overflow: auto;
 }
 html[data-omd-layout="glyph-motion"] .omd-model-panel { padding: 18px 20px 12px; width: min(320px, calc(100vw - 24px)); }
 html[data-omd-layout="glyph-motion"] .omd-model-panel[data-pane="effort"] { overflow: visible; }
 html[data-omd-layout="glyph-motion"] .omd-effort-control { margin-block: 10px; }
-html[data-omd-layout="glyph-motion"] :is(.omd-effort-track, .omd-effort-thumb, [data-glyph-control] > *) { visibility: hidden !important; }
+html[data-omd-layout="glyph-motion"] :is(.omd-effort-track, .omd-effort-thumb, [data-glyph-control] > :not(.omd-glyph-chrome)) { opacity: 0 !important; }
 html[data-omd-layout="glyph-motion"] :is(.omd-effort-heading h2, .omd-model-trigger[data-mode="ultra"] .omd-model-caption, .omd-brand-dsh) {
   background: transparent !important;
   color: var(--omd-text) !important;
@@ -182,13 +204,16 @@ html[data-omd-layout="glyph-motion"] [data-glyph-control] {
 }
 html[data-omd-layout="glyph-motion"] input[data-glyph-control]::-webkit-slider-thumb { appearance: none; background: transparent; border: 0; }
 html[data-omd-layout="glyph-motion"] input[data-glyph-control]::-moz-range-thumb { background: transparent; border: 0; }
+html[data-omd-layout="glyph-motion"] input[data-glyph-control]::-webkit-slider-runnable-track { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+html[data-omd-layout="glyph-motion"] input[data-glyph-control]::-moz-range-track { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+html[data-omd-layout="glyph-motion"] input[data-glyph-control]::-moz-range-progress { background: transparent !important; }
 html[data-omd-layout="glyph-motion"] [data-glyph-control]::before,
 html[data-omd-layout="glyph-motion"] [data-glyph-control]::after { visibility: hidden !important; }
-html[data-omd-layout="glyph-motion"] :is(button, [role="button"], input, textarea, select):focus-visible { outline: none !important; }
+html[data-omd-layout="glyph-motion"] :is(button, input, textarea, select):focus-visible { outline: 1px dotted var(--omd-accent); outline-offset: 2px; }
 html[data-omd-layout="glyph-motion"] :is(button, [role="button"], [role="tab"], [role="option"])[aria-selected="true"] { font-weight: 600; }
 html[data-omd-layout="glyph-motion"] :is(button, input, textarea):disabled { opacity: .45; }
-html[data-omd-layout="glyph-motion"] :is(hr, [role="separator"]) { border: 0; height: 12px; background: transparent; overflow: hidden; }
-html[data-omd-layout="glyph-motion"] :is(hr, [role="separator"])::after { content: '· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·'; white-space: nowrap; color: var(--omd-border); font: 10px var(--omd-font-mono); }
+html[data-omd-layout="glyph-motion"] hr { border: 0; height: 12px; background: transparent; overflow: hidden; }
+html[data-omd-layout="glyph-motion"] hr::after { content: '· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·'; white-space: nowrap; color: var(--omd-border); font: 10px var(--omd-font-mono); }
 html[data-omd-layout="glyph-motion"] ::selection { background: var(--omd-text); color: var(--omd-bg); }
 .omd-glyph-canvas { z-index: 2147483000; }
 .omd-glyph-brand[data-glyph-size="hero"] { height: 210px; }
@@ -204,9 +229,18 @@ html[data-omd-layout="glyph-motion"] [data-omd-surface="sidebar"] :is([class*="_
 .omd-glyph-nav-brand { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; flex: none; color: var(--omd-text); }
 .omd-glyph-nav-brand svg { display: block; visibility: visible; }
 html[data-omd-layout="glyph-motion"] .omd-ultra-submodes span { padding-inline: 24px 4px; }
-html[data-omd-layout="glyph-motion"] * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+html[data-omd-layout="glyph-motion"] * { scrollbar-width: thin; scrollbar-color: var(--omd-muted) transparent; }
+@supports selector(::-webkit-scrollbar) {
+  html[data-omd-layout="glyph-motion"] * { scrollbar-width: auto; scrollbar-color: auto; }
+}
 html[data-omd-layout="glyph-motion"] ::-webkit-scrollbar { width: 8px; height: 8px; background: transparent; }
-html[data-omd-layout="glyph-motion"] ::-webkit-scrollbar-thumb { background: transparent; }
+html[data-omd-layout="glyph-motion"] ::-webkit-scrollbar-thumb {
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><text x="4" y="7" text-anchor="middle" font-size="9" fill="%23888">┃</text></svg>') center repeat-y !important;
+}
+html[data-omd-layout="glyph-motion"] ::-webkit-scrollbar-thumb:horizontal {
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><text x="4" y="7" text-anchor="middle" font-size="9" fill="%23888">━</text></svg>') center repeat-x !important;
+}
+html[data-omd-layout="glyph-motion"] ::-webkit-scrollbar-corner { background: var(--omd-surface-solid); }
 html[data-omd-layout="glyph-motion"] input::file-selector-button { border: 0 !important; background: transparent !important; color: var(--omd-text); font: inherit; padding: 8px 12px; }
 html[data-omd-layout="glyph-motion"] .glyph-wordmark { display: inline; white-space: nowrap; line-height: 1; }
 
@@ -219,3 +253,13 @@ html[data-omd-layout="glyph-motion"] :is([data-composer-card], .Sixlwa_bubble, .
   background-color: var(--omd-surface-solid) !important;
   color: var(--omd-text);
 }
+
+/* Keep translucent menu materials, fixed settings bars and edit fields on a
+   readable surface. Floating home labels deliberately keep their open scene. */
+html[data-omd-layout="glyph-motion"] [data-menu-material] > [class*="_material"] {
+  background: var(--omd-surface-solid) !important;
+}
+html[data-omd-layout="glyph-motion"] :is([role="dialog"], [role="alertdialog"], dialog, [role="menu"], [role="listbox"], .omd-model-panel) :is(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea, select) {
+  background-color: var(--omd-bg) !important; color: var(--omd-text) !important;
+}
+html[data-omd-layout="glyph-motion"] :is(input,textarea)::placeholder { color: var(--omd-muted); opacity: 1; }

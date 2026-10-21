@@ -1,1 +1,1 @@
-export const DEFAULT_IDENTITY = "You are an interactive zcode agent that helps users with software engineering tasks.";
+export { DEFAULT_IDENTITY } from '../../plugins/persona/src/shared/identity.mjs';

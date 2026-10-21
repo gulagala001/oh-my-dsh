@@ -135,8 +135,9 @@ export function ContextDockItem(props) {
   const working = c.preparing || c.coordinating || c.adaptive?.running || c.manualOperation || c.transactionPending;
   const failed = Object.keys(c.failures || {}).length > 0;
   const last = c.lastReplacement, saved = last ? last.stats?.estimatedSavedTokens ?? (last.inputTokens - last.outputTokens) : 0;
+  const bc = c.bc?.backend === 'bc';
   // Idle stays a quiet glyph; words appear only when there is something to act on.
-  const label = c.manualOperation ? '压缩中' : working ? '整理中' : pending ? `可替换 −${k(pending.estimatedSavedTokens)}` : failed ? '整理异常' : null;
+  const label = c.manualOperation ? '压缩中' : working ? '整理中' : pending ? `可替换 −${k(pending.estimatedSavedTokens)}` : failed || c.bc?.error ? '整理异常' : bc ? 'BC' : null;
   const tone = pending ? 'green' : failed && !working ? 'red' : undefined;
   const apply = async () => {
     setBusy(true); setMsg('');
@@ -144,12 +145,13 @@ export function ContextDockItem(props) {
     catch (e) { setMsg(e.message); } finally { setBusy(false); }
   };
   return <Pill seat={seat} stat="omd-context" tone={tone} icon={working ? <Dot tone="blue" pulse/> : <Icon name="compress" size={14}/>}
-    aria={label ? `OMD 上下文：${label}` : 'OMD 上下文整理'} title={c.compressionMode === 'adaptive' ? 'OMD 主动异步整理' : 'OMD 上下文整理'} label={label}
+    aria={label ? `OMD 上下文：${label}` : 'OMD 上下文整理'} title={bc ? 'BC 压缩与 OMD 档案' : c.compressionMode === 'adaptive' ? 'OMD 主动异步整理' : 'OMD 上下文整理'} label={label}
     footer={<Jump section="context"/>}>
     <Steps steps={pipelineSteps(c)}/>
     {pending && <div className="omc-pop-callout"><div><b>{pending.selectedRecords} 段可替换</b><span>{pending.currentMessages} 条消息 · 预计 −{k(pending.estimatedSavedTokens)}</span></div>
       <Button kind="primary" busy={busy} onClick={apply}>应用</Button></div>}
     <dl className="omc-kv">
+      {bc && <><dt>BC 发送估算</dt><dd>{c.bc.status?.sentTokens == null ? '等待读数' : `≈${k(c.bc.status.sentTokens)} tokens`}</dd></>}
       <dt>未处理原文</dt><dd>{c.backlog?.events ?? 0} 条 · ≈{k(c.backlog?.estimatedTokens)}</dd>
       <dt>分段摘要</dt><dd>{c.recordCount ?? (c.records || []).filter(r => !r.mergedInto).length} 段</dd>
       {c.estimate?.compact && !c.estimate.compact.error && <><dt>/compact-p 预计</dt><dd>−{k(c.estimate.compact.estimatedSavedTokens)}</dd></>}

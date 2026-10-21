@@ -4,10 +4,37 @@ import { compactionMessage } from './commands.mjs';
 import { Config, contextConfig } from '../config.mjs';
 import { normalizePersonalityPatch } from '../cc-adaptation/personality.mjs';
 import { actualUser } from './core.mjs';
+import { handlePersonalityApi } from '../personality-session.mjs';
+import { CONFIG_KEYS as PERSONA_KEYS } from '../../plugins/persona/src/store.mjs';
 
 export async function handleContextApi({ hub, ctx, req, res, url, session, agent, inspection, archivedOnly, refreshSession, id, send, readBody }) {
   const path = url.pathname.replace('/trisoul-x/api', '');
   const needSession = () => { if (!session) throw new Error('请选择一个可读取的会话'); return session; };
+  if (path.startsWith('/context/evidence')) {
+    const service = hub.optimization, target = needSession();
+    await service.settled();
+    const ancestors = await service.ancestors(target);
+    if (path === '/context/evidence/export' && req.method === 'GET') {
+      send(res, 200, await service.evidence.export(target, ancestors, undefined, url.searchParams.get('rawRef'))); return true;
+    }
+    if (path === '/context/evidence/import' && req.method === 'POST') {
+      send(res, 200, await service.evidence.import(await readBody(req, { maxBytes: 128 * 1024 * 1024 }), target, ancestors)); return true;
+    }
+    if (req.method !== 'GET') { send(res, 405, { error: '仅支持 GET' }); return true; }
+    const rawRef = url.searchParams.get('rawRef');
+    if (rawRef) {
+      send(res, 200, await service.evidence.read(target, { rawRef, mode: url.searchParams.get('mode') || 'head',
+        cursor: url.searchParams.get('cursor') || undefined, query: url.searchParams.get('query') || undefined,
+        startLine: url.searchParams.has('startLine') ? Number(url.searchParams.get('startLine')) : undefined }, ancestors));
+    } else if (url.searchParams.has('query')) send(res, 200, await service.evidence.search(target, { query: url.searchParams.get('query'), cursor: url.searchParams.get('cursor') || undefined }, ancestors));
+    else send(res, 200, { records: (await service.evidence.list(target, ancestors)).map(({ ref, tool, sourceHash, characters, complete, createdAt, rule, callId }) => ({ ref, tool, sourceHash, characters, complete, createdAt, rule, callId })) });
+    return true;
+  }
+  if (path === '/context/optimization' && req.method === 'GET') { send(res, 200, hub.optimization.snapshot(needSession())); return true; }
+  if (path === '/personality') {
+    await handlePersonalityApi({ hub, ctx, req, res, session, inspection, archivedOnly, refreshSession, id, readBody, send });
+    return true;
+  }
   if (path === '/scope') {
     const reading = new AbortController(), abortRead = () => reading.abort(Error('会话范围读取已取消'));
     req.once?.('aborted', abortRead); res.once?.('close', abortRead);
@@ -57,6 +84,17 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     if (req.method !== 'POST') { send(res, 405, { error: '请使用 POST' }); return true; }
     const { mode } = await readBody(req);
     send(res, 200, hub.context.setMode(needSession(), mode)); return true;
+  }
+  if (path === '/context/backend') {
+    if (req.method !== 'POST') { send(res, 405, { error: '请使用 POST' }); return true; }
+    const { backend } = await readBody(req);
+    send(res, 200, await hub.bc.choose(needSession(), backend, agent)); return true;
+  }
+  if (path === '/context/bc') {
+    if (req.method !== 'GET') { send(res, 405, { error: '请使用 GET' }); return true; }
+    const session = needSession();
+    await hub.bc.refresh(session).catch(error => { hub.bc.identity(session).error = error.message; });
+    send(res, 200, hub.bc.view(session)); return true;
   }
   if (path === '/context/catalog') {
     const s = needSession(); hub.context.state(s);
@@ -127,7 +165,10 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     contextConfig({ ...hub.config(), ...patch });
     patch = normalizePersonalityPatch(hub.config(), patch);
     if (patch.memoryScope !== undefined && !['session', 'project', 'global'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆；全局模式使用 global');
-    await ctx.settings.update('trisoul-x', patch);
+    const personaPatch = Object.fromEntries(Object.entries(patch).filter(([key]) => PERSONA_KEYS.includes(key)));
+    if (hub.persona) patch = Object.fromEntries(Object.entries(patch).filter(([key]) => !PERSONA_KEYS.includes(key)));
+    if (Object.keys(patch).length) await ctx.settings.update('trisoul-x', patch);
+    if (hub.persona && Object.keys(personaPatch).length) hub.persona.update(personaPatch);
     hub.context.cachedPreparation.configure();
     send(res, 200, hub.config()); return true;
   }

@@ -50,8 +50,12 @@ export function installToolDefinitions(ctx, lease, sessionKey) {
         if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('OpenCU arguments must be an object');
         for (const key of tool.inputSchema.required || []) if (args[key] === undefined) throw new Error(`${key} is required`);
         const id = exec.agent?.session?.id ?? sessionKey;
+        const optimization = ctx.get?.('trisoulX')?.optimization;
+        const fullBaseline = optimization && exec.agent && !optimization.computerBaseline(exec.agent.session);
         let projector = observations.get(id);
         if (!projector) { projector = createObservationProjector(); observations.set(id, projector); if (observations.size > 64) observations.delete(observations.keys().next().value); }
+        if (fullBaseline) { projector.reset(); if (endpoint === 'computer_use' || endpoint === 'observe') optimization.resetComputerBaseline(exec.agent.session); }
+        if (endpoint === 'computer_use' && fullBaseline) args = { ...args, restoreObservationBaseline: true };
         if (endpoint === 'observe') args = {format:'ax', ...args};
         else if (['select','resume','stop','computer_use','computer_use_reset','openTarget'].includes(endpoint) || endpoint === 'act' && ['navigate','back','forward','reload','closeTab','domSnapshot'].includes(args.action)) projector.reset();
         try {

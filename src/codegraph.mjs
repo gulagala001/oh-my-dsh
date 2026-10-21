@@ -91,7 +91,8 @@ export function codegraphCommand(cacheDir) {
 
 export function codegraphEnvironment() {
   return { ...getDefaultEnvironment(), CODEGRAPH_TELEMETRY: '0', CODEGRAPH_NO_DOWNLOAD: '1',
-    CODEGRAPH_NO_DAEMON: '1', CODEGRAPH_HOST_PPID: String(process.pid), NO_COLOR: '1' };
+    CODEGRAPH_NO_DAEMON: '1', CODEGRAPH_HOST_PPID: String(process.pid), NO_COLOR: '1',
+    CODEGRAPH_EXPLORE_DEDUP: '0', CODEGRAPH_MCP_TOOLS: 'explore,node,search,callers,callees,impact,files,status' };
 }
 
 export async function projectDirectory(cwd, requested) {
@@ -262,7 +263,7 @@ export class CodegraphRuntime {
     })().catch(error => { this.catalogPromise = undefined; this.catalogError = error.message; throw error; });
   }
 
-  async call(name, args, { cwd, signal }) {
+  async call(name, args, { cwd, signal, sessionKey = 'metadata' }) {
     if (!this.enabled) throw new Error('CodeGraph 已关闭。');
     const combined = signal ? AbortSignal.any([signal, this.controller.signal]) : this.controller.signal;
     throwIfAborted(combined);
@@ -272,13 +273,14 @@ export class CodegraphRuntime {
       catch (error) { throw codegraphFailure(error); }
     }
     throwIfAborted(combined);
-    let entry = this.connections.get(directory);
+    const connectionKey = JSON.stringify([directory, sessionKey]);
+    let entry = this.connections.get(connectionKey);
     if (!entry) {
       entry = { busy: 0, timer: null };
       // Startup belongs to the runtime; one cancelled caller must not abort
       // another session's shared connection handshake.
       entry.ready = this.connect(directory, this.controller.signal).then(connection => entry.connection = connection);
-      this.connections.set(directory, entry);
+      this.connections.set(connectionKey, entry);
     }
     clearTimeout(entry.timer);
     entry.busy++;
@@ -293,15 +295,15 @@ export class CodegraphRuntime {
       const connection = entry.connection;
       const failure = connectionFailure(error, connection, 'call');
       if ((!connection && !combined.aborted) || connection?.closed) {
-        if (this.connections.get(directory) === entry) this.connections.delete(directory);
+        if (this.connections.get(connectionKey) === entry) this.connections.delete(connectionKey);
         if (connection) try { await this.close(connection); } catch {}
       }
       throw failure;
     } finally {
       entry.busy--;
-      if (!entry.busy && this.connections.get(directory) === entry) {
+      if (!entry.busy && this.connections.get(connectionKey) === entry) {
         entry.timer = setTimeout(() => {
-          this.connections.delete(directory);
+          this.connections.delete(connectionKey);
           void entry.ready.then(connection => this.close(connection)).catch(() => {});
         }, this.idleMs);
         entry.timer.unref();

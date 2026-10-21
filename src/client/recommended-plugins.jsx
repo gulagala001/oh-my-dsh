@@ -35,11 +35,12 @@ export function applyFeatureClients(ctx, clients) {
       const ticket = ++revision;
       queued = queued.catch(() => {}).then(async () => {
         if (!alive || ticket !== revision) return;
-        for (const [id, apply] of Object.entries(clients)) {
+        for (const [id, client] of Object.entries(clients)) {
           const entry = snapshot.plugins?.find(plugin => plugin.id === id);
           if (!entry) continue;
           if (entry.active && !fibers.has(id)) {
-            const fiber = ctx.plugin({ name: `omd-feature-${id}`, apply });
+            // A client is its apply function, or `{ apply, inject }` when it waits for services.
+            const fiber = ctx.plugin({ name: `omd-feature-${id}`, ...typeof client === 'function' ? { apply: client } : client });
             fibers.set(id, fiber);
             try { await fiber; } catch (error) { fibers.delete(id); await fiber.dispose(); throw error; }
           } else if (!entry.active && fibers.has(id)) {

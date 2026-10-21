@@ -1,4 +1,5 @@
 import { sourceName } from './message-source.mjs';
+import { BC_REFERENCE_TOOLS } from './context/bc-policy.mjs';
 // Shared, pure helpers for the task ledger and context-compaction layer.
 export const TASK_SOURCE = 'trisoul-x:tasks';
 export const TODO_META = 'omdTodo';
@@ -64,7 +65,7 @@ export function latestTodo(session) {
 export function summaryMessageReader(session) {
   const taskCalls = new Set();
   for (const e of session.snapshotEvents()) for (const b of messageOf(e)?.content || []) {
-    if (b.type === 'tool-call' && ['todo_write', 'task_map', 'runtime_status', 'recall', 'memory_search'].includes(b.name)) taskCalls.add(b.id);
+    if (b.type === 'tool-call' && ['todo_write', 'task_map', 'runtime_status', 'recall', 'memory_search', ...BC_REFERENCE_TOOLS].includes(b.name)) taskCalls.add(b.id);
   }
   const filter = blocks => (blocks || []).flatMap(b => {
     if (b.type === 'tool-call' && taskCalls.has(b.id)) return [];

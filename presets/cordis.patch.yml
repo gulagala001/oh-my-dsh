@@ -79,8 +79,6 @@
               - id: trisoul-x-agent
                 name: 'trisoul_x/agent'
           
-              - id: command-compact
-                name: '@deepseek-ai/dsh-command-compact'
           
           - id: delegation
             name: cordis:group
@@ -217,8 +215,6 @@
               - id: trisoul-x-agent
                 name: 'trisoul_x/agent'
           
-              - id: command-compact
-                name: '@deepseek-ai/dsh-command-compact'
           
           - id: delegation
             name: cordis:group

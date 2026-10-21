@@ -20,7 +20,7 @@ export function applyProjectlessWorkspaces(ctx) {
         if (drafts.current() !== id || drafts.lifetime.signal.aborted) return;
         if (managed) return drafts.startDraft(id, options);
         original.call(workspace, workspaceId, options);
-      }).catch(error => drafts.shell(id).notify('error', error.message));
+      }).catch(error => { if (!drafts.lifetime.signal.aborted) drafts.shell(id).notify('error', error.message); });
     }
     workspace.startSession = start;
     return () => { if (workspace.startSession === start) workspace.startSession = original; drafts.dispose(); style.remove(); };
@@ -35,6 +35,7 @@ export function applyProjectlessWorkspaces(ctx) {
     const id = props.sessionId, active = drafts.isDraft(id) || drafts.isManaged(id);
     useEffect(() => { void drafts.inspect(id).catch(() => {}); }, [id]);
     useLayoutEffect(() => id ? drafts.installSubmit(id) : undefined, [id]);
+    if (drafts.lifetime.signal.aborted) return <Original {...props}/>;
     const next = { ...props };
     if (active && next.onRequestWorkspace) {
       delete next.disabled; delete next.onRequestWorkspace; delete next.workspacePickerOpen; delete next.placeholder;
@@ -48,6 +49,7 @@ export function applyProjectlessWorkspaces(ctx) {
     const id = drafts.current(), pending = drafts.isDraft(id), managed = drafts.isManaged(id);
     const [open, setOpen] = useState(false), anchor = useRef(null);
     useEffect(() => { setOpen(false); void drafts.inspect(id).catch(() => {}); }, [id]);
+    if (drafts.lifetime.signal.aborted) return <Original {...props}/>;
     const pick = workspaceId => {
       if (drafts.isBusy(id)) return;
       // A refused navigation must leave the cancelled source projectless.

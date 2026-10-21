@@ -6,6 +6,7 @@ import { homedir } from 'node:os';
 import { HubStore, projectOf } from './hub-store.mjs';
 import { Config, configSnapshot } from './config.mjs';
 import { ContextPipeline } from './context/pipeline.mjs';
+import { BillionContext } from './context/bc.mjs';
 import { createHostAdapter } from './context/host.mjs';
 import { createEffortResolver } from './effort.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
@@ -37,6 +38,7 @@ export class Hub extends Service {
     this.monitor = new MonitorLedger(this.store.dir);
     this.pricing = new MonitorPricing(this.store.dir);
     this.context = new ContextPipeline(this, createHostAdapter(this));
+    this.bc = new BillionContext(this);
     this.efforts = createEffortResolver(ctx); this.agents = new Map();
     this.live = new Map(); this.calls = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
     this.closed = false; this.closing = null;
@@ -73,12 +75,16 @@ export class Hub extends Service {
       collect(await Promise.allSettled([...(this.context.runtimeRetirements?.values() || [])]));
       retireDreamConsumers();
       collect(await dream);
+      await this.optimization?.settled();
       this.requestStarts.clear(); this.taskReviews.clear(); this.agents.clear();
       try { this.monitor.close(); } catch (error) { errors.push(error); }
     }
     if (errors.length) throw new AggregateError([...new Set(errors)], 'OMD 退出清理失败');
   }
-  config() { const value = this.getConfig(); return Object.fromEntries(Object.keys(Config.dict).filter(key => Object.hasOwn(value, key)).map(key => [key, value[key]])); }
+  config() {
+    const value = this.getConfig();
+    return { ...Object.fromEntries(Object.keys(Config.dict).filter(key => Object.hasOwn(value, key)).map(key => [key, value[key]])), ...this.persona?.config() };
+  }
   taskReminders(session) {
     const saved = (this.store.peek ? this.store.peek(session.id) : this.store.state(session.id))?.betterTodo;
     return { todo: saved?.todo ?? true, verification: saved?.verification ?? false };

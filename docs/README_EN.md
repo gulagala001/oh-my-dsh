@@ -26,6 +26,7 @@ Topics without an English edition are marked **Chinese**.
 | Track tasks, requirements and evidence | [Everyday usage](usage_EN.md#everyday-work) |
 | Understand background jobs, budgets and sampled state | [Runtime state (Chinese)](runtime-state-background.md) |
 | Open DeepSeek web tools or import extractable history | [DeepSeek Workbench (Chinese)](deepseek-workbench.md) |
+| Manage skills, MCP, instruction files, commands and hooks | [Extensions (Chinese)](extensions.md) |
 | Use CodeGraph, side questions and optional plugins | [Usage](usage_EN.md) · [OpenDesign (Chinese)](open-design.md) |
 | Install other plugins | [Compatibility](plugin-compatibility_EN.md) |
 | Back up, upgrade, migrate or roll back | [Upgrade guide](upgrade_EN.md) |

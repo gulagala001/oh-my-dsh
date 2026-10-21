@@ -7,6 +7,10 @@ export function readEffort(element) {
 }
 export function paintEffort({r,ratio,peak,disabled,max},time,glyph,ink,muted,still) {
   const left=r.left+14,right=r.right-14,cy=r.top+r.height/2,thumb=left+(right-left)*ratio;
+  // Settings/IUI ranges can be shorter than the thinking selector. Keep every
+  // character inside the real track without enlarging its layout or hit area.
+  const paint=glyph,scale=Math.min(1,r.height/50);
+  glyph=(char,x,y,color,alpha,size=10)=>paint(char,x,cy+(y-cy)*scale,color,alpha,size*scale);
   const alpha=disabled?.35:1,t=still||disabled?0:time;
   const phase=t*(1.15+ratio*.65),ramp='·:+=×#';
   for(let x=left;x<=right;x+=7){

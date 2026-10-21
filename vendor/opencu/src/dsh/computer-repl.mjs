@@ -454,7 +454,7 @@ export function createComputerRepl(request, report = () => {}) {
         evaluationRepl._domain.on('error', evaluationError);
         try {
           execution.run(current, () => {
-            if (args.restoreDocumentation) observations.reset();
+            if (args.restoreDocumentation || args.restoreObservationBaseline) observations.reset();
             for (const topic of [...documentationLoaded]) documentation(topic, args.restoreDocumentation === true);
             documentation('core');
           });

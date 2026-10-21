@@ -13,6 +13,8 @@ core.push('test/context-memory-cache.test.mjs');
 core.push('test/host-component-overlay.test.mjs');
 core.push('test/ultra-mode.test.mjs', 'test/conversation-input-owner.test.mjs', 'test/model-label-contract.test.mjs');
 core.push('test/overview-native-style.test.mjs');
+core.push('test/context-optimization.test.mjs', 'test/bc-compatibility.test.mjs',
+  'test/personality-files-session.test.mjs', 'test/projectless-disposal.test.mjs');
 
 const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
 if (command === 'matrix') {

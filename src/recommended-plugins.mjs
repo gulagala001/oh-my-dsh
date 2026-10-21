@@ -278,7 +278,7 @@ export function mountRecommendedPlugins(ctx, hub) {
     const service = new RecommendedPluginManager({ manager: scope.pluginManager, getConfig: () => hub.config(),
       packageDirectory: resolve(hub.store.dir, 'recommended-packages'),
       getHostVersion: () => actualHostVersion(scope),
-      getBundledPluginState: plugin => plugin.id === 'dsh-deepseek-workbench' ? { enabled: scope.get('deepseekWorkbench')?.enabled === true } : {},
+      getBundledPluginState: plugin => ({ 'dsh-deepseek-workbench': { enabled: scope.get('deepseekWorkbench')?.enabled === true }, 'dsh-extensions': { enabled: scope.get('dshExtensions')?.enabled === true } })[plugin.id] ?? {},
       saveConfig: patch => scope.settings.update('trisoul-x', patch), isRunning: () => scope.agents.list().some(agent => agent.status === 'running') });
     scope.effect(() => {
       const tick = () => { void service.tick().catch(error => scope.logger.warn(error.message)); };

@@ -4,6 +4,7 @@ import { personalityPatch, personalityPreset } from './cc-adaptation/personality
 import { CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
+const personalityModules = z.object({ style: z.string(), communication: z.string(), presentation: z.string() });
 const contextCadence = CONTEXT_FREQUENCY_PRESETS.medium;
 export function configSnapshot(config = {}) {
   return Object.fromEntries(Object.entries(config).map(([key, value]) => [key,
@@ -17,6 +18,7 @@ export const Config = z.object({
     inputTokens: z.number().min(0), outputTokens: z.number().min(0), cacheReadTokens: z.number().min(0), cacheWriteTokens: z.number().min(0),
   })).default([]),
   contextEnabled: z.boolean().default(true),
+  contextOptimizationEnabled: z.boolean().default(true),
   automaticReplace: z.boolean().default(true),
   autoCompactEnabled: z.boolean().default(false),
   autoCompactThreshold: z.number().step(1).min(1).default(400000),
@@ -38,8 +40,11 @@ export const Config = z.object({
   traceMaxChars: z.number().step(1).min(0).default(0),
   identityPrompt: z.string().default(DEFAULT_IDENTITY),
   identityPreset: z.string().default('custom'),
-  identitySavedPresets: z.array(z.object({ id: z.string().required(), name: z.string().required(), text: z.string().required() })).default([]),
+  identitySavedPresets: z.array(z.object({ id: z.string().required(), name: z.string().required(), text: z.string().required(), description: z.string(), modules: personalityModules })).default([]),
   identityCustomPrompt: z.string(),
+  identityCustomModules: personalityModules,
+  identityCustomDescription: z.string(),
+  sessionPersonalityEnabled: z.boolean().default(false),
   stateHintsEnabled: z.boolean().default(false),
   budgetHintsEnabled: z.boolean().default(false),
   budgetEveryStep: z.boolean().default(false),

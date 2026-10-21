@@ -22,6 +22,7 @@ export class AutoCompaction {
   check(agent, signal = this.signals.get(agent), { maintenance = true } = {}) {
     if (signal) this.signals.set(agent, signal);
     const p = this.pipeline, session = agent.session, id = session.id, key = id + ':autoCompact', cfg = p.config();
+    if (p.hub.bc?.active(session)) return Promise.resolve(null);
     if (p.closed || !cfg.autoCompactEnabled || session.header?.origin === 'subagent' || Number(session.header?.delegationDepth) > 0
       || p.agents.get(id) !== agent || p.adaptive.isManaged && !p.adaptive.isManaged(session)) return Promise.resolve(null);
     if (p.jobs.has(key)) {

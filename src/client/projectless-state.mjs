@@ -116,25 +116,28 @@ export class ProjectlessDrafts {
   emit() { ++this.revision; for (const fn of this.listeners) fn(); }
   save(next) { this.storage.setItem(STORAGE_KEY, JSON.stringify(next)); this.drafts = next; this.emit(); }
   current() {
+    if (this.lifetime.signal.aborted) return undefined;
     return this.ctx.sessions.list.getSnapshot().ids.find(id => this.ctx.sessions.retainInfo(id).getSnapshot().retainedBy.mainView > 0);
   }
   isDraft(id) {
-    if (id === undefined || !Object.hasOwn(this.drafts, id)) return false;
+    if (this.lifetime.signal.aborted || id === undefined || !Object.hasOwn(this.drafts, id)) return false;
     // A stale browser write must never replay an already-admitted first turn.
     return this.pending.has(id) || this.ctx.sessions.list.getSnapshot().byId[this.drafts[id].sessionId]?.blank !== false;
   }
-  isManaged(id) { return this.managed.get(id) === true; }
-  isBusy(id) { return this.pending.has(id); }
+  isManaged(id) { return !this.lifetime.signal.aborted && this.managed.get(id) === true; }
+  isBusy(id) { return !this.lifetime.signal.aborted && this.pending.has(id); }
   mark(id) {
     if (!this.isDraft(id)) this.save({ ...this.drafts, [id]: { requestId: crypto.randomUUID(), sessionId: crypto.randomUUID() } });
   }
   clear(id) { if (Object.hasOwn(this.drafts, id)) { const next = { ...this.drafts }; delete next[id]; this.save(next); } }
   async inspect(id) {
+    if (this.lifetime.signal.aborted) return false;
     if (!id || this.managed.has(id)) return this.isManaged(id);
     if (this.inspections.has(id)) return this.inspections.get(id);
     const cwd = this.ctx.sessions.list.getSnapshot().byId[id]?.cwd;
     if (!cwd) return false;
     const attempt = this.request('?cwd=' + encodeURIComponent(cwd), undefined, this.lifetime.signal).then(value => {
+      if (this.lifetime.signal.aborted) return false;
       this.managed.set(id, value.managed); this.emit(); return value.managed;
     }).finally(() => this.inspections.delete(id));
     this.inspections.set(id, attempt); return attempt;
@@ -176,6 +179,9 @@ export class ProjectlessDrafts {
     if (!saved.ok) throw Error((await saved.json()).error || '无法保留模型模式');
   }
   installSubmit(id) {
+    // Slot wrappers can survive a plugin reload until React commits the new
+    // registration. Never resolve services through their disposed owner.
+    if (this.lifetime.signal.aborted) return;
     const shell = this.shell(id), original = shell.submit, owner = this;
     function submit(mode = 'queue', ...args) {
       if (owner.lifetime.signal.aborted || !owner.isDraft(id)) return original.call(shell, mode, ...args);

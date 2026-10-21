@@ -86,6 +86,14 @@ Tools, verification commands, CodeGraph, and Workflow resolve paths in the host'
 
 ## Context and Memory
 
+**Context → Context management** selects OMD or Billion Context (BC) per session; OMD is the default. The current integration targets DSH **0.2.1-rc.2** and the original **billion-context 0.1.202** npm package by [ranxianglei](https://github.com/ranxianglei/billion-context). Install and enable the pinned package in third-party features, then select BC.
+
+Only automatic compression ownership changes. In BC mode, OMD continues archive preparation, Dream, tasks, persona, original/attachment recall, side questions and branch handling. OMD's compression settings stay saved for switching back. In OMD mode, BC's `compress`/`absorb` writers are hidden and rejected; its search, recovery, rules and diagnostics remain available. Explicit material/compaction operations synchronize the BC history boundary. Native tools and PTC retain their own execution routes.
+
+Busy sessions switch at the next request boundary. Returning to OMD first prepares a safe native representation if local history is too large; a failed switch keeps BC active and reports the reason. Rewind cannot reuse future BC summaries. An unavailable BC fails the request locally instead of silently sending uncompressed history. Each request verifies the proxy version because BC has its own updater.
+
+The UI separates BC's outgoing estimate from local history. Independent archive/Dream calls keep their inputs and budgets outside the main BC conversation. Memory-cache preparation still copies the host request prefix; BC's wire rewriting can change cache reuse, and the existing input-budget wait remains in force. Other protocol/platform/version combinations require separate verification. [Detailed workflow](context-workflow.md#omd-与-billion-context)
+
 Background preparation stores facts, source-backed user decisions, and detailed material separately, applying representations at safe request boundaries. Originals, documents, images, and attachments remain; windows are finite. Choose scope before first send; it then locks:
 
 | Scope | Automatic injection and boundary |
@@ -114,9 +122,17 @@ Each session retains up to 20 versions. Within the page, switching retains unsen
 
 ## Settings and Saving
 
-Settings include Common, Base components, Third-party, Model/identity, Experimental, Advanced, Global background. Use **Save settings** for ordinary changes; component toggles save immediately. Only edited fields are sent. Edits made during saving remain and need another save. Migration reads the live legacy configuration rather than letting an old overlay swallow new settings.
+Oh My DSH settings use one page, with third-party features on a separate subpage. Switches and selections save immediately; personality text uses its editor's save button. Failed saves show an error and restore stored settings while retaining personality drafts.
 
-Choose a built-in personality, Custom, a saved preset, or Off. Name a custom personality and use **Save as preset**; saved presets can be edited, renamed, updated, saved as a new copy, or deleted. These operations save immediately for subsequent requests. Deleting the selected preset retains its text in Custom; built-in presets remain available. Use **Save settings** to apply selection changes or direct edits to Custom. Global background is user-maintained. On conflict, **Read latest version**, compare, merge/adopt, then save; reading does not overwrite a draft. Dream does not edit this background.
+**Personality preset** selects the global default. The collapsed **Advanced** section manages multiple personalities: create, copy, rename, update, delete, import and export. The editing selection is independent of the global selection, so saving an edit does not switch the global personality. Deleting the selected global preset preserves all its modules in Custom. Copy built-in presets to edit them.
+
+Each personality has four modules: **Identity, Language style, Communication, and Answer presentation**. The latter three can inherit defaults; an explicitly empty override adds no preference for that module. Personality preferences do not replace the actual environment, permissions, tool protocols, task controls or memory processing rules.
+
+Use **Copy creation prompt**, give it to an AI with your character idea, and ask for a JSON file following the included format. **Import personality file** creates and selects a new preset; duplicate names are renamed automatically, existing presets are never overwritten, and invalid files show an error. **Export personality file** saves the current editor content for backup, sharing or further AI editing.
+
+Enable **Session personalities** to add a **Session personality** section to the permissions drawer in OMD and OMAA main conversations. Choose the global default, a specific personality, or Off. Changes apply to subsequent model requests, including in conversations already underway. Choices persist independently for each conversation. Disabling the feature uses the global personality while preserving saved choices for re-enabling. Deleted presets fall back to the global selection with a notice. Child conversations do not show this control.
+
+Global background is user-maintained. On conflict, **Read latest version**, compare, merge/adopt, then save; reading does not overwrite a draft. Dream does not edit this background.
 
 Five themes, 28 palettes, backgrounds, section colors, fonts, logos/titles, and reduced motion remain independent. [Appearance (Chinese)](skins.md)
 
@@ -161,6 +177,8 @@ The current profile’s native manager handles installation and activation, reta
 **IUI, OMAA, Subscriptions and Intent remain independent projects**, each needing a matching host build. OMD retains their entries, tools, configuration and user data rather than taking over their accounts or business features. [Compatibility](plugin-compatibility_EN.md)
 
 **DeepSeek Workbench** is bundled and enabled by default. It opens web chat/platform and imports extractable history into native conversations, retaining the original webpage; the user sends the next message. Embedded pages, persistent login and downloads require matching host bridges. [Usage (Chinese)](deepseek-workbench.md)
+
+**Extensions** is bundled and enabled by default. It adds Skills, MCP, Instructions, Commands and Hooks tabs to the **Plugins** page: switch skills, manage MCP servers and single tools in `~/.dsh/mcp.json`, edit AGENTS.md / CLAUDE.md, define `/commands` from Markdown templates and configure hooks in the Claude Code format. [Usage (Chinese)](extensions.md)
 
 <a id="optional-intent-component"></a>
 

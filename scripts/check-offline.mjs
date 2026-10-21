@@ -8,6 +8,7 @@ export const offlineEntries = [
   'src/index.mjs', 'src/ptc.mjs', 'lib/host/jobs-local.mjs',
   'lib/host/workflow-spawn.mjs', 'lib/host/pwsh-sandbox.mjs',
   'lib/host/ui-conversation.mjs', 'src/host/ui-chat.mjs',
+  'src/result-reduction/service.mjs', 'src/result-reduction/views.mjs',
 ];
 
 export function inside(directory, path) {
@@ -75,6 +76,15 @@ export async function checkOffline(directory = root) {
     catch (error) { errors.push(`${entry}: ${error.stack ?? error}`); }
   }
   const requirePackage = createRequire(join(directory, 'package.json'));
+  try {
+    const ast = await import(pathToFileURL(join(directory, 'src/result-reduction/ast.mjs')).href);
+    for (const language of ast.languages) await ast.astRuntime(language);
+    checks.push('bundled AST runtime and all declared grammars');
+    for (const dependency of ['@mozilla/readability', 'jsdom', '@toon-format/toon', '@ast-grep/wasm', 'web-tree-sitter', '@vscode/tree-sitter-wasm/wasm/tree-sitter-javascript.wasm']) {
+      if (!inside(directory, realpathSync(requirePackage.resolve(dependency)))) throw Error(dependency + ': 解析到了离线目录外');
+    }
+    checks.push('context optimization direct dependencies');
+  } catch (error) { errors.push('上下文优化随包资源：' + error.message); }
   for (const name of ['sharp', '@colbymchenry/codegraph']) {
     try {
       if (!inside(directory, realpathSync(requirePackage.resolve(name)))) throw new Error('依赖解析到了离线目录外');
