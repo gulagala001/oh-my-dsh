@@ -36,7 +36,9 @@ def perform(root, element, action, check, fail):
                 return dict(performed=True, type=kind, inputMode='background', delivery='no-op')
             direction = ('right' if dx > 0 else 'left') if dx else ('down' if dy > 0 else 'up')
             current, selected = element, None
-            while current is not None:
+            for _ in range(100):
+                if current is None:
+                    break
                 try:
                     interface = current.queryAction()
                     for index in range(interface.nActions):
@@ -49,8 +51,11 @@ def perform(root, element, action, check, fail):
                 if selected or current == root:
                     break
                 current = current.parent
+            else:
+                fail('TARGET_IDENTITY_CHANGED', 'Scroll ancestor chain did not reach the selected window')
             if not selected:
                 fail('FOREGROUND_REQUIRED', 'Element has no named AT-SPI scroll action; no global wheel event was sent')
+            verify_window(current, root, fail)
             check()
             accepted = selected[0].doAction(selected[1])
         else:

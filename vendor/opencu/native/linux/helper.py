@@ -297,9 +297,13 @@ def tree(t, options):
         if key.startswith(prefix):
             del elements[key]
     nodes, lines = [], []
+    max_nodes, max_depth = min(3000, max(1, options.get('maxNodes', 1000))), min(80, max(0, options.get('maxDepth', 40)))
+    truncated = False
     deadline = time.monotonic() + min(15, options.get('timeoutMs', 5000) / 1000)
     def visit(element, depth, parent=None):
-        if len(nodes) >= min(3000, options.get('maxNodes', 1000)) or depth > min(80, options.get('maxDepth', 40)) or time.monotonic() > deadline:
+        nonlocal truncated
+        if len(nodes) >= max_nodes or depth > max_depth or time.monotonic() >= deadline:
+            truncated = True
             return
         key = prefix + str(uuid.uuid4())
         elements[key] = element
@@ -318,10 +322,13 @@ def tree(t, options):
         nodes.append(node)
         lines.append('  ' * depth + '[' + key + '] ' + node['role'] + ' ' + node['name'] + ' ' + node.get('value', ''))
         for child in element:
+            if len(nodes) >= max_nodes or depth >= max_depth or time.monotonic() >= deadline:
+                truncated = True
+                break
             if child:
                 visit(child, depth + 1, key)
     visit(app_window(t), 0)
-    return dict(nodes=nodes, text='\n'.join(lines), truncated=time.monotonic() >= deadline or len(nodes) >= options.get('maxNodes', 1000))
+    return dict(nodes=nodes, text='\n'.join(lines), truncated=truncated)
 
 
 def element(t, key):

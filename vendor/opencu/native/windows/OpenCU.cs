@@ -234,8 +234,9 @@ namespace OpenCU {
       if (type == "hit_test") { string id = S(target, "id") + ":" + Interlocked.Increment(ref nextElement); elements[id] = element; return D("element", D("elementId", id, "name", element.Current.Name, "role", element.Current.ControlType.ProgrammaticName)); }
       object pattern;
       if (type == "scroll") {
-        var node = element;
+        var node = element; int ancestors = 0;
         while (!node.TryGetCurrentPattern(ScrollPattern.Pattern, out pattern)) {
+          if (++ancestors > 256) throw new Exception("TARGET_IDENTITY_CHANGED: scroll ancestor chain did not reach the selected window");
           if (Automation.Compare(node, root)) throw new Exception("FOREGROUND_REQUIRED: element has no UI Automation scroll pattern");
           node = TreeWalker.ControlViewWalker.GetParent(node); if (node == null) throw new Exception("STALE_ELEMENT: scroll ancestor disappeared");
         }
