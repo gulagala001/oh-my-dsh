@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/gulagala001/opencu/releases/tag/v2.0.6-dsh.0.2.1-rc.2"><img alt="OpenCU 2.0.6" src="https://img.shields.io/badge/release-OpenCU%202.0.6-0969da?style=flat-square"></a>
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.0.6-dsh.0.2.1-rc.2"><img alt="本版插件包下载次数，非用户数" src="https://img.shields.io/github/downloads/gulagala001/opencu/v2.0.6-dsh.0.2.1-rc.2/opencu-2.0.6-dsh.0.2.1-rc.2.tgz?style=flat-square&amp;label=package%20downloads&amp;displayAssetName=false&amp;color=0969da"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.0.6-dsh.0.2.1-rc.2"><img alt="本版插件包下载次数" src="https://img.shields.io/github/downloads/gulagala001/opencu/v2.0.6-dsh.0.2.1-rc.2/opencu-2.0.6-dsh.0.2.1-rc.2.tgz?style=flat-square&amp;label=package%20downloads&amp;displayAssetName=false&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>
 </p>
@@ -16,10 +16,6 @@
 <p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="DEVELOPMENT.md">完整文档</a> · <a href="https://github.com/gulagala001/opencu/issues">反馈</a></p>
 
 <p align="center"><a href="docs/images/browser-annotations.jpg"><img src="docs/images/browser-annotations.jpg" alt="浏览器现场与批注 / Browser view and annotations" width="880"></a></p>
-
-*隔离 DSH 中的真实浏览器与合成设计评审内容；完整内嵌界面需要宿主适配。*
-
-下载徽章只统计所链接发行版中的插件压缩包，不代表安装人数或活跃用户数。
 
 <a id="install"></a>
 <a name="readme-install"></a>

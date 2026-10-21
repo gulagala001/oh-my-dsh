@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8"><img alt="OMD 0.18.8" src="https://img.shields.io/badge/release-OMD%200.18.8-0969da?style=flat-square"></a>
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8"><img alt="This package downloads, not users" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/v0.2.1-rc.2.omd.0.18.8/trisoul_x-0.2.1-rc.2.omd.0.18.8.tgz?style=flat-square&amp;label=package%20downloads&amp;displayAssetName=false&amp;color=0969da"></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8"><img alt="Package downloads" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/v0.2.1-rc.2.omd.0.18.8/trisoul_x-0.2.1-rc.2.omd.0.18.8.tgz?style=flat-square&amp;label=package%20downloads&amp;displayAssetName=false&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
 </p>
@@ -16,10 +16,6 @@
 <p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="docs/README_EN.md">Docs</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">Report an issue</a></p>
 
 <p align="center"><a href="docs/images/release/context.jpg"><img src="docs/images/release/context.jpg" alt="上下文占用、构成与整理入口 / Context usage and organization" width="880"></a></p>
-
-*Real interface from an earlier release; displayed figures are not performance benchmarks.*
-
-The download badge counts only the linked release’s plugin archive; it is not a count of users or installations.
 
 <a id="quickstart"></a>
 <a id="desktop"></a>
@@ -71,8 +67,6 @@ Read this project’s README and explain its purpose and startup steps. Use only
 Native, Codex Desktop, iOS Liquid Glass, Claude CLI and Google Material appearances offer different layouts and materials, alongside 29 palettes, custom backgrounds, fonts and region colors. Current source also includes the Glyph character appearance; fixed packages provide the features listed in their Release.
 
 ![Appearance examples](docs/images/release/themes.jpg)
-
-*Screenshots from an earlier release. Themes do not include the named brands’ models, accounts or services.*
 
 ### Keep context and evidence available
 

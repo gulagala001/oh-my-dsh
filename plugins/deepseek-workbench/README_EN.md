@@ -6,8 +6,6 @@ Use DeepSeek web chat, temporary sidebar chat and the API Platform inside **Deep
 
 ![DeepSeek Workbench](docs/images/temporary-chat.png)
 
-Temporary sidebar example with synthetic conversation content.
-
 ## Features
 
 - **Web chat:** Open DeepSeek from the sidebar into the main content area, browse history, send messages, toggle DeepThink and Search, and upload attachments.

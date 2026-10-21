@@ -6,8 +6,6 @@ Rewind conversations and workspace files in [DeepSeek Harness](https://github.co
 
 ![Native rewind list above the composer](docs/images/rewind.jpg)
 
-Shown with synthetic demo messages.
-
 ## Install
 
 Requires **DSH 0.2.1-rc.2** and **Node.js 22.19+**.

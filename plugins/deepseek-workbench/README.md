@@ -6,8 +6,6 @@
 
 ![DeepSeek Workbench](docs/images/temporary-chat.png)
 
-临时侧栏界面示例（合成对话内容）。
-
 ## 功能
 
 - **网页聊天**：从左侧栏打开 DeepSeek，在主内容区查看历史、发送消息、切换深度思考与联网搜索、上传附件。

@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8"><img alt="OMD 0.18.8" src="https://img.shields.io/badge/release-OMD%200.18.8-0969da?style=flat-square"></a>
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8"><img alt="本版插件包下载次数，非用户数" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/v0.2.1-rc.2.omd.0.18.8/trisoul_x-0.2.1-rc.2.omd.0.18.8.tgz?style=flat-square&amp;label=package%20downloads&amp;displayAssetName=false&amp;color=0969da"></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8"><img alt="本版插件包下载次数" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/v0.2.1-rc.2.omd.0.18.8/trisoul_x-0.2.1-rc.2.omd.0.18.8.tgz?style=flat-square&amp;label=package%20downloads&amp;displayAssetName=false&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
 </p>
@@ -16,10 +16,6 @@
 <p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="docs/README.md">完整文档</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈</a></p>
 
 <p align="center"><a href="docs/images/release/context.jpg"><img src="docs/images/release/context.jpg" alt="上下文占用、构成与整理入口 / Context usage and organization" width="880"></a></p>
-
-*此前发行的真实界面截图；图中数值不是性能基准。*
-
-下载徽章只统计所链接发行版中的插件压缩包，不代表安装人数或活跃用户数。
 
 <a id="quickstart"></a>
 <a id="desktop"></a>
@@ -71,8 +67,6 @@ https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.
 原生、Codex Desktop、iOS Liquid Glass、Claude CLI 与 Google Material 提供不同布局和材质，搭配 29 套配色、自定义背景、字体与分区颜色。当前源码还包含 Glyph 动态字符外观；固定发行包的功能以对应 Release 为准。
 
 ![外观示例](docs/images/release/themes.jpg)
-
-*此前发行中的外观截图；主题不附带对应品牌的模型、账号或服务。*
 
 ### 长任务保留背景，结果保留依据
 
