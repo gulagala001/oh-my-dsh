@@ -1,6 +1,6 @@
 // OMD console kit: one visual language for every console section and the
 // composer dock items. Colours come from DSH theme aliases only.
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Tag as NativeTag, StateDot, useAnchoredPosition, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives';
 import { createPoller } from '../polling.mjs';
@@ -126,12 +126,18 @@ export function Pager({ page, pages, total, onPage, label }) {
 
 /** Stacked bars with an optional cost line on an independent right axis. */
 export function BarChart({ series, keys, height = 120, format = String, secondary }) {
-  const [hover, setHover] = useState(null);
+  const [hover, setHover] = useState(null), [focus, setFocus] = useState(null);
+  const closeTimer = useRef(null), tooltipId = useId();
+  const keepOpen = () => clearTimeout(closeTimer.current);
+  const closeHover = () => { keepOpen(); closeTimer.current = setTimeout(() => setHover(null), 120); };
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
   const peak = Math.max(0, ...series.map(s => keys.reduce((n, k) => n + (s.parts[k.key] || 0), 0))), max = peak || 1;
   const costPeak = Math.max(0, ...series.map(s => Number.isFinite(s.cost) ? s.cost : 0)), costMax = costPeak || 1;
   if (!series.length) return <Empty icon="overview" title="暂无趋势数据"/>;
-  const active = hover == null ? null : series[hover];
-  const detail = s => `${s.label} · ${keys.map(k => `${k.name} ${format(s.parts[k.key] || 0)}`).join(' · ')}${secondary ? ` · 费用 ${secondary.format(s.cost)}` : ''}`;
+  const selected = hover ?? focus, active = selected && series[selected.index];
+  const usedKeys = s => keys.filter(k => s.parts[k.key] > 0);
+  const detail = s => [s.label, ...usedKeys(s).map(k => `${k.name} ${format(s.parts[k.key])}`),
+    !usedKeys(s).length && '暂无用量', secondary && `费用 ${secondary.format(s.cost)}`].filter(Boolean).join(' · ');
   let connected = false;
   const path = series.map((s, i) => {
     if (!Number.isFinite(s.cost)) { connected = false; return ''; }
@@ -141,14 +147,18 @@ export function BarChart({ series, keys, height = 120, format = String, secondar
   return <div className={cx('omc-chart', secondary && 'omc-chart-dual')}>
     <div className="omc-chart-legend">{keys.map(k => <span key={k.key}><i style={{ background: k.color }}/>{k.name}</span>)}
       {secondary && <span><i className="omc-line-key" style={{ background: secondary.color }}/>{secondary.name}</span>}
-      <em>{active ? detail(active) : `峰值 ${format(peak)}${secondary ? ` · 费用 ${secondary.format(costPeak)}` : ''}`}</em></div>
+      {/* Keep this summary stable so hovering never moves the bars out from under the pointer. */}
+      <em>{`峰值 ${format(peak)}${secondary ? ` · 费用 ${secondary.format(costPeak)}` : ''}`}</em></div>
     {secondary && <div className="omc-chart-units"><span>Tokens</span><span>{secondary.name}</span></div>}
     <div className={cx(secondary && 'omc-chart-plot')}>
       {secondary && <div className="omc-chart-y"><span>{format(peak)}</span><span>{format(peak / 2)}</span><span>0</span></div>}
       <div className="omc-chart-data">
-        <div className="omc-bars" style={{ height }} onMouseLeave={() => setHover(null)}>
-          {series.map((s, i) => <div key={s.label} className={cx('omc-bar', hover === i && 'omc-bar-on', !keys.some(k => s.parts[k.key] > 0) && 'omc-bar-empty')}
-            onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} tabIndex={0} title={detail(s)} aria-label={detail(s)}>
+        <div className="omc-bars" style={{ height }} onMouseLeave={closeHover}>
+          {series.map((s, i) => <div key={s.label} className={cx('omc-bar', active && selected.index === i && 'omc-bar-on', !usedKeys(s).length && 'omc-bar-empty')}
+            onMouseEnter={e => { keepOpen(); setHover({ index: i, anchor: e.currentTarget }); }}
+            onFocus={e => setFocus({ index: i, anchor: e.currentTarget })} onBlur={() => setFocus(null)}
+            onKeyDown={e => { if (e.key === 'Escape' && active) { e.preventDefault(); e.stopPropagation(); keepOpen(); setHover(null); setFocus(null); } }}
+            tabIndex={0} aria-label={detail(s)} aria-describedby={active && selected.index === i ? tooltipId : undefined}>
             <div className="omc-bar-stack">{keys.map(k => s.parts[k.key] > 0 && <i key={k.key} style={{ height: `${s.parts[k.key] / max * 100}%`, background: k.color }}/>)}</div>
           </div>)}
         </div>
@@ -160,7 +170,23 @@ export function BarChart({ series, keys, height = 120, format = String, secondar
       {secondary && <div className="omc-chart-y omc-chart-y-right"><span>{secondary.format(costPeak)}</span><span>{secondary.format(costPeak / 2)}</span><span>{secondary.format(0)}</span></div>}
     </div>
     <div className="omc-chart-axis"><span>{series[0].label}</span>{series.length > 2 && <span>{series[Math.floor(series.length / 2)].label}</span>}{series.length > 1 && <span>{series.at(-1).label}</span>}</div>
+    {active && <ChartTooltip key={selected.index} id={tooltipId} anchor={selected.anchor} onMouseEnter={keepOpen} onMouseLeave={closeHover}>
+      <strong>{active.label}</strong>
+      {usedKeys(active).length ? usedKeys(active).map(k => <div key={k.key} className="omc-chart-tooltip-row">
+        <span><i style={{ background: k.color }}/>{k.name}</span><b>{format(active.parts[k.key])}</b>
+      </div>) : <p className="omc-hint">暂无用量</p>}
+      {secondary && <div className="omc-chart-tooltip-row omc-chart-tooltip-cost"><span>{secondary.name}</span><b>{secondary.format(active.cost)}</b></div>}
+    </ChartTooltip>}
   </div>;
+}
+
+function ChartTooltip({ id, anchor, children, onMouseEnter, onMouseLeave }) {
+  const anchorRef = useRef(anchor), panelRef = useRef(null);
+  const position = useAnchoredPosition({ open: true, anchorRef, panelRef, side: 'top', gap: 8, margin: 12 });
+  return createPortal(<div id={id} ref={panelRef} className="omc-chart-tooltip omc-root" role="tooltip"
+    style={position ?? { visibility: 'hidden', left: 0, top: 0 }} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    {children}
+  </div>, document.body);
 }
 
 /** Horizontal distribution bars with values. rows: [{ key, label, value, text, color, onClick }]. */

@@ -136,6 +136,13 @@ html[data-omd-skin] .omc-icon-btn{ width: 28px; padding: 0; border-color: transp
 .omc-chart-legend i, .omc-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 .omc-chart-legend em { margin-left: auto; font-style: normal; color: var(--omc-text2); }
 .omc-chart-legend > span { min-width: 0; overflow-wrap: anywhere; }
+.omc-chart-tooltip { position: fixed; z-index: 1100; box-sizing: border-box; width: 340px; max-width: calc(100vw - 24px); max-height: min(320px, calc(100vh - 24px)); overflow: auto; overscroll-behavior: contain; padding: 12px; border: 1px solid var(--omc-line); border-radius: var(--omc-radius-sm); background: var(--omc-card); box-shadow: 0 6px 24px #0003; font-size: 12px; line-height: 1.5; }
+.omc-chart-tooltip > strong { display: block; margin-bottom: 8px; }
+.omc-chart-tooltip-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 4px; }
+.omc-chart-tooltip-row > span { min-width: 0; overflow-wrap: anywhere; color: var(--omc-text2); }
+.omc-chart-tooltip-row i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; }
+.omc-chart-tooltip-row b { flex: none; font-weight: 500; white-space: nowrap; }
+.omc-chart-tooltip-cost { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--omc-line-soft); }
 .omc-legend b { margin-left: 4px; color: var(--omc-text2); font-weight: 500; }
 .omc-bars { display: flex; align-items: flex-end; gap: 3px; margin-top: 10px; padding-bottom: 1px; border-bottom: 1px solid var(--omc-line); }
 .omc-bars { justify-content: center; }
