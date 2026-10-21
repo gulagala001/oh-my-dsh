@@ -16,7 +16,8 @@ function consumer(t, kind, prepareCall) {
   const hub = { live: new Map(), context: { releaseState() {} }, record(_session, _kind, record) { records.push(record); } };
   const service = kind === 'chat' ? new TemporaryChats(ctx) : createPromptOptimizer(ctx, hub);
   const id = kind === 'chat' ? service.open(session.id).id : null;
-  const run = signal => kind === 'chat' ? service.send(id, 'Original draft', event => emitted.push(event), signal)
+  let requestId = 0;
+  const run = signal => kind === 'chat' ? service.send(id, ++requestId, 'Original draft', event => emitted.push(event), signal)
     : service.optimize(session, { text: 'Original draft' }, signal);
   t.after(() => service.dispose());
   return { service, run, emitted, records, hub, id };
@@ -39,7 +40,7 @@ for (const kind of ['chat', 'optimizer']) {
     assert.ok(!f.emitted.some(event => event.type === 'text-delta' || event.type === 'done'));
     retire.resolve(); await rejected;
     assert.equal(retired, true);
-    if (kind === 'chat') assert.equal(f.service.get(f.id).messages.length, 0);
+    if (kind === 'chat') assert.equal(f.service.get(f.id).turns.length, 0);
     else { assert.equal(f.records[0].status, 'cancelled'); assert.equal(f.hub.live.size, 0); }
     await f.run(); assert.equal(calls, 2, 'The cancelled operation must release its slot exactly once');
   });
@@ -56,7 +57,7 @@ for (const kind of ['chat', 'optimizer']) {
     } }));
     for (const expected of [/未报告完成/, /max-tokens/, /工具调用/]) await assert.rejects(f.run(), expected);
     if (kind === 'chat') {
-      assert.equal(f.service.get(f.id).messages.length, 0);
+      assert.equal(f.service.get(f.id).turns.length, 0);
       assert.equal(f.emitted.some(event => event.type === 'done'), false);
     } else assert.ok(f.records.length === 3 && f.records.every(record => record.status === 'error'));
   });
@@ -97,7 +98,7 @@ for (const kind of ['chat', 'optimizer']) {
     const abort = new AbortController(), running = f.run(abort.signal);
     const rejected = assert.rejects(running, error => error.cleanup === true && error.errors.includes(failure));
     await entered.promise; abort.abort(Error('human stop')); release.resolve(); await rejected;
-    if (kind === 'chat') assert.equal(f.service.get(f.id).messages.length, 0);
+    if (kind === 'chat') assert.equal(f.service.get(f.id).turns.length, 0);
     else assert.equal(f.records[0].status, 'error');
   });
 }
