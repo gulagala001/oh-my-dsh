@@ -337,29 +337,40 @@ async function readHeader(path, compression, support) {
 }
 
 // Bump when migration rules change, so archives left unmigrated are re-examined.
-const MIGRATION_RULES = 1;
+const MIGRATION_RULES = 2;
 const canonicalLogVersion = (name, compression) => {
   const suffix = compression === 'zstd' ? '.zstd' : '';
   if (!name.endsWith(suffix)) return undefined;
   const match = /^session(?:\.v([1-9][0-9]*))?\.jsonl$/u.exec(name.slice(0, name.length - suffix.length));
   return match && (match[1] === undefined ? 0 : Number(match[1]));
 };
-// Filenames only: session directories whose newest generation predates V4, and
-// migration journals. Ordinary V4 archives need no header reads or host codecs.
+// One inventory owns generation selection for both the fast path and migration.
+// Ordinary V4 archives need no header reads or host codecs.
 async function legacyInventory(root, compression) {
-  const legacy = [], journals = [];
+  const archives = [], journals = [];
   async function walk(path, depth) {
     let entries; try { entries = await readdir(path, { withFileTypes: true }); } catch (e) { if (e.code === 'ENOENT') return; throw e; }
-    const versions = entries.filter(e => e.isFile()).map(e => canonicalLogVersion(e.name, compression)).filter(Number.isSafeInteger);
-    if (versions.length) {
-      if (Math.max(...versions) < 4) legacy.push(path);
-      if (entries.some(e => e.isFile() && e.name === 'omd-v4-migration.json')) journals.push(join(path, 'omd-v4-migration.json'));
+    const files = entries.filter(e => e.isFile()).map(e => ({ path: join(path, e.name), version: canonicalLogVersion(e.name, compression) }))
+      .filter(e => Number.isSafeInteger(e.version)).sort((a, b) => b.version - a.version);
+    const journal = entries.some(e => e.isFile() && e.name === 'omd-v4-migration.json');
+    if (journal) {
+      if (!files.length) throw Error('迁移记录缺少对应的会话日志，保留迁移现场：' + path);
+      journals.push(join(path, 'omd-v4-migration.json'));
+    }
+    if (files.length) {
+      archives.push({ ...files[0], dir: path });
       return;
     }
     if (depth > 0) for (const entry of entries) if (entry.isDirectory()) await walk(join(path, entry.name), depth - 1);
   }
   await walk(root, 2);
-  return { legacy: legacy.sort(), journals };
+  return { archives: archives.sort((a, b) => a.path.localeCompare(b.path)), journals };
+}
+
+const fileIdentity = async path => stat(path, { bigint: true }).then(signature, error => { if (error.code === 'ENOENT') return null; throw error; });
+const sidecarPaths = (dataDir, id) => [join(dataDir, 'context-v1/sessions', hash(id) + '.json'), join(dataDir, 'sessions', id + '.json')];
+async function ownershipFingerprint(dataDir, ids) {
+  return hash(await Promise.all(ids.map(async id => [id, await Promise.all(sidecarPaths(dataDir, id).map(fileIdentity))])));
 }
 
 export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
@@ -371,42 +382,45 @@ export async function migrateSessionStorage(ctx, dataDir, providedSupport) {
   const inventory = await legacyInventory(root, compression);
   // Unreadable journals take the strict full path below and fail there.
   const openJournal = (await Promise.all(inventory.journals.map(path => optionalJson(path).catch(() => null)))).some(journal => !journal?.complete);
+  if (!openJournal && !inventory.archives.some(item => item.version < 4)) return;
+  // A path is not evidence that its bytes were examined. Include children (the
+  // native migration resolves their relationships) and restored sidecar owners.
+  // Metadata only: never decode ordinary V4 logs merely to validate this cache.
+  const sources = hash(await Promise.all(inventory.archives.map(async item => [item.path, await fileIdentity(item.path)])));
   const settled = marker?.rules === MIGRATION_RULES && marker.root === root && marker.compression === compression
-    && Array.isArray(marker.legacy) && inventory.legacy.every(path => marker.legacy.includes(path));
-  if (!openJournal && (!inventory.legacy.length || settled)) return;
+    && marker.sources === sources && Array.isArray(marker.owners) && marker.owners.every(id => typeof id === 'string')
+    && marker.ownership === await ownershipFingerprint(dataDir, marker.owners);
+  if (!openJournal && settled) return;
   const support = providedSupport ?? await (await import('../lib/host/session-migration.mjs')).loadMigrationSupport(ctx);
-  await migrateArchives(ctx, dataDir, support, root, compression);
-  // Archives still below V4 were examined and intentionally left in place.
-  try { await mkdir(dataDir, { recursive: true }); await writeFile(markerPath, JSON.stringify({ rules: MIGRATION_RULES, root, compression, legacy: (await legacyInventory(root, compression)).legacy }) + '\n'); }
+  const ownership = await migrateArchives(ctx, dataDir, support, root, compression, inventory);
+  // Save the inputs actually examined, never a fresh post-run inventory that
+  // could incorrectly certify files changed concurrently with this migration.
+  try { await mkdir(dataDir, { recursive: true }); await writeFile(markerPath, JSON.stringify({ rules: MIGRATION_RULES, root, compression, sources, ...ownership }) + '\n'); }
   catch (error) { ctx.logger.warn?.('会话迁移检查记录未保存，下次启动将重新检查：%s', error.message); }
 }
 
 // Native publication is exclusive and retains predecessor generations. The
 // journal is durable before publication; a crash resumes sidecar writes once.
-async function migrateArchives(ctx, dataDir, support, root, compression) {
+async function migrateArchives(ctx, dataDir, support, root, compression, inventory) {
   const discovered = [];
-  async function directories(path, depth) {
-    let entries; try { entries = await readdir(path, { withFileTypes: true }); } catch (e) { if (e.code === 'ENOENT') return; throw e; }
-    const files = entries.filter(e => e.isFile()).map(e => ({ path: join(path, e.name), version: support.parseGenerationLogFilename(e.name, compression) })).filter(e => e.version !== undefined).sort((a, b) => b.version - a.version);
-    if (files.length) {
-      const selected = files[0];
-      // Journal errors and filesystem failures remain strict. Only damaged
-      // unjournaled archive bytes can be isolated without hiding a transaction.
-      const journal = await optionalJson(join(path, 'omd-v4-migration.json'));
-      let header, identity;
-      try {
-        header = await readHeader(selected.path, compression, support);
-        if (header.version !== selected.version) throw new SessionHeaderCorruptionError('会话头部版本与文件名不符：' + selected.path);
-        identity = await assertStorageIdentity(selected.path, root, header, selected.version, compression, support);
-      } catch (error) {
-        if (!(error instanceof SessionHeaderCorruptionError) || journal) throw error;
-        ctx.logger.warn?.('旧会话 %s 未迁移，原始日志保留：%s', basename(path), error.message);return;
-      }
-      discovered.push({ ...selected, dir: path, header, identity, journal }); return;
+  for (const selected of inventory.archives) {
+    const path = selected.dir;
+    // Journal errors and filesystem failures remain strict. Only damaged
+    // unjournaled archive bytes can be isolated without hiding a transaction.
+    const journal = await optionalJson(join(path, 'omd-v4-migration.json'));
+    let header, identity;
+    try {
+      header = await readHeader(selected.path, compression, support);
+      if (header.version !== selected.version) throw new SessionHeaderCorruptionError('会话头部版本与文件名不符：' + selected.path);
+      identity = await assertStorageIdentity(selected.path, root, header, selected.version, compression, support);
+    } catch (error) {
+      if (!(error instanceof SessionHeaderCorruptionError) || journal) throw error;
+      ctx.logger.warn?.('旧会话 %s 未迁移，原始日志保留：%s', basename(path), error.message);continue;
     }
-    if (depth > 0) for (const entry of entries) if (entry.isDirectory()) await directories(join(path, entry.name), depth - 1);
+    discovered.push({ ...selected, header, identity, journal });
   }
-  await directories(root, 2);
+  const owners = [...new Set(discovered.filter(item => item.version < 4).map(item => item.header.id))].sort();
+  const ownership = await ownershipFingerprint(dataDir, owners);
   const byId = new Map();
   for (const item of discovered) {
     const group = byId.get(item.header.id) || [];group.push(item);byId.set(item.header.id, group);
@@ -423,9 +437,8 @@ async function migrateArchives(ctx, dataDir, support, root, compression) {
     const journalPath = join(item.dir, 'omd-v4-migration.json');
     let journal = await optionalJson(journalPath);
     if (item.version >= 4 && (!journal || journal.complete)) continue;
-    const owned = isOmdPreset(item.header.agentPreset)
-      || await optionalJson(join(dataDir, 'context-v1/sessions', hash(item.header.id) + '.json'))
-      || await optionalJson(join(dataDir, 'sessions', item.header.id + '.json'));
+    const [contextPath, hubPath] = sidecarPaths(dataDir, item.header.id);
+    const owned = isOmdPreset(item.header.agentPreset) || await optionalJson(contextPath) || await optionalJson(hubPath);
     // Desktop and Web share the old archive. V0 predates OMD's preset names,
     // so limiting migration to the new presets leaves those sessions unreadable.
     if (!owned && !journal && ![0, 1, 2].includes(item.version)) continue;
@@ -495,9 +508,9 @@ async function migrateArchives(ctx, dataDir, support, root, compression) {
         updates = journal.updates;
       } else {
         updates = [];
-        for (const [path, context] of [[join(dataDir, 'context-v1/sessions', hash(item.header.id) + '.json'), true], [join(dataDir, 'sessions', item.header.id + '.json'), false]]) {
+        for (const [index, path] of sidecarPaths(dataDir, item.header.id).entries()) {
           const before = await optionalJson(path);
-          if (before) updates.push({ path, before, after: context ? migrateContextState(before, mapping, old.sourceEvents || old.events, prepared.artifact) : remapOwned(before, mapping, item.header.id, old.sourceEvents || old.events) });
+          if (before) updates.push({ path, before, after: index === 0 ? migrateContextState(before, mapping, old.sourceEvents || old.events, prepared.artifact) : remapOwned(before, mapping, item.header.id, old.sourceEvents || old.events) });
         }
         journal = { version: 1, artifactHash: artifactHash(prepared.artifact), id: item.header.id, source: item.path, target, mapping, updates, complete: false };
         await durableJson(journalPath, journal);
@@ -519,4 +532,5 @@ async function migrateArchives(ctx, dataDir, support, root, compression) {
       ctx.logger.warn?.('旧会话 %s 未迁移，原始日志保留：%s', item.header.id, error.message);
     } finally { await lease?.release(); }
   }
+  return { owners, ownership };
 }

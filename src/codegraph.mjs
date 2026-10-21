@@ -127,7 +127,6 @@ export class CodegraphRuntime {
     this.autoInstall = autoInstall;
     this.resolveCommand = resolveCommand;
     this.projects = new Map();
-    this.indexing = new Map();
     this.catalogRevision = 0;
     this.connections = new Map();
     this.processes = new Set();
@@ -143,37 +142,36 @@ export class CodegraphRuntime {
       const shim = join(dirname(require.resolve('@colbymchenry/codegraph/package.json')), 'npm-shim.js');
       const env = { ...codegraphEnvironment(), CODEGRAPH_INSTALL_DIR: this.cacheDir };
       delete env.CODEGRAPH_NO_DOWNLOAD;
-      await this.run(process.execPath, [shim, '--version'], { env, signal: catalog ? this.catalogController.signal : this.controller.signal });
+      // Installation is shared by project work and metadata probes, including
+      // disabled presets. Only disposal owns its cancellation.
+      await this.run(process.execPath, [shim, '--version'], { env, signal: this.catalogController.signal, catalog: true });
       return this.resolveCommand(this.cacheDir);
     })().finally(() => { this.preparing = null; });
   }
 
   async setEnabled(enabled) {
-    if (this.enabled === enabled) return;
-    if (!enabled) { this.enabled = false; await this.stop(); }
-    else { this.controller = new AbortController(); this.enabled = true; this.retryCatalog(); }
+    if (!enabled) { this.enabled = false; await this.stop(); return; }
+    await this.stopping;
+    if (this.disposed) throw new Error('CodeGraph 已停止。');
+    if (this.enabled) return;
+    this.controller = new AbortController(); this.enabled = true; this.retryCatalog();
   }
 
-  retryCatalog() { this.catalogPromise = undefined; this.catalogError = null; this.catalogRevision++; }
+  retryCatalog() { this.catalogRevision++; }
+
+  get catalogError() { return this.catalogJob?.revision === this.catalogRevision ? this.catalogJob.error?.message ?? null : null; }
 
   async ensureProject(cwd, { retry = false } = {}) {
     if (!this.enabled || this.disposed) throw new Error('CodeGraph 已关闭。');
+    const signal = this.controller.signal;
     const directory = await indexedRoot(await projectDirectory(cwd));
-    let state = this.projects.get(directory);
-    if (state?.pending) return state.pending;
-    if (state?.status === 'ready') return directory;
+    throwIfAborted(signal);
+    const state = this.projects.get(directory);
+    if (state?.pending) { await state.pending; return directory; }
+    if (state?.status === 'ready' && !retry) return directory;
     if (state?.status === 'error' && !retry) throw new Error(state.error);
-    state = { path: directory, status: 'preparing', error: null };
-    this.projects.set(directory, state);
-    state.pending = (async () => {
-      try {
-        await this.prepare();
-        await this.index({}, { cwd: directory });
-        state.status = 'ready'; return directory;
-      } catch (error) { const failure = codegraphFailure(error); state.status = 'error'; state.error = failure.message; throw failure; }
-      finally { state.pending = null; }
-    })();
-    return state.pending;
+    await this.indexProject(directory, signal);
+    return directory;
   }
 
   status() {
@@ -184,9 +182,10 @@ export class CodegraphRuntime {
   }
 
   async connect(directory, signal, { catalog = false } = {}) {
+    const owner = (catalog ? this.catalogController : this.controller).signal;
+    signal = signal ? AbortSignal.any([signal, owner]) : owner;
     throwIfAborted(signal);
-    throwIfAborted((catalog ? this.catalogController : this.controller).signal);
-    const launch = await this.prepare({ catalog });
+    const launch = await waitFor(this.prepare({ catalog }), signal);
     throwIfAborted(signal);
     const client = new Client({ name: 'oh-my-dsh', version: '1' });
     const transport = new StdioClientTransport({ ...launch,
@@ -242,12 +241,21 @@ export class CodegraphRuntime {
   }
 
   catalog() {
-    return this.catalogPromise ??= (async () => {
+    if (this.disposed) return Promise.reject(new Error('CodeGraph 已停止。'));
+    const previous = this.catalogJob;
+    if (previous?.revision === this.catalogRevision && !previous.error) return previous.promise;
+    const job = { revision: this.catalogRevision, error: null };
+    this.catalogJob = job;
+    // A retry invalidates the result, not ownership of a live process. The new
+    // probe follows its predecessor's cleanup; stale failures stay with that job.
+    job.promise = (async () => {
+      if (previous) await previous.promise.catch(() => {});
+      this.catalogController.signal.throwIfAborted();
       const directory = await mkdtemp(join(tmpdir(), 'oh-my-dsh-codegraph-'));
       let connection, failure;
       try {
         connection = await this.connect(directory, this.catalogController.signal, { catalog: true });
-        const { tools } = await connection.client.listTools();
+        const { tools } = await connection.client.listTools({}, { signal: this.catalogController.signal });
         return { tools, instructions: connection.client.getInstructions() || '' };
       } catch (error) {
         failure = connectionFailure(error, connection, 'catalog');
@@ -260,7 +268,8 @@ export class CodegraphRuntime {
           if (!failure) throw connectionFailure(error, connection, 'catalog-close');
         }
       }
-    })().catch(error => { this.catalogPromise = undefined; this.catalogError = error.message; throw error; });
+    })().catch(error => { job.error = codegraphFailure(error); throw job.error; });
+    return job.promise;
   }
 
   async call(name, args, { cwd, signal, sessionKey = 'metadata' }) {
@@ -312,28 +321,33 @@ export class CodegraphRuntime {
   }
 
   async index({ projectPath } = {}, { cwd, signal }) {
+    if (!this.enabled || this.disposed) throw new Error('CodeGraph 已关闭。');
     const combined = signal ? AbortSignal.any([signal, this.controller.signal]) : this.controller.signal;
     throwIfAborted(combined);
     const directory = await projectDirectory(cwd, projectPath);
-    if (this.indexing.has(directory)) return waitFor(this.indexing.get(directory), combined);
-    const pending = this.buildIndex(directory, combined);
-    this.indexing.set(directory, pending);
-    try {
-      const result = await pending;
-      const state = this.projects.get(directory);
-      if (state) { state.status = 'ready'; state.error = null; }
-      return result;
-    } catch (error) {
+    throwIfAborted(combined);
+    return this.indexProject(directory, combined);
+  }
+
+  indexProject(directory, signal) {
+    const current = this.projects.get(directory);
+    if (current?.pending) return waitFor(current.pending, signal);
+    const state = { path: directory, status: 'preparing', error: null };
+    this.projects.set(directory, state);
+    // The same record owns manual indexing, automatic preparation and status.
+    // Register before starting work so stop() can wait for the complete task.
+    state.pending = Promise.resolve().then(() => { throwIfAborted(signal); return this.buildIndex(directory, signal); }).then(result => {
+      throwIfAborted(signal);
+      state.status = 'ready'; return result;
+    }).catch(error => {
       const failure = codegraphFailure(error);
-      const state = this.projects.get(directory);
-      if (state) { state.status = 'error'; state.error = failure.message; }
-      throw failure;
-    }
-    finally { if (this.indexing.get(directory) === pending) this.indexing.delete(directory); }
+      state.status = 'error'; state.error = failure.message; throw failure;
+    }).finally(() => { state.pending = null; });
+    return state.pending;
   }
 
   async buildIndex(directory, combined) {
-    const launch = await this.prepare();
+    const launch = await waitFor(this.prepare(), combined);
     let initialized = false;
     try { initialized = (await stat(join(directory, '.codegraph', 'codegraph.db'))).isFile(); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -344,14 +358,14 @@ export class CodegraphRuntime {
     return this.run(launch.command, [...launch.args, ...args], { cwd: directory, signal: combined });
   }
 
-  run(command, args, { cwd, signal: combined, env = codegraphEnvironment() }) {
+  run(command, args, { cwd, signal: combined, env = codegraphEnvironment(), catalog = false }) {
     throwIfAborted(combined);
     return new Promise((resolveResult, reject) => {
       let output = '', killTimer;
       const child = spawn(command, args, {
         cwd, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
       });
-      const job = { child, done: null };
+      const job = { child, done: null, catalog };
       this.processes.add(job);
       const append = chunk => { output = (output + chunk).slice(-64_000); };
       child.stdout.on('data', append); child.stderr.on('data', append);
@@ -373,18 +387,24 @@ export class CodegraphRuntime {
     });
   }
 
-  async dispose() {
+  dispose() { return this.disposing ??= this.shutdown(); }
+
+  async shutdown() {
     this.disposed = true;
     this.catalogController.abort(new Error('CodeGraph 已停止。'));
-    await this.stop();
-    await Promise.allSettled([...this.processes].filter(p => p.catalog).map(p => this.close(p)));
+    await Promise.allSettled([this.stop(), this.preparing, this.catalogJob?.promise,
+      ...[...this.processes].filter(p => p.catalog).map(p => p.child ? p.done : this.close(p))]);
   }
 
-  async stop() {
+  stop() { return this.stopping ??= this.stopWork().finally(() => { this.stopping = null; }); }
+
+  async stopWork() {
     this.controller.abort(new Error('CodeGraph 已停止。'));
+    const pending = [...this.projects.values()].map(state => state.pending);
+    for (const entry of this.connections.values()) pending.push(entry.ready);
     for (const entry of this.connections.values()) clearTimeout(entry.timer);
     this.connections.clear();
     this.projects.clear();
-    await Promise.allSettled([...this.processes].filter(p => !p.catalog).map(process => process.child ? process.done : this.close(process)));
+    await Promise.allSettled([...pending, ...[...this.processes].filter(p => !p.catalog).map(process => process.child ? process.done : this.close(process))]);
   }
 }

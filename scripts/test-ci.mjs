@@ -9,6 +9,7 @@ const core = [
   'model-reply', 'temporary-chat',
   'context-controls', 'settings-state',
   'task-ledger-authority', 'plugin-operation-state',
+  'session-migration-cache', 'host-component-reload', 'codegraph-lifecycle',
 ].map(name => `test/${name}.test.mjs`);
 core.push('test/opencu-browser-generation.test.mjs');
 core.push('test/opencu-app-approval-session-cancel.test.mjs');

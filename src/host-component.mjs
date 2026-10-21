@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { symbols } from '@deepseek-ai/cordis';
 import pluginPackage from '../package.json' with { type: 'json' };
 
 async function privateComponentPath(candidate, specifier) {
@@ -59,7 +60,10 @@ async function requireHostEntry(ctx, name) {
 // through the host Loader's resolver. Node's ordinary require.resolve can
 // select a stale hoisted package after an in-place host upgrade.
 export async function loadHostModule(ctx, name, createModule, dependencies) {
-  const originalEntry = await requireHostEntry(ctx, name);
+  return createHostModule(await requireHostEntry(ctx, name), createModule, dependencies);
+}
+
+async function createHostModule(originalEntry, createModule, dependencies) {
   const tree = originalEntry.parent.tree;
   const modules = new Map(await Promise.all(dependencies.map(async specifier => [specifier,
     specifier.startsWith('node:') ? await import(specifier) : await tree.import(specifier)])));
@@ -73,8 +77,8 @@ export async function loadHostModule(ctx, name, createModule, dependencies) {
 }
 
 export async function mountHostComponent(ctx, name, createModule, dependencies, config) {
-  const component = await loadHostModule(ctx, name, createModule, dependencies);
   const originalEntry = await requireHostEntry(ctx, name);
+  const component = await createHostModule(originalEntry, createModule, dependencies);
   const tree = originalEntry.parent.tree;
   const inherited = ['jobs-local', 'bash-sandbox', 'pwsh-sandbox'].includes(name);
   let effective = config;
@@ -90,12 +94,27 @@ export async function mountHostComponent(ctx, name, createModule, dependencies, 
   const fiber = ctx.plugin(component.default ?? component, effective);
   await fiber;
   if (inheritedConfig) {
-    ctx.on('app-boot/config-reload', async () => {
-      if (ctx.fiber?.uid === null) return;
+    let reloading = Promise.resolve();
+    ctx.on('app-boot/config-reload', () => reloading = reloading.catch(() => {}).then(async () => {
+      if (ctx.fiber?.uid === null || ![1, 2].includes(ctx.fiber?.state)) return;
       const next = inheritedConfig();
       if (!next || isDeepStrictEqual(next, effective)) return;
-      await fiber.update(next, true);
-      effective = next;
-    });
+      // Cordis update() returns void. The native lifecycle is the acknowledgement,
+      // so a failed activation must not become our remembered applied config.
+      // Observe the existing waterfall, including asynchronous update hooks.
+      // Its rejected restart would otherwise be detached by update() itself.
+      let updating;
+      const release = ctx.on('internal/update', function (_config, _noSave, proceed) {
+        if ((this?.[symbols.original] ?? this) !== (fiber[symbols.original] ?? fiber)) return proceed();
+        updating = Promise.resolve().then(proceed);
+        return updating.catch(() => {}); // The caller below owns the failure.
+      }, { global: true, prepend: true });
+      try {
+        fiber.update(next, true);
+        await updating;
+        await fiber.await();
+        effective = next;
+      } finally { release(); }
+    }));
   }
 }
