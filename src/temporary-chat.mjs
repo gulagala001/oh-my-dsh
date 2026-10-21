@@ -1,17 +1,19 @@
 import { randomUUID } from 'node:crypto';
-import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm';
+import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { readModelReply } from './model-reply.mjs';
 import { readJsonBody, sendJson } from './http.mjs';
 
 /** Pure chat uses the host's model driver without creating a persistent Agent Session. */
 export class TemporaryChats {
   constructor(ctx, { idleMs = 180000 } = {}) {
-    this.ctx = ctx; this.chats = new Map(); this.idleMs = idleMs;
+    this.ctx = ctx; this.chats = new Map(); this.idleMs = idleMs; this.closed = false;
     this.timer = setInterval(() => {
-      for (const chat of this.chats.values()) if (Date.now() - chat.touched > idleMs) void this.close(chat.id);
+      for (const chat of this.chats.values()) if (Date.now() - chat.touched > idleMs) void this.close(chat.id).catch(error => this.ctx.logger?.warn?.(error.message));
     }, Math.min(idleMs, 30000));
     this.timer.unref?.();
   }
   open(parentId) {
+    if (this.closed) throw Error('临时聊天已停止');
     const parent = this.ctx.sessions.get(parentId);
     const selected = parent && this.ctx.sessionProjections.stateOf(parent, 'modelSelection');
     const selection = selected?.pending ?? parent?.requestHeader()?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
@@ -34,38 +36,21 @@ export class TemporaryChats {
     if (typeof text !== 'string' || !text.trim()) throw Error('请输入消息。');
     const abort = new AbortController();
     const combined = AbortSignal.any([abort.signal, ...(signal ? [signal] : [])]);
-    const assembler = new BlockAssembler();
     const user = createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'plugin:temporary-sidebar' } });
     const operation = { abort, done: null }; chat.active = operation;
     operation.done = (async () => {
-      let iterator, cancel;
-      const cancelled = new Promise((_, reject) => {
-        cancel = () => reject(combined.reason || Error('回复已停止'));
-        combined.addEventListener('abort', cancel, { once: true });
-        if (combined.aborted) cancel();
-      });
-      cancelled.catch(() => {});
       try {
-        const prepared = await Promise.race([this.ctx.llm.prepareCall(chat.route, combined), cancelled]);
-        combined.throwIfAborted();
-        emit({ type: 'start' });
-        iterator = prepared.stream({ ...prepared.config, messages: [...chat.messages, user], tools: [],
-          system: '你正在与用户进行独立的临时聊天。根据用户的问题直接作答。', signal: combined })[Symbol.asyncIterator]();
-        for (;;) {
-          const item = await Promise.race([iterator.next(), cancelled]);
-          if (item.done) break;
-          assembler.push(item.value);
-          if (item.value.type === 'text-delta' || item.value.type === 'reasoning-delta') emit(item.value);
-        }
-        combined.throwIfAborted();
-        if (['error', 'aborted'].includes(assembler.finish.kind)) throw Error(assembler.finish.failure?.message || '回复未完成');
+        const { assembler } = await readModelReply(() => this.ctx.llm.prepareCall(chat.route, combined), {
+          messages: [...chat.messages, user], tools: [], system: '你正在与用户进行独立的临时聊天。根据用户的问题直接作答。',
+        }, combined, { start: () => emit({ type: 'start' }), chunk: value => {
+          if (value.type === 'text-delta' || value.type === 'reasoning-delta') emit(value);
+        } });
+        if (!assembler.blocks().some(block => block.type === 'text' && block.text.trim())) throw Error('模型没有返回聊天正文，请重试');
         const assistant = assembler.message({ provider: chat.route.provider, model: chat.route.model,
           ...(assembler.replayState ? { replayState: assembler.replayState } : {}) });
         if (!chat.closed) chat.messages.push(user, assistant);
         emit({ type: 'done' });
       } finally {
-        combined.removeEventListener('abort', cancel);
-        if (combined.aborted) { try { void iterator?.return?.()?.catch?.(() => {}); } catch {} }
         if (chat.active === operation) chat.active = null;
       }
     })();
@@ -76,10 +61,15 @@ export class TemporaryChats {
     const chat = this.chats.get(id);
     if (!chat) return;
     chat.closed = true; chat.active?.abort.abort(Error('临时聊天已关闭'));
-    await chat.active?.done?.catch(() => {});
-    chat.messages.length = 0; this.chats.delete(id);
+    try { await chat.active?.done?.catch(error => { if (error?.cleanup) throw error; }); }
+    finally { chat.messages.length = 0; this.chats.delete(id); }
   }
-  async dispose() { clearInterval(this.timer); await Promise.all([...this.chats.keys()].map(id => this.close(id))); }
+  async dispose() {
+    this.closed = true; clearInterval(this.timer);
+    const results = await Promise.allSettled([...this.chats.keys()].map(id => this.close(id)));
+    const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+    if (errors.length) throw new AggregateError(errors, '临时聊天退出清理失败');
+  }
 }
 
 export async function handleTemporaryChatApi({ service, req, res, url }) {

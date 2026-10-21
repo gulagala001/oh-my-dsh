@@ -1,5 +1,5 @@
 import { catalogPage } from './catalog.mjs';
-import { sendAttachment } from '../http.mjs';
+import { sendAttachment, withRequestSignal } from '../http.mjs';
 import { compactionMessage } from './commands.mjs';
 import { Config, contextConfig } from '../config.mjs';
 import { normalizePersonalityPatch } from '../cc-adaptation/personality.mjs';
@@ -11,24 +11,35 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
   const path = url.pathname.replace('/trisoul-x/api', '');
   const needSession = () => { if (!session) throw new Error('请选择一个可读取的会话'); return session; };
   if (path.startsWith('/context/evidence')) {
-    const service = hub.optimization, target = needSession();
-    await service.settled();
-    const ancestors = await service.ancestors(target);
-    if (path === '/context/evidence/export' && req.method === 'GET') {
-      send(res, 200, await service.evidence.export(target, ancestors, undefined, url.searchParams.get('rawRef'))); return true;
-    }
-    if (path === '/context/evidence/import' && req.method === 'POST') {
-      send(res, 200, await service.evidence.import(await readBody(req, { maxBytes: 128 * 1024 * 1024 }), target, ancestors)); return true;
-    }
-    if (req.method !== 'GET') { send(res, 405, { error: '仅支持 GET' }); return true; }
-    const rawRef = url.searchParams.get('rawRef');
-    if (rawRef) {
-      send(res, 200, await service.evidence.read(target, { rawRef, mode: url.searchParams.get('mode') || 'head',
-        cursor: url.searchParams.get('cursor') || undefined, query: url.searchParams.get('query') || undefined,
-        startLine: url.searchParams.has('startLine') ? Number(url.searchParams.get('startLine')) : undefined }, ancestors));
-    } else if (url.searchParams.has('query')) send(res, 200, await service.evidence.search(target, { query: url.searchParams.get('query'), cursor: url.searchParams.get('cursor') || undefined }, ancestors));
-    else send(res, 200, { records: (await service.evidence.list(target, ancestors)).map(({ ref, tool, sourceHash, characters, complete, createdAt, rule, callId }) => ({ ref, tool, sourceHash, characters, complete, createdAt, rule, callId })) });
-    return true;
+    const service = hub.optimization;
+    // Evidence only needs the native immutable log, including its inherited
+    // cut. Reading a cold archive must not create an Agent or a second Session.
+    const target = session ?? (inspection?.meta?.id === id && Array.isArray(inspection.events) ? {
+      id, header: inspection.meta, inheritedEventCount: inspection.inheritedEventCount,
+      snapshotEvents: () => inspection.events,
+    } : null);
+    if (!target) needSession();
+    const execute = async signal => {
+      await service.settled();
+      signal?.throwIfAborted();
+      const ancestors = await service.ancestors(target, signal);
+      if (path === '/context/evidence/export' && req.method === 'GET') {
+        send(res, 200, await service.evidence.export(target, ancestors, signal, url.searchParams.get('rawRef'))); return true;
+      }
+      if (path === '/context/evidence/import' && req.method === 'POST') {
+        send(res, 200, await service.evidence.import(await readBody(req, { maxBytes: 128 * 1024 * 1024 }), target, ancestors)); return true;
+      }
+      if (req.method !== 'GET') { send(res, 405, { error: '仅支持 GET' }); return true; }
+      const rawRef = url.searchParams.get('rawRef');
+      if (rawRef) {
+        send(res, 200, await service.evidence.read(target, { rawRef, mode: url.searchParams.get('mode') || 'head',
+          cursor: url.searchParams.get('cursor') || undefined, query: url.searchParams.get('query') || undefined,
+          startLine: url.searchParams.has('startLine') ? Number(url.searchParams.get('startLine')) : undefined }, ancestors, signal));
+      } else if (url.searchParams.has('query')) send(res, 200, await service.evidence.search(target, { query: url.searchParams.get('query'), cursor: url.searchParams.get('cursor') || undefined }, ancestors, signal));
+      else send(res, 200, { records: (await service.evidence.list(target, ancestors, signal)).map(({ ref, tool, sourceHash, characters, complete, createdAt, rule, callId }) => ({ ref, tool, sourceHash, characters, complete, createdAt, rule, callId })) });
+      return true;
+    };
+    return req.method === 'GET' ? withRequestSignal(req, res, execute) : execute();
   }
   if (path === '/context/optimization' && req.method === 'GET') { send(res, 200, hub.optimization.snapshot(needSession())); return true; }
   if (path === '/personality') {

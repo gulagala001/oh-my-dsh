@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { runInNewContext } from 'node:vm';
 import { decorateSlotComponent } from '../src/client/slot-decoration.mjs';
+import * as ultraSubmodePreference from '../src/client/ultra-submode-preference.mjs';
 
 const require = createRequire(import.meta.url), React = require('react');
 const { transformSync } = require('esbuild');
@@ -18,11 +19,13 @@ function load(pane) {
     if (name === 'react') return hooks;
     if (name === 'react-dom') return { createPortal: node => node };
     if (name === './native-controls.jsx') return { Button: 'button', Input: 'input' };
+    if (name === '@deepseek-ai/dsh-client-ui-primitives') return { Menu: 'menu' };
     if (name === './native-icons.jsx') return { Icon: () => null };
     if (name.endsWith('.css')) return { default: '' };
     if (name.includes('model-efforts')) return { effortChoices: () => [] };
     if (name.includes('main-conversation')) return { useMainConversation: () => true };
     if (name.includes('slot-decoration')) return { decorateSlotComponent };
+    if (name === './ultra-submode-preference.mjs') return ultraSubmodePreference;
     throw Error(name);
   }, document: { body: {} } });
   return module.exports;

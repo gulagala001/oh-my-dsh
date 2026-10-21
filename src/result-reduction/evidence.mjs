@@ -7,6 +7,7 @@ export const hash = value => createHash('sha256').update(typeof value === 'strin
 export const rawPattern = /\bomd-raw:([a-f0-9-]{36})\b/g;
 const refPattern = /^omd-raw:([a-f0-9-]{36})$/;
 const MAX_OBJECT_BYTES = 32 * 1024 * 1024;
+const MAX_META_CACHE = 256;
 const message = event => event.type === 'tool/result' ? event.data?.message : event.type === 'tool/ptc-dispatch'
   ? { id: 'ptc:' + event.data?.subCallId, toolCallId: event.data?.subCallId, content: event.data?.content, isError: event.data?.isError } : null;
 const validId = id => typeof id === 'string' && id.length > 0 && id.length <= 512;
@@ -32,6 +33,34 @@ function integer(value, fallback, min, max, name) {
   value ??= fallback;
   if (!Number.isSafeInteger(value) || value < min || value > max) throw Error(`${name} 必须为 ${min}–${max} 的整数`);
   return value;
+}
+
+// Derive provenance once for this read from native events. Keep the snapshot
+// local: a later read must see imports, new results and the current fork cut.
+function accessIndex(session) {
+  const events = session.snapshotEvents(), dispatched = new Map(), results = new Map();
+  for (const [position, event] of events.entries()) {
+    const data = event.data;
+    if (event.type === 'tool/call') dispatched.set(data?.callId, { name: data?.name, root: data?.callId, arguments: data?.arguments ?? {} });
+    if (event.type === 'tool/ptc-dispatch') {
+      const root = dispatched.get(data?.rootCallId), parent = dispatched.get(data?.parentCallId);
+      if (root?.name !== 'run_code' || parent?.root !== data.rootCallId) continue;
+      dispatched.set(data.subCallId, { name: data.name, root: data.rootCallId, arguments: data.arguments });
+    }
+    const m = message(event), call = m && dispatched.get(m.toolCallId);
+    if (!call || m.isError) continue;
+    if (!results.has(m.toolCallId)) results.set(m.toolCallId, []);
+    results.get(m.toolCallId).push({ event, position, message: m, call });
+  }
+  return { eventCount: events.length, inheritedEventCount: session.inheritedEventCount, results };
+}
+
+function argumentsHash(call) {
+  if (!Object.hasOwn(call, 'hash')) {
+    try { call.hash = hash(typeof call.arguments === 'string' ? JSON.parse(call.arguments) : call.arguments); }
+    catch { call.hash = null; }
+  }
+  return call.hash;
 }
 
 /** Owned files, not an OPS cache. Committed objects are never expired by a TTL. */
@@ -75,16 +104,16 @@ export class EvidenceStore {
   }
   remember(record) {
     this.cache.delete(record.ref); this.cache.set(record.ref, record);
-    if (this.cache.size > 256) this.cache.delete(this.cache.keys().next().value);
+    if (this.cache.size > MAX_META_CACHE) this.cache.delete(this.cache.keys().next().value);
   }
-  async meta(ref) {
+  async meta(ref, retain = true) {
     const id = this.id(ref);
     if (this.cache.has(ref)) return this.cache.get(ref);
     let record;
     try { record = JSON.parse(await readFile(join(this.dir, id + '.json'), 'utf8')); }
     catch (error) { if (error.code === 'ENOENT') throw Error('原文引用不存在或已被删除'); throw error; }
     if (record.version !== 1 || record.ref !== ref || !/^[a-f0-9]{64}$/.test(record.sourceHash) || !validId(record.sessionId)) throw Error('原文记录校验失败');
-    this.remember(record); return record;
+    if (retain) this.remember(record); return record;
   }
   async commit(ref, event) {
     const previous = await this.meta(ref), m = message(event);
@@ -104,74 +133,70 @@ export class EvidenceStore {
     await unlink(join(this.dir, 'owners', hash(record.sessionId), this.id(ref))).catch(() => {});
     // Content objects may be shared. Never delete one without a full reference scan.
   }
-  access(record, session, ancestors = []) {
+  access(record, session, ancestors = [], index) {
     if (!record.committed || !validId(record.callId) || !validId(record.tool) || !validId(record.messageId)
       || ![record.sourceHash, record.contentHash, record.argumentsHash].every(v => typeof v === 'string' && /^[a-f0-9]{64}$/.test(v))) return false;
     const owners = [record.sessionId, ...(record.importedSessions ?? [])], own = owners.includes(session.id);
     if (!own && !ancestors.some(id => owners.includes(id))) return false;
-    const events = session.snapshotEvents();
-    const cut = own ? events.length : session.inheritedEventCount;
-    if (!Number.isSafeInteger(cut)) return false;
-    let call = false;
-    const dispatched = new Map();
-    for (const event of events.slice(0, cut)) {
-      if (event.type === 'tool/call') dispatched.set(event.data?.callId, { name: event.data?.name, root: event.data?.callId });
-      if (event.type === 'tool/ptc-dispatch') {
-        const data = event.data, root = dispatched.get(data?.rootCallId), parent = dispatched.get(data?.parentCallId);
-        if (root?.name !== 'run_code' || parent?.root !== data.rootCallId) continue;
-        dispatched.set(data.subCallId, { name: data.name, root: data.rootCallId });
-        if (data.subCallId === record.callId && data.name === record.tool) {
-          try { call = hash(typeof data.arguments === 'string' ? JSON.parse(data.arguments) : data.arguments) === record.argumentsHash; } catch { call = false; }
-        }
-      }
-      if (event.type === 'tool/call' && event.data?.callId === record.callId && event.data.name === record.tool) {
-        try { call = hash(typeof event.data.arguments === 'string' ? JSON.parse(event.data.arguments) : event.data.arguments ?? {}) === record.argumentsHash; }
-        catch { call = false; }
-      }
-      const m = message(event);
-      if (call && m?.toolCallId === record.callId && m.id === record.messageId && !m.isError && hash(m.content) === record.contentHash) {
-        const body = m.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
-        if (hash(body) === record.sourceHash || body.includes(record.ref) && body.includes(record.sourceHash)) return true;
+    index ??= accessIndex(session);
+    const cut = own ? index.eventCount : index.inheritedEventCount;
+    if (!Number.isSafeInteger(cut) || cut < 0 || cut > index.eventCount) return false;
+    for (const item of index.results.get(record.callId) || []) {
+      const m = item.message;
+      if (item.position >= cut || item.call.name !== record.tool || m.id !== record.messageId || argumentsHash(item.call) !== record.argumentsHash) continue;
+      if ((item.contentHash ??= hash(m.content)) === record.contentHash) {
+        const body = item.text ??= m.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+        if ((item.sourceHash ??= hash(body)) === record.sourceHash || body.includes(record.ref) && body.includes(record.sourceHash)) return true;
       }
     }
     return false;
   }
-  async text(record) {
-    const text = await readFile(join(this.dir, 'objects', record.sourceHash + '.txt'), 'utf8');
+  async text(record, signal) {
+    signal?.throwIfAborted();
+    const text = await readFile(join(this.dir, 'objects', record.sourceHash + '.txt'), { encoding: 'utf8', signal });
+    signal?.throwIfAborted();
     if (hash(text) !== record.sourceHash) throw Error('原文内容校验失败，不使用当前同名文件代替');
     return text;
   }
-  async list(session, ancestors = [], signal) {
+  async list(session, ancestors = [], signal, index) {
+    signal?.throwIfAborted();
     await this.ready;
     const result = [];
     const names = new Set();
     for (const id of [session.id, ...ancestors]) {
+      signal?.throwIfAborted();
       let entries;
       try { entries = await readdir(join(this.dir, 'owners', hash(id))); } catch (e) { if (e.code === 'ENOENT') continue; throw e; }
       for (const entry of entries) if (/^[a-f0-9-]{36}$/.test(entry)) names.add(entry + '.json');
     }
+    signal?.throwIfAborted();
+    index ??= accessIndex(session);
     for (const name of names) {
       signal?.throwIfAborted();
       if (!/^[a-f0-9-]{36}\.json$/.test(name)) continue;
-      let record = await this.meta('omd-raw:' + name.slice(0, -5));
+      // A sweep larger than the cache must not evict every useful entry before
+      // reaching it. Ordinary reads/writes still admit their current record.
+      let record = await this.meta('omd-raw:' + name.slice(0, -5), this.cache.size < MAX_META_CACHE);
       // A process can end between durable tool/result and the observation hook.
       // Recover only our pre-published hash plus a genuine authorized event pair.
-      if (!record.committed && record.preparedHash) for (const event of session.snapshotEvents()) {
-        const m = message(event);
-        if (!m || m.toolCallId !== record.callId || m.isError || hash(m.content) !== record.preparedHash) continue;
-        const candidate = { ...record, committed: true, eventSeq: event.seq, messageId: m.id, contentHash: hash(m.content) };
-        if (this.access(candidate, session, ancestors)) { await this.commit(record.ref, event); record = await this.meta(record.ref); break; }
+      if (!record.committed && record.preparedHash) for (const item of index.results.get(record.callId) || []) {
+        const { event, message: m } = item;
+        if ((item.contentHash ??= hash(m.content)) !== record.preparedHash) continue;
+        const candidate = { ...record, committed: true, eventSeq: event.seq, messageId: m.id, contentHash: item.contentHash };
+        if (this.access(candidate, session, ancestors, index)) { await this.commit(record.ref, event); record = await this.meta(record.ref); break; }
       }
-      if (this.access(record, session, ancestors)) result.push(record);
+      if (this.access(record, session, ancestors, index)) result.push(record);
     }
+    signal?.throwIfAborted();
     return result.sort((a, b) => a.createdAt - b.createdAt || a.ref.localeCompare(b.ref));
   }
   async read(session, args, ancestors = [], signal) {
     signal?.throwIfAborted();
+    const index = accessIndex(session);
     let record = await this.meta(args.rawRef);
-    if (!record.committed) { await this.list(session, ancestors, signal); record = await this.meta(args.rawRef); }
-    if (!this.access(record, session, ancestors)) throw Error('当前会话无权读取此原文；跨会话需显式选择可读取的来源会话');
-    const text = await this.text(record), maxChars = integer(args.maxChars, 12000, 256, 48000, 'maxChars');
+    if (!record.committed) { await this.list(session, ancestors, signal, index); record = await this.meta(args.rawRef); }
+    if (!this.access(record, session, ancestors, index)) throw Error('当前会话无权读取此原文；跨会话需显式选择可读取的来源会话');
+    const text = await this.text(record, signal), maxChars = integer(args.maxChars, 12000, 256, 48000, 'maxChars');
     const mode = args.mode ?? 'head';
     if (!['head', 'tail', 'range', 'query'].includes(mode)) throw Error('原文 mode 只支持 head、tail、range、query');
     const query = args.query ?? '';
@@ -232,7 +257,7 @@ export class EvidenceStore {
       signal?.throwIfAborted();
       if (candidates && !candidates.has(record.ref)) continue;
       if (record.indexComplete && terms.length && !terms.every(t => record.terms.some(word => word.includes(t)))) continue;
-      const text = await this.text(record), folded = text.toLowerCase();
+      const text = await this.text(record, signal), folded = text.toLowerCase();
       const at = literalIndex(text, args.query);
       if (at < 0 && (!terms.length || !terms.every(t => folded.includes(t)))) continue;
       const p = at >= 0 ? at : Math.max(0, literalIndex(text, terms[0]));
@@ -248,11 +273,13 @@ export class EvidenceStore {
     const records = (await this.list(session, ancestors, signal)).filter(r => !rawRef || r.ref === rawRef), objects = {};
     if (rawRef && !records.length) throw Error('当前会话没有该原文');
     if (records.reduce((n, r) => n + r.bytes, 0) > 48 * 1024 * 1024) throw Error('原文较多，请按单份原文档案导出');
-    for (const record of records) { signal?.throwIfAborted(); objects[record.sourceHash] ??= await this.text(record); }
+    for (const record of records) { signal?.throwIfAborted(); objects[record.sourceHash] ??= await this.text(record, signal); }
     return { format: 'omd-tool-evidence', version: 1, sessionId: session.id, records, objects };
   }
   async import(bundle, session, ancestors = [], signal) {
     if (bundle?.format !== 'omd-tool-evidence' || bundle.version !== 1 || !Array.isArray(bundle.records) || !bundle.objects) throw Error('无法识别原文档案');
+    signal?.throwIfAborted();
+    const index = accessIndex(session);
     let count = 0;
     for (const original of bundle.records) {
       signal?.throwIfAborted();
@@ -261,7 +288,7 @@ export class EvidenceStore {
       const text = bundle.objects[original.sourceHash];
       // Explicit import may restore a host-exported session under a new ID.
       // Only a complete matching logged call/result can grant that new owner.
-      if (!this.access({ ...original, sessionId: session.id, importedSessions: [] }, session, []) || typeof text !== 'string' || !text.isWellFormed() || Buffer.byteLength(text) > MAX_OBJECT_BYTES || hash(text) !== original.sourceHash) throw Error('档案来源或内容与当前会话不匹配');
+      if (!this.access({ ...original, sessionId: session.id, importedSessions: [] }, session, [], index) || typeof text !== 'string' || !text.isWellFormed() || Buffer.byteLength(text) > MAX_OBJECT_BYTES || hash(text) !== original.sourceHash) throw Error('档案来源或内容与当前会话不匹配');
       let record = { ...original, bytes: Buffer.byteLength(text), characters: text.length, importedSessions: original.sessionId === session.id ? [] : [session.id], ...indexTerms(text) };
       await this.ready;
       try {

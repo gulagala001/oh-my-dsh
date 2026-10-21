@@ -3,6 +3,7 @@ import { reduceText, textOf, readIdentity, referenced, worthwhile, exactDelta } 
 import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { installRequestProjection } from '../llm-request-projection.mjs';
 import { contentTokens } from '../context/materials.mjs';
+import { hash as contentHash, jsonBytes, requestBytes, frozenJsonValue } from './json-metrics.mjs';
 
 const chars = content => content?.reduce((n, b) => n + (b.type === 'text' ? b.text.length : 0), 0) ?? 0;
 const estimate = value => Math.ceil(Buffer.byteLength(typeof value === 'string' ? value : JSON.stringify(value)) / 3);
@@ -19,9 +20,10 @@ export class ResultReduction {
     this.agentIds = new WeakMap(); this.agentSerial = 0;
     this.recallCalls = new Set(); this.discoveryCalls = new Set(); this.schemaSavings = new Map();
     this.computerCuts = new Map();
-    this.cachedCharacters = 0;
+    this.cachedCharacters = 0; this.closed = false;
+    this.readViews = new WeakMap();
   }
-  enabled(session) { return this.hub.config().contextOptimizationEnabled !== false && this.managed(session); }
+  enabled(session) { return !this.closed && this.hub.config().contextOptimizationEnabled !== false && this.managed(session); }
   state(session) {
     let state = this.metrics.get(session.id);
     if (!state) { state = { requests: 0, estimatedSavedTokens: 0, recallTokens: 0, discoveryTokens: 0, fallbacks: 0, rules: {}, lastRequest: null }; this.metrics.set(session.id, state); }
@@ -34,7 +36,7 @@ export class ResultReduction {
       const event = session.eventAt(seq), m = event?.type === 'tool/result' && event.data?.message;
       if (!m || m.isError) continue;
       const item = this.results.get(eventKey(session, m.toolCallId));
-      if (item?.committed && item.finalHash === hash(m.content)) refs.add(item.record.ref);
+      if (item?.committed && item.finalHash === contentHash(m.content)) refs.add(item.record.ref);
     }
     return [...refs];
   }
@@ -43,36 +45,62 @@ export class ResultReduction {
     const replacements = agent.session.snapshotEvents().filter(e => e.surfaceOp && e.surfaceOp !== 'append').map(e => e.seq);
     return JSON.stringify([agent.session.id, this.agentIds.get(agent), replacements]);
   }
+  rememberVisible(session, messages) {
+    if (this.closed) return;
+    const calls = new Map(), visible = new Map();
+    for (const message of messages) {
+      if (message.role === 'assistant') for (const block of message.content) if (block.type === 'tool-call') calls.set(block.id, block.name);
+      if (message.role === 'tool' && !message.isError && /^(?:computer_use|opencu_observe)$/.test(calls.get(message.toolCallId) ?? '')) visible.set(message.toolCallId, contentHash(message.content));
+    }
+    if (visible.size) this.visible.set(session.id, visible); else this.visible.delete(session.id);
+  }
   computerBaseline(session) {
     if (!this.enabled(session) || this.hub.bc?.view(session)?.backend === 'bc') return false;
     const visible = this.visible.get(session.id);
     if (!visible) return false;
     const events = session.snapshotEvents(), cut = this.computerCuts.get(session.id) ?? 0;
+    const calls = new Map(events.filter(e => e.type === 'tool/call').map(e => [e.data?.callId, e.data?.name]));
     let found = false;
     for (const event of events.slice(cut)) {
       if (event.surfaceOp && event.surfaceOp !== 'append') return false;
       if (event.type !== 'tool/result') continue;
       const m = event.data?.message;
-      const call = events.find(e => e.type === 'tool/call' && e.data?.callId === m?.toolCallId);
-      if (!/^(?:computer_use|opencu_observe)$/.test(call?.data?.name ?? '')) continue;
+      if (!/^(?:computer_use|opencu_observe)$/.test(calls.get(m?.toolCallId) ?? '')) continue;
       found = true;
-      if (m.isError || !visible.some(v => v.role === 'tool' && v.toolCallId === m.toolCallId && hash(v.content) === hash(m.content))) return false;
+      if (m.isError || visible.get(m.toolCallId) !== contentHash(m.content)) return false;
     }
     return found;
   }
   resetComputerBaseline(session) { this.computerCuts.set(session.id, session.snapshotEvents().length); }
+  release(id) {
+    if (id === undefined) this.closed = true;
+    const owns = item => id === undefined || item.sessionId === id;
+    // A prepared reference may already be on its way to the native log. Keep
+    // its write-ahead metadata so a later read can finish the durable commit.
+    for (const [token, item] of this.pending) if (owns(item)) this.pending.delete(token);
+    for (const [key, item] of this.results) if (owns(item)) { this.cachedCharacters -= item.source.length; this.results.delete(key); }
+    for (const calls of [this.recallCalls, this.discoveryCalls]) for (const key of calls) if (id === undefined || key.startsWith(id + ':')) calls.delete(key);
+    if (id === undefined) { this.visible.clear(); this.computerCuts.clear(); this.metrics.clear(); this.schemaSavings.clear(); this.readViews = new WeakMap(); }
+    else {
+      this.visible.delete(id); this.computerCuts.delete(id);
+      // Keep lightweight cumulative counters; the next request owns its budget.
+      const state = this.metrics.get(id); if (state) state.lastRequest = null;
+    }
+  }
   track(promise) { this.writes.add(promise); promise.catch(error => this.ctx.logger?.warn?.('上下文优化保留原结果：' + error.message)).finally(() => this.writes.delete(promise)); return promise; }
   async settled() { await Promise.allSettled([...this.writes]); }
-  async ancestors(session) {
+  async ancestors(session, signal) {
     const ids = [], seen = new Set([session.id]); let current = session;
     while (current.header?.parentSession && current.header.origin !== 'subagent' && ids.length < 64) {
+      signal?.throwIfAborted();
       const id = current.header.parentSession;
       if (seen.has(id)) break;
       seen.add(id); ids.push(id);
       const live = this.ctx.sessions.get(id);
       if (live) current = live;
-      else { try { const snapshot = await this.hub.dream.sources.read(id); current = { header: snapshot.header }; } catch { break; } }
+      else { try { const snapshot = await this.hub.dream.sources.read(id, signal); current = { header: snapshot.header }; } catch { signal?.throwIfAborted(); break; } }
     }
+    signal?.throwIfAborted();
     return ids;
   }
   async target(session, sessionId, signal) {
@@ -83,19 +111,21 @@ export class ResultReduction {
   async recall(session, args, signal) {
     await this.settled(); signal?.throwIfAborted();
     if (['memory', 'reference', 'id', 'asset', 'from', 'to'].some(key => args[key] !== undefined)) throw Error('原文引用不能与其他回查目标混用');
-    const target = await this.target(session, args.sessionId, signal), ancestors = await this.ancestors(target);
+    const target = await this.target(session, args.sessionId, signal), ancestors = await this.ancestors(target, signal);
     const result = args.rawRef ? await this.evidence.read(target, args, ancestors, signal) : await this.evidence.search(target, args, ancestors, signal);
     return result;
   }
   async archive(exec, text, rule, complete = true) {
     const started = performance.now();
+    if (this.closed) throw Error('上下文优化已停止');
     exec.signal?.throwIfAborted();
     const record = await this.evidence.save({ sessionId: exec.agent.session.id, callId: exec.callId, tool: exec.name, args: exec.arguments, text, rule, complete });
-    if (exec.signal?.aborted) { await this.evidence.abandon(record.ref); exec.signal.throwIfAborted(); }
-    this.pending.set(exec.token, { record, exec, source: text, started });
+    if (exec.signal?.aborted || this.closed) { await this.evidence.abandon(record.ref); exec.signal?.throwIfAborted(); throw Error('上下文优化已停止'); }
+    this.pending.set(exec.token, { record, sessionId: exec.agent.session.id, name: exec.name, callId: exec.callId, source: text, started });
     return record;
   }
   async finish(exec, value) {
+    if (this.closed) throw Error('上下文优化已停止');
     const content = [{ type: 'text', text: value }], item = this.pending.get(exec.token);
     if (item) { item.proposed = content; item.record = await this.evidence.prepare(item.record.ref, content); }
     return value;
@@ -118,6 +148,7 @@ export class ResultReduction {
     return { ...decision, content: item.proposed };
   }
   result(exec, result) {
+    if (this.closed) return;
     if (exec.agent && exec.name === 'recall' && !result.isError) this.recallCalls.add(eventKey(exec.agent.session, exec.rootCallId ?? exec.callId));
     if (exec.agent && exec.name === 'tool_find' && !result.isError) this.discoveryCalls.add(eventKey(exec.agent.session, exec.rootCallId ?? exec.callId));
     const item = this.pending.get(exec.token); this.pending.delete(exec.token);
@@ -152,20 +183,28 @@ export class ResultReduction {
       if (message.role === 'assistant') for (const block of message.content) if (block.type === 'tool-call') calls.set(block.id, block);
       const item = message.role === 'tool' && this.results.get(eventKey(session, message.toolCallId));
       let next = message;
-      if (item?.committed && !message.isError && item.finalHash === hash(message.content)) {
+      if (item?.committed && !message.isError && item.finalHash === contentHash(message.content)) {
         const call = calls.get(message.toolCallId);
-        if (call?.name === item.exec.name && argumentsHash(call.arguments) === item.record.argumentsHash) {
+        if (call?.name === item.name && argumentsHash(call.arguments) === item.record.argumentsHash) {
           if (item.readKey && dependent) {
             const baseline = baselines.get(item.readKey);
             if (baseline) {
-              const same = baseline.source === item.source;
-              const text = same ? 'Unchanged read window: the complete earlier read is still present in this request.'
-                : 'Exact unified delta against the complete earlier read in this request:\n' + exactDelta(baseline.source, item.source);
-              const view = referenced({ text: `Baseline toolCallId=${baseline.exec.callId}\n${text}`, lossless: true }, item.record);
-              if (worthwhile(item.source, view)) { next = freezeMessage({ ...message, content: [{ type: 'text', text: view }] }); changed = true; }
+              const key = JSON.stringify([item.record.ref, item.record.sourceHash, baseline.record.ref, baseline.record.sourceHash, baseline.callId]);
+              const immutable = frozenJsonValue(message), cached = immutable && this.readViews.get(message);
+              if (cached?.key === key) next = cached.message;
+              else {
+                const same = baseline.source === item.source;
+                const text = same ? 'Unchanged read window: the complete earlier read is still present in this request.'
+                  : 'Exact unified delta against the complete earlier read in this request:\n' + exactDelta(baseline.source, item.source);
+                const view = referenced({ text: `Baseline toolCallId=${baseline.callId}\n${text}`, lossless: true }, item.record);
+                if (worthwhile(item.source, view)) next = freezeMessage({ ...message, content: [{ type: 'text', text: view }] });
+                if (immutable) this.readViews.set(message, { key, message: next });
+              }
+              if (next !== message) changed = true;
             } else baselines.set(item.readKey, item);
           }
-          const saved = Math.max(0, estimate([{ type: 'text', text: item.source }]) - estimate(next.content));
+          item.sourceTokens ??= estimate([{ type: 'text', text: item.source }]);
+          const saved = Math.max(0, item.sourceTokens - Math.ceil(jsonBytes(next.content) / 3));
           if (saved) rules.push({ rule: next !== message ? (item.source === baselines.get(item.readKey)?.source ? 'visible-read-repeat' : 'visible-read-delta') : item.record.rule, saved, elapsedMs: item.elapsedMs });
         }
       }
@@ -209,6 +248,8 @@ export function installResultReduction(ctx, hub, managed) {
   }, { global: true });
   ctx.on('tools/result', (exec, result) => { service.result(exec, result); }, { global: true });
   ctx.on('session/event', (session, event) => { service.event(session, event); }, { global: true });
+  ctx.on('agent/disposed', ({ agent }) => service.release(agent.session.id), { global: true });
+  ctx.on('session/disposed', session => service.release(session.id), { global: true });
   installRequestProjection(ctx, options => {
     try { return service.project(options); }
     catch (error) { ctx.logger?.warn?.('上下文请求优化回退：' + error.message); return options; }
@@ -217,9 +258,9 @@ export function installResultReduction(ctx, hub, managed) {
     const session = isAgentLoopRequest(options) && options.sessionId && ctx.sessions.get(options.sessionId);
     if (!session || !managed(session)) { yield* next(); return; }
     const state = service.state(session), rules = [...(service.projections.get(options.messages) ?? [])];
-    const schemaSaved = service.schemaSavings.get(hash(options.tools ?? []));
+    const schemaSaved = service.schemaSavings.size ? service.schemaSavings.get(contentHash(options.tools ?? [])) : 0;
     if (service.enabled(session) && schemaSaved > 0) rules.push({ rule: 'scoped-tool-discovery', saved: schemaSaved, elapsedMs: 0 });
-    let used = estimate({ messages: options.messages, tools: options.tools, system: options.system });
+    let used = Math.ceil(requestBytes(options) / 3);
     try {
       used += contentTokens(options.messages.flatMap(m => media(m.content)), { imagePricing: ctx.llm.imageRequestPricing?.(options.provider, options.model), fileText: ctx.llm.fileRequestText ? ref => ctx.llm.fileRequestText(ref) : undefined });
       used = Math.max(used, ctx.tokenMeter?.measure(session)?.totalTokens ?? 0);
@@ -242,9 +283,9 @@ export function installResultReduction(ctx, hub, managed) {
         if (message.role === 'tool' && overhead.has(message.toolCallId)) state[overhead.get(message.toolCallId)] += estimate(message.content);
       }
       for (const rule of rules) { state.estimatedSavedTokens += rule.saved; const row = state.rules[rule.rule] ??= { requests: 0, savedTokens: 0, elapsedMs: 0, images: 0 }; row.requests++; row.savedTokens += rule.saved; row.elapsedMs += rule.elapsedMs; row.images += rule.images ?? 0; }
-      service.visible.set(session.id, options.messages);
+      service.rememberVisible(session, options.messages);
     }
   }, { global: true });
-  ctx.effect(() => () => { service.pending.clear(); service.results.clear(); service.visible.clear(); });
+  ctx.effect(() => () => { service.release(); return service.settled(); });
   return service;
 }

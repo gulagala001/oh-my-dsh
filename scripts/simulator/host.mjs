@@ -188,7 +188,8 @@ export class SimulationHost {
   }
   async idle(sessionId, predicate = () => true) {
     return until(async () => { const state = await this.api('/state?session=' + sessionId);
-      if (state.running === 'idle' && !state.live && await predicate(state)) return state;
+      const live = await this.api('/monitor/live?session=' + sessionId);
+      if (state.running === 'idle' && !live.liveCalls.length && await predicate(state)) return state;
       // Drive host-owned polling/yield timers while native I/O completes. This
       // is separate from explicit long deadline advances in timeout scenarios.
       if (this.clockMode === 'virtual') await this.control('/clock', { advance: 25 });
@@ -230,7 +231,7 @@ export class SimulationHost {
     const file = await find(this.home);
     if (!file) throw Error('No native durable session file: ' + sessionId);
     const { Context } = await import(pathToFileURL(this.anchor.resolve('@deepseek-ai/cordis')).href);
-    const { default: Persistence } = await import(pathToFileURL(this.anchor.resolve('@deepseek-ai/dsh-session-persistence-jsonl')).href);
+    const Persistence = await import(pathToFileURL(this.anchor.resolve('@deepseek-ai/dsh-session-persistence-jsonl')).href);
     const ctx = new Context();
     try {
       await ctx.plugin(Persistence, { root: dirname(dirname(dirname(file))), compression: file.endsWith('.zstd') ? 'zstd' : 'none' });

@@ -1,7 +1,7 @@
 import { installOmaaEnhancement, omaaWorkflowComposition, omaaIdentityPrompt } from './omaa-enhancement.mjs';
 import { installResultReduction } from './result-reduction/service.mjs';
 import { acquirePersona } from '../plugins/persona/src/index.mjs';
-import { readJsonBody as readBody, rejectUntrusted, sendJson as send } from './http.mjs';
+import { readJsonBody as readBody, rejectUntrusted, sendJson as send, withRequestSignal } from './http.mjs';
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
 import { legacySettings } from './legacy-settings.mjs';
 import { homedir } from 'node:os';
@@ -347,12 +347,7 @@ export async function apply(ctx, config) {
           if (req.method === 'POST') { send(res, 200, await hub.ultracode.select(id, await readBody(req))); return; }
           if (req.method === 'GET') {
             validateSessionId(id);
-            const reading = new AbortController(), abortRead = () => reading.abort(new Error('模型模式读取已取消'));
-            req.once?.('aborted', abortRead); res.once?.('close', abortRead);
-            try {
-              if (req.aborted || res.destroyed) abortRead();
-              send(res, 200, await hub.ultracode.inspect(id, reading.signal));
-            } finally { req.off?.('aborted', abortRead); res.off?.('close', abortRead); }
+            await withRequestSignal(req, res, async signal => send(res, 200, await hub.ultracode.inspect(id, signal)));
             return;
           }
           send(res, 405, { error: '不支持此方法' }); return;
@@ -379,15 +374,7 @@ export async function apply(ctx, config) {
           res.setHeader('Cache-Control', 'no-store');
           send(res, 200, compactMonitorSnapshot({ metrics, actions, meter, liveCalls, sessionCount: all.length, running: agent?.status ?? 'idle' })); return;
         }
-        const readTarget = async () => {
-          const reading = new AbortController();
-          const abortRead = () => reading.abort(new Error('会话读取已取消'));
-          req.once?.('aborted', abortRead); res.once?.('close', abortRead);
-          try {
-            if (req.aborted || res.destroyed) abortRead();
-            return await apiSessionTarget(ctx, hub.store, id, reading.signal);
-          } finally { req.off?.('aborted', abortRead); res.off?.('close', abortRead); }
-        };
+        const readTarget = () => withRequestSignal(req, res, signal => apiSessionTarget(ctx, hub.store, id, signal));
         const target = await readTarget();
         const { agent, session, stored, inspection, archivedOnly } = target;
         if (!target.found) { send(res, 404, { error: '会话不存在' }); return; }

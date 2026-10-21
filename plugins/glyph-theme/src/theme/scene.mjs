@@ -24,6 +24,7 @@ export function createCharacterScene() {
     if (!rect) return;
     const active = still ? [] : trails.filter(p => now - p.time < 900);
     const clicks=still?[]:waves.clicks,ultraWaves=still?[]:waves.ultra;
+    const deforming=active.length||clicks.length||ultraWaves.length;
     const hex=ink.match(/^#([a-f\d]{3}|[a-f\d]{6})$/i)?.[1];
     const expanded=hex?.length===3?[...hex].map(c=>c+c).join(''):hex;
     const rgb=expanded?[0,2,4].map(i=>parseInt(expanded.slice(i,i+2),16)):(ink.match(/[\d.]+/g)||['255','255','255']).slice(0,3).map(Number);
@@ -31,6 +32,13 @@ export function createCharacterScene() {
     for (let row = Math.max(0, Math.floor(rect.top / stepY)); row < Math.min(rows, Math.ceil(rect.bottom / stepY)); row++) {
       for (let col = Math.max(0, Math.floor(rect.left / stepX)); col < Math.min(cols, Math.ceil(rect.right / stepX)); col++) {
         const x = (col + .5) * stepX, y = (row + .5) * stepY;
+        // With no live interaction the deformation is exactly the identity.
+        // Keep the same grid/light, avoiding per-cell empty packets and trig.
+        if(!deforming) {
+          const light=values[row*cols+col];
+          if(light>=.025)glyph(chars[Math.min(chars.length-1,Math.floor(light*chars.length))],x,y,ink,light,stepY+.6);
+          continue;
+        }
         let dx = 0, dy = 0, energy = 0;
         for (const point of active) {
           const age = (now - point.time) / 900;

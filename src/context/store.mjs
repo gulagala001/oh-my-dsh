@@ -57,7 +57,9 @@ export class ContextStore {
     for (const key of id === undefined ? [...this.dirty] : [id]) if (this.dirty.has(key) && this.cache.has(key)) this.save(this.cache.get(key));
   }
   release(id) {
-    try { this.flush(id); } catch {}
+    // A failed save still owns the only current copy. Keep it available for
+    // recovery and let the lifecycle owner report the actual failure.
+    this.flush(id);
     this.cache.delete(id); this.writes.delete(this.path(id)); this.dirty.delete(id);
     this.dropDiskCache(basename(this.path(id)));
   }

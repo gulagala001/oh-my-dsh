@@ -1,5 +1,17 @@
 import { Readable } from 'node:stream';
 import { pipeline as streamPipeline } from 'node:stream/promises';
+
+// Keep cancellation attached for the whole read, including archive work after
+// native session lookup. Accepted writes have their own completion lifecycle.
+export async function withRequestSignal(req, res, read) {
+  const controller = new AbortController(), abort = () => controller.abort(Error('请求读取已取消'));
+  req.once?.('aborted', abort); res.once?.('close', abort);
+  try {
+    if (req.aborted || res.destroyed) abort();
+    controller.signal.throwIfAborted();
+    return await read(controller.signal);
+  } finally { req.off?.('aborted', abort); res.off?.('close', abort); }
+}
 // Read transport bytes once; chunk boundaries need not align with UTF-8 characters.
 export async function readJsonBody(req, { maxBytes = 768000, timeoutMs = 30000 } = {}) {
   const iterator = req.iterator?.({ destroyOnReturn: false }) ?? req[Symbol.asyncIterator]();

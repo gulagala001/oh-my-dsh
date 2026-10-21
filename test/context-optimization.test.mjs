@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createServer } from 'node:http';
+import { once } from 'node:events';
 import { Context } from '@deepseek-ai/cordis';
 import { ToolRuntime } from '@deepseek-ai/dsh-tools';
 import { createToolResultMessage, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
@@ -13,6 +15,8 @@ import { minifyJson, reduceText, dataView } from '../src/result-reduction/reduce
 import { structuralSearch, astRuntime, languages } from '../src/result-reduction/ast.mjs';
 import { articleView, registerContextViews } from '../src/result-reduction/views.mjs';
 import { codegraphEnvironment, CodegraphRuntime } from '../src/codegraph.mjs';
+import { handleContextApi } from '../src/context/api.mjs';
+import { sendJson } from '../src/http.mjs';
 
 const text = value => [{ type: 'text', text: value }];
 async function fixture(t) {
@@ -144,4 +148,126 @@ test('native view/AST tools save complete evidence; denied underlying reads neve
   const found = JSON.parse(search.result.value); assert.equal(found.totalMatches, 1); assert.deepEqual(found.matches[0].range.start, { line: 0, column: 0, index: 0 });
   const before = reads; denied = true;
   const rejected = await f.call('context_view', { file: '/private/secret', view: 'raw' }); assert.equal(rejected.result.isError, true); assert.equal(reads, before);
+});
+
+test('one native snapshot authorizes an archive listing, including nested PTC and fork boundaries', async t => {
+  const f = await fixture(t), body = 'Exact file evidence.\n'.repeat(100);
+  f.ctx.tools.register({ name: 'read', description: 'fixture read', parameters: { type: 'object', properties: {} },
+    output: { schema: { type: 'object' }, render: () => text(body) },
+    execute: () => ({ path: '/project/file', totalLines: 100, lines: [{ number: 1, text: body }] }) });
+  for (let i = 0; i < 8; i++) await f.call('read');
+  const nested = await f.service.evidence.save({ sessionId: f.session.id, callId: 'nested', tool: 'context_view', args: {}, text: body, rule: 'raw' });
+  await f.service.evidence.prepare(nested.ref, text(body));
+  f.session.append('tool/call', { callId: 'program', name: 'run_code', arguments: '{}' });
+  f.session.append('tool/ptc-dispatch', { rootCallId: 'program', parentCallId: 'program', subCallId: 'parent', name: 'context_view', arguments: '{}' });
+  const inheritedCut = f.session.events.length;
+  const event = f.session.append('tool/ptc-dispatch', { rootCallId: 'program', parentCallId: 'parent', subCallId: 'nested', name: 'context_view', arguments: '{}', content: text(body), isError: false });
+  await f.service.evidence.commit(nested.ref, event);
+  const snapshot = f.session.snapshotEvents.bind(f.session); let snapshots = 0;
+  f.session.snapshotEvents = () => { snapshots++; return snapshot(); };
+  const records = await f.service.evidence.list(f.session);
+  assert.equal(records.length, 9); assert.equal(snapshots, 1, 'Do not rescan native history for each evidence record');
+  const child = new FixtureSession('fork', snapshot(), [], { parentSession: f.session.id }); child.inheritedEventCount = inheritedCut;
+  assert.equal((await f.service.evidence.list(child, [f.session.id])).length, 8);
+  await assert.rejects(f.service.evidence.read(child, { rawRef: nested.ref }, [f.session.id]), /无权/);
+  child.inheritedEventCount++;
+  assert.equal((await f.service.evidence.read(child, { rawRef: nested.ref }, [f.session.id])).text, body);
+});
+
+test('archive provenance rejects an unbound PTC parent and a reused call with a different tool', async t => {
+  const f = await fixture(t), body = 'Raw evidence', content = text(body);
+  for (const scenario of ['unbound', 'reused']) {
+    const record = await f.service.evidence.save({ sessionId: f.session.id, callId: scenario, tool: 'read', args: {}, text: body, rule: 'raw' });
+    await f.service.evidence.prepare(record.ref, content);
+    let event;
+    if (scenario === 'unbound') {
+      f.session.append('tool/call', { callId: 'program', name: 'run_code', arguments: '{}' });
+      event = f.session.append('tool/ptc-dispatch', { rootCallId: 'program', parentCallId: 'missing-parent', subCallId: scenario, name: 'read', arguments: '{}', content, isError: false });
+    } else {
+      f.session.append('tool/call', { callId: scenario, name: 'read', arguments: '{}' });
+      f.session.append('tool/call', { callId: scenario, name: 'different-tool', arguments: '{}' });
+      event = f.session.append('tool/result', { message: createToolResultMessage({ callId: scenario, content, isError: false }) });
+    }
+    await f.service.evidence.commit(record.ref, event);
+    await assert.rejects(f.service.evidence.read(f.session, { rawRef: record.ref }), /无权/);
+  }
+});
+
+test('a cold native inspection can read and export evidence without recreating a Session or Agent', async t => {
+  const f = await fixture(t), body = JSON.stringify(Array.from({ length: 90 }, (_, line) => ({ line, source: 'saved-source' })), null, 2);
+  f.ctx.tools.register({ name: 'grep', description: 'fixture', parameters: { type: 'object', properties: {} },
+    output: { schema: { type: 'string' }, render: () => text(body) }, execute: () => body });
+  const result = await f.call('grep'), rawRef = result.message.content[0].text.match(/omd-raw:[a-f0-9-]{36}/)[0];
+  const inspection = { meta: f.session.header, events: f.session.snapshotEvents(), inheritedEventCount: 0 };
+  f.ctx.emit('session/disposed', f.session); await f.service.settled();
+  for (const path of ['?rawRef=' + rawRef, '/export?rawRef=' + rawRef]) {
+    let data;
+    await handleContextApi({ hub: f.hub, req: { method: 'GET' }, res: {}, id: f.session.id, inspection,
+      url: new URL('http://localhost/trisoul-x/api/context/evidence' + path), send(_res, status, value) { assert.equal(status, 200); data = value; } });
+    if (data.text !== undefined) { assert.equal(data.sourceHash, hash(body)); assert.ok(data.text.length > 0 && body.startsWith(data.text)); }
+    else assert.equal(data.objects[hash(body)], body);
+  }
+  assert.equal(f.service.results.size, 0, 'Reading durable evidence does not recreate the live optimization state');
+});
+
+test('unload preserves a prepared reference that reaches the native log after memory release', async t => {
+  const f = await fixture(t), body = 'Exact pending evidence.\n'.repeat(100);
+  const exec = { agent: f.agent, name: 'context_view', callId: 'pending-unload', token: Symbol('pending'), arguments: {}, signal: new AbortController().signal };
+  const record = await f.service.archive(exec, body, 'raw'), view = JSON.stringify({ rawRef: record.ref, sourceHash: record.sourceHash });
+  await f.service.finish(exec, view);
+  f.service.release(); await f.service.settled();
+  f.session.append('tool/call', { callId: exec.callId, name: exec.name, arguments: '{}' });
+  f.session.append('tool/result', { message: createToolResultMessage({ callId: exec.callId, content: text(view), isError: false }) });
+  const reopened = new EvidenceStore(f.directory);
+  assert.equal((await reopened.read(f.session, { rawRef: record.ref })).text, body);
+  assert.equal((await reopened.meta(record.ref)).committed, true);
+  await assert.rejects(f.service.archive(exec, body, 'raw'), /已停止/);
+});
+
+test('CU visibility keeps fingerprints, releases session references and preserves durable originals and counters', async t => {
+  const f = await fixture(t), body = 'Exact observation.\n'.repeat(100);
+  f.ctx.tools.register({ name: 'read', description: 'fixture read', parameters: { type: 'object', properties: {} },
+    output: { schema: { type: 'object' }, render: () => text(body) },
+    execute: () => ({ path: '/project/file', totalLines: 100, lines: [{ number: 1, text: body }] }) });
+  await f.call('read');
+  assert.equal(f.service.results.size, 1);
+  f.ctx.tools.register({ name: 'computer_use', description: 'fixture observation', parameters: { type: 'object', properties: {} },
+    output: { schema: { type: 'string' }, render: () => text(body) }, execute: () => body });
+  const observation = await f.call('computer_use');
+  const saved = await f.service.evidence.save({ sessionId: f.session.id, callId: observation.callId, tool: 'computer_use', args: {}, text: body, rule: 'raw' });
+  await f.service.evidence.prepare(saved.ref, observation.message.content);
+  await f.service.evidence.commit(saved.ref, observation.event);
+  f.service.rememberVisible(f.session, f.messages);
+  assert.equal(f.service.computerBaseline(f.session), true);
+  assert.ok(!JSON.stringify([...f.service.visible]).includes(body));
+  const changed = structuredClone(f.messages); changed.at(-1).content[0].text += ' changed';
+  f.service.rememberVisible(f.session, changed);
+  assert.equal(f.service.computerBaseline(f.session), false);
+  f.service.rememberVisible(f.session, f.messages);
+  f.service.resetComputerBaseline(f.session);
+  Object.assign(f.service.state(f.session), { requests: 7, lastRequest: { used: 10 } });
+  f.ctx.emit('agent/disposed', { agent: f.agent }); await f.service.settled();
+  assert.equal(f.service.visible.size, 0); assert.equal(f.service.results.size, 0); assert.equal(f.service.computerCuts.size, 0);
+  assert.equal(f.service.cachedCharacters, 0);
+  assert.equal(f.service.state(f.session).requests, 7); assert.equal(f.service.state(f.session).lastRequest, null);
+  assert.equal((await f.service.recall(f.session, { rawRef: saved.ref })).text, body);
+});
+
+test('disconnecting an evidence search cancels its actual HTTP read and detaches the listeners', async t => {
+  const entered = Promise.withResolvers(), finish = Promise.withResolvers(), closed = Promise.withResolvers();
+  let readSignal, request, response, handler;
+  const hub = { optimization: { async settled() {}, async ancestors() { return []; }, evidence: {
+    async search(_session, _args, _ancestors, signal) { readSignal = signal; entered.resolve(); await finish.promise; signal?.throwIfAborted(); return { results: [] }; },
+  } } };
+  const server = createServer((req, res) => {
+    request = req; response = res; res.once('close', () => closed.resolve());
+    handler = handleContextApi({ hub, req, res, url: new URL(req.url, 'http://localhost'), session: new FixtureSession(), send: sendJson }).catch(() => {});
+  });
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  t.after(() => { finish.resolve(); server.closeAllConnections(); return new Promise(resolve => server.close(resolve)); });
+  const controller = new AbortController(), fetching = fetch(`http://127.0.0.1:${server.address().port}/trisoul-x/api/context/evidence?query=source`, { signal: controller.signal }).catch(error => error);
+  await entered.promise; controller.abort(); await fetching; await closed.promise;
+  assert.equal(readSignal?.aborted, true);
+  finish.resolve(); await handler;
+  assert.equal(request.listenerCount('aborted'), 0); assert.equal(response.listenerCount('close'), 0);
 });

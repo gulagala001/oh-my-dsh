@@ -333,6 +333,8 @@ export class DreamService {
           try{this.store.settle(callId,usage,failure?String(failure.message||failure):undefined);}
           catch(error){cleanupFailure=new DreamCleanupError([...(failure?[failure]:[]),error]);this.cleanupFailures.add(cleanupFailure);failure=cleanupFailure;status='error';}
           this.hub.live?.delete(`dream:${callId}`);
+          if(input.kind==='session')try{this.hub.context.releaseState?.(input.target);}
+          catch(error){cleanupFailure=new DreamCleanupError([...(failure?[failure]:[]),error]);this.cleanupFailures.add(cleanupFailure);failure=cleanupFailure;status='error';}
           try{this.hub.monitor?.append({id:`dream:${callId}`,source:'dream',kind:`dream${input.kind[0].toUpperCase()}${input.kind.slice(1)}`,
             sessionId:input.kind==='session'?input.target:null,at:Date.now(),startedAt,
             provider:actual.provider,model:actual.model,effort:actual.effort??null,

@@ -116,7 +116,7 @@ function fullLifecycle({ trace }) {
     const sourceEvent = before.events.find(event => event.type === 'tool/result' && JSON.stringify(event.data).includes('SOURCE_ORIGINAL_9007199254740993'));
     assert.ok(sourceEvent); recallRange = { from: sourceEvent.seq, to: sourceEvent.seq };
     await host.api('/context/prepare?session=' + publicId, {});
-    await until(async () => (await host.api('/state?session=' + publicId)).actions.preparedSegments, { signal: host.signal, description: 'prepared context' });
+    await until(async () => (await host.api('/context?session=' + publicId)).records.length, { signal: host.signal, description: 'prepared context' });
     const records = (await host.api('/context?session=' + publicId)).records.filter(record => record.live && !record.mergedInto && record.mode === 'raw').map(record => record.id);
     const compact = await host.api('/compact?session=' + publicId, { ids: records, mode: 'detail' });
     await checks.check('真实预处理与上下文替换', () => { assert.ok(records.length); assert.equal(compact.changed, true); });
@@ -395,7 +395,7 @@ function contextAdaptiveAuto({ trace }) {
     });
     await checks.check('模拟缓存用量经过真实响应链路进入上下文和指标', async () => {
       assert.equal(staged.adaptive.cacheReadTokens, 123);
-      const state = await host.api('/state?session=' + id); assert.equal(state.metrics.adaptive.calls, 1); assert.equal(state.metrics.adaptive.cacheReadTokens, 123);
+      const state = await host.api('/monitor?view=usage&session=' + id); assert.equal(state.metrics.adaptive.calls, 1); assert.equal(state.metrics.adaptive.cacheReadTokens, 123);
       const request = provider.requests.find(request => adaptiveMatch(request.payload));
       assert.equal(request.chunks.at(-1).usage.prompt_tokens_details.cached_tokens, 123);
     });
@@ -466,11 +466,12 @@ function backgroundTimeout({ trace }) {
       await until(() => request.chunks.length > count, { signal: host.signal, description: 'transport heartbeat' });
       await host.control('/clock', { advance });
     }
-    await checks.check('十分钟期限前不提前取消', async () => assert.ok((await host.api('/state?session=' + id)).live));
+    await checks.check('十分钟期限前不提前取消', async () => assert.ok((await host.api('/monitor/live?session=' + id)).liveCalls.length));
     await host.control('/clock', { advance: 1 });
-    const state = await until(async () => { const value = await host.api('/state?session=' + id); return !value.live && value.metrics.prepare?.errors && value; }, { signal: host.signal, description: 'background timeout cleanup' });
+    await until(async () => { const value = await host.api('/monitor?view=usage&session=' + id), live = await host.api('/monitor/live?session=' + id);
+      return !live.liveCalls.length && value.metrics.prepare?.errors; }, { signal: host.signal, description: 'background timeout cleanup' });
     await checks.check('推进十分钟触发真实超时并清理', async () => {
-      assert.equal((await host.control('/clock')).now - start, 600000); assert.match(JSON.stringify(state.activity), /后台作业超时/);
+      assert.equal((await host.control('/clock')).now - start, 600000); assert.match((await host.api('/context?session=' + id)).failures.prepare.message, /后台作业超时/);
     });
     return { sessionId: id, virtualElapsedMs: 600000 };
   } };
@@ -506,8 +507,8 @@ function todoReminder({ trace }) {
     step('final', () => textReply('已说明暂停原因，等待条件满足。')),
   ] }, auxiliary()] });
   return { model, async run({ host, checks }) {
-    const id = await host.createSession(); await host.prompt(id, prompt); const state = await host.idle(id, state => state.metrics.main?.calls >= 4);
-    await checks.check('真实收尾提醒与pause_turn', () => { assert.equal(state.tasks[0].status, 'pending'); assert.equal(state.metrics.main.calls, 4); });
+    const id = await host.createSession(); await host.prompt(id, prompt); const state = await host.idle(id, async () => (await host.api('/monitor?view=usage&session=' + id)).metrics.main?.calls >= 4);
+    await checks.check('真实收尾提醒与pause_turn', async () => { assert.equal(state.tasks[0].status, 'pending'); assert.equal((await host.api('/monitor?view=usage&session=' + id)).metrics.main.calls, 4); });
     return { sessionId: id };
   } };
 }

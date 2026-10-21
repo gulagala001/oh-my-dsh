@@ -23,6 +23,7 @@ const WORKBENCH = '[data-omd-surface="workbench-column"], .P3OORG_tabBody';
 export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const background = canvas.getContext('2d');
   let g=background, local=false;
+  let paintContext,paintFont,paintColor;
   if (!g) return () => {};
   const root = document.documentElement, motion = matchMedia('(prefers-reduced-motion: reduce)');
   const whale = createWhalePainter(), marked = new Set(), cache = new Map(), rings = [], bursts = [];
@@ -67,8 +68,11 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     if (artwork && occluded(x,y)) return;
     if (!local && !artwork && covers.some(c => c.layer>=ownerLayer && inside(c.r, x, y) && c.el !== owner && !c.el.contains(owner) && !owner?.contains(c.el)
       && !(c.composer && owner?.closest(PANEL)))) return;
-    g.globalAlpha = Math.max(0, Math.min(1, alpha)); g.fillStyle = color;
-    g.font = `${size}px ${font}`; g.fillText(char, x, y);
+    if(paintContext!==g){paintContext=g;paintFont=paintColor=undefined;}
+    g.globalAlpha = Math.max(0, Math.min(1, alpha));
+    if(paintColor!==color){g.fillStyle=color;paintColor=color;}
+    if(paintFont!==size){g.font=`${size}px ${font}`;paintFont=size;}
+    g.fillText(char, x, y);
   }
   function pixels(svg, r) {
     const cols=Math.max(8,Math.min(160,Math.ceil(r.width/4))), rows=Math.max(8,Math.min(120,Math.ceil(r.height/4)));
@@ -316,6 +320,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     // Scroll/layout updates must not wait for the background's 30 fps budget.
     const quiet=still();if(!quiet&&!dirty&&now-last<32){wake();return;}last=now;
     if(dirty)measure();
+    paintContext=undefined;
     const time=quiet?0:now/1000;g.clearRect(0,0,width,height);
     if(!quiet&&ultraMode&&ultraAnchor?.isConnected&&now>=nextUltraWave){
       emitUltra(ultraAnchor,now);

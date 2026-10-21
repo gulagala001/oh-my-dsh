@@ -4,7 +4,27 @@ import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL } from './prompts.
 import { decodeCachedPreparation } from './cached-preparation.mjs';
 
 export class AutoCompaction {
-  constructor(pipeline) { this.pipeline = pipeline; this.signals = new WeakMap(); }
+  constructor(pipeline) { this.pipeline = pipeline; this.signals = new WeakMap(); this.configuration = this.settingsKey(); }
+  settingsKey(cfg = this.pipeline.config()) {
+    return JSON.stringify([cfg.autoCompactEnabled, cfg.autoCompactThreshold, cfg.autoCompactMode, cfg.memoryCacheEnabled]);
+  }
+  reconfigure(cfg) {
+    const next = this.settingsKey(cfg);
+    if (next === this.configuration) return;
+    this.configuration = next;
+    const p = this.pipeline;
+    for (const agent of p.agents.values()) {
+      const id = agent.session.id, job = p.jobs.get(id + ':autoCompact');
+      p.controllers.get(id + ':autoCompact')?.abort(Error('Auto Compact 设置已变化'));
+      const restart = () => {
+        if (p.closed || p.agents.get(id) !== agent) return;
+        const s = p.state(agent.session);
+        if (s.autoCompact) { delete s.autoCompact.lastKey; p.store.save(s); }
+        this.kick(agent);
+      };
+      if (job) void job.then(restart, restart); else restart();
+    }
+  }
   used(session) { return this.pipeline.hub.ctx.tokenMeter?.measure(session)?.totalTokens ?? 0; }
   fingerprint(session, state, cfg) {
     return hash([session.surface.nodes, state.records.map(r => [r.id, r.version, r.mode, r.mergedInto]), cfg.autoCompactThreshold, cfg.autoCompactMode,

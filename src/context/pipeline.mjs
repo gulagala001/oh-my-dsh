@@ -67,14 +67,17 @@ export class ContextPipeline {
   }
   async withCallSlot(run, signal, lowPriority = false) {
     signal?.throwIfAborted();
+    if (this.closed) throw Error('上下文组件已关闭');
     if (this.activeCalls >= this.config().backgroundConcurrency) {
       await new Promise((resolve, reject) => {
-        const item = { lowPriority, grant: () => { signal?.removeEventListener('abort', abort); this.activeCalls++; resolve(); } };
-        const abort = () => {
+        const cancel = reason => {
           const index = this.callWaiters.indexOf(item);
           if (index >= 0) this.callWaiters.splice(index, 1);
-          reject(signal.reason || Error('后台排队已取消'));
+          signal?.removeEventListener('abort', abort);
+          reject(reason);
         };
+        const abort = () => cancel(signal.reason || Error('后台排队已取消'));
+        const item = { lowPriority, cancel, grant: () => { signal?.removeEventListener('abort', abort); this.activeCalls++; resolve(); } };
         const firstBackground = this.callWaiters.findIndex(waiter => waiter.lowPriority);
         if (lowPriority || firstBackground < 0) this.callWaiters.push(item);
         else this.callWaiters.splice(firstBackground, 0, item);
@@ -82,11 +85,16 @@ export class ContextPipeline {
         if (signal?.aborted) abort();
       });
     } else this.activeCalls++;
-    try { signal?.throwIfAborted(); return await run(); }
+    try { signal?.throwIfAborted(); if (this.closed) throw Error('上下文组件已关闭'); return await run(); }
     finally {
       this.activeCalls--;
-      while (this.callWaiters.length && this.activeCalls < this.config().backgroundConcurrency) this.callWaiters.shift().grant();
+      this.drainCalls();
     }
+  }
+  drainCalls() {
+    if (this.closed || !this.callWaiters.length) return;
+    const limit = this.config().backgroundConcurrency;
+    while (this.callWaiters.length && this.activeCalls < limit) this.callWaiters.shift().grant();
   }
 
   state(session) {
@@ -701,25 +709,26 @@ export class ContextPipeline {
     this.store.save(s); return { queued: true, changed: false };
   }
   reconfigure() {
-    if (!this.config().contextEnabled) {
+    const cfg = this.config();
+    this.cachedPreparation.configure();
+    if (!cfg.contextEnabled && !cfg.autoCompactEnabled) this.cachedPreparation.drop();
+    if (!cfg.contextEnabled) {
       for (const [id, agent] of this.agents) {
-        this.controllers.get(id + ':adaptive')?.abort(Error('上下文整理已关闭'));
+        for (const kind of ['prepare', 'coordinate', 'adaptive']) this.controllers.get(id + ':' + kind)?.abort(Error('上下文整理已关闭'));
+        for (const [key, timer] of this.timers) if (key.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(key); this.reviewTimers.delete(key); }
+        this.idleSince.delete(id);
         this.adaptive.drop(id);
         const s = this.state(agent.session);
-        if (s.pending?.source === 'adaptive') { s.pending = null; this.store.save(s); }
+        if (['adaptive', 'coordinator'].includes(s.pending?.source)) { s.pending = null; this.store.save(s); }
       }
     }
-    for (const agent of this.agents.values()) {
-      const id = agent.session.id, s = this.state(agent.session), job = this.jobs.get(id + ':autoCompact');
-      this.controllers.get(id + ':autoCompact')?.abort(Error('Auto Compact 设置已变化'));
-      const restart = () => { if (s.autoCompact) { delete s.autoCompact.lastKey; this.store.save(s); } this.autoCompact.kick(agent); };
-      if (job) void job.then(restart, restart); else restart();
-    }
+    this.autoCompact.reconfigure(cfg);
+    this.drainCalls();
     // Settings may adjust an existing deadline, never wake a dormant session.
     // Keep its original idle start, including repeated settings callbacks.
     for (const [id, since] of [...this.idleSince]) {
       const agent = this.agents.get(id);
-      if (agent) this.arm(agent, this.config().flushIdleMs, 'idle', since);
+      if (agent) this.arm(agent, cfg.flushIdleMs, 'idle', since);
     }
   }
   recall(session, args = {}) {
@@ -765,12 +774,12 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
   }
   // Read-only dry run of the same transaction builder; cached per surface so
   // console polling never repeats token counting for an unchanged session.
-  estimate(session, s, index, spans) {
+  estimate(session, s, index, spans, cfg = this.config()) {
     if (s.transaction) return null;
     const key = [session.surface.nodes.length, session.surface.nodes.at(-1), s.pending?.id, s.records.length, s.records.map(r => r.version + r.mode).join()].join(':');
     const cache = this.estimates ??= new Map(), hit = cache.get(session.id);
     if (hit?.key === key) return hit.value;
-    const cfg = this.config(), pricing = this.adapter.pricing?.(session);
+    const pricing = this.adapter.pricing?.(session);
     const run = plan => {
       try {
         const tx = plan && createTransaction(session, { ...s, transaction: null }, plan, { ...cfg, traceEnabled: false }, this.adapter.pairing, pricing);
@@ -789,10 +798,10 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
     return value;
   }
   view(session, { compact = false } = {}) {
-    const s = this.state(session), index = createSurfaceIndex(session);
+    const s = this.state(session), index = createSurfaceIndex(session), cfg = this.config();
     const spans = new Map(s.records.map(record => [record, liveSpan(session, record, index)]));
-    return { schema: 1, compressionMode: this.mode(session), bc: this.hub.bc?.view(session), autoCompact: { ...s.autoCompact, enabled: this.config().autoCompactEnabled,
-      threshold: this.config().autoCompactThreshold, mode: this.config().autoCompactMode, running: this.jobs.has(session.id + ':autoCompact') },
+    return { schema: 1, compressionMode: this.mode(session), bc: this.hub.bc?.view(session), autoCompact: { ...s.autoCompact, enabled: cfg.autoCompactEnabled,
+      threshold: cfg.autoCompactThreshold, mode: cfg.autoCompactMode, running: this.jobs.has(session.id + ':autoCompact') },
       adaptive: { running: this.jobs.has(session.id + ':adaptive'), lastAt: s.adaptive?.lastAt ?? null,
       lastDecision: s.adaptive?.lastDecision ?? null, reason: s.adaptive?.reason ?? null, error: s.adaptive?.error ?? null,
       waitingReason: s.adaptive?.waitingReason ?? null, cacheReadTokens: s.adaptive?.cacheReadTokens ?? null }, scope: s.binding, steps: s.steps, pending: s.pending, lastReplacement: s.lastReplacement || null, todoRefresh: s.todoRefresh || null,
@@ -800,37 +809,47 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
         const { documents, assets = [], userOriginals, originalSeqs, sourceSeqs, sourceHash, ...r } = record;
         return { ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(spans.get(record)) };
       }) }),
-      backlog: backlogView(session, s, this.config(), index, spans), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
-      memoryCache: { ...s.memoryCache, enabled: this.config().memoryCacheEnabled },
-      limits: { batchWindows: this.config().prepareBatchWindows, concurrency: this.config().backgroundConcurrency, continueTokens: this.config().prepareContinueTokens },
-      failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > this.config().backgroundMaxRetries ? kind === 'prepare' && s.failures[kind].validation ? 'waiting-events' : 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
+      backlog: backlogView(session, s, cfg, index, spans), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
+      memoryCache: { ...s.memoryCache, enabled: cfg.memoryCacheEnabled },
+      limits: { batchWindows: cfg.prepareBatchWindows, concurrency: cfg.backgroundConcurrency, continueTokens: cfg.prepareContinueTokens },
+      failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > cfg.backgroundMaxRetries ? kind === 'prepare' && s.failures[kind].validation ? 'waiting-events' : 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),
       manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
       queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),
-      estimate: (() => { try { return this.estimate(session, s, index, spans); } catch { return null; } })(),
+      estimate: (() => { try { return this.estimate(session, s, index, spans, cfg); } catch { return null; } })(),
       review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [], lastRejection: s.review.lastRejection || null, lastDiscard: s.review.lastDiscard || null, discarded: s.review.discarded || 0 } };
   }
   releaseState(id) {
-    if (!this.releasing.has(id) || this.agents.has(id) || this.manualSessions.has(id) || this.runtimeRetirements?.has(id)
+    if ((!this.closed && !this.releasing.has(id)) || this.agents.has(id) || this.manualSessions.has(id) || this.runtimeRetirements?.has(id)
       || [...(this.hub.live?.values() || [])].some(call => call.sessionId === id)
       || [...this.jobs.keys()].some(key => key.startsWith(id + ':'))) return;
     this.store.release(id); this.hub.store.release?.(id); this.releasing.delete(id);
   }
-  dispose(id) {
+  async dispose(id) {
     this.cachedPreparation.drop(id);
     this.adaptive.drop(id);
-    const ids = id ? [id] : [...this.agents.keys()];
+    const ids = id ? [id] : [...new Set([...this.agents.keys(), ...this.store.cache.keys(), ...this.releasing])];
     for (const key of ids) this.releasing.add(key);
     if (!id) this.closed = true;
-    for (const [key, c] of this.controllers) if (!id || key.startsWith(id + ':')) c.abort();
+    const reason = Error(id ? '会话上下文已释放' : '上下文组件已关闭');
+    const cancelled = new Set([reason]);
+    for (const [key, c] of this.controllers) if (!id || key.startsWith(id + ':')) { c.abort(reason); cancelled.add(c.signal.reason); }
+    for (const key of ids) {
+      const signal = this.autoCompact.signals.get(this.agents.get(key));
+      if (signal?.aborted) cancelled.add(signal.reason);
+    }
+    if (!id) for (const waiter of [...this.callWaiters]) waiter.cancel(reason);
     for (const [key, timer] of this.timers) if (!id || key.startsWith(id + ':')) { clearTimeout(timer); this.timers.delete(key); }
     for (const key of this.reviewTimers.keys()) if (!id || key.startsWith(id + ':')) this.reviewTimers.delete(key);
     if (id) { this.agents.delete(id); this.idleSince.delete(id); }
     else { this.agents.clear(); this.idleSince.clear(); }
     const pending = [...this.jobs].filter(([key]) => !id || key.startsWith(id + ':')).map(([, job]) => job);
-    return Promise.allSettled(pending).then(() => {
-      for (const key of ids) this.releaseState(key);
-      if (!id) try { this.store.flush(); } catch (error) { this.hub.ctx.logger?.warn?.(error.message); }
-    });
+    const settled = await Promise.allSettled(pending);
+    const errors = settled.filter(result => result.status === 'rejected' && !cancelled.has(result.reason)).map(result => result.reason);
+    for (const key of id ? ids : new Set([...ids, ...this.store.cache.keys()])) {
+      try { this.store.flush(key); this.releaseState(key); }
+      catch (error) { errors.push(error); }
+    }
+    if (errors.length) throw new AggregateError(errors, '上下文退出清理失败');
   }
 }

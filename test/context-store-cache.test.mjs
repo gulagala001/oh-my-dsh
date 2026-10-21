@@ -36,3 +36,19 @@ test('archive sweeps retain a bounded useful subset and still validate changed, 
   assert.equal(store.all().length, 5); assert.ok(!store.diskCache.has(filename));
   assert.equal(store.diskCacheBytes, [...store.diskCache.keys()].reduce((bytes, name) => bytes + statSync(join(store.dir, 'sessions', name)).size, 0));
 });
+
+test('a failed release retains the dirty state and reports the write failure until recovery', t => {
+  const directory = mkdtempSync(join(tmpdir(), 'omd-archive-release-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const store = new ContextStore(directory), state = store.state('unsaved');
+  state.steps = 7; store.touch(state);
+  const write = store.write.bind(store), failure = Error('disk unavailable');
+  store.write = () => { throw failure; };
+  assert.throws(() => store.release(state.id), error => error === failure);
+  assert.equal(store.cache.get(state.id), state);
+  assert.ok(store.dirty.has(state.id));
+  store.write = write;
+  store.release(state.id);
+  assert.equal(store.cache.has(state.id), false);
+  assert.equal(store.peek(state.id).steps, 7);
+});

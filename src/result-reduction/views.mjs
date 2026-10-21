@@ -59,8 +59,8 @@ export function registerContextViews(ctx, hub) {
       let source;
       if (args.rawRef) {
         await service.settled(); const record = await service.evidence.meta(args.rawRef);
-        if (!service.evidence.access(record, exec.agent.session, await service.ancestors(exec.agent.session))) throw Error('当前会话无权读取该原文');
-        source = { text: await service.evidence.text(record), complete: record.complete, source: args.rawRef };
+        if (!service.evidence.access(record, exec.agent.session, await service.ancestors(exec.agent.session, exec.signal))) throw Error('当前会话无权读取该原文');
+        source = { text: await service.evidence.text(record, exec.signal), complete: record.complete, source: args.rawRef };
       } else if (args.files) {
         if (!['raw', 'data'].includes(args.view) || !Array.isArray(args.files) || !args.files.length || args.files.length > 16 || args.files.some(file => typeof file !== 'string' || !file)) throw Error('批量读取需要 1–16 个文件和 raw/data 视图');
         const files = []; let size = 0;

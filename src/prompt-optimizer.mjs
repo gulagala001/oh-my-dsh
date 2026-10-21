@@ -1,5 +1,6 @@
 import { readJsonBody, rejectUntrusted } from './http.mjs';
-import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm';
+import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { readModelReply } from './model-reply.mjs';
 import templates from '../vendor/prompt-optimizer/templates.json' with { type: 'json' };
 
 export const OPTIMIZER_LIMIT = 64000;
@@ -41,52 +42,51 @@ export function createPromptOptimizer(ctx, hub, { timeoutMs = 120000 } = {}) {
     const request = optimizationRequest(input), route = optimizerRoute(ctx, session), own = new AbortController();
     const timer = setTimeout(() => own.abort(Error('提示词优化超时，草稿已保留')), timeoutMs); timer.unref?.();
     const combined = AbortSignal.any([own.signal, lifetime.signal, ...(signal ? [signal] : [])]);
-    const assembler = new BlockAssembler();
-    let iterator, completed = false, onAbort, startedAt = null, reasoningEffort;
-    const cancelled = new Promise((_, reject) => {
-      onAbort = () => reject(combined.reason instanceof Error ? combined.reason : Error('优化已取消'));
-      if (combined.aborted) onAbort(); else combined.addEventListener('abort', onAbort, { once: true });
-    });
-    cancelled.catch(() => {}); active.set(session.id, own);
+    let assembler, startedAt = null, reasoningEffort;
     const key = `prompt-optimizer:${session.id}`;
     let status = 'error', failure, live;
-    try {
-      // Bind capability selection and dispatch to one real SDK registration.
-      // An adapter default is an actual effort too; a failed preparation is not a call.
-      const prepared = await Promise.race([ctx.llm.prepareCall(route, combined, (controls, info) => ({ ...controls,
-        ...(info.reasoning?.efforts?.some(item => item.id === 'off') ? { reasoningEffort: 'off' } : {}) })), cancelled]);
-      combined.throwIfAborted(); reasoningEffort = prepared.config.reasoningEffort;
-      startedAt = Date.now();
-      live = { sessionId: session.id, kind: 'promptOptimizer', startedAt, ...route, effort: reasoningEffort ?? null };
-      hub.live.set(key, live);
-      iterator = prepared.stream({ ...prepared.config, ...request, tools: [], sessionId: session.id, signal: combined })[Symbol.asyncIterator]();
-      for (;;) { const part = await Promise.race([iterator.next(), cancelled]); if (part.done) break; assembler.push(part.value); }
-      combined.throwIfAborted(); completed = true;
-      if (['error', 'aborted', 'max-tokens'].includes(assembler.finish.kind)) throw Error(assembler.finish.failure?.message || '模型没有完整输出，请重试');
-      const text = assembler.blocks().filter(block => block.type === 'text').map(block => block.text).join('').trim();
-      if (!text || text.length > OPTIMIZER_LIMIT * 2) throw Error('优化结果为空或过长，草稿已保留');
-      status = 'success';
-      return { text, ...route };
-    } catch (error) {
-      status = combined.aborted ? combined.reason === own.signal.reason ? 'error' : 'cancelled'
-        : assembler.finish.kind === 'aborted' ? 'cancelled' : 'error';
-      failure = String(error?.message ?? error);
-      throw error;
-    } finally {
-      // Capability lookup or pre-dispatch cancellation is not a model call.
-      // A telemetry failure must not retry or fail a successful optimization.
-      if (startedAt !== null) {
-        try { hub.record(session, 'promptOptimizer', { ...route, source: 'background', startedAt, status,
-          effort: reasoningEffort ?? null, durationMs: Date.now() - startedAt, usage: assembler.usage,
-          hasOutput: Boolean(assembler.blocks().length), ...(failure ? { error: failure } : {}) }); } catch {}
+    const operation = (async () => {
+      try {
+        // Bind capability selection and dispatch to one real SDK registration.
+        // An adapter default is an actual effort too; a failed preparation is not a call.
+        await readModelReply(() => ctx.llm.prepareCall(route, combined, (controls, info) => ({ ...controls,
+          ...(info.reasoning?.efforts?.some(item => item.id === 'off') ? { reasoningEffort: 'off' } : {}) })),
+        { ...request, tools: [], sessionId: session.id }, combined, { start(prepared, current) {
+          assembler = current; reasoningEffort = prepared.config.reasoningEffort; startedAt = Date.now();
+          live = { sessionId: session.id, kind: 'promptOptimizer', startedAt, ...route, effort: reasoningEffort ?? null };
+          hub.live.set(key, live);
+        } });
+        const text = assembler.blocks().filter(block => block.type === 'text').map(block => block.text).join('').trim();
+        if (!text || text.length > OPTIMIZER_LIMIT * 2) throw Error('优化结果为空或过长，草稿已保留');
+        status = 'success';
+        return { text, ...route };
+      } catch (error) {
+        status = error?.cleanup ? 'error' : combined.aborted ? combined.reason === own.signal.reason ? 'error' : 'cancelled'
+          : assembler?.finish.kind === 'aborted' ? 'cancelled' : 'error';
+        failure = String(error?.message ?? error);
+        throw error;
+      } finally {
+        // Capability lookup or pre-dispatch cancellation is not a model call.
+        // A telemetry failure must not retry or fail a successful optimization.
+        if (startedAt !== null) {
+          try { hub.record(session, 'promptOptimizer', { ...route, source: 'background', startedAt, status,
+            effort: reasoningEffort ?? null, durationMs: Date.now() - startedAt, usage: assembler.usage,
+            hasOutput: Boolean(assembler.blocks().length), ...(failure ? { error: failure } : {}) }); } catch {}
+        }
+        clearTimeout(timer); active.delete(session.id);
+        if (hub.live.get(key) === live) hub.live.delete(key);
+        hub.context?.releaseState?.(session.id);
       }
-      clearTimeout(timer); combined.removeEventListener('abort', onAbort); active.delete(session.id);
-      if (hub.live.get(key) === live) hub.live.delete(key);
-      hub.context?.releaseState?.(session.id);
-      if (!completed) { try { void iterator?.return?.()?.catch?.(() => {}); } catch {} }
-    }
+    })();
+    active.set(session.id, operation);
+    return operation;
   }
-  return { optimize, dispose() { lifetime.abort(Error('提示词优化已停止')); } };
+  return { optimize, async dispose() {
+    lifetime.abort(Error('提示词优化已停止'));
+    const results = await Promise.allSettled([...active.values()]);
+    const errors = results.filter(result => result.status === 'rejected' && result.reason?.cleanup).map(result => result.reason);
+    if (errors.length) throw new AggregateError(errors, '提示词优化退出清理失败');
+  } };
 }
 
 export async function handlePromptOptimizerApi({ ctx, service, req, res, url, getSession, send }) {
