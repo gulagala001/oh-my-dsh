@@ -689,7 +689,7 @@
     "native/windows/helper.ps1": "a509cd49a9213089a8dc36337c3a939f89c484d722bba3b8b6bbeccf81ca4993",
     "package.json": "76e376ef5ed17a82c9e7fbf15d8c35cc6d583b3ea3d4d6ef34759bfcbafc36a5",
     "src/browser/actions.mjs": "c3691936d1eca4c6c5b7ca4207444e40d55002f715240e588d43c60932a92986",
-    "src/browser/backend.mjs": "55aae6a2e6ec1cd8ada04a54e66336832ec46e57b55849b0e7dd25f6435816d3",
+    "src/browser/backend.mjs": "d371f32958aa56be54502c8836777c516adca40b239e501fc3d282bd92bd88ef",
     "src/browser/composite.mjs": "8e2367f385677fc327c0eed9019a62868c462b2ec7a73c8abfa348774ff0a864",
     "src/browser/deliveries.mjs": "293870a2560eb0e3629fe70923a700eb2dbdd71944a9ec44b560d220d7f27052",
     "src/browser/dialogs.mjs": "0e4dd7a0f21af3c08b9b5fea70b66b1a32036fd3d0b2fd906fbcb5a6f49e5192",
@@ -745,6 +745,6 @@
     "src/runtime.mjs": "a3ba694ff2a3979f0ddc9aa7c803e17dc2c874fabd6f86f4dc448f3416411c1a",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
   },
-  "sourceRevision": "af4d6cf4839fd1f425040f4580539fc109944200",
+  "sourceRevision": "2efdaf752bda52636322c0671508f43fc162b2da",
   "baselineArchiveSha256": "a227e711071a07122afac58ca7262eb5aac9a798287f9ddae3ebfcab5ca19477"
 }
