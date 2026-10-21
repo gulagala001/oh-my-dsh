@@ -77,7 +77,10 @@ export class RecommendedPluginManager {
   unavailable(plugin) {
     plugin = resolveRecommendedPlugin(plugin, this.hostVersion);
     if (plugin.unavailable && plugin.unavailableHosts && !this.hostVersion) return '未能核实当前 DSH 完整版本，暂不提供安装或更新。已有安装仍可卸载。';
-    return plugin.unavailable && (!plugin.unavailableHosts || plugin.unavailableHosts.includes(this.hostVersion)) ? plugin.unavailable : null;
+    if (plugin.unavailable && (!plugin.unavailableHosts || plugin.unavailableHosts.includes(this.hostVersion))) return plugin.unavailable;
+    if (plugin.supportedRuntimeTargets && !plugin.supportedRuntimeTargets.includes(`${process.platform}-${process.arch}`))
+      return `此插件没有当前平台 ${process.platform}-${process.arch} 的原生运行时。支持：${plugin.supportedRuntimeTargets.join('、')}。已有安装仍可卸载。`;
+    return null;
   }
   async status() {
     if (this.getHostVersion) await this.refreshHost();
@@ -150,6 +153,10 @@ export class RecommendedPluginManager {
     const present = !!bundle?.installed || bundle?.availability === 'installation';
     if (['enable', 'disable'].includes(action)) {
       if (bundle?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
+      if (action === 'enable' && plugin.requireReviewedVersion) {
+        if (this.unavailable(plugin)) throw Error(this.unavailable(plugin));
+        if (present && bundle.version !== plugin.review?.version) throw Error('当前安装版本不在兼容目录中，请先切换到当前宿主的固定版本；目录未登记的外部新版可卸载后重新开启。');
+      }
       if (present) return this.finish(plugin, action, await this.manager.setBundleEnabled(plugin.packageName, action === 'enable'));
       if (action === 'disable') return this.finish(plugin, action, { application: 'applied' });
       // Enabling an absent feature is one operation: download, install and activate.
@@ -185,7 +192,7 @@ export class RecommendedPluginManager {
           && current?.version === plugin.review.upstreamVersion
           && version === plugin.review?.version && plugin.githubRelease
           && plugin.review?.releaseTag === 'v' + version && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 || '')
-          && version.startsWith(current.version + '-omd.');
+          && (version.startsWith(current.version + '-omd.') || !automatic && plugin.requireReviewedVersion && plugin.hostBuilds && plugin.review.dsh === this.hostVersion);
         const reviewedBuildMigration = !!plugin.hostBuilds && plugin.review?.dsh === this.hostVersion && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 ?? '')
           && [...Object.entries(plugin.historicalHostBuilds ?? {}), ...Object.entries(plugin.hostBuilds)].some(([host, build]) => host !== this.hostVersion && build.version === current?.version);
         if (automatic && plugin.hostBuilds && current?.version && !current.version.startsWith(this.hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.')) { this.records.set(plugin.id, { ...this.records.get(plugin.id), message: '宿主已变更，请手动更新为对应核验构建；界面状态数据将保留。', error: '' }); return false; }

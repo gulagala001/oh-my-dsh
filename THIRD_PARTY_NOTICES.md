@@ -8,6 +8,7 @@
 | `/btw` 侧问 | [JasonQQ](https://github.com/JasonQQ) | [dsh-btw-plugin](https://github.com/JasonQQ/dsh-btw-plugin) |
 | 历史可选回合回滚 · Turn Rewind | [Anionex](https://github.com/Anionex) | [dsh-turn-rewind](https://github.com/Anionex/dsh-turn-rewind) |
 | 可选需求理解组件 | [啃轮胎的西狐（WestFox-AwA）](https://github.com/WestFox-AwA) | [dsh-prompt-optimizer](https://github.com/WestFox-AwA/dsh-prompt-optimizer) |
+| 可选文件、文档与命令工具 · dsh-ops | [T-Auto](https://github.com/T-Auto) 与 dsh-ops 贡献者 | [dsh-ops](https://github.com/T-Auto/dsh-ops)；[兼容发行说明](docs/dsh-ops.md) |
 | 提示词优化模板 | [linshenkx](https://github.com/linshenkx) | [prompt-optimizer](https://github.com/linshenkx/prompt-optimizer) |
 | OpenDesign 技能桥接 | [omegapaopao](https://github.com/omegapaopao)；技能来源为 [nexu-io](https://github.com/nexu-io) 及各技能作者 | [dsh-open-design](https://github.com/omegapaopao/dsh-open-design)、[open-design](https://github.com/nexu-io/open-design)；[完整来源与许可](docs/open-design.md) |
 
@@ -77,6 +78,36 @@ originally authored by **啃轮胎的西狐（WestFox-AwA）**. **gulagala001** 
 OMD adaptation. It is not an official upstream release. The separate plugin
 preserves the upstream BSD-3-Clause license, attribution and source provenance;
 its code is not bundled with Oh My DSH.
+
+# dsh-ops compatibility distribution
+
+The optional, separately installed `dsh-ops` compatibility distributions pin
+[T-Auto's dsh-ops 0.4.1](https://github.com/T-Auto/dsh-ops/releases/tag/v0.4.1).
+Copyright (c) 2026 T-Auto and the dsh-ops contributors. **gulagala001** maintains
+the compatibility changes; these are not official upstream releases. Exact
+package versions are `0.2.1-rc.1.ops.0.1.0` and `0.2.1-rc.2.ops.0.1.0`, for
+their respective complete DSH host versions. The upstream archive is pinned to
+SHA-256 `e8ae70fa1703004973f4a61d5afe6c163862dd1469e3e9f5d03c736f8da5a362`;
+download links and per-release checksum files are in the
+[installation guide](docs/dsh-ops_EN.md).
+
+The compatibility distribution adjusts exact host/framework metadata, accepts
+`run_code` together with the four host background controls for PTC detection,
+and obtains scope helpers from the same Loader module used by the host tools.
+Business tools continue through the SDK under host permissions and sandbox
+policies. Native receipt checks use the pinned upstream version. The native
+worker bytes and original provenance receipts are unchanged; packaging restores
+only the executable bits for the two POSIX workers. Replacing official tools,
+the optional browser panel and the TUI panel remain off by default.
+
+The package preserves the upstream composite license **MIT AND Apache-2.0**,
+its `LICENSE`, `NOTICE`, `licenses/` and `docs/PROVENANCE.md`. Its original MIT
+grant covers dsh-ops-authored work. The retained FastCtx attribution and Apache
+license notices remain included as required by the upstream distribution.
+The optional Windows `@dsh-ops/bash-win32-x64@0.2.1` payload preserves the
+Git for Windows/Git component licenses, including GPL-2.0, and original notices.
+PowerShell remains host-managed and is not redistributed by this compatibility
+package. No third-party work is relicensed.
 
 # DSH
 

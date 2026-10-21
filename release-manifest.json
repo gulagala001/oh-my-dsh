@@ -2,6 +2,30 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.2.omd.0.19.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "接入固定版本 dsh-ops",
+      "notes": [
+        "新增功能：第三方功能页提供 dsh-ops，固定上游 0.4.1 与对应宿主的兼容发行包。",
+        "问题修复：统一普通／PTC 工具作用域与展示，保留后台任务控制、原生工具及权限。",
+        "其他变更：目录更新不跟随 latest，原生工具替换及 OPS 面板默认关闭，停用保留数据。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.19.0.md"
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.19.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "接入固定版本 dsh-ops",
+      "notes": [
+        "新增功能：第三方功能页提供 dsh-ops，固定上游 0.4.1 与对应宿主的兼容发行包。",
+        "问题修复：统一普通／PTC 工具作用域与展示，保留后台任务控制、原生工具及权限。",
+        "其他变更：目录更新不跟随 latest，原生工具替换及 OPS 面板默认关闭，停用保留数据。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.19.0.md"
+    },
+    {
       "version": "0.2.1-rc.2.omd.0.18.8",
       "severity": "normal",
       "unpublished": false,

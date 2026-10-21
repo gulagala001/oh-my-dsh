@@ -6,7 +6,7 @@ OMD retains native DSH tools, skills, sessions and third-party entries. **Use pl
 
 ## Match the artifacts
 
-Current source targets DSH `0.2.1-rc.2`: OMD `0.18.1` and standalone/bundled OpenCU `2.0.1`. Independent projects such as IUI and OMAA need their own matching builds. 0.2.0-rc.2, alpha.3 and 0.2.1-rc.1 have separate build inputs; relabeling the same frontend is not adaptation.
+Current source targets DSH `0.2.1-rc.2`: OMD `0.19.0` and standalone/bundled OpenCU `2.0.6`. DSH `0.2.1-rc.1` has a separate build; these two complete host versions are currently supported. Independent projects such as IUI and OMAA need their own matching builds; relabeling the same frontend is not adaptation.
 
 Do not replace current work with old packages, older HEAD or version exemptions. Back up actual data and retain explicit settings, accounts and third-party provenance.
 
@@ -36,6 +36,7 @@ The complete embedded browser, annotations and native monitor need matching Host
 | **OMAA** | Independent presets/features, usable through supported workflow/mode boundaries. |
 | **Subscriptions** | Independent login, account pools, routing and persistent Fast settings. OMD supplies no accounts, quota or server-priority guarantees. |
 | **Intent / requirement understanding** | Independent and off by default, separate from OMD's system instructions and manual draft refinement. |
+| **[dsh-ops](dsh-ops_EN.md)** | File, document and shell tools by T-Auto, with progressive tool discovery and result references. Fixed rc.1/rc.2 compatibility packages pin upstream `0.4.1`; native mode and PTC retain host permissions, sandbox policies and native tools. |
 | **DeepSeek Workbench** | Bundled; the recommendation page provides entry/state rather than third-party install/update/remove. |
 | **OpenDesign / standard plugins** | Retain independent skills, tools, UI ownership, account requirements and licenses. |
 | **Development-injected projects** | Follow their project instructions when no standard artifact exists; do not disguise them as directly installable packages. |
@@ -45,6 +46,8 @@ The complete embedded browser, annotations and native monitor need matching Host
 The catalog lists purpose, original author, fixed source, full host, SHA-256 and state. Unknown hosts, missing artifacts and unpublished targets do not get invented installation entries. Use the current profile's native manager; on desktop, use the app or its bundled CLI.
 
 Automatic updates default off and apply only to eligible installed/enabled releases. They do not cross hosts, approve scripts or restart. Accounts, OAuth, Fast and paid behavior need separate confirmation.
+
+The dsh-ops third-party feature page provides an install/enable switch and selects a fixed compatibility package for the complete host version and runtime target. Disabling retains plugin data. Catalog updates use reviewed compatibility releases rather than upstream `latest`. Updates through an external plugin marketplace or CLI can bypass the catalog pin; check the matching version afterward. [Installation and usage](dsh-ops_EN.md)
 
 Disable/removal retains conversations, drafts, attachments, settings, short memory and companion data. A saved conversation missing its preset may need that plugin restored.
 

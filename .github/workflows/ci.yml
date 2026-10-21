@@ -66,6 +66,8 @@ jobs:
         run: |
           pnpm list @deepseek-ai/dsh @deepseek-ai/cordis --depth 0
           node --test test/recommended-update-native.test.mjs
+      - name: Fixed OPS versions and PTC presentation contract
+        run: node --test test/dsh-ops-compat.test.mjs
       - name: Titlebar clearance source and bundled CSS regression
         run: |
           node --test test/titlebar-clearance.test.mjs

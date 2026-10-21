@@ -6,14 +6,12 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表列的是已发�
 
 | DSH 宿主 / Host | OMD 插件 / Plugin | 可粘贴安装的包 / Package |
 | --- | --- | --- |
-| 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.18.8 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.8/trisoul_x-0.2.1-rc.2.omd.0.18.8.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8) |
-| 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.18.8 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.8/trisoul_x-0.2.1-rc.1.omd.0.18.8.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.18.8) |
+| 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.19.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/trisoul_x-0.2.1-rc.2.omd.0.19.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.19.0) |
+| 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.19.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/trisoul_x-0.2.1-rc.1.omd.0.19.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.19.0) |
 
-## 0.18.8 更新 / Changes
+## OMD 0.19.0
 
-修复 `/btw` 侧问在 DSH 0.2.1 rc.1／rc.2 上无法启动（`ctx.subagents.start is not a function`）：改用宿主当前的 `startActivation` 启动原生 fork 子会话，答案只回到指令结果；取消时结束子运行。其他功能与内置 OpenCU 2.0.6 不变。
-
-Fixes `/btw` side questions failing to start on DSH 0.2.1 rc.1/rc.2 with `ctx.subagents.start is not a function` by starting the native fork sub-context through the host's `startActivation`, keeping the answer as a command result and ending the child when cancelled. No other functional or bundled OpenCU changes.
+[中文更新说明](release-0.19.0.md#zh-0190) · [English release notes](release-0.19.0.md#en-0190) · [dsh-ops 使用指南](dsh-ops.md)
 
 ## Release 里的文件怎么选？ / Which asset?
 
@@ -25,7 +23,7 @@ Fixes `/btw` side questions failing to start on DSH 0.2.1 rc.1/rc.2 with `ctx.su
 | metadata.json | 发行版本及来源信息。 / Release metadata. |
 | GitHub 自动生成的 Source code | 源码归档，供开发者使用，不填入普通插件安装步骤。 / Source archives for developers. |
 
-宿主适配与校验文件：[rc.2 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.8/host-adapters.zip) · [rc.2 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.18.8/SHA256SUMS) · [rc.1 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.8/host-adapters.zip) · [rc.1 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.18.8/SHA256SUMS)
+宿主适配与校验文件：[rc.2 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/host-adapters.zip) · [rc.2 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/SHA256SUMS) · [rc.1 适配源码](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/host-adapters.zip) · [rc.1 校验值](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/SHA256SUMS)
 
 这些发行**不包含配套完整桌面安装器**。对话、主题、任务和记忆可按插件步骤安装；完整内置浏览器、批注和原生监看需要匹配宿主构建。见[安装条件](install.md#computer-use)。These releases do not include a complete desktop installer; full desktop CU requires a matching host build.
 
@@ -35,7 +33,7 @@ Fixes `/btw` side questions failing to start on DSH 0.2.1 rc.1/rc.2 with `ctx.su
 
 ## 上一版 / Previous release
 
-OMD 0.18.7：[DSH rc.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.7) · [DSH rc.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.18.7)。
+OMD 0.18.8：[DSH rc.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8) · [DSH rc.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.18.8)。
 
 ## 旧版用户 / Older hosts
 

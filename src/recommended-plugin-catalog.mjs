@@ -2,6 +2,17 @@
 // Bundled features use their existing host entry instead of installing a second copy.
 export const recommendedPlugins = [
   {
+    id: 'dsh-ops', name: 'dsh-ops', packageName: 'dsh-ops', versionSuffix: 'ops',
+    author: '原作者：T-Auto · 兼容适配：gulagala001',
+    description: '增强文件、文档与命令操作，按需加载工具并复用结果；支持普通模式和 PTC，保留原生工具。',
+    category: '操作工具', url: 'https://github.com/T-Auto/dsh-ops', githubRelease: 'gulagala001/oh-my-dsh',
+    supportedRuntimeTargets: ['darwin-arm64', 'linux-x64', 'win32-x64'], requireReviewedVersion: true,
+    hostBuilds: {
+      '0.2.1-rc.2': { version: '0.2.1-rc.2.ops.0.1.0', upstreamVersion: '0.4.1', releaseTag: 'v0.2.1-rc.2.ops.0.1.0', asset: 'dsh-ops-0.2.1-rc.2.ops.0.1.0.tgz', sha256: 'd2a13073db75f11b7262b388c786bfb8fab35e541e35938f67bc0dd90dfe04c5', dsh: '0.2.1-rc.2', allowPrerelease: true },
+      '0.2.1-rc.1': { version: '0.2.1-rc.1.ops.0.1.0', upstreamVersion: '0.4.1', releaseTag: 'v0.2.1-rc.1.ops.0.1.0', asset: 'dsh-ops-0.2.1-rc.1.ops.0.1.0.tgz', sha256: '5343ead8b3816f0e070f254da5cc95a98abb173fc3440881888c16d55f8b325c', dsh: '0.2.1-rc.1', allowPrerelease: true },
+    },
+  },
+  {
     id: 'dsh-deepseek-workbench', name: 'DeepSeek 工作台', section: 'features', moduleName: 'trisoul_x/deepseek-workbench', packageName: 'dsh-deepseek-workbench', author: 'gulagala001',
     description: '使用 DeepSeek 网页聊天、临时侧栏与开放平台，将网页历史导入 DSH 后继续对话。',
     category: '内置工作台', bundled: true,

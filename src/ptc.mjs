@@ -47,15 +47,20 @@ export function installPtcPresentation(ctx, directTools = () => [], mode = 'ptc'
   ctx.tools.guard(reason);
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
     const assembly = await next();
-    if (!context?.agent) return assembly;
-    if (!owns(context.agent)) { sampled.delete(context.agent); return assembly; }
-    if (runtime.modeFor(context.scope ?? context.agent) === 'native') {
-      sampled.delete(context.agent);
+    // Public presentation probes use { scope: agent }, without the execution
+    // metadata. They must observe the same direct controls as a real request.
+    // Resolve locally: adding agent to the shared context would trigger other
+    // request-only hooks while a plugin is only inspecting presentation.
+    const agent = context?.agent ?? (context?.scope?.session && context.scope?.ctx ? context.scope : undefined);
+    if (!agent) return assembly;
+    if (!owns(agent)) { sampled.delete(agent); return assembly; }
+    if (runtime.modeFor(context.scope ?? agent) === 'native') {
+      sampled.delete(agent);
       return assembly;
     }
-    const names = sample(context.agent), controls = [...names].filter(name => name !== 'run_code');
+    const names = sample(agent), controls = [...names].filter(name => name !== 'run_code');
     const schemas = new Map(assembly.tools.map(tool => [tool.name, tool]));
-    for (const schema of ctx.tools.schemas(context.agent)) if (names.has(schema.name) && !schemas.has(schema.name)) schemas.set(schema.name, schema);
+    for (const schema of ctx.tools.schemas(agent)) if (names.has(schema.name) && !schemas.has(schema.name)) schemas.set(schema.name, schema);
     const text = controls.length
       ? `Use run_code and the tools SDK for business operations. These control tools are also callable directly: ${controls.join(', ')}. All other tools require run_code.`
       : '`run_code` is the only tool you can call directly — a tool call naming any other tool fails. Reach every tool the SDK declares below from inside the program.';
