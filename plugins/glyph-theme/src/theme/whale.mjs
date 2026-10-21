@@ -25,20 +25,29 @@ export function createWhalePainter() {
       }
     }
     const depth = (x, y) => Math.sqrt(at(x, y) * 3.2), points = [];
+    const columns = Array.from({ length: cols }, (_, x) => {
+      const px = (x + .5) * step - 11.75, tail = Math.max(0, (px - 1) / 10.75);
+      return { x: px, tailPower: tail ** 1.7 * .34, tailPhase: tail * 2.7 };
+    });
+    const straight = { fin: 0 }, strokes = [straight];
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
       const d = at(x, y); if (!d) continue;
       const z = depth(x, y), dx = (depth(x + 1, y) - depth(x - 1, y)) / (2 * step);
       const dy = (depth(x, y + 1) - depth(x, y - 1)) / (2 * step), len = Math.hypot(dx, dy, 1);
       const px = (x + .5) * step - 11.75, py = (y + .5) * step - 8.55;
-      for (const side of [1, -1]) points.push({ x:px, y:py, z:z * side, nx:-dx / len, ny:-dy / len, nz:side / len });
+      const fin = Math.max(0, Math.min(1, (py - 2) / 5)) * Math.exp(-(((px - 1) / 5) ** 2));
+      const stroke = fin ? { fin } : straight;
+      if (fin) strokes.push(stroke);
+      const column = columns[x];
+      for (const side of [1, -1]) points.push({ x:px, y:py, z:z * side, nx:-dx / len, ny:-dy / len, nz:side / len, column, stroke });
       if (d <= step * 1.1) {
         const norm = Math.hypot(dx, dy) || 1;
-        for (const f of [-.6, 0, .6]) points.push({ x:px, y:py, z:z * f, nx:-dx / norm, ny:-dy / norm, nz:0 });
+        for (const f of [-.6, 0, .6]) points.push({ x:px, y:py, z:z * f, nx:-dx / norm, ny:-dy / norm, nz:0, column, stroke });
       }
     }
-    for(const p of points){const tail=Math.max(0,(p.x-1)/10.75);p.tailPower=tail**1.7*.34;p.tailPhase=tail*2.7;p.fin=Math.max(0,Math.min(1,(p.y-2)/5))*Math.exp(-(((p.x-1)/5)**2));}
-    meshes.set(cols, points);
-    return points;
+    const value = { points, columns, strokes, time: undefined };
+    meshes.set(cols, value);
+    return value;
   }
   function makeRaster(scene,cellX,cellY,slot) {
     const left=Math.floor(scene.left/cellX)-1,top=Math.floor(scene.top/cellY)-1;
@@ -53,6 +62,22 @@ export function createWhalePainter() {
     const t = time === 0 ? 0 : Math.max(0, time - epoch);
     const shot=small?{primary:[Math.sin(t*.6)*.3,.08,1,0,0]}
       :ambient?{primary:[Math.sin(t*.2)*.35,.1,1.05,0,0]}:whaleShots(t);
+    const model = mesh(small ? 24 : 148);
+    // The front, back and rim share each surface sample's deformation. Camera
+    // transitions also reuse it; only the view projection changes between shots.
+    if (model.time !== t) {
+      for (const column of model.columns) {
+        const bend = Math.sin(t * 2.1 - column.tailPhase) * column.tailPower;
+        column.sb = Math.sin(bend); column.cb = Math.cos(bend);
+        column.breath = Math.sin(t * 1.2 - column.x * .15) * .12;
+      }
+      const phase = Math.sin(t * 1.7 - .6);
+      for (const stroke of model.strokes) {
+        const angle = phase * stroke.fin * .23;
+        stroke.ss = Math.sin(angle); stroke.cs = Math.cos(angle);
+      }
+      model.time = t;
+    }
     function renderView([yaw,pitch,zoom,focusX,focusY],slot) {
     const sy = Math.sin(yaw), cy = Math.cos(yaw), sx = Math.sin(pitch), cx = Math.cos(pitch);
     const rotate = (x, y, z) => {
@@ -69,15 +94,14 @@ export function createWhalePainter() {
     const cellX = small ? 1.25 : raster?.stepX || 6, cellY = small ? 1.45 : raster?.stepY || 8;
     const pixels=makeRaster(scene,cellX,cellY,(small?'small':'large')+slot);
     const {depth,light:lights,used,left,top,cols,rows}=pixels;
-    for (const p of mesh(small ? 24 : 148)) {
+    for (const p of model.points) {
       // A travelling bend reaches the tail after the body. The lower fin has
       // its own stroke; breathing and buoyancy stay small and continuous.
-      const bend = Math.sin(t * 2.1 - p.tailPhase) * p.tailPower;
-      const sb = Math.sin(bend), cb = Math.cos(bend);
+      const { sb, cb, breath } = p.column;
       let x = 1 + (p.x - 1) * cb + p.z * sb, z = -(p.x - 1) * sb + p.z * cb;
       let nx = p.nx * cb + p.nz * sb, nz = -p.nx * sb + p.nz * cb;
-      const stroke = Math.sin(t * 1.7 - .6) * p.fin * .23, ss = Math.sin(stroke), cs = Math.cos(stroke);
-      const y = p.y * cs - z * ss + Math.sin(t * 1.2 - p.x * .15) * .12;
+      const { ss, cs } = p.stroke;
+      const y = p.y * cs - z * ss + breath;
       z = p.y * ss + z * cs; const ny = p.ny * cs - nz * ss; nz = p.ny * ss + nz * cs;
       const rx=x*cy+z*sy,rz=-x*sy+z*cy,ry=y*cx-rz*sx,depthZ=y*sx+rz*cx;
       const normalX=nx*cy+nz*sy,normalZ0=-nx*sy+nz*cy,normalY=ny*cx-normalZ0*sx,normalZ=ny*sx+normalZ0*cx;
