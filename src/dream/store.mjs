@@ -55,11 +55,17 @@ export class DreamStore {
     this.tx(() => {
       this.db.prepare(`INSERT INTO sessions VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET project=excluded.project,shared=excluded.shared,title=excluded.title,activity=excluded.activity,data=excluded.data`)
         .run(value.id, value.project || '', Number(value.shared), value.title || value.id, value.activity || 0, encode(value));
-      if (!old || old.project !== value.project || old.shared !== value.shared || old.title !== value.title || old.available !== value.available || old.readError !== value.readError) this.bumpCatalog();
-      if(old?.shared&&(old.project!==value.project||!value.shared)){
-        for(const key of [nodeKey('project',old.project),'global']){
-          const memory=this.memory(key);if(memory)this.db.prepare('UPDATE memories SET data=? WHERE key=?').run(encode({...memory,invalid:true,notice:'来源范围已改变，等待重新整理'}),key);
-        }
+      // A log generation owns its memory just as a shared scope owns a parent.
+      // Preserve old versions for explicit recall; they cannot seed a new log.
+      const replaced=typeof value.generation==='string'&&old?.generation!==value.generation;
+      if (!old || replaced || old.project !== value.project || old.shared !== value.shared || old.title !== value.title || old.available !== value.available || old.readError !== value.readError) this.bumpCatalog();
+      const invalidated=new Set(replaced?[nodeKey('session',value.id)]:[]);
+      if(old?.shared&&(replaced||old.project!==value.project||!value.shared)){
+        invalidated.add(nodeKey('project',old.project));invalidated.add('global');
+      }
+      if(replaced)this.db.prepare('DELETE FROM meta WHERE key=?').run('scan:'+value.id);
+      for(const key of invalidated){
+        const memory=this.memory(key);if(memory)this.db.prepare('UPDATE memories SET data=? WHERE key=?').run(encode({...memory,invalid:true,notice:'来源范围或会话日志已改变，等待重新整理'}),key);
       }
     });
     return true;
@@ -106,6 +112,11 @@ export class DreamStore {
       if (baseInvalid !== undefined && Boolean(old?.invalid) !== baseInvalid) throw Error('Dream 来源范围在生成期间已改变；停止发布');
       // Membership is checked inside the same transaction as publication: a
       // second process may update scope after the asynchronous source read.
+      if(kind==='session'&&sources.length){
+        const session=this.session(target);
+        if(sources.some(source=>source.sessionId!==target||!source.generation||source.generation!==session?.generation))
+          throw Error('发布时会话来源已改变；未发布旧日志的结果');
+      }
       if(kind==='project'||kind==='global')for(const source of sources){
         if(!['memory','withdrawn'].includes(source.kind))continue;
         const child=this.memory(source.key),session=child?.kind==='session'?this.session(child.target):null;
@@ -115,10 +126,10 @@ export class DreamStore {
         if(source.kind==='withdrawn'&&eligible)throw Error('发布时来源已恢复，不能撤回其贡献');
       }
       for (const source of sources) this.putSource(source);
-      // An invalid parent's first batch starts a new body without the old one.
+      // An invalid memory's first batch starts a new body without the old one.
       // Atomically discard that body's coverage too: after an interruption,
       // only sources actually rebuilt into the new body may be skipped.
-      if (old?.invalid && (kind === 'project' || kind === 'global'))
+      if (old?.invalid)
         this.db.prepare('DELETE FROM progress WHERE node=?').run(key);
       for (const item of consumed) this.db.prepare('INSERT INTO progress VALUES(?,?,?,?) ON CONFLICT(node,source) DO UPDATE SET fingerprint=excluded.fingerprint,data=excluded.data').run(key, item.key, item.fingerprint, encode(item));
       // Source coverage is committed even if the concise text did not change.
