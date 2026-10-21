@@ -3,7 +3,7 @@ import { Button } from './native-controls.jsx';
 import { usePollingAction } from './use-polling-action.mjs';
 
 async function updateApi(version, signal) {
-  const response = await fetch('trisoul-x/api/version-update', version === undefined ? { signal, cache: 'no-store' }
+  const response = await fetch('oh-my-dsh/api/version-update', version === undefined ? { signal, cache: 'no-store' }
     : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version }) });
   if (response.status === 404) throw Error('更新服务尚未加载，请重启 DSH 后重试。');
   const data = await response.json();

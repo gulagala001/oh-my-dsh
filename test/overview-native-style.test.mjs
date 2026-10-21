@@ -20,7 +20,7 @@ test('native plugin disposal preserves OMD overview styles and repeated factorie
     const factories = [createJobsOverview, createTeamOverview, createWorkflowOverview];
     factories.forEach(factory => factory(hostRequire));
     assert.equal(styles.length, 3);
-    assert.ok(styles.every(style => style.dataset.plugin === 'trisoul_x' && style.dataset.pluginCss.startsWith('trisoul_x/overview/')));
+    assert.ok(styles.every(style => style.dataset.plugin === 'oh-my-dsh' && style.dataset.pluginCss.startsWith('oh-my-dsh/overview/')));
     // The host removes styles by the unloaded module's exact data-plugin ID.
     for (const owner of ['@deepseek-ai/dsh-client-ui-jobs', '@deepseek-ai/dsh-experimental-client-ui-agent-team', '@deepseek-ai/dsh-client-ui-workflow-run']) {
       assert.equal(styles.filter(style => style.dataset.plugin !== owner).length, 3);

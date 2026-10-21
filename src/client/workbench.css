@@ -1,5 +1,5 @@
 /* Keep the host's tab controls, drag handling and fullscreen start inset. */
-html.trisoul-shell[data-omd-skin] [data-sidebar-right-panel] [data-dockkit-strip] {
+html.omd-shell[data-omd-skin] [data-sidebar-right-panel] [data-dockkit-strip] {
   box-sizing: border-box; height: 44px; min-height: 44px; padding-block: 7px;
   border-bottom: 1px solid var(--omd-pane-line,var(--dsw-alias-border-l3));
 }

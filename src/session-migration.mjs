@@ -5,6 +5,8 @@ import { sourceHash, hash } from './context/core.mjs';
 import { userDocument } from './context/materials.mjs';
 import { normalizeLegacyV0Row } from './session-legacy-v0.mjs';
 import { hasLegacyPluginSources } from './session-legacy-sources.mjs';
+import { sourceName } from './message-source.mjs';
+import { isOmdPreset, LEGACY_V0_COMPACTION_PREFIX } from './legacy-identity.mjs';
 
 const optionalJson = async path => { try { return JSON.parse(await readFile(path, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return null; throw e; } };
 async function durableJson(path, value) {
@@ -74,9 +76,9 @@ function rebaseGeneratedContent(content, mapping, sessionId) {
 }
 function normalizeSystem(event) {
   const message = event.type === 'system/message' ? event.data?.message : null;
-  if (message?.source?.kind !== 'plugin' || !message.source.plugin?.startsWith('trisoul-x:')) return event;
+  if (message?.source?.kind !== 'plugin' || !sourceName(message.source)?.startsWith('oh-my-dsh:')) return event;
   return { ...event, data: { ...event.data, message: { ...message, source: {
-    ...message.source, plugin: '@deepseek-ai/dsh-system-prompt', ...(message.source.plugin === 'trisoul-x:shadow' ? { omdShadow: true } : {}),
+    ...message.source, plugin: '@deepseek-ai/dsh-system-prompt', ...(sourceName(message.source) === 'oh-my-dsh:shadow' ? { omdShadow: true } : {}),
   } } } };
 }
 // The retired pre-step path reserved its empty system head before step/start.
@@ -90,8 +92,8 @@ function normalizeLegacyBoundaries(input, inheritedEventCount) {
     if (event.type === 'step/start') step = event.data;
     if (event.type === 'step/end' || event.type === 'turn/end') step = null;
     const source = event.type === 'system/message' ? event.data.message?.source : null;
-    if (source?.kind !== 'plugin' || !source.plugin?.startsWith('trisoul-x:')) continue;
-    if (source.plugin === 'trisoul-x:shadow') {
+    if (source?.kind !== 'plugin' || !sourceName(source)?.startsWith('oh-my-dsh:')) continue;
+    if (sourceName(source) === 'oh-my-dsh:shadow') {
       event.type = 'user/message'; event.data = { ...event.data.message, role: 'user' };
       continue;
     }
@@ -107,7 +109,7 @@ function normalizeLegacyBoundaries(input, inheritedEventCount) {
   const early = events.slice(0, Math.max(0, head)).filter(e => e.surfaceOp);
   if (early.length) {
     if (events[head].surfaceOp !== 'append' || early.some(e => e.type !== 'user/message' || e.surfaceOp !== 'append'
-      || e.data.source?.kind !== 'plugin' || !e.data.source.plugin?.startsWith('trisoul-x:')
+      || e.data.source?.kind !== 'plugin' || !sourceName(e.data.source)?.startsWith('oh-my-dsh:')
       || (e.seq < inheritedEventCount) !== (events[head].seq < inheritedEventCount))) throw Error('旧系统头之前存在非 OMD 控制消息，原日志保留');
     for (const event of early) events.splice(events.indexOf(event), 1);
     events.splice(events.indexOf(events.find(e => e.type === 'system/message')) + 1, 0, ...early);
@@ -151,7 +153,7 @@ function normalizeCompactionSpans(events, legacyV0 = false) {
   const surface = [];
   let turn = null, compaction = null;
   for (const event of events) {
-    const repair = !legacyV0 || event.data.compactionId?.startsWith('trisoul-');
+    const repair = !legacyV0 || event.data.compactionId?.startsWith(LEGACY_V0_COMPACTION_PREFIX);
     if (event.type === 'turn/start') turn = event.data.turn;
     if (event.type === 'turn/end') turn = null;
     if (event.type === 'compaction/start') {
@@ -167,7 +169,7 @@ function normalizeCompactionSpans(events, legacyV0 = false) {
     if (source?.kind === 'plugin' && source.plugin === 'compact' && compaction?.compactionId === source.compactionId
       && source.sourceCommandId === undefined && compaction.sourceCommandId !== undefined) source.sourceCommandId = compaction.sourceCommandId;
     if (source?.kind === 'plugin' && source.plugin === 'compact' && compaction?.compactionId !== source.compactionId
-      && (event.data.omdBatchId || legacyV0 && source.compactionId?.startsWith('trisoul-'))) source.plugin = 'trisoul-x:context-record';
+      && (event.data.omdBatchId || legacyV0 && source.compactionId?.startsWith(LEGACY_V0_COMPACTION_PREFIX))) source.plugin = 'oh-my-dsh:context-record';
     if (event.type === 'compaction/summary' && repair) {
       const {start,end} = event.data.shadowedRange;
       const first = surface.indexOf(start), last = surface.indexOf(end);
@@ -229,7 +231,7 @@ export function migrateArtifact(support, historical, children) {
     if (event.type === 'compaction/summary' && event.data.omdBatchId) event.data.summary = rebaseGeneratedContent(event.data.summary, originalMapping, header.id);
     const message = event.type === 'user/message' ? event.data : event.data?.message;
     if (!message) continue;
-    if (message.omdBatchId || message.source?.kind === 'plugin:trisoul-x:trace') message.content = rebaseGeneratedContent(message.content, originalMapping, header.id);
+    if (message.omdBatchId || message.source?.kind?.startsWith('plugin:') && sourceName(message.source) === 'oh-my-dsh:trace') message.content = rebaseGeneratedContent(message.content, originalMapping, header.id);
     for (const key of ['omdTodo', 'omdTaskContext']) if (message[key]) message[key] = remapOwned(message[key], originalMapping, header.id, originalEvents);
   }
   const restore = support.sessionFormatCatalog.createRestore(support.sessionFormatCatalog.encodeCurrentHeader(header, inheritedEventCount), { recovery: 'strict', validation: 'current' });
@@ -421,7 +423,7 @@ async function migrateArchives(ctx, dataDir, support, root, compression) {
     const journalPath = join(item.dir, 'omd-v4-migration.json');
     let journal = await optionalJson(journalPath);
     if (item.version >= 4 && (!journal || journal.complete)) continue;
-    const owned = ['trisoul-x', 'omd-ptc'].includes(item.header.agentPreset)
+    const owned = isOmdPreset(item.header.agentPreset)
       || await optionalJson(join(dataDir, 'context-v1/sessions', hash(item.header.id) + '.json'))
       || await optionalJson(join(dataDir, 'sessions', item.header.id + '.json'));
     // Desktop and Web share the old archive. V0 predates OMD's preset names,

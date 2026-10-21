@@ -18,7 +18,7 @@ export function VersionInfo({ row = false, onCheck } = {}) {
     setBusy(true);
     pending.current = (async () => {
       try {
-        const response = await fetch('trisoul-x/api/version' + (refresh ? '?refresh=1' : ''), { signal: controller.signal, cache: 'no-store' });
+        const response = await fetch('oh-my-dsh/api/version' + (refresh ? '?refresh=1' : ''), { signal: controller.signal, cache: 'no-store' });
         if (!response.ok) throw Error('Version check failed');
         const result = await response.json();
         if (typeof result.currentVersion !== 'string' || !['unknown', 'current', 'ahead', 'update'].includes(result.status)) throw Error('Invalid version response');

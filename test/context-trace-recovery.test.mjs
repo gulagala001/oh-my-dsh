@@ -24,7 +24,7 @@ async function fixture(t) {
   const traceSource = session.append('assistant/message', { turn: 1, step: 1,
     message: { id: 'trace-source', role: 'assistant', source: { kind: 'model', model: 'fixture' },
       content: [{ type: 'reasoning', text: 'Earlier exposed reasoning' }, { type: 'text', text: 'Recorded findings. '.repeat(400) }] } }, { surfaceOp: 'append' });
-  const trace = session.append('user/message', createUserMessage({ source: { kind: 'plugin:trisoul-x:trace' },
+  const trace = session.append('user/message', createUserMessage({ source: { kind: 'plugin:oh-my-dsh:trace' },
     content: [{ type: 'text', text: '[Previous analysis]\nEarlier exposed reasoning\n[End previous analysis]\n' }, ...original.data.content] }),
   { surfaceOp: { op: 'replace', startSeq: original.seq, endSeq: original.seq }, sourceEventSeqs: [original.seq] });
   const state = pipeline.state(session);
@@ -44,13 +44,13 @@ for (const stale of ['log-only', 'unrelated-surface', 'old-carrier']) test(`comp
       { surfaceOp: { op: 'replace', startSeq: trace.seq, endSeq: trace.seq }, sourceEventSeqs: [trace.seq] });
   }
   const before = structuredClone(session.snapshotEvents()), recovered = resolveTraceSlot(session, state.traceSlot);
-  assert.equal(sourceName(session.eventAt(recovered.carrierSeq).data.source), 'trisoul-x:trace');
+  assert.equal(sourceName(session.eventAt(recovered.carrierSeq).data.source), 'oh-my-dsh:trace');
   assert.equal(carrierBarrier(session, state, { traceEnabled: true }), 0);
   const projected = withoutMovedReasoning(session.deriveMessages(), session, state.traceSlot);
   assert.equal(projected.find(m => m.id === 'trace-source').content.some(b => b.type === 'reasoning'), false);
   const result = await ReplacementCanvas.prototype.compactNow.call({ hub: f.hub }, agent, new AbortController().signal, 'compact-command');
   assert.ok(result);
-  assert.equal(state.traceSlot.carrierSeq, session.surface.nodes.find(seq => sourceName(session.deriveEventMessage(session.eventAt(seq))?.source) === 'trisoul-x:trace'));
+  assert.equal(state.traceSlot.carrierSeq, session.surface.nodes.find(seq => sourceName(session.deriveEventMessage(session.eventAt(seq))?.source) === 'oh-my-dsh:trace'));
   assert.equal(state.records.find(r => r.id === record.id).mode, 'detail');
   assert.deepEqual(state.traceSlot.original.content, trace.data.content.slice(1));
   assert.deepEqual(session.snapshotEvents().slice(0, before.length), before);
@@ -69,7 +69,7 @@ test('a transaction resolves the live Trace without relying on a previous state 
   assert.equal(tx.operations.find(o => o.kind === 'trace').seqs[0], f.trace.seq);
   await applyTransaction(session, state, tx, pipeline.store, f.adapter);
   assert.equal(state.records[0].mode, 'brief');
-  assert.equal(sourceName(session.eventAt(state.traceSlot.carrierSeq).data.source), 'trisoul-x:trace');
+  assert.equal(sourceName(session.eventAt(state.traceSlot.carrierSeq).data.source), 'oh-my-dsh:trace');
 });
 
 test('full compaction retains the recovered Trace and its original request', async t => {

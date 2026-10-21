@@ -2,7 +2,7 @@
 import { appendFileSync, writeSync } from 'node:fs';
 import { readJsonBody, sendJson, rejectUntrusted } from '../../src/http.mjs';
 
-export const inject = ['llm', 'agents', 'sessions', 'sessionProjections', 'trisoulX'];
+export const inject = ['llm', 'agents', 'sessions', 'sessionProjections', 'omd'];
 export function apply(ctx, config) {
   if (process.env.OMD_SIMULATION !== '1') throw Error('Simulation instrumentation requires its isolated launcher');
   const record = entry => {

@@ -24,7 +24,7 @@ export async function openSidebarReplay(browser, bundle, { rows = 50, history = 
   const pageErrors = []; page.on('pageerror', error => pageErrors.push(error));
   const assertNoPageErrors = () => { if (pageErrors.length) throw new AggregateError(pageErrors, 'Sidebar replay page errors'); };
   await page.route('**/*', route => route.abort());
-  await page.setContent('<!doctype html><html class="trisoul-shell"><head><style>body{margin:0}main{display:flex}nav{width:250px}[role=treeitem]{min-height:24px}section{flex:1}</style></head><body><main id="fixture-frame" data-omd-surface="frame" data-sidebar-collapsed="false"><aside id="fixture-sidebar-column" data-omd-surface="sidebar-column"></aside><section id="fixture-conversation" data-omd-surface="conversation"><div id="fixture-history"></div><div id="fixture-output"></div></section><aside id="fixture-workbench" data-omd-surface="workbench-column"></aside></main></body></html>');
+  await page.setContent('<!doctype html><html class="omd-shell"><head><style>body{margin:0}main{display:flex}nav{width:250px}[role=treeitem]{min-height:24px}section{flex:1}</style></head><body><main id="fixture-frame" data-omd-surface="frame" data-sidebar-collapsed="false"><aside id="fixture-sidebar-column" data-omd-surface="sidebar-column"></aside><section id="fixture-conversation" data-omd-surface="conversation"><div id="fixture-history"></div><div id="fixture-output"></div></section><aside id="fixture-workbench" data-omd-surface="workbench-column"></aside></main></body></html>');
   await page.evaluate(({ rows, history }) => {
     let counters;
     const resetCounters = () => { counters = { observerCalls: 0, observerCallbackMs: 0, observerRecords: 0, sidebarScanCalls: 0, sidebarScanNodes: 0 }; };

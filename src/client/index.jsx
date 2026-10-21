@@ -3,6 +3,7 @@ import { applyAppearanceBrand } from './appearance-brand.jsx';
 import { createPoller } from './polling.mjs';
 import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
 import { installTemporaryChat } from './temporary-chat.jsx';
+import { isOmdPreset } from '../legacy-identity.mjs';
 import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
 import { applySessionTimeZone } from './session-time-zone.mjs';
 import { apply as applyRewind, inject as rewindInject } from '../../vendor/rewind/src/client/index.jsx';
@@ -42,7 +43,7 @@ import { apply as applyExtensions, inject as extensionsInject } from '../../plug
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 
 const api = async (path, value, signal) => {
-  const response = await fetch(`trisoul-x/api${path}`, value === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
+  const response = await fetch(`oh-my-dsh/api${path}`, value === undefined ? { signal } : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
   return data;
@@ -53,7 +54,7 @@ const shortDate = at => at == null ? '时间未记录' : new Date(at).toLocaleSt
 function BetterTodoChip(props) {
   const preset = props.useSessions(s => s.byId[props.sessionId]?.projectionValues?.agentPreset);
   const main = useMainConversation(props);
-  return main && ['trisoul-x', 'omd-ptc'].includes(preset) ? <BetterTodoSessionChip {...props}/> : null;
+  return main && isOmdPreset(preset) ? <BetterTodoSessionChip {...props}/> : null;
 }
 function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
@@ -121,18 +122,18 @@ export async function apply(ctx) {
   }
   const getAppearanceRuntime = applySkins(ctx);
   ctx.effect(() => {
-    const tag = document.createElement('style'); tag.dataset.plugin = 'trisoul_x'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss; document.head.appendChild(tag);
+    const tag = document.createElement('style'); tag.dataset.plugin = 'oh-my-dsh'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss; document.head.appendChild(tag);
     const runtime = getAppearanceRuntime();
     // Feature integration scope only; native DSH never installs the selectable skin base.
-    const sync = () => document.documentElement.classList.toggle('trisoul-shell', runtime.getSnapshot().active !== false);
+    const sync = () => document.documentElement.classList.toggle('omd-shell', runtime.getSnapshot().active !== false);
     const off = runtime.subscribe(sync); sync();
-    return () => { off(); tag.remove(); document.documentElement.classList.remove('trisoul-shell'); };
+    return () => { off(); tag.remove(); document.documentElement.classList.remove('omd-shell'); };
   });
   applyAppearanceBrand(ctx, getAppearanceRuntime);
   applyOmdSettings(ctx, { optimizer: optimizer.preferences, persona });
   ctx.effect(() => bindSettingsNavigation(ctx));
-  ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({ name: 'conversation.session.header.utilities', id: 'trisoul-running', order: 25 }, RunningMarker));
-  ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'trisoul-better-todo', order: 100 }, BetterTodoChip));
+  ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({ name: 'conversation.session.header.utilities', id: 'omd-running', order: 25 }, RunningMarker));
+  ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'omd-better-todo', order: 100 }, BetterTodoChip));
   applyConsole(ctx, { composerStats: JSON.parse(__OMD_COMPOSER_STATS__),
     performanceMode: { get: () => chatSettings.getSnapshot()?.value?.performanceUsage, subscribe: listener => chatSettings.subscribe(listener) } });
   applyConversationRecords(ctx);

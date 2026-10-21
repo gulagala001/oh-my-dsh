@@ -4,7 +4,7 @@ import { readJsonBody } from './http.mjs';
 import { compareVersions, parseVersion, updateHostRequirement } from './version.mjs';
 import { pluginManagementError } from './recommended-plugins.mjs';
 
-const PACKAGE = 'trisoul_x';
+const PACKAGE = 'oh-my-dsh';
 const failure = (message, statusCode = 409) => Object.assign(new Error(message), { statusCode });
 const hostReason = (current, target, host) => {
   if (!target) return '';
@@ -101,7 +101,7 @@ export class VersionUpdater {
 
 // Mounted after the shared authentication and Origin check in index.mjs.
 export async function handleVersionUpdateApi({ req, res, url, service, send }) {
-  if (url.pathname !== '/trisoul-x/api/version-update') return false;
+  if (url.pathname !== '/oh-my-dsh/api/version-update') return false;
   if (req.method === 'GET') send(res, 200, await service.status());
   else if (req.method === 'POST') {
     const input = await readJsonBody(req, { maxBytes: 4096 });

@@ -87,7 +87,7 @@ export async function desktopInputs(env = process.env, platform = process.platfo
   const files = archiveFiles(bytes);
   const manifest = JSON.parse(files.get('package/package.json'));
   const source = JSON.parse(await readFile(new URL('../../../package.json', import.meta.url)));
-  assert.equal(manifest.name, 'trisoul_x'); assert.equal(manifest.version, source.version);
+  assert.equal(manifest.name, 'oh-my-dsh'); assert.equal(manifest.version, source.version);
   assert.match(manifest.version, /^0\.2\.1-rc\.2\.omd\.\d+\.\d+\.\d+$/);
   assert.equal(manifest.engines.dsh, hostVersion);
   assert.equal(manifest.devDependencies['@deepseek-ai/dsh'], hostVersion);

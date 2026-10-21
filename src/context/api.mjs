@@ -8,7 +8,7 @@ import { handlePersonalityApi } from '../personality-session.mjs';
 import { CONFIG_KEYS as PERSONA_KEYS } from '../../plugins/persona/src/store.mjs';
 
 export async function handleContextApi({ hub, ctx, req, res, url, session, agent, inspection, archivedOnly, refreshSession, id, send, readBody }) {
-  const path = url.pathname.replace('/trisoul-x/api', '');
+  const path = url.pathname.replace('/oh-my-dsh/api', '');
   const needSession = () => { if (!session) throw new Error('请选择一个可读取的会话'); return session; };
   if (path.startsWith('/context/evidence')) {
     const service = hub.optimization;
@@ -84,7 +84,7 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
         if (projectless||scopeLocked(fresh)) { send(res, 409, { error: '会话已开始或属于非工作区 Chat，隔离范围不能中途扩大' }); return true; }
         state = id ? hub.store.peek(id) : null;
         if (id) { state ??= hub.store.state(id); state.memoryScope = input.scope; hub.store.save(state); }
-        else await ctx.settings.update('trisoul-x', { memoryScope: input.scope });
+        else await ctx.settings.update('oh-my-dsh', { memoryScope: input.scope });
       }
       reading.signal.throwIfAborted();
       send(res, 200, { scope: scope(), locked, default: ['session','global'].includes(hub.config().memoryScope) ? hub.config().memoryScope : 'project' }); return true;
@@ -178,7 +178,7 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     if (patch.memoryScope !== undefined && !['session', 'project', 'global'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆；全局模式使用 global');
     const personaPatch = Object.fromEntries(Object.entries(patch).filter(([key]) => PERSONA_KEYS.includes(key)));
     if (hub.persona) patch = Object.fromEntries(Object.entries(patch).filter(([key]) => !PERSONA_KEYS.includes(key)));
-    if (Object.keys(patch).length) await ctx.settings.update('trisoul-x', patch);
+    if (Object.keys(patch).length) await ctx.settings.update('oh-my-dsh', patch);
     if (hub.persona && Object.keys(personaPatch).length) hub.persona.update(personaPatch);
     hub.context.cachedPreparation.configure();
     send(res, 200, hub.config()); return true;

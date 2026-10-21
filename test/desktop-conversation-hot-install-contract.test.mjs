@@ -7,29 +7,29 @@ import { readFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { archiveFiles, pins } from './fixtures/conversation-hot-install/inputs.mjs';
 import { assertReport, stages } from './fixtures/conversation-hot-install/contract.mjs';
-const sessionId = 'synthetic-blank', bundleRoot = '/synthetic/profile/node_modules/trisoul_x';
+const sessionId = 'synthetic-blank', bundleRoot = '/synthetic/profile/node_modules/oh-my-dsh';
 const baseline = { priority: 0, labelOwner: 'official-ModelSelect' };
 const originals = [['ui-conversation', '@deepseek-ai/dsh-client-ui-conversation'], ['ui-chat', '@deepseek-ai/dsh-client-ui-chat']];
-const replacements = [['trisoul-x', 'trisoul_x'], ['omd-ui-conversation', 'trisoul_x/host/ui-conversation'], ['omd-ui-chat', 'trisoul_x/host/ui-chat']];
+const replacements = [['oh-my-dsh', 'oh-my-dsh'], ['omd-ui-conversation', 'oh-my-dsh/host/ui-conversation'], ['omd-ui-chat', 'oh-my-dsh/host/ui-chat']];
 const release = { version: pins.desktop.version, commit: pins.desktop.sourceCommit };
 const expected = { sha256: 'a'.repeat(64) };
 const tap = '# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n';
 function stageValue(stage, index) {
   const enabled = ['installed', 'reenabled'].includes(stage), rev = 'current-graph-' + stage;
-  const row = { name: 'trisoul_x', installed: true, enabled, version: pins.plugin.version };
+  const row = { name: 'oh-my-dsh', installed: true, enabled, version: pins.plugin.version };
   return { stage, pid: 200 + index, errors: [], persisted: { installed: stage !== 'stock', enabled }, bundles: stage === 'stock' ? [] : [row],
     composerVisible: true, modelButtonCount: enabled ? 1 : 0, modelButtonVisible: enabled, additiveButtonCount: 0,
     host: { pid: 100 + index, shellVersion: pins.desktop.version, modelCalls: [], clientGraph: { rev, release: structuredClone(release) },
       opencu: { browserEnabled: false, nativeEnabled: false, extensionEnabled: false },
       entries: [...originals.map(([id, name]) => ({ id, name, disabled: enabled, active: !enabled, state: enabled ? undefined : 2 })),
         ...enabled ? replacements.map(([id, name]) => ({ id, name, disabled: false, active: true, state: 2, moduleCallbackMatches: true,
-          source: { name: 'trisoul_x', dir: bundleRoot, version: pins.plugin.version } })) : []] },
+          source: { name: 'oh-my-dsh', dir: bundleRoot, version: pins.plugin.version } })) : []] },
     ui: { identity: { rev, release: structuredClone(release), shellProtocol: 1, moduleSystem: 'client', bootRev: 'deliberately-stale-boot-rev',
       services: { moduleTableIsLoader: true, rootUsesShellCordis: true, slotsUsesShellCordis: true, slotsUsesDynamicRenderer: true },
-      conversationOwners: { [enabled ? 'trisoul_x' : originals[0][1]]: true },
-      dynamic: (enabled ? ['trisoul_x'] : originals.map(([, name]) => name)).map(id => ({ id, rev: 'artifact',
+      conversationOwners: { [enabled ? 'oh-my-dsh' : originals[0][1]]: true },
+      dynamic: (enabled ? ['oh-my-dsh'] : originals.map(([, name]) => name)).map(id => ({ id, rev: 'artifact',
         url: `plugins/??${id}/client.js&rev=artifact`, cachedId: id, materialized: true })) },
-      entries: [{ name: enabled ? 'trisoul_x' : originals[0][1], state: 2 }],
+      entries: [{ name: enabled ? 'oh-my-dsh' : originals[0][1], state: 2 }],
       session: { id: sessionId, currentSessionId: sessionId, retainedMainView: 1, blank: true, promptAttempted: false },
       events: enabled ? [{ kind: 'omd-task-injection' }, { kind: 'omd-btw' }] : [], views: ['chat'],
       slots: [{ name: 'conversation.input.model', kind: 'single', occupants: [
@@ -46,8 +46,8 @@ function reportFixture(kinds = []) {
     shutdowns: [{ pid: 200, hostPid: 100, exitCode: 0, signalCode: null, naturalExit: true }],
     receipts: [{ operation: 'install', coldStage: 'installed', before: { pid: 200, hostPid: 100 }, changedEvents: 1,
       persisted: installed.persisted, bundle: installed.bundles[0], hot: installed,
-      receipt: { application: 'applied', changed: true, stage: 'enable', target: 'trisoul_x', enabled: true,
-        bundle: 'trisoul_x', version: pins.plugin.version } }],
+      receipt: { application: 'applied', changed: true, stage: 'enable', target: 'oh-my-dsh', enabled: true,
+        bundle: 'oh-my-dsh', version: pins.plugin.version } }],
     lifecycle: ['ready', 'disposed', 'before-exit', 'exit'].map(event => ({ event, bootId: 'one-activation', pid: 100,
       code: 0, rootDisposed: true, modelCalls: 0 })),
     readiness: { crashes: [], uiConversation: { owner: [{ uid: 91, state: 2 }], conversation: { activePresent: true, provider: [{ uid: 92, state: 2 }, { uid: 91, state: 2 }] } } } };

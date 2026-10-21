@@ -11,7 +11,7 @@ import { Button as NativeButton, Input, Select as NativeSelect } from '../native
 export const cx = (...parts) => parts.filter(Boolean).join(' ');
 
 export const api = async (path, value, signal) => {
-  const response = await fetch(`trisoul-x/api${path}`, value === undefined ? { signal }
+  const response = await fetch(`oh-my-dsh/api${path}`, value === undefined ? { signal }
     : { signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw Object.assign(new Error(data.error || `HTTP ${response.status}`), { statusCode: response.status });

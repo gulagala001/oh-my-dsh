@@ -15,7 +15,7 @@ The pinned official commit and matching prebuilt conversation + Chat artifacts a
 Default sync only reads source files and Git metadata; it never installs dependencies or stages Git files.
 Symlinks, linked worktrees, shared Git object stores, and external build outputs are refused.
 --build-browser explicitly rebuilds both native browser packages in that disposable staging checkout.
-Never pass trisoul_x, a linked worktree, the current DSH checkout, or any retained user data.
+Never pass oh-my-dsh, a linked worktree, the current DSH checkout, or any retained user data.
 Run only after all implementation domains are ready for the centralized build/acceptance phase.`;
 const { values, positionals } = parseArgs({ options: { commit: { type: 'string' }, 'build-browser': { type: 'boolean', default: false }, help: { type: 'boolean', default: false } }, allowPositionals: true });
 if (values.help) {

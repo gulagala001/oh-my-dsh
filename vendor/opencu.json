@@ -699,7 +699,7 @@
     "src/dsh/repl-output.mjs": "b6bff1e63f0d640ecf03ff5e907b4c382c27a7c66ab028adc31071e06089bb14",
     "src/dsh/runtime.mjs": "aa47b3a09a48447cd8986cf2be7e4b27c0cba1069c813d42be3dc0b046548b13",
     "src/dsh/shared.mjs": "0a937d29734f12202bb7dac00c4829eb4317d3a38043d4367600b13061803b98",
-    "src/dsh/tools.mjs": "3568c04a36979b28f431167a9767702591e90e1897441421e540cc616389caa1",
+    "src/dsh/tools.mjs": "f56b4fcb5e7d98b2545b43f224cbf14feb47681eef81072a08c86ee295ad7891",
     "src/extension/backend.mjs": "e6b54508aa0e9c21366d67be2363bc81b5883e32ca8f75572b57886242e53bfd",
     "src/extension/distribution.json": "d0fa292e3ef46d7a141fd16a805229351f9e39d81f43943e09708f0c31894ae6",
     "src/extension/distribution.mjs": "b901210231f6cdc3416464afb9caa88c4aadb89e91f7064a84a8e230e7bcf27b",

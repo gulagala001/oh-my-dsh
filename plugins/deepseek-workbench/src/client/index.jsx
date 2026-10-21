@@ -288,7 +288,7 @@ function mountClient(ctx) {
         if (selected && selected.activePanelId !== PANEL_ID) return;
         const frame = document.querySelector('[data-omd-surface="frame"]'), root = document.documentElement;
         const layout = root.dataset.omdLayout;
-        const maxWidth = layout === 'google-material-expressive' ? 839 : ['ios-liquid', 'codex-desktop', 'claude-cli-terminal'].includes(layout) ? 600 : !layout && root.classList.contains('trisoul-shell') ? 719 : null;
+        const maxWidth = layout === 'google-material-expressive' ? 839 : ['ios-liquid', 'codex-desktop', 'claude-cli-terminal'].includes(layout) ? 600 : !layout && root.classList.contains('omd-shell') ? 719 : null;
         // Native layout actions release their own overlays and inert leases.
         if (maxWidth !== null && matchMedia(`(max-width: ${maxWidth}px)`).matches && frame && frame.dataset.sidebarCollapsed !== 'true'
           && !frame.hasAttribute('data-rightbar-fullscreen') && typeof scope.layout.toggleSidebar === 'function') scope.layout.toggleSidebar();

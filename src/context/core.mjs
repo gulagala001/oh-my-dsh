@@ -69,9 +69,9 @@ export function protectedEvent(session, e) {
   if (!e) return true;
   const source = eventSource(e), message = session.deriveEventMessage(e);
   return e.type === 'developer/message'
-    || (e.type === 'system/message' && source !== 'trisoul-x:shadow')
-    || (message?.role === 'system' && source !== 'trisoul-x:shadow')
-    || source === 'trisoul-x:todo-prefix' || source === '@deepseek-ai/dsh-system-prompt' || source === 'trisoul-x:trace' || source === 'trisoul-x:manual-global' || source === 'trisoul-x:dream-memory' || source === 'trisoul-x:project-catalog';
+    || (e.type === 'system/message' && source !== 'oh-my-dsh:shadow')
+    || (message?.role === 'system' && source !== 'oh-my-dsh:shadow')
+    || source === 'oh-my-dsh:todo-prefix' || source === '@deepseek-ai/dsh-system-prompt' || source === 'oh-my-dsh:trace' || source === 'oh-my-dsh:manual-global' || source === 'oh-my-dsh:dream-memory' || source === 'oh-my-dsh:project-catalog';
 }
 export function preparationStop(session, cfg) {
   const nodes = session.surface.nodes, live = nodes.flatMap((seq, i) => session.deriveEventMessage(session.eventAt(seq)) ? [i] : []);
@@ -93,7 +93,7 @@ export function resolveTraceSlot(session, slot) {
   if (!slot) return slot;
   const matches = seq => {
     const message = withoutTodo(session.deriveEventMessage(session.eventAt(seq)));
-    return sourceName(message?.source) === 'trisoul-x:trace'
+    return sourceName(message?.source) === 'oh-my-dsh:trace'
       && hash(message.content.slice(1)) === hash(slot.original?.content || []);
   };
   if (session.surface.nodes.includes(slot.carrierSeq) && matches(slot.carrierSeq)) return slot;
@@ -105,8 +105,8 @@ export function resolveTraceSlot(session, slot) {
 export function carrierBarrier(session, state, cfg) {
   const nodes = session.surface.nodes;
   const saved = resolveTraceSlot(session, state.traceSlot)?.carrierSeq;
-  const trace = saved ?? nodes.find(seq => eventSource(session.eventAt(seq)) === 'trisoul-x:trace');
-  const anchor = trace ?? (cfg.traceEnabled && !state.fullCompaction ? nodes.find(seq => actualUser(session.eventAt(seq)) || eventSource(session.eventAt(seq)) === 'trisoul-x:todo-prefix') : undefined);
+  const trace = saved ?? nodes.find(seq => eventSource(session.eventAt(seq)) === 'oh-my-dsh:trace');
+  const anchor = trace ?? (cfg.traceEnabled && !state.fullCompaction ? nodes.find(seq => actualUser(session.eventAt(seq)) || eventSource(session.eventAt(seq)) === 'oh-my-dsh:todo-prefix') : undefined);
   return nodes.indexOf(anchor);
 }
 export function protectedSeqs(session, state, cfg) {
@@ -114,7 +114,7 @@ export function protectedSeqs(session, state, cfg) {
   // The established Trace slot carries the first request. Keep that anchor in
   // place, but read across it; it is never a segmentation boundary.
   if (cfg.traceEnabled && !state.traceSlot && !state.fullCompaction) {
-    const anchor = session.surface.nodes.find(seq => actualUser(session.eventAt(seq)) || eventSource(session.eventAt(seq)) === 'trisoul-x:todo-prefix');
+    const anchor = session.surface.nodes.find(seq => actualUser(session.eventAt(seq)) || eventSource(session.eventAt(seq)) === 'oh-my-dsh:todo-prefix');
     if (anchor !== undefined) keep.add(anchor);
   }
   return keep;
@@ -210,7 +210,7 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
   const latest = new Map();
   for (const e of events) {
     const src = eventSource(e);
-    if (['trisoul-x:state', 'trisoul-x:tasks'].includes(src)) latest.set(src, e.seq);
+    if (['oh-my-dsh:state', 'oh-my-dsh:tasks'].includes(src)) latest.set(src, e.seq);
   }
   const stop = preparationStop(session, cfg);
   const boundary = e => {
@@ -219,7 +219,7 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
     if (hasOpaqueContent(session.deriveEventMessage(e)?.content)) return true;
     if (e.data?.source?.form === 'snapshot') return true;
     const src = eventSource(e) || '';
-    if (src.startsWith('trisoul-x:context') || src.startsWith('trisoul-x:trace') || src === 'trisoul-x:project-catalog' || src === 'trisoul-x:manual-global' || src === 'trisoul-x:dream-memory') return true;
+    if (src.startsWith('oh-my-dsh:context') || src.startsWith('oh-my-dsh:trace') || src === 'oh-my-dsh:project-catalog' || src === 'oh-my-dsh:manual-global' || src === 'oh-my-dsh:dream-memory') return true;
     if (latest.get(src) === e.seq) return true;
     return !session.deriveEventMessage(e);
   };
@@ -370,7 +370,7 @@ export function newRecord(session, events, prepared, binding, { state, wholeWind
   const originals = events.flatMap(e => {
     if (actualUser(e)) return [e];
     const m = session.deriveEventMessage(e), base = withoutTodo(m);
-    if (base?.source?.kind !== 'user' && sourceName(m?.source) !== 'trisoul-x:todo-prefix') return [];
+    if (base?.source?.kind !== 'user' && sourceName(m?.source) !== 'oh-my-dsh:todo-prefix') return [];
     const origin = session.snapshotEvents().find(x => actualUser(x) && (x.seq === m?.[TODO_META]?.originalSeq || x.data.id === base.id));
     return origin ? [origin] : [];
   });

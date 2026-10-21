@@ -20,7 +20,7 @@ import { MonitorPricing } from './monitor-pricing.mjs';
 const TASK_PAUSE_GUIDANCE = promptText('runtime/task-pause.md');
 const DREAM_CONSUMERS = Symbol('dream-consumers');
 
-export const NS = 'trisoul-x';
+export const NS = 'oh-my-dsh';
 export const message = (text, kind = 'context') => createUserMessage({
   content: [{ type: 'text', text }], source: { kind: `plugin:${NS}:${kind}` },
 });
@@ -32,7 +32,7 @@ export const contentText = (blocks = []) => blocks.flatMap(b => {
 }).join('\n');
 export class Hub extends Service {
   constructor(ctx, config) {
-    super(ctx, 'trisoulX');
+    super(ctx, 'omd');
     this.getConfig = () => configSnapshot(config);
     this.store = new HubStore(config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), NS));
     this.monitor = new MonitorLedger(this.store.dir);

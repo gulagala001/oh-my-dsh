@@ -38,8 +38,8 @@ test('session selection persists independently; disable, deletion and failed wri
     const saved = config.identityPreset;
     config = apply(config, { ...personalityPatch(config, 'softie'), sessionPersonalityEnabled: true });
     const hub = { store: new HubStore(root), config: () => config };
-    const a = { id: 'personality-a', header: { agentPreset: 'trisoul-x', origin: 'user' } };
-    const b = { id: 'personality-b', header: { agentPreset: 'trisoul-x', origin: 'user' } };
+    const a = { id: 'personality-a', header: { agentPreset: 'oh-my-dsh', origin: 'user' } };
+    const b = { id: 'personality-b', header: { agentPreset: 'oh-my-dsh', origin: 'user' } };
     const request = async (session, body, extra = {}) => {
       let response;
       await handlePersonalityApi({ hub, ctx: {}, req: { method: body ? 'POST' : 'GET' }, res: { setHeader() {} },
@@ -73,7 +73,7 @@ test('session selection persists independently; disable, deletion and failed wri
     assert.equal(sessionPersonality(hub, a).effectivePreset, 'softie');
     assert.equal((await request(a, { preset: 'inherit' })).data.missing, false);
     await assert.rejects(request(a, { preset: 'unknown' }), /未知/);
-    assert.equal((await request({ ...b, header: { agentPreset: 'trisoul-x', origin: 'subagent' } }, { preset: 'off' })).status, 409);
+    assert.equal((await request({ ...b, header: { agentPreset: 'oh-my-dsh', origin: 'subagent' } }, { preset: 'off' })).status, 409);
     assert.equal((await request(b, undefined, { archivedOnly: true })).data.locked, true);
     assert.equal((await request({ ...b, header: { agentPreset: 'default' } })).data.enabled, true);
   } finally { rmSync(root, { recursive: true, force: true }); }

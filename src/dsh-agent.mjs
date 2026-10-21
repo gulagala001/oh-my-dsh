@@ -10,11 +10,11 @@ import { registerTasks } from './tasks.mjs';
 import { registerRuntimeStatus } from './runtime-state.mjs';
 import { registerBudgetCommand } from './task-budget.mjs';
 
-export const inject = ['trisoulX', 'systemPrompt', 'tools', 'llm', 'tokenMeter', 'sessions', 'sessionProjections'];
+export const inject = ['omd', 'systemPrompt', 'tools', 'llm', 'tokenMeter', 'sessions', 'sessionProjections'];
 const result = { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] };
 export function apply(ctx) {
-  const hub = ctx.trisoulX;
-  ctx.systemPrompt.section({ name: 'trisoul-x:persona', order: 0, text: MAIN_PERSONA, interpolate: false });
+  const hub = ctx.omd;
+  ctx.systemPrompt.section({ name: 'oh-my-dsh:persona', order: 0, text: MAIN_PERSONA, interpolate: false });
   installPromptAdapter(ctx);
   new ReplacementCanvas(ctx, hub);
   hub.todoStore = registerTasks(ctx, hub.todoStore);

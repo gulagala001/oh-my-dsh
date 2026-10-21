@@ -110,7 +110,7 @@ export class ConversationImporter {
     const sessionId = `session-deepseek-${key}`;
     let cwd = record?.cwd ?? input.cwd;
     if (!cwd) {
-      const projectless = this.ctx.get('trisoulX')?.projectless;
+      const projectless = this.ctx.get('omd')?.projectless;
       cwd = projectless ? (await projectless.prepare({ requestId: `deepseek-${key}`, prompt: input.conversation.title })).cwd : join(this.directory, 'chats', key);
     }
     const save = async value => { const temporary = `${path}.tmp`; await writeFile(temporary, JSON.stringify(value), { mode: 0o600 }); await rename(temporary, path); record = value; };

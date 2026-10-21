@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 // Content-hashed bodies of large built-in skins; the client loads one on first use.
 const directory = new URL('./client/skins/bundled/', import.meta.url);
-const PREFIX = '/trisoul-x/api/skins/';
+const PREFIX = '/oh-my-dsh/api/skins/';
 let files;
 export async function handleSkinAsset(req, res, url) {
   if (!url.pathname.startsWith(PREFIX)) return false;

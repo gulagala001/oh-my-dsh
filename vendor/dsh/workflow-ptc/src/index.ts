@@ -198,7 +198,7 @@ class PtcWorkflowEngine extends WorkflowEngine {
     // Captured service handles keep a holder-owned run usable after engine unload.
     const runCtx = this.ctx
     const subagents = runCtx.subagents
-    const hub = runCtx.get('trisoulX') as WorkflowHub | undefined
+    const hub = runCtx.get('omd') as WorkflowHub | undefined
     const budget = hub?.workflowBudget?.capture(request.parent.session)
     const run = new PtcWorkflowRun(
       runCtx,
@@ -218,7 +218,7 @@ class PtcWorkflowEngine extends WorkflowEngine {
       },
       request.signal,
       hub !== undefined || this.config.stateDirectory !== undefined || request.resumeFromRunId !== undefined ? {
-        root: this.config.stateDirectory ?? join(hub?.store.dir ?? join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'trisoul-x'), 'workflows'),
+        root: this.config.stateDirectory ?? join(hub?.store.dir ?? join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'oh-my-dsh'), 'workflows'),
         ...request.resumeFromRunId === undefined ? {} : { resumeFromRunId: request.resumeFromRunId },
         budget: budget?.snapshot ?? (() => ({ total: null, spent: 0 })),
         ...budget?.owner === undefined ? {} : { budgetOwner: budget.owner },

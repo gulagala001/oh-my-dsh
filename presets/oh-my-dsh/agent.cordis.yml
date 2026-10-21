@@ -5,13 +5,13 @@
     maxBytes: 65536
 
 - id: tool-bash
-  name: 'trisoul_x/host/tool-bash'
+  name: 'oh-my-dsh/host/tool-bash'
   disabled: !!js process.platform === 'win32'
   config:
     promoteOnTimeout: false
 
 - id: tool-pwsh
-  name: 'trisoul_x/host/tool-pwsh'
+  name: 'oh-my-dsh/host/tool-pwsh'
   disabled: !!js process.platform !== 'win32'
   config:
     promoteOnTimeout: false
@@ -25,10 +25,10 @@
     sampleOverCapGlobResults: false
 
 - id: codegraph
-  name: 'trisoul_x/codegraph'
+  name: 'oh-my-dsh/codegraph'
 
 - id: tool-jobs
-  name: 'trisoul_x/host/tool-jobs'
+  name: 'oh-my-dsh/host/tool-jobs'
 
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'
@@ -66,8 +66,8 @@
   isolate:
     compaction: true
   config:
-    - id: trisoul-x-agent
-      name: 'trisoul_x/agent'
+    - id: oh-my-dsh-agent
+      name: 'oh-my-dsh/agent'
 
 
 - id: delegation
@@ -99,7 +99,7 @@
       name: '@deepseek-ai/dsh-workflow-ptc'
       disabled: true
     - id: workflow-ptc
-      name: 'trisoul_x/host/workflow-ptc'
+      name: 'oh-my-dsh/host/workflow-ptc'
       config:
         provider: omd-workflow
 
@@ -107,7 +107,7 @@
       name: '@deepseek-ai/dsh-tool-workflow'
       disabled: true
     - id: tool-workflow
-      name: 'trisoul_x/host/tool-workflow'
+      name: 'oh-my-dsh/host/tool-workflow'
 
     - id: tool-ralph
       name: '@deepseek-ai/dsh-tool-ralph'

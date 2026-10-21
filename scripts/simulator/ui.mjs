@@ -23,7 +23,7 @@ export async function checkBrowser({ host, sessionId, checks, directory, trace, 
     await context.route('**/*', async route => {
       const url = new URL(route.request().url());
       if (url.origin !== host.origin) { denied.push(url.origin); await route.abort(); return; }
-      if (url.pathname === '/trisoul-x/api/version') { await route.fulfill({ json: { currentVersion: 'simulation', latestVersion: 'simulation', status: 'current', severity: 'none', releases: [] } }); return; }
+      if (url.pathname === '/oh-my-dsh/api/version') { await route.fulfill({ json: { currentVersion: 'simulation', latestVersion: 'simulation', status: 'current', severity: 'none', releases: [] } }); return; }
       await route.continue();
     });
     await context.addCookies(host.cookie.split('; ').map(value => { const at = value.indexOf('='); return { name: value.slice(0, at), value: value.slice(at + 1), url: host.origin }; }));
@@ -40,7 +40,7 @@ export async function checkBrowser({ host, sessionId, checks, directory, trace, 
     await checks.check('真实 Web 会话与工作台点击', async () => {
       const guide = page.locator('[data-sidebar-right-guide]:visible');
       await guide.waitFor();
-      await guide.locator('[data-sidebar-right-guide-entry="trisoul-x-context"]').click();
+      await guide.locator('[data-sidebar-right-guide-entry="oh-my-dsh-context"]').click();
       await page.locator('.tx-workbench[data-section="tasks"]').waitFor({ state: 'visible' });
       await page.getByRole('button', { name: '用量详情', exact: true }).waitFor();
       await page.locator('[data-composer-input]').fill('模拟器草稿保留检查');

@@ -48,7 +48,7 @@ export function buildChatStyleFactory(rawClient, source) {
   const dataset = 'tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-chat"';
   const tags = [...adapted.code.matchAll(tagPattern)].length, datasets = count(adapted.code, dataset);
   gate(tags === 18 && datasets === 18, `expected 18 style-owner tags/datasets, found ${tags}/${datasets}`);
-  const owned = adapted.code.replace(tagPattern, '$1"trisoul_x/chat/').replaceAll(dataset, 'tag.dataset.plugin = "trisoul_x/chat"')
+  const owned = adapted.code.replace(tagPattern, '$1"oh-my-dsh/chat/').replaceAll(dataset, 'tag.dataset.plugin = "oh-my-dsh/chat"')
     .replace(/^([ \t]*\/\/#region \\0dsh-css:)[^\r\n]*?\/(packages\/[^\r\n]+)$/gm, '$1$2');
   const registration = owned.trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
   const code = registration + `\nexport function createChat(require) { const component = registration.factory(require); Object.defineProperty(component, Symbol.for('omd.ui-chat.source.v1'), { value: ${JSON.stringify(source)} }); return component; }\n`;

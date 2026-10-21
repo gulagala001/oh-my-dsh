@@ -22,7 +22,7 @@ export function createBtwCompatibility(ctx) {
   installRequestProjection(ctx, options => {
     const state = stateOf({ id: options.sessionId });
     if (!state || options.purpose) return options;
-    const requestOnlyContext = state.reference.messages.some(message => sourceName(message.source) === 'trisoul-x:bc-state');
+    const requestOnlyContext = state.reference.messages.some(message => sourceName(message.source) === 'oh-my-dsh:bc-state');
     if (!state.useRequestContext && !requestOnlyContext) return options;
     const question = options.messages?.findLast(m => m.role === 'user' && m.source?.kind === 'user');
     if (!question) throw Error('/btw 缺少侧问消息；已停止请求。');
@@ -128,7 +128,7 @@ export function createBtwCompatibility(ctx) {
   const facade = {
     effect: (...args) => ctx.effect(...args),
     commands: { register(definition) {
-      return ctx.commands.register({ ...definition, definitionId: 'trisoul_x:btw:v1', input: { hint: '<问题> | cancel' },
+      return ctx.commands.register({ ...definition, definitionId: 'oh-my-dsh:btw:v1', input: { hint: '<问题> | cancel' },
         handler: async invocation => {
           const input = invocation.rawInput.trim();
           if (input === 'cancel') {

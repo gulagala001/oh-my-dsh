@@ -50,7 +50,7 @@ Use the package matching the **complete DSH version**. Open **Plugins → Add Pl
 
 | DSH | 固定安装包 / Fixed package | SHA256SUMS |
 | --- | --- | --- |
-| 0.2.1-rc.2 | [OMD 0.19.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/trisoul_x-0.2.1-rc.2.omd.0.19.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/SHA256SUMS) |
-| 0.2.1-rc.1 | [OMD 0.19.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/trisoul_x-0.2.1-rc.1.omd.0.19.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/SHA256SUMS) |
+| 0.2.1-rc.2 | [OMD 0.19.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/SHA256SUMS) |
+| 0.2.1-rc.1 | [OMD 0.19.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/oh-my-dsh-0.2.1-rc.1.omd.0.19.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/SHA256SUMS) |
 
 [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [dsh-ops 使用指南 / dsh-ops guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/dsh-ops.md)

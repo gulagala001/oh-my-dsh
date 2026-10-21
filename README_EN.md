@@ -41,7 +41,7 @@ Models use your DSH configuration. The default installation grants full file/com
 Open **Plugins → Add plugin** in the DSH instance you use, then paste:
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/trisoul_x-0.2.1-rc.2.omd.0.19.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz
 ```
 
 Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/SHA256SUMS).

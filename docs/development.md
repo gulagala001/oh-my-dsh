@@ -22,7 +22,7 @@ pnpm start
 
 **本地兼容构建：** `scripts/host-targets.mjs` 集中定义已审阅宿主的官方提交与框架；`scripts/align-host.mjs <完整宿主版本> <官方源码目录>` 对齐清单、枚举来源和框架 overrides。`scripts/sync-dsh.mjs` 接收独立匹配源码及其真实浏览产物，`scripts/sync-opencu.mjs` 接收对应新版 tgz。每份构建单独生成并核对冻结锁、peer 与工件，不改版本号混装。独立聊天的草稿初始化集中在 `src/client/projectless-state.mjs`：新版调用原生初始化接口，rc.2 使用同一目标 Session 的输入 facade，保留已有草稿、附件所有权及提交锁。本地安装包使用 `OMD_PNPM_ENTRY="$PNPM" node scripts/pack-local.mjs <输出目录>`，保留内置 macOS helper 的执行位与原签名字节。最小定点检查使用隔离数据/profile；日常部署与重启另需明确授权。
 
-默认数据目录为仓库内的 `data/dsh/`，profile 为 `trisoul-x`，端口为 3083；首次启动安装本地插件。
+默认数据目录为仓库内的 `data/dsh/`，profile 为 `oh-my-dsh`，端口为 3083；首次启动安装本地插件。
 打开终端输出的完整登录链接，在 DSH 中配置模型。仓库不提供私人数据或凭据。
 
 <details>
@@ -71,13 +71,13 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 | `vendor/opencu/` | 新版 OpenCU 完整发行快照；对应目标 tgz 整体同步，不手改 |
 | `scripts/`、`test/` | 构建／启动／检查 |
 
-`pnpm build` 构建前端，并从 `presets/trisoul-x/agent.cordis.yml` 生成普通与 OMD-PTC 预设；修改源配置，不手改生成文件。
+`pnpm build` 构建前端，并从 `presets/oh-my-dsh/agent.cordis.yml` 生成普通与 OMD-PTC 预设；修改源配置，不手改生成文件。
 
 宿主构建通过 [`host-const-enums.mjs`](../scripts/host-const-enums.mjs)，使用根 `devDependencies` 显式锁定、经来源清单核验的 TypeScript `6.0.3`，按 AST 与真实符号绑定内联官方 `const enum` 成员并消除运行时枚举引用。DSH／Cordis 复用宿主 SDK 单例，不打包第二份；官方来源提交、SHA-256 与完整枚举声明／成员按[枚举 manifest](../scripts/host-const-enums.json)校验。默认构建不依赖桌面 SDK 路径中的未声明编译器 fallback。
 
 CodeGraph 的 `codegraph.json` 排除规则只作用于当前项目根，不会自动继承到独立子仓库。工作区与各子仓库分别排除隔离宿主、构建产物和 REA 提取包，查询保留手写适配层；调查提取包原件用定点文件读取。索引异常膨胀时先确认无活动写入者，再清理可重建的 `.codegraph` 数据库，执行 `codegraph_index` 并以实际查询确认；不得删除用户数据或源文件。
 
-**内置回合撤回：** `node scripts/sync-rewind.mjs ../rewind` 从已完成构建的独立 `@gulagala001/dsh-undo-plugin` 包同步实际发布文件，核对精确宿主并生成 `vendor/rewind.json`。服务端通过 `trisoul_x/rewind` 加载同一模块，客户端直接编译快照入口；独立插件与内置方使用共同运行时所有权，不能额外注册另一套回退引擎或按钮。同步后运行 OMD 构建；不在构建期间隐式拉取或重写快照。
+**内置回合撤回：** `node scripts/sync-rewind.mjs ../rewind` 从已完成构建的独立 `@gulagala001/dsh-undo-plugin` 包同步实际发布文件，核对精确宿主并生成 `vendor/rewind.json`。服务端通过 `oh-my-dsh/rewind` 加载同一模块，客户端直接编译快照入口；独立插件与内置方使用共同运行时所有权，不能额外注册另一套回退引擎或按钮。同步后运行 OMD 构建；不在构建期间隐式拉取或重写快照。
 
 ## 按需测试
 

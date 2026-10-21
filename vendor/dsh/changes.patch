@@ -2197,7 +2197,7 @@ index 9bd42169..6482e5a0 100644
      // Captured service handles keep a holder-owned run usable after engine unload.
      const runCtx = this.ctx
      const subagents = runCtx.subagents
-+    const hub = runCtx.get('trisoulX') as WorkflowHub | undefined
++    const hub = runCtx.get('omd') as WorkflowHub | undefined
 +    const budget = hub?.workflowBudget?.capture(request.parent.session)
      const run = new PtcWorkflowRun(
        runCtx,
@@ -2207,7 +2207,7 @@ index 9bd42169..6482e5a0 100644
        },
        request.signal,
 +      hub !== undefined || this.config.stateDirectory !== undefined || request.resumeFromRunId !== undefined ? {
-+        root: this.config.stateDirectory ?? join(hub?.store.dir ?? join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'trisoul-x'), 'workflows'),
++        root: this.config.stateDirectory ?? join(hub?.store.dir ?? join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'oh-my-dsh'), 'workflows'),
 +        ...request.resumeFromRunId === undefined ? {} : { resumeFromRunId: request.resumeFromRunId },
 +        budget: budget?.snapshot ?? (() => ({ total: null, spent: 0 })),
 +        ...budget?.owner === undefined ? {} : { budgetOwner: budget.owner },
@@ -2557,7 +2557,7 @@ index 00000000..35956926
 +      const ticket = ++generation, own = controller = new AbortController()
 +      const timeout = setTimeout(() => own.abort(), 5000)
 +      try {
-+        const response = await fetch(new URL(`trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, document.baseURI), { signal: own.signal })
++        const response = await fetch(new URL(`oh-my-dsh/api/background-wait?session=${encodeURIComponent(id)}`, document.baseURI), { signal: own.signal })
 +        if (!response.ok) throw new Error(`HTTP ${response.status}`)
 +        const value: unknown = await response.json()
 +        if (active && ticket === generation) setObserved({ id, waiting: typeof value === 'object' && value !== null && 'waiting' in value && value.waiting === true })
@@ -2918,7 +2918,7 @@ index 00000000..0d0edb72
 +    }
 +    signal.throwIfAborted()
 +    if (ctx.subagents.getProvider('spawn') !== record.native) throw new Error('Native workflow provider changed during startup; retry the call')
-+    const hub = ctx.get('trisoulX') as WorkflowHub | undefined
++    const hub = ctx.get('omd') as WorkflowHub | undefined
 +    hub?.workflowBudget?.attach(agent.session, record.options.budgetOwner)
 +    if (hub !== undefined) {
 +      const state = hub.store.state(agent.id)

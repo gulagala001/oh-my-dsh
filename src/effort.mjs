@@ -51,7 +51,7 @@ export function createEffortResolver(ctx, { effort = 'off' } = {}) {
       const set = await supported(provider, model)
       return set.has(requested) ? requested : undefined
     } catch (e) {
-      ctx.logger?.warn(`trisoul-memory: 档位能力查询失败（${provider}/${model}），本次按 '${requested}' 乐观派发且不缓存: ${String(e?.message ?? e)}`)
+      ctx.logger?.warn(`omd-memory: 档位能力查询失败（${provider}/${model}），本次按 '${requested}' 乐观派发且不缓存: ${String(e?.message ?? e)}`)
       return requested
     }
   }

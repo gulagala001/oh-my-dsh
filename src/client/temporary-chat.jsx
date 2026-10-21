@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button, InlineEditor, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
 import css from './temporary-chat.css';
 
-const KIND = 'omd-temporary-chat', ID = 'trisoul_x/temporary-chat';
+const KIND = 'omd-temporary-chat', ID = 'oh-my-dsh/temporary-chat';
 const labels = { code: { copyLabel: '复制代码', copiedLabel: '已复制' }, footnotes: '引用' };
 async function request(action, data, signal) {
-  const response = await fetch(`trisoul-x/api/temporary-chat/${action}`, {
+  const response = await fetch(`oh-my-dsh/api/temporary-chat/${action}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), signal, cache: 'no-store',
   });
   if (action === 'send' && response.ok) return response;
@@ -121,7 +121,7 @@ export function installTemporaryChat(ctx) {
     const present = new Set(ctx.sidebarRight.openTabs.getSnapshot().filter(tab => tab.kind === KIND).map(tab => tab.tabId));
     for (const [id, entry] of entries) if (!present.has(id)) { void close(entry).catch(() => {}); entries.delete(id); }
   });
-  const leave = () => { for (const entry of entries.values()) if (entry.value?.id) navigator.sendBeacon('trisoul-x/api/temporary-chat/close', new Blob([JSON.stringify({ id: entry.value.id })], { type: 'application/json' })); };
+  const leave = () => { for (const entry of entries.values()) if (entry.value?.id) navigator.sendBeacon('oh-my-dsh/api/temporary-chat/close', new Blob([JSON.stringify({ id: entry.value.id })], { type: 'application/json' })); };
   window.addEventListener('pagehide', leave);
   ctx.effect(() => () => { off(); window.removeEventListener('pagehide', leave); style.remove(); return Promise.all([...entries.values()].map(entry => close(entry).catch(() => {}))); });
 }

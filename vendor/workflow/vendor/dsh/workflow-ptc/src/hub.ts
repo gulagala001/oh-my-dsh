@@ -12,5 +12,5 @@ export interface WorkflowHub {
 }
 export function workflowSupport(ctx: Context, session: Session, owner?: { sessionId: string; poolId: string }): WorkflowHub | undefined {
   const runtime = ctx.get('dshWorkflow') as { support(session: Session, owner?: { sessionId: string; poolId: string }): WorkflowHub } | undefined
-  return runtime?.support(session, owner) ?? ctx.get('trisoulX') as WorkflowHub | undefined
+  return runtime?.support(session, owner) ?? ctx.get('omd') as WorkflowHub | undefined
 }

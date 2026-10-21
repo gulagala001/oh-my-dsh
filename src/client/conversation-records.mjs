@@ -5,7 +5,7 @@ const textOf = content => (content || []).filter(b => b.type === 'text').map(b =
 export function taskInjection(message) {
   if (!message || !sourceName(message.source)) return null;
   const embedded = message.omdTodo;
-  if (!embedded && sourceName(message.source) !== 'trisoul-x:tasks') return null;
+  if (!embedded && sourceName(message.source) !== 'oh-my-dsh:tasks') return null;
   const text = embedded ? message.content?.[embedded.index]?.text : textOf(message.content);
   if (!text) return null;
   const todo = /^\[todo list\]/m.test(text), runtime = /^(?:\[runtime state(?: ·|\])|预算(?:：|$))/m.test(text);
@@ -42,7 +42,7 @@ export function supersededTaskInjections(entries) {
       previous = event.seq; compacting = false;
     } else if (event.type?.startsWith('compaction/') || event.type === 'user/message' && data.source?.compactionId) {
       compacting = true;
-    } else if (sourceName((event.type === 'user/message' ? data : data.message)?.source) === 'trisoul-x:shadow') {
+    } else if (sourceName((event.type === 'user/message' ? data : data.message)?.source) === 'oh-my-dsh:shadow') {
       // A compaction's surface cleanup is not new conversation activity.
     } else {
       previous = null; compacting = false;
@@ -61,7 +61,7 @@ export function compactionGroups(entries) {
     const checkpoint = event.type === 'user/message' && data.source?.compactionId;
     const lifecycle = ['compaction/start', 'compaction/summary', 'compaction/end'].includes(event.type);
     if (!checkpoint && !lifecycle) {
-      if (!(sourceName((event.type === 'user/message' ? data : data.message)?.source) === 'trisoul-x:shadow')) legacyRun = null;
+      if (!(sourceName((event.type === 'user/message' ? data : data.message)?.source) === 'oh-my-dsh:shadow')) legacyRun = null;
       continue;
     }
     const id = checkpoint || data.compactionId;

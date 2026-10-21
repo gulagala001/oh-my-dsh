@@ -8,16 +8,16 @@
 
 ## 先确认是否装到了正在使用的环境
 
-1. **核对来源和版本。** 本项目的仓库是 `gulagala001/oh-my-dsh`，插件包名为 `trisoul_x`。宿主版本与插件版本分别查看；左上角「关于 Oh My DSH」中的“当前版本”才代表正在运行的插件，“最新版本”只是发布信息。
+1. **核对来源和版本。** 本项目的仓库是 `gulagala001/oh-my-dsh`，插件包名为 `oh-my-dsh`。宿主版本与插件版本分别查看；左上角「关于 Oh My DSH」中的“当前版本”才代表正在运行的插件，“最新版本”只是发布信息。
 2. **核对运行方式。** 桌面版在应用内安装，属于 `desktop` profile；Web 安装到启动命令使用的 profile。两者不会自动共享插件安装状态。
-3. **核对数据位置。** 沿用实际 `DSH_HOME`。Web 默认是用户目录的 `.dsh`；本仓库源码 `pnpm start` 默认是仓库下的 `data/dsh/`，profile 为 `trisoul-x`，端口为 `3083`。
+3. **核对数据位置。** 沿用实际 `DSH_HOME`。Web 默认是用户目录的 `.dsh`；本仓库源码 `pnpm start` 默认是仓库下的 `data/dsh/`，profile 为 `oh-my-dsh`，端口为 `3083`。
 4. **完整重启后做一次操作。** 等任务结束，桌面完整退出再打开，Web 按原方式重启服务。新建会话选择 Oh My DSH，使用已配置模型发一条消息；升级用户再检查一个旧会话与原主题。没有模型凭据时，先在模型设置中添加可用渠道。
 
 <a id="package-source"></a>
 
 ### 安装来源怎么核对
 
-复制[首页安装命令](../README.md#quickstart)中的完整 GitHub 来源，或使用本仓库 Release 的发行包。安装页面的展示名称不等于包名；本仓库 `package.json` 的 `name` 为 `trisoul_x`，`repository.url` 指向 `gulagala001/oh-my-dsh`。
+复制[首页安装命令](../README.md#quickstart)中的完整 GitHub 来源，或使用本仓库 Release 的发行包。安装页面的展示名称不等于包名；本仓库 `package.json` 的 `name` 为 `oh-my-dsh`，`repository.url` 指向 `gulagala001/oh-my-dsh`。
 
 如果安装日志中的包名、仓库或宿主版本与上述配对不符，先记录实际来源与版本，核对后再继续，避免对错误的安装目标反复更新。
 

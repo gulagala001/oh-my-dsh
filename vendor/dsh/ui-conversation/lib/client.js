@@ -18905,7 +18905,7 @@ window.__ModuleLoader__.load({
 					const ticket = ++generation, own = controller = new AbortController();
 					const timeout = setTimeout(() => own.abort(), 5e3);
 					try {
-						const response = await fetch(new URL(`trisoul-x/api/background-wait?session=${encodeURIComponent(id)}`, document.baseURI), { signal: own.signal });
+						const response = await fetch(new URL(`oh-my-dsh/api/background-wait?session=${encodeURIComponent(id)}`, document.baseURI), { signal: own.signal });
 						if (!response.ok) throw new Error(`HTTP ${response.status}`);
 						const value = await response.json();
 						if (active && ticket === generation) setObserved({

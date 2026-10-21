@@ -4,7 +4,7 @@
 
 > Current source is **OMD `0.2.1-rc.2.omd.0.18.1` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.1`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
 
-OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. Package ID `trisoul_x`, preset `trisoul-x`, and existing data locations remain compatible.
+OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. The package ID and preset are both `oh-my-dsh`; settings, conversations and data from earlier versions migrate automatically after upgrading, see [the upgrade guide](upgrade_EN.md#package-name).
 
 <a id="install-in-existing-dsh"></a>
 
@@ -24,7 +24,7 @@ Back up, then select a fixed release for the actual full host. The version panel
 After installation/update/enable/disable, let tasks finish and fully restart the app or original Web service. Closing a window or refreshing does not switch the backend. Removal example for DSH 0.2.1-rc.2 with the web profile; desktop users should use the plugin interface:
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web remove trisoul_x
+npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web remove oh-my-dsh
 ```
 
 Disable/uninstall retains models, credentials, sessions, drafts, and memory. Old sessions missing their OMD preset require re-enabling it. A working new standard session does not establish conversion of old sessions. Loader protection does not persist effective bundle patches into user configuration and retains third-party registrations/wrappers.
@@ -196,7 +196,7 @@ OMD bundles `@gulagala001/dsh-undo-plugin`. Double Esc while idle or `/rewind` o
 
 ## Data and Maintenance
 
-Use actual `DSH_HOME` (normally user `.dsh` for Web), OMD under `trisoul-x/`, source default repository `data/dsh/`. Back up profiles, credentials, sessions, attachments, context, memory together. Dream uses `dream-v1/memory.sqlite`, monitoring `monitor-v1/usage.sqlite`; retired automatic memory stays read-only. External projects/indexes need separate backups. Disable/uninstall does not clear user data.
+Use actual `DSH_HOME` (normally user `.dsh` for Web), OMD under `oh-my-dsh/`, source default repository `data/dsh/`. Back up profiles, credentials, sessions, attachments, context, memory together. Dream uses `dream-v1/memory.sqlite`, monitoring `monitor-v1/usage.sqlite`; retired automatic memory stays read-only. External projects/indexes need separate backups. Disable/uninstall does not clear user data.
 
 ## Versions and Update Notices
 

@@ -83,7 +83,7 @@ export async function createOwnedFixtureDirectory(prefix, parent = tmpdir()) {
 }
 
 /** An explicit false overrides the legacy, opt-in whole-fixture debug retention. */
-export function fixtureRetention(retainFixture, debugArtifacts = process.env.TRISOUL_UI_ARTIFACTS) {
+export function fixtureRetention(retainFixture, debugArtifacts = process.env.OMD_UI_ARTIFACTS) {
   if (retainFixture !== undefined && typeof retainFixture !== 'boolean') throw Error('retainFixture must be a boolean');
   return retainFixture ?? Boolean(debugArtifacts);
 }

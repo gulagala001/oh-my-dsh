@@ -119,7 +119,7 @@ for (const name of ['bash-local.mjs', 'pwsh-local.mjs', 'tools.mjs', 'tools.fact
 
 // Embed the upstream-built browser factories in OMD's own client module. A
 // file: subpackage cannot be resolved from a GitHub-installed dependency.
-for (const [name, create, styleOwner] of [['ui-conversation', 'createConversation', 'trisoul_x'], ['ui-chat', 'createChat', 'trisoul_x/chat']]) {
+for (const [name, create, styleOwner] of [['ui-conversation', 'createConversation', 'oh-my-dsh'], ['ui-chat', 'createChat', 'oh-my-dsh/chat']]) {
   const rawClient = await readFile(`${root}vendor/dsh/${name}/lib/client.js`, 'utf8');
   if (name === 'ui-chat') {
     const { code } = buildChatStyleFactory(rawClient, { commit: snapshot.commit, sha256: chatSnapshot.files['lib/client.js'] });
@@ -129,7 +129,7 @@ for (const [name, create, styleOwner] of [['ui-conversation', 'createConversatio
   const client = rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, '');
   if (!client.startsWith('window.__ModuleLoader__.load({') || !client.trimEnd().endsWith('});')) throw new Error(`Unexpected DSH ${name} browser factory format`);
   if (!client.slice(0, 150).includes(`id: "@deepseek-ai/dsh-client-${name}"`)) throw new Error(`Unexpected DSH ${name} module identity`);
-  const stylePrefix = name === 'ui-chat' ? styleOwner : 'trisoul_x/conversation';
+  const stylePrefix = name === 'ui-chat' ? styleOwner : 'oh-my-dsh/conversation';
   const ownedClient = client.replace(new RegExp(`(const tagId(?:\\$\\d+)? = )"@deepseek-ai/dsh-client-${name}/`, 'g'), `$1"${stylePrefix}/`)
     .replaceAll(`tag.dataset.plugin = "@deepseek-ai/dsh-client-${name}"`, `tag.dataset.plugin = "${styleOwner}"`);
   const registration = ownedClient.trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');

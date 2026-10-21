@@ -1,7 +1,7 @@
 import { installPtcControlCompatibility, isPtcControl } from './ptc-control-compat.mjs';
 
 export const name = 'omd-ptc-presentation';
-export const inject = ['tools', 'ptcRuntime', 'trisoulX', 'loader'];
+export const inject = ['tools', 'ptcRuntime', 'omd', 'loader'];
 
 // Keep the host's registry, SDK and scheduler. Only this preset's wire catalog
 // and model-direct gate follow the matching host contract; nested SDK calls remain
@@ -82,8 +82,8 @@ export async function apply(ctx) {
   if (!Array.isArray(modes) || !modes.includes('native') || !modes.includes('ptc')) throw new Error('The DSH tools component did not expose its presentation modes');
   const mode = modes.includes('both') ? 'both' : 'ptc';
   installPtcPresentation(ctx, agent => {
-    ctx.trisoulX.prepareBackground(agent);
-    return ctx.trisoulX.backgroundOptions(agent).interruptibleWait
+    ctx.omd.prepareBackground(agent);
+    return ctx.omd.backgroundOptions(agent).interruptibleWait
       ? ['job_output', 'job_list', 'job_kill', 'runtime_status'] : [];
   }, mode, runtime, scopes);
 }

@@ -197,7 +197,7 @@ export function createVersionService({ currentVersion = INSTALLED_VERSION, bundl
 }
 
 export async function handleVersionApi({ req, res, url, service, send }) {
-  if (url.pathname !== '/trisoul-x/api/version') return false;
+  if (url.pathname !== '/oh-my-dsh/api/version') return false;
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'GET') { send(res, 405, { error: '版本信息仅支持读取' }); return true; }
   const result = await service.check(url.searchParams.get('refresh') === '1');

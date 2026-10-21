@@ -175,7 +175,7 @@ export function ContextSection({ sessionId, visible, go, params }) {
 }
 
 export function RecordDrawer({ record: r, sessionId, onClose, assetBase }) {
-  const url = i => assetBase ? assetBase(r, i) : `trisoul-x/api/context/asset?${qs({ session: r.requestSessionId || r.sessionId || sessionId, id: r.id, asset: i + 1 })}`;
+  const url = i => assetBase ? assetBase(r, i) : `oh-my-dsh/api/context/asset?${qs({ session: r.requestSessionId || r.sessionId || sessionId, id: r.id, asset: i + 1 })}`;
   return <Drawer title="摘要与详细资料" onClose={onClose}>
     {r.loading ? <Skeleton rows={6}/> : <>
       <div className="omc-drawer-meta"><code>{r.id}</code><span>{clock(r.timeStart)} — {clock(r.timeEnd)}</span></div>

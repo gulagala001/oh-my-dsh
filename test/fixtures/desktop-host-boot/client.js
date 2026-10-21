@@ -25,7 +25,7 @@ window.__ModuleLoader__.load({ id: 'omd-desktop-host-boot-observer', factory: re
             seen.add(fiber); ancestry.push(fiber); fiber = fiber.parent?.fiber;
           }
           const conversationOwners = {};
-          for (const id of ['@deepseek-ai/dsh-client-ui-conversation', 'trisoul_x']) {
+          for (const id of ['@deepseek-ai/dsh-client-ui-conversation', 'oh-my-dsh']) {
             const callback = modules.loadCache.get(id)?.exports?.apply;
             conversationOwners[id] = typeof callback === 'function'
               && ancestry.some(owner => owner.state === 2 && owner.runtime?.callback === callback);

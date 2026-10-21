@@ -9,7 +9,7 @@ export function withoutMovedReasoning(messages, session, traceSlot) {
   traceSlot = resolveTraceSlot(session, traceSlot);
   if (!traceSlot) return messages;
   const carrier = session.deriveEventMessage(session.eventAt(traceSlot.carrierSeq));
-  if (!carrier || !messages.some(m => m.id === carrier.id && sourceName(m.source) === 'trisoul-x:trace')) return messages;
+  if (!carrier || !messages.some(m => m.id === carrier.id && sourceName(m.source) === 'oh-my-dsh:trace')) return messages;
   const ids = new Set((traceSlot.movedSourceSeqs || [traceSlot.sourceSeq])
     .map(seq => session.eventAt(seq)?.data?.message?.id).filter(Boolean));
   let changed = false;

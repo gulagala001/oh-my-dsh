@@ -192,7 +192,7 @@ export function applySessionOverview(ctx, openCU) {
       return <div style={{ height: '100%', overflow: 'auto', paddingBlock: 12 }}><Overview sessionId={props.sessionId} variant={props.variant} overview={data} panels={panels}/></div>;
     }
     for (const [kind, title, variant] of [[AGENTS_KIND, '子智能体', 'agents'], [JOBS_KIND, '后台进程', 'jobs'], [SOURCES_KIND, '来源', 'sources'], [OUTPUTS_KIND, '输出内容', 'outputs']]) {
-      const id = `trisoul_x/${kind}`;
+      const id = `oh-my-dsh/${kind}`;
       scope.effect(() => scope.sidebarRightTabs.register({ id, kind, multiple: false, title: () => title,
         // Retain the old kind for saved tabs; OpenCU owns the single Sources entry.
         guide: kind === SOURCES_KIND ? [] : [{ id: kind, order: 32, title: () => title }] }));

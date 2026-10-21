@@ -1,18 +1,18 @@
 - insert:
-    - id: trisoul-x
-      name: trisoul_x
+    - id: oh-my-dsh
+      name: oh-my-dsh
     - id: omd-deepseek-workbench
-      name: trisoul_x/deepseek-workbench
+      name: oh-my-dsh/deepseek-workbench
     - id: omd-extensions
-      name: trisoul_x/extensions
+      name: oh-my-dsh/extensions
     - id: omd-opencu
-      name: trisoul_x/opencu
+      name: oh-my-dsh/opencu
     - id: omd-rewind
-      name: trisoul_x/rewind
+      name: oh-my-dsh/rewind
 
 - id: agent-preset-registry
   config:
-    default: trisoul-x
+    default: oh-my-dsh
 
 - id: system-prompt
   config:
@@ -40,16 +40,16 @@
   disabled: true
 - insert:
     - id: omd-jobs
-      name: trisoul_x/host/jobs-local
+      name: oh-my-dsh/host/jobs-local
     - id: omd-workflow-runtime
-      name: trisoul_x/workflow
+      name: oh-my-dsh/workflow
     - id: omd-workflow-spawn
-      name: trisoul_x/host/workflow-spawn
+      name: oh-my-dsh/host/workflow-spawn
     - id: omd-bash-sandbox
-      name: trisoul_x/host/bash-sandbox
+      name: oh-my-dsh/host/bash-sandbox
       disabled: !!js process.platform === 'win32'
     - id: omd-pwsh-sandbox
-      name: trisoul_x/host/pwsh-sandbox
+      name: oh-my-dsh/host/pwsh-sandbox
       disabled: !!js process.platform !== 'win32'
 
 - id: ui-conversation
@@ -60,6 +60,6 @@
 
 - insert:
     - id: omd-ui-conversation
-      name: trisoul_x/host/ui-conversation
+      name: oh-my-dsh/host/ui-conversation
     - id: omd-ui-chat
-      name: trisoul_x/host/ui-chat
+      name: oh-my-dsh/host/ui-chat

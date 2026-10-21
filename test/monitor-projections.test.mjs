@@ -56,12 +56,12 @@ test('projection GET routes keep identity checks and no-store with object and UR
   for (const view of ['context', 'usage']) {
     let response, cache;
     assert.equal(await handleMonitorApi({ hub: f.hub, ctx: f.ctx, req: { method: 'GET' }, res: { setHeader: (key, value) => { if (key === 'Cache-Control') cache = value; } },
-      url: new URL('http://isolated.invalid/trisoul-x/api/monitor?session=fixture&view=' + view), send(_res, status, data) { response = { status, data }; } }), true);
+      url: new URL('http://isolated.invalid/oh-my-dsh/api/monitor?session=fixture&view=' + view), send(_res, status, data) { response = { status, data }; } }), true);
     assert.equal(response.status, 200); assert.equal(cache, 'no-store');
     const expected = f.read(view);
     for (const key of view === 'usage' ? ['metrics'] : ['meter', 'frame', 'toolsTokens', 'contextCapacity']) assert.deepEqual(response.data[key], expected[key]);
   }
   f.hub.store.monitorErrors.add('unreadable'); f.hub.monitor.error = 'isolated write failure';
   const partial = f.read('usage'); assert.equal(partial.coverage.partial, true); assert.match(partial.coverage.message, /历史档案无法读取/); assert.match(partial.coverage.message, /写入失败/);
-  await assert.rejects(() => handleMonitorApi({ hub: f.hub, ctx: f.ctx, req: { method: 'GET' }, res: {}, url: new URL('http://isolated.invalid/trisoul-x/api/monitor?session=..&view=context') }), /会话编号/);
+  await assert.rejects(() => handleMonitorApi({ hub: f.hub, ctx: f.ctx, req: { method: 'GET' }, res: {}, url: new URL('http://isolated.invalid/oh-my-dsh/api/monitor?session=..&view=context') }), /会话编号/);
 });

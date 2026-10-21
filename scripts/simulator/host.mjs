@@ -61,12 +61,12 @@ export class SimulationHost {
     this.version = JSON.parse(await readFile(this.anchor.resolve('@deepseek-ai/dsh/package.json'), 'utf8')).version;
     const { initProfile, PROFILE_TEMPLATES } = await import(pathToFileURL(this.anchor.resolve('@deepseek-ai/dsh-app-boot')).href);
     const profile = join(this.home, 'profiles/simulation');
-    initProfile(profile, [...PROFILE_TEMPLATES.web.bundles, 'trisoul_x']);
+    initProfile(profile, [...PROFILE_TEMPLATES.web.bundles, 'oh-my-dsh']);
     const manifestPath = join(profile, 'package.json');
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-    manifest.dependencies.trisoul_x = 'link:' + repoRoot;
+    manifest.dependencies['oh-my-dsh'] = 'link:' + repoRoot;
     await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-    await symlink(repoRoot, join(profile, 'node_modules/trisoul_x'), process.platform === 'win32' ? 'junction' : 'dir');
+    await symlink(repoRoot, join(profile, 'node_modules/oh-my-dsh'), process.platform === 'win32' ? 'junction' : 'dir');
     await writeFile(join(profile, 'cordis.patch.yml'), JSON.stringify([
       // The whole process already runs inside the enforcing outer sandbox.
       // macOS refuses sandbox_apply inside an existing Seatbelt sandbox, so
@@ -80,7 +80,7 @@ export class SimulationHost {
       'llm-pi-ai': { providers: { simulation: { api: 'openai-completions', baseURL: this.provider.baseURL, apiKeyEnv: 'OMD_SIMULATION_KEY', streamIdleTimeoutMs: 1200000,
         models: this.models.map(id => ({ id, name: '离线模拟 ' + id, contextWindow: 1000000, maxTokens: 16384, input: ['text', 'image'] })) } } },
       'agent-default-model': { provider: 'simulation', model: this.models[0] },
-      'trisoul-x': { componentAutoSetup: false, computerUseEnabled: false, codegraphEnabled: false, backgroundTasksEnabled: false,
+      'oh-my-dsh': { componentAutoSetup: false, computerUseEnabled: false, codegraphEnabled: false, backgroundTasksEnabled: false,
         dreamAutoEnabled: false, projectlessWorkspaceRoot: join(this.root, 'projectless-chats'), flushIdleMs: 0, digestEvery: 1000, coordinatorEvery: 1000,
         unifiedBackground: { provider: 'simulation', model: this.models[0], effort: 'off' }, dreamProvider: 'simulation', dreamModel: this.models[0],
         ...this.omd },
@@ -172,13 +172,13 @@ export class SimulationHost {
     if (!result.result?.ok) throw Object.assign(Error(method + ': ' + JSON.stringify(result)), { code: 'HOST_RPC_ERROR' });
     return result.result.value;
   }
-  api(path, body) { return this.request('/trisoul-x/api' + path, body); }
+  api(path, body) { return this.request('/oh-my-dsh/api' + path, body); }
   async control(path, body) {
     const result = await this.request('/__simulation' + path, body);
     if (path === '/clock') this.clockSnapshot = result;
     return result;
   }
-  async createSession({ id, preset = 'trisoul-x' } = {}) {
+  async createSession({ id, preset = 'oh-my-dsh' } = {}) {
     const result = await this.rpc('session/create', { workspaceId: this.workspaceId, ...(id ? { sessionId: id } : {}), agentPreset: preset });
     return result.sessionId;
   }

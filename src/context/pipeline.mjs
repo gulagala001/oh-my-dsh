@@ -673,7 +673,7 @@ export class ContextPipeline {
   async retireLegacyInjections(session) {
     const s = this.state(session);
     if (s.migrationVersion === 1) return;
-    const old = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && ['trisoul-x:memory', 'trisoul-x:task-memory'].includes(sourceName(e.data?.source)));
+    const old = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && ['oh-my-dsh:memory', 'oh-my-dsh:task-memory'].includes(sourceName(e.data?.source)));
     if (old.length) {
       const tx = { id: randomUUID(), planId: 'legacy-memory-retirement', source: 'migration', createdAt: Date.now(),
         operations: old.map(e => ({ id: randomUUID(), kind: 'delete', seqs: [e.seq], text: '', position: session.surface.nodes.indexOf(e.seq) })),

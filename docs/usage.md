@@ -4,7 +4,7 @@
 
 > 当前源码为 **OMD `0.2.1-rc.2.omd.0.18.1` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.1`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
 
-OMD 继续使用 DSH 的模型、项目、会话、原生工具、文件、技能与内容标签。包 ID `trisoul_x`、preset `trisoul-x` 和原数据目录保持兼容。
+OMD 继续使用 DSH 的模型、项目、会话、原生工具、文件、技能与内容标签。包 ID 与 preset 均为 `oh-my-dsh`；早期版本的设置、会话和数据目录在升级后自动迁移，见[升级说明](upgrade.md#package-name)。
 
 <a id="安装到现有-dsh推荐"></a>
 
@@ -24,7 +24,7 @@ OMD 继续使用 DSH 的模型、项目、会话、原生工具、文件、技�
 安装、更新、启停后，等任务结束再完整重启应用或原 Web 服务，关窗口或刷新不替代后端切换。以下为 DSH 0.2.1-rc.2、web profile 的卸载示例；桌面请使用插件页：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web remove trisoul_x
+npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web remove oh-my-dsh
 ```
 
 停用／卸载保留模型、凭据、会话、草稿和记忆；缺少 OMD preset 的旧会话需重新启用插件后继续。新 standard 会话可运行不证明旧会话已经转换。Loader 的配置保护不把 bundle effective patch 写回用户配置，卸载保留第三方注册和包装。
@@ -189,7 +189,7 @@ OMD 内置 `@gulagala001/dsh-undo-plugin`。 会话空闲时连按两次 Esc，�
 
 ## 数据与维护
 
-数据使用实际 `DSH_HOME`（Web 默认用户目录 `.dsh`），OMD 在 `trisoul-x/`；源码默认仓库 `data/dsh/`。完整备份 profile、凭据、会话、附件、上下文和记忆。Dream 数据在 `dream-v1/memory.sqlite`，监控在 `monitor-v1/usage.sqlite`，旧自动记忆只读保留；外部项目／索引另备份。停用／卸载不清资料。
+数据使用实际 `DSH_HOME`（Web 默认用户目录 `.dsh`），OMD 在 `oh-my-dsh/`；源码默认仓库 `data/dsh/`。完整备份 profile、凭据、会话、附件、上下文和记忆。Dream 数据在 `dream-v1/memory.sqlite`，监控在 `monitor-v1/usage.sqlite`，旧自动记忆只读保留；外部项目／索引另备份。停用／卸载不清资料。
 
 ## 版本与更新提醒
 

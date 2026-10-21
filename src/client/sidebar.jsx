@@ -48,7 +48,7 @@ function bindNarrowSidebar(ctx, frame, column) {
   const otherOverlay = () => [...document.querySelectorAll('[role="dialog"],[role="menu"]')].some(el => el !== column && el.getClientRects().length);
   const close = () => { if (open && frame.dataset.sidebarCollapsed !== 'true') ctx.layout.toggleSidebar(); };
   const sync = () => {
-    const next = narrow.matches && document.documentElement.classList.contains('trisoul-shell')
+    const next = narrow.matches && document.documentElement.classList.contains('omd-shell')
       && !document.documentElement.hasAttribute('data-omd-layout')
       && frame.dataset.sidebarCollapsed !== 'true' && !frame.hasAttribute('data-rightbar-fullscreen');
     if (next) {

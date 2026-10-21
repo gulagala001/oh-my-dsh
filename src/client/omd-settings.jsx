@@ -18,7 +18,7 @@ async function request(path, body, signal) {
   if (!response.ok) throw Object.assign(Error(data.error || 'HTTP ' + response.status), { statusCode: response.status });
   return data;
 }
-const api = (path, body, signal) => request('trisoul-x/api' + path, body, signal);
+const api = (path, body, signal) => request('oh-my-dsh/api' + path, body, signal);
 const fmt = value => Number(value || 0).toLocaleString();
 const ROUTE = { provider: '', model: '', temperature: 0.7, effort: 'off' };
 const operationLabel = { enable: '正在开启…', disable: '正在关闭…', install: '正在开启…', update: '正在更新…', uninstall: '正在卸载…' };
@@ -116,7 +116,7 @@ function usePoll(read, interval) {
   }, [read, interval]);
   return { state, setState, error, refresh: () => poller.current?.refresh() };
 }
-const readComponents = signal => request('trisoul-x/components', undefined, signal);
+const readComponents = signal => request('oh-my-dsh/components', undefined, signal);
 const readDream = signal => api('/dream/settings', undefined, signal);
 
 // ---- Features ---------------------------------------------------------------
@@ -154,8 +154,8 @@ function CodeGraphRow({ components }) {
     setBusy(true); setActionError('');
     if (body.patch && d) setState({ ...d, ...(typeof body.patch.componentAutoSetup === 'boolean' ? { automatic: body.patch.componentAutoSetup } : {}),
       codegraph: { ...d.codegraph, ...(typeof body.patch.codegraphEnabled === 'boolean' ? { enabled: body.patch.codegraphEnabled } : {}) } });
-    try { setState(await request('trisoul-x/components', body)); }
-    catch (e) { setActionError(e.message); try { setState(await request('trisoul-x/components')); } catch {} }
+    try { setState(await request('oh-my-dsh/components', body)); }
+    catch (e) { setActionError(e.message); try { setState(await request('oh-my-dsh/components')); } catch {} }
     finally { setBusy(false); }
   };
   const cg = d?.codegraph;
@@ -377,7 +377,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
     const tag = document.createElement('style'); tag.dataset.plugin = 'omd-settings'; tag.textContent = css; document.head.append(tag);
     return () => tag.remove();
   });
-  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'trisoul-x', order: 16, label: () => 'Oh My DSH' }, OmdSettings));
+  ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'oh-my-dsh', order: 16, label: () => 'Oh My DSH' }, OmdSettings));
   function OmdSettings() {
     const [notice, setNotice] = useState('');
     useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 6000); return () => clearTimeout(timer); }, [notice]);
@@ -496,7 +496,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
         </Group>
         <Group title="其他">
           <Toggle title="启动时自动准备依赖" hint="关闭后，代码理解需要手动准备运行环境。" checked={components.state?.automatic} disabled={!components.state}
-            onChange={v => request('trisoul-x/components', { action: 'settings', patch: { componentAutoSetup: v } }).then(components.setState, e => report(e.message))}/>
+            onChange={v => request('oh-my-dsh/components', { action: 'settings', patch: { componentAutoSetup: v } }).then(components.setState, e => report(e.message))}/>
           <HistorySize/>
         </Group>
       </details>

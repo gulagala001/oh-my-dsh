@@ -28,7 +28,7 @@ body:
         DSH 版本：
         OMD 当前版本：
         安装来源或命令：
-        profile（如 web / desktop / trisoul-x）：
+        profile（如 web / desktop / oh-my-dsh）：
         是否自定义 DSH_HOME：
     validations:
       required: true

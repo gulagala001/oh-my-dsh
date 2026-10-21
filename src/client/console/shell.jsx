@@ -73,7 +73,7 @@ function ConsolePage(props) {
 export function applyConsole(ctx, { composerStats = [], performanceMode } = {}) {
   ctx.effect(() => bindSidebar(ctx.sidebarRight));
   ctx.effect(() => { const tag = document.createElement('style'); tag.dataset.plugin = 'omd-console'; tag.textContent = css; document.head.appendChild(tag); return () => tag.remove(); });
-  const id = `trisoul_x/${CONSOLE_KIND}`;
+  const id = `oh-my-dsh/${CONSOLE_KIND}`;
   ctx.effect(() => ctx.sidebarRightTabs.register({ id, kind: CONSOLE_KIND, title: () => 'OMD', keepMounted: true,
     guide: [{ id: 'omd-console', order: 40, title: () => 'OMD 控制台', description: () => '上下文、记忆、调用与后台日志', icon: p => <Icon name="omd" {...p}/> }] }));
   ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: id }, ConsolePage));

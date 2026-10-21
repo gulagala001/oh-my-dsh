@@ -9,7 +9,7 @@ import { pins } from './inputs.mjs';
 export const stages = ['stock', 'installed'];
 export const enabledStage = stage => stage === 'installed';
 const originals = [['ui-conversation', '@deepseek-ai/dsh-client-ui-conversation'], ['ui-chat', '@deepseek-ai/dsh-client-ui-chat']];
-const replacements = [['trisoul-x', 'trisoul_x'], ['omd-ui-conversation', 'trisoul_x/host/ui-conversation'], ['omd-ui-chat', 'trisoul_x/host/ui-chat']];
+const replacements = [['oh-my-dsh', 'oh-my-dsh'], ['omd-ui-conversation', 'oh-my-dsh/host/ui-conversation'], ['omd-ui-chat', 'oh-my-dsh/host/ui-chat']];
 const flatten = rows => rows.flatMap(row => [row, ...flatten(row.children ?? [])]);
 
 export function stockBaseline(ui) {
@@ -47,27 +47,27 @@ export function assertStage(value, baseline, expected) {
   }
   const modules = ui.identity.dynamic;
   for (const name of new Set(modules.map(row => row.id))) assert.equal(modules.filter(row => row.id === name).length, 1, 'No duplicate renderer row: ' + name);
-  const rootRows = modules.filter(row => row.id === 'trisoul_x');
+  const rootRows = modules.filter(row => row.id === 'oh-my-dsh');
   assert.equal(rootRows.length, enabled ? 1 : 0, 'OMD renderer row follows selection');
   if (enabled) {
-    assert.equal(rootRows[0].materialized, true); assert.equal(rootRows[0].cachedId, 'trisoul_x');
-    assert.equal(rootRows[0].url, `plugins/??trisoul_x/client.js&rev=${rootRows[0].rev}`);
+    assert.equal(rootRows[0].materialized, true); assert.equal(rootRows[0].cachedId, 'oh-my-dsh');
+    assert.equal(rootRows[0].url, `plugins/??oh-my-dsh/client.js&rev=${rootRows[0].rev}`);
     for (const [id, name] of replacements) {
       const rows = host.entries.filter(row => row.id === id); assert.equal(rows.length, 1, 'Unique OMD Host row: ' + id);
       assert.equal(rows[0].name, name); assert.equal(rows[0].active, true); assert.equal(rows[0].disabled, false);
-      assert.deepEqual(rows[0].source, { name: 'trisoul_x', dir: bundleRoot, version: pins.plugin.version });
+      assert.deepEqual(rows[0].source, { name: 'oh-my-dsh', dir: bundleRoot, version: pins.plugin.version });
       assert.equal(rows[0].moduleCallbackMatches, true, 'Actual installed callback: ' + id);
     }
     assert.deepEqual(host.opencu, { browserEnabled: false, nativeEnabled: false, extensionEnabled: false });
   } else {
-    assert.equal(host.entries.some(row => row.name === 'trisoul_x' || row.name?.startsWith('trisoul_x/')), false, 'No residual OMD Host rows');
-    assert.equal(ui.entries.some(row => row.name === 'trisoul_x'), false, 'No residual OMD renderer entry');
+    assert.equal(host.entries.some(row => row.name === 'oh-my-dsh' || row.name?.startsWith('oh-my-dsh/')), false, 'No residual OMD Host rows');
+    assert.equal(ui.entries.some(row => row.name === 'oh-my-dsh'), false, 'No residual OMD renderer entry');
     for (const [, name] of originals) {
       const rows = modules.filter(row => row.id === name); assert.equal(rows.length, 1, 'Official client restored: ' + name);
       assert.equal(rows[0].materialized, true);
     }
   }
-  const owner = enabled ? 'trisoul_x' : originals[0][1];
+  const owner = enabled ? 'oh-my-dsh' : originals[0][1];
   assert.equal(ui.identity.conversationOwners[owner], true, 'Actual conversation provider callback ancestry');
   const rows = flatten(ui.slots), models = rows.filter(row => row.name === 'conversation.input.model');
   const labels = rows.filter(row => row.name === 'conversation.input.model.label');
@@ -91,7 +91,7 @@ export function assertStage(value, baseline, expected) {
   assert(ui.session.retainedMainView > 0, 'Real mainView retain'); assert.equal(ui.session.blank, true); assert.equal(ui.session.promptAttempted, false);
   assert.equal(value.composerVisible, true, 'Actual session composer visible');
   assert.equal(value.persisted.installed, stage !== 'stock'); assert.equal(value.persisted.enabled, enabled);
-  const bundles = value.bundles.filter(row => row.name === 'trisoul_x');
+  const bundles = value.bundles.filter(row => row.name === 'oh-my-dsh');
   assert.equal(bundles.length, stage === 'stock' ? 0 : 1, 'Exact listBundles row');
   if (stage !== 'stock') {
     assert.equal(bundles[0].installed, true); assert.equal(bundles[0].enabled, enabled);
@@ -102,7 +102,7 @@ export function assertStage(value, baseline, expected) {
 export function assertReceipt(value, targetStage) {
   const receipt = value.receipt;
   assert(['applied', 'restart-required'].includes(receipt.application), 'Successful real application receipt');
-  assert.equal(receipt.changed, true); assert.equal(receipt.stage, 'enable'); assert.equal(receipt.target, 'trisoul_x');
+  assert.equal(receipt.changed, true); assert.equal(receipt.stage, 'enable'); assert.equal(receipt.target, 'oh-my-dsh');
   assert.equal(receipt.enabled, enabledStage(targetStage)); assert.equal(receipt.error, undefined);
   assert(value.changedEvents > 0, 'Actual plugin-manager/changed event observed');
   assert.equal(value.persisted.installed, true); assert.equal(value.persisted.enabled, enabledStage(targetStage));

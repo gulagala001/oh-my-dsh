@@ -11,7 +11,7 @@ import { clientComponents } from './client-identity.mjs';
 export const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 export const hostVersion = '0.2.1-rc.2';
 export const pins = { desktop: { version: hostVersion, sourceCommit: '687f282e8625c6b8d11ff58211a90524be2e4317' },
-  plugin: { name: 'trisoul_x', version: JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url))).version } };
+  plugin: { name: 'oh-my-dsh', version: JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url))).version } };
 export const inside = (root, path) => path === root || path.startsWith(root + sep);
 export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sdkNames = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host', '@deepseek-ai/dsh-app-boot',
@@ -80,7 +80,7 @@ export async function desktopInputs(env = process.env, platform = process.platfo
   const files = new Map([...members].map(([name, row]) => [name, row.bytes]));
   const manifest = JSON.parse(files.get('package/package.json'));
   const source = JSON.parse(await readFile(new URL('../../../package.json', import.meta.url)));
-  assert.equal(manifest.name, 'trisoul_x'); assert.equal(manifest.version, source.version);
+  assert.equal(manifest.name, 'oh-my-dsh'); assert.equal(manifest.version, source.version);
   assert.match(manifest.version, /^0\.2\.1-rc\.2\.omd\.\d+\.\d+\.\d+$/);
   assert.equal(manifest.engines.dsh, hostVersion);
   assert.equal(manifest.devDependencies['@deepseek-ai/dsh'], hostVersion);

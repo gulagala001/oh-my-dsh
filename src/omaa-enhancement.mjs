@@ -10,8 +10,8 @@ export function omaaWorkflowComposition() {
   return [
     { id: 'workflow-ptc', name: '@deepseek-ai/dsh-workflow-ptc', disabled: true },
     { id: 'tool-workflow', name: '@deepseek-ai/dsh-tool-workflow', disabled: true },
-    { id: 'omd-workflow-ptc', name: 'trisoul_x/host/workflow-ptc', config: { provider: 'omd-workflow' } },
-    { id: 'omd-tool-workflow', name: 'trisoul_x/host/tool-workflow' },
+    { id: 'omd-workflow-ptc', name: 'oh-my-dsh/host/workflow-ptc', config: { provider: 'omd-workflow' } },
+    { id: 'omd-tool-workflow', name: 'oh-my-dsh/host/tool-workflow' },
   ];
 }
 

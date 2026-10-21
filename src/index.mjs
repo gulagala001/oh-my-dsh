@@ -4,6 +4,8 @@ import { acquirePersona } from '../plugins/persona/src/index.mjs';
 import { readJsonBody as readBody, rejectUntrusted, sendJson as send, withRequestSignal } from './http.mjs';
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
 import { legacySettings } from './legacy-settings.mjs';
+import { isOmdPreset } from './legacy-identity.mjs';
+import { migrateLegacyInstallation } from './legacy-migration.mjs';
 import { homedir } from 'node:os';
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { realpath } from 'node:fs/promises';
@@ -60,14 +62,15 @@ import { TemporaryChats, handleTemporaryChatApi } from './temporary-chat.mjs';
 import { createProjectlessWorkspaceService } from './projectless-workspaces.mjs';
 
 export { Config };
-export const name = 'trisoul-x';
+export const name = 'oh-my-dsh';
 export const inject = ['loader', 'tools', 'llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections', 'sessionPersistence'];
 
 export async function apply(ctx, config) {
   installLoaderLifecycleCompatibility(ctx);
   installFileUploadCompatibility(ctx);
-  const legacy = await legacySettings(ctx, 'trisoul-x', Config, ['opencu']);
-  const directory = legacy.value.dataDir || config.dataDir || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'trisoul-x');
+  const migratedDirectory = migrateLegacyInstallation(ctx, { home: process.env.DSH_HOME || join(homedir(), '.dsh'), dataDir: config.dataDir });
+  const legacy = await legacySettings(ctx, 'oh-my-dsh', Config, ['opencu']);
+  const directory = legacy.value.dataDir || migratedDirectory;
   installSearchCompatibility(ctx, directory);
   await migrateSessionStorage(ctx, directory);
   installToolSchedulerCompatibility(ctx);
@@ -148,7 +151,7 @@ export async function apply(ctx, config) {
   mountComponents(ctx, hub.components);
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
   mountRecommendedPlugins(ctx, hub);
-  const isX = session => ['trisoul-x', 'omd-ptc'].includes(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
+  const isX = session => isOmdPreset(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
   installResultReduction(ctx, hub, session => isX(session) || isOmaaEnhanced(session));
   hub.ultracode = new UltracodeControl(ctx, session => isX(session) || (isOmaaEnhanced(session) && ctx.get('omaa').modeFor(session) === 'default'), hub.store);
@@ -327,14 +330,14 @@ export async function apply(ctx, config) {
   // has been registered, so side questions reuse the full parent assembly.
   installBtwCompatibility(ctx);
   ctx.inject(['webServer'], web => {
-    web.effect(() => web.webServer.register({ kind: 'prefix', path: '/trisoul-x/api', async handler(req, res) {
+    web.effect(() => web.webServer.register({ kind: 'prefix', path: '/oh-my-dsh/api', async handler(req, res) {
       try {
         const url = new URL(req.url, 'http://localhost'), id = url.searchParams.get('session');
         if (await handleVersionApi({ req, res, url, service: versionService, send })) return;
         if (rejectUntrusted(ctx, req, res)) return;
         if (await handleSkinAsset(req, res, url)) return;
         if (await handleTemporaryChatApi({ service: temporaryChats, req, res, url })) return;
-        if (url.pathname === '/trisoul-x/api/projectless-workspace') {
+        if (url.pathname === '/oh-my-dsh/api/projectless-workspace') {
           if (req.method === 'GET') {
             send(res, 200, { managed: await projectless.owns(url.searchParams.get('cwd') || '') }); return;
           }
@@ -342,7 +345,7 @@ export async function apply(ctx, config) {
           send(res, 405, { error: '不支持此方法' }); return;
         }
         if (await handleDreamApi({ hub, ctx, req, res, url, send, readBody })) return;
-        if (url.pathname === '/trisoul-x/api/model-mode') {
+        if (url.pathname === '/oh-my-dsh/api/model-mode') {
           if (!id) { send(res, 400, { error: '缺少会话编号' }); return; }
           if (req.method === 'POST') { send(res, 200, await hub.ultracode.select(id, await readBody(req))); return; }
           if (req.method === 'GET') {
@@ -355,7 +358,7 @@ export async function apply(ctx, config) {
         if (await handleVersionUpdateApi({ req, res, url, service: versionUpdater, send })) return;
         if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
         if (await handleMonitorApi({ hub, ctx, req, res, url, send })) return;
-        if (url.pathname === '/trisoul-x/api/state' && req.method === 'GET' && url.searchParams.get('view') === 'summary') {
+        if (url.pathname === '/oh-my-dsh/api/state' && req.method === 'GET' && url.searchParams.get('view') === 'summary') {
           if (id) validateSessionId(id);
           const agent = id ? ctx.agents.get(id) : undefined;
           const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
@@ -379,14 +382,14 @@ export async function apply(ctx, config) {
         const { agent, session, stored, inspection, archivedOnly } = target;
         if (!target.found) { send(res, 404, { error: '会话不存在' }); return; }
         const scopeSession = session ?? { id: id || 'settings', header: inspection?.meta ?? { cwd: stored?.cwd || process.cwd() } };
-        if (url.pathname === '/trisoul-x/api/background-wait' && req.method === 'GET') {
+        if (url.pathname === '/oh-my-dsh/api/background-wait' && req.method === 'GET') {
           const denied = ctx.get('connection')?.requestRejection(req);
           if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
           res.setHeader('Cache-Control', 'no-store');
           send(res, 200, { waiting: hub.backgroundWaiting(agent) }); return;
         }
         if (await handleContextApi({ hub, ctx, req, res, url, session, agent, inspection, archivedOnly, refreshSession: readTarget, id, send, readBody })) return;
-        if (url.pathname === '/trisoul-x/api/better-todo') {
+        if (url.pathname === '/oh-my-dsh/api/better-todo') {
           if (!id) { send(res, 400, { error: '请选择一个会话' }); return; }
           if (!['GET', 'POST'].includes(req.method)) { send(res, 405, { error: 'Method not allowed' }); return; }
           if (req.method === 'POST') {
@@ -399,7 +402,7 @@ export async function apply(ctx, config) {
           }
           send(res, 200, hub.taskReminders(scopeSession)); return;
         }
-        if (url.pathname === '/trisoul-x/api/state' && req.method === 'GET') {
+        if (url.pathname === '/oh-my-dsh/api/state' && req.method === 'GET') {
           // Settings read config and providers; the record view reads notes and tasks.
           // Usage and context meters are served by /monitor and /context.
           const directory = id ? [] : await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));

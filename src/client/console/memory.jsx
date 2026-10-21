@@ -113,7 +113,7 @@ export function MemorySection({ sessionId, visible, params }) {
       {reader.loading ? <Skeleton rows={6}/> : <SourceView value={reader.value} onRead={read} onDoc={openDoc}/>}
     </Drawer>}
     {doc && <RecordDrawer record={doc} sessionId={sid} onClose={() => documents.close()}
-      assetBase={(r, i) => `trisoul-x/api/dream/asset?${qs({ sessionId: r.requestSessionId || r.sessionId, id: r.id, asset: i + 1 })}`}/>}
+      assetBase={(r, i) => `oh-my-dsh/api/dream/asset?${qs({ sessionId: r.requestSessionId || r.sessionId, id: r.id, asset: i + 1 })}`}/>}
   </div>;
 }
 

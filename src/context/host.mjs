@@ -5,7 +5,7 @@ import { appendShadow } from './shadow.mjs';
 
 export function createHostAdapter(hub) {
   const routes = new WeakMap();
-  const message = (text, kind) => createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'plugin:trisoul-x:' + kind } });
+  const message = (text, kind) => createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'plugin:oh-my-dsh:' + kind } });
   const requestBudget = session => {
     const prepared = routes.get(session), { route, info } = prepared ?? { route: session.requestHeader?.()?.config };
     const capacity = prepared ? info?.context?.contextWindow : session.requestContext?.()?.contextWindow;
@@ -62,7 +62,7 @@ export function createHostAdapter(hub) {
         // Editing a prior checkpoint is an OMD context update, not another
         // native checkpoint in an already-closed compaction lifecycle.
         const value = op.message.source?.kind === 'compact-checkpoint'
-          ? { ...op.message, source: { kind: 'plugin:trisoul-x:context-record' } } : op.message;
+          ? { ...op.message, source: { kind: 'plugin:oh-my-dsh:context-record' } } : op.message;
         return session.append('user/message', value, { surfaceOp, sourceEventSeqs });
       }
       if (op.kind === 'trace') return session.append('user/message', {

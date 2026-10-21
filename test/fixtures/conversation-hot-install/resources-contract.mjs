@@ -28,16 +28,16 @@ test('resource stdout excludes credentials, private paths, bodies and all unknow
   assert(f.rows().some(row => row.resource?.category === 'credentials-redacted'));
 });
 test('only graph-verified allowlisted module identity and revision enter stdout', () => {
-  const f = fixture(), rev = 'a'.repeat(12), base = 'dsh-app://app/plugins/??trisoul_x/client.js&rev=' + rev;
+  const f = fixture(), rev = 'a'.repeat(12), base = 'dsh-app://app/plugins/??oh-my-dsh/client.js&rev=' + rev;
   const response = url => f.value.response({ url, status: 404, method: 'GET', type: 'script' });
   response(base);
-  f.value.allowModules([{ id: 'trisoul_x', rev, url: `plugins/??trisoul_x/client.js&rev=${rev}` }]);
+  f.value.allowModules([{ id: 'oh-my-dsh', rev, url: `plugins/??oh-my-dsh/client.js&rev=${rev}` }]);
   response(base); response(base + '&token=PRIVATE_QUERY');
   response('dsh-app://app/plugins/??PRIVATE_PACKAGE/client.js&rev=' + rev);
-  response('dsh-app://app/plugins/??trisoul_x/client.js&rev=' + 'b'.repeat(12));
+  response('dsh-app://app/plugins/??oh-my-dsh/client.js&rev=' + 'b'.repeat(12));
   f.value.flush(); const rows = f.rows().filter(row => row.kind === 'response');
   assert.equal(rows[0].resource.category, 'module-redacted');
-  assert.equal(rows[1].resource.module, 'trisoul_x'); assert.equal(rows[1].resource.rev, rev);
+  assert.equal(rows[1].resource.module, 'oh-my-dsh'); assert.equal(rows[1].resource.rev, rev);
   assert(rows.slice(2).every(row => row.resource.category === 'module-redacted'));
   assert.equal(f.lines.join('\n').includes('PRIVATE_'), false);
 });
@@ -153,13 +153,13 @@ test('declared and actual packaged static files are exact matches, never wildcar
 });
 test('fixed OMD and SDK methods discard session/query/fragment, unknown paths retain only pathname hash', () => {
   const f = fixture();
-  for (const url of ['dsh-app://app/trisoul-x/api/version?refresh=PRIVATE',
-    'dsh-app://app/trisoul-x/api/model-mode?session=PRIVATE',
+  for (const url of ['dsh-app://app/oh-my-dsh/api/version?refresh=PRIVATE',
+    'dsh-app://app/oh-my-dsh/api/model-mode?session=PRIVATE',
     'dsh-app://app/api/session/create?token=PRIVATE', 'dsh-app://app/api/PRIVATE?token=PRIVATE#PRIVATE'])
     f.value.consoleError({ url, lineNumber: 0, columnNumber: 0 });
   f.value.flush(); const rows = f.rows().filter(row => row.kind === 'console-error');
-  assert.equal(rows[0].resource.path, '/trisoul-x/api/version');
-  assert.equal(rows[1].resource.path, '/trisoul-x/api/model-mode');
+  assert.equal(rows[0].resource.path, '/oh-my-dsh/api/version');
+  assert.equal(rows[1].resource.path, '/oh-my-dsh/api/model-mode');
   assert.equal(rows[2].resource.method, 'session/create');
   assert.equal(rows[3].resource.category, 'api-redacted');
   assert.equal(rows[3].resource.pathnameSha256, createHash('sha256').update('/api/PRIVATE').digest('hex'));

@@ -24,7 +24,7 @@ function sdkDescription(name, description) {
 export function transformAssembly(assembly, context, options = {}) {
   const { agent } = context ?? {};
   if (!agent || agent.session?.header?.origin === 'subagent'
-      || !assembly.sections?.some(section => section.name === 'trisoul-x:persona')) {
+      || !assembly.sections?.some(section => section.name === 'oh-my-dsh:persona')) {
     return { assembly, audit: { applied: false, reason: 'outside-main-agent-scope' } };
   }
   const load = options.read ?? read;
@@ -90,7 +90,7 @@ export function transformAssembly(assembly, context, options = {}) {
   for (const name of applied) for (const section of map[name].sections ?? []) suppressed.add(section);
   let sdkRegenerated = false;
   const sections = assembly.sections.flatMap(section => {
-    if (section.name === 'trisoul-x:persona') return [{ ...section, text: persona, interpolate: false }];
+    if (section.name === 'oh-my-dsh:persona') return [{ ...section, text: persona, interpolate: false }];
     if (section.name === 'harness:identity') return [];
     if (section.name === 'tool:jobs' && applied.has('job_output') && applied.has('job_kill')) {
       return [{ ...section, text: load(options.backgroundTasksEnabled ? 'runtime/job-collection-background.md' : 'runtime/job-collection.md'), interpolate: false }];
@@ -118,13 +118,13 @@ export function transformAssembly(assembly, context, options = {}) {
     if (suppressed.has(section.name)) return [];
     return [section];
   });
-  if (known.has('note') && known.has('recall') && !sections.some(x => x.name === 'trisoul-x:cc-memory')) {
-    sections.splice(sections.findIndex(section => section.name === 'trisoul-x:persona') + 1, 0,
-      { name: 'trisoul-x:cc-memory', text: load('context/memory.md'), interpolate: false });
+  if (known.has('note') && known.has('recall') && !sections.some(x => x.name === 'oh-my-dsh:cc-memory')) {
+    sections.splice(sections.findIndex(section => section.name === 'oh-my-dsh:persona') + 1, 0,
+      { name: 'oh-my-dsh:cc-memory', text: load('context/memory.md'), interpolate: false });
   }
   const recallFields=known.get('recall')?.parameters?.properties;
-  if(['memory','sessionId','reference'].every(key=>recallFields?.[key])&&!sections.some(x=>x.name==='trisoul-x:cc-dream-memory')){
-    sections.push({name:'trisoul-x:cc-dream-memory',text:load('context/dream-memory.md'),interpolate:false});
+  if(['memory','sessionId','reference'].every(key=>recallFields?.[key])&&!sections.some(x=>x.name==='oh-my-dsh:cc-dream-memory')){
+    sections.push({name:'oh-my-dsh:cc-dream-memory',text:load('context/dream-memory.md'),interpolate:false});
   }
   // DSH strips order metadata after assembling sections. Preserve the host's order.
   const result = { ...assembly, sections, tools: (assembly.tools ?? []).map(tool => changedSchemas.get(tool.name) ?? tool) };
@@ -142,7 +142,7 @@ export function installPromptAdapter(ctx) {
   ctx.on('system-prompt/assemble', async (_initial, context, next) => {
     const assembly = await next();
     if (!context?.agent || context.agent.session?.header?.origin === 'subagent'
-        || !assembly.sections.some(section => section.name === 'trisoul-x:persona')) return assembly;
+        || !assembly.sections.some(section => section.name === 'oh-my-dsh:persona')) return assembly;
     const schemas = ctx.tools.schemas(context.scope ?? context.agent);
     const activeSdk = assembly.sections.some(section => section.name === 'tools:sdk' && section.text);
     let renderSdk;
@@ -154,15 +154,15 @@ export function installPromptAdapter(ctx) {
         : language === 'python' ? renderToolsSdkPy : undefined;
       if (!renderSdk) throw new Error(`Unsupported PTC SDK language: ${language}`);
     }
-    const config = ctx.trisoulX.config();
-    const personality = sessionPersonality(ctx.trisoulX, context.agent.session);
+    const config = ctx.omd.config();
+    const personality = sessionPersonality(ctx.omd, context.agent.session);
     const result = transformAssembly(assembly, context, {
       identityPrompt: personality.modules.identity, personalityModules: personality.modules,
       todoConstraintFirst: config.todoConstraintFirst, stateHintsEnabled: config.stateHintsEnabled,
-      backgroundTasksEnabled: ctx.trisoulX.backgroundOptions?.(context.agent)?.interruptibleWait === true,
+      backgroundTasksEnabled: ctx.omd.backgroundOptions?.(context.agent)?.interruptibleWait === true,
       schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent),
     });
-    if (ctx.trisoulX.persona) result.assembly.sections.push({ name: 'dsh-persona:applied', text: '', interpolate: false });
+    if (ctx.omd.persona) result.assembly.sections.push({ name: 'dsh-persona:applied', text: '', interpolate: false });
     const key = sha(result.audit);
     if (!seen.has(key)) {
       seen.add(key);

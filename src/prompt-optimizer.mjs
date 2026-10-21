@@ -24,7 +24,7 @@ export function optimizationRequest(input) {
   const system = rendered.filter(p => p.role === 'system').map(p => p.content).join('\n\n') + '\n\n' + OPTIMIZER_RULES + `\n本次改写策略：${{ basic: '轻润色', structured: '结构化', planning: '步骤规划' }[mode]}。`;
   const user = (iterative && original ? '最初原稿（用于核对原始意图，新增修改以本次要求为准）：\n' + original + '\n\n' : '') + rendered.filter(p => p.role === 'user').map(p => p.content).join('\n\n')
     + (requirements?.trim() ? '\n\n额外要求（仅用于本次草稿改写）：\n' + requirements : '');
-  return { system, messages: [createUserMessage({ content: [{ type: 'text', text: user }], source: { kind: 'plugin:trisoul-x:prompt-optimizer' } })] };
+  return { system, messages: [createUserMessage({ content: [{ type: 'text', text: user }], source: { kind: 'plugin:oh-my-dsh:prompt-optimizer' } })] };
 }
 
 export function optimizerRoute(ctx, session) {
@@ -90,7 +90,7 @@ export function createPromptOptimizer(ctx, hub, { timeoutMs = 120000 } = {}) {
 }
 
 export async function handlePromptOptimizerApi({ ctx, service, req, res, url, getSession, send }) {
-  if (url.pathname !== '/trisoul-x/api/prompt-optimizer') return false;
+  if (url.pathname !== '/oh-my-dsh/api/prompt-optimizer') return false;
   if (rejectUntrusted(ctx, req, res)) return true;
   if (req.method !== 'POST') { send(res, 405, { error: '请使用 POST' }); return true; }
   let session;

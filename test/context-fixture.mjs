@@ -4,7 +4,7 @@ import { textBlocks } from '../src/context/core.mjs';
 // A protocol fixture, not the DSH implementation. Native integration is tested separately.
 export class FixtureSession {
   constructor(id = 's1', events = [], nodes, header = {}) {
-    this.id = id; this.header = { id, cwd: '/project', agentPreset: 'trisoul-x', ...header };
+    this.id = id; this.header = { id, cwd: '/project', agentPreset: 'oh-my-dsh', ...header };
     this.events = structuredClone(events); this.surface = { nodes: nodes ? [...nodes] : [] }; this.seq = this.events.length;
   }
   append(type, data, options = {}) {
@@ -25,14 +25,14 @@ export class FixtureSession {
   deriveEventMessage(e) {
     if (!e) return;
     const m = e.type === 'user/message' ? e.data : ['assistant/message', 'system/message', 'tool/result'].includes(e.type) ? e.data.message : undefined;
-    if (e.type === 'system/message' && sourceName(m?.source) === 'trisoul-x:shadow' && !textBlocks(m.content)) return;
+    if (e.type === 'system/message' && sourceName(m?.source) === 'oh-my-dsh:shadow' && !textBlocks(m.content)) return;
     return m;
   }
   deriveMessages() { return this.surface.nodes.map(n => this.deriveEventMessage(this.eventAt(n))).filter(Boolean); }
   requestContext() { return { contextWindow: 100000 }; }
 }
 export const user = (s, text) => s.append('user/message', { id: randomUUID(), role: 'user', content: [{ type: 'text', text }], source: { kind: 'user' } }, { surfaceOp: 'append' });
-export const plugin = (s, text, kind = 'context') => s.append('user/message', { id: randomUUID(), role: 'user', content: [{ type: 'text', text }], source: { kind: 'plugin:trisoul-x:' + kind } }, { surfaceOp: 'append' });
+export const plugin = (s, text, kind = 'context') => s.append('user/message', { id: randomUUID(), role: 'user', content: [{ type: 'text', text }], source: { kind: 'plugin:oh-my-dsh:' + kind } }, { surfaceOp: 'append' });
 export const system = s => s.append('system/message', { turn: 1, step: 1, message: { id: randomUUID(), role: 'system', content: [{ type: 'text', text: 'System prompt' }], source: { kind: 'system-prompt' } } }, { surfaceOp: 'append' });
 export function exchange(s, value = 'Original source material. '.repeat(250), reasoning) {
   const id = randomUUID();
@@ -52,7 +52,7 @@ const balanced = (s, index) => {
 export const pairing = { before: (s, seq) => balanced(s, s.surface.nodes.indexOf(seq)), after: (s, seq) => balanced(s, s.surface.nodes.indexOf(seq) + 1) };
 export const adapter = {
   pairing,
-  message(text, kind) { return { role: 'user', content: [{ type: 'text', text }], source: { kind: 'plugin:trisoul-x:' + kind } }; },
+  message(text, kind) { return { role: 'user', content: [{ type: 'text', text }], source: { kind: 'plugin:oh-my-dsh:' + kind } }; },
   publish: plugin,
   async flush() {},
   append(s, op, surfaceOp, sourceEventSeqs) {

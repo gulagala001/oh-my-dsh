@@ -162,7 +162,7 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   let selected;
   const sessionId = 'synthetic-blank-id', requested = [], navigationCalls = [];
   const session = { getSnapshot: () => ({ sessionId, blank: true, openState: 'open', running: false, promptAttempted: false, pendingSubmissions: [] }),
-    projections: { faceOf: () => ({ getSnapshot: () => 'trisoul-x' }) } };
+    projections: { faceOf: () => ({ getSnapshot: () => 'oh-my-dsh' }) } };
   const binding = { session, eventSource: { getSnapshot: () => ({ entries: [{ type: 'event', event: { type: 'session/title' } }] }) } };
   const scope = { root: rootContext, slots: new SlotRegistry(), modules,
     uiSession: { adapter: { current: { getSnapshot: () => ({ key: selected, props: { sessionId: selected } }) } } },
@@ -184,7 +184,7 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   assert.deepEqual(navigationCalls, ['refresh', 'open:' + sessionId]);
   await assert.rejects(window.__OMD_DESKTOP_OPEN_SESSION__('uncatalogued'), /refreshed Client catalog/);
   assert.deepEqual(requested, [sessionId], 'Unknown catalog entries never reach openSession/retain');
-  const navigationExpected = { sessionId, agentPreset: 'trisoul-x', cwd: '/synthetic/workspace' };
+  const navigationExpected = { sessionId, agentPreset: 'oh-my-dsh', cwd: '/synthetic/workspace' };
   // A successful public API return and a stored title do not prove current
   // selection. Only the observed UI/session scope transition can satisfy it.
   const beforeSelection = (await window.__OMD_DESKTOP_HOST_BOOT__()).navigation;
@@ -210,9 +210,9 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   scope.slots = new SlotRegistry();
   const omd = { apply() {} };
   modules.manifest.modules = [...rows.filter(row => ![conversationName, chatName].includes(row.id)),
-    { id: 'trisoul_x', rev: 'omd-rev', url: 'plugins/??trisoul_x/client.js&rev=omd-rev' }];
+    { id: 'oh-my-dsh', rev: 'omd-rev', url: 'plugins/??oh-my-dsh/client.js&rev=omd-rev' }];
   for (const name of [conversationName, chatName]) modules.loadCache.delete(name);
-  modules.loadCache.set('trisoul_x', { id: 'trisoul_x', exports: omd });
+  modules.loadCache.set('oh-my-dsh', { id: 'oh-my-dsh', exports: omd });
   // The service is owned by an inline factory below the root bundle callback,
   // not by a fabricated slash-named renderer row or matching display name.
   scope.uiConversation.ctx.fiber = { state: 2, runtime: { callback() {} },
@@ -223,9 +223,9 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   assert.throws(() => assertClientIdentity(installed, { ...installedExpected,
     publicComponents: [...installedExpected.publicComponents, '@deepseek-ai/dsh-client-unknown'] }), /Required dynamic client module/);
   for (const [mutate, message] of [
-    [value => { value.dynamic = value.dynamic.filter(row => row.id !== 'trisoul_x'); }, /Required dynamic client module/],
-    [value => { value.dynamic.find(row => row.id === 'trisoul_x').url = 'plugins/??other/client.js&rev=omd-rev'; }, /revisioned module source/],
-    [value => { value.conversationOwners.trisoul_x = false; }, /loaded provider callback/],
+    [value => { value.dynamic = value.dynamic.filter(row => row.id !== 'oh-my-dsh'); }, /Required dynamic client module/],
+    [value => { value.dynamic.find(row => row.id === 'oh-my-dsh').url = 'plugins/??other/client.js&rev=omd-rev'; }, /revisioned module source/],
+    [value => { value.conversationOwners['oh-my-dsh'] = false; }, /loaded provider callback/],
     [value => { value.dynamic.push(rows.find(row => row.id === conversationName)); }, /Bundle-disabled official client row/],
   ]) {
     const invalid = structuredClone(installed); mutate(invalid);
@@ -234,8 +234,8 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
 });
 
 test('blank navigation does not treat a title, API return, wrong selection or fabricated turn as UI evidence', () => {
-  const expected = { sessionId: 'blank-id', agentPreset: 'trisoul-x', cwd: '/fixture/workspace' };
-  const blank = { sessionId: 'blank-id', bindingKey: 'blank-id', boundSessionId: 'blank-id', agentPreset: 'trisoul-x', cwd: expected.cwd,
+  const expected = { sessionId: 'blank-id', agentPreset: 'oh-my-dsh', cwd: '/fixture/workspace' };
+  const blank = { sessionId: 'blank-id', bindingKey: 'blank-id', boundSessionId: 'blank-id', agentPreset: 'oh-my-dsh', cwd: expected.cwd,
     title: 'title metadata does not clear blank', blank: true, listedBlank: true, openState: 'open', running: false,
     promptAttempted: false, pendingSubmissions: 0, mainViewReferences: 1, eventTypes: ['session/title', 'permission/preset'] };
   assertBlankNavigation(blank, expected);
@@ -251,9 +251,9 @@ test('installed UI identity requires the exact disabled originals and active rep
   const stock = { entries: uiReplacements.map(row => ({ id: row.officialId, name: row.officialClient, disabled: false, active: true })) };
   assertHostUiIdentity(stock, { stage: 'stock' });
   const installed = { entries: [...stock.entries.map(row => ({ ...row, disabled: true, active: false })),
-    ...[['trisoul-x', 'trisoul_x'], ...uiReplacements.map(row => [row.replacementId, row.replacementHost])].map(([id, name]) => ({
+    ...[['oh-my-dsh', 'oh-my-dsh'], ...uiReplacements.map(row => [row.replacementId, row.replacementHost])].map(([id, name]) => ({
       id, name, disabled: false, active: true, moduleCallbackMatches: true,
-      source: { name: 'trisoul_x', dir: expected.bundleRoot, version: expected.omdVersion },
+      source: { name: 'oh-my-dsh', dir: expected.bundleRoot, version: expected.omdVersion },
     }))] };
   assertHostUiIdentity(installed, expected);
   for (const [mutate, message] of [

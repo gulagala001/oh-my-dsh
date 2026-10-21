@@ -5,7 +5,7 @@ import { createSystemMessage } from '@deepseek-ai/dsh-llm';
 // during the open request step, before X appends context.
 export function ensureSystemHead(session, { turn, step }) {
   const nodes = session.surface.nodes.map(seq => session.eventAt(seq));
-  const index = nodes.findIndex(e => e.type === 'system/message' && sourceName(e.data.message.source) !== 'trisoul-x:shadow');
+  const index = nodes.findIndex(e => e.type === 'system/message' && sourceName(e.data.message.source) !== 'oh-my-dsh:shadow');
   if (index === 0) return false;
   const preceding = index < 0 ? nodes : nodes.slice(0, index);
   const head = index < 0

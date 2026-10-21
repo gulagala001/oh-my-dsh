@@ -3,6 +3,7 @@ import { promptText } from './cc-adaptation/texts.mjs';
 import { highestEffort } from './model-efforts.mjs';
 import { z } from 'zod';
 import { apiSessionTarget } from './api-session.mjs';
+import { isOmdPreset } from './legacy-identity.mjs';
 import { validateSessionId } from './hub-store.mjs';
 
 export const ULTRA_WORKFLOW_ON = "Ultra Workflow mode is on. Use the Workflow tool on substantive tasks to delegate concrete requirements under the shared Ultra quality and initiative requirements. See the workflow authoring reference for the actual tool API.";
@@ -152,13 +153,13 @@ export class UltracodeControl {
   async coldCapability(preset, signal) {
     const unavailable = reason => ({ eligible: false, capability: 'cold-unavailable', workflowResumeReady: false,
       reason: reason + ' 冷会话尚未 hydration，Workflow resume 能力未就绪。' });
-    if (!['trisoul-x', 'omd-ptc'].includes(preset)) return unavailable('原生历史当前不是 OMD preset；工作模式未启用。');
+    if (!isOmdPreset(preset)) return unavailable('原生历史当前不是 OMD preset；工作模式未启用。');
     const presets = this.ctx.get('agentPresets'), tools = this.ctx.get('tools');
     if (typeof presets?.compositionInventory !== 'function' || typeof presets?.acquireScope !== 'function' || typeof tools?.schemas !== 'function') return unavailable('冷会话尚未 hydration；宿主不能只读核对当前 preset 与 Workflow。');
     const inventory = await presets.compositionInventory(); signal?.throwIfAborted();
     if (!Array.isArray(inventory)) throw Error('原生 preset 配置查询无效');
     const current = inventory.find(row => row.id === preset);
-    if (!current || current.broken !== undefined || !current.rows?.some(row => row.moduleName === 'trisoul_x/host/tool-workflow' && row.enabled === true && row.fiberState === 2)) return unavailable('当前 OMD Workflow bundle 不可用；保留已保存模式，恢复后需重新核对。');
+    if (!current || current.broken !== undefined || !current.rows?.some(row => row.moduleName === 'oh-my-dsh/host/tool-workflow' && row.enabled === true && row.fiberState === 2)) return unavailable('当前 OMD Workflow bundle 不可用；保留已保存模式，恢复后需重新核对。');
     // The native cold-read lease exposes the standing preset's public tool view.
     // It neither creates/binds an Agent nor mounts a new preset revision.
     const lease = await presets.acquireScope(preset);

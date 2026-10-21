@@ -5,7 +5,7 @@ import { isBtwSession } from '../btw-policy.mjs';
 
 export function publishDreamMemory(hub,session,enabled=true){
   if(isBtwSession(session))return;
-  const owned=session.surface.nodes.map(seq=>session.eventAt(seq)).filter(e=>e.type==='user/message'&&['trisoul-x:dream-memory','trisoul-x:project-catalog'].includes(sourceName(e.data?.source)));
+  const owned=session.surface.nodes.map(seq=>session.eventAt(seq)).filter(e=>e.type==='user/message'&&['oh-my-dsh:dream-memory','oh-my-dsh:project-catalog'].includes(sourceName(e.data?.source)));
   const mode=hub.scope(session).mode;let text='';
   if(enabled&&mode!=='session'){
     const key=mode==='global'?'global':nodeKey('project',hub.scope(session).project),memory=hub.dream.store.memory(key);
@@ -27,7 +27,7 @@ export function publishDreamMemory(hub,session,enabled=true){
     if(hub.context.adapter.catalogCost(body)<=budget)text=body;
     else if(hub.context.adapter.catalogCost(fallback)<=budget)text=fallback;
   }
-  if(owned.length===1&&sourceName(owned[0].data.source)==='trisoul-x:dream-memory'&&owned[0].data.content?.[0]?.text===text)return;
+  if(owned.length===1&&sourceName(owned[0].data.source)==='oh-my-dsh:dream-memory'&&owned[0].data.content?.[0]?.text===text)return;
   for(const event of owned)appendShadow(session,[event.seq]);
   if(text)hub.context.adapter.publish(session,text,'dream-memory');
 }

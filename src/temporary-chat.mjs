@@ -73,7 +73,7 @@ export class TemporaryChats {
 }
 
 export async function handleTemporaryChatApi({ service, req, res, url }) {
-  if (!url.pathname.startsWith('/trisoul-x/api/temporary-chat/')) return false;
+  if (!url.pathname.startsWith('/oh-my-dsh/api/temporary-chat/')) return false;
   if (req.method !== 'POST') { sendJson(res, 405, { error: '请使用 POST' }); return true; }
   const action = url.pathname.split('/').at(-1);
   const input = await readJsonBody(req);

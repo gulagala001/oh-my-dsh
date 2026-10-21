@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 const UNLOADING = 5;
 const untrace = value => value?.[symbols.original] || value;
 const installed = Symbol.for('omd.loader-live-entries.alpha2');
-const omdProvider = row => row?.name === 'trisoul_x' || row?.name?.startsWith('trisoul_x/host/')
+const omdProvider = row => row?.name === 'oh-my-dsh' || row?.name?.startsWith('oh-my-dsh/host/')
   || row?.name === '@oh-my-dsh/ui-conversation';
 
 function holdClientGraph(loader) {

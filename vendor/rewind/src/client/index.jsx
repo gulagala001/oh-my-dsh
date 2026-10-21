@@ -20,7 +20,7 @@ export function install(ctx){
   const blocked=(node,ranges)=>contains(ranges,node?.anchorSeq??node?.data?.seq);
   const projectionAdapter=(props,state)=>{
     const cache=new Map();
-    return key=>{const value=props.useProjection(key),old=cache.get(key);if(old?.input===value)return old.output;let output=value;
+    return key=>{const value=props.useProjection(key),old=cache.get(key);if(old&&old.input===value)return old.output;let output=value;
       if(key==='turnOutline'&&Array.isArray(value))output=value.filter(t=>!state.hiddenTurns?.includes(t.turn));
       if(key==='sessionStats'&&value)output={...value,turns:Math.max(0,value.turns-(state.hiddenTurns?.length||0)),steps:Math.max(0,value.steps-(state.hiddenSteps||0))};
       cache.set(key,{input:value,output});return output;

@@ -5,13 +5,13 @@ const installed = Symbol.for('omd.desktop-restart-notice');
 export function installDesktopLifecycle(ctx) {
   if (window.location.protocol !== 'dsh-app:' || ctx.root[installed]) return;
   const root = ctx.root, modules = ctx.modules;
-  const bootRevision = window.__DSH_BOOT__?.entries?.find(row => row.id === 'trisoul_x')?.rev;
+  const bootRevision = window.__DSH_BOOT__?.entries?.find(row => row.id === 'oh-my-dsh')?.rev;
   root.effect(() => {
     root[installed] = true;
     let notice;
     const sync = () => {
       if (modules.entries.state.getSnapshot().syncing) return;
-      const revision = modules.manifest.modules.find(row => row.id === 'trisoul_x')?.rev;
+      const revision = modules.manifest.modules.find(row => row.id === 'oh-my-dsh')?.rev;
       if (revision === bootRevision) return;
       if (notice) return;
       notice = document.createElement('div');

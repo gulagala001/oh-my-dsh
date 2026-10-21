@@ -203,7 +203,7 @@ test('a cold native inspection can read and export evidence without recreating a
   for (const path of ['?rawRef=' + rawRef, '/export?rawRef=' + rawRef]) {
     let data;
     await handleContextApi({ hub: f.hub, req: { method: 'GET' }, res: {}, id: f.session.id, inspection,
-      url: new URL('http://localhost/trisoul-x/api/context/evidence' + path), send(_res, status, value) { assert.equal(status, 200); data = value; } });
+      url: new URL('http://localhost/oh-my-dsh/api/context/evidence' + path), send(_res, status, value) { assert.equal(status, 200); data = value; } });
     if (data.text !== undefined) { assert.equal(data.sourceHash, hash(body)); assert.ok(data.text.length > 0 && body.startsWith(data.text)); }
     else assert.equal(data.objects[hash(body)], body);
   }
@@ -265,7 +265,7 @@ test('disconnecting an evidence search cancels its actual HTTP read and detaches
   });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   t.after(() => { finish.resolve(); server.closeAllConnections(); return new Promise(resolve => server.close(resolve)); });
-  const controller = new AbortController(), fetching = fetch(`http://127.0.0.1:${server.address().port}/trisoul-x/api/context/evidence?query=source`, { signal: controller.signal }).catch(error => error);
+  const controller = new AbortController(), fetching = fetch(`http://127.0.0.1:${server.address().port}/oh-my-dsh/api/context/evidence?query=source`, { signal: controller.signal }).catch(error => error);
   await entered.promise; controller.abort(); await fetching; await closed.promise;
   assert.equal(readSignal?.aborted, true);
   finish.resolve(); await handler;

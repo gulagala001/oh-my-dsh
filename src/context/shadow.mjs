@@ -16,7 +16,7 @@ export function appendShadow(session, seqs, id = randomUUID()) {
   }
   // Manual maintenance may run after step/end. V4 disallows system/message
   // there, so use a short valid user message until the next in-step repair.
-  const message = { ...createUserMessage({ content: [{ type: 'text', text: IDLE_SHADOW_TEXT }], source: { kind: 'plugin:trisoul-x:shadow' } }), id };
+  const message = { ...createUserMessage({ content: [{ type: 'text', text: IDLE_SHADOW_TEXT }], source: { kind: 'plugin:oh-my-dsh:shadow' } }), id };
   return session.append('user/message', message, options);
 }
 
@@ -25,7 +25,7 @@ export function repairShadows(session) {
   let count = 0;
   for (const seq of [...session.surface.nodes]) {
     const event = session.eventAt(seq), message = session.deriveEventMessage(event);
-    if (event.type !== 'user/message' || sourceName(message?.source) !== 'trisoul-x:shadow'
+    if (event.type !== 'user/message' || sourceName(message?.source) !== 'oh-my-dsh:shadow'
       || !Array.isArray(message.content)
       || !message.content.every(block => block.type === 'text' && (!block.text?.trim() || block.text === IDLE_SHADOW_TEXT))) continue;
     appendShadow(session, [seq]);

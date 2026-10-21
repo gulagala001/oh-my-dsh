@@ -50,7 +50,7 @@ export function installToolDefinitions(ctx, lease, sessionKey) {
         if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('OpenCU arguments must be an object');
         for (const key of tool.inputSchema.required || []) if (args[key] === undefined) throw new Error(`${key} is required`);
         const id = exec.agent?.session?.id ?? sessionKey;
-        const optimization = ctx.get?.('trisoulX')?.optimization;
+        const optimization = ctx.get?.('omd')?.optimization;
         const fullBaseline = optimization && exec.agent && !optimization.computerBaseline(exec.agent.session);
         let projector = observations.get(id);
         if (!projector) { projector = createObservationProjector(); observations.set(id, projector); if (observations.size > 64) observations.delete(observations.keys().next().value); }

@@ -7,7 +7,7 @@ import { buildMainPrompt } from '../src/cc-adaptation/texts.mjs';
 import { renderBudget } from '../src/task-budget.mjs';
 import { renderRuntimeState } from '../src/runtime-state.mjs';
 
-const composition = readFileSync(new URL('../presets/trisoul-x/agent.cordis.yml', import.meta.url), 'utf8');
+const composition = readFileSync(new URL('../presets/oh-my-dsh/agent.cordis.yml', import.meta.url), 'utf8');
 const policy = composition.match(/section: \|\n([\s\S]*?)\n- id: compaction/)[1].replace(/^ {14}/gm, '').trim();
 const tool = (name, description, properties = {}, output = { type: 'object' }) => ({
   name, description, parameters: { type: 'object', properties }, output: { schema: output },
@@ -27,7 +27,7 @@ function fixture(runtime, team = false) {
     tool('run_code', 'Live runtime instructions'),
   ];
   const schemas = definitions.map(({ output, ...schema }) => schema);
-  const sections = [{ name: 'trisoul-x:persona', text: 'Placeholder' }, { name: 'plan:policy', text: policy },
+  const sections = [{ name: 'oh-my-dsh:persona', text: 'Placeholder' }, { name: 'plan:policy', text: policy },
     ...controls.map(({ name, description }) => ({ name: `tool:${name}`, text: description }))];
   if (runtime) sections.push({ name: 'tools:sdk', text: 'Host SDK' }, { name: 'tools:ptc-only', text: 'SDK tools only' });
   const assembly = { sections, tools: runtime ? schemas.filter(t => t.name === 'run_code') : schemas };
@@ -36,7 +36,7 @@ function fixture(runtime, team = false) {
     on: (_event, callback) => { hook = callback; },
     get: name => name === 'ptcRuntime' ? runtime : undefined,
     tools: { schemas: () => schemas, get: name => definitions.find(t => t.name === name) },
-    trisoulX: { config: () => ({ identityPrompt: 'OMD fixture identity' }) },
+    omd: { config: () => ({ identityPrompt: 'OMD fixture identity' }) },
   });
   return { assembly, schemas, controls, assemble: (origin = 'user') => hook(null, { agent: { session: { header: { origin } } } }, async () => assembly) };
 }
@@ -51,7 +51,7 @@ test('native and PTC preserve live child/Team controls, identities, schemas and 
       else assert.equal(result.tools.find(t => t.name === control.name), f.schemas.find(t => t.name === control.name));
     }
     assert.deepEqual(result.tools.map(t => t.parameters), f.assembly.tools.map(t => t.parameters));
-    assert.ok(section(result, 'trisoul-x:persona').startsWith('OMD fixture identity'));
+    assert.ok(section(result, 'oh-my-dsh:persona').startsWith('OMD fixture identity'));
     assert.equal(await f.assemble('subagent'), f.assembly);
   }
 });
@@ -65,7 +65,7 @@ test('TypeScript SDK follows the live execution format and REPL guidance never r
     assert.ok(example.startsWith(format === 'repl' ? 'console.log(' : 'return await '), `Wrong SDK syntax for ${format}`);
     if (format === 'repl') {
       assert.doesNotThrow(() => parse(example, { ecmaVersion: 'latest', sourceType: 'module' }));
-      assert.ok(!/\breturn (?:its result|or print)\b/.test(section(result, 'trisoul-x:persona') + section(result, 'plan:policy')));
+      assert.ok(!/\breturn (?:its result|or print)\b/.test(section(result, 'oh-my-dsh:persona') + section(result, 'plan:policy')));
     }
     assert.ok(sdk.includes('approved?: boolean'), 'Live output schema is retained');
   }
@@ -74,7 +74,7 @@ test('TypeScript SDK follows the live execution format and REPL guidance never r
 test('Python SDK keeps its native language and runtime-neutral OMD guidance', async () => {
   const result = await fixture({ language: 'python', programFormat: 'repl' }).assemble();
   assert.ok(section(result, 'tools:sdk').includes('async def bash('));
-  assert.ok(!/\breturn (?:its result|or print)\b/.test(section(result, 'trisoul-x:persona') + section(result, 'plan:policy')));
+  assert.ok(!/\breturn (?:its result|or print)\b/.test(section(result, 'oh-my-dsh:persona') + section(result, 'plan:policy')));
 });
 
 test('both generated presets use the authored policy and require explicit plan approval', async () => {

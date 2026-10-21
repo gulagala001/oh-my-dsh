@@ -47,7 +47,7 @@ export function apply(ctx, config) {
     if (ctx.fiber.state !== 2) throw Error('Host observer is not active');
     const entries = [...ctx.loader.entries()].map(row => {
       let source, moduleCallbackMatches = false;
-      if (['trisoul_x', 'trisoul_x/host/ui-conversation', 'trisoul_x/host/ui-chat'].includes(row.options.name) && row.fiber?.state === 2) {
+      if (['oh-my-dsh', 'oh-my-dsh/host/ui-conversation', 'oh-my-dsh/host/ui-chat'].includes(row.options.name) && row.fiber?.state === 2) {
         const pkg = ctx.pluginPackages.packageOf(row.options.name, row.parent.tree.ctx.baseUrl);
         if (!pkg) throw Error('Loaded OMD Host entry has no package source: ' + row.options.name);
         source = { name: pkg.name, dir: realpathSync(pkg.dir), version: pkg.version };

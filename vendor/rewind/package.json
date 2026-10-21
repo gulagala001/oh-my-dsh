@@ -17,7 +17,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.mjs",
-    "prepack": "node scripts/check-package.mjs"
+    "prepack": "npm run build && node scripts/check-package.mjs"
   },
   "files": [
     "src",
@@ -29,7 +29,8 @@
     "THIRD_PARTY_NOTICES.md",
     "LICENSE.DSH",
     "README.zh.md",
-    "docs"
+    "docs",
+    "README_EN.md"
   ],
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.5",

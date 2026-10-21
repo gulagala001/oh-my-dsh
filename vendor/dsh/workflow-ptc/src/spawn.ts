@@ -111,7 +111,7 @@ export function apply(ctx: Context): void {
     }
     signal.throwIfAborted()
     if (ctx.subagents.getProvider('spawn') !== record.native) throw new Error('Native workflow provider changed during startup; retry the call')
-    const hub = ctx.get('trisoulX') as WorkflowHub | undefined
+    const hub = ctx.get('omd') as WorkflowHub | undefined
     hub?.workflowBudget?.attach(agent.session, record.options.budgetOwner)
     if (hub !== undefined) {
       const state = hub.store.state(agent.id)

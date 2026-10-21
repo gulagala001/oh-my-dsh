@@ -9,8 +9,8 @@ import { k, ago } from './model.mjs';
 import { pipelineSteps } from './context.jsx';
 import { openConsole } from './nav.mjs';
 import { useMainConversation } from '../main-conversation.mjs';
+import { isOmdPreset } from '../../legacy-identity.mjs';
 
-const OMD_PRESETS = ['trisoul-x', 'omd-ptc'];
 // Native ui-chat readings, so a replaced pill reads exactly like the original.
 const exact = n => Number(n || 0).toLocaleString('en-US');
 const tok = n => { const v = Math.max(0, n || 0), s = x => x >= 100 ? String(Math.round(x)) : String(Math.round(x * 10) / 10); return v < 1e3 ? String(v) : v < 1e6 ? `${s(v / 1e3)}K` : `${s(v / 1e6)}M`; };
@@ -27,7 +27,7 @@ function hitPercent(read, prompt) {
 function useIsOmd(props) {
   const main = useMainConversation(props);
   const preset = props.useSessions(s => s.byId?.[props.sessionId]?.projectionValues?.agentPreset);
-  return main && OMD_PRESETS.includes(preset);
+  return main && isOmdPreset(preset);
 }
 const Jump = ({ section, extra, children = '在控制台查看' }) => <NativeButton size="sm" variant="ghost" type="button" className="omc-pop-jump" onClick={() => openConsole(section, extra)}>{children}<Icon name="chevron" size={12}/></NativeButton>;
 

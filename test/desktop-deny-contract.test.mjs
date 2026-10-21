@@ -120,7 +120,7 @@ test('real OpenCU controller and official ToolRuntime reject before any syntheti
   const wire = createWireProtocol(); wire.respond(firstRequest()); wire.respond(secondRequest());
   // Synthetic event envelopes below exercise the acceptance predicate only;
   // they never represent Agent or UI completion evidence.
-  const value = { ...snapshot, pending: [], events, activity, agent: { id: 'unit-session', status: 'idle' }, header: { agentPreset: 'trisoul-x' },
+  const value = { ...snapshot, pending: [], events, activity, agent: { id: 'unit-session', status: 'idle' }, header: { agentPreset: 'oh-my-dsh' },
     nativeToolRuntime: ctx.tools instanceof ToolRuntime, nativeAgentRegistry: true, agentOwnsSession: true,
     modelCalls: [{ provider, model, sessionId: 'unit-session' }, { provider, model, sessionId: 'unit-session' }], rejectedModels: [] };
   assertDenied(value, { sessionId: 'unit-session', requestId: pending.id, response, wire });

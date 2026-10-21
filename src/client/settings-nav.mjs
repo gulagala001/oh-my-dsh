@@ -12,7 +12,7 @@ export function openOmdSettings(anchor = '') {
   if (!actions?.openSection) throw new Error('DSH 设置暂时无法打开');
   pending = anchor;
   listeners.forEach(listener => listener());
-  actions.openSection('trisoul-x');
+  actions.openSection('oh-my-dsh');
 }
 
 // The settings page consumes the requested anchor once it has rendered.

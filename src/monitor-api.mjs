@@ -7,7 +7,7 @@ import { validateSessionId } from './hub-store.mjs';
 import { coldNativeMonitorTarget } from './monitor-session.mjs';
 
 export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
-  if (url.pathname === '/trisoul-x/api/monitor/prices') {
+  if (url.pathname === '/oh-my-dsh/api/monitor/prices') {
     if (req.method !== 'GET') { send(res, 405, { error: '不支持此方法' }); return true; }
     const query = url.searchParams.get('query') || '', provider = url.searchParams.get('provider') || '';
     const offset = Number(url.searchParams.get('offset') || 0), limit = Number(url.searchParams.get('limit') || 30);
@@ -18,7 +18,7 @@ export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
     send(res, 200, hub.pricing ? hub.pricing.catalog({ query, provider, offset, limit }) : monitorPriceCatalog({ query, provider, offset, limit }));
     return true;
   }
-  if (url.pathname === '/trisoul-x/api/monitor/events') {
+  if (url.pathname === '/oh-my-dsh/api/monitor/events') {
     if (req.method !== 'GET') { send(res, 405, { error: '不支持此方法' }); return true; }
     const id = url.searchParams.get('session');
     if (id) validateSessionId(id);
@@ -30,7 +30,7 @@ export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
     send(res, 200, hub.monitor.events(ids, query));
     return true;
   }
-  if (url.pathname === '/trisoul-x/api/monitor/live') {
+  if (url.pathname === '/oh-my-dsh/api/monitor/live') {
     // Lightweight composer-dock poll: Dream job state and live background calls only.
     if (req.method !== 'GET') { send(res, 405, { error: '不支持此方法' }); return true; }
     const id = url.searchParams.get('session');
@@ -42,7 +42,7 @@ export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
       liveCalls: [...hub.live.values()].filter(call => !id || call.sessionId === id) });
     return true;
   }
-  if (url.pathname !== '/trisoul-x/api/monitor') return false;
+  if (url.pathname !== '/oh-my-dsh/api/monitor') return false;
   if (req.method !== 'GET') { send(res, 405, { error: '不支持此方法' }); return true; }
   const id = url.searchParams.get('session');
   if (id) validateSessionId(id);

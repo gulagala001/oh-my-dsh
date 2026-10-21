@@ -13,7 +13,7 @@ const exclusiveTools = new Set(BC_EXCLUSIVE_TOOLS);
 export const BC_STATE = Symbol.for('billion-context.native-intercept-state');
 const traffic = new AsyncLocalStorage();
 const hooks = new WeakMap();
-const checkpointSources = new Set(['trisoul-x:dream-memory', 'trisoul-x:manual-global', 'trisoul-x:project-catalog', 'trisoul-x:trace']);
+const checkpointSources = new Set(['oh-my-dsh:dream-memory', 'oh-my-dsh:manual-global', 'oh-my-dsh:project-catalog', 'oh-my-dsh:trace']);
 const jsonHeaders = { 'content-type': 'application/json' };
 async function ready(promise, signal) {
   const joined = AbortSignal.any([AbortSignal.timeout(15000), ...(signal ? [signal] : [])]);
@@ -88,7 +88,7 @@ export function protectBcContext(options, session) {
   // Repeating binary blocks here would double image cost on every request.
   const content = [{ type: 'text', text: parts.map(block => block.type === 'text' ? block.text
     : `[Original ${block.type} attachment remains in the preceding request.]`).join('\n\n') }];
-  const state = freezeMessage({ id: `omd-bc-state:${hash(content)}`, role: 'user', source: { kind: 'plugin:trisoul-x:bc-state' }, content });
+  const state = freezeMessage({ id: `omd-bc-state:${hash(content)}`, role: 'user', source: { kind: 'plugin:oh-my-dsh:bc-state' }, content });
   return markAgentLoopRequest(Object.freeze({ ...options, messages: Object.freeze([...options.messages, state]) }));
 }
 
@@ -286,7 +286,7 @@ export class BillionContext {
     const owner = this;
     ctx.on('llm/stream', async function* (options, next) {
       const session = options.sessionId && ctx.sessions.get(options.sessionId);
-      const ownBackground = !isAgentLoopRequest(options) && options.messages?.some(message => sourceName(message.source)?.startsWith('trisoul-x:'));
+      const ownBackground = !isAgentLoopRequest(options) && options.messages?.some(message => sourceName(message.source)?.startsWith('oh-my-dsh:'));
       if ((!session || !managed(session)) && !ownBackground) { yield* next(); return; }
       if (ownBackground && (!session || !managed(session))) {
         owner.native(); yield* bcTraffic({ bypass: true }, next); return;

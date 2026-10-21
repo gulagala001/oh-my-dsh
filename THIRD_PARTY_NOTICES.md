@@ -227,7 +227,7 @@ License: https://github.com/colbymchenry/codegraph/blob/v1.6.0/LICENSE
 
 Sources: https://github.com/modelcontextprotocol/typescript-sdk and https://github.com/deepseek-ai/deepseek-harness
 
-The modular main-agent prompt adaptation in `src/cc-adaptation` comes from the user-supplied TriSoulX DSH 0.1.6 CC migration candidate 0.4.0. Its fixed comparison source is [the CC prompt snapshot](https://github.com/asgeirtj/system_prompts_leaks/blob/8eb1be156b850d09c2bd05df7ea32b0f06c9887d/Anthropic/claude-code/claude-code-opus-5.md). The historical migration targeted DSH 0.1.6-alpha.1; the current OMD integration is adapted to DSH 0.2.1-alpha.2. This attribution does not grant additional rights to third-party prompt text.
+The modular main-agent prompt adaptation in `src/cc-adaptation` comes from the project's own DSH 0.1.6 CC migration candidate 0.4.0. Its fixed comparison source is [the CC prompt snapshot](https://github.com/asgeirtj/system_prompts_leaks/blob/8eb1be156b850d09c2bd05df7ea32b0f06c9887d/Anthropic/claude-code/claude-code-opus-5.md). The historical migration targeted DSH 0.1.6-alpha.1; the current OMD integration is adapted to DSH 0.2.1-alpha.2. This attribution does not grant additional rights to third-party prompt text.
 
 # Prompt Optimizer templates
 

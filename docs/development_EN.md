@@ -22,7 +22,7 @@ pnpm start
 
 **Local compatibility builds:** `scripts/host-targets.mjs` centralizes reviewed official commits and frameworks. `scripts/align-host.mjs <full host version> <official source directory>` aligns manifests, enum sources and framework overrides. `scripts/sync-dsh.mjs` accepts independent matching sources with real browser artifacts; `scripts/sync-opencu.mjs` accepts the matching rewritten tgz. Each build generates and checks its own frozen lock, peers and artifacts without relabeling another host's bytes. Projectless draft initialization is centralized in `src/client/projectless-state.mjs`: newer hosts use the native initializer; rc.2 uses the target Session's input facade while preserving existing drafts, attachment ownership and submission locks. Use `OMD_PNPM_ENTRY="$PNPM" node scripts/pack-local.mjs <output directory>` for local installation tarballs, preserving the bundled macOS helper's executable mode and signed bytes. Targeted runtime checks use isolated data/profiles; daily deployment and restart require explicit authorization.
 
-Defaults are the repository's `data/dsh/` directory, profile `trisoul-x`, and port 3083; the first launch installs the local plugin.
+Defaults are the repository's `data/dsh/` directory, profile `oh-my-dsh`, and port 3083; the first launch installs the local plugin.
 Open the complete login link printed in the terminal and configure your model in DSH. The repository supplies no private data or credentials.
 
 <details>
@@ -71,7 +71,7 @@ Closing the browser does not stop the background service. Use Ctrl+C to stop a f
 | `vendor/opencu/` | Complete rewritten OpenCU distribution, synchronized from a matching tgz rather than edited in place |
 | `scripts/`, `test/` | Build, launch, checks |
 
-`pnpm build` builds the frontend and generates the standard and OMD-PTC presets from `presets/trisoul-x/agent.cordis.yml`. Edit source configuration, not generated files.
+`pnpm build` builds the frontend and generates the standard and OMD-PTC presets from `presets/oh-my-dsh/agent.cordis.yml`. Edit source configuration, not generated files.
 
 The host build uses [`host-const-enums.mjs`](../scripts/host-const-enums.mjs) with the source-verified TypeScript `6.0.3`, explicitly pinned in the root `devDependencies`, to inline official `const enum` members through AST and real symbol binding and eliminate runtime enum references. DSH/Cordis reuse the host SDK singleton rather than bundle a second copy; the official source commit, SHA-256, and complete enum declarations/members are checked against the [enum manifest](../scripts/host-const-enums.json). The default build does not rely on an undeclared compiler fallback from a desktop SDK path.
 

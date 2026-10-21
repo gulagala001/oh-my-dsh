@@ -18,7 +18,7 @@ core.push('test/overview-native-style.test.mjs');
 core.push('test/web-chat-page-scripts.test.mjs');
 core.push('test/context-optimization.test.mjs', 'test/bc-compatibility.test.mjs',
   'test/personality-files-session.test.mjs', 'test/projectless-disposal.test.mjs');
-core.push('test/result-reduction-memo.test.mjs');
+core.push('test/result-reduction-memo.test.mjs', 'test/legacy-identity.test.mjs');
 
 const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
 if (command === 'matrix') {

@@ -50,8 +50,8 @@ Use the package matching the **complete DSH version**. Open **Plugins → Add Pl
 
 | DSH | 固定安装包 / Fixed package | SHA256SUMS |
 | --- | --- | --- |
-| 0.2.1-rc.2 | [OMD 0.19.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/trisoul_x-0.2.1-rc.2.omd.0.19.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/SHA256SUMS) |
-| 0.2.1-rc.1 | [OMD 0.19.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/trisoul_x-0.2.1-rc.1.omd.0.19.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/SHA256SUMS) |
+| 0.2.1-rc.2 | [OMD 0.19.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/SHA256SUMS) |
+| 0.2.1-rc.1 | [OMD 0.19.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/oh-my-dsh-0.2.1-rc.1.omd.0.19.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/SHA256SUMS) |
 
 [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [dsh-ops 使用指南 / dsh-ops guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/dsh-ops.md)
 
@@ -240,7 +240,7 @@ This release includes the changes since 0.17.4 and fixes the missing preset cont
 - 保留 OMAA 可选增强、独立基础预设、工作流组合及前端所有权。IUI 与 OMAA 独立发行，不塞入 OMD 包。
 - 右侧栏 OMD 四页合并为单入口“OMD 控制台”：概览、上下文、记忆、调用日志、后台日志，窄栏顶部标签、宽栏／全屏左侧导航；任务证据改由 BT 菜单“查看任务证据”打开，旧标签自动转到对应分区。只用原生右侧栏注册与插槽，不改 DSH 预构建组件。
 - 输入框下方信息栏：按宿主自带 id 同 id 替换统计项（alpha.3 `activity`／`usage`，rc.2 `stats`），读数、格式与“简洁／详细”设置同原生；弹窗加 OMD 后台另计用量和控制台跳转。新增“上下文整理”项（整理中、可替换预计与一键应用）和 Dream 作业项。
-- 监控账本新增后台事件表（只加表，schema 版本不变）及 `/trisoul-x/api/monitor/events`、`/monitor/live`；上下文视图新增已准备替换与 `/compact-p` 的预计节省；趋势按宿主本地时间补齐空档。
+- 监控账本新增后台事件表（只加表，schema 版本不变）及 `/oh-my-dsh/api/monitor/events`、`/monitor/live`；上下文视图新增已准备替换与 `/compact-p` 的预计节省；趋势按宿主本地时间补齐空档。
 - Auto Compact：按当前上下文 token 阈值（默认关，预填 400k）立即准备并应用，支持“摘要＋资料／仅摘要”。
 - 当前版本尚未公开发布。
 

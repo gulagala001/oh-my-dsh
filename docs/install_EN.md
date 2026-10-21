@@ -42,13 +42,13 @@ Read the **complete host version** in DSH's About/version information, for examp
 **DSH 0.2.1-rc.2 → OMD 0.19.0:**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/trisoul_x-0.2.1-rc.2.omd.0.19.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz
 ```
 
 **DSH 0.2.1-rc.1 → OMD 0.19.0:**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/trisoul_x-0.2.1-rc.1.omd.0.19.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/oh-my-dsh-0.2.1-rc.1.omd.0.19.0.tgz
 ```
 
 The first part of the complete plugin version identifies DSH; the trailing 0.19.0 identifies OMD. For other hosts, use [downloads and historical versions](releases.md).
@@ -89,7 +89,7 @@ Existing Web installation: stop the service and use its original CLI. This examp
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/trisoul_x-0.2.1-rc.2.omd.0.19.0.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz
 ```
 
 Restart through the original launch method, retaining the data directory and port. For DSH 0.2.1-rc.1, use the rc.1 URL above.
@@ -97,7 +97,7 @@ Restart through the original launch method, retaining the data directory and por
 First-time Web setup requires Node.js ≥22.19; use PowerShell 7 on Windows:
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/trisoul_x-0.2.1-rc.2.omd.0.19.0.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz
 npx --yes @deepseek-ai/dsh@0.2.1-rc.2 --profile web
 ```
 
@@ -107,7 +107,7 @@ Default macOS desktop CLI example, only for an actual DSH 0.2.1-rc.2 installatio
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/trisoul_x-0.2.1-rc.2.omd.0.19.0.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz
 ```
 
 On Windows desktop, the plugin dialog is the simplest route; CLI paths depend on the installation. A Web CLI does not substitute for the desktop CLI.

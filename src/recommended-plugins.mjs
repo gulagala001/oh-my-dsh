@@ -279,17 +279,17 @@ export function mountRecommendedPlugins(ctx, hub) {
       packageDirectory: resolve(hub.store.dir, 'recommended-packages'),
       getHostVersion: () => actualHostVersion(scope),
       getBundledPluginState: plugin => ({ 'dsh-deepseek-workbench': { enabled: scope.get('deepseekWorkbench')?.enabled === true }, 'dsh-extensions': { enabled: scope.get('dshExtensions')?.enabled === true } })[plugin.id] ?? {},
-      saveConfig: patch => scope.settings.update('trisoul-x', patch), isRunning: () => scope.agents.list().some(agent => agent.status === 'running') });
+      saveConfig: patch => scope.settings.update('oh-my-dsh', patch), isRunning: () => scope.agents.list().some(agent => agent.status === 'running') });
     scope.effect(() => {
       const tick = () => { void service.tick().catch(error => scope.logger.warn(error.message)); };
       const timer = setInterval(tick, 60000); timer.unref();
       return () => { clearInterval(timer); service.close(); };
     });
-    scope.effect(() => scope.webServer.register({ kind: 'prefix', path: '/trisoul-x/recommended-plugins', async handler(req, res) {
+    scope.effect(() => scope.webServer.register({ kind: 'prefix', path: '/oh-my-dsh/recommended-plugins', async handler(req, res) {
       const denied = scope.connection.requestRejection(req);
       if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
       const send = (status, data) => sendJson(res, status, data);
-      if (new URL(req.url, 'http://localhost').pathname !== '/trisoul-x/recommended-plugins') { send(404, { error: 'Not found' }); return; }
+      if (new URL(req.url, 'http://localhost').pathname !== '/oh-my-dsh/recommended-plugins') { send(404, { error: 'Not found' }); return; }
       try {
         if (req.method === 'POST') {
           const input = await readJsonBody(req, { maxBytes: 8192 });

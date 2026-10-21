@@ -1,5 +1,6 @@
 import { readJsonBody, sendJson } from './http.mjs';
 import { currentDirectory } from './working-directory.mjs';
+import { isOmdPreset } from './legacy-identity.mjs';
 
 /** CodeGraph owns preparation; OpenCU owns its separate capability settings. */
 export class Components {
@@ -56,7 +57,7 @@ export class Components {
       this.start();
       if (this.hub.config().codegraphEnabled !== false) for (const agent of this.hub.agents.values()) {
         const preset = this.ctx.sessionProjections?.stateOf(agent.session, 'agentPreset') ?? agent.session.header.agentPreset;
-        if (['trisoul-x', 'omd-ptc'].includes(preset)) this.project(currentDirectory(this.ctx, agent.session));
+        if (isOmdPreset(preset)) this.project(currentDirectory(this.ctx, agent.session));
       }
     });
   }
@@ -74,7 +75,7 @@ export class Components {
     if (!Object.keys(patch).length) return this.configuring;
     return this.saving = (this.saving || Promise.resolve()).catch(() => {}).then(async () => {
       this.writingSettings = true;
-      try { await this.ctx.settings.update('trisoul-x', patch); }
+      try { await this.ctx.settings.update('oh-my-dsh', patch); }
       finally { this.writingSettings = false; await this.reconfigure(); }
     });
   }
@@ -85,7 +86,7 @@ export class Components {
 }
 
 export function mountComponents(ctx, components) {
-  ctx.inject(['webServer', 'connection'], scope => scope.effect(() => scope.webServer.register({ kind: 'prefix', path: '/trisoul-x/components', async handler(req, res) {
+  ctx.inject(['webServer', 'connection'], scope => scope.effect(() => scope.webServer.register({ kind: 'prefix', path: '/oh-my-dsh/components', async handler(req, res) {
     const denied = scope.connection.requestRejection(req);
     if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
     const send = (status, body) => sendJson(res, status, body);

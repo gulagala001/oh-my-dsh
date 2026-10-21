@@ -1,4 +1,4 @@
-.trisoul-shell .omd-brand-with-version { flex: 0 1 auto; }
+.omd-shell .omd-brand-with-version { flex: 0 1 auto; }
 .omd-version-anchor { display: inline-flex; flex: 0 0 auto; align-items: center; margin-right: auto; }
 .omd-version { display: inline-flex; align-items: center; color: var(--tx-shell-muted, GrayText); font: inherit; }
 .omd-version-trigger { position: relative; flex: none; }

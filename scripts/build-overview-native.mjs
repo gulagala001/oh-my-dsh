@@ -107,7 +107,7 @@ for (const [name, exportName] of [['dsh-experimental-client-ui-agent-team', 'cre
   const dataset = `tag.dataset.plugin = "@deepseek-ai/${name}"`;
   const tags = [...source.matchAll(tagPattern)].length, owners = source.split(dataset).length - 1;
   if (!tags || tags !== owners) throw Error(`Native overview style ownership changed: ${name} ${tags}/${owners}`);
-  source = source.replace(tagPattern, `$1"trisoul_x/overview/${name}/`).replaceAll(dataset, 'tag.dataset.plugin = "trisoul_x"');
+  source = source.replace(tagPattern, `$1"oh-my-dsh/overview/${name}/`).replaceAll(dataset, 'tag.dataset.plugin = "oh-my-dsh"');
   source = source.replace(/\/\/# sourceMappingURL=.*$/m, '');
   sources.push(`// ${name} ${version}; upstream SHA-256 ${hash}\nexport function ${exportName}(require) { let record; const window = {__ModuleLoader__: {load(value) { record=value; }}};\n${source}\nreturn record.factory(require); }`);
 }

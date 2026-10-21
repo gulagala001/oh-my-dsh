@@ -130,7 +130,7 @@ export function assertDenied(value, { sessionId, requestId, response, wire }) {
   assert.deepEqual(value.authorizationFiles, { persisted: false, pending: false });
   assert.deepEqual(value.credentialFiles, { bridge: false, pairings: false }, 'No persistent extension/bridge credentials');
   assert.equal(value.nativeToolRuntime, true); assert.equal(value.nativeAgentRegistry, true); assert.equal(value.agentOwnsSession, true);
-  assert.equal(value.agent.status, 'idle'); assert.equal(value.header.agentPreset, 'trisoul-x');
+  assert.equal(value.agent.status, 'idle'); assert.equal(value.header.agentPreset, 'oh-my-dsh');
   const events = value.events, calls = events.filter(event => event.type === 'tool/call'), results = events.filter(event => event.type === 'tool/result');
   assert.equal(calls.length, 1); assert.equal(calls[0].data.name, 'opencu_select'); assert.equal(calls[0].data.callId, callId);
   assert.deepEqual(JSON.parse(calls[0].data.arguments), { reference: targetId });

@@ -6,8 +6,8 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表列的是已发�
 
 | DSH 宿主 / Host | OMD 插件 / Plugin | 可粘贴安装的包 / Package |
 | --- | --- | --- |
-| 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.19.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/trisoul_x-0.2.1-rc.2.omd.0.19.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.19.0) |
-| 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.19.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/trisoul_x-0.2.1-rc.1.omd.0.19.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.19.0) |
+| 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.19.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.19.0) |
+| 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.19.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.19.0/oh-my-dsh-0.2.1-rc.1.omd.0.19.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.19.0) |
 
 ## OMD 0.19.0
 
@@ -17,7 +17,7 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表列的是已发�
 
 | 文件 / File | 用途 / Purpose |
 | --- | --- |
-| trisoul_x-…tgz | **安装插件用这个。** 粘贴其下载地址到“添加插件”，或下载后使用相应 CLI 安装。 / The installable plugin. |
+| oh-my-dsh-…tgz | **安装插件用这个。** 粘贴其下载地址到“添加插件”，或下载后使用相应 CLI 安装。 / The installable plugin. |
 | host-adapters.zip | 完整桌面 CU 所需的宿主源码适配和构建说明；**不是安装器，也不是插件**。 / Host adapter source and build instructions, not an installer. |
 | SHA256SUMS | 下载文件的校验值。 / Archive checksums. |
 | metadata.json | 发行版本及来源信息。 / Release metadata. |

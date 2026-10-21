@@ -1,7 +1,7 @@
 import { sourceName } from './message-source.mjs';
 import { BC_REFERENCE_TOOLS } from './context/bc-policy.mjs';
 // Shared, pure helpers for the task ledger and context-compaction layer.
-export const TASK_SOURCE = 'trisoul-x:tasks';
+export const TASK_SOURCE = 'oh-my-dsh:tasks';
 export const TODO_META = 'omdTodo';
 export const TASK_CONTEXT_META = 'omdTaskContext';
 const runtimeProviders = new WeakMap();
@@ -76,7 +76,7 @@ export function summaryMessageReader(session) {
     return [b];
   });
   return e => {
-    if (isTaskInjection(e)||['trisoul-x:dream-memory','trisoul-x:project-catalog','trisoul-x:manual-global'].includes(sourceName(messageOf(e)?.source))) return null;
+    if (isTaskInjection(e)||['oh-my-dsh:dream-memory','oh-my-dsh:project-catalog','oh-my-dsh:manual-global'].includes(sourceName(messageOf(e)?.source))) return null;
     const m = withoutTodo(session.deriveEventMessage(e));
     if (!m) return null;
     if (m.role === 'tool' && taskCalls.has(m.toolCallId)) return null;

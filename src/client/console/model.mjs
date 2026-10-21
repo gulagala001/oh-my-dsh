@@ -98,8 +98,8 @@ export function composition(frame, total, toolsTokens) {
   const sums = Object.fromEntries(COMPOSITION.map(c => [c.key, 0]));
   for (const node of frame || []) {
     const kind = String(node.kind || ''), t = Number(node.tokens) || 0;
-    const key = node.checkpoint || kind === 'compact-checkpoint' || kind === 'trisoul-x:context-record' ? 'summary'
-      : kind.startsWith('trisoul-x:') && kind !== 'trisoul-x:shadow' ? 'omd'
+    const key = node.checkpoint || kind === 'compact-checkpoint' || kind === 'oh-my-dsh:context-record' ? 'summary'
+      : kind.startsWith('oh-my-dsh:') && kind !== 'oh-my-dsh:shadow' ? 'omd'
       : ['agent-instructions', 'skill-catalog', 'skill-invocation'].includes(kind) ? 'instructions'
       : node.role === 'system' || kind === 'system/message' || (kind === '@deepseek-ai/dsh-system-prompt' && !node.role) ? 'system'
       : kind === 'user' || kind === 'user/message' ? 'user'

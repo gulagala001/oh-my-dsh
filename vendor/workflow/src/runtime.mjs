@@ -33,7 +33,7 @@ export class WorkflowRuntime extends Service {
         if (support.store.peek(owner.sessionId)?.workflowBudget?.pools?.[owner.poolId]) return support;
       }
     }
-    const omd = this.ctx.get('trisoulX');
+    const omd = this.ctx.get('omd');
     if (omd?.workflowBudget?.owner(session)) {
       this.embeddedBudgets.add(omd.workflowBudget);
       this.embeddedSupports.add(omd);

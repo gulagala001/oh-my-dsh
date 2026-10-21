@@ -16,12 +16,12 @@ test('starting from another cwd preserves relative home, explicit permissions an
     const home = process.env.DSH_HOME, args = process.argv.slice(2);
     fs.appendFileSync(path.join(home, 'commands.jsonl'), JSON.stringify({ args, cwd: process.cwd(), home, permission: process.env.DSH_PERMISSION_MODE }) + '\\n');
     if (args.includes('--from-default-profile')) {
-      const dir = path.join(home, 'profiles/trisoul-x'); fs.mkdirSync(dir, { recursive: true });
+      const dir = path.join(home, 'profiles/oh-my-dsh'); fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ dependencies: {} }));
     }
     if (args[0] === 'plugin') {
-      const file = path.join(home, 'profiles/trisoul-x/package.json');
-      fs.writeFileSync(file, JSON.stringify({ dependencies: { trisoul_x: args.at(-1) } }));
+      const file = path.join(home, 'profiles/oh-my-dsh/package.json');
+      fs.writeFileSync(file, JSON.stringify({ dependencies: { 'oh-my-dsh': args.at(-1) } }));
     }`);
   for (const permission of ['workspace-write']) {
     const env = { ...process.env, OMD_DSH_CLI: 'external host.cjs', DSH_HOME: 'home', PORT: '0' };

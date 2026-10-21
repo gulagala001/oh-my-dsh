@@ -6395,7 +6395,7 @@ var WorkflowWorktree = class _WorkflowWorktree {
 // vendor/dsh/workflow-ptc/src/hub.ts
 function workflowSupport(ctx, session, owner) {
   const runtime = ctx.get("dshWorkflow");
-  return runtime?.support(session, owner) ?? ctx.get("trisoulX");
+  return runtime?.support(session, owner) ?? ctx.get("omd");
 }
 
 // vendor/dsh/workflow-ptc/src/spawn.ts
@@ -7433,7 +7433,7 @@ var PtcWorkflowEngine = class extends import_dsh_workflow3.WorkflowEngine {
       },
       request.signal,
       hub !== void 0 || this.config.stateDirectory !== void 0 || request.resumeFromRunId !== void 0 ? {
-        root: this.config.stateDirectory ?? (0, import_node_path5.join)(hub?.store.dir ?? (0, import_node_path5.join)(process.env.DSH_HOME ?? (0, import_node_path5.join)((0, import_node_os.homedir)(), ".dsh"), "trisoul-x"), "workflows"),
+        root: this.config.stateDirectory ?? (0, import_node_path5.join)(hub?.store.dir ?? (0, import_node_path5.join)(process.env.DSH_HOME ?? (0, import_node_path5.join)((0, import_node_os.homedir)(), ".dsh"), "oh-my-dsh"), "workflows"),
         ...request.resumeFromRunId === void 0 ? {} : { resumeFromRunId: request.resumeFromRunId },
         budget: budget?.snapshot ?? (() => ({ total: null, spent: 0 })),
         ...budget?.owner === void 0 ? {} : { budgetOwner: budget.owner },

@@ -2,12 +2,12 @@ import { createMcpToolDefinition } from '@deepseek-ai/dsh-mcp-client';
 import { currentDirectory } from './working-directory.mjs';
 import { codegraphCatalogOwner } from './codegraph-agent-lifecycle.mjs';
 
-export const inject = ['trisoulX', 'tools', 'systemPrompt'];
+export const inject = ['omd', 'tools', 'systemPrompt'];
 export const CODEGRAPH_GUIDE = `CodeGraph is bundled with Oh My DSH and enabled by default. The current project is indexed automatically in the background; a first query waits for preparation when needed. Use codegraph_index to refresh or rebuild a project's index. It creates the project's .codegraph directory; no global CLI installation or agent setup is needed. Query paths default to this session's working directory; relative projectPath values resolve against it. Indexed projects have live synchronization while connected; idle connections close and catch up on the next query. If indexing or a query fails, report the error and continue with the ordinary file/search tools where appropriate. Component status and switches are in the basic components settings.`;
 export const CODEGRAPH_DISABLED_GUIDE = 'CodeGraph is disabled in component settings. Use the ordinary file and search tools. Do not start or query CodeGraph unless the user enables it.';
 
 export async function apply(ctx) {
-  const runtime = ctx.trisoulX.codegraph, owner = codegraphCatalogOwner(ctx);
+  const runtime = ctx.omd.codegraph, owner = codegraphCatalogOwner(ctx);
   if (!owner.active()) return;
   ctx.tools.register({
     name: 'codegraph_index',
@@ -42,7 +42,7 @@ export async function apply(ctx) {
           name: `mcp__codegraph__${tool.name}`, rawName: tool.name,
           description: tool.description, inputSchema: parameters, outputSchema: tool.outputSchema,
           call: (args, { agent, signal }) => runtime.call(tool.name, args, { cwd: currentDirectory(ctx, agent.session), signal,
-            sessionKey: ctx.trisoulX.optimization?.graphScope(agent) ?? agent.session.id }),
+            sessionKey: ctx.omd.optimization?.graphScope(agent) ?? agent.session.id }),
         });
         if (!owner.active()) return;
         ctx.tools.register(definition);
@@ -64,13 +64,13 @@ export async function apply(ctx) {
     return next();
   });
   if (!owner.active()) return;
-  ctx.systemPrompt.section({ name: 'trisoul-x:codegraph', order: 80, interpolate: false,
+  ctx.systemPrompt.section({ name: 'oh-my-dsh:codegraph', order: 80, interpolate: false,
     text: CODEGRAPH_GUIDE });
   if (!owner.active()) return;
   ctx.on?.('system-prompt/assemble', async (_initial, _context, next) => {
     const assembly = await next();
     if (runtime.enabled !== false) return assembly;
-    return { ...assembly, sections: assembly.sections.map(section => section.name === 'trisoul-x:codegraph'
+    return { ...assembly, sections: assembly.sections.map(section => section.name === 'oh-my-dsh:codegraph'
       ? { ...section, text: CODEGRAPH_DISABLED_GUIDE } : section) };
   });
   // Disabled presets still acquire metadata/guide, but cold session creation

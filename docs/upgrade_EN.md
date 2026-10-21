@@ -52,6 +52,19 @@ Alternatively, give an AI the [installation/upgrade instructions](install_EN.md#
 
 OMD's version panel updates the plugin in the current profile; it does not update DSH itself. A remote Latest label is not the installed version.
 
+<a id="package-name"></a>
+
+### Upgrading Earlier Versions to the `oh-my-dsh` Package Name
+
+The plugin package is now named `oh-my-dsh`. Earlier versions used a different package name, so the Plugins page lists them as two plugins:
+
+1. After the backup, install the new package directly; there is no need to remove the earlier version first.
+2. If the new version finds the earlier one still running, it disables the earlier one (data is kept) and prompts for a restart. After a full restart you can remove the earlier Oh My DSH on the Plugins page. If the prompt persists, disable the earlier version on the Plugins page yourself, then fully restart.
+3. After the restart, migration runs automatically: the data directory becomes `DSH_HOME/oh-my-dsh` and the old location keeps a compatibility link to it; OMD settings, the default preset and the settings import record in the profile are updated; earlier conversations still open as Oh My DSH with their tasks, archives and records.
+4. Model channels and key variable names you created yourself are personal configuration and are left unchanged.
+
+To return to an earlier version, follow [Roll Back](#roll-back) with the complete pre-upgrade backup; do not let old and new versions alternate writes to one data directory.
+
 ## 4. Handle Relevant Version Differences
 
 When changing DSH versions, prepare matching versions of all required plugins and any desktop host adapters. Keep model channels, permission settings, data, and third-party plugins. Follow the relevant DSH release's migration instructions; do not relabel an incompatible package to make it install.

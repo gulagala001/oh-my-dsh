@@ -2,7 +2,7 @@ import { sourceName } from './message-source.mjs';
 import { appendShadow } from './context/shadow.mjs';
 import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutRuntime, tasksFromLegacy } from './task-context.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
-// Task ledger adapted from trisoul 4189f90: preserve excerpts, anchors, item operations and evidence.
+// Task ledger carried over from the earlier OMD ledger: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { accessSync, constants, realpathSync } from 'node:fs'
@@ -577,7 +577,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
 
   // Compare the live Todo/runtime block with the current ledger at request boundaries.
   const maintainInjection = (session, options = {}) => {
-    let live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (sourceName(e.data?.source) === 'trisoul-x:tasks' || e.data?.[TODO_META]));
+    let live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (sourceName(e.data?.source) === 'oh-my-dsh:tasks' || e.data?.[TODO_META]));
     const desired = latestTaskContext(session, options.runtime);
     // Disabling removes only our state section, including compressed carriers.
     if (!desired?.meta.runtime) {
@@ -587,7 +587,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
           { surfaceOp: { op: 'replace', startSeq: e.seq, endSeq: e.seq }, sourceEventSeqs: [e.seq] });
         else appendShadow(session, [e.seq]);
       }
-      live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (sourceName(e.data?.source) === 'trisoul-x:tasks' || e.data?.[TODO_META]));
+      live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (sourceName(e.data?.source) === 'oh-my-dsh:tasks' || e.data?.[TODO_META]));
     }
     if (!desired) return undefined;
     // Budget-only updates share the existing summary exclusion and compaction
@@ -601,10 +601,10 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       const previous = taskContextMeta(live.findLast(e => taskContextMeta(e.data)?.runtime?.budget)?.data)?.runtime.budget;
       if (!budget?.every || !previous || budget.rounds - previous.rounds < budget.every) return undefined;
       const runtime = { ...desired.meta.runtime, text: budget.text };
-      return session.append('user/message', { ...createUserMessage({ content: [{ type: 'text', text: budget.text }], source: { kind: 'plugin:trisoul-x:tasks' } }),
+      return session.append('user/message', { ...createUserMessage({ content: [{ type: 'text', text: budget.text }], source: { kind: 'plugin:oh-my-dsh:tasks' } }),
         [TASK_CONTEXT_META]: { todoText: null, runtime, budgetOnly: true } }, { surfaceOp: 'append' });
     }
-    const msg = { ...createUserMessage({ content: [{ type: 'text', text: desired.text }], source: { kind: 'plugin:trisoul-x:tasks' } }), [TASK_CONTEXT_META]: desired.meta };
+    const msg = { ...createUserMessage({ content: [{ type: 'text', text: desired.text }], source: { kind: 'plugin:oh-my-dsh:tasks' } }), [TASK_CONTEXT_META]: desired.meta };
     return session.append('user/message', msg, { surfaceOp: 'append' });
   }
 

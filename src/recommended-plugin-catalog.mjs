@@ -22,13 +22,13 @@ export const recommendedPlugins = [
     },
   },
   {
-    id: 'dsh-deepseek-workbench', name: 'DeepSeek 工作台', section: 'features', moduleName: 'trisoul_x/deepseek-workbench', packageName: 'dsh-deepseek-workbench', author: 'gulagala001',
+    id: 'dsh-deepseek-workbench', name: 'DeepSeek 工作台', section: 'features', moduleName: 'oh-my-dsh/deepseek-workbench', packageName: 'dsh-deepseek-workbench', author: 'gulagala001',
     description: '使用 DeepSeek 网页聊天、临时侧栏与开放平台，将网页历史导入 DSH 后继续对话。',
     category: '内置工作台', bundled: true,
     url: 'https://github.com/gulagala001/dsh-deepseek-workbench',
   },
   {
-    id: 'dsh-extensions', name: '扩展管理', section: 'features', moduleName: 'trisoul_x/extensions', packageName: 'dsh-extensions', author: 'gulagala001',
+    id: 'dsh-extensions', name: '扩展管理', section: 'features', moduleName: 'oh-my-dsh/extensions', packageName: 'dsh-extensions', author: 'gulagala001',
     description: '在插件页管理 Skill、MCP、指令文件、自定义命令和 Hooks。',
     category: '内置扩展管理', bundled: true,
     url: 'https://github.com/gulagala001/dsh-extensions',

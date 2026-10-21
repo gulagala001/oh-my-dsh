@@ -1,4 +1,6 @@
-// Finite compatibility for the retired TriSoul writer. The original V0 file
+import { LEGACY_V0_REASONING_TAG as TAG } from './legacy-identity.mjs';
+
+// Finite compatibility for the retired V0 writer. The original V0 file
 // remains the read-only archive, including raw reasoning and task-ledger extras.
 // Never recursively strip fields from user text, tool arguments or attachments.
 export function normalizeLegacyV0Row(input) {
@@ -13,8 +15,8 @@ export function normalizeLegacyV0Row(input) {
     if (typeof data.quiet === 'boolean') delete data.quiet;
   }
   const block = value => {
-    if (value?.type !== 'reasoning' || !['distilled', 'note'].includes(value.trisoul)) return;
-    delete value.trisoul;
+    if (value?.type !== 'reasoning' || !['distilled', 'note'].includes(value[TAG])) return;
+    delete value[TAG];
     for (const key of ['raw', 'note']) if (typeof value[key] === 'string') delete value[key];
   };
   const message = value => { if (Array.isArray(value?.content)) value.content.forEach(block); };

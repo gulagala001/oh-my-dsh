@@ -76,7 +76,7 @@ export function applyConversationRecords(ctx) {
     function ContextRecord(props) {
       // The dedicated row also covers replacement messages; the process
       // adapter groups it alongside ordinary context and tool records.
-      return sourceName(props.node.data.source) === 'trisoul-x:tasks'
+      return sourceName(props.node.data.source) === 'oh-my-dsh:tasks'
         ? <span data-omd-record-hidden hidden/> : <Original {...props}/>;
     }
     function GroupedCompaction(props) {

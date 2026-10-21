@@ -155,7 +155,7 @@ function requestKey(value) {
 // vendor/dsh/workflow-ptc/src/hub.ts
 function workflowSupport(ctx, session, owner) {
   const runtime = ctx.get("dshWorkflow");
-  return runtime?.support(session, owner) ?? ctx.get("trisoulX");
+  return runtime?.support(session, owner) ?? ctx.get("omd");
 }
 
 // vendor/dsh/workflow-ptc/src/spawn.ts

@@ -32,7 +32,7 @@ export function presentDreamRead(hub, value, args = {}) {
 }
 
 export async function handleDreamApi({hub,ctx,req,res,url,send,readBody}){
-  const path=url.pathname.replace('/trisoul-x/api','');if(!path.startsWith('/dream'))return false;
+  const path=url.pathname.replace('/oh-my-dsh/api','');if(!path.startsWith('/dream'))return false;
   const id=url.searchParams.get('session')||'',agent=id?ctx.agents.get(id):null;
   const requester=agent?.session||{id:id||'dream-reader',header:{cwd:(id?hub.store.peek?.(id)?.cwd:null)||process.cwd()}};
   // Folder list is derived state: a failure here must never fail the request.
@@ -70,7 +70,7 @@ export async function handleDreamApi({hub,ctx,req,res,url,send,readBody}){
     if('dreamProjects' in input&&(!Array.isArray(input.dreamProjects)||input.dreamProjects.some(x=>typeof x!=='string')))throw Error('Dream 文件夹设置必须是字符串数组');
     const next=contextConfig({...hub.config(),...input});
     if(Boolean(next.dreamProvider)!==Boolean(next.dreamModel))throw Error('固定后台提供方与模型需要一起填写，或一起留空');
-    await ctx.settings.update('trisoul-x',input);
+    await ctx.settings.update('oh-my-dsh',input);
     hub.dream.store.setMeta('nextAutoAt',0);void hub.dream.tick().catch(e=>hub.dream.notice(e));
     send(res,200,{...hub.dream.status(id).settings,folders:folderPayload()});return true;
   }

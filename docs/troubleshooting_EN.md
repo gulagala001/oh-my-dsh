@@ -10,14 +10,14 @@ Keep the first complete error. Check the installed version, running version and 
 
 1. Read the actual DSH version and the version panel's **Current version**. Latest version is not installation success.
 2. Desktop uses the reserved `desktop` profile; Web uses its launch profile. Installation state is separate.
-3. Check the actual process's `DSH_HOME`. Web normally uses the user's `.dsh`; source runs default to repository `data/dsh/`, profile `trisoul-x`, and port 3083.
+3. Check the actual process's `DSH_HOME`. Web normally uses the user's `.dsh`; source runs default to repository `data/dsh/`, profile `oh-my-dsh`, and port 3083.
 4. After finishing active work, fully restart desktop or the original Web service. Choose OMD in a new conversation, and check old models, conversations, attachments, and themes after upgrading.
 
 <a id="package-source"></a>
 
 ### Check the Installation Source
 
-Repository `gulagala001/oh-my-dsh`, package `trisoul_x`, preset `trisoul-x`. See [public pairs](upgrade_EN.md#versions-and-success-criteria). Display names do not establish identity; do not install an unrelated npm package with a similar name.
+Repository `gulagala001/oh-my-dsh`, package `oh-my-dsh`, preset `oh-my-dsh`. See [public pairs](upgrade_EN.md#versions-and-success-criteria). Display names do not establish identity; do not install an unrelated npm package with a similar name.
 
 The current candidate is not publicly released. Do not guess with `latest` or relabel a package for another host. New OpenCU is bundled, but its complete UI requires matching Host, Client and preload adapters.
 

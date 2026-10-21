@@ -11,7 +11,7 @@ export function forkArchiveSnapshot(session, state, store, parentOf) {
   for (const event of session.snapshotEvents().slice(0, count)) {
     let blocks;
     if (event.type === 'compaction/summary' && event.data.omdBatchId) blocks = event.data.summary;
-    else if (event.type === 'user/message' && sourceName(event.data.source) === 'trisoul-x:context-record') blocks = event.data.content;
+    else if (event.type === 'user/message' && sourceName(event.data.source) === 'oh-my-dsh:context-record') blocks = event.data.content;
     for (const block of blocks || []) {
       if (block.type !== 'text') continue;
       const match = /^\[Context record ([^\s\]]+) ·/.exec(block.text);

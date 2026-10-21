@@ -124,7 +124,7 @@ function fullLifecycle({ trace }) {
     const privateId = await host.createSession(); await host.api('/scope?session=' + privateId, { scope: 'session' });
     await host.prompt(privateId, 'PRIVATE_SIM_ 隔离材料禁止传播。'); await host.idle(privateId);
     const chatDirectory = await host.api('/projectless-workspace', { requestId: 'simulation-projectless', prompt: '无工作区 Chat' });
-    const projectlessId = (await host.rpc('session/create', { cwd: chatDirectory.cwd, agentPreset: 'trisoul-x' })).sessionId;
+    const projectlessId = (await host.rpc('session/create', { cwd: chatDirectory.cwd, agentPreset: 'oh-my-dsh' })).sessionId;
     await host.prompt(projectlessId, 'PRIVATE_SIM_PROJECTLESS_ 非工作区材料禁止后台共享整理。'); await host.idle(projectlessId);
     await host.api('/context/prepare?session=' + projectlessId, {});
     await until(async () => (await host.api('/context?session=' + projectlessId)).records.some(record => record.summary?.includes('PRIVATE_SIM_PROJECTLESS_')),
@@ -149,7 +149,7 @@ function fullLifecycle({ trace }) {
       assert.deepEqual((await host.control('/snapshot?session=' + projectlessId)).events, chatBeforeDream.events);
     });
     await host.prompt(publicId, '运行两个模拟子会话。'); await host.idle(publicId);
-    const journals = await readdir(join(host.home, 'trisoul-x/workflows'));
+    const journals = await readdir(join(host.home, 'oh-my-dsh/workflows'));
     await checks.check('原生 workflow 与两个子会话', () => { assert.ok(journals.length); assert.equal(provider.requests.filter(request => userText(request.payload ?? { messages: [] }).includes('SIM_CHILD_ALPHA')).length, 1); });
     const checkpoint = await host.control('/snapshot?session=' + publicId);
     await host.restart({ crash: true }); await host.createSession({ id: publicId });

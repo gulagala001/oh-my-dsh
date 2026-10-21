@@ -6,10 +6,10 @@ const phases = ['prepare', 'launch', 'stock-selected', 'install-request', 'recei
   'quit-before', 'quit-evaluation-returned', 'quit-issued-received', 'electron-exit',
   'host-before-exit-received', 'host-exit-received', 'exit-verified', 'failure',
   'cleanup-app-close-before', 'cleanup-app-close-returned'];
-const moduleIds = ['trisoul_x', '@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-chat',
+const moduleIds = ['oh-my-dsh', '@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-chat',
   '@deepseek-ai/dsh-client-ui-renderer', 'omd-desktop-conversation-hot-observer'];
 const declaredStaticPaths = ['/', '/index.html', '/favicon.ico', '/favicon.svg', '/favicon-dark.svg', '/manifest.webmanifest'];
-const omdPaths = new Set(['/trisoul-x/api/version', '/trisoul-x/api/model-mode']);
+const omdPaths = new Set(['/oh-my-dsh/api/version', '/oh-my-dsh/api/model-mode']);
 // Fixed rc2 @Remote declarations and the fixture's public RPC methods only.
 const sdkPaths = new Set(['session/list', 'session/create', 'session/modelCatalog', 'session/rename',
   'workspace/create', 'pluginManager/listBundles', 'pluginManager/installBundle'].map(name => '/api/' + name));

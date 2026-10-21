@@ -25,7 +25,7 @@ const ultraSubmodes = [
 const sameRoute = (a, b) => a?.provider === b?.provider && a?.model === b?.model;
 const inUltraMenu = target => Boolean(target?.closest?.('[role="menu"]')?.querySelector('[data-omd-ultra-option]'));
 async function modeApi(sessionId, body, signal) {
-  const response = await fetch(`trisoul-x/api/model-mode?session=${encodeURIComponent(sessionId)}`, {
+  const response = await fetch(`oh-my-dsh/api/model-mode?session=${encodeURIComponent(sessionId)}`, {
     signal, ...(body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
   });
   const value = await response.json();

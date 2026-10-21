@@ -5,7 +5,7 @@ import { Icon } from './native-icons.jsx';
 const scopes = [['session', '会话隔离', 'lock'], ['project', '项目共享', 'layers'], ['global', '全局记忆', 'globe']];
 const prefix = 'omd-memory:';
 const api = async (sessionId, scope) => {
-  const response = await fetch('trisoul-x/api/scope?session=' + encodeURIComponent(sessionId), scope === undefined ? undefined
+  const response = await fetch('oh-my-dsh/api/scope?session=' + encodeURIComponent(sessionId), scope === undefined ? undefined
     : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope }) });
   const data = await response.json();
   if (!response.ok) throw Error(data.error || '读取记忆范围失败');
