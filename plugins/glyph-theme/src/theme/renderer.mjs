@@ -5,7 +5,7 @@ import { createCharacterIcons } from './icons.mjs';
 import { createCharacterChrome } from './chrome.mjs';
 import { createOcclusionIndex } from './occlusion.mjs';
 import { createAttributeMarkers } from '../shared/attribute-markers.mjs';
-import { NATIVE_CONTENT, isChromeIcon, isBareToggle, inClosedDetails } from './semantics.mjs';
+import { NATIVE_CONTENT, isChromeIcon, isBareToggle, inClosedDetails, createContentExclusion } from './semantics.mjs';
 import { readEffort, paintEffort } from './effort.mjs';
 import {prepareWaves,ULTRA_DURATION,ULTRA_INTERVAL,ULTRA_RELEASE,CLICK_DURATION} from './waves.mjs';
 
@@ -35,7 +35,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const trails = [];
   const clickWaves = [];
   const pointer = { x: -1000, y: -1000 }, font = '"SFMono-Regular", Menlo, monospace';
-  let stopped = false, frame, last = 0, dirty = true, width = 0, height = 0, measurements;
+  let stopped = false, frame, last = 0, dirty = true, width = 0, height = 0, measurements, excludedContent;
   const candidateCache=new Map(), resized=new Set();
   const candidates=selector=>{if(!candidateCache.has(selector))candidateCache.set(selector,[...document.querySelectorAll(selector)]);return candidateCache.get(selector);};
   const resizeObserver=new ResizeObserver(invalidate);
@@ -54,10 +54,14 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   }
   const still = () => reduced || motion.matches;
   function visible(el, acceptHidden = false) {
-    if (!el.isConnected || el.closest(EXTERNAL) || inClosedDetails(el)
-      || el.checkVisibility?.({ contentVisibilityAuto: true }) === false) return null;
     let value = measurements?.get(el);
+    if (value?.excluded) return null;
     if (!value) {
+      if (!el.isConnected || (excludedContent ? excludedContent(el) : el.closest(EXTERNAL) || inClosedDetails(el))
+        || el.checkVisibility?.({ contentVisibilityAuto: true }) === false) {
+        measurements?.set(el, { excluded: true });
+        return null;
+      }
       value = { rect: el.getBoundingClientRect() };
       measurements?.set(el, value);
     }
@@ -165,6 +169,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   }
   function measure() {
     measurements = new Map();
+    excludedContent = createContentExclusion(EXTERNAL);
     const dpr=Math.min(devicePixelRatio||1,2); width=innerWidth; height=innerHeight;
     if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)) {
       canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
@@ -262,7 +267,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     }
     // Complete geometry reads before changing native SVGs or control markers.
     // Interleaving them forced a full transcript layout for each visible icon.
-    measurements = undefined;
+    measurements = excludedContent = undefined;
     opaque.update(solid);
     for(const el of currentControls)if(!el.hasAttribute('data-glyph-control'))el.setAttribute('data-glyph-control','');
     for(const {el,item,r} of iconUpdates)characterIcons.mount(el,item,r);
@@ -337,7 +342,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     if(!quiet&&ultraMode&&ultraAnchor?.isConnected&&now>=nextUltraWave){
       emitUltra(ultraAnchor,now);
     }
-    const raster=scene.begin(fieldRect,width,height);
+    const raster=scene.begin(fieldRect,width,height,occluded);
     while(trails.length&&now-trails[0].time>900)trails.shift();
     paintField(fieldRect,now,scene.write,accent,quiet,raster);
     for(const v of brands)if(!v.small)whale({...v,raster},time,scene.write,accent,muted,pointer);

@@ -4,14 +4,20 @@ import {sampleClickWaves,sampleUltraWaves} from './waves.mjs';
 // The pointer refracts this existing scene; it never paints a separate particle layer.
 export function createCharacterScene() {
   let cols = 0, rows = 0, values = new Float32Array(), rect, stepX = 6, stepY = 8;
-  function begin(bounds, width, height) {
+  let hidden = new Uint8Array(), occlusion, maskedBounds, maskedStepX, maskedStepY;
+  function begin(bounds, width, height, excludes) {
     rect = bounds;
     stepX = Math.max(6, Math.ceil(Math.sqrt(width * height / 40000) * .86));
     stepY = Math.round(stepX * 4 / 3);
     const nextCols = Math.ceil(width / stepX), nextRows = Math.ceil(height / stepY);
     if (nextCols !== cols || nextRows !== rows) {
       cols = nextCols; rows = nextRows; values = new Float32Array(cols * rows);
+      hidden = new Uint8Array(cols * rows); occlusion = undefined;
     } else values.fill(0);
+    if (occlusion !== excludes || maskedBounds !== bounds || maskedStepX !== stepX || maskedStepY !== stepY) {
+      hidden.fill(0);
+      occlusion = excludes; maskedBounds = bounds; maskedStepX = stepX; maskedStepY = stepY;
+    }
     return {stepX,stepY};
   }
   function write(char, x, y, color, light) {
@@ -19,6 +25,13 @@ export function createCharacterScene() {
     if (gx < 0 || gx >= cols || gy < 0 || gy >= rows) return;
     const index = gy * cols + gx;
     values[index] = Math.max(values[index], Math.min(1, light));
+  }
+  function covered(index, x, y) {
+    if (!occlusion) return false;
+    // Classify only cells the scene actually visits; avoid a full extra grid
+    // scan when input or scrolling invalidates the native layout.
+    if (!hidden[index]) hidden[index] = occlusion(x, y) ? 2 : 1;
+    return hidden[index] === 2;
   }
   function paint(now, trails, still, glyph, ink, waves = {clicks:[],ultra:[]}) {
     if (!rect) return;
@@ -36,9 +49,11 @@ export function createCharacterScene() {
         // Keep the same grid/light, avoiding per-cell empty packets and trig.
         if(!deforming) {
           const light=values[row*cols+col];
-          if(light>=.025)glyph(chars[Math.min(chars.length-1,Math.floor(light*chars.length))],x,y,ink,light,stepY+.6);
+          if(light>=.025&&!covered(row*cols+col,x,y))glyph(chars[Math.min(chars.length-1,Math.floor(light*chars.length))],x,y,ink,light,stepY+.6);
           continue;
         }
+        // Keep covered source values: waves can refract them into visible cells.
+        if (covered(row * cols + col, x, y)) continue;
         let dx = 0, dy = 0, energy = 0;
         for (const point of active) {
           const age = (now - point.time) / 900;

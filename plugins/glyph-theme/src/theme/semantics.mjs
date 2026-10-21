@@ -30,3 +30,22 @@ export function inClosedDetails(el) {
   }
   return false;
 }
+
+// Share ancestor classification only during one synchronous geometry read.
+// Scrolling and native mutations get a fresh check on the next measurement.
+export function createContentExclusion(selector) {
+  const cache = new Map();
+  return el => {
+    const pending = [];
+    let parent = el;
+    while (parent && !cache.has(parent)) { pending.push(parent); parent = parent.parentElement; }
+    let excluded = parent ? cache.get(parent) : false;
+    for (let i = pending.length - 1; i >= 0; i--) {
+      const node = pending[i], owner = node.parentElement;
+      excluded = excluded || node.matches(selector) || owner?.tagName === 'DETAILS' && !owner.open
+        && ![...owner.children].find(child => child.tagName === 'SUMMARY')?.contains(node);
+      cache.set(node, excluded);
+    }
+    return excluded;
+  };
+}
