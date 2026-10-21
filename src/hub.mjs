@@ -277,9 +277,6 @@ export class Hub extends Service {
       const request = this.requestStarts.get(session.id);
       if (request?.turn === event.data.turn && (event.type === 'turn/end' || request.step === event.data.step)) this.requestStarts.delete(session.id);
     }
-    if (event.type === 'todo/write') {
-      const state = this.store.state(session.id); state.taskList = event.data; this.store.save(state);
-    }
     if (event.type === 'user/message' && event.data.source.kind === 'user') {
       const state = this.store.state(session.id);
       state.memoryScope ??= this.scope(session,{effective:false}).mode;

@@ -414,7 +414,7 @@ export async function apply(ctx, config) {
               status: stored.status, pins: stored.pins, workdoc: stored.memoryContext?.doc, checkpoint: stored.checkpoint,
               digests: stored.digests, probe: stored.probe, probeNotes: stored.probeNotes,
             } : null,
-            tasks: currentTasks(session, stored?.taskList ?? stored?.tasks), taskRelease: stored?.taskRelease,
+            tasks: currentTasks(session, stored?.taskList ?? stored?.tasks, inspection?.events), taskRelease: stored?.taskRelease,
             scope: hub.scope(scopeSession), running: agent?.status ?? 'idle',
             route: session?.requestHeader()?.config ? { provider: session.requestHeader().config.provider, model: session.requestHeader().config.model } : null,
           }); return;

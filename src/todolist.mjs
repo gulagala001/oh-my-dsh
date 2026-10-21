@@ -1,6 +1,7 @@
 import { sourceName } from './message-source.mjs';
 import { appendShadow } from './context/shadow.mjs';
-import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutRuntime, tasksFromLegacy } from './task-context.mjs';
+import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutRuntime } from './task-context.mjs';
+import { TODOLIST_EVENT, readTaskSnapshot, passedTest, textOnly, todosOf } from './task-ledger.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 // Task ledger carried over from the earlier OMD ledger: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
@@ -8,18 +9,6 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { accessSync, constants, realpathSync } from 'node:fs'
 import { resolve as resolvePath, extname } from 'node:path'
 
-// Persist through the host's todo/write event. The native todos projection and
-// the full excerpts/tasks ledger share that durable event, so both readers work.
-export const TODOLIST_EVENT = 'todo/write'
-// Full OMD snapshots include tasks; the host-only format contains todos.
-export const isTodoSnapshot = (e) => e?.type === TODOLIST_EVENT && Array.isArray(e.data?.tasks)
-/** 任务有跑绿的 test 链接（真正靠运行过关） */
-const passedTest = (t) => (t.links ?? []).some(l => l.kind === 'test' && l.lastRun?.pass === true)
-// Shared classification for evidence review, completion counts and UI labels.
-export const textOnly = (t) => !passedTest(t) && (t.links ?? []).some(l => l.kind === 'text')
-// Keep the native content/status shape and the two task states. Text-only
-// completion remains visibly marked in the native projection.
-export const todosOf = (tasks) => (Array.isArray(tasks) ? tasks : []).map(t => ({ content: textOnly(t) ? `${t.title} ⚠ text-only` : t.title, status: t.done ? 'completed' : 'pending' }))
 /** 新用户输入时投递的任务提醒。 */
 export const TODO_NUDGE = promptText('runtime/task-nudge.md')
 /** run 失败输出尾巴长度（回执 output tail 的截取；「tail」语义是拍板文案自带的，非预算限制） */
@@ -181,8 +170,6 @@ async function runTestLink(link, real, execute, timeoutMs) {
 // ---------- 清单存储（会话持久：每次变更 append 快照事件，重启从事件恢复） ----------
 
 export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
-  /** sessionId → 记录（内存态权威副本；快照事件是持久层与投影源） */
-  const sessions = new Map()
   // Continuation control belongs to one running turn, never to task completion.
   // A restart starts a new turn; the successful tool result retains the reason.
   const turnControls = new WeakMap()
@@ -199,42 +186,12 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     }
     return control
   }
-  const recordOf = (sid) => {
-    let r = sessions.get(sid)
-    if (!r) {
-      r = { excerpts: [], tasks: [], nextE: 1, nextT: 1, nextL: 1, adopted: false }
-      sessions.set(sid, r)
-    }
-    return r
-  }
-  // Restore the complete ledger, including quiet evidence-review snapshots.
-  const adopt = (session, r) => {
-    r.adopted = true
-    const last = session.snapshotEvents().findLast(e => isTodoSnapshot(e) || (e.type === TODOLIST_EVENT && Array.isArray(e.data?.todos)))
-    if (last?.data) {
-      const d = last.data
-      r.excerpts = structuredClone(d.excerpts ?? [])
-      r.tasks = structuredClone(d.tasks ?? tasksFromLegacy(d.todos ?? []))
-      // Absence of native provenance means unknown, including older snapshots.
-      for (const task of r.tasks) for (const link of task.links ?? []) {
-        if (link.lastRun && !Object.hasOwn(link.lastRun, 'execution')) link.lastRun.execution = null
-      }
-      r.nextE = d.nextE ?? r.excerpts.length + 1
-      r.nextT = d.nextT ?? r.tasks.length + 1
-      r.nextL = d.nextL ?? 1
-    }
-
-  }
-  const getRec = (session) => {
-    const r = recordOf(session.id)
-    if (!r.adopted) { try { adopt(session, r) } catch { r.adopted = true } }
-    return r
-  }
-  /** Commit the durable V3 snapshot before advancing the in-memory ledger. */
+  const getRec = session => readTaskSnapshot(session).record
+  // Appending the canonical event is the commit. Concurrent native task edits
+  // cannot be overwritten by a verification command that started earlier.
   const commit = (session, r, next, { quiet = false } = {}) => {
+    if (getRec(session) !== r) throw Error('任务清单已更新；本次操作未覆盖新任务，请重新查看任务与验证结果。')
     session.append(TODOLIST_EVENT, { todos: todosOf(next.tasks), excerpts: next.excerpts, tasks: next.tasks, nextE: next.nextE, nextT: next.nextT, nextL: next.nextL, ...(quiet ? { quiet: true } : {}) })
-    r.excerpts = next.excerpts; r.tasks = next.tasks
-    r.nextE = next.nextE; r.nextT = next.nextT; r.nextL = next.nextL
   }
   const clone = (r) => structuredClone({ excerpts: r.excerpts, tasks: r.tasks, nextE: r.nextE, nextT: r.nextT, nextL: r.nextL })
   const err = (text) => ({ text, isError: true })
@@ -300,10 +257,8 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
 
   /** 摘录与任务结构操作；整调用原子。 */
   const execTaskMap = (session, args) => {
-    const rec = getRec(session)
     const op = args?.op
     if (op === 'transcript') return { text: transcriptText(session) }
-    if (op === 'view') return { text: renderTree(rec) }
     if (op === 'pause_turn') {
       if (typeof args.reason !== 'string' || !args.reason.trim()) return err('Rejected: op:pause_turn requires a reason stating the blocker and what is needed to continue.')
       const events = session.snapshotEvents(), start = events.findLast(e => e.type === 'turn/start')
@@ -311,6 +266,8 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       turnControl(session).paused = true
       return { text: `Todo and verification continuation reminders are paused for this turn. Tasks, evidence, and BT settings are unchanged.\nReason: ${args.reason.trim()}\nExplain what remains incomplete and what is needed to continue, then end your response. New user input or the next turn restores the checks. This does not stop background jobs or pause an active goal.` }
     }
+    const rec = getRec(session)
+    if (op === 'view') return { text: renderTree(rec) }
     if (op === 'excerpt') {
       const msgs = userMessages(session)
       if (typeof args.from !== 'string' || !args.from || typeof args.to !== 'string' || !args.to) {
@@ -359,7 +316,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       commit(session, rec, next)
       const ids = entries.length ? (entries.length === 1 ? `T${firstT}` : `T${firstT}–T${next.nextT - 1}`) : 'none'
       const head = `Excerpt ${ex.id} recorded (msg ${ex.msg}, "${ex.from}"→"${ex.to}") with ${entries.length} task${entries.length === 1 ? '' : 's'} (${ids}).`
-      return { text: `${head}\n\n${renderTree(rec)}` }
+      return { text: `${head}\n\n${renderTree(next)}` }
     }
     if (op === 'add' || op === 'edit') {
       const entries = Array.isArray(args.tasks) ? args.tasks : []
@@ -402,7 +359,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
         }
       }
       commit(session, rec, next)
-      return { text: `${echo.join('\n')}\n\n${renderTree(rec)}` }
+      return { text: `${echo.join('\n')}\n\n${renderTree(next)}` }
     }
     if (op === 'remove') {
       const ids = Array.isArray(args.ids) ? args.ids : []
@@ -414,7 +371,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
         next.tasks.splice(i, 1)
       }
       commit(session, rec, next)
-      return { text: `Tasks removed: ${ids.join(', ')}.\n\n${renderTree(rec)}` }
+      return { text: `Tasks removed: ${ids.join(', ')}.\n\n${renderTree(next)}` }
     }
     return err(`Rejected: unknown op "${String(op)}".`)
   }
@@ -434,7 +391,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       seen.push([t.id, u.done])
     }
     commit(session, rec, next)
-    return { text: `Updated: ${seen.map(([id, d]) => `${id} → ${d ? 'done' : 'open'}`).join(', ')}. Tasks: ${rec.tasks.filter(t => t.done).length}/${rec.tasks.length} done.` }
+    return { text: `Updated: ${seen.map(([id, d]) => `${id} → ${d ? 'done' : 'open'}`).join(', ')}. Tasks: ${next.tasks.filter(t => t.done).length}/${next.tasks.length} done.` }
   }
 
   /** 验证证据操作：link/run/unlink/view。 */
@@ -490,6 +447,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       for (const { t, l } of jobs) {
         // Cancellation is not a test result; preserve unfinished and unstarted evidence.
         if (signal?.aborted) { aborted = true; break }
+        if (getRec(session) !== rec) throw Error('任务清单已更新；未继续执行旧任务的验证命令，请重新查看任务。')
         const real = existingPath(cwd, l.path)
         const startedAt = Date.now(), started = performance.now()
         let r
@@ -517,7 +475,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       const head = !aborted ? ran
         : ran ? `${ran} · Run aborted: ${jobs.length - results.length} not finished — their previous results are unchanged.`
           : 'Run aborted before any linked test finished — previous results are unchanged.'
-      return { text: `${head}\n\n${renderVerifyView(rec)}` }
+      return { text: `${head}\n\n${renderVerifyView(next)}` }
     }
     if (op === 'unlink') {
       const next = clone(rec)

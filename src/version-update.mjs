@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { readJsonBody } from './http.mjs';
 import { compareVersions, parseVersion, updateHostRequirement } from './version.mjs';
-import { pluginManagementError } from './recommended-plugins.mjs';
+import { requirePluginChange } from './plugin-operation.mjs';
 
 const PACKAGE = 'oh-my-dsh';
 const failure = (message, statusCode = 409) => Object.assign(new Error(message), { statusCode });
@@ -43,11 +43,18 @@ export class VersionUpdater {
   }
   async status() {
     if (this.job) return { ...this.snapshot(), available: false };
+    const before = this.state;
     const { bundle, reason } = await this.inventory();
+    // The inventory belongs to the operation state at the start of this read.
+    // An update that started or finished meanwhile owns its newer progress.
+    if (this.job || this.state !== before) return { ...this.snapshot(), available: false };
     if (bundle?.version && compareVersions(bundle.version, this.versions.snapshot().currentVersion) !== 0) {
       if (this.state.phase === 'failed') return { ...this.snapshot(), available: false, blockedReason: '安装状态有变化，请先到 DSH 的“插件”页面检查。' };
       return { phase: 'restart-required', targetVersion: bundle.version, error: '', available: false };
     }
+    // The native Plugins page may have restored the running version. A past
+    // install receipt cannot keep claiming a different package is on disk.
+    if (bundle?.version && this.state.phase === 'restart-required') this.state = { phase: 'idle', targetVersion: null, error: '' };
     const release = this.versions.snapshot();
     const blockedReason = reason || unpublishedReason(release, release.latestVersion, this.includeUnpublished)
       || hostReason(release.currentVersion, release.latestVersion, release.hostVersion) || (this.isRunning() ? '有任务正在运行，请等任务结束后更新。' : '');
@@ -82,13 +89,8 @@ export class VersionUpdater {
     if (this.isRunning()) throw failure('有任务正在运行，请等任务结束后更新。');
     this.state.phase = 'installing';
     const result = await manager.installBundle(versionInstallSpec(version), { enabled: bundle.enabled, requestId: this.requestId });
-    if (result.application === 'failed') {
-      if (result.pendingBuilds?.length) throw Error('安装脚本需要授权，请到 DSH 的“插件”页面处理：' + result.pendingBuilds.join('、'));
-      throw Error(pluginManagementError(result.error) || result.packageResult?.output || '更新失败，请重试。');
-    }
-    if (result.application === 'cancelled') throw Error('更新已取消，可以重试。');
-    if (result.application === 'overridden') throw Error('插件配置被其他配置覆盖，请到 DSH 的“插件”页面检查。');
-    if (!['applied', 'restart-required'].includes(result.application) || result.bundle !== PACKAGE) throw Error('未能确认更新结果，请到 DSH 的“插件”页面检查。');
+    requirePluginChange(result);
+    if (result.bundle !== PACKAGE) throw Error('未能确认更新结果，请到 DSH 的“插件”页面检查。');
     const installed = (await manager.listBundles()).find(row => row.name === PACKAGE);
     if (!installed?.installed || !installed.version || compareVersions(installed.version, version) !== 0) throw Error('安装版本与目标版本不一致，请到 DSH 的“插件”页面检查。');
     this.state = { phase: 'restart-required', targetVersion: installed.version, error: '' };

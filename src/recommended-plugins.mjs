@@ -5,15 +5,9 @@ import { readFile } from 'node:fs/promises';
 import { recommendedPlugins, resolveRecommendedPlugin } from './recommended-plugin-catalog.mjs';
 import { prepareReviewedPackage } from './recommended-plugin-package.mjs';
 import { compareVersions, parseVersion, releaseHostVersion, INSTALLED_VERSION } from './version.mjs';
+import { pluginManagementError, requirePluginChange } from './plugin-operation.mjs';
 
 export const AUTO_UPDATE_INTERVAL = 6 * 60 * 60 * 1000;
-export function pluginManagementError(error) {
-  if (error?.code === 'incompatible-version') {
-    const versions = (error.incompatible || []).map(item => `${item.name} ${item.version} 不兼容 DSH ${item.runtimeVersion}`).join('；');
-    return `${versions || '插件版本与当前 DSH 不兼容'}。请安装适配版本，或到宿主“插件”页面查看详情`;
-  }
-  return error?.diagnostic || error?.code || '';
-}
 export function pluginInstallSpec(plugin, version) {
   if (plugin.bundled) throw Error('内置插件随 OMD 管理，请通过 OMD 更新');
   parseVersion(version);
@@ -230,19 +224,13 @@ export class RecommendedPluginManager {
     this.finish(plugin, action, result, version);
   }
   finish(plugin, action, result, version) {
-    if (result.application === 'failed') {
+    if (result?.application === 'failed') {
       const pending = result.pendingBuilds || [];
       this.records.set(plugin.id, { ...this.records.get(plugin.id), pendingBuilds: pending,
         ...(version && result.stage === 'enable' && result.bundle === plugin.packageName ? { failedInstallVersion: version } : {}),
       });
-      const message = result.error?.code === 'incompatible-version' ? pluginManagementError(result.error)
-        : result.error?.diagnostic || result.packageResult?.output || result.error?.code || '插件操作失败';
-      throw Error(pending.length ? `安装脚本需要授权，请到宿主“插件”页面处理：${pending.join('、')}` : message.slice(-2000));
     }
-    if (result.application === 'cancelled') throw Error('操作已取消');
-    if (result.application === 'overridden') throw Error('插件配置被其他配置覆盖，请到宿主“插件”页面检查');
-    if (!['applied', 'restart-required'].includes(result.application)) throw Error('未能确认插件操作结果，请到宿主“插件”页面检查');
-    const restartRequired = result.application === 'restart-required';
+    const restartRequired = requirePluginChange(result) === 'restart-required';
     this.records.set(plugin.id, { ...this.records.get(plugin.id), failedInstallVersion: undefined, restartRequired, error: '',
       message: ({ uninstall: '已卸载', update: '更新已完成', install: '已安装并启用', enable: '已开启', disable: '已关闭' }[action]) + (restartRequired ? '，重启 DSH 后生效' : ''),
     });

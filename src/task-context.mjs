@@ -1,5 +1,6 @@
 import { sourceName } from './message-source.mjs';
 import { BC_REFERENCE_TOOLS } from './context/bc-policy.mjs';
+import { readTaskSnapshot } from './task-ledger.mjs';
 // Shared, pure helpers for the task ledger and context-compaction layer.
 export const TASK_SOURCE = 'oh-my-dsh:tasks';
 export const TODO_META = 'omdTodo';
@@ -46,17 +47,12 @@ export function withoutRuntime(message) {
   return { ...base, source: base.source?.kind === 'user' ? message.source : base.source };
 }
 
-export const tasksFromLegacy = todos => todos.map((task, index) => ({ id: `T${index + 1}`,
-  title: task.content, done: task.status === 'completed', anchor: null, links: [],
-  legacySource: task.source ?? '', ...(task.verification ? { legacyVerification: task.verification } : {}) }));
-
 export function latestTodo(session) {
-  const events = session.snapshotEvents(), snapshot = events.findLast(e => e.type === 'todo/write' && (Array.isArray(e.data?.tasks) || Array.isArray(e.data?.todos)));
-  if (snapshot) {
-    const tasks = snapshot.data.tasks || tasksFromLegacy(snapshot.data.todos);
-    return { snapshotSeq: snapshot.seq, text: renderTodoInjection({ tasks }), count: tasks.length };
+  const { event, record } = readTaskSnapshot(session);
+  if (event) {
+    return { snapshotSeq: event.seq, text: renderTodoInjection(record), count: record.tasks.length };
   }
-  const old = events.findLast(e => isTaskInjection(e) && (!taskContextMeta(e.data) || taskContextMeta(e.data).todoText));
+  const old = session.snapshotEvents().findLast(e => isTaskInjection(e) && (!taskContextMeta(e.data) || taskContextMeta(e.data).todoText));
   return old ? { snapshotSeq: -1, text: taskContextMeta(old.data)?.todoText ?? old.data.content.filter(b => b.type === 'text').map(b => b.text).join('\n'), count: null } : null;
 }
 

@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { validateJsonSchemaValue } from '@deepseek-ai/dsh-tools';
 import { randomUUID } from 'node:crypto';
 import { createTodoStore } from './todolist.mjs';
-import { tasksFromLegacy } from './task-context.mjs';
+import { normalizeTaskSnapshot, readTaskSnapshot, taskSnapshotFromEvents, todosOf } from './task-ledger.mjs';
+import { isDeepStrictEqual } from 'node:util';
 import { currentDirectory } from './working-directory.mjs';
 
 const TASK_ENTRY_SCHEMA = { type: 'object', properties: {
@@ -82,13 +83,13 @@ const VERIFICATION_OPERATIONS = operationParameters(VERIFICATION_PROPERTIES, [
   { op: ['run', 'view'] },
 ]);
 
-export function currentTaskSnapshot(session, cached) {
-  const value = session?.snapshotEvents().findLast(e => e.type === 'todo/write')?.data ?? cached;
-  if (Array.isArray(value?.tasks)) return value;
-  return { excerpts: [], tasks: tasksFromLegacy(Array.isArray(value) ? value : value?.todos || []) };
+export function currentTaskSnapshot(session, cached, events) {
+  // Native history is authoritative even when empty. Only an archive without
+  // a readable native Session may use the retired OMD sidecar snapshot.
+  return session ? readTaskSnapshot(session).record : events ? taskSnapshotFromEvents(events).record : normalizeTaskSnapshot(cached);
 }
-export function currentTasks(session, cached) {
-  const record = currentTaskSnapshot(session, cached);
+export function currentTasks(session, cached, events) {
+  const record = currentTaskSnapshot(session, cached, events);
   return record.tasks.map(t => {
     const excerpt = record.excerpts.find(e => e.id === t.anchor?.excerpt);
     return { ...t, content: t.title, status: t.done ? 'completed' : 'pending',
@@ -187,10 +188,12 @@ export function registerTasks(ctx, store = createTodoStore()) {
 }
 
 export function restoreTaskProjection(ctx, session) {
-  if (ctx.sessionProjections.stateOf(session, 'todos') !== null) return;
-  const last = session.snapshotEvents().findLast(e => e.type === 'todo/write');
-  if (!last?.data.tasks?.length) return;
+  const { event, record } = readTaskSnapshot(session);
+  if (!Array.isArray(event?.data.tasks)) return;
+  const todos = todosOf(record.tasks);
+  const current = ctx.sessionProjections.stateOf(session, 'todos');
+  if (!todos.length && current === null || isDeepStrictEqual(current, todos)) return;
   // Restore X's persistent task dock after the shared projection's turn reset.
   // A quiet snapshot changes neither the ledger revision nor model context.
-  session.append('todo/write', { ...last.data, quiet: true });
+  session.append('todo/write', { ...record, todos, quiet: true });
 }
