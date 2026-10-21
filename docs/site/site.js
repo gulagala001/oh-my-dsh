@@ -89,11 +89,13 @@
   }
 
   const heroScenes = {
+    overview: { src: 'images/omd-hero-zh.png', alt: 'Oh My DSH · 从对话到交付', caption: '从对话到交付。' },
     computer: { src: 'site/media/launchpad-workbench.jpg', alt: '发布清单的实际验收，对话、任务与文件核验输出并排显示', caption: '需求、任务与交付文件并排查看。' },
     memory: { src: 'site/media/launchpad-recall.jpg', alt: '压缩后实际回查原话，核对 CSV 六列、编码与未验收项要求', caption: '按原话核对：UTF-8 + BOM、六列、保留未验收项。' },
     tasks: { src: 'site/media/launchpad-tasks.jpg', alt: '实际任务账本中的原始要求、文件路径与通过的 CSV 核验输出', caption: '要求对应任务，下载文件对应验证结果；每一项都有依据。' },
   };
   if (english) {
+    Object.assign(heroScenes.overview, { src: 'images/omd-hero-en.png', alt: 'Oh My DSH · From conversation to delivery', caption: 'From conversation to delivery.' });
     Object.assign(heroScenes.computer, { alt: 'Actual release checklist verification, with conversation, tasks, and file checks side by side', caption: 'Requirements, tasks and delivered files, side by side.' });
     Object.assign(heroScenes.memory, { alt: 'Original requirements recalled after compression to verify CSV columns, encoding, and pending items', caption: 'Checked against the original: UTF-8 + BOM, six columns, and pending items retained.' });
     Object.assign(heroScenes.tasks, { alt: 'A task ledger with original requirements, file paths, and successful CSV verification output', caption: 'Requirements connect to tasks; downloaded files connect to verification results.' });

@@ -335,6 +335,10 @@ h3 {
   max-height: 440px;
   object-fit: contain;
 }
+#hero-panel[aria-labelledby="hero-overview"] img {
+  max-height: none;
+  height: auto;
+}
 .product-caption {
   display: flex;
   justify-content: space-between;

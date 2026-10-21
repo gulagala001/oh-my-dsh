@@ -34,7 +34,9 @@ Mermaid diagrams render during the build through the pinned official `@mermaid-j
 
 Diagrams use static labels and descriptions; scripts, interactive links, and remote resources are rejected. Tiny excludes Mindmap, Architecture, KaTeX, and ELK; an ELK request falls back to Dagre as described by the [official documentation](https://mermaid.js.org/config/usage.html#elk-and-the-tiny-build). Missing Chromium, invalid syntax, unsupported diagrams, and a render taking more than 30 seconds stop the build while retaining the previous output.
 
-`site.css` and `site.js` provide the product layout, screenshot tabs, light and dark theme previews, install tabs, copying, image recovery, and full-size previews. `docs.css` and `docs.js` provide document navigation, section navigation, code copying, and image recovery. Long tables and code scroll independently. Native navigation and document content remain readable without JavaScript.
+`site.css` and `site.js` provide the product layout, promotional and interface image tabs, light and dark theme previews, install tabs, copying, image recovery, and full-size previews. `docs.css` and `docs.js` provide document navigation, section navigation, code copying, and image recovery. Long tables and code scroll independently. Native navigation and document content remain readable without JavaScript.
+
+The README and product page share the Oh My DSH character-whale hero image.
 
 `media/manifest.json` records screenshot hashes and the relationship between originals and cropped details. Screenshots show the same Launchpad sample task across requirements, browser actions, recall, and file checks. See [screenshots and sources (Chinese)](../showcase.md) for the demonstration limits. The static site does not execute model calls, authentication, or installation.
 

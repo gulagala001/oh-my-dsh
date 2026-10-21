@@ -1,4 +1,4 @@
-<a name="readme-top"></a>
+<a id="readme-top"></a>
 
 <h1 align="center">Oh My DSH</h1>
 
@@ -15,7 +15,7 @@
 
 <p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="docs/README.md">完整文档</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈</a></p>
 
-<p align="center"><a href="docs/images/release/context.jpg"><img src="docs/images/release/context.jpg" alt="上下文占用、构成与整理入口 / Context usage and organization" width="880"></a></p>
+<p align="center"><a href="docs/images/omd-hero-zh.png"><img src="docs/images/omd-hero-zh.png" alt="Oh My DSH · 从对话到交付" width="880"></a></p>
 
 <a id="quickstart"></a>
 <a id="desktop"></a>
@@ -28,7 +28,7 @@
 <a id="support"></a>
 <a id="plugins"></a>
 <a id="docs"></a>
-<a name="readme-install"></a>
+<a id="readme-install"></a>
 
 ## 快速开始
 
