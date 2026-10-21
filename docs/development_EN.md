@@ -65,6 +65,7 @@ Closing the browser does not stop the background service. Use Ctrl+C to stop a f
 | `src/tasks.mjs`, `src/todolist.mjs` | Anchors, tasks, evidence |
 | `src/hub.mjs`, `src/hub-store.mjs`, `src/monitor-ledger.mjs` | Background work/persistent monitoring ledger |
 | `src/dream/` | Isolation, sources, short memory, recovery |
+| `src/temporary-chat.mjs`, `src/client/temporary-chat-state.mjs` | Temporary chat turns and frontend streaming interaction state |
 | `src/codegraph.mjs` | Indexing/queries |
 | `src/client/` | Conversation, workbench, settings, themes |
 | `vendor/dsh/` | Public Chat, Conversation and host components matching the current build target |
@@ -73,14 +74,16 @@ Closing the browser does not stop the background service. Use Ctrl+C to stop a f
 
 `pnpm build` builds the frontend and generates the standard and OMD-PTC presets from `presets/oh-my-dsh/agent.cordis.yml`. Edit source configuration, not generated files.
 
+Temporary chat history comes from complete turns held in server memory. Native messages and model replay information are reused unchanged in the next request. Request numbers increase within each tab: a `done` receipt confirms commitment, while `stop` cancels only that request, fences its late arrival, and waits for real producer cleanup. After a disconnect, the client reconciles that turn and preserves the draft with sending paused until confirmation; recovery never repeats the model call. Tab entries own frontend state and components subscribe to their views. Closing erases history, and removing a tab stops its keepalive.
+
 The host build uses [`host-const-enums.mjs`](../scripts/host-const-enums.mjs) with the source-verified TypeScript `6.0.3`, explicitly pinned in the root `devDependencies`, to inline official `const enum` members through AST and real symbol binding and eliminate runtime enum references. DSH/Cordis reuse the host SDK singleton rather than bundle a second copy; the official source commit, SHA-256, and complete enum declarations/members are checked against the [enum manifest](../scripts/host-const-enums.json). The default build does not rely on an undeclared compiler fallback from a desktop SDK path.
 
 ## Tests on Demand
 
 Focus on implementation and delivery; keep testing minimal. Run minimal build/startup checks as needed, and use targeted verification (including CU) only for a concrete issue or an explicit user request. Improve the experience from user feedback. See [Contributing](../CONTRIBUTING.md).
-- `pnpm test` (or `pnpm test:smoke`): 12 lightweight core files, without repeated host installations or a full desktop launch.
-- Individual regression: `node --test test/<name>.test.mjs`; documentation: `node --test test/documentation.test.mjs`.
-- `pnpm test:all`: explicit execution of the retained tests, not a default gate. Some historical fixtures still disagree with alpha.2; counts and pass rates do not establish product completeness.
+- `pnpm test` (or `pnpm test:smoke`): the core regressions listed in `scripts/test-ci.mjs`, without repeated host installations or a full desktop launch.
+- Individual regression: `node --test test/<name>.test.mjs` for an existing test file.
+- `pnpm test:all`: a compatibility entry point for the same core suite, without a separate heavyweight full suite; results describe only the checks that ran.
 - When runtime checks are needed, use isolated data and profiles and leave the working DSH instance unchanged.
 
 See [context preparation and original recall (Chinese)](context-workflow.md) for images, context budgets, and idle preprocessing, and [third-party notices](../THIRD_PARTY_NOTICES.md) for sources and licenses.

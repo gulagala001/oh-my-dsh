@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, InlineEditor, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
+import { recoverTemporaryChat, sendTemporaryChat } from './temporary-chat-state.mjs';
 import css from './temporary-chat.css';
 
 const KIND = 'omd-temporary-chat', ID = 'oh-my-dsh/temporary-chat';
@@ -16,78 +17,50 @@ async function request(action, data, signal) {
 export function installTemporaryChat(ctx) {
   const entries = new Map();
   const style = document.createElement('style'); style.textContent = css; document.head.append(style);
+  const heartbeat = entry => {
+    clearInterval(entry.heartbeat);
+    if (entry.value && !entry.closed && !entry.closing && !entry.detached)
+      entry.heartbeat = setInterval(() => { void request('touch', { id: entry.value.id }).catch(() => {}); }, 30000);
+  };
   const close = async entry => {
     if (entry.closed) return;
     if (entry.closing) return entry.closing;
-    entry.send?.abort(); entry.refresh?.();
     entry.closing = (async () => {
       try {
         const value = await entry.created.catch(() => null);
         if (value?.id) await request('close', { id: value.id });
-        entry.closed = true; entry.messages = []; entry.draft = ''; clearInterval(entry.heartbeat);
-      } finally { entry.closing = null; entry.refresh?.(); }
+        entry.closed = true; entry.messages = []; entry.draft = ''; entry.turn = null;
+      } finally { entry.closing = null; heartbeat(entry); entry.refresh?.(); }
     })();
+    heartbeat(entry);
+    entry.turn?.abort.abort(); entry.refresh?.();
     return entry.closing;
   };
   const create = (tab, parentId) => {
-    const entry = { messages: [], draft: '', closed: false, created: request('open', { parentId }), error: '' };
+    const entry = { messages: [], draft: '', closed: false, busy: false, turn: null, created: request('open', { parentId }), error: '' };
     entry.created.then(value => {
       entry.value = value;
       if (entry.closed) return request('close', { id: value.id });
-      entry.heartbeat = setInterval(() => { void request('touch', { id: value.id }).catch(() => {}); }, 30000);
-    }).catch(error => { entry.error = error.message; });
+      heartbeat(entry);
+      entry.refresh?.();
+    }).catch(error => { entry.error = error.message; entry.refresh?.(); });
     entries.set(tab.id, entry); return entry;
   };
   function Panel({ useTabInfo, sessionId }) {
     const { tab } = useTabInfo();
     const entry = entries.get(tab.id) || create(tab, sessionId);
-    const [draft, setDraft] = useState(entry.draft), [messages, setMessages] = useState(entry.messages);
-    const [busy, setBusy] = useState(false), [closing, setClosing] = useState(false);
-    const [error, setError] = useState(entry.error), [model, setModel] = useState(entry.value?.model);
-    const scroll = useRef(null), live = useRef(true);
-    useEffect(() => { entry.refresh = () => { setClosing(!!entry.closing); setError(entry.error); if(entry.closed){setMessages([]);setDraft('');} }; return () => { entry.refresh = null; }; }, [entry]);
+    const [view, setView] = useState(() => ({ ...entry }));
+    const { draft, messages, busy, error, turn } = view, closing = !!view.closing, model = view.value?.model;
+    const scroll = useRef(null);
     useEffect(() => {
-      live.current = true;
-      entry.created.then(value => { if (live.current) setModel(value.model); }, failure => { if (live.current) setError(failure.message); });
-      return () => { live.current = false; };
+      const refresh = () => setView({ ...entry });
+      entry.refresh = refresh; refresh();
+      return () => { if (entry.refresh === refresh) entry.refresh = null; };
     }, [entry]);
     useEffect(() => { if (scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight; }, [messages]);
-    const publish = next => { entry.messages = next; if (live.current) setMessages(next); };
     const end = () => {
-      setClosing(true); setError('');
-      void close(entry).then(() => tab.actions.close()).catch(failure => { if (live.current) { setClosing(false); setError(failure.message); } });
-    };
-    const send = async () => {
-      if (!draft.trim() || busy || closing || entry.closed) return;
-      setBusy(true); setError('');
-      const text = draft, old = entry.messages, responseMessage = { role: 'assistant', text: '', reasoning: '' };
-      const abort = new AbortController(); entry.send = abort;
-      try {
-        const { id } = await entry.created;
-        const response = await request('send', { id, text }, abort.signal);
-        const reader = response.body.getReader(), decoder = new TextDecoder(); let pending = '', done = false;
-        for (;;) {
-          const part = await reader.read(); pending += decoder.decode(part.value, { stream: !part.done });
-          let at;
-          while ((at = pending.indexOf('\n')) >= 0) {
-            const raw = pending.slice(0, at); pending = pending.slice(at + 1); if (!raw) continue;
-            const event = JSON.parse(raw);
-            if (event.type === 'error') throw Error(event.error);
-            if (event.type === 'start') { entry.draft = ''; if (live.current) setDraft(''); }
-            if (event.type === 'text-delta') responseMessage.text += event.text;
-            if (event.type === 'reasoning-delta') responseMessage.reasoning += event.text;
-            if (event.type === 'done') done = true;
-            if (!entry.closed) publish([...old, { role: 'user', text }, { ...responseMessage }]);
-          }
-          if (part.done) break;
-        }
-        if (!done) throw Error('回复连接中断，请重试。');
-      } catch (failure) {
-        if (!entry.closed && !entry.closing) {
-          publish(old); entry.draft = text;
-          if (live.current) { setDraft(text); setError(failure.name === 'AbortError' ? '回复已停止，草稿已保留。' : failure.message); }
-        }
-      } finally { if (entry.send === abort) entry.send = null; if (live.current) setBusy(false); }
+      entry.error = '';
+      void close(entry).then(() => tab.actions.close()).catch(failure => { entry.error = failure.message; entry.refresh?.(); });
     };
     return <section className="omd-temporary-chat" aria-label="临时侧栏聊天">
       <header><span>临时聊天{model && <small>{model} · 关闭后不保留历史</small>}</span><Button size="sm" disabled={closing} onClick={end}>{closing ? '正在关闭…' : '关闭'}</Button></header>
@@ -98,9 +71,10 @@ export function installTemporaryChat(ctx) {
       </article>) : <p className="omd-temporary-empty">开始独立的临时聊天</p>}</div>
       {error && <div role="alert">{error}</div>}
       <div className="omd-temporary-composer" inert={closing ? '' : undefined}>
-        {busy ? <Button onClick={() => { entry.send?.abort(); void entry.created.then(value => request('stop', { id: value.id })).catch(() => {}); }}>停止回复</Button> : <>
-          <InlineEditor value={draft} label="临时聊天消息" onChange={value => { entry.draft = value; setDraft(value); }} onSave={send} onCancel={() => {}}/>
-          <Button variant="primary" disabled={!draft.trim() || !model} onClick={send}>发送</Button>
+        {busy ? <Button disabled={turn?.abort.signal.aborted} onClick={() => { turn?.abort.abort(); entry.refresh?.(); }}>{turn?.abort.signal.aborted ? '正在确认结果…' : '停止回复'}</Button>
+          : turn ? <Button onClick={() => recoverTemporaryChat(entry, request)}>恢复聊天</Button> : <>
+          <InlineEditor value={draft} label="临时聊天消息" onChange={value => { entry.draft = value; entry.refresh?.(); }} onSave={() => sendTemporaryChat(entry, request)} onCancel={() => {}}/>
+          <Button variant="primary" disabled={!draft.trim() || !model || entry.closed} onClick={() => sendTemporaryChat(entry, request)}>发送</Button>
         </>}
       </div>
     </section>;
@@ -119,9 +93,17 @@ export function installTemporaryChat(ctx) {
   window.dispatchEvent(new Event('dsh:temporary-native-command-registered'));
   const off = ctx.sidebarRight.openTabs.subscribe(() => {
     const present = new Set(ctx.sidebarRight.openTabs.getSnapshot().filter(tab => tab.kind === KIND).map(tab => tab.tabId));
-    for (const [id, entry] of entries) if (!present.has(id)) { void close(entry).catch(() => {}); entries.delete(id); }
+    for (const [id, entry] of entries) if (!present.has(id)) {
+      entry.detached = true;
+      void close(entry).then(() => entries.delete(id)).catch(error => { entry.error = error.message; });
+    }
   });
   const leave = () => { for (const entry of entries.values()) if (entry.value?.id) navigator.sendBeacon('oh-my-dsh/api/temporary-chat/close', new Blob([JSON.stringify({ id: entry.value.id })], { type: 'application/json' })); };
   window.addEventListener('pagehide', leave);
-  ctx.effect(() => () => { off(); window.removeEventListener('pagehide', leave); style.remove(); return Promise.all([...entries.values()].map(entry => close(entry).catch(() => {}))); });
+  ctx.effect(() => async () => {
+    off(); window.removeEventListener('pagehide', leave); style.remove();
+    const results = await Promise.allSettled([...entries.values()].map(entry => { entry.detached = true; return close(entry); }));
+    const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+    if (errors.length) throw new AggregateError(errors, '临时聊天关闭失败');
+  });
 }

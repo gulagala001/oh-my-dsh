@@ -65,6 +65,7 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 | `src/tasks.mjs`、`src/todolist.mjs` | 锚点、任务、证据 |
 | `src/hub.mjs`、`src/hub-store.mjs`、`src/monitor-ledger.mjs` | 后台／持久监控账本 |
 | `src/dream/` | 隔离归属、来源、短记忆与续跑 |
+| `src/temporary-chat.mjs`、`src/client/temporary-chat-state.mjs` | 临时聊天回合与前端流式交互状态 |
 | `src/codegraph.mjs` | 索引／查询；取消及初始化失败保留可读错误与原始 cause |
 | `src/client/` | 对话、工作台、设置、主题 |
 | `vendor/dsh/` | 匹配当前构建目标的公共 Chat、Conversation 与宿主组件 |
@@ -72,6 +73,8 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 | `scripts/`、`test/` | 构建／启动／检查 |
 
 `pnpm build` 构建前端，并从 `presets/oh-my-dsh/agent.cordis.yml` 生成普通与 OMD-PTC 预设；修改源配置，不手改生成文件。
+
+临时聊天以服务端内存中的完整回合为历史来源，原生消息及模型重放信息原样用于下一次请求。每个标签页的请求编号递增；`done` 回执确认提交，`stop` 只取消对应请求、阻止该编号迟到执行，并等待真实调用清理。断线时核对该次回合，未确认前保留草稿并暂停发送，恢复操作不重新调用模型。前端状态由标签页记录持有，组件只订阅视图；关闭后清空历史，移除标签页后停止保活。
 
 宿主构建通过 [`host-const-enums.mjs`](../scripts/host-const-enums.mjs)，使用根 `devDependencies` 显式锁定、经来源清单核验的 TypeScript `6.0.3`，按 AST 与真实符号绑定内联官方 `const enum` 成员并消除运行时枚举引用。DSH／Cordis 复用宿主 SDK 单例，不打包第二份；官方来源提交、SHA-256 与完整枚举声明／成员按[枚举 manifest](../scripts/host-const-enums.json)校验。默认构建不依赖桌面 SDK 路径中的未声明编译器 fallback。
 
@@ -82,7 +85,7 @@ CodeGraph 的 `codegraph.json` 排除规则只作用于当前项目根，不会�
 ## 按需测试
 
 专注实现和交付，尽量少做测试。按需做最小构建／启动检查，仅为具体问题或用户明确要求做定点验证（含 CU）。依据用户实际使用反馈改进体验。贡献与发行要点见[贡献说明](../CONTRIBUTING.md)。
-- `pnpm test`（或 `pnpm test:smoke`）：仅保留 6 个文件的少量明确回归，不反复安装宿主、不启动完整桌面。
+- `pnpm test`（或 `pnpm test:smoke`）：运行 `scripts/test-ci.mjs` 列出的核心回归，不反复安装宿主、不启动完整桌面。
 - 单项回归：`node --test test/<name>.test.mjs`，仅指定实际保留的文件。
 - `pnpm test:all`：兼容入口，运行同一组最小检查，不再另设重型全量套件；结果只说明这些检查的有限范围。
 - 需要运行检查时，使用隔离数据/profile，保持当前工作 DSH 原状。
