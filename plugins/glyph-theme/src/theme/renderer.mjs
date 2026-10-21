@@ -34,7 +34,10 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const trails = [];
   const clickWaves = [];
   const pointer = { x: -1000, y: -1000 }, font = '"SFMono-Regular", Menlo, monospace';
-  let stopped = false, frame, last = 0, dirty = true, measured = 0, width = 0, height = 0;
+  let stopped = false, frame, last = 0, dirty = true, width = 0, height = 0;
+  const candidateCache=new Map(), resized=new Set();
+  const candidates=selector=>{if(!candidateCache.has(selector))candidateCache.set(selector,[...document.querySelectorAll(selector)]);return candidateCache.get(selector);};
+  const resizeObserver=new ResizeObserver(invalidate);
   let ink, muted, accent, line, boxes = [], brands = [], controls = [], ranges = [], covers = [];
   let divider, rightDivider, header, owner, clip, conversation, fieldRect, obstacles=[], effortElement, effortPeak = false, artwork = false;
   let ownerLayer=0;
@@ -50,9 +53,11 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   }
   const still = () => reduced || motion.matches;
   function visible(el, acceptHidden = false) {
-    if (!el.isConnected || el.closest(EXTERNAL) || inClosedDetails(el) || !el.getClientRects().length) return null;
-    const r = el.getBoundingClientRect(), style = getComputedStyle(el);
+    if (!el.isConnected) return null;
+    const r = el.getBoundingClientRect();
     if (r.width < 2 || r.height < 2 || r.bottom < 0 || r.top > height || r.right < 0 || r.left > width) return null;
+    if (el.closest(EXTERNAL) || inClosedDetails(el)) return null;
+    const style = getComputedStyle(el);
     if (style.opacity === '0' || !acceptHidden && style.visibility === 'hidden') return null;
     return r;
   }
@@ -98,7 +103,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   }
   function measureFloatingLabels() {
     const text = [], icons = [];
-    for (const el of document.querySelectorAll(FLOATING)) {
+    for (const el of candidates(FLOATING)) {
       if (!visible(el)) continue;
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       for (let node=walker.nextNode(); node; node=walker.nextNode()) {
@@ -164,24 +169,24 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     rightDivider=shell?.querySelector('[data-omd-surface="workbench-column"]');
     header=shell?.querySelector('.wSkVaW_header');
     const solid=new Map();
-    for(const panel of document.querySelectorAll(PANEL)) {
+    for(const panel of candidates(PANEL)) {
       if(!visible(panel))continue;
       solid.set(panel,'');
       for(const el of panel.querySelectorAll('header, footer, thead, th, [class*="header"], [class*="Header"], [class*="footer"], [class*="Footer"], [class*="toolbar"], [class*="savebar"], [role="alert"]'))
         if(['sticky','fixed'].includes(getComputedStyle(el).position))solid.set(el,'');
     }
     opaque.update(solid);
-    covers=[...document.querySelectorAll(PANEL+', '+COMPOSER+', '+WORKBENCH+', '+NATIVE_CONTENT)].filter(el=>!el.hidden&&!inClosedDetails(el)&&el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})).map(el=>({el,layer:Number(getComputedStyle(el).zIndex)||0,composer:el.hasAttribute('data-composer-seat'),r:el.getBoundingClientRect()})).filter(c=>c.r.width>2&&c.r.height>2);
+    covers=candidates(PANEL+', '+COMPOSER+', '+WORKBENCH+', '+NATIVE_CONTENT).filter(el=>!el.hidden&&!inClosedDetails(el)&&el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})).map(el=>({el,layer:Number(getComputedStyle(el).zIndex)||0,composer:el.hasAttribute('data-composer-seat'),r:el.getBoundingClientRect()})).filter(c=>c.r.width>2&&c.r.height>2);
     conversation=shell?.querySelector('[data-omd-surface="conversation"]');fieldRect=conversation&&visible(conversation);
-    brands=[...document.querySelectorAll('.omd-glyph-brand')].map(el=>{
+    brands=candidates('.omd-glyph-brand').map(el=>{
       const r=visible(el),small=el.dataset.glyphSize==='small';
       return {el,r,small,clip:small?r:fieldRect,scene:small?r:fieldRect||r};
     }).filter(v=>v.r);
-    obstacles=[...document.querySelectorAll(READABLE+', .wSkVaW_header, '+PANEL)].map(el=>visible(el)).filter(Boolean);
+    obstacles=candidates(READABLE+', .wSkVaW_header, '+PANEL).map(el=>visible(el)).filter(Boolean);
     // Other streamed/tool rows still protect their text while letting the
     // water pass through the surrounding gaps.
-    for(const row of document.querySelectorAll('[data-chat-flow-kind]')){
-      if(!visible(row))continue;
+    for(const row of candidates('[data-chat-flow-kind]')){
+      if(!visible(row)||row.matches(READABLE))continue;
       const walker=document.createTreeWalker(row,NodeFilter.SHOW_TEXT);
       for(let node=walker.nextNode();node;node=walker.nextNode()){
         if(!node.textContent.trim()||node.parentElement?.closest('[data-glyph-content]'))continue;
@@ -198,9 +203,9 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     }
     // Compact tooltips have only enough room for their label/shortcut. They
     // still mask the background, but a character frame would cross the text.
-    boxes=[...document.querySelectorAll(BOX)].filter(el=>el.getAttribute('role')!=='tooltip').map(el=>({el,r:visible(el),composer:el.hasAttribute('data-composer-card'),selected:el.getAttribute('aria-selected')==='true'})).filter(v=>v.r);
+    boxes=candidates(BOX).filter(el=>el.getAttribute('role')!=='tooltip').map(el=>({el,r:visible(el),composer:el.hasAttribute('data-composer-card'),selected:el.getAttribute('aria-selected')==='true'})).filter(v=>v.r);
     controls=[];ranges=[];const currentControls=new Set();
-    for(const el of document.querySelectorAll(CONTROL)) {
+    for(const el of candidates(CONTROL)) {
       if(el.namespaceURI!=='http://www.w3.org/1999/xhtml')continue;
       let r=visible(el); const hiddenToggle=!r&&['checkbox','radio'].includes(el.type)&&getComputedStyle(el).opacity==='0';
       if(hiddenToggle)r=visible(el.parentElement);
@@ -235,7 +240,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     }else if(selected&&(!ultraMode||ultraAnchor!==peakRange.el))nextUltraWave=now;
     ultraMode=selected;ultraAnchor=peakRange?.el;
     const current=new Set();
-    for(const el of document.querySelectorAll('svg')) {
+    for(const el of candidates('svg')) {
       // Brand lettering is an SVG in the native shell. Rasterizing a 13 px
       // wordmark into 4 px glyphs makes both the name and logo unreadable.
       if(el.closest('[data-omd-nav-part="brand"], [class*="_logoRow"]'))continue;
@@ -259,6 +264,10 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       ...covers.filter(c=>c.layer>=ownerLayer&&c.el!==owner&&!c.el.contains(owner)&&!owner?.contains(c.el)
         &&!(c.composer&&owner?.closest(PANEL))).map(c=>c.r),
     ],width,height);
+    const observed=new Set([document.body,shell,conversation,divider,rightDivider,header,
+      ...boxes.map(v=>v.el),...controls.map(v=>v.el),...ranges.map(v=>v.el),...brands.map(v=>v.el)].filter(Boolean));
+    for(const el of resized)if(!observed.has(el)){resizeObserver.unobserve(el);resized.delete(el);}
+    for(const el of observed)if(!resized.has(el)){resizeObserver.observe(el);resized.add(el);}
     dirty=false;
   }
   function edge(x1,y1,x2,y2,time,bright=false) {
@@ -306,7 +315,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     g=background;local=false;
     // Scroll/layout updates must not wait for the background's 30 fps budget.
     const quiet=still();if(!quiet&&!dirty&&now-last<32){wake();return;}last=now;
-    if(dirty||now-measured>250){measure();measured=now;}
+    if(dirty)measure();
     const time=quiet?0:now/1000;g.clearRect(0,0,width,height);
     if(!quiet&&ultraMode&&ultraAnchor?.isConnected&&now>=nextUltraWave){
       emitUltra(ultraAnchor,now);
@@ -378,16 +387,18 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     invalidate();
   };
   const visibility=()=>{if(document.hidden){cancelAnimationFrame(frame);frame=undefined;rings.length=bursts.length=trails.length=clickWaves.length=0;}else invalidate();};
-  const decoration=node=>node.nodeType===1&&node.matches('.omd-glyph-chrome,.omd-glyph-caption,[data-glyph-content]');
+  const decoration=node=>node.nodeType===1&&node.matches('.omd-glyph-canvas,.omd-glyph-chrome,.omd-glyph-caption,[data-glyph-content]');
   const observer=new MutationObserver(records=>{
     // Our canvases and SVG glyph groups do not change native layout. Do not
     // feed their insertion/removal back into another whole-document measure.
-    if(records.some(record=>record.type!=='childList'||![...record.addedNodes,...record.removedNodes].every(decoration)))invalidate();
+    const relevant=records.filter(record=>!decoration(record.target)&&!record.target.parentElement?.closest('[data-glyph-content]')
+      &&(record.type!=='childList'||![...record.addedNodes,...record.removedNodes].every(decoration)));
+    if(relevant.length){if(relevant.some(r=>r.type!=='characterData'))candidateCache.clear();invalidate();}
   });
-  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-selected','aria-expanded','aria-checked','aria-valuenow','data-content-phase','data-effort-value','data-effort-max','disabled','checked','open','hidden']});
+  observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','aria-selected','aria-expanded','aria-checked','aria-valuenow','data-content-phase','data-effort-value','data-effort-max','data-omd-surface','data-omd-nav-part','data-sidebar-collapsed','data-rightbar-fullscreen','disabled','checked','open','hidden']});
   observer.observe(root,{attributes:true,attributeFilter:['data-appearance','data-omd-palette','data-omd-custom']});
-  const listeners=[['scroll',invalidate,true],['pointermove',move,{passive:true}],['pointerdown',click,true],['pointerleave',leave],['focusin',invalidate],['focusout',invalidate],['visibilitychange',visibility],['input',effortChanged,true],['change',invalidate,true]];
+  const listeners=[['scroll',invalidate,true],['transitionend',invalidate,true],['animationend',invalidate,true],['pointermove',move,{passive:true}],['pointerdown',click,true],['pointerleave',leave],['focusin',invalidate],['focusout',invalidate],['visibilitychange',visibility],['input',effortChanged,true],['change',invalidate,true]];
   for(const args of listeners)document.addEventListener(...args);
   window.addEventListener('resize',invalidate);motion.addEventListener('change',invalidate);wake();
-  return()=>{stopped=true;cancelAnimationFrame(frame);observer.disconnect();characterIcons.clear();chrome.dispose();opaque.dispose();window.removeEventListener('resize',invalidate);motion.removeEventListener('change',invalidate);for(const args of listeners)document.removeEventListener(...args);for(const el of marked){el.removeAttribute('data-glyph-icon');el.removeAttribute('data-glyph-control');}cache.clear();};
+  return()=>{stopped=true;cancelAnimationFrame(frame);observer.disconnect();resizeObserver.disconnect();candidateCache.clear();characterIcons.clear();chrome.dispose();opaque.dispose();window.removeEventListener('resize',invalidate);motion.removeEventListener('change',invalidate);for(const args of listeners)document.removeEventListener(...args);for(const el of marked){el.removeAttribute('data-glyph-icon');el.removeAttribute('data-glyph-control');}cache.clear();};
 }

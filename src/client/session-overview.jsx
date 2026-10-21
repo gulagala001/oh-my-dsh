@@ -25,7 +25,8 @@ export function applySessionOverview(ctx, openCU) {
   const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
   const useOverview = sessionId => useSyncExternalStore(subscribe, () => states.get(sessionId));
   const pageKinds = { agents: AGENTS_KIND, jobs: JOBS_KIND, sources: SOURCES_KIND, outputs: OUTPUTS_KIND };
-  const openPage = (sessionId, section, params = {}) => ctx.sidebarRight.openTabIn(sessionId, pageKinds[section], { revealIfOpened: true, params: { ...params, nonce: Date.now() } });
+  const pageKind = section => section === 'sources' && ctx.sidebarRightTabs.get('opencu-sources') ? 'opencu-sources' : pageKinds[section];
+  const openPage = (sessionId, section, params = {}) => ctx.sidebarRight.openTabIn(sessionId, pageKind(section), { revealIfOpened: true, params: { ...params, nonce: Date.now() } });
   function openAgent(row) {
     const address = childAddress(row);
     if (!address || !row.available) return;
@@ -193,9 +194,19 @@ export function applySessionOverview(ctx, openCU) {
     for (const [kind, title, variant] of [[AGENTS_KIND, '子智能体', 'agents'], [JOBS_KIND, '后台进程', 'jobs'], [SOURCES_KIND, '来源', 'sources'], [OUTPUTS_KIND, '输出内容', 'outputs']]) {
       const id = `trisoul_x/${kind}`;
       scope.effect(() => scope.sidebarRightTabs.register({ id, kind, multiple: false, title: () => title,
-        guide: [{ id: kind, order: 32, title: () => title }] }));
+        // Retain the old kind for saved tabs; OpenCU owns the single Sources entry.
+        guide: kind === SOURCES_KIND ? [] : [{ id: kind, order: 32, title: () => title }] }));
       scope.slots.inject('sidebar.right.pane.tab', () => scope.slots.register({ name: 'sidebar.right.pane.tab', key: id }, variant === 'jobs' ? JobsPage : props => <OverviewPage {...props} variant={variant}/>));
     }
+    scope.slots.inject('sidebar.right.pane.tab', () => decorateSlotComponent(scope.slots, 'sidebar.right.pane.tab', key => key === 'opencu.sources', original => {
+      const Original = original.component;
+      return function SourcesPage(props) {
+        const data = useOverview(props.sessionId);
+        // The overview includes native attachments as well as OpenCU's saved
+        // pages, delivered files and WebMCP calls. Preserve standalone fallback.
+        return data ? <OverviewPage {...props} variant="sources"/> : <Original {...props}/>;
+      };
+    }));
     // Keep native Conversation and its real composer. Only add the common
     // detail header above it; the native resource still owns retention.
     scope.slots.inject('sidebar.right.pane.tab', () => decorateSlotComponent(scope.slots, 'sidebar.right.pane.tab', key => key === '@deepseek-ai/dsh-client-ui-subagent', original => {
@@ -207,7 +218,7 @@ export function applySessionOverview(ctx, openCU) {
         const all = useSyncExternalStore(subscribe, () => [...states.values()].find(data => data.rows.some(row => row.id === childId)));
         const data = all, row = data?.rows.find(row => row.id === childId);
         // Return through this native tab's placement, reusing its pane's overview.
-        const returnToOverview = section => tab.actions.openTab(pageKinds[section], { replaceTab: true });
+        const returnToOverview = section => tab.actions.openTab(pageKind(section), { replaceTab: true });
         return <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {data && row && <Overview sessionId={parentId} variant="detail" overview={{ ...data, detail: row, openPage: returnToOverview }}/>}<div style={{ flex: 1, minHeight: 0 }}><Original {...props}/></div>
         </div>;

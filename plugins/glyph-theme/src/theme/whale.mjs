@@ -6,7 +6,7 @@ import {whaleShots,shotBlend} from './director.mjs';
 export function createWhalePainter() {
   const path = new Path2D(whalePath);
   const probe = document.createElement('canvas').getContext('2d');
-  const meshes = new Map();
+  const meshes = new Map(), rasters = new Map();
   let epoch;
   function mesh(cols) {
     if (meshes.has(cols)) return meshes.get(cols);
@@ -36,15 +36,24 @@ export function createWhalePainter() {
         for (const f of [-.6, 0, .6]) points.push({ x:px, y:py, z:z * f, nx:-dx / norm, ny:-dy / norm, nz:0 });
       }
     }
+    for(const p of points){const tail=Math.max(0,(p.x-1)/10.75);p.tailPower=tail**1.7*.34;p.tailPhase=tail*2.7;p.fin=Math.max(0,Math.min(1,(p.y-2)/5))*Math.exp(-(((p.x-1)/5)**2));}
     meshes.set(cols, points);
     return points;
+  }
+  function makeRaster(scene,cellX,cellY,slot) {
+    const left=Math.floor(scene.left/cellX)-1,top=Math.floor(scene.top/cellY)-1;
+    const cols=Math.ceil(scene.right/cellX)-left+1,rows=Math.ceil(scene.bottom/cellY)-top+1,size=cols*rows;
+    let value=rasters.get(slot);
+    if(!value||value.depth.length!==size){value={depth:new Float64Array(size),light:new Float64Array(size),used:new Uint32Array(size)};rasters.set(slot,value);}
+    value.depth.fill(-Infinity);value.count=0;
+    Object.assign(value,{left,top,cols,rows,cellX,cellY});return value;
   }
   return function paintWhale({ r, small, scene = r, ambient = false, raster }, time, glyph, ink, muted, pointer) {
     epoch ??= time;
     const t = time === 0 ? 0 : Math.max(0, time - epoch);
     const shot=small?{primary:[Math.sin(t*.6)*.3,.08,1,0,0]}
       :ambient?{primary:[Math.sin(t*.2)*.35,.1,1.05,0,0]}:whaleShots(t);
-    function renderView([yaw,pitch,zoom,focusX,focusY]) {
+    function renderView([yaw,pitch,zoom,focusX,focusY],slot) {
     const sy = Math.sin(yaw), cy = Math.cos(yaw), sx = Math.sin(pitch), cx = Math.cos(pitch);
     const rotate = (x, y, z) => {
       const rx = x * cy + z * sy, rz = -x * sy + z * cy;
@@ -57,52 +66,56 @@ export function createWhalePainter() {
       + macro * (scene.top + scene.height * .38 - r.top - r.height / 2);
     const scale = (small ? Math.min(r.width * .9 / 23.5, r.height * .82 / 17.1)
       : Math.min(scene.width * .72 / 23.5, r.height * 1.4 / 17.1)) * zoom;
-    const cellX = small ? 1.25 : raster?.stepX || 6, cellY = small ? 1.45 : raster?.stepY || 8, pixels = new Map();
+    const cellX = small ? 1.25 : raster?.stepX || 6, cellY = small ? 1.45 : raster?.stepY || 8;
+    const pixels=makeRaster(scene,cellX,cellY,(small?'small':'large')+slot);
+    const {depth,light:lights,used,left,top,cols,rows}=pixels;
     for (const p of mesh(small ? 24 : 148)) {
       // A travelling bend reaches the tail after the body. The lower fin has
       // its own stroke; breathing and buoyancy stay small and continuous.
-      const tail = Math.max(0, (p.x - 1) / 10.75);
-      const bend = Math.sin(t * 2.1 - tail * 2.7) * tail ** 1.7 * .34;
+      const bend = Math.sin(t * 2.1 - p.tailPhase) * p.tailPower;
       const sb = Math.sin(bend), cb = Math.cos(bend);
       let x = 1 + (p.x - 1) * cb + p.z * sb, z = -(p.x - 1) * sb + p.z * cb;
       let nx = p.nx * cb + p.nz * sb, nz = -p.nx * sb + p.nz * cb;
-      const fin = Math.max(0, Math.min(1, (p.y - 2) / 5)) * Math.exp(-(((p.x - 1) / 5) ** 2));
-      const stroke = Math.sin(t * 1.7 - .6) * fin * .23, ss = Math.sin(stroke), cs = Math.cos(stroke);
+      const stroke = Math.sin(t * 1.7 - .6) * p.fin * .23, ss = Math.sin(stroke), cs = Math.cos(stroke);
       const y = p.y * cs - z * ss + Math.sin(t * 1.2 - p.x * .15) * .12;
       z = p.y * ss + z * cs; const ny = p.ny * cs - nz * ss; nz = p.ny * ss + nz * cs;
-      const position = rotate(x, y, z), normal = rotate(nx, ny, nz);
-      if (normal[2] < -.08) continue;
-      const perspective = 58 / (58 - position[2]);
-      const px = centerX + (position[0] - focus[0]) * scale * perspective;
-      const py = centerY + (position[1] - focus[1]) * scale * perspective;
+      const rx=x*cy+z*sy,rz=-x*sy+z*cy,ry=y*cx-rz*sx,depthZ=y*sx+rz*cx;
+      const normalX=nx*cy+nz*sy,normalZ0=-nx*sy+nz*cy,normalY=ny*cx-normalZ0*sx,normalZ=ny*sx+normalZ0*cx;
+      if (normalZ < -.08) continue;
+      const perspective = 58 / (58 - depthZ);
+      const px = centerX + (rx - focus[0]) * scale * perspective;
+      const py = centerY + (ry - focus[1]) * scale * perspective;
       if (px < scene.left - 4 || px > scene.right + 4 || py < scene.top - 4 || py > scene.bottom + 4) continue;
-      const diffuse = Math.max(0, normal[0] * -.42 + normal[1] * -.5 + normal[2] * .76);
-      const rim = (1 - Math.abs(normal[2])) ** 3;
-      const sheen = Math.max(0, normal[0] * -.24 + normal[1] * -.3 + normal[2] * .92) ** 22;
+      const diffuse = Math.max(0, normalX * -.42 + normalY * -.5 + normalZ * .76);
+      const rim = (1 - Math.abs(normalZ)) ** 3;
+      const sheen = Math.max(0, normalX * -.24 + normalY * -.3 + normalZ * .92) ** 22;
       const light = Math.min(1, .12 + diffuse ** 1.2 * .78 + rim * .45 + sheen * .65);
       // Cover the projected surface footprint rather than enlarging or spacing
       // out its characters during close-ups. The final grid never changes size.
       const footprint = Math.max(Math.min(cellX,cellY) * .55, scale * 23.5 / (small ? 24 : 148) * perspective * .8);
-      for(let gy=Math.floor((py-footprint)/cellY);gy<=Math.floor((py+footprint)/cellY);gy++){
-        for(let gx=Math.floor((px-footprint)/cellX);gx<=Math.floor((px+footprint)/cellX);gx++){
-          const key=gx+':'+gy;
-          if(pixels.has(key)&&pixels.get(key).z>=position[2])continue;
-          pixels.set(key,{x:(gx+.5)*cellX,y:(gy+.5)*cellY,z:position[2],light});
+      const y0=Math.max(top,Math.floor((py-footprint)/cellY)),y1=Math.min(top+rows-1,Math.floor((py+footprint)/cellY));
+      const x0=Math.max(left,Math.floor((px-footprint)/cellX)),x1=Math.min(left+cols-1,Math.floor((px+footprint)/cellX));
+      for(let gy=y0;gy<=y1;gy++){
+        for(let gx=x0;gx<=x1;gx++){
+          const key=(gy-top)*cols+gx-left;
+          if(depth[key]>=depthZ)continue;
+          if(depth[key]===-Infinity)used[pixels.count++]=key;
+          depth[key]=depthZ;lights[key]=light;
         }
       }
     }
-    return {pixels,opacity:ambient?.26:1-macro*.16};
+    pixels.opacity=ambient?.26:1-macro*.16;return pixels;
     }
-    const first=renderView(shot.primary),second=shot.secondary?renderView(shot.secondary):null;
-    const keys=second?new Set([...first.pixels.keys(),...second.pixels.keys()]):first.pixels.keys();
+    const first=renderView(shot.primary,0),second=shot.secondary?renderView(shot.secondary,1):null;
     const chars='·:;=+×#';
-    for(const key of keys){
-      const a=first.pixels.get(key),b=second?.pixels.get(key),point=a||b;
-      const blend=second?shotBlend(shot,point.x,point.y,scene):0;
-      const light=(a?Math.min(1,.18+a.light)*first.opacity:0)*(1-blend)
-        +(b?Math.min(1,.18+b.light)*second.opacity:0)*blend;
-      if(light<.015)continue;
-      glyph(chars[Math.min(chars.length-1,Math.floor(light*chars.length))],point.x,point.y,ink,light,small?2.6:7.3);
-    }
+    const paint=key=>{
+      const x=(key%first.cols+first.left+.5)*first.cellX,y=(Math.floor(key/first.cols)+first.top+.5)*first.cellY;
+      const blend=second?shotBlend(shot,x,y,scene):0;
+      const light=(first.depth[key]!==-Infinity?Math.min(1,.18+first.light[key])*first.opacity:0)*(1-blend)
+        +(second&&second.depth[key]!==-Infinity?Math.min(1,.18+second.light[key])*second.opacity:0)*blend;
+      if(light>=.015)glyph(chars[Math.min(chars.length-1,Math.floor(light*chars.length))],x,y,ink,light,small?2.6:7.3);
+    };
+    for(let i=0;i<first.count;i++)paint(first.used[i]);
+    if(second)for(let i=0;i<second.count;i++)if(first.depth[second.used[i]]===-Infinity)paint(second.used[i]);
   };
 }
