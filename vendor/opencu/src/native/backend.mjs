@@ -66,7 +66,7 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
       const script = fileURLToPath(new URL('../../native/windows/helper.ps1', import.meta.url));
       const literal = value => `'${value.replaceAll("'", "''")}'`;
       const command = helperPath || resolve(process.env.SystemRoot || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
-      transport = createHelperTransport(command, ['-NoProfile', '-NonInteractive', '-Command', `& { ${await readFile(script, 'utf8')} } -DataDir ${literal(directory)}`], { ...transportOptions, env: { ...process.env, OPENCU_HELPER_SOURCE: resolve(script, '..') } });
+      transport = createHelperTransport(command, ['-NoProfile', '-NonInteractive', '-Mta', '-Command', `& { ${await readFile(script, 'utf8')} } -DataDir ${literal(directory)}`], { ...transportOptions, env: { ...process.env, OPENCU_HELPER_SOURCE: resolve(script, '..') } });
     } else {
       const packaged = await buildMacHelper(directory, {helperPath, compile: compileHelper});
       await checkMacHelperIdentity(resolve(packaged, '../../..'));

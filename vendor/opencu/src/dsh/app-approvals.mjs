@@ -53,7 +53,7 @@ export function createAppApprovals(getDirectory, onChange = () => {}) {
       if (typeof bundleIdentifier !== 'string' || !bundleIdentifier) throw new Error('An application identifier is required');
       return change(value => ({ approvedApps: value.approvedApps.filter(app => app.bundleIdentifier !== bundleIdentifier) }));
     },
-    async authorize(target, sessionId, signal, readMetadata) {
+    async authorize(target, sessionId, signal, readMetadata, onWaiting) {
       signal?.throwIfAborted();
       if (closed) throw new Error('Application approvals are closed');
       if (typeof sessionId !== 'string' || !sessionId) throw failure('APP_SESSION_REQUIRED', 'Application access requires a conversation');
@@ -85,14 +85,18 @@ export function createAppApprovals(getDirectory, onChange = () => {}) {
         }
       } finally { authorizing.delete(attempt); }
       return new Promise((resolve, reject) => {
-        const waiter = { resolve, reject, cleanup: () => signal?.removeEventListener('abort', abort) };
-        const abort = () => {
+        let endWaiting;
+        const waiter = { resolve, reject, cleanup: () => { signal?.removeEventListener('abort', abort); const finish = endWaiting; endWaiting = undefined; finish?.(); } };
+        const cancel = reason => {
           waiter.cleanup(); request.waiters.delete(waiter);
           if (!request.waiters.size && pending.delete(request.id)) changed();
-          reject(signal.reason ?? failure('APP_APPROVAL_CANCELLED', 'Application request was cancelled'));
+          reject(reason);
         };
+        const abort = () => cancel(signal.reason ?? failure('APP_APPROVAL_CANCELLED', 'Application request was cancelled'));
         request.waiters.add(waiter);
         signal?.addEventListener('abort', abort, { once: true });
+        try { endWaiting = onWaiting?.({requestId: request.id, targetId: target.id, appDisplayName: request.app.displayName}); }
+        catch (error) { cancel(error); return; }
         if (signal?.aborted) abort();
       });
     },

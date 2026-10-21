@@ -6,6 +6,17 @@ const checked = result => {
   return result;
 };
 
+function timeoutFailure(run) {
+  const pendingRequests = [...run.requests.values()].map(value => ({...value}));
+  const approval = pendingRequests.some(value => value.stage === 'application-approval');
+  return Object.assign(new Error(approval
+    ? 'Application access approval was not completed before the computer-use deadline; bindings were reset. Select the same target again and respond to the OpenCU application access request. Increasing timeoutMs does not grant access.'
+    : 'Computer JavaScript timed out; bindings were reset'), {
+    code: approval ? 'APP_APPROVAL_TIMEOUT' : 'COMPUTER_TIMEOUT',
+    details: {stage: approval ? 'application-approval' : pendingRequests.length ? 'backend-request' : 'javascript', pendingRequests},
+  });
+}
+
 /** Keep persistent bindings off the Host thread; only the Host owns dispatch and release. */
 export function createComputerSession(request) {
   let context, current, closing, closed = false, releaseOnClose = false, releaseRequired = false, generation = 0, sequence = 0, tail = Promise.resolve();
@@ -23,17 +34,23 @@ export function createComputerSession(request) {
       if (record.retired || !run || message.cell !== run.id) return;
       if (message.type === 'progress') { run.partial = message.partial; return; }
       if (message.type === 'result') {
-        if (performance.now() >= run.deadline) { run.aborter.abort(Object.assign(new Error('Computer JavaScript timed out; bindings were reset'), { code: 'COMPUTER_TIMEOUT' })); return; }
+        if (performance.now() >= run.deadline) { run.aborter.abort(timeoutFailure(run)); return; }
         if (message.error) run.reject(deserializeReplError(message.error));
         else run.resolve(message.result);
         return;
       }
       if (message.type !== 'request' || run.signal.aborted) return;
       const { endpoint, args } = message, action = endpoint === 'act' ? args?.action : null;
+      const stage = {endpoint, targetId: args?.targetId ?? args?.reference?.id, stage: 'backend-request'};
+      run.requests.set(message.id, stage);
       const key = ['keyDown', 'key_down', 'keyUp', 'key_up'].includes(action) ? JSON.stringify([args.targetId, 'key', args.key])
         : ['mouseDown', 'mouse_down', 'mouseUp', 'mouse_up'].includes(action) ? JSON.stringify([args.targetId, 'button', args.button ?? 'left']) : null;
       if (['keyDown', 'key_down', 'mouseDown', 'mouse_down'].includes(action)) heldInputs.add(key);
-      const work = Promise.resolve().then(() => { run.signal.throwIfAborted(); return request(endpoint, args); }).then(checked).then(result => {
+      const work = Promise.resolve().then(() => { run.signal.throwIfAborted(); return request(endpoint, args, {onApprovalWait: approval => {
+        if (record.retired || run.signal.aborted) return;
+        Object.assign(stage, {stage: 'application-approval', ...approval});
+        return () => { stage.stage = 'backend-request'; delete stage.requestId; delete stage.appDisplayName; };
+      }}); }).then(checked).then(result => {
         if (['keyUp', 'key_up', 'mouseUp', 'mouse_up'].includes(action)) heldInputs.delete(key);
         if (endpoint === 'stop') heldInputs.clear();
         const outcome = result.result ?? result;
@@ -46,7 +63,7 @@ export function createComputerSession(request) {
         if (!record.retired) record.worker.postMessage({ type: 'response', id: message.id, ...response });
       };
       void work.then(result => respond({ result }), error => respond({ error: serializeReplError(error) }))
-        .catch(error => run.reject(error)).finally(() => pending.delete(work));
+        .catch(error => run.reject(error)).finally(() => { pending.delete(work); run.requests.delete(message.id); });
     });
     record.worker.on('error', error => { record.failed = error; record.run?.reject(error); });
     record.worker.on('exit', code => {
@@ -102,13 +119,13 @@ export function createComputerSession(request) {
         if (typeof args.code !== 'string') throw new Error('code is required');
         signal?.throwIfAborted();
         const record = context ?? initialize(), aborter = new AbortController();
-        const run = { id: ++sequence, aborter, signal: signal ? AbortSignal.any([signal, aborter.signal]) : aborter.signal,
+        const run = { id: ++sequence, aborter, signal: signal ? AbortSignal.any([signal, aborter.signal]) : aborter.signal, requests: new Map(),
           partial: { outputs: [], images: [], deliveries: [], documentation: [] } };
         current = record.run = run;
         record.worker.ref();
         const timeoutMs = Math.min(300000, Math.max(1, args.timeoutMs ?? 30000));
         run.deadline = performance.now() + timeoutMs;
-        const timer = setTimeout(() => aborter.abort(Object.assign(new Error('Computer JavaScript timed out; bindings were reset'), { code: 'COMPUTER_TIMEOUT' })), timeoutMs);
+        const timer = setTimeout(() => aborter.abort(timeoutFailure(run)), timeoutMs);
         let cancel;
         try {
           return await new Promise((resolve, reject) => {

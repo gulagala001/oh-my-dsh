@@ -48,6 +48,15 @@ namespace OpenCU {
     static readonly Dictionary<string, Dictionary<string, object>> mappings = new Dictionary<string, Dictionary<string, object>>();
     static readonly HashSet<int> keys = new HashSet<int>(), buttons = new HashSet<int>();
     static string directory, journal; static int epoch, nextElement; static volatile bool eof, closing;
+    sealed class TreeRead {
+      internal Thread Worker;
+      internal readonly Dictionary<string, AutomationElement> Elements = new Dictionary<string, AutomationElement>();
+      internal Dictionary<string, object> Result;
+      internal Exception Error;
+      internal volatile bool Cancelled;
+      internal int Epoch;
+    }
+    static TreeRead treeRead;
     static JavaScriptSerializer Json() { return new JavaScriptSerializer { MaxJsonLength = 64 * 1024 * 1024, RecursionLimit = 128 }; }
     static Dictionary<string, object> D(params object[] pairs) { var value = new Dictionary<string, object>(); for (int i = 0; i < pairs.Length; i += 2) value[(string)pairs[i]] = pairs[i + 1]; return value; }
     static object V(Dictionary<string, object> value, string key, object fallback = null) { object result; return value.TryGetValue(key, out result) ? result : fallback; }
@@ -142,30 +151,61 @@ namespace OpenCU {
         var mapping = D("path", path, "mediaType", "image/png", "width", width, "height", height, "bounds", D("x", left, "y", top, "width", width, "height", height), "windowBounds", Bounds(rect), "mappingId", token, "scale", 1, "coordinateSpace", "physical-screenshot-pixels"); mappings[S(target, "id")] = mapping; return mapping;
       }
     }
-    static Dictionary<string, object> Tree(Dictionary<string, object> target, Dictionary<string, object> options) {
-      string prefix = S(target, "id") + ":"; foreach (string key in elements.Keys.Where(k => k.StartsWith(prefix)).ToArray()) elements.Remove(key);
+    static void CheckTree(TreeRead read) { if (read.Cancelled || read.Epoch != epoch || eof) throw new OperationCanceledException("Accessibility read was cancelled"); }
+    static Dictionary<string, object> ReadTree(Dictionary<string, object> target, Dictionary<string, object> options, TreeRead read) {
+      string prefix = S(target, "id") + ":";
       var nodes = new List<object>(); var text = new StringBuilder(); int max = (int)Math.Min(3000, Math.Max(1, N(options, "maxNodes", 1000))), depthLimit = (int)Math.Min(80, N(options, "maxDepth", 40)); var clock = Stopwatch.StartNew(); bool truncated = false;
       Action<AutomationElement, int, string> visit = null;
       visit = (element, depth, parent) => {
+        CheckTree(read);
         if (nodes.Count >= max || depth > depthLimit || clock.ElapsedMilliseconds > N(options, "timeoutMs", 5000)) { truncated = true; return; }
         try {
-          var current = element.Current; string id = prefix + (++nextElement); elements[id] = element; object pattern;
+          var current = element.Current; CheckTree(read); string id = prefix + Interlocked.Increment(ref nextElement); read.Elements[id] = element; object pattern;
           var node = D("elementId", id, "role", current.ControlType.ProgrammaticName, "name", current.Name, "enabled", current.IsEnabled, "parentId", parent);
           if (!current.IsPassword && element.TryGetCurrentPattern(ValuePattern.Pattern, out pattern)) { var value = (ValuePattern)pattern; node["value"] = value.Current.Value; node["valueSettable"] = !value.Current.IsReadOnly; }
           var r = current.BoundingRectangle; if (!r.IsEmpty) node["bounds"] = D("x", r.X, "y", r.Y, "width", r.Width, "height", r.Height);
           nodes.Add(node); text.AppendLine(new string(' ', depth * 2) + "[" + id + "] " + current.ControlType.ProgrammaticName + " " + current.Name + (node.ContainsKey("value") ? " value=" + node["value"] : ""));
-          var child = TreeWalker.ControlViewWalker.GetFirstChild(element); while (child != null && !truncated) { visit(child, depth + 1, id); child = TreeWalker.ControlViewWalker.GetNextSibling(child); }
+          CheckTree(read);
+          var child = TreeWalker.ControlViewWalker.GetFirstChild(element); while (child != null && !truncated) { visit(child, depth + 1, id); CheckTree(read); child = TreeWalker.ControlViewWalker.GetNextSibling(child); }
         } catch (ElementNotAvailableException) { /* A disappearing subtree does not invalidate other live elements. */ }
       };
       visit(AutomationElement.FromHandle(Handle(target)), 0, null); return D("nodes", nodes, "text", text.ToString(), "truncated", truncated);
     }
+    static Dictionary<string, object> Tree(Dictionary<string, object> target, Dictionary<string, object> options, int expected) {
+      // A provider RPC can block inside Current/TreeWalker, beyond the traversal's
+      // stopwatch. Keep that read off the command lane, with at most one worker.
+      if (treeRead != null && treeRead.Worker.IsAlive) throw new Exception("AX_BUSY: a previous accessibility provider read is still pending; screenshot observation remains available");
+      int timeout = (int)Math.Min(5000, Math.Max(1, N(options, "timeoutMs", 5000)));
+      string prefix = S(target, "id") + ":";
+      foreach (string key in elements.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).ToArray()) elements.Remove(key);
+      var read = new TreeRead { Epoch = expected }; treeRead = read;
+      read.Worker = new Thread(() => {
+        try { Dpi(); CheckTree(read); read.Result = ReadTree(target, options, read); }
+        catch (Exception error) { read.Error = error; }
+        finally { if (read.Cancelled) { read.Elements.Clear(); read.Result = null; } }
+      });
+      read.Worker.IsBackground = true; read.Worker.SetApartmentState(ApartmentState.MTA); read.Worker.Start();
+      var clock = Stopwatch.StartNew();
+      while (!read.Worker.Join(10)) {
+        if (expected != epoch || eof) { read.Cancelled = true; throw new Exception("CONTROL_STOPPED: accessibility read was cancelled"); }
+        if (clock.ElapsedMilliseconds >= timeout) { read.Cancelled = true; throw new Exception("AX_TIMEOUT: accessibility provider did not respond within " + timeout + "ms; binding is retained and screenshot observation remains available"); }
+      }
+      if (expected != epoch || eof) throw new Exception("CONTROL_STOPPED: accessibility read was cancelled");
+      if (read.Error != null) throw read.Error;
+      Resolve(target, true);
+      foreach (var entry in read.Elements) elements[entry.Key] = entry.Value;
+      return read.Result;
+    }
     static void VerifyElementWindow(Dictionary<string, object> target, AutomationElement element) {
-      if (element == null || element.Current.ProcessId != Convert.ToInt32(target["pid"])) throw new Exception("TARGET_IDENTITY_CHANGED: element belongs to another application");
+      if (element == null) throw new Exception("STALE_ELEMENT: accessibility element is no longer available");
       var window = AutomationElement.FromHandle(Handle(target));
-      for (var current = element; current != null; current = TreeWalker.RawViewWalker.GetParent(current)) if (Automation.Compare(current, window)) return;
+      // WebView2 descendants can belong to a renderer process. Membership in the
+      // verified window's live raw tree, rather than PID equality, is authoritative.
+      var current = element;
+      for (int depth = 0; current != null && depth < 256; depth++, current = TreeWalker.RawViewWalker.GetParent(current)) if (Automation.Compare(current, window)) return;
       throw new Exception("TARGET_IDENTITY_CHANGED: element is outside the selected window");
     }
-    static AutomationElement Element(Dictionary<string, object> target, object id) { AutomationElement element; string key = Convert.ToString(id); if (!key.StartsWith(S(target, "id") + ":") || !elements.TryGetValue(key, out element) || element.Current.ProcessId != Convert.ToInt32(target["pid"])) throw new Exception("STALE_ELEMENT: observe the same window again"); VerifyElementWindow(target, element); return element; }
+    static AutomationElement Element(Dictionary<string, object> target, object id) { AutomationElement element; string key = Convert.ToString(id); if (!key.StartsWith(S(target, "id") + ":", StringComparison.Ordinal) || !elements.TryGetValue(key, out element)) throw new Exception("STALE_ELEMENT: observe the same window again"); VerifyElementWindow(target, element); return element; }
     static Point Position(Dictionary<string, object> target, Dictionary<string, object> action) {
       if (action.ContainsKey("elementId")) { var element = Element(target, action["elementId"]); var rect = element.Current.BoundingRectangle; if (rect.IsEmpty || element.Current.IsOffscreen) throw new Exception("ELEMENT_NOT_VISIBLE: selected element has no usable bounds"); return new Point { X = (int)(rect.X + rect.Width / 2), Y = (int)(rect.Y + rect.Height / 2) }; }
       Dictionary<string, object> mapping; if (!mappings.TryGetValue(S(target, "id"), out mapping)) throw new Exception("OBSERVATION_REQUIRED: capture before using coordinates");
@@ -191,7 +231,7 @@ namespace OpenCU {
         if (element == null) throw new Exception("ELEMENT_NOT_FOUND: no accessibility element in selected window at this point");
       }
       VerifyElementWindow(target, element); Check(expected, target, false);
-      if (type == "hit_test") { string id = S(target, "id") + ":" + (++nextElement); elements[id] = element; return D("element", D("elementId", id, "name", element.Current.Name, "role", element.Current.ControlType.ProgrammaticName)); }
+      if (type == "hit_test") { string id = S(target, "id") + ":" + Interlocked.Increment(ref nextElement); elements[id] = element; return D("element", D("elementId", id, "name", element.Current.Name, "role", element.Current.ControlType.ProgrammaticName)); }
       object pattern;
       if (type == "scroll") {
         var node = element;
@@ -224,7 +264,7 @@ namespace OpenCU {
       }
       if (mode == "background" && (type == "click" || type == "ax_press" || type == "scroll" || type == "hit_test")) return BackgroundAction(target, action, expected);
       if (type == "activate") { SetForegroundWindow(Handle(target)); Foreground(target); }
-      else if (type == "hit_test") { var at = Position(target, action); var hit = AutomationElement.FromPoint(new System.Windows.Point(at.X, at.Y)); VerifyElementWindow(target, hit); string id = S(target, "id") + ":" + (++nextElement); elements[id] = hit; return D("element", D("elementId", id, "name", hit.Current.Name, "role", hit.Current.ControlType.ProgrammaticName)); }
+      else if (type == "hit_test") { var at = Position(target, action); var hit = AutomationElement.FromPoint(new System.Windows.Point(at.X, at.Y)); VerifyElementWindow(target, hit); string id = S(target, "id") + ":" + Interlocked.Increment(ref nextElement); elements[id] = hit; return D("element", D("elementId", id, "name", hit.Current.Name, "role", hit.Current.ControlType.ProgrammaticName)); }
       else if (type == "set_value") { object pattern; var element = Element(target, V(action, "elementId")); if (!element.TryGetCurrentPattern(ValuePattern.Pattern, out pattern) || ((ValuePattern)pattern).Current.IsReadOnly) throw new Exception("VALUE_NOT_SETTABLE: element has no writable value"); ((ValuePattern)pattern).SetValue(S(action, "value", S(action, "text"))); }
       else if (type == "ax_press") { object pattern; var element = Element(target, V(action, "elementId")); if (!element.TryGetCurrentPattern(InvokePattern.Pattern, out pattern)) throw new Exception("ACTION_UNAVAILABLE: element cannot be invoked"); ((InvokePattern)pattern).Invoke(); }
       else if (type == "type_text") { foreach (char ch in S(action, "text")) { Check(expected, target); if (ch == '\n' || ch == '\t') { int key = ch == '\n' ? 13 : 9; Key(key, true, expected); Key(key, false); } else { Send(new Input { Type = 1, Data = new InputUnion { Key = new KeyInput { Scan = ch, Flags = 4 } } }); Send(new Input { Type = 1, Data = new InputUnion { Key = new KeyInput { Scan = ch, Flags = 6 } } }); } } }
@@ -267,7 +307,7 @@ namespace OpenCU {
       if (method == "act") return Act(selected, Obj(V(args, "action")), expected);
       if (method == "observe") {
         var options = Obj(V(args, "options")); string format = S(options, "format", "both"); var result = D("observationId", Guid.NewGuid().ToString(), "targetId", selected["id"], "identity", selected["identity"], "coordinateSpace", "physical-screenshot-pixels"); Activity.Watch(Handle(selected).ToInt64(), S(selected, "id")); foreach (var item in Obj(Activity.Read(S(selected, "id")))) result[item.Key] = item.Value; var errors = new List<object>();
-        if (format != "screenshot") try { var tree = Tree(selected, options); result["ax"] = tree; result["text"] = tree["text"]; } catch (Exception error) { errors.Add(D("message", error.Message)); }
+        if (format != "screenshot") try { var tree = Tree(selected, options, expected); result["ax"] = tree; result["text"] = tree["text"]; } catch (Exception error) { if (format == "ax" || expected != epoch || eof) throw; errors.Add(D("code", error.Message.Contains(":") ? error.Message.Split(':')[0] : "NATIVE_FAILURE", "message", error.Message)); }
         if (format != "ax") try { result["screenshot"] = Capture(selected, false); } catch (Exception error) { errors.Add(D("message", error.Message)); }
         if (!result.ContainsKey("ax") && !result.ContainsKey("screenshot")) throw new Exception("OBSERVATION_FAILED: " + Json().Serialize(errors)); if (errors.Count > 0) { result["partial"] = true; result["errors"] = errors; } return result;
       }

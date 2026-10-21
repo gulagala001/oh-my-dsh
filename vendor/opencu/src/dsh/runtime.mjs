@@ -197,7 +197,7 @@ export function createPluginRuntime(options = {}) {
     } finally { await deliveryFiles.retainAll(records.flatMap(record => record.file ? [record.file] : [])); }
     return { ok: true, deliveries: records };
   }
-  async function authorizeApplication(runtime, endpoint, args, sessionKey, signal) {
+  async function authorizeApplication(runtime, endpoint, args, sessionKey, signal, onApprovalWait) {
     if (!['select', 'observe', 'act', 'resume', 'preview'].includes(endpoint)) return args;
     let target;
     if (endpoint === 'select') {
@@ -220,10 +220,10 @@ export function createPluginRuntime(options = {}) {
     const bound = endpoint === 'select'
       ? {...args, reference: {...(typeof args.reference === 'object' ? args.reference : {}), id: target.id, targetId: target.id, identity}}
       : {...args, targetId: target.id, targetIdentity: identity};
-    if (target?.backend === 'native') await appApprovals.authorize(target, sessionKey, signal, () => runtime.applicationMetadata(target));
+    if (target?.backend === 'native') await appApprovals.authorize(target, sessionKey, signal, () => runtime.applicationMetadata(target), onApprovalWait);
     return bound;
   }
-  async function request(endpoint, args = {}, { attachments, signal, sessionKey, modelProjection = false } = {}) {
+  async function request(endpoint, args = {}, { attachments, signal, sessionKey, modelProjection = false, onApprovalWait } = {}) {
     if (disposed) throw new Error('OpenCU plugin is unloading');
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw error('INVALID_ARGUMENT', 'OpenCU payload must be an object');
     if (endpoint === 'appApprovals/read') return { ok: true, approvals: await appApprovals.read() };
@@ -311,7 +311,7 @@ export function createPluginRuntime(options = {}) {
       await imageRegistry.retain(image);
       return { ok: true, image };
     }
-    args = await authorizeApplication(runtime, endpoint, args, sessionKey, signal);
+    args = await authorizeApplication(runtime, endpoint, args, sessionKey, signal, onApprovalWait);
     signal?.throwIfAborted();
     if (active.has(endpoint)) { revision++; activity = { endpoint, targetId: args.targetId ?? null, at: new Date().toISOString(), status: 'running' }; }
     try {

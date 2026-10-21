@@ -80,6 +80,7 @@ export function createComputerRepl(request, report = () => {}) {
       last = { id, observationId, coordinateSpace, screenshot };
       const result = modelResult(observations.project(raw, { ...options, targetId: target.id, format }), { ...options, format });
       if (options.emit !== false) {
+        if (raw.observation.partial && raw.observation.errors?.length) emit({targetId: target.id, partialObservation: true, errors: raw.observation.errors});
         if (result.userActivity) emit({ userActivity: result.userActivity, observedUserActivitySequence: result.observedUserActivitySequence,
           notice: 'The user interacted with this target. This is information, not a takeover or a stop; use the fresh observation before continuing.' });
         if (raw.observation.userActivityMonitoring?.available === false) emit({ userActivityMonitoring: raw.observation.userActivityMonitoring,
