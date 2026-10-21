@@ -42,6 +42,7 @@ Windows 原生 helper 由系统 Windows PowerShell 编译随包 C#，需要 Wind
 - macOS 使用私有事件源和 `postToPid`，不移动系统鼠标；需要明确窗口。后台普通左键点击优先对支持的控件或其子元素执行 `AXPress`，禁用控件直接拒绝；否则，对已观察表格行、单元格或其文本在精确窗口内寻找最近行并使用可写 `AXSelected`，不支持时返回 `BACKGROUND_SELECTION_UNAVAILABLE`，不发送指针输入。多选表格中普通点击只保留目标行；持键、其他鼠标按钮及双击仍沿原事件路径。键盘仅发给应用内部当前键盘窗口，其他窗口用 AX 元素操作或返回 `BACKGROUND_KEYBOARD_UNAVAILABLE`。目标应用仍可能忽略事件或因自身行为激活窗口；这不是全应用无干扰保证。
 - Windows 使用 UI Automation 的文本、Invoke／Toggle／SelectionItem／ExpandCollapse 和滚动模式；截图使用 `PrintWindow`，不还原最小化窗口或回退桌面截图。应用拒绝或不提供窗口像素时明确不可用。
 - Windows 控件按所选窗口的实时 UIA 祖先链核验归属，允许 WebView2 跨进程子树，仍拒绝同进程的其他窗口。辅助功能读取在 MTA 线程执行，最多等待 5 秒；超时保留绑定，不发布迟到元素，仍可读取窗口截图。旧读取尚未结束时返回 `AX_BUSY`，不会反复创建线程。
+- macOS 的直接赋值、AXPress、元素坐标与指定元素输入均复核当前窗口归属；X11／Wayland 的元素坐标和前台命中测试同样按当前窗口祖先链核验，允许窗口内的跨进程控件，拒绝已移到同进程另一窗口的旧元素。
 - `APP_APPROVAL_TIMEOUT` 表示总执行时限内仍在等待用户授予应用访问权，不等于 helper 卡死；重选原目标后需响应授权请求。其他 `COMPUTER_TIMEOUT` 通过 `details.stage`／`pendingRequests` 标明挂起的后端调用或 JavaScript 阶段。取消和输入释放语义保持一致，不能据此重放可能已派发的输入。
 - X11 使用 AT-SPI 动作与 XComposite 窗口像素；Wayland 使用 AT-SPI 动作，portal 仍只共享显示器，不提供被遮挡应用的独立像素，非活跃应用截图明确不可用。Windows／Linux 的后台滚动是应用定义的步长，不是精确像素。
 

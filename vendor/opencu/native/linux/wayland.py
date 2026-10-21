@@ -375,9 +375,9 @@ def element(target, key):
     value = elements.get(key)
     if not str(key).startswith(target['id'] + ':') or value is None:
         fail('STALE_ELEMENT', 'Observe the selected application again')
-    if value.getApplication().get_process_id() != target.get('pid') or value.getState().contains(pyatspi.STATE_DEFUNCT):
-        fail('TARGET_IDENTITY_CHANGED', 'Accessibility element is no longer in the selected application')
-    return value
+    if value.getState().contains(pyatspi.STATE_DEFUNCT):
+        fail('STALE_ELEMENT', 'Accessibility element is no longer available')
+    return verify_window(value, windows[target['id']], fail)
 
 
 def point(target, action):
@@ -531,9 +531,11 @@ def act(target, action, expected):
         origin = state['stream']['position']
         if target['kind'] != 'app' or origin is None:
             fail('ACCESSIBILITY_UNAVAILABLE', 'Hit testing requires a selected AT-SPI application')
-        hit = windows[target['id']].queryComponent().getAccessibleAtPoint(int(px + origin[0]), int(py + origin[1]), pyatspi.DESKTOP_COORDS)
-        if not hit or hit.getApplication().get_process_id() != target['pid']:
-            fail('TARGET_MISMATCH', 'Point does not identify an element in the selected application')
+        window = windows[target['id']]
+        hit = window.queryComponent().getAccessibleAtPoint(int(px + origin[0]), int(py + origin[1]), pyatspi.DESKTOP_COORDS)
+        if hit is None:
+            fail('ELEMENT_NOT_FOUND', 'No accessibility element at this point in the selected window')
+        verify_window(hit, window, fail)
         key = target['id'] + ':' + str(uuid.uuid4())
         elements[key] = hit
         return dict(element=dict(elementId=key, name=hit.name, role=hit.getRoleName()))

@@ -328,9 +328,7 @@ def element(t, key):
     if not str(key).startswith(t['id'] + ':') or key not in elements:
         fail('STALE_ELEMENT', 'Observe the selected application again')
     value = elements[key]
-    if value.getApplication().get_process_id() != t['pid']:
-        fail('TARGET_IDENTITY_CHANGED', 'Element belongs to another process')
-    return value
+    return verify_window(value, app_window(t), fail)
 
 
 def point(t, action):
@@ -442,9 +440,11 @@ def act(t, action, expected):
         x.XFlush(display)
     elif kind == 'hit_test':
         px, py = point(t, action)
-        hit = app_window(t).queryComponent().getAccessibleAtPoint(px, py, pyatspi.DESKTOP_COORDS)
-        if not hit or hit.getApplication().get_process_id() != t['pid']:
-            fail('TARGET_IDENTITY_CHANGED', 'Point does not belong to the selected application')
+        window = app_window(t)
+        hit = window.queryComponent().getAccessibleAtPoint(px, py, pyatspi.DESKTOP_COORDS)
+        if hit is None:
+            fail('ELEMENT_NOT_FOUND', 'No accessibility element at this point in the selected window')
+        verify_window(hit, window, fail)
         key = t['id'] + ':' + str(uuid.uuid4())
         elements[key] = hit
         return dict(element=dict(elementId=key, name=hit.name, role=hit.getRoleName()))

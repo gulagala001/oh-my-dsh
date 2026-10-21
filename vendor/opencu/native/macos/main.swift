@@ -153,7 +153,7 @@ final class NativeService {
     }
 
     func point(_ action: [String: Any], _ target: [String: Any]) throws -> CGPoint {
-        if let elementID = action["elementId"] as? Int { return try ax.center(elementID, target: target) }
+        if let elementID = action["elementId"] as? Int { return try ax.center(elementID, target: target, targets: targets) }
         return try capture.point(action, target: target)
     }
 
@@ -252,10 +252,10 @@ final class NativeService {
             }
         case "set_value":
             guard let id = action["elementId"] as? Int, let value = action["value"], value is String || value is NSNumber else { throw NativeFailure("INVALID_ACTION", "AX set_value requires numeric elementId and string/number value.") }
-            try ax.setValue(id, target: target, value: value)
+            try ax.setValue(id, target: target, targets: targets, value: value)
         case "ax_press":
             guard let id = action["elementId"] as? Int else { throw NativeFailure("INVALID_ACTION", "ax_press requires numeric elementId.") }
-            try ax.press(id, target: target)
+            try ax.press(id, target: target, targets: targets)
         case "move": try input.move(point(action, target))
         case "click", "double_click", "right_click", "mouse_down", "mouse_up":
             if let element = pressElement {
@@ -375,6 +375,7 @@ final class NativeService {
             if let id = action["elementId"] as? Int {
                 try requireAX()
                 let element = try ax.get(id, target: target)
+                try ax.verifyWindow(element, target: target, targets: targets)
                 if mode == "background" {
                     let root = AXUIElementCreateApplication(pid_t(target["pid"] as? Int ?? 0))
                     guard let focused = attribute(root, kAXFocusedUIElementAttribute), CFEqual(focused, element) else {

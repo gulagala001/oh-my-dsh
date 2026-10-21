@@ -136,18 +136,18 @@ final class AccessibilityStore {
         return result
     }
 
-    func setValue(_ id: Int, target: [String: Any], value: Any) throws {
+    func setValue(_ id: Int, target: [String: Any], targets: TargetStore, value: Any) throws {
         try requireAX()
-        let element = try get(id, target: target)
+        let element = try currentElement(id, target: target, targets: targets)
         var settable = DarwinBoolean(false)
         try checkedAX(AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable), "check value is settable")
         guard settable.boolValue else { throw NativeFailure("AX_VALUE_NOT_SETTABLE", "The selected element does not support AX value assignment.") }
         try checkedAX(AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, value as CFTypeRef), "set value")
     }
 
-    func press(_ id: Int, target: [String: Any]) throws {
+    func press(_ id: Int, target: [String: Any], targets: TargetStore) throws {
         try requireAX()
-        try checkedAX(AXUIElementPerformAction(try get(id, target: target), kAXPressAction as CFString), "press element")
+        try checkedAX(AXUIElementPerformAction(try currentElement(id, target: target, targets: targets), kAXPressAction as CFString), "press element")
     }
 
     private func selectedRange(_ element: AXUIElement) -> CFRange? {
@@ -350,9 +350,9 @@ final class AccessibilityStore {
         throw NativeFailure("TARGET_IDENTITY_CHANGED", "The selected row is outside the target window.")
     }
 
-    func center(_ id: Int, target: [String: Any]) throws -> CGPoint {
+    func center(_ id: Int, target: [String: Any], targets: TargetStore) throws -> CGPoint {
         try requireAX()
-        guard let bounds = axRect(try get(id, target: target)), bounds.width > 0, bounds.height > 0 else {
+        guard let bounds = axRect(try currentElement(id, target: target, targets: targets)), bounds.width > 0, bounds.height > 0 else {
             throw NativeFailure("ELEMENT_NOT_VISIBLE", "AX element has no usable screen bounds.")
         }
         return CGPoint(x: bounds.midX, y: bounds.midY)
