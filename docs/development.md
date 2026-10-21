@@ -60,7 +60,7 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 | 路径 | 内容 |
 | --- | --- |
 | `cordis.patch.yml`、`presets/` | 宿主与预设组合 |
-| `src/index.mjs`、`src/dsh-agent.mjs` | 生命周期／工具 |
+| `src/index.mjs`、`src/runtime.mjs`、`src/dsh-agent.mjs` | 轻量启动入口／增强运行时／工具 |
 | `src/context/` | 摘要、资料、替换、回查 |
 | `src/tasks.mjs`、`src/todolist.mjs` | 锚点、任务、证据 |
 | `src/hub.mjs`、`src/hub-store.mjs`、`src/monitor-ledger.mjs` | 后台／持久监控账本 |

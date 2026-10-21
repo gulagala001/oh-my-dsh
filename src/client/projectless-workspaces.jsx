@@ -2,14 +2,44 @@ import { Icon } from './native-icons.jsx';
 import { Button } from './native-controls.jsx';
 import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ProjectlessDrafts } from './projectless-state.mjs';
+import { decorateSlotComponent } from './slot-decoration.mjs';
 import css from './projectless-workspaces.css';
 
-export function applyProjectlessWorkspaces(ctx) {
+export function applyProjectlessWorkspaces(ctx, { onError = error => console.error('新会话创建失败', error) } = {}) {
   const drafts = new ProjectlessDrafts(ctx);
+  let initialPreset;
+  ctx.effect(() => decorateSlotComponent(ctx.slots, 'conversation.hero.agentPreset', () => true, entry => {
+    const Original = entry.component;
+    return function Preset(props) {
+      const id = props.useAgentPresetSeat(state => state.current);
+      useLayoutEffect(() => {
+        if (props.sessionId !== undefined) return;
+        const selection = { id }; initialPreset = selection;
+        return () => { if (initialPreset === selection) initialPreset = undefined; };
+      }, [id, props.sessionId]);
+      return <Original {...props}/>;
+    };
+  }));
   const useDrafts = () => useSyncExternalStore(drafts.subscribe, drafts.getSnapshot);
   ctx.effect(() => {
     const style = document.createElement('style'); style.dataset.plugin = 'omd-projectless'; style.textContent = css; document.head.append(style);
-    const workspace = ctx.uiWorkspace, original = workspace.startSession;
+    const workspace = ctx.uiWorkspace, original = workspace.startSession, originalRestore = workspace.restoreSelection;
+    let initialCreations = 0;
+    // A failed initial restore retries on every Session-list update. During an
+    // explicit first creation, that retry would cancel the user's navigation
+    // and try the broken default again. The native openWorkspace still owns
+    // admission, blank reuse, navigation cancellation and error presentation.
+    function restore(...args) {
+      if (initialCreations) return Promise.resolve();
+      return originalRestore.apply(this, args);
+    }
+    workspace.restoreSelection = restore;
+    drafts.openInitialWorkspace = async (workspaceId, agentPreset) => {
+      if (drafts.lifetime.signal.aborted) return;
+      initialCreations++;
+      try { await workspace.openWorkspace(workspaceId, undefined, { agentPreset }); }
+      finally { initialCreations--; }
+    };
     function start(workspaceId, options) {
       const id = drafts.current();
       if (workspaceId !== undefined || !id) return original.call(workspace, workspaceId, options);
@@ -40,6 +70,7 @@ export function applyProjectlessWorkspaces(ctx) {
     return () => {
       document.removeEventListener('click', onUngroupedCreate, true);
       if (workspace.startSession === start) workspace.startSession = original;
+      if (workspace.restoreSelection === restore) workspace.restoreSelection = originalRestore;
       drafts.dispose(); style.remove();
     };
   });
@@ -70,6 +101,16 @@ export function applyProjectlessWorkspaces(ctx) {
     if (drafts.lifetime.signal.aborted) return <Original {...props}/>;
     const pick = workspaceId => {
       if (drafts.isBusy(id)) return;
+      // The native unbound seat applies its staged preset only after a Session
+      // exists. Forward the actual selection to first creation so an invalid
+      // deployment default cannot block a different, healthy preset.
+      if (id === undefined && initialPreset?.id) {
+        props.onClose();
+        void drafts.openInitialWorkspace(workspaceId, initialPreset.id).catch(error => {
+          if (!drafts.lifetime.signal.aborted) onError(error);
+        });
+        return;
+      }
       // A refused navigation must leave the cancelled source projectless.
       // Choosing its original Workspace explicitly restores that selection.
       if (workspaceId === props.selectedId) drafts.clear(id);

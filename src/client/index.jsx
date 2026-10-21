@@ -39,6 +39,8 @@ import { applySessionOverview } from './session-overview.jsx';
 import { applyProjectlessWorkspaces } from './projectless-workspaces.jsx';
 import { apply as applyDeepSeekWorkbench } from '../../plugins/deepseek-workbench/src/client/index.jsx';
 import { apply as applyExtensions, inject as extensionsInject } from '../../plugins/dsh-extensions/src/client/index.jsx';
+import { mountOptionalClient } from './optional-client.mjs';
+import { applyStartupNotice } from './startup.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 
@@ -90,32 +92,49 @@ function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
-const hostConversation = createConversation(require), hostChat = createChat(require), openCU = createOpenCU(require);
+const hostConversation = createConversation(require), hostChat = createChat(require);
 // The embedded Conversation plugin provides both services during apply().
 // Waiting for either here would prevent their provider from ever starting.
-export const inject = [...new Set(['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', 'remote.session', 'remote.subagents', 'remote.agentPresets', ...hostConversation.inject, ...hostChat.inject, ...rewindInject])].filter(name => name !== 'uiConversation' && name !== 'conversation');
+export const inject = [...new Set(['layout', ...hostConversation.inject, ...hostChat.inject])].filter(name => name !== 'uiConversation' && name !== 'conversation');
 export async function apply(ctx) {
-  const persona = acquirePersonaClient(ctx, { embedded: true });
   ctx.provide('omdConversationLifecycle', installConversationLifecycle(ctx));
+  const report = applyStartupNotice(ctx);
+  const projectlessDrafts = applyProjectlessWorkspaces(ctx, { onError: error => report('新会话', error) });
+  await ctx.plugin(hostConversation, { settingsNamespace: 'omd-ui-conversation' });
+  const chatSettings = createChatSettings(() => ctx.configForms.get('omd-ui-chat'), () => () => {});
+  ctx.effect(() => () => chatSettings.dispose());
+  await ctx.plugin(hostChat, { settings: chatSettings });
+  await mountOptionalClient(ctx, 'OMD 界面增强', async () => ({
+    inject: ['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', 'remote.session', 'remote.subagents', 'remote.agentPresets'],
+    apply: scope => applyEnhancements(scope, { chatSettings, projectlessDrafts, report }),
+  }), report);
+}
+
+async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report }) {
+  const persona = acquirePersonaClient(ctx, { embedded: true });
   applySessionTimeZone(ctx);
   applyFeatureClients(ctx, { 'dsh-deepseek-workbench': applyDeepSeekWorkbench, 'dsh-extensions': { apply: applyExtensions, inject: extensionsInject } });
   ctx.inject(['commandUi', 'sidebarRight', 'sidebarRightTabs'], installTemporaryChat);
   applyHistorySize(ctx);
   installDesktopLifecycle(ctx);
-  const projectlessDrafts = applyProjectlessWorkspaces(ctx);
-  await ctx.plugin(hostConversation, { settingsNamespace: 'omd-ui-conversation' });
-  const chatSettings = createChatSettings(() => ctx.configForms.get('omd-ui-chat'), () => () => {});
-  ctx.effect(() => () => chatSettings.dispose());
-  await ctx.plugin(hostChat, { settings: chatSettings });
-  await applyRewind(ctx);
-  await ctx.plugin(openCU);
+  await mountOptionalClient(ctx, '回合撤回', async () => ({ inject: rewindInject, apply: applyRewind }), report);
+  await mountOptionalClient(ctx, '电脑操作', async () => {
+    const openCU = createOpenCU(require);
+    return { ...openCU, async apply(scope, config) {
+      await openCU.apply(scope, config);
+      applySessionOverview(scope, openCU);
+    } };
+  }, report);
   const optimizer = applyPromptOptimizer(ctx, { draftLock: projectlessDrafts });
+  const previousOptimizer = projectlessDrafts.transferOptimizer;
   projectlessDrafts.transferOptimizer = optimizer.transferDraft;
+  ctx.effect(() => () => {
+    if (projectlessDrafts.transferOptimizer === optimizer.transferDraft) projectlessDrafts.transferOptimizer = previousOptimizer;
+  });
   applyModelPanel(ctx);
   applySubscriptionFast(ctx);
   applyMemoryPermissions(ctx);
-  await applyWorkflowClient(ctx);
-  applySessionOverview(ctx, openCU);
+  await mountOptionalClient(ctx, '工作流', async () => ({ apply: applyWorkflowClient }), report);
   function RunningMarker(props) {
     const running = props.useSessionStatus(s => Boolean(s.get(props.sessionId)?.running));
     return <span hidden data-omd-running={running ? '' : undefined}/>;

@@ -60,7 +60,7 @@ Closing the browser does not stop the background service. Use Ctrl+C to stop a f
 | Path | Responsibility |
 | --- | --- |
 | `cordis.patch.yml`, `presets/` | Host/preset composition |
-| `src/index.mjs`, `src/dsh-agent.mjs` | Lifecycle and tools |
+| `src/index.mjs`, `src/runtime.mjs`, `src/dsh-agent.mjs` | Lightweight startup, enhancement runtime, and tools |
 | `src/context/` | Summaries, documents, replacement, recall |
 | `src/tasks.mjs`, `src/todolist.mjs` | Anchors, tasks, evidence |
 | `src/hub.mjs`, `src/hub-store.mjs`, `src/monitor-ledger.mjs` | Background work/persistent monitoring ledger |

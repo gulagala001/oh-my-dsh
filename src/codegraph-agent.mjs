@@ -1,4 +1,3 @@
-import { createMcpToolDefinition } from '@deepseek-ai/dsh-mcp-client';
 import { currentDirectory } from './working-directory.mjs';
 import { codegraphCatalogOwner } from './codegraph-agent-lifecycle.mjs';
 
@@ -31,6 +30,12 @@ export async function apply(ctx) {
       let tools;
       try { ({ tools } = await owner.wait(runtime.catalog({ signal: owner.signal }))); }
       catch (error) { if (owner.active()) ctx.logger?.warn?.('CodeGraph: ' + error.message); return; }
+      let createMcpToolDefinition;
+      try { ({ createMcpToolDefinition } = await owner.wait(import('@deepseek-ai/dsh-mcp-client'))); }
+      catch (error) {
+        if (owner.active() && runtime.catalogRevision === revision) runtime.catalogError = error?.message ?? String(error);
+        throw error;
+      }
       if (!owner.active() || runtime.catalogRevision !== revision) return;
       for (const tool of tools) {
         if (!owner.active()) return;

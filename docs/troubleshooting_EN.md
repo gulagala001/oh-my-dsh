@@ -60,6 +60,23 @@ The package manager lacks remote archive integrity information. Recommended mana
 
 <a id="offline"></a>
 
+<a id="native-dependencies"></a>
+
+## Missing Native Dependencies, `sharp`, or Windows `EPERM`
+
+OMD loads its enhancement runtime separately from the basic Conversation/Chat providers. An enhancement import or initialization failure leaves the conversation UI available and displays the first error, its causes, paths, and stack. Undo, Computer Use, and workflow UI have independent lifecycles. CodeGraph and Computer Use load dependencies on demand; `sharp` loads when taking screenshots. Select another available Agent preset to continue chatting while repairing a failed enhancement. Damage to the host or basic conversation components still requires repairing that installation.
+
+1. Fully quit the desktop application and its Host, then back up the actual profile, data, and configuration. A running process can hold native files open on Windows and cause `EPERM`. Stop further installation attempts after a failure and retain the first error.
+2. Reinstall the fixed OMD package matching the exact host version through the original plugin management entry, retaining optionalDependencies. A directory and manifest do not prove its entry, `.node`, or DLL files are intact. `--lockfile-only` updates the lockfile and does not repair disk files. Do not combine dependency files from different versions or platforms or permanently override the official conversation entries to hide a failure.
+3. With the same OS, architecture, and Node runtime as the affected host, run the read-only check against the installed directory (or use `pnpm runtime:check` in a source checkout):
+
+   ```sh
+   node /path/to/profile/node_modules/oh-my-dsh/scripts/check-runtime.mjs
+   ```
+
+   It imports the plugin and deferred dependencies independently and generates a PNG with the actual `sharp` instance. Any failure returns a nonzero status with the original error chain. For desktop, run it with the corresponding bundled Node runtime. If only a system Node result is available, record the runtime difference; it does not establish that Electron's runtime works. Offline transfers still require the complete offline check below.
+4. Restart normally and check an existing conversation, a new conversation, and the affected feature. If it still fails, report the first error, exact versions, OS/architecture, profile, and dependency path without credentials or full conversations.
+
 ## Offline Transfer and Local Installation
 
 Release `.tgz` files do not include every dependency/runtime. Prepare a complete directory online on the same operating system and architecture, then transfer it intact. Do not move it across platforms or zip an ordinary dependency tree containing absolute links.

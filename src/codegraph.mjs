@@ -4,8 +4,6 @@ import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { Client } from '@modelcontextprotocol/client';
-import { StdioClientTransport, getDefaultEnvironment } from '@modelcontextprotocol/client/stdio';
 
 const require = createRequire(import.meta.url);
 const STDERR_LIMIT = 8000;
@@ -90,6 +88,7 @@ export function codegraphCommand(cacheDir) {
 }
 
 export function codegraphEnvironment() {
+  const { getDefaultEnvironment } = require('@modelcontextprotocol/client/stdio');
   return { ...getDefaultEnvironment(), CODEGRAPH_TELEMETRY: '0', CODEGRAPH_NO_DOWNLOAD: '1',
     CODEGRAPH_NO_DAEMON: '1', CODEGRAPH_HOST_PPID: String(process.pid), NO_COLOR: '1',
     CODEGRAPH_EXPLORE_DEDUP: '0', CODEGRAPH_MCP_TOOLS: 'explore,node,search,callers,callees,impact,files,status' };
@@ -186,6 +185,9 @@ export class CodegraphRuntime {
     signal = signal ? AbortSignal.any([signal, owner]) : owner;
     throwIfAborted(signal);
     const launch = await waitFor(this.prepare({ catalog }), signal);
+    const [{ Client }, { StdioClientTransport }] = await waitFor(Promise.all([
+      import('@modelcontextprotocol/client'), import('@modelcontextprotocol/client/stdio'),
+    ]), signal);
     throwIfAborted(signal);
     const client = new Client({ name: 'oh-my-dsh', version: '1' });
     const transport = new StdioClientTransport({ ...launch,

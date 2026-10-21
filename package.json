@@ -28,6 +28,7 @@
     "dev": "node scripts/build.mjs && node scripts/start.mjs",
     "offline:prepare": "node scripts/prepare-offline.mjs",
     "offline:check": "node scripts/check-offline.mjs",
+    "runtime:check": "node scripts/check-runtime.mjs",
     "test": "node scripts/test-ci.mjs run core",
     "test:all": "node scripts/test-ci.mjs run all",
     "test:smoke": "node scripts/test-ci.mjs run core",

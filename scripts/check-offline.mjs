@@ -2,10 +2,11 @@ import { existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { checkDeferredDependencies } from './check-runtime.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 export const offlineEntries = [
-  'src/index.mjs', 'src/ptc.mjs', 'lib/host/jobs-local.mjs',
+  'src/index.mjs', 'src/runtime.mjs', 'src/ptc.mjs', 'lib/host/jobs-local.mjs',
   'lib/host/workflow-spawn.mjs', 'lib/host/pwsh-sandbox.mjs',
   'lib/host/ui-conversation.mjs', 'src/host/ui-chat.mjs',
   'src/result-reduction/service.mjs', 'src/result-reduction/views.mjs',
@@ -85,20 +86,8 @@ export async function checkOffline(directory = root) {
     }
     checks.push('context optimization direct dependencies');
   } catch (error) { errors.push('上下文优化随包资源：' + error.message); }
-  for (const name of ['sharp', '@colbymchenry/codegraph']) {
-    try {
-      if (!inside(directory, realpathSync(requirePackage.resolve(name)))) throw new Error('依赖解析到了离线目录外');
-      if (name === 'sharp') {
-        const sharp = requirePackage(name);
-        await sharp({ create: { width: 1, height: 1, channels: 3, background: '#000000' } }).png().toBuffer();
-      } else {
-        const target = `${name}-${process.platform}-${process.arch}`;
-        if (!inside(directory, realpathSync(requirePackage.resolve(target + '/lib/dist/index.js')))) throw new Error('平台包解析到了离线目录外');
-        requirePackage(name);
-      }
-      checks.push(name);
-    } catch (error) { errors.push(`${name}: ${error.stack ?? error}`); }
-  }
+  const deferred = await checkDeferredDependencies(directory, { portable: true });
+  checks.push(...deferred.checks); errors.push(...deferred.errors);
   return { ok: errors.length === 0, checks, errors };
 }
 

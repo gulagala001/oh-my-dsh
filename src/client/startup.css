@@ -1,0 +1,21 @@
+.omd-startup-notice {
+  position: fixed;
+  inset-inline: 16px;
+  bottom: 16px;
+  z-index: 10000;
+  max-height: min(50vh, 420px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--dsw-alias-border-l2, #888);
+  border-radius: 12px;
+  color: var(--dsw-alias-text-primary, CanvasText);
+  background: var(--dsw-alias-bg-base, Canvas);
+  box-shadow: 0 4px 24px #0003;
+  font-size: 13px;
+  -webkit-app-region: no-drag;
+}
+.omd-startup-notice > button { float: right; }
+.omd-startup-notice details { margin-block: 8px; }
+.omd-startup-notice summary { cursor: pointer; overflow-wrap: anywhere; }
+.omd-startup-notice pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow: auto; }
+.omd-startup-notice p { margin-block: 8px; }
