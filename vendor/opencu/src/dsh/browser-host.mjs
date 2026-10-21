@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { checkExpected, fail, inputReleased, json, referenceMatches, sameIdentity } from '../protocol.mjs';
+import { compactPresentationImages } from '../presentation-images.mjs';
 
 /** The authenticated DSH renderer owns each real sidebar guest, not a screenshot proxy. */
 export function createBrowserHost() {
   const clients = new Map(), pending = new Map(), sessionOwners = new Map(), bindings = new Map();
   let closed = false;
+  const resetPresentationImages = client => { client.presentationSequence++; client.presentationFrames = []; };
   function disconnect(client, reason) {
+    resetPresentationImages(client);
     if (clients.get(client.id) === client) clients.delete(client.id);
     client.wake?.();
     for (const [id, task] of pending) if (task.client === client) {
@@ -169,14 +172,32 @@ export function createBrowserHost() {
     async present(payload, ownerId) {
       const owner = liveClients().find(client => client.id === ownerId && client.presentation);
       if (!owner) fail('PRESENTATION_HOST_UNAVAILABLE', 'The owning DSH window is no longer available');
-      return request(owner, 'presentation', { operation: 'update', payload });
+      if (!owner.presentationImages) return request(owner, 'presentation', { operation: 'update', payload });
+      const sequence = ++owner.presentationSequence, baseline = randomUUID();
+      const current = () => clients.get(owner.id) === owner && sequence === owner.presentationSequence;
+      const send = frames => request(owner, 'presentation', { operation: 'update', payload: { ...payload, frames, presentationImageBaseline: baseline } });
+      try {
+        let result;
+        try { result = await send(compactPresentationImages(owner.presentationFrames, payload.frames)); }
+        catch (error) {
+          // A renderer can lose its cache independently of the broker. Retry
+          // this display update once with full pixels, never an input action.
+          if (error.code !== 'PRESENTATION_IMAGE_BASELINE_MISSING' || !current()) throw error;
+          result = await send(payload.frames);
+        }
+        if (current()) owner.presentationFrames = result?.presentationImageBaseline === baseline ? payload.frames.map(frame => ({ ...frame })) : [];
+        const { presentationImageBaseline, ...value } = result ?? {};
+        return value;
+      } catch (error) { if (current()) owner.presentationFrames = []; throw error; }
     },
     async hidePresentation(ownerId) {
       const owner = liveClients().find(client => client.id === ownerId && client.presentation);
-      if (owner) await request(owner, 'presentation', { operation: 'hide', payload: {} });
+      if (owner) { resetPresentationImages(owner); await request(owner, 'presentation', { operation: 'hide', payload: {} }); }
     },
     async closePresentations() {
-      await Promise.all(liveClients().filter(client => client.presentation).map(client => request(client, 'presentation', { operation: 'close', payload: {} })));
+      await Promise.all(liveClients().filter(client => client.presentation).map(client => {
+        resetPresentationImages(client); return request(client, 'presentation', { operation: 'close', payload: {} });
+      }));
     }, 
     async openTab({ browserId, sessionId, url }) {
       const matches = liveClients().filter(client => !browserId || browserId === `dsh:${client.id}`);
@@ -192,7 +213,8 @@ export function createBrowserHost() {
         const previous = clients.get(id);
         if (previous) disconnect(previous, 'The sidebar renderer reconnected; the previous command outcome is unknown');
         const connectionId = randomUUID();
-        clients.set(id, { id, connectionId, presentation: args.presentation === true, sessionIds: Array.isArray(args.sessionIds) ? args.sessionIds.filter(id => typeof id === 'string') : [],
+        clients.set(id, { id, connectionId, presentation: args.presentation === true, presentationImages: args.presentationImages === 1, presentationFrames: [], presentationSequence: 0,
+          sessionIds: Array.isArray(args.sessionIds) ? args.sessionIds.filter(id => typeof id === 'string') : [],
           targets: [], commands: [], wake: null, lastSeen: Date.now() });
         for (const sessionId of clients.get(id).sessionIds) sessionOwners.set(sessionId, id);
         return { ok: true, rendererId: id, connectionId };
@@ -210,6 +232,7 @@ export function createBrowserHost() {
       client.lastSeen = Date.now();
       if (method === 'browser/sessions') {
         if (!Array.isArray(args.sessionIds) || args.sessionIds.some(id => typeof id !== 'string')) fail('INVALID_TARGET', 'Expected live window session IDs');
+        if (JSON.stringify([...client.sessionIds].sort()) !== JSON.stringify([...args.sessionIds].sort())) resetPresentationImages(client);
         client.sessionIds = args.sessionIds;
         for (const sessionId of client.sessionIds) sessionOwners.set(sessionId, client.id);
         return { ok: true };
