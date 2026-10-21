@@ -42,7 +42,7 @@
     "extension/select-options.js": "0a6718e15a82eb89cb2aa402a9a7ceff140f522ff116e6bd330de40091d1f97a",
     "extension/text-edit.d.ts": "ee6c554eeac0f01c99c666ee33bc7e33304fc5fc777f4d8bb5cb3dfad05026b5",
     "extension/text-edit.js": "f6ffae9b7dc8e09f7f8709eb8c83a68cde813cbfaeb0507089ee6e1d09bb9182",
-    "host/apply.mjs": "654632a5b18561529e1dcd13fd718d75251a50474de2e3adbde7979426290c8f",
+    "host/apply.mjs": "09a4f1eb581952e04e31b87050281b795ad05633229570d538faf6429b657be9",
     "host/artifact-documents.ts": "dd56a64effad00c5cab1ccfa4f7a4ce7487a26c482caf255196a6f83454d2d1f",
     "host/automation.ts": "f33f1dde4e283e99ed2cb75e5c7f6d5f0ad7fb2b1b279d2574c8de236fdc580b",
     "host/browser-surfaces.ts": "43cab21e5462d339876034e859acd60b0f8e29c295d99eff9190e5219ed1e5fa",
@@ -73,7 +73,7 @@
     "host/preload-surface.ts": "4a99aec1fd937c082d59a9db78b7ca3cbafca6ff544719fde6459130084c83e3",
     "host/presentation-motion.ts": "d847dadd9e2b05ed452f7243c19a4d3ef67849801b27958e3138a734429727dd",
     "host/presentation-transfer.ts": "74b603c3f1848f1e54aa7731481d58bee49cf2d1bf75d1c8009a43a4bd574df3",
-    "host/presentation.ts": "6a532867a29968df7bb3c3b30183781483ce41529f8155fa928cdb077913a2bc",
+    "host/presentation.ts": "17cb7ccbc481f308c94e3c458ff5f41bad37fa323bcde4e263c7fca768e9682c",
     "host/profile.ts": "dc5d13a1089ccfbda33d9aa8e4bb9e93fbdf0e7c4802a323245756d50ccf610d",
     "host/rea-context-menu.d.ts": "d76a600fa8cf607b4d059295e12599690da84aad8f1d9b7cccce766e574d146f",
     "host/rea-context-menu.js": "394586bd3a25dabe038d836cb552103c977d80f121631628b069b18ff150578f",
@@ -89,7 +89,7 @@
     "lib/page-annotations.js": "e536daf5d747e172d45e2e150fae92308ae930d659fa1718ce52802f904bdf36",
     "lib/page-cursor.js": "9aece5995f3952f60aeeb5022c27f1c062ec434bebc816c18cfed0fed4837dc5",
     "lib/presentation.html": "4e31f907fe0172debdccf6532537f1d150818d359245fac494b032b5820f69f6",
-    "lib/presentation.js": "39e2b0fe37421208cf9001346802d3a04d1a326b0cc4438d50bb4654b73b3668",
+    "lib/presentation.js": "e9f35e4509e0d6f80ad21c7ffb7bcc2b826a73004734625b3562aa849ce4cb8d",
     "lib/rea-assets/DocumentFormat.OpenXml.Framework.vsp3g6rq8c.wasm": "a142923ef94ffd9bb96258117d0c8bf11c002ed58a9d2b1c3c63c6116308339f",
     "lib/rea-assets/DocumentFormat.OpenXml.mwa9472424.wasm": "8a402f13db99ae59b41eb815c5f6d56c6e4e142c9bb723fb9f9d11c6db96c4f7",
     "lib/rea-assets/Google.Protobuf.ze35jf5cfr.wasm": "8b7f1bac2252626a6c5041b79f7e2e12e0c57cbc64ae5102ab8c0838c9690626",
@@ -742,8 +742,10 @@
     "lib/rea-assets/opencu-chunk-SXTXLRD4.js": "ab69baf57b12401b041c91b8da30c428babd564faa4b4a77d99d6c6705d489bf",
     "lib/rea-assets/opencu-chunk-V7B27CSK.js": "2a3664436f6c19fa0a1b7acb72f48902db8fb1fcee60a04501986f0280337f01",
     "lib/rea-assets/opencu-chunk-VO4H2YSS.js": "3e53776b80e83f7bd2bc8d6e469147576711f0eb5806b03c13a0f334e79a7a1c",
-    "lib/rea-assets/opencu-chunk-WO5DG7JU.js": "12aa4a4488ad175fcbe59a3fe6d7a1ac9829f627930d163fcfb2a721be89d783"
+    "lib/rea-assets/opencu-chunk-WO5DG7JU.js": "12aa4a4488ad175fcbe59a3fe6d7a1ac9829f627930d163fcfb2a721be89d783",
+    "src/presentation-images.mjs": "ffc1b3507f0b35418bc2e8bf4d1817c7a87be91001e29e89954167619c1bc024",
+    "src/presentation-images.d.mts": "0be3cbe5392df014c10611165717ad55ba7b6666a29b2a3a8e319c87a3af26cd"
   },
-  "sourceRevision": "f6778fac169335433d93c4770fa107cb3179dcbb",
+  "sourceRevision": "fbec78fc218729ec6cc81403f546093f1c5eab4f",
   "baselineArchiveSha256": "a227e711071a07122afac58ca7262eb5aac9a798287f9ddae3ebfcab5ca19477"
 }
