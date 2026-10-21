@@ -71,7 +71,7 @@ export async function createController({dataDir, browser, native} = {}) {
   function targetFor(id = activeTargetId, identity) {
     const target = selected.get(id);
     if (!target) fail('TARGET_NOT_SELECTED', 'Select a target first', {targetId: id});
-    if (identity && !sameIdentity(target.identity, identity)) fail('TARGET_IDENTITY_CHANGED', 'The approved target occurrence changed', {targetId: id});
+    if (identity !== undefined && !sameIdentity(target.identity, identity)) fail('TARGET_IDENTITY_CHANGED', 'The approved target occurrence changed', {targetId: id});
     const backend = backends.get(target.backend);
     if (!backend) fail('BACKEND_UNAVAILABLE', `Backend ${target.backend} is not configured`);
     return {target, backend};
@@ -454,7 +454,7 @@ export async function createController({dataDir, browser, native} = {}) {
         if (matches.length !== 1) fail('TARGET_IDENTITY_CHANGED', 'The referenced application or browser occurrence is no longer available');
         target = matches[0]; backend = backends.get(target.backend);
         checkExpected(target, reference.expected);
-      } else ({target, backend} = targetFor(request.targetId));
+      } else ({target, backend} = targetFor(request.targetId, request.targetIdentity));
       if (target.cold) fail('RECOVERY_REQUIRED', 'Resume and verify the saved target before opening it');
       await verify(target, backend, false, operationEpoch);
       if (typeof backend.focus !== 'function') fail('UNSUPPORTED_OPERATION', 'This backend cannot open the selected target');

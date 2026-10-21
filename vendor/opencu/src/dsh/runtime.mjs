@@ -212,6 +212,8 @@ export function createPluginRuntime(options = {}) {
       const current = await runtime.getState();
       if (current.ok === false) throw Object.assign(new Error(current.error.message), current.error);
       target = current.state.targets.find(value => value.id === (args.targetId ?? current.state.activeTargetId));
+      if (target && args.targetIdentity !== undefined && !sameIdentity(target.identity, args.targetIdentity))
+        throw error('TARGET_IDENTITY_CHANGED', 'The bound target occurrence changed; select the live target again');
     }
     if (!target) throw error('TARGET_NOT_SELECTED', 'Select a target first');
     // Keep the selected occurrence across approval and controller queue waits.
@@ -339,7 +341,7 @@ export function createPluginRuntime(options = {}) {
         });
         annotationTail = work.catch(() => {});
         result = await work;
-      } else if (endpoint === 'focus') result = await runtime.focus({ targetId: args.targetId, reference: args.reference });
+      } else if (endpoint === 'focus') result = await runtime.focus(args);
       else if (endpoint === 'openTarget') {
         if (args.backend === 'native') {
           // Only return the launched process identity. The following ordinary
@@ -355,10 +357,12 @@ export function createPluginRuntime(options = {}) {
             result = await runtime.openTarget(args);
           } else {
             if (!matches.length || ids.size !== 1) throw error('AMBIGUOUS_TARGET', 'Choose one real browser inventory ID before opening a tab');
+            if (args.targetIdentity !== undefined && !sameIdentity(matches[0].identity, args.targetIdentity))
+              throw error('TARGET_IDENTITY_CHANGED', 'The bound target occurrence changed; select the live target again');
             let selected = await runtime.selectTarget(matches[0]);
-            if (selected.ok !== false && !selected.target.verified) selected = await runtime.resume({ targetId: selected.target.id });
+            if (selected.ok !== false && !selected.target.verified) selected = await runtime.resume({ targetId: selected.target.id, targetIdentity: selected.target.identity });
             if (selected.ok === false) return selected;
-            result = await runtime.act({ targetId: selected.target.id, action: 'newTab', url: args.url });
+            result = await runtime.act({ targetId: selected.target.id, targetIdentity: selected.target.identity, action: 'newTab', url: args.url });
             if (result.ok !== false) result = { ...result, target: result.result?.target };
           }
         }

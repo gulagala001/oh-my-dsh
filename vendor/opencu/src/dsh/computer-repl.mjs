@@ -73,9 +73,12 @@ export function createComputerRepl(request, report = () => {}) {
     return displayed(text);
   }
   function targetAPI(target) {
+    // A public descriptor is editable metadata, never the binding's authority.
+    target = structuredClone(target);
     let last, api;
+    const targetRequest = () => ({targetId: target.id, targetIdentity: structuredClone(target.identity)});
     const observe = async (format, options = {}) => {
-      const raw = await call('observe', { targetId: target.id, format });
+      const raw = await call('observe', { ...targetRequest(), format });
       const { id, observationId, coordinateSpace, screenshot } = raw.observation;
       last = { id, observationId, coordinateSpace, screenshot };
       const result = modelResult(observations.project(raw, { ...options, targetId: target.id, format }), { ...options, format });
@@ -92,10 +95,10 @@ export function createComputerRepl(request, report = () => {}) {
     };
     const act = async (action, args = {}) => {
       const shot = last?.screenshot, image = shot?.image;
-      const payload = { targetId: target.id, action, observationId: last?.id ?? last?.observationId,
+      const payload = { action, observationId: last?.id ?? last?.observationId,
         screenshotId: shot?.id, mappingId: shot?.mappingId,
         coordinateSpace: shot ? 'screenshot-pixels' : last?.coordinateSpace,
-        previewWidth: image?.width ?? shot?.width, previewHeight: image?.height ?? shot?.height, ...args };
+        previewWidth: image?.width ?? shot?.width, previewHeight: image?.height ?? shot?.height, ...args, ...targetRequest() };
       if (target.backend === 'native' && shot && image) {
         for (const key of ['x', 'fromX']) if (payload[key] != null) payload[key] *= shot.width / image.width;
         for (const key of ['y', 'fromY']) if (payload[key] != null) payload[key] *= shot.height / image.height;
@@ -103,9 +106,9 @@ export function createComputerRepl(request, report = () => {}) {
       }
       const result = await call('act', payload);
       if (result.result?.target) {
-        target = result.result.target; api.id = target.id; api.target = target;
+        target = structuredClone(result.result.target); api.id = target.id; api.target = structuredClone(target);
       }
-      if (['navigate', 'back', 'forward', 'reload', 'closeTab'].includes(action)) { observations.reset(); last = undefined; }
+      if (target.id !== payload.targetId || ['navigate', 'back', 'forward', 'reload', 'closeTab'].includes(action)) { observations.reset(); last = undefined; }
       return result;
     };
     const point = value => Array.isArray(value) ? { x: value[0], y: value[1] } : { elementId: value };
@@ -208,7 +211,7 @@ export function createComputerRepl(request, report = () => {}) {
       });
     };
     return api = {
-      id: target.id, target,
+      id: target.id, target: structuredClone(target),
       capabilities: { list: () => target.capabilities ?? [], control: () => target.control },
       getAXState: async options => { const result = await observe('ax', options); return displayed(typeof result.observation.ax === 'string' ? result.observation.ax : JSON.stringify(result.observation.ax)); },
       getScreenshot: async options => displayed((await observe('screenshot', options)).image),
@@ -243,7 +246,7 @@ export function createComputerRepl(request, report = () => {}) {
       navigate: async url => act('navigate', { url }),
       goto: async url => act('navigate', { url }),
       back: async () => act('back'), forward: async () => act('forward'), reload: async () => act('reload'),
-      close: async () => act('closeTab'), focus: async () => call('focus', { targetId: target.id }),
+      close: async () => act('closeTab'), focus: async () => call('focus', targetRequest()),
       webmcp: {
         listTools: async () => { const result = (await act('siteTools')).result; emit(result); return displayed(result.tools); },
         invokeTool: async (registrationId, input) => { const result = (await act('invokeSiteTool', { registrationId, input })).result; emit(result); return displayed(result); },
@@ -256,7 +259,7 @@ export function createComputerRepl(request, report = () => {}) {
   }
   async function select(reference) {
     let result = await call('select', { reference });
-    if (!result.target.verified) result = await call('resume', { targetId: result.target.id });
+    if (!result.target.verified) result = await call('resume', { targetId: result.target.id, targetIdentity: result.target.identity });
     documentation(result.target.backend === 'native' ? 'native' : 'browser');
     const target = targetAPI(result.target);
     emit({target: Object.fromEntries(['id','backend','provider','browserId','title','url','control'].filter(key => result.target[key] !== undefined).map(key => [key, result.target[key]]))});
@@ -276,7 +279,7 @@ export function createComputerRepl(request, report = () => {}) {
     const opened = await call('openTarget', { browserId, url });
     let stage = 'select';
     try {
-      const target = await select({ id: opened.target.id });
+      const target = await select({ id: opened.target.id, identity: opened.target.identity });
       if (options.visible === true) { stage = 'show'; await target.focus(); }
       return target;
     }
