@@ -1,0 +1,54 @@
+/* Electron collects app regions independently of pointer hit testing. The
+   host excludes body portals, including our full-window paint-only layers.
+   Reset to the initial `none`: neither subtract nor add a native region.
+   `no-drag` blocks the titlebar; `drag` would swallow controls underneath. */
+html[data-platform='darwin'] :is(.omd-glyph-canvas, .omd-glyph-chrome, .omd-glyph-caption, [data-glyph-content], [data-omd-background-layer]) {
+  -webkit-app-region: initial !important;
+}
+
+/* The host publishes a titlebar clearance even on main pages without a
+   resident conversation header (for example, the task manager). Its frame
+   background owns this stable band; later controls and modal portals still
+   subtract their own boxes. Windows already supplies its native frame band. */
+html[data-platform='darwin'] :is(.pI_x6G_frame, [data-omd-surface='frame'])::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--dsh-frame-top-clearance, 0px);
+  pointer-events: none;
+  -webkit-app-region: drag;
+}
+
+html[data-platform='darwin'] [data-window-drag] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Native splitters handle pointer events on plain divs, so the host's
+   semantic-control rule does not exclude them from an overlapping titlebar. */
+html[data-platform='darwin'] :is(.pI_x6G_handle, .wSkVaW_widthHandle) {
+  -webkit-app-region: no-drag;
+}
+/* These native containers include gaps and noninteractive slot labels. Only
+   the actual controls should subtract from their header's drag rectangle.
+   A container that acquires interaction semantics keeps the host exclusion. */
+html[data-platform='darwin'] .wSkVaW_header[data-window-drag] :is(.wSkVaW_headerLeading, .wSkVaW_headerActions, .wSkVaW_headerUtilities, .wSkVaW_headerCorner):where(div):not([role], [tabindex], [contenteditable], [data-window-drag-recall]) {
+  -webkit-app-region: initial !important;
+}
+/* The host covers ordinary buttons, links, menus and form controls. Extend
+   that contract to embedded editors and draggable content in plugin slots. */
+html[data-platform='darwin'] [data-window-drag] :is([contenteditable]:not([contenteditable='false']), [draggable='true'], iframe, webview) {
+  -webkit-app-region: no-drag;
+}
+html[data-platform='darwin'] [data-window-drag] :is(input, textarea, [contenteditable]:not([contenteditable='false'])) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Flex layouts can move tabs before the title row. Reserve the host's live
+   traffic-light/leading-seat clearance once, ahead of the whole header. */
+html[data-omd-layout][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] {
+  padding-inline-start: var(--dsh-frame-leading-clearance, 0px) !important;
+}
+html[data-omd-layout][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] .wSkVaW_titleRow {
+  padding-inline-start: 0 !important;
+}

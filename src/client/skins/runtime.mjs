@@ -7,6 +7,7 @@ import { extraPalettes } from './palettes.mjs';
 import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
 import { appearanceCoordinator } from './coordinator.mjs';
 import { createAttributeMarkers } from '../attribute-markers.mjs';
+import windowChromeCss from '../../../plugins/glyph-theme/src/shared/window-chrome.css';
 export const STORAGE_KEY = 'omd.skins.v1';
 // OMD and the standalone theme manager ship this file unchanged; product
 // differences are options. assetUrl maps a bundled skin file to its route.
@@ -16,7 +17,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   const defaults = () => advancedDefaults(brand);
   const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
   let state = { active: false, skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: defaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
-  let disposeTokens, style, customStyle, disposed = false, logoSequence = 0, owning = false;
+  let disposeTokens, style, customStyle, windowStyle, disposed = false, logoSequence = 0, owning = false;
   const effectsRoot = document.documentElement;
   const effectsMarkers = createAttributeMarkers('data-omd-reduce-effects');
   const syncEffects = () => effectsMarkers.update(new Map(state.reduceEffects ? [[effectsRoot, '']] : []));
@@ -85,6 +86,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     const root = document.documentElement;
     style?.remove(); style = undefined;
     customStyle?.remove(); customStyle = undefined;
+    windowStyle?.remove(); windowStyle = undefined;
     root.classList.remove('omd');
     for (const name of ['omdSkin', 'omdLayout', 'omdPalette', 'omdColors', 'appearance', 'omdCustom']) delete root.dataset[name];
   };
@@ -100,6 +102,10 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     // Only coordinator handoff/unload releases surfaces and their observers.
     clearTheme();
     owning = true;
+    // Native appearance needs the same interaction contract as selected skins.
+    // Keep it for this owner's lifetime, including palette-only customization.
+    windowStyle = document.createElement('style'); windowStyle.dataset.omdWindowChrome = '';
+    windowStyle.textContent = windowChromeCss; document.head.append(windowStyle);
     const root = document.documentElement;
     const active = prepared.get(state.selected);
     if (active?.css === null) load(active);

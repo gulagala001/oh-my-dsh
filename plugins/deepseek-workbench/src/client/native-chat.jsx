@@ -141,7 +141,7 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
     } catch (failure) { if (current()) setError(failure.message); }
   };
   return <div ref={surface} className="dswb-native" data-deepseek-workbench="chat" data-empty={messages.length === 0} inert={temporary?.closing || temporary?.closed ? '' : undefined} onDragOver={event => { if (snapshot.ready) event.preventDefault(); }} onDrop={event => { if (snapshot.ready) { event.preventDefault(); void upload(event.dataTransfer.files).catch(failure => setError(failure.message)); } }}>
-    <header className="dswb-chat-header"><div className="dswb-chat-identity"><div><strong>{temporary ? '临时网页聊天' : 'DeepSeek 网页聊天'}</strong></div></div><div className="dswb-chat-actions">
+    <header className="dswb-chat-header" data-window-drag><div className="dswb-chat-identity"><div><strong>{temporary ? '临时网页聊天' : 'DeepSeek 网页聊天'}</strong></div></div><div className="dswb-chat-actions">
       {!temporary && <><Button size="sm" type="button" onClick={() => setHistory(value => !value)} aria-expanded={history}>历史对话</Button>
       <Button size="sm" type="button" disabled={!snapshot.ready || busy !== '' || snapshot.generating} onClick={async () => { if (await command('new')) { setText(''); setFiles([]); setMessages([]); } }}>新对话</Button>
       <Button size="sm" type="button" className="dswb-primary" variant="primary" disabled={!canImport || !snapshot.ready || !messages.length || snapshot.generating || busy !== ''} onClick={onImport}>{importing || '在 DSH 中继续'}</Button>

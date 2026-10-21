@@ -4,13 +4,6 @@
 .omd-shell [data-conversation-content][data-content-phase='active'] > [data-conversation-scroll]:not(:has([data-conversation-composer-overlay])) > [data-composer-seat] {
   top: calc(100% - var(--dsh-composer-height, 0px));
 }
-/* Custom layouts reorder the header; native DSH already reserves its title band. */
-html.omd-shell[data-omd-layout][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] {
-  padding-inline-start: var(--dsh-frame-leading-clearance, 0px) !important;
-}
-html.omd-shell[data-omd-layout][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] .wSkVaW_titleRow {
-  padding-inline-start: 0 !important;
-}
 /* Streaming CU titles must not push status/counts outside their native row. */
 .omd-shell .tx-cu-group-toggle { width: 100%; min-width: 0; }
 .omd-shell .tx-cu-group-toggle > :nth-child(2) { flex: 1; min-width: 0; }

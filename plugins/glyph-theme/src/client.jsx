@@ -4,6 +4,7 @@ import { Button, Switch } from '@deepseek-ai/dsh-client-ui-primitives';
 import { glyphOwnership } from './shared/ownership.mjs';
 import { createSurfaceMarkers } from './shared/surfaces.mjs';
 import { createAttributeMarkers } from './shared/attribute-markers.mjs';
+import windowChrome from './shared/window-chrome.css';
 import { mountGlyphRenderer } from './theme/renderer.mjs';
 import { GlyphBrand } from './theme/brand.jsx';
 import layout from './theme/layout.css';
@@ -26,7 +27,7 @@ export function apply(ctx) {
     const previous=names.map(name=>[name,root.getAttribute(name)]);
     root.setAttribute('data-glyph-owner','standalone');root.setAttribute('data-omd-layout','glyph-motion');root.setAttribute('data-omd-skin','glyph-motion');
     const sync=()=>{root.dataset.appearance=ctx.theme.getTheme().active.colorScheme;};sync();
-    const style=document.createElement('style');style.dataset.glyphStyles='standalone';style.textContent=paletteCss+'\n'+nativeCss+'\n'+layout;document.head.append(style);
+    const style=document.createElement('style');style.dataset.glyphStyles='standalone';style.textContent=paletteCss+'\n'+nativeCss+'\n'+layout+'\n'+windowChrome;document.head.append(style);
     const disposeTokens=ctx.theme.overrideTokens('dsh-glyph-theme',Object.fromEntries(Object.entries(aliases).map(([alias,key])=>[`--dsw-alias-${alias}`,{light:`var(--omd-${key})`,dark:`var(--omd-${key})`}])));
     const offTheme=ctx.on('theme/change',sync),surfaces=createSurfaceMarkers(),nav=createAttributeMarkers('data-omd-nav-part');
     let pending;

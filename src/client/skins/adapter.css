@@ -83,13 +83,5 @@ html.omd[data-omd-skin] :where(.tx-button.tx-primary,.cx-btn.primary,.uV2eYG_pri
   }
 }
 
-/* Header gaps and labels remain draggable; controls keep the host's no-drag rules. */
-html.omd[data-platform='darwin'] .wSkVaW_header[data-window-drag] {
-  -webkit-user-select: none; user-select: none;
-}
-html.omd[data-platform='darwin'] .wSkVaW_header[data-window-drag] :is(.wSkVaW_headerActions,.wSkVaW_headerUtilities) {
-  -webkit-app-region: drag;
-}
-
 /* Keep preset action tooltips inside narrow settings panels. */
 html.omd[data-omd-skin] .rtSEdW_iconButton::after { left: auto; right: 0; transform: none; }

@@ -33,16 +33,6 @@ html[data-omd-skin] .wSkVaW_tabs { order: -1; flex: 0 0 auto; align-items: cente
 html[data-omd-skin] .wSkVaW_tab { padding: 5px 10px; border-radius: 6px; font-size: 12px; line-height: 18px; font-weight: 400; }
 html[data-omd-skin] .wSkVaW_tab:after { display: none; }
 html[data-omd-skin] .wSkVaW_tabActive { background: var(--tx-shell-bg); color: var(--tx-shell-text); box-shadow: 0 1px 3px #00000008; }
-/* Flex skins can place tabs before the host's title row. Move the frame's
-   existing macOS chrome clearance to the whole header so every control clears
-   the lights and shell.leading seat. The host reduces it in window fullscreen.
-   These geometry constraints must also override skin padding shorthands. */
-html[data-omd-skin][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] {
-  padding-inline-start: var(--dsh-frame-leading-clearance, 0px) !important;
-}
-html[data-omd-skin][data-platform='darwin'] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] .wSkVaW_titleRow {
-  padding-inline-start: 0 !important;
-}
 html[data-omd-skin] [data-composer-card] {
   border: 1px solid var(--tx-shell-line);
   border-radius: 20px;
