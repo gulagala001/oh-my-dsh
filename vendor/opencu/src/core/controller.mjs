@@ -1,7 +1,7 @@
 import {createStorage} from './storage.mjs';
 import {createBrowserBackend} from '../browser/backend.mjs';
 import {
-  PROTOCOL_VERSION, assertBackend, assertTarget, checkExpected, errorJSON, fail,
+  PROTOCOL_VERSION, assertBackend, assertTarget, checkExpected, errorJSON, fail, inputReleased,
   json, referenceMatches, sameIdentity,
 } from '../protocol.mjs';
 
@@ -41,6 +41,10 @@ export async function createController({dataDir, browser, native} = {}) {
   function snapshot() {
     return json({version: PROTOCOL_VERSION, mode, activeTargetId, releasePending, releaseErrors,
       targets: [...selected.values()], userActivity: [...userActivity.values()], closed});
+  }
+  function forgetTarget(id) {
+    selected.delete(id); userActivity.delete(id); observedActivity.delete(id); previews.delete(id);
+    if (activeTargetId === id) activeTargetId = [...selected.keys()].at(-1) ?? null;
   }
   async function persist() { await storage.write('controller.json', snapshot()); }
   function response(work) {
@@ -90,20 +94,26 @@ export async function createController({dataDir, browser, native} = {}) {
     finally { if (interrupt) signal.removeEventListener('abort', interrupt); }
   }
   async function verify(target, backend, cold = false, operationEpoch = epoch, signal) {
-    const result = await readOperation(() => backend.verify(json(target), {cold, signal}), signal);
     checkOperation(operationEpoch);
-    if (result?.valid !== true) {
-      target.verified = false;
-      fail('TARGET_IDENTITY_CHANGED', result?.reason ?? 'Target occurrence could not be verified', {targetId: target.id});
-    }
-    const current = assertTarget(result.target ?? target, target.backend);
-    if (current.id !== target.id || !sameIdentity(current.identity, target.identity)) {
-      target.verified = false;
-      fail('TARGET_IDENTITY_CHANGED', 'Backend returned a different target occurrence', {targetId: target.id});
-    }
-    if (cold) checkExpected(current, {url: target.url, title: target.title});
-    Object.assign(target, current);
-    return target;
+    const recovery = signal === undefined && aborter.signal.aborted ? new AbortController() : null;
+    if (recovery) recoveryOperations.add(recovery);
+    signal ??= recovery?.signal ?? aborter.signal;
+    try {
+      const result = await readOperation(() => backend.verify(json(target), {cold, signal}), signal);
+      checkOperation(operationEpoch);
+      if (result?.valid !== true) {
+        target.verified = false;
+        fail('TARGET_IDENTITY_CHANGED', result?.reason ?? 'Target occurrence could not be verified', {targetId: target.id});
+      }
+      const current = assertTarget(result.target ?? target, target.backend);
+      if (current.id !== target.id || !sameIdentity(current.identity, target.identity)) {
+        target.verified = false;
+        fail('TARGET_IDENTITY_CHANGED', 'Backend returned a different target occurrence', {targetId: target.id});
+      }
+      if (cold) checkExpected(current, {url: target.url, title: target.title});
+      Object.assign(target, current);
+      return target;
+    } finally { if (recovery) recoveryOperations.delete(recovery); }
   }
   async function releaseAll({ dismissDialogs = false } = {}) {
     const failures = [];
@@ -113,10 +123,9 @@ export async function createController({dataDir, browser, native} = {}) {
         const result = await backend.release({targets: [...selected.values()].filter(target => target.backend === name).map(json), dismissDialogs});
         for (const id of result?.retiredTargetIds ?? []) {
           if (selected.get(id)?.backend !== name) continue;
-          selected.delete(id); userActivity.delete(id); observedActivity.delete(id); previews.delete(id);
-          if (activeTargetId === id) activeTargetId = [...selected.keys()].at(-1) ?? null;
+          forgetTarget(id);
         }
-        if (result?.released !== true || result.failures?.length || result.errors?.length) {
+        if (!inputReleased(result)) {
           failures.push({backend: name, ...result, released: false});
         }
       } catch (error) { failures.push({backend: name, ...errorJSON(error)}); }
@@ -124,8 +133,11 @@ export async function createController({dataDir, browser, native} = {}) {
     releaseErrors = failures;
     releasePending = failures.length > 0;
     if (releasePending) mode = 'release_failed';
-    await persist();
-    if (releasePending) fail('RELEASE_FAILED', 'Input release failed; control remains blocked', failures);
+    let persistenceError;
+    try { await persist(); } catch (error) { persistenceError = error; }
+    if (releasePending) fail('RELEASE_FAILED', 'Input release failed; control remains blocked',
+      persistenceError ? [...failures, {stage: 'persist-release', ...errorJSON(persistenceError)}] : failures);
+    if (persistenceError) throw persistenceError;
   }
   function block(nextMode) {
     alive();
@@ -225,17 +237,22 @@ export async function createController({dataDir, browser, native} = {}) {
       checkExpected(candidate, reference?.expected);
       const backend = backends.get(candidate.backend);
       const controlling = mode === 'active' && !releasePending && !previous?.cold;
-      const target = assertTarget(controlling ? await backend.select(candidate) : candidate, candidate.backend);
-      checkOperation(operationEpoch);
-      if (target.id !== candidate.id || !sameIdentity(target.identity, candidate.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed occurrence');
-      await verify(target, backend, previous?.cold ?? false, operationEpoch);
-      checkOperation(operationEpoch);
-      // Selection cannot bypass cold recovery or a previous stop.
-      Object.assign(target, {verified: mode === 'active' && !releasePending && !previous?.cold, cold: previous?.cold ?? false});
-      selected.set(target.id, target);
-      activeTargetId = target.id;
-      await persist();
-      return {target, state: snapshot()};
+      try {
+        const target = assertTarget(controlling ? await backend.select(candidate) : candidate, candidate.backend);
+        checkOperation(operationEpoch);
+        if (target.id !== candidate.id || !sameIdentity(target.identity, candidate.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed occurrence');
+        await verify(target, backend, previous?.cold ?? false, operationEpoch);
+        checkOperation(operationEpoch);
+        // Selection cannot bypass cold recovery or a previous stop.
+        Object.assign(target, {verified: mode === 'active' && !releasePending && !previous?.cold, cold: previous?.cold ?? false});
+        selected.set(target.id, target);
+        activeTargetId = target.id;
+        await persist();
+        return {target, state: snapshot()};
+      } catch (error) {
+        if (controlling && operationEpoch === epoch) { block('faulted'); await releaseAll(); }
+        throw error;
+      }
     })),
     observe: (request = {}) => {
       const operationEpoch = epoch;
@@ -282,6 +299,28 @@ export async function createController({dataDir, browser, native} = {}) {
         await verify(target, backend, false, operationEpoch, signal);
         if (dialogAction) alive(); else controlAllowed();
         result = await backend.act(json(target), {...request, signal});
+        if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
+        if (result?.closedTargetId && (request.action !== 'closeTab' || result.closedTargetId !== target.id))
+          fail('TARGET_IDENTITY_CHANGED', 'Action closed an unrelated target');
+        if (result?.target) {
+          const current = assertTarget(result.target, target.backend);
+          if (current.id === target.id && !sameIdentity(current.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Action changed occurrence');
+          const navigation = ['navigate', 'back', 'forward', 'reload'].includes(request.action);
+          const replaced = navigation && result.replacedTargetId === target.id && target.provider === 'extension' && current.provider === 'extension' &&
+            ['instanceId', 'browserInstanceId', 'epoch', 'tabId'].every(key => current.identity[key] === target.identity[key]);
+          if (current.id !== target.id && request.action !== 'newTab' && !replaced) fail('TARGET_IDENTITY_CHANGED', 'Action returned another target');
+          const previous = selected.get(current.id);
+          if (previous && !sameIdentity(previous.identity, current.identity)) fail('TARGET_IDENTITY_CHANGED', 'Action reused a selected target ID');
+          if (current.id !== target.id) await verify(current, backend, false, operationEpoch, signal);
+          if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
+          if (replaced) forgetTarget(target.id);
+          selected.set(current.id, {...current, verified: true, cold: false});
+          activeTargetId = current.id;
+        }
+        if (result?.closedTargetId) forgetTarget(result.closedTargetId);
+        await persist();
+        checkOperation(operationEpoch);
+        return {targetId: result?.target?.id ?? target.id, result: result ?? {}};
       }
       catch (error) {
         const unresolvedLocator = ['locator','domSnapshot'].includes(request.action) && error.details?.inputDispatched !== true && ['LOCATOR_NOT_FOUND', 'AMBIGUOUS_LOCATOR', 'UNSUPPORTED_LOCATOR', 'LOCATOR_NOT_ACTIONABLE', 'LOCATOR_NOT_STABLE', 'STALE_ELEMENT', 'STALE_OBSERVATION', 'FRAME_NOT_FOUND', 'FRAME_DETACHED'].includes(error.code);
@@ -303,26 +342,7 @@ export async function createController({dataDir, browser, native} = {}) {
         throw error;
       }
       finally { if (recovery) recoveryOperations.delete(recovery); }
-      if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
-      if (result?.target) {
-        const current = assertTarget(result.target, target.backend);
-        if (current.id === target.id && !sameIdentity(current.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Action changed occurrence');
-        const navigation = ['navigate', 'back', 'forward', 'reload'].includes(request.action);
-        const replaced = navigation && result.replacedTargetId === target.id && target.provider === 'extension' && current.provider === 'extension' &&
-          ['instanceId', 'browserInstanceId', 'epoch', 'tabId'].every(key => current.identity[key] === target.identity[key]);
-        if (current.id !== target.id && request.action !== 'newTab' && !replaced) fail('TARGET_IDENTITY_CHANGED', 'Action returned another target');
-        if (current.id !== target.id) await verify(current, backend);
-        if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
-        if (replaced) { selected.delete(target.id); userActivity.delete(target.id); observedActivity.delete(target.id); }
-        selected.set(current.id, {...current, verified: true, cold: false});
-        activeTargetId = current.id;
-      }
-      if (result?.closedTargetId) {
-        selected.delete(result.closedTargetId);
-        if (activeTargetId === result.closedTargetId) activeTargetId = [...selected.keys()].at(-1) ?? null;
-      }
-      await persist();
-      return {targetId: result?.target?.id ?? target.id, result: result ?? {}};
+
     })),
     stop: () => {
       try { block('stopped'); } catch (error) { return response(() => { throw error; }); }
@@ -380,11 +400,11 @@ export async function createController({dataDir, browser, native} = {}) {
       const ids = new Set(request.targetIds);
       if (!ids.size) fail('INVALID_ARGUMENT', 'Choose the exact closed browser connections');
       const targets = [...ids].map(id => targetFor(id).target);
-      if (targets.some(target => target.backend !== 'browser' || target.provider !== 'extension')) fail('INVALID_ARGUMENT', 'Only closed extension connections can be confirmed');
+      if (targets.some(target => target.backend !== 'browser' || !['extension', 'dsh'].includes(target.provider))) fail('INVALID_ARGUMENT', 'Only closed browser connections can be confirmed');
       const result = await backends.get('browser').confirmClosedTargets(targets);
       if (result?.released !== true) fail('RELEASE_FAILED', 'Closed connection confirmation was not persisted');
       block('stopped');
-      for (const id of ids) { selected.delete(id); userActivity.delete(id); observedActivity.delete(id); previews.delete(id); }
+      for (const id of ids) forgetTarget(id);
       if (ids.has(activeTargetId)) activeTargetId = null;
       await releaseAll();
       mode = 'recovery_required'; await persist();

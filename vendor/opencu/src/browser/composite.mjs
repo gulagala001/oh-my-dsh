@@ -5,7 +5,7 @@
  * Extension download events stay metadata-only until explicitly imported and validated.
  */
 import {basename} from 'node:path';
-import {assertBackend, checkExpected, checkSignal, errorJSON, fail, json, referenceMatches, sameIdentity} from '../protocol.mjs';
+import {assertBackend, checkExpected, checkSignal, errorJSON, fail, inputReleased, json, referenceMatches, sameIdentity} from '../protocol.mjs';
 import {parseTarget, targetId} from '../extension/protocol.mjs';
 import {normalizeBrowserAction} from './actions.mjs';
 
@@ -56,13 +56,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
         ...(result.url === undefined ? {} : {url: result.url}), ...(result.title === undefined ? {} : {title: result.title})}, 'extension')};
     } catch (error) { return {valid: false, reason: error.message, error: errorJSON(error)}; }
   }
-  function acknowledged(result) {
-    const itemOK = item => item?.released === true && !(item.failures?.length || item.errors?.length) &&
-      (!Array.isArray(item.tabs) || item.tabs.every(tab => tab?.released === true && !(tab.failures?.length || tab.errors?.length)));
-    if (result?.released === true) return itemOK(result);
-    return Array.isArray(result?.released) && result.released.length > 0 && result.released.every(itemOK);
-  }
-  async function release({targets = []} = {}) {
+  async function release({targets = [], dismissDialogs = true} = {}) {
     const failures = [], results = [], retiredTargetIds = [];
     const unavailable = new Set([...targets.map(providerName), ...Object.keys(releaseUnavailable)]);
     for (const [provider, backend] of [['browser', browser], ['extension', extension], ['dsh', dsh]]) if (backend) unavailable.delete(provider);
@@ -71,15 +65,15 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
         if (typeof releaseUnavailable[provider] !== 'function') fail('BACKEND_UNAVAILABLE', `Cannot verify input release for unavailable browser provider ${provider}`);
         const result = await releaseUnavailable[provider]({targets: targets.filter(target => providerName(target) === provider)});
         results.push({provider, result});
-        if (!acknowledged(result)) failures.push({provider, code: 'RELEASE_UNACKNOWLEDGED', result});
+        if (!inputReleased(result)) failures.push({provider, code: 'RELEASE_UNACKNOWLEDGED', result});
       } catch (error) { failures.push({provider, ...errorJSON(error)}); }
     }
     for (const [provider, backend] of [['browser', browser], ['dsh', dsh]]) {
       if (!backend) continue;
       try {
-        const result = await backend.release({targets: targets.filter(target => providerName(target) === provider).map(target => unwrap(target, provider))});
+        const result = await backend.release({targets: targets.filter(target => providerName(target) === provider).map(target => unwrap(target, provider)), dismissDialogs});
         results.push({provider, result});
-        if (!acknowledged(result)) failures.push({provider, code: 'RELEASE_UNACKNOWLEDGED', result});
+        if (!inputReleased(result)) failures.push({provider, code: 'RELEASE_UNACKNOWLEDGED', result});
       } catch (error) { failures.push({provider, ...errorJSON(error)}); }
     }
     if (extension) {
@@ -89,7 +83,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
         try {
           const result = await extension.release(unwrap(target, 'extension'));
           results.push({provider: 'extension', targetId: target.id, result});
-          if (!acknowledged(result)) { held.set(target.id, target); failures.push({provider: 'extension', targetId: target.id, code: 'RELEASE_UNACKNOWLEDGED', result}); }
+          if (!inputReleased(result)) { held.set(target.id, target); failures.push({provider: 'extension', targetId: target.id, code: 'RELEASE_UNACKNOWLEDGED', result}); }
           else { held.delete(target.id); if (result.retired === true) { retiredTargetIds.push(target.id); stale.delete(target.id); } }
         } catch (error) {
           held.set(target.id, target);
@@ -101,7 +95,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
         const result = await extension.release();
         results.push({provider: 'extension', scope: 'connected-sessions', result});
         const empty = Array.isArray(result?.released) && result.released.length === 0;
-        if (!acknowledged(result) && !(empty && pending.size === 0)) failures.push({provider: 'extension', code: 'RELEASE_UNACKNOWLEDGED', outcome: 'unknown', result});
+        if (!inputReleased(result) && !(empty && pending.size === 0)) failures.push({provider: 'extension', code: 'RELEASE_UNACKNOWLEDGED', outcome: 'unknown', result});
       } catch (error) { failures.push({provider: 'extension', outcome: 'unknown', ...errorJSON(error)}); }
     }
     return {released: failures.length === 0, failures, results, retiredTargetIds};
@@ -110,8 +104,13 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
     kind: 'browser',
     async confirmClosedTargets(targets) {
       alive();
-      if (!extension?.confirmClosedTargets) fail('UNSUPPORTED_OPERATION', 'Extension recovery is unavailable');
-      return extension.confirmClosedTargets(targets.map(target => unwrap(target, 'extension')));
+      const results = [];
+      for (const provider of new Set(targets.map(providerName))) {
+        const {backend} = providerFor({provider});
+        if (!['extension', 'dsh'].includes(provider) || !backend.confirmClosedTargets) fail('UNSUPPORTED_OPERATION', 'Browser recovery is unavailable');
+        results.push(await backend.confirmClosedTargets(targets.filter(target => providerName(target) === provider).map(target => unwrap(target, provider))));
+      }
+      return {released: results.length > 0 && results.every(inputReleased)};
     },
     async listBrowsers() {
       alive();

@@ -379,7 +379,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       if (signal?.aborted) throw failure('CONTROL_STOPPED', 'Control has been stopped.');
       result.observationId ??= randomUUID();
       result.coordinateSpace = 'screenshot-pixels';
-      if (result.ax?.source !== 'chromium-accessibility-tree' || !Array.isArray(result.ax.nodes)) throw failure('INVALID_OBSERVATION', 'The extension did not return a Chromium accessibility tree; reload the matching extension package.');
+      if (options.format !== 'screenshot' && (result.ax?.source !== 'chromium-accessibility-tree' || !Array.isArray(result.ax.nodes))) throw failure('INVALID_OBSERVATION', 'The extension did not return a Chromium accessibility tree; reload the matching extension package.');
       if (result.screenshot) {
         const screenshot = result.screenshot, bytes = Buffer.from(screenshot.data, 'base64');
         const directory = join(dir, 'observations'); await mkdir(directory, { recursive: true, mode: 0o700 });

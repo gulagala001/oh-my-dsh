@@ -45,6 +45,14 @@ export function errorJSON(error) {
   };
 }
 
+export function inputReleased(result) {
+  const acknowledged = item => item?.released === true && !item.failures?.length && !item.errors?.length &&
+    (!Array.isArray(item.tabs) || item.tabs.every(acknowledged));
+  return Array.isArray(result?.released)
+    ? result.released.length > 0 && result.released.every(acknowledged)
+    : acknowledged(result);
+}
+
 export function json(value) {
   return JSON.parse(JSON.stringify(value));
 }

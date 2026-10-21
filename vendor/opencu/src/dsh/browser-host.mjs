@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { checkExpected, fail, json, referenceMatches, sameIdentity } from '../protocol.mjs';
+import { checkExpected, fail, inputReleased, json, referenceMatches, sameIdentity } from '../protocol.mjs';
 
 /** The authenticated DSH renderer owns each real sidebar guest, not a screenshot proxy. */
 export function createBrowserHost() {
-  const clients = new Map(), pending = new Map(), sessionOwners = new Map();
+  const clients = new Map(), pending = new Map(), sessionOwners = new Map(), bindings = new Map();
   let closed = false;
   function disconnect(client, reason) {
     if (clients.get(client.id) === client) clients.delete(client.id);
@@ -73,7 +73,14 @@ export function createBrowserHost() {
       const matches = (await backend.listTargets()).filter(target => referenceMatches(target, reference));
       if (matches.length !== 1) fail(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND', 'Select one live DSH sidebar tab');
       const target = matches[0]; checkExpected(target, reference.expected);
-      await request(clientFor(target), 'select', { target });
+      const client = clientFor(target), previous = bindings.get(target.id);
+      if (previous?.needsRelease && previous.client !== client) {
+        const release = await request(client, 'release', { target, dismissDialogs: false });
+        if (!inputReleased(release)) fail('RELEASE_FAILED', 'Reselection requires the original guest to release its input', release);
+        previous.needsRelease = false;
+      }
+      await request(client, 'select', { target });
+      bindings.set(target.id, {target: json(target), client, needsRelease: previous?.needsRelease ?? false});
       return target;
     },
     async verify(target, options = {}) {
@@ -93,6 +100,13 @@ export function createBrowserHost() {
       const { signal, ...action } = options;
       signal?.throwIfAborted();
       const client = clientFor(target);
+      const previous = bindings.get(target.id);
+      const reading = ['getDialog', 'getDOM', 'domSnapshot', 'hitTest', 'siteTools', 'cursor'].includes(action.action);
+      if (!reading && previous && previous.client !== client) fail('RECOVERY_REQUIRED', 'The sidebar reconnected; select the original target again before input');
+      // Keep the connection that owns selection and unresolved input even after
+      // it disappears from inventory. A replacement connection is not a receipt.
+      const binding = previous ?? {target: json(target), client, needsRelease: false};
+      if (!reading) { binding.needsRelease = true; bindings.set(target.id, binding); }
       let interruption;
       const abort = () => { interruption ??= request(client, 'release', { target }).catch(error => ({ released: false, error: error.message })); };
       signal?.addEventListener('abort', abort, { once: true });
@@ -100,19 +114,42 @@ export function createBrowserHost() {
         signal?.throwIfAborted();
         const result = await request(client, 'act', { target, action });
         signal?.throwIfAborted();
+        if (result?.closedTargetId === target.id) bindings.delete(target.id);
         return result;
       } finally {
         signal?.removeEventListener('abort', abort);
         if (interruption) {
           const release = await interruption;
-          if (release.released !== true) fail('RELEASE_FAILED', 'Cancelled sidebar input release was not acknowledged', release);
+          if (!inputReleased(release)) fail('RELEASE_FAILED', 'Cancelled sidebar input release was not acknowledged', release);
+          binding.needsRelease = false;
         }
       }
     },
-    async release({ dismissDialogs = true } = {}) {
-      const results = await Promise.allSettled(liveClients().map(client => request(client, 'release', { dismissDialogs })));
-      const failures = results.flatMap(result => result.status === 'rejected' ? [{ message: result.reason.message }] : result.value?.released === true ? [] : [result.value]);
+    async release({ targets = [], dismissDialogs = true } = {}) {
+      const failures = [];
+      for (const target of targets) if (target.cold && !bindings.has(target.id))
+        bindings.set(target.id, {target: json(target), needsRelease: true});
+      await Promise.all(liveClients().map(async client => {
+        try {
+          const result = await request(client, 'release', { dismissDialogs });
+          if (!inputReleased(result)) { failures.push({rendererId: client.id, code: 'RELEASE_FAILED', result}); return; }
+          for (const binding of bindings.values()) if (binding.client === client || client.targets.some(target =>
+            target.id === binding.target.id && sameIdentity(target.identity, binding.target.identity))) binding.needsRelease = false;
+        } catch (error) { failures.push({rendererId: client.id, code: error.code, message: error.message}); }
+      }));
+      for (const binding of bindings.values()) if (binding.needsRelease) failures.push({targetId: binding.target.id,
+        code: 'STALE_TARGET', message: 'The original sidebar guest has not acknowledged input release', identity: binding.target.identity});
       return { released: failures.length === 0, failures };
+    },
+    async confirmClosedTargets(targets) {
+      for (const target of targets) {
+        if (liveClients().some(client => client.targets.some(current => current.id === target.id && sameIdentity(current.identity, target.identity))))
+          fail('BROWSER_STILL_CONNECTED', 'The original sidebar guest is still connected; release it normally');
+        const binding = bindings.get(target.id);
+        if (binding && !sameIdentity(binding.target.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Recovery refers to another sidebar guest');
+      }
+      for (const target of targets) bindings.delete(target.id);
+      return {released: true};
     },
     async close() {
       const result = await backend.release();
@@ -154,13 +191,22 @@ export function createBrowserHost() {
         const id = args.rendererId || randomUUID();
         const previous = clients.get(id);
         if (previous) disconnect(previous, 'The sidebar renderer reconnected; the previous command outcome is unknown');
-        clients.set(id, { id, presentation: args.presentation === true, sessionIds: Array.isArray(args.sessionIds) ? args.sessionIds.filter(id => typeof id === 'string') : [],
+        const connectionId = randomUUID();
+        clients.set(id, { id, connectionId, presentation: args.presentation === true, sessionIds: Array.isArray(args.sessionIds) ? args.sessionIds.filter(id => typeof id === 'string') : [],
           targets: [], commands: [], wake: null, lastSeen: Date.now() });
         for (const sessionId of clients.get(id).sessionIds) sessionOwners.set(sessionId, id);
-        return { ok: true, rendererId: id };
+        return { ok: true, rendererId: id, connectionId };
       }
       const client = clients.get(args.rendererId);
+      if (method === 'browser/disconnect' && (!client || args.connectionId !== client.connectionId)) {
+        // A late receipt can retire only its own connection's obligations.
+        // It cannot disconnect or release a replacement using the same renderer ID.
+        if (inputReleased(args)) for (const [id, binding] of bindings)
+          if (binding.target.identity.rendererId === args.rendererId && binding.client?.connectionId === args.connectionId) bindings.delete(id);
+        return {ok: true, ignored: true};
+      }
       if (!client) fail('BROWSER_HOST_DISCONNECTED', 'Reconnect the sidebar renderer');
+      if (args.connectionId !== client.connectionId) fail('BROWSER_HOST_DISCONNECTED', 'The sidebar connection was replaced; reconnect before sending more messages');
       client.lastSeen = Date.now();
       if (method === 'browser/sessions') {
         if (!Array.isArray(args.sessionIds) || args.sessionIds.some(id => typeof id !== 'string')) fail('INVALID_TARGET', 'Expected live window session IDs');
@@ -198,9 +244,12 @@ export function createBrowserHost() {
         const connected = clients.get(client.id) === client;
         return { ok: true, commands: connected ? client.commands.splice(0) : [], connected };
       }
-      if (method === 'browser/disconnect') { disconnect(client, 'The sidebar renderer disconnected'); return { ok: true }; }
+      if (method === 'browser/disconnect') {
+        if (inputReleased(args)) for (const [id, binding] of bindings) if (binding.client === client) bindings.delete(id);
+        disconnect(client, 'The sidebar renderer disconnected'); return { ok: true };
+      }
       fail('UNSUPPORTED_METHOD', 'Unknown sidebar browser transport operation');
     },
-    close() { closed = true; for (const client of [...clients.values()]) disconnect(client, 'OpenCU unloaded'); sessionOwners.clear(); },
+    close() { closed = true; for (const client of [...clients.values()]) disconnect(client, 'OpenCU unloaded'); sessionOwners.clear(); bindings.clear(); },
   };
 }

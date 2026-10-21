@@ -9,12 +9,17 @@ function result(reply) {
   return reply.result.value;
 }
 export function invalidateElements(tabId) { states.delete(tabId); }
-export async function observeAccessibility(tabId, send, documentId, check = () => {}) {
-  const { nodes } = await send('Accessibility.getFullAXTree');
-  check();
+export async function observeAccessibility(tabId, send, documentId, check = () => {}, {format} = {}) {
   const observationId = crypto.randomUUID(), elements = new Map();
   const previous = states.get(tabId);
   const identityScope = previous && previous.documentId === documentId ? previous.identityScope : crypto.randomUUID();
+  if (format === 'screenshot') {
+    check();
+    states.set(tabId, {elements, observationId, identityScope, documentId, deferredAX: true});
+    return {observationId};
+  }
+  const { nodes } = await send('Accessibility.getFullAXTree');
+  check();
   states.set(tabId, {elements, observationId, identityScope, documentId});
   const visible = nodes.filter(node => !node.ignored).map(node => {
     const elementId = node.backendDOMNodeId ? `${identityScope}:${node.backendDOMNodeId}` : undefined;
@@ -29,6 +34,14 @@ export async function observeAccessibility(tabId, send, documentId, check = () =
 export async function elementOperation(tabId, send, operation, args, router, editOptions = {}) {
   const state = states.get(tabId), elements = state?.elements;
   if (args.observationId !== undefined && args.observationId !== state?.observationId) fail('Element observation has expired; observe again.');
+  // A screenshot has no AX payload. A later element action still receives the
+  // current index, built with that action's guarded CDP transport.
+  if (state?.deferredAX && typeof args.elementId === 'string' && !elements.has(args.elementId)) {
+    const {nodes} = await send('Accessibility.getFullAXTree');
+    if (states.get(tabId) !== state) fail('Element observation has expired; observe again.');
+    for (const node of nodes) if (!node.ignored && node.backendDOMNodeId) elements.set(`${state.identityScope}:${node.backendDOMNodeId}`, {backendNodeId:node.backendDOMNodeId});
+    delete state.deferredAX;
+  }
   const entry = elements?.get(args.elementId);
   const route = entry?.route;
   let backendNodeId = entry?.backendNodeId, elementId = args.elementId;

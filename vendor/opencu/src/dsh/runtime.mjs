@@ -384,10 +384,19 @@ export function createPluginRuntime(options = {}) {
       const runtime = await start();
       if (method === 'prepare') {
         const current = await runtime.getState();
+        if (current.ok === false) throw Object.assign(new Error(current.error.message), current.error);
         const state = current.state, connected = runtime.extensionConnections();
-        const failed = new Set((state.releaseErrors || []).flatMap(item => item.failures || []).filter(item => item.code === 'STALE_TARGET').map(item => item.targetId));
-        const targets = state.targets.filter(target => failed.has(target.id) && target.provider === 'extension'
-          && !connected.some(item => item.instanceId === target.identity.instanceId && item.browserInstanceId === target.identity.browserInstanceId));
+        const sidebar = await options.dshBrowser?.listTargets() ?? [];
+        const failed = new Set();
+        const collect = item => {
+          if (item.code === 'STALE_TARGET') failed.add(item.targetId);
+          for (const failure of item.failures ?? []) collect(failure);
+          if (item.result) collect(item.result);
+        };
+        for (const failure of state.releaseErrors ?? []) collect(failure);
+        const targets = state.targets.filter(target => failed.has(target.id) && (target.provider === 'extension'
+          ? !connected.some(item => item.instanceId === target.identity.instanceId && item.browserInstanceId === target.identity.browserInstanceId)
+          : target.provider === 'dsh' && !sidebar.some(item => item.id === target.id && sameIdentity(item.identity, target.identity))));
         if (!state.releasePending || !targets.length) throw error('NO_ORPHANED_CONNECTIONS', 'No offline browser connection needs manual recovery. Reconnect the original browser and retry release.');
         recoveryOffer = { nonce: randomUUID(), expires: Date.now() + 60000, targetIds: targets.map(target => target.id), expectedReleaseErrors: JSON.stringify(state.releaseErrors) };
         return { ok: true, nonce: recoveryOffer.nonce, targets: targets.map(target => ({ id: target.id, title: target.title })) };

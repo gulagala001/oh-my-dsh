@@ -34,6 +34,7 @@ interface ObservationState {
   documentGeneration: number
   identityScope: string
   observationId?: string
+  deferredAX?: boolean
   rendererExited?: boolean
 }
 const states = new WeakMap<WebContents, ObservationState>()
@@ -116,7 +117,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       inputKeys: new Map(), inputButtons: new Set(), releasingInputs: new Map(), inputPosition: { x: 0, y: 0 } }
     states.set(guest, state)
     const tracked = state
-    const invalidate = (): void => { tracked.documentGeneration++; tracked.identityScope = randomUUID(); tracked.elements.clear(); delete tracked.observationId }
+    const invalidate = (): void => { tracked.documentGeneration++; tracked.identityScope = randomUUID(); tracked.elements.clear(); delete tracked.observationId; delete tracked.deferredAX }
     guest.on('render-process-gone', () => {
       invalidate(); tracked.rendererExited = true; tracked.uploadGeneration++
       tracked.inputKeys.clear(); tracked.inputButtons.clear(); tracked.releasingInputs.clear(); tracked.inputActive = false
@@ -132,10 +133,17 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   if (operation === 'releaseInput') {
     current.cancellation.abort(Object.assign(new Error('Browser operation interrupted by input release'), { code: 'CONTROL_STOPPED' }))
     current.cancellation = new AbortController()
-    current.elements.clear(); delete current.observationId
+    current.elements.clear(); delete current.observationId; delete current.deferredAX
     delete current.capture
   }
   const signal = current.cancellation.signal
+  const verifyElement = async (): Promise<{ valid: true }> => {
+    if (typeof args.elementId !== 'string' || !current.elements.has(args.elementId)) throw Object.assign(new Error('STALE_ELEMENT: observe the current document again'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+    if (args.observationId !== undefined && args.observationId !== current.observationId) throw Object.assign(new Error('STALE_ELEMENT: element observation has expired'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+    const entry = current.elements.get(String(args.elementId))
+    if (entry?.route) await current.frameRouter!.validate(entry.route)
+    return { valid: true }
+  }
   if (current.rendererExited || guest.isCrashed()) {
     if (operation === 'releaseInput') {
       current.inputKeys.clear(); current.inputButtons.clear(); current.inputActive = false
@@ -166,13 +174,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
     dialogs.assertClear()
     if (current.rendererExited || guest.isCrashed()) throw guestExited()
     if (current.documentGeneration !== documentGeneration && operation !== 'releaseInput') throw Object.assign(new Error('STALE_ELEMENT: the queued document changed'), { code: 'STALE_ELEMENT', details: { inputDispatched: false } })
-    if (operation === 'verifyElement') {
-      if (typeof args.elementId !== 'string' || !current.elements.has(args.elementId)) throw Object.assign(new Error('STALE_ELEMENT: observe the current document again'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
-      if (args.observationId !== undefined && args.observationId !== current.observationId) throw Object.assign(new Error('STALE_ELEMENT: element observation has expired'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
-      const entry = current.elements.get(String(args.elementId))
-      if (entry?.route) await current.frameRouter!.validate(entry.route)
-      return { valid: true }
-    }
+    if (operation === 'verifyElement' && (!current.deferredAX || current.elements.has(String(args.elementId)))) return verifyElement()
     if (operation === 'navigationSnapshot') {
       return { entries: guest.navigationHistory.getAllEntries(), index: guest.navigationHistory.getActiveIndex() }
     }
@@ -247,6 +249,19 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       }
     }
     try {
+      // Screenshot observations need only document identity and geometry. Rebuild
+      // their element index only if a later command actually uses an AX handle.
+      // Locator-created entries already have their own live frame validation.
+      if (current.deferredAX && typeof args.elementId === 'string' && !current.elements.has(args.elementId)) {
+        if (args.observationId !== undefined && args.observationId !== current.observationId) throw Object.assign(new Error('STALE_ELEMENT: element observation has expired'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+        const tree: { nodes: AXNode[] } = await send('Accessibility.getFullAXTree')
+        if (!Array.isArray(tree.nodes)) throw new Error('Chromium returned no accessibility tree')
+        signal.throwIfAborted()
+        if (guest.isDestroyed() || documentGeneration !== current.documentGeneration) throw Object.assign(new Error('STALE_ELEMENT: document changed while resolving screenshot elements'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+        for (const node of tree.nodes) if (!node.ignored && node.backendDOMNodeId) current.elements.set(`${current.identityScope}:${node.backendDOMNodeId}`, {backendNodeId:node.backendDOMNodeId})
+        delete current.deferredAX
+      }
+      if (operation === 'verifyElement') return await verifyElement()
       if (operation === 'pageState') return value(await send('Runtime.evaluate', { expression:
         '({ documentId: globalThis.__opencuDocument?.id, url: location.href, width: innerWidth, height: innerHeight, scrollX, scrollY, focused: document.hasFocus() })', returnByValue: true }))
       if (operation === 'inputMarker') {
@@ -396,6 +411,12 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         if (!details || typeof details !== 'object') throw new Error('Guest metadata is unavailable')
         live()
         const observationId = randomUUID()
+        if (args.format === 'screenshot') {
+          current.elements.clear()
+          current.observationId = observationId
+          current.deferredAX = true
+          return { ...details, observationId, coordinateSpace: 'viewport-css-pixels' }
+        }
         const tree: { nodes: AXNode[] } = await send('Accessibility.getFullAXTree')
         if (!Array.isArray(tree.nodes)) throw new Error('Chromium returned no accessibility tree')
         live()
@@ -408,6 +429,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
             properties: Object.fromEntries((node.properties ?? []).map(item => [item.name, item.value.value ?? item.value.relatedNodes?.map(related => related.text ?? related.idref) ?? null])) }
         })
         current.observationId = observationId
+        delete current.deferredAX
         return { ...details, observationId, coordinateSpace: 'viewport-css-pixels', ax: { source: 'chromium-accessibility-tree', nodes, stableIds: true, identityScope: current.identityScope },
           text: nodes.map(node => `${node.elementId ? `[${node.elementId}] ` : ''}${node.role} ${JSON.stringify(node.name)}${node.value !== undefined ? ` value=${JSON.stringify(node.value)}` : ''}`).join('\n') }
       }

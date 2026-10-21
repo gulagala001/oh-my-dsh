@@ -227,7 +227,7 @@ async function observe(identity, options = {}, token = controlToken(identity.tab
     await attach(identity, read);
     const current = await verify(identity, true, read);
     const dom = await content(identity.tabId, 'identity', { documentId: identity.documentId }, current.browserDocumentId, read);
-    const accessibility = await observeAccessibility(identity.tabId, (method, params) => read(() => cdp(identity.tabId, method, params)), identity.documentId, read.check);
+    const accessibility = await observeAccessibility(identity.tabId, (method, params) => read(() => cdp(identity.tabId, method, params)), identity.documentId, read.check, options);
     let screenshot;
     if (options.screenshot !== false) {
       if (Math.abs(dom.geometry.visual.scale - 1) > 0.001) fail('UNSUPPORTED_PINCH_ZOOM', 'Reset pinch zoom before screenshot-coordinate actions. Browser page zoom is supported.');
