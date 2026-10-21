@@ -91,7 +91,7 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
     }
     return counts;
   }
-  function taskState(rendererId, { compactImages = false, knownImages } = {}) {
+  function taskState(rendererId, { compactImages = false, knownImages, imagePlacement, imageSessions } = {}) {
     const group = groups().get(rendererId), owner = owners.get(rendererId);
     const activeTaskIds = [...group?.activity.keys() ?? []];
     return { activeTaskIds, revision, globalHidden: false,
@@ -104,6 +104,12 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
       frames: owner?.hidden ? [] : (owner?.frames ?? []).filter(frame => activeTaskIds.includes(frame.threadID)).map(frame => {
         const failure = renderFailure(rendererId, frame);
         const value = failure ? { ...frame, renderError: failure.message, renderErrorCode: failure.code } : frame;
+        // A floating window already receives these pixels through present(). Its
+        // owner needs metadata until a dock handoff explicitly requests images.
+        if (imagePlacement === 'home' && frame.placement !== 'home' && !imageSessions?.includes(frame.threadID) && value.imageDataURL) {
+          const { imageDataURL, ...deferred } = value;
+          return { ...deferred, imageDeferred: true };
+        }
         if (!compactImages || !value.imageDataURL || knownImages?.[frame.presentationID] !== value.imageRevision) return value;
         const { imageDataURL, ...compact } = value;
         return { ...compact, imageUnchanged: true };
@@ -260,7 +266,10 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
     },
     async handle(method, args) {
       const group = groups().get(args.rendererId);
-      if (method === 'state') return { ok: true, state: taskState(args.rendererId, { compactImages: args.compactImages === true, knownImages: args.knownImages }) };
+      const imageOptions = { compactImages: args.compactImages === true, knownImages: args.knownImages,
+        imagePlacement: args.imagePlacement === 'home' ? 'home' : undefined,
+        imageSessions: Array.isArray(args.imageSessions) ? args.imageSessions.filter(id => typeof id === 'string') : [] };
+      if (method === 'state') return { ok: true, state: taskState(args.rendererId, imageOptions) };
       if (method === 'contrast') {
         const owner = owners.get(args.rendererId), rect = args.rect;
         if (!group || !owner?.visible || owner.ownerPid !== args.ownerPid || !Number.isInteger(args.ownerPid) || args.ownerPid <= 0
@@ -300,7 +309,7 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
         void refresh();
       } else await refresh();
       revision++;
-      return { ok: true, state: taskState(args.rendererId) };
+      return { ok: true, state: taskState(args.rendererId, imageOptions) };
     },
     async event(event) {
       const owner = owners.get(event.rendererId);
