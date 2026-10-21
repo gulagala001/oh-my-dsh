@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 // A few known regressions only; no host installation, browser or build matrix.
 const core = [
   'startup-isolation',
-  'start', 'monitor-partial', 'workflow-budget', 'task-budget-persistence',
+  'start', 'monitor-partial', 'monitor-read-cache', 'workflow-budget', 'task-budget-persistence',
   'file-upload-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update',
   'context-store-cache', 'context-coordinate-release',
   'model-reply', 'temporary-chat',

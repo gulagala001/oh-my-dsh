@@ -133,7 +133,8 @@ export function monitorEventQuery(params, now = Date.now()) {
 /** Derived metadata only; no messages, credentials or tool arguments are stored. */
 export class MonitorLedger {
   constructor(directory, { now = Date.now } = {}) {
-    this.now = now; this.error = null; this.imported = new Map(); this.closed = false; this.groupCache = null;
+    this.now = now; this.error = null; this.imported = new Map(); this.closed = false;
+    this.groupCache = null; this.usageCache = null; this.legacyCache = null;
     try {
       mkdirSync(join(directory, 'monitor-v1'), { recursive: true, mode: 0o700 });
       this.db = new DatabaseSync(join(directory, 'monitor-v1', 'usage.sqlite'));
@@ -234,11 +235,27 @@ export class MonitorLedger {
       this.error = String(error.message);
     }
   }
-  metricGroups(where, args, upperIndex) {
+  metricCacheKey(query, args, upperIndex) {
     // Read versions inside the transaction so external writers cannot race a cache hit.
     const version = this.db.prepare('SELECT total_changes() changes,(SELECT data_version FROM pragma_data_version) version,(SELECT MAX(at) FROM calls) lastAt').get();
-    const effective = [...args]; effective[upperIndex] = Math.min(effective[upperIndex], version.lastAt ?? effective[upperIndex]);
-    const key = hash([version.changes, version.version, where, effective]);
+    const effective = [...args];
+    if (upperIndex !== undefined) effective[upperIndex] = Math.min(effective[upperIndex], version.lastAt ?? effective[upperIndex]);
+    return hash([version.changes, version.version, query, effective]);
+  }
+  metricRows(cacheName, sql, args, upperIndex) {
+    const key = this.metricCacheKey(sql, args, upperIndex);
+    let rows = this[cacheName]?.key === key ? this[cacheName].value : null;
+    if (!rows) {
+      this[cacheName] = null;
+      rows = this.db.prepare(sql).all(...args);
+      // One result per read family, with the same bound as grouped metrics.
+      // Never retain receipt bodies, errors or caller-owned mutable counters.
+      if (Buffer.byteLength(JSON.stringify(rows)) <= 512 * 1024) this[cacheName] = { key, value: rows };
+    }
+    return rows.map(row => Object.assign(Object.create(Object.getPrototypeOf(row)), row));
+  }
+  metricGroups(where, args, upperIndex) {
+    const key = this.metricCacheKey(where, args, upperIndex);
     let value = this.groupCache?.key === key ? this.groupCache.value : null;
     if (!value) {
       this.groupCache = null;
@@ -282,7 +299,7 @@ export class MonitorLedger {
     this.db.exec('BEGIN');
     try {
       const { totals, ...groups } = usageOnly
-        ? { totals: emptyMonitorMetric(), components: this.db.prepare(`SELECT kind key,${metricsSQL} FROM calls WHERE ${where} GROUP BY kind ORDER BY knownTotalTokens DESC`).all(...args) }
+        ? { totals: emptyMonitorMetric(), components: this.metricRows('usageCache', `SELECT kind key,${metricsSQL} FROM calls WHERE ${where} GROUP BY kind ORDER BY knownTotalTokens DESC`, args, scopeArgs.length + 1) }
         : callsOnly ? { totals: this.db.prepare(`SELECT ${metricsSQL} FROM calls WHERE ${where}`).get(...args), components: [] }
         : this.metricGroups(where, args, scopeArgs.length + 1);
       let performance;
@@ -387,7 +404,7 @@ export class MonitorLedger {
   }
   legacy(states, scope, args) {
     if (!states.some(state => Object.values(state.metrics || {}).some(metric => metric.calls > 0))) return {};
-    const seen = this.db.prepare(`SELECT sessionId,kind,${metricsSQL} FROM calls WHERE ${scope} AND source!='dream' GROUP BY sessionId,kind`).all(...args);
+    const seen = this.metricRows('legacyCache', `SELECT sessionId,kind,${metricsSQL} FROM calls WHERE ${scope} AND source!='dream' GROUP BY sessionId,kind`, args);
     const byId = new Map(seen.map(row => [JSON.stringify([row.sessionId, row.kind]), row])), result = {};
     for (const state of states) for (const [kind, saved] of Object.entries(state.metrics || {})) {
       const known = byId.get(JSON.stringify([state.id, kind])) || emptyMonitorMetric(), calls = Math.max(0, (saved.calls || 0) - known.calls);
@@ -421,7 +438,7 @@ export class MonitorLedger {
     }
     return result;
   }
-  close() { this.closed = true; this.groupCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
+  close() { this.closed = true; this.groupCache = null; this.usageCache = null; this.legacyCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
 }
 
 // Empty buckets keep the console trend on a steady time axis. Labels follow
