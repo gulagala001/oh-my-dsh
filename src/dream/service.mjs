@@ -57,7 +57,8 @@ export class DreamService {
     this.lifecycle.signal.throwIfAborted();
     if(scope==='session'&&!this.store.session(target))await this.sources.inspect(target,this.lifecycle.signal);
     this.lifecycle.signal.throwIfAborted();
-    if(scope==='project'&&!this.store.projects().includes(target))throw Error('当前项目没有可共享的会话');
+    // An existing parent still needs to withdraw its last shared source.
+    if(scope==='project'&&!this.store.projects().includes(target)&&!this.store.memory(nodeKey('project',target)))throw Error('当前项目没有可共享的会话');
     const job=this.store.enqueue(scope,scope==='global'?'global':target,false,{route});
     void this.drain().catch(e=>this.notice(e));return job;
   }
@@ -182,12 +183,13 @@ export class DreamService {
   }
   async updateSession(id,job,signal,target){
     const stamp=this.sources.stamp(id,this.config().dreamDeepAgeMs??604800000);
-    if(stamp&&this.store.meta('scan:'+id)===stamp)return;
+    if(stamp&&this.store.meta('scan:'+id)===stamp&&!this.store.memory(nodeKey('session',id))?.invalid)return;
     const manifest=await this.sources.manifest(id,{signal,deepAgeMs:this.config().dreamDeepAgeMs??604800000,cut:target?.cut,before:job.createdAt});
     if(target&&!target.cut)this.store.pinTarget(job.id,target.ordinal,{through:manifest.through,generation:manifest.metadata.generation},this.epoch);
     if(job.scope!=='session'&&!manifest.metadata.shared)return;
     const key=nodeKey('session',id);
-    const items=manifest.items.filter(x=>this.store.consumed(key,x.key)!==x.fingerprint);
+    const rebuilding=Boolean(this.store.memory(key)?.invalid);
+    const items=manifest.items.filter(x=>rebuilding||this.store.consumed(key,x.key)!==x.fingerprint);
     await this.batches('session',id,items,job,signal,async batch=>{
       await this.sources.validateBatch(manifest.metadata,batch,signal);
     });
@@ -198,7 +200,6 @@ export class DreamService {
     // like a withdrawn source and wrongly retract its contribution.
     const key=nodeKey(kind,target),children=kind==='project'?this.store.sessions({project:target,shared:true}).map(s=>({key:nodeKey('session',s.id),title:s.title})):this.store.projects().map(p=>({key:nodeKey('project',p),title:this.sources.projectTitle(p)}));
     const current=new Map(children.map(c=>[c.key,{...c,memory:this.store.memory(c.key)}]).filter(([,c])=>c.memory&&!c.memory.invalid));
-    if(!current.size)return;
     const rebuilding=Boolean(this.store.memory(key)?.invalid);
     const progress=this.store.progress(key),previousInputs=new Map(progress.map(p=>[p.source,p]));
     const items=[];
@@ -208,7 +209,7 @@ export class DreamService {
       const before=previousInputs.get(child);
       items.push({key:child,fingerprint,source,text:`${c.title} · ${child} · revision ${fingerprint}${before?` (replaces revision ${before.fingerprint})`:''}\n${c.memory.summary}`});
     }
-    for(const old of progress)if(!current.has(old.source)&&old.fingerprint!=='withdrawn'){
+    for(const old of progress)if(!current.has(old.source)&&(rebuilding||old.fingerprint!=='withdrawn')){
       const source={id:`withdrawn:${digest([key,old.source,old.fingerprint])}`,kind:'withdrawn',key:old.source};
       items.push({key:old.source,fingerprint:'withdrawn',source,text:`Source ${old.source} is no longer shared/available. Remove its contribution; do not infer replacement facts.`});
     }
