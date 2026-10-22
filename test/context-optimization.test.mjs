@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
+import { createRequire } from 'node:module';
 import { Context } from '@deepseek-ai/cordis';
 import { ToolRuntime } from '@deepseek-ai/dsh-tools';
 import { createToolResultMessage, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
@@ -13,12 +14,19 @@ import { installResultReduction } from '../src/result-reduction/service.mjs';
 import { EvidenceStore, hash } from '../src/result-reduction/evidence.mjs';
 import { minifyJson, reduceText, dataView } from '../src/result-reduction/reducers.mjs';
 import { structuralSearch, astRuntime, languages } from '../src/result-reduction/ast.mjs';
-import { articleView, registerContextViews } from '../src/result-reduction/views.mjs';
+import { articleView, fileSource, registerContextViews } from '../src/result-reduction/views.mjs';
 import { codegraphEnvironment, CodegraphRuntime } from '../src/codegraph.mjs';
 import { handleContextApi } from '../src/context/api.mjs';
 import { sendJson } from '../src/http.mjs';
 
 const text = value => [{ type: 'text', text: value }];
+const hostRequire = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
+async function nativeReads(f, fs, cwd = '/project') {
+  const tools = await import(hostRequire.resolve('@deepseek-ai/dsh-tool-fs'));
+  f.ctx.reflect.provide('fs', fs);
+  f.ctx.reflect.provide('workingDirectory', { async ensure() { return cwd; } });
+  tools.apply(f.ctx, tools.Config({ readImage: false, write: false, edit: false }));
+}
 async function fixture(t) {
   const directory = await mkdtemp(join(tmpdir(), 'omd-optimization-'));
   const ctx = new Context(), session = new FixtureSession(), agent = { session, ctx };
@@ -136,7 +144,10 @@ test('native view/AST tools save complete evidence; denied underlying reads neve
     async stat() { return { type: 'file', size: source.length, version: 'v1' }; },
     async streamText() { reads++; return [source]; } });
   f.ctx.tools.register({ name: 'read', description: 'authorized read', parameters: { type: 'object', properties: { file_path: { type: 'string' }, limit: { type: 'number' } } },
-    output: { schema: { type: 'object' }, render: () => text('line 1') }, execute: () => ({ path: '/project/file.js', lines: [{ number: 1, text: 'console.log(123);' }], totalLines: 201 }) });
+    output: { schema: { type: 'object' }, render: () => text('line 1') }, execute: (_args, exec) => {
+      f.ctx.emit('fs/observed', { path: '/project/file.js' }, { kind: 'present', version: 'v1' }, exec);
+      return { path: '/project/file.js', lines: [{ number: 1, text: 'console.log(123);' }], totalLines: 201 };
+    } });
   f.ctx.on('tools/pre-execute', (exec, next) => denied && exec.name === 'read' ? { kind: 'deny', reason: 'policy denied file' } : next(), { global: true });
   registerContextViews(f.ctx, f.hub);
   const raw = await f.call('context_view', { file: '/project/file.js', view: 'raw', maxChars: 256 });
@@ -148,6 +159,111 @@ test('native view/AST tools save complete evidence; denied underlying reads neve
   const found = JSON.parse(search.result.value); assert.equal(found.totalMatches, 1); assert.deepEqual(found.matches[0].range.start, { line: 0, column: 0, index: 0 });
   const before = reads; denied = true;
   const rejected = await f.call('context_view', { file: '/private/secret', view: 'raw' }); assert.equal(rejected.result.isError, true); assert.equal(reads, before);
+});
+
+test('native snapshots keep file identity through path rewriting, every view, batches and AST search', async t => {
+  const f = await fixture(t), html = '<html><head><title>Source</title></head><body><article>\n<h1>Source</h1>\n<p>' + 'A complete sentence about source code. '.repeat(40) + '</p></article></body></html>';
+  const sources = { 'article.html': html, 'file.js': 'console.log(123);\nfunction sample() {}\n', 'data.json': '{ "answer": 42 }' };
+  const resolutions = [], snapshots = [];
+  const nameOf = target => target.targetKey.slice('opaque-file:'.length);
+  await nativeReads(f, {
+    async resolve(path, options) {
+      resolutions.push({ path, cwd: options.cwd });
+      const name = path.replaceAll('\\', '/').split('/').at(-1);
+      assert.ok(Object.hasOwn(sources, name));
+      return { targetKey: 'opaque-file:' + name, displayPath: path };
+    },
+    processPath: target => 'D:\\test\\' + nameOf(target),
+    async stat(target) { return { type: 'file', size: Buffer.byteLength(sources[nameOf(target)]), version: 'v1' }; },
+    async readText(target) { return sources[nameOf(target)]; },
+    async streamText(target) { snapshots.push(target.targetKey); return [sources[nameOf(target)]]; },
+  }, 'D:\\test');
+  // The same tools/execute seam used by Git Bash: translate read arguments in,
+  // then rewrite its successful result path for display, leaving fs untouched.
+  f.ctx.on('tools/execute', async (exec, next) => {
+    if (exec.name !== 'read') return next();
+    const file = exec.arguments.file_path.replace(/^\/d\//i, 'D:/');
+    exec.arguments = { ...exec.arguments, file_path: file };
+    const result = await next();
+    return result.isError ? result : { ...result, value: { ...result.value, path: result.value.path.replace(/^D:\\/i, '/d/').replaceAll('\\', '/') } };
+  });
+  registerContextViews(f.ctx, f.hub);
+  for (const file of ['/d/test/article.html', 'D:\\test\\article.html', 'article.html']) {
+    for (const view of ['raw', 'outline', 'article', 'query']) {
+      const result = await f.call('context_view', { file, view, ...(view === 'query' ? { query: 'Source' } : {}) });
+      assert.equal(result.result.isError, false, JSON.stringify(result.result.content));
+      const page = JSON.parse(result.result.value);
+      assert.equal(page.source, '/d/test/article.html');
+      assert.ok(page.text.includes('Source'));
+      assert.equal((await f.service.recall(f.session, { rawRef: page.rawRef, maxChars: 48000 })).text, html);
+    }
+  }
+  const data = await f.call('context_view', { file: '/d/test/data.json', view: 'data' });
+  assert.equal(data.result.isError, false, JSON.stringify(data.result.content));
+  assert.equal(JSON.parse(data.result.value).text, '{"answer":42}');
+  const batch = await f.call('context_view', { files: ['/d/test/data.json', 'file.js'], view: 'raw' });
+  assert.equal(batch.result.isError, false, JSON.stringify(batch.result.content));
+  assert.deepEqual(JSON.parse(JSON.parse(batch.result.value).text).map(file => file.text), [sources['data.json'], sources['file.js']]);
+  const search = await f.call('code_search', { paths: ['/d/test/file.js'], language: 'javascript', pattern: 'console.log($A)' });
+  assert.equal(search.result.isError, false, JSON.stringify(search.result.content));
+  assert.equal(JSON.parse(search.result.value).matches[0].text, 'console.log(123)');
+  assert.equal(resolutions.length, snapshots.length, 'Only native read resolves paths; the snapshot reuses its exact target');
+  assert.ok(resolutions.every(row => row.cwd === 'D:\\test'));
+});
+
+test('snapshots reject changed files and never stream blocked or unobserved reads', async t => {
+  const f = await fixture(t), target = { targetKey: 'opaque-file:source', displayPath: '/project/source' };
+  let scenario = 'stale-before', stats = 0, snapshots = 0;
+  await nativeReads(f, {
+    async resolve() { return target; }, processPath: () => '/project/source',
+    async stat() {
+      stats++;
+      return { type: 'file', size: 6, version: (scenario === 'stale-before' && stats > 1) || (scenario === 'stale-after' && snapshots > 0) ? 'v2' : 'v1' };
+    },
+    async readText() { return 'source'; },
+    async streamText() { snapshots++; return ['source']; },
+  });
+  f.ctx.on('tools/post-execute', (exec, _result, next) => scenario === 'blocked' && exec.name === 'read' ? { kind: 'block', feedback: text('blocked by policy') } : next());
+  const exec = { agent: f.agent, callId: 'snapshot', token: Symbol('snapshot'), signal: new AbortController().signal };
+  await assert.rejects(fileSource(f.ctx, exec, 'source'), /源文件变化/);
+  assert.equal(snapshots, 0);
+  scenario = 'stale-after';
+  await assert.rejects(fileSource(f.ctx, exec, 'source'), /源文件变化/);
+  assert.equal(snapshots, 1);
+  scenario = 'blocked';
+  await assert.rejects(fileSource(f.ctx, exec, 'source'), /原生 read 未成功/);
+  assert.equal(snapshots, 1);
+  // A synthetic read result (including an unrelated observation) cannot grant
+  // permission to stream a different file after the native policy boundary.
+  f.ctx.on('tools/execute', (actor, next) => {
+    if (scenario !== 'unobserved' || actor.name !== 'read') return next();
+    f.ctx.emit('fs/observed', target, { kind: 'present', version: 'v1' }, { ...actor, name: 'read', callId: 'unrelated-read' });
+    return { isError: false, value: { path: '/project/source', offset: 1, lines: [], totalLines: 1 }, content: text('source') };
+  });
+  scenario = 'unobserved';
+  await assert.rejects(fileSource(f.ctx, exec, 'source'), /不支持完整原文快照/);
+  assert.equal(snapshots, 1);
+});
+
+test('real local snapshots preserve the native session directory and symlink target after result rewriting', async t => {
+  const f = await fixture(t), cwd = join(f.directory, 'session'), source = 'console.log("authorized target");\n';
+  await mkdir(cwd);
+  await writeFile(join(cwd, 'source.js'), source);
+  await symlink('source.js', join(cwd, 'alias.js'), 'file');
+  const { LocalFileSystem } = await import(hostRequire.resolve('@deepseek-ai/dsh-fs-local'));
+  const backend = new Context();
+  await backend.plugin(LocalFileSystem, { cwd: f.directory });
+  t.after(() => backend.fiber.dispose());
+  await nativeReads(f, backend.fs, cwd);
+  f.ctx.on('tools/execute', async (exec, next) => {
+    const result = await next();
+    return exec.name === 'read' && !result.isError ? { ...result, value: { ...result.value, path: 'alias.js' } } : result;
+  });
+  const controller = new AbortController();
+  const exec = { agent: f.agent, callId: 'local-snapshot', token: Symbol('local-snapshot'), signal: controller.signal };
+  assert.deepEqual(await fileSource(f.ctx, exec, 'alias.js'), { text: source, complete: true, source: 'alias.js' });
+  controller.abort();
+  await assert.rejects(fileSource(f.ctx, exec, 'alias.js'), /abort/i);
 });
 
 test('one native snapshot authorizes an archive listing, including nested PTC and fork boundaries', async t => {

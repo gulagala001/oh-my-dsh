@@ -4,24 +4,35 @@ import { dataView } from './reducers.mjs';
 import { structuralSearch, languages } from './ast.mjs';
 
 const output = { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] };
-async function native(ctx, exec, name, args) {
+async function native(ctx, exec, name, args, observe) {
   if (!ctx.tools.get(name, exec.agent)) throw Error(`当前会话没有 ${name} 工具`);
-  const result = await ctx.tools.execute({ name, arguments: args, agent: exec.agent, signal: exec.signal,
-    callId: randomUUID(), rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
-  exec.signal.throwIfAborted();
-  if (result.isError || result.value === undefined) throw Error(`原生 ${name} 未成功；没有绕过其权限或限制`);
-  return result.value;
+  const callId = randomUUID();
+  const stop = observe && ctx.on('fs/observed', (target, observation, actor) => {
+    if (actor?.name === name && actor.callId === callId && actor.agent === exec.agent && actor.parent === exec.token) observe(target, observation);
+  });
+  try {
+    const result = await ctx.tools.execute({ name, arguments: args, agent: exec.agent, signal: exec.signal,
+      callId, rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
+    exec.signal.throwIfAborted();
+    if (result.isError || result.value === undefined) throw Error(`原生 ${name} 未成功；没有绕过其权限或限制`);
+    return result.value;
+  } finally { stop?.(); }
 }
 export async function fileSource(ctx, exec, path) {
   // The normal read dispatcher and its policies authorize the exact file first.
   // Then use the SAME scoped filesystem, never host fs or a shell shortcut.
-  const approved = await native(ctx, exec, 'read', { file_path: path, limit: 1 });
+  let observed;
+  const approved = await native(ctx, exec, 'read', { file_path: path, limit: 1 }, (target, observation) => {
+    if (observation.kind === 'present') observed = { target, version: observation.version };
+  });
   const fs = ctx.get('fs');
-  if (!fs || typeof approved.path !== 'string' || !Array.isArray(approved.lines)) throw Error('当前文件后端不支持完整原文快照');
-  const target = await fs.resolve(approved.path, { signal: exec.signal });
-  if (fs.processPath(target) !== approved.path) throw Error('文件身份已变化，请重新读取');
+  if (!fs || !observed || observed.version === undefined || typeof approved?.path !== 'string' || !Array.isArray(approved.lines)) throw Error('当前文件后端不支持完整原文快照');
+  // Result paths are display metadata: plugins may rewrite their dialect. The
+  // read observation binds the snapshot to its actual target and version.
+  const { target } = observed;
   const before = await fs.stat(target, exec.signal);
   if (before?.type !== 'file' || before.size > 8 * 1024 * 1024) throw Error('快照仅支持 8 MiB 内的常规文本文件；请使用原生范围读取');
+  if (before.version !== observed.version) throw Error('读取前源文件变化，请重试');
   let text = '', size = 0;
   for await (const chunk of await fs.streamText(target, exec.signal)) {
     exec.signal.throwIfAborted(); size += Buffer.byteLength(chunk);
@@ -29,7 +40,8 @@ export async function fileSource(ctx, exec, path) {
     text += chunk;
   }
   const after = await fs.stat(target, exec.signal);
-  if (before.version !== undefined && hash(before.version) !== hash(after?.version ?? null)) throw Error('读取过程中源文件变化，请重试');
+  exec.signal.throwIfAborted();
+  if (after?.type !== 'file' || before.version !== after.version) throw Error('读取过程中源文件变化，请重试');
   return { text, complete: true, source: approved.path };
 }
 export async function articleView(html, url = 'https://document.invalid/') {
