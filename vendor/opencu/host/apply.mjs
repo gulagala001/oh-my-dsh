@@ -352,6 +352,8 @@ for (const [from, to] of [
   ['dialogs', 'opencu-dialogs'],
   ['site-tools', 'opencu-site-tools'], ['extensions', 'opencu-extensions'], ['files', 'opencu-files'], ['profile', 'opencu-profile'],
 ]) pending.set(desktop + to + '.ts', await readFile(new URL(`./${from}.ts`, import.meta.url), 'utf8'));
+for (const extension of ['mjs', 'd.mts']) pending.set(desktop + 'opencu-presentation-images.' + extension,
+  await readFile(new URL('../src/presentation-images.' + extension, import.meta.url), 'utf8'));
 // The same locator and real frame-session router serve all three browser backends.
 for (const file of ['dom-locator.js','cdp-locator.js','cdp-locator.d.ts','select-options.js','select-options.d.ts','frame-router.js','frame-router.d.ts','keyboard.js','keyboard.d.ts','text-edit.js','text-edit.d.ts']) {
   const value = await readFile(new URL(`../extension/${file}`, import.meta.url), 'utf8');

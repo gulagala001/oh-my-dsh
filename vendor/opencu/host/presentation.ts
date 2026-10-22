@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { OpenCUCursors } from './opencu-cursor.ts'
 import { PresentationTransfer, type TransferRect } from './opencu-presentation-transfer.ts'
 import { PresentationMotion, type MotionAnchor, type ResizeEdge } from './opencu-presentation-motion.ts'
+import { compactPresentationImages } from './opencu-presentation-images.mjs'
 
 type Alignment = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 interface Anchor { alignment: Alignment; point: { x: number; y: number } }
@@ -19,6 +20,8 @@ interface RecordEntry {
   hide: (immediate?: boolean) => void; exitGeneration: number; finishHide: () => void
   transfer?: PresentationTransfer; renderMotion: () => void; stopMotion: () => void; pin: () => void
   contrast: { sequence: number; pending: boolean; sampledAt: number; changedAt: number; white: number; confirmations: number; rect: HitRegion | null; applied?: number }
+  frames: object[]; appearance: { locale?: unknown; theme?: unknown }; replay: () => void
+  compactImages: boolean; resetImages: () => void
 }
 const alignments: readonly string[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
 function readLayout(value: unknown): Layout {
@@ -55,7 +58,18 @@ export class OpenCUPresentations {
       ready: Promise.resolve(), follow: () => {}, dispose: () => {}, drag: () => {}, ignoreClickUntil: 0,
       hitRegions: [], syncPointer: () => {}, motion, animate: () => {}, frameIds: [], resize: () => {},
       hide: () => {}, exitGeneration: 0, finishHide: () => {}, renderMotion: () => {}, stopMotion: () => {}, pin: () => {},
-      contrast: { sequence: 0, pending: false, sampledAt: 0, changedAt: 0, white: 1, confirmations: 0, rect: null } }
+      contrast: { sequence: 0, pending: false, sampledAt: 0, changedAt: 0, white: 1, confirmations: 0, rect: null },
+      frames: [], appearance: {}, replay: () => {}, compactImages: false, resetImages: () => {} }
+    // The Host retains at most the currently displayed frames. Reloads and a
+    // receiver cache miss replay these full images over the ordered IPC channel.
+    record.replay = () => {
+      if (!record.hidden && !record.transfer && !window.isDestroyed()) window.webContents.send('dsh-desktop:opencu-presentation-update', {
+        ...record.appearance, frames: record.frames, motion: motion.frame(), exitGeneration: record.exitGeneration, controlWhite: record.contrast.white,
+      })
+    }
+    window.webContents.on('did-finish-load', record.replay)
+    record.resetImages = () => { record.compactImages = false }
+    window.webContents.on('did-start-loading', record.resetImages)
     window.webContents.setZoomFactor(1)
     window.setAlwaysOnTop(owner.isAlwaysOnTop())
     let hideTimer: ReturnType<typeof setTimeout> | undefined
@@ -178,6 +192,7 @@ export class OpenCUPresentations {
       if (record.hidden && !immediate) return
       record.transfer?.cancel(); record.transfer = undefined
       motion.cancel(); stopMotion(); record.hidden = true; record.generation++; record.exitGeneration++
+      record.frames = []
       record.frameIds = []; record.hitRegions = []; record.contrast.pending = false; record.contrast.sequence++; record.contrast.confirmations = 0
       motion.update([]); record.syncPointer()
       if (immediate || !window.isVisible()) {
@@ -208,6 +223,9 @@ export class OpenCUPresentations {
     record.dispose = () => {
       record.transfer?.cancel(); record.transfer = undefined
       record.generation++; stopMotion(); clearTimeout(hideTimer); clearInterval(pointerTimer); motion.cancel()
+      record.frames = []
+      window.webContents.removeListener('did-finish-load', record.replay)
+      window.webContents.removeListener('did-start-loading', record.resetImages)
       owner.removeListener('move', follow); owner.removeListener('resize', follow); owner.removeListener('show', follow)
       owner.removeListener('hide', follow); owner.removeListener('minimize', follow); owner.removeListener('restore', follow); owner.removeListener('focus', raise)
       owner.removeListener('always-on-top-changed', syncLevel)
@@ -355,6 +373,7 @@ export class OpenCUPresentations {
     await record.ready
     if (record.window.isDestroyed() || generation !== record.generation) return { visible: false }
     frames = frames.filter(frame => this.sessions.get(sender)?.includes(frame.threadID))
+    if (frames.length > 10) throw new Error('Too many monitoring frames')
     const displayFrames = frames.map(frame => {
       if (typeof frame.presentationID !== 'string' || [frame.width, frame.height].some(value => value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value <= 0))) throw new Error('Invalid monitoring dimensions')
       return { presentationID: frame.presentationID, width: frame.width as number | undefined, height: frame.height as number | undefined }
@@ -371,12 +390,17 @@ export class OpenCUPresentations {
     }
     record.hidden = false
     record.follow()
-    record.window.webContents.send('dsh-desktop:opencu-presentation-update', { ...payload, frames, motion: record.motion.frame(), exitGeneration: record.exitGeneration })
+    const outgoing = record.compactImages ? compactPresentationImages(record.frames, frames) : frames
+    record.frames = frames
+    record.appearance = { ...('locale' in payload ? { locale: payload.locale } : {}), ...('theme' in payload ? { theme: payload.theme } : {}) }
+    record.window.webContents.send('dsh-desktop:opencu-presentation-update', { ...payload, frames: outgoing, motion: record.motion.frame(), exitGeneration: record.exitGeneration })
     return { visible: record.window.isVisible(), ownerWindow: record.owner.id, windowId: record.window.id, ownerPid: process.pid }
   }
   event(sender: WebContents, payload: unknown): void {
     const record = [...this.records.values()].find(item => item.window.webContents === sender)
     if (!record || typeof payload !== 'object' || payload === null || !('type' in payload)) return
+    if (payload.type === 'images-ready') { record.compactImages = true; record.replay(); return }
+    if (payload.type === 'images-required') { record.replay(); return }
     if (payload.type === 'transfer-rendered') {
       if ('id' in payload && payload.id === record.transfer?.id) record.transfer?.rendered()
       return
