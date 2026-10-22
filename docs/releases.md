@@ -11,7 +11,7 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表为 OMD 0.99.1 �
 
 ## OMD 0.99.1（准备中 / In preparation）
 
-[中文更新说明](release-0.99.1.md#zh-0990) · [English release notes](release-0.99.1.md#en-0990) · [dsh-ops 使用指南](dsh-ops.md)
+[中文更新说明](release-0.99.1.md#zh-0991) · [English release notes](release-0.99.1.md#en-0991) · [dsh-ops 使用指南](dsh-ops.md)
 
 ## 当前公开版本 / Current public version
 
