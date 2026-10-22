@@ -129,8 +129,10 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     return value;
   }
   const backend = {
-    async listTargets() {
+    async listTargets({signal} = {}) {
+      checkSignal(signal);
       const values = await request('listTargets');
+      checkSignal(signal);
       known.clear();
       for (const target of values) known.set(target.id, target);
       return values;

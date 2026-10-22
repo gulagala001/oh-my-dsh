@@ -2,7 +2,7 @@ import {createStorage} from './storage.mjs';
 import {createBrowserBackend} from '../browser/backend.mjs';
 import {
   PROTOCOL_VERSION, assertBackend, assertTarget, checkExpected, errorJSON, fail, inputReleased,
-  json, referenceMatches, sameIdentity,
+  json, readOperation, referenceMatches, sameIdentity,
 } from '../protocol.mjs';
 
 /** All public methods resolve to {ok:true,...} or {ok:false,error,state}. */
@@ -76,23 +76,6 @@ export async function createController({dataDir, browser, native} = {}) {
     if (!backend) fail('BACKEND_UNAVAILABLE', `Backend ${target.backend} is not configured`);
     return {target, backend};
   }
-  async function readOperation(work, signal) {
-    if (signal?.aborted) fail('CONTROL_STOPPED', 'Read interrupted by cancellation or shutdown');
-    let interrupt;
-    const interrupted = signal && new Promise((_, reject) => {
-      interrupt = () => reject(Object.assign(new Error('Read interrupted by cancellation or shutdown'), {code: 'CONTROL_STOPPED'}));
-      signal.addEventListener('abort', interrupt, {once: true});
-      if (signal.aborted) interrupt();
-    });
-    try {
-      const pending = Promise.resolve().then(() => {
-        if (signal?.aborted) fail('CONTROL_STOPPED', 'Read interrupted by cancellation or shutdown');
-        return work();
-      });
-      return await (interrupted ? Promise.race([pending, interrupted]) : pending);
-    }
-    finally { if (interrupt) signal.removeEventListener('abort', interrupt); }
-  }
   async function verify(target, backend, cold = false, operationEpoch = epoch, signal) {
     checkOperation(operationEpoch);
     const recovery = signal === undefined && aborter.signal.aborted ? new AbortController() : null;
@@ -148,22 +131,44 @@ export async function createController({dataDir, browser, native} = {}) {
     for (const recovery of recoveryOperations) recovery.abort();
     for (const target of selected.values()) target.verified = false;
   }
-  async function inventory() {
+  async function inventory(operationEpoch = epoch, callerSignal) {
     alive();
-    const targets = [];
-    const errors = [];
-    for (const [name, backend] of backends) {
-      try { targets.push(...(await backend.listTargets()).map(target => assertTarget(target, name))); }
-      catch (error) { errors.push({backend: name, ...errorJSON(error)}); }
-    }
-    let browsers = [];
-    try { browsers = await backends.get('browser')?.listBrowsers?.() ?? []; }
-    catch (error) { errors.push({backend: 'browser', ...errorJSON(error)}); }
-    return {targets, browsers, errors};
+    checkOperation(operationEpoch);
+    // Inventory is read-only, including after stop. Keep its wait interruptible
+    // so discovery cannot hold the input/release lane or publish a late result.
+    const recovery = aborter.signal.aborted ? new AbortController() : null;
+    if (recovery) recoveryOperations.add(recovery);
+    const controlSignal = recovery?.signal ?? aborter.signal;
+    const signal = callerSignal ? AbortSignal.any([controlSignal, callerSignal]) : controlSignal;
+    try {
+      const targets = [], errors = [];
+      for (const [name, backend] of backends) {
+        try { targets.push(...(await readOperation(() => backend.listTargets({signal}), signal)).map(target => assertTarget(target, name))); }
+        catch (error) {
+          checkOperation(operationEpoch);
+          if (signal.aborted) throw error;
+          errors.push({backend: name, ...errorJSON(error)});
+        }
+        checkOperation(operationEpoch);
+      }
+      let browsers = [];
+      try { browsers = await readOperation(() => backends.get('browser')?.listBrowsers?.({signal}) ?? [], signal); }
+      catch (error) {
+        checkOperation(operationEpoch);
+        if (signal.aborted) throw error;
+        errors.push({backend: 'browser', ...errorJSON(error)});
+      }
+      checkOperation(operationEpoch);
+      if (signal.aborted) fail('CONTROL_STOPPED', 'Read interrupted by cancellation or shutdown');
+      return {targets, browsers, errors};
+    } finally { if (recovery) recoveryOperations.delete(recovery); }
   }
 
   const controller = {
-    listTargets: () => response(() => serial(inventory)),
+    listTargets: ({signal} = {}) => {
+      const operationEpoch = epoch;
+      return response(() => serial(() => inventory(operationEpoch, signal)));
+    },
     openTarget: (request = {}) => response(() => serial(async () => {
       alive();
       // Recover cold state only for an explicit new tab after all prior release
@@ -204,7 +209,7 @@ export async function createController({dataDir, browser, native} = {}) {
         target = assertTarget(await backend.newTab(request.browserId, request.url, {signal: aborter.signal}), 'browser');
         checkOperation(operationEpoch);
         if (target.browserId !== request.browserId) fail('TARGET_IDENTITY_CHANGED', 'Created tab belongs to another browser');
-        const current = assertTarget(await backend.select(json(target)), 'browser');
+        const current = assertTarget(await backend.select(json(target), {signal: aborter.signal}), 'browser');
         checkOperation(operationEpoch);
         if (current.id !== target.id || current.browserId !== request.browserId || !sameIdentity(current.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed the created tab occurrence');
         Object.assign(target, current);
@@ -238,7 +243,7 @@ export async function createController({dataDir, browser, native} = {}) {
       const backend = backends.get(candidate.backend);
       const controlling = mode === 'active' && !releasePending && !previous?.cold;
       try {
-        const target = assertTarget(controlling ? await backend.select(candidate) : candidate, candidate.backend);
+        const target = assertTarget(controlling ? await backend.select(candidate, {signal: aborter.signal}) : candidate, candidate.backend);
         checkOperation(operationEpoch);
         if (target.id !== candidate.id || !sameIdentity(target.identity, candidate.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed occurrence');
         await verify(target, backend, previous?.cold ?? false, operationEpoch);
@@ -362,20 +367,23 @@ export async function createController({dataDir, browser, native} = {}) {
       const operationEpoch = epoch;
       const {target, backend} = targetFor(request.targetId, request.targetIdentity);
       let selecting = false;
+      const recovery = aborter.signal.aborted ? new AbortController() : null;
+      if (recovery) recoveryOperations.add(recovery);
+      const signal = recovery?.signal ?? aborter.signal;
       try {
         if (releasePending || mode === 'recovery_required') {
           await releaseAll();
           checkOperation(operationEpoch);
         }
-        await verify(target, backend, target.cold, operationEpoch);
+        await verify(target, backend, target.cold, operationEpoch, signal);
         checkOperation(operationEpoch);
         selecting = true;
-        const current = await backend.select(json(target));
+        const current = await backend.select(json(target), {signal});
         checkOperation(operationEpoch);
         const resumed = assertTarget(current, target.backend);
         if (resumed.id !== target.id || !sameIdentity(resumed.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Resume selection changed occurrence');
         if (target.cold) checkExpected(resumed, {url: target.url, title: target.title});
-        await verify(resumed, backend, target.cold, operationEpoch);
+        await verify(resumed, backend, target.cold, operationEpoch, signal);
         checkOperation(operationEpoch);
         if (mode !== 'active') aborter = new AbortController();
         Object.assign(target, resumed, {verified: true, cold: false});
@@ -392,7 +400,7 @@ export async function createController({dataDir, browser, native} = {}) {
           checkOperation(releaseEpoch);
         }
         throw error;
-      }
+      } finally { if (recovery) recoveryOperations.delete(recovery); }
     })),
     recoverClosedTargets: (request = {}) => response(() => serial(async () => {
       alive();

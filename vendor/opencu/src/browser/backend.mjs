@@ -1,7 +1,7 @@
 import {randomUUID, createHash} from 'node:crypto';
 import {mkdir, readFile} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
-import {checkExpected, checkSignal, errorJSON, fail, referenceMatches, sameIdentity} from '../protocol.mjs';
+import {checkExpected, checkSignal, errorJSON, fail, readOperation, referenceMatches, sameIdentity} from '../protocol.mjs';
 import {createDeliveryStore} from './deliveries.mjs';
 import {observePage} from './observation.mjs';
 import {actOnPage, releasePage, normalizeBrowserAction} from './actions.mjs';
@@ -342,15 +342,22 @@ export async function createBrowserBackend(options = {}) {
       if (releaseFailures.length) fail('RELEASE_FAILED', 'Browser remains blocked until input release succeeds');
       return (await newTab({url, signal})).target;
     },
-    async listTargets() {
+    async listTargets({signal} = {}) {
+      checkSignal(signal);
       await initialize();
+      checkSignal(signal);
       await registerPages(context.pages());
       const targets = [];
-      for (const record of records.values()) if (!record.page.isClosed()) targets.push(await descriptor(record));
+      for (const record of records.values()) {
+        checkSignal(signal);
+        if (!record.page.isClosed()) targets.push(await descriptor(record));
+      }
+      checkSignal(signal);
       return targets;
     },
-    async select(reference) {
-      const targets = await this.listTargets();
+    async select(reference, {signal} = {}) {
+      const targets = await readOperation(() => this.listTargets({signal}), signal);
+      checkSignal(signal);
       const matches = targets.filter(target => referenceMatches(target, reference));
       if (matches.length !== 1) fail(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND', 'Reference must match one browser tab');
       checkExpected(matches[0], reference?.expected);

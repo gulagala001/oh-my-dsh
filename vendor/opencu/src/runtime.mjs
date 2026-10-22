@@ -35,12 +35,12 @@ export async function createRuntime(options = {}) {
     }
     const { createCompositeBrowserBackend, createExtensionMountHook } = await import('./browser/composite.mjs');
     // provider belongs to the composite inventory, not the plain Playwright inventory.
-    const plainBrowser = browser && { ...browser, select(reference) {
+    const plainBrowser = browser && { ...browser, select(reference, options) {
       if (reference && typeof reference === 'object') {
         const { provider, ...plainReference } = reference;
-        return browser.select(plainReference);
+        return browser.select(plainReference, options);
       }
-      return browser.select(reference);
+      return browser.select(reference, options);
     } };
     const { releaseUnavailableBrowser } = await import('./browser/unavailable-release.mjs');
     const composite = browser || extension || options.dshBrowser ? createCompositeBrowserBackend({ browser: plainBrowser, extension, dsh: options.dshBrowser,
