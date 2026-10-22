@@ -55,12 +55,25 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     const requirements = optimizerRequirements(prefs), selectedPreset = prefs.requirementPresets.find(p => p.id === prefs.requirementPreset);
     useLayoutEffect(() => { setPresetName(selectedPreset?.name ?? ''); }, [prefs.requirementPreset, selectedPreset?.name]);
     const instruction = state.instruction, setInstruction = instruction => controller.publish({ instruction });
-    const id = useId(), anchor = useRef(null), panel = useRef(null);
+    const id = useId(), anchor = useRef(null), panel = useRef(null), closeTimer = useRef(null);
     const [position, setPosition] = useState({ left: 8, bottom: 60, width: 370, maxHeight: 500 });
     useEffect(() => { controller.activate(); return () => controller.deactivate(); }, [controller]);
     useEffect(() => { if (!prefs.enabled) setOpen(false); }, [prefs.enabled]);
     useEffect(() => { if (state.candidate || state.error) setOpen(true); }, [state.candidate, state.error]);
-    const close = () => setOpen(false);
+    const cancelClose = () => { clearTimeout(closeTimer.current); closeTimer.current = null; };
+    const reveal = () => { cancelClose(); setOpen(true); };
+    const close = () => { cancelClose(); setOpen(false); };
+    const leave = () => {
+      cancelClose();
+      closeTimer.current = setTimeout(() => {
+        closeTimer.current = null;
+        if (!panel.current?.contains(document.activeElement) && !isSelectMenuTarget(document.activeElement)) setOpen(false);
+      }, 150);
+    };
+    const blur = event => {
+      if (!anchor.current?.contains(event.relatedTarget) && !panel.current?.contains(event.relatedTarget) && !isSelectMenuTarget(event.relatedTarget)) close();
+    };
+    useEffect(() => cancelClose, []);
     useLayoutEffect(() => {
       if (!open || !prefs.enabled) return;
       const place = () => { const rect = anchor.current?.getBoundingClientRect(); if (!rect) return; const width = Math.min(380, window.innerWidth - 16); setPosition({ width, left: Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8)), bottom: Math.max(8, window.innerHeight - rect.top + 8), maxHeight: Math.max(100, rect.top - 16) }); };
@@ -76,12 +89,11 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     if (!prefs.enabled) return null;
     const locked = controller.locked(), editingBlocked = locked || !!state.busy;
     const canOptimize = !locked && Boolean(input?.draft.trim()) && input.phase === 'plain' && !/^\s*\//.test(input.draft);
-    return <div className="omd-opt-entry omd-opt-theme" ref={anchor}>
-      <Button size="sm" variant="outline" type="button" className="omd-opt-star" aria-label={prefs.automatic ? '关闭自动润色' : '启用自动润色'} aria-pressed={prefs.automatic} title={prefs.automatic ? '自动轻润色已开启 · 点击关闭' : '提示词优化 · 点击开启自动轻润色'} onClick={() => set({ automatic: !prefs.automatic })} data-busy={state.busy || undefined}><Sparkle/></Button>
-      <Button size="sm" variant="outline" type="button" className="omd-opt-expand" aria-label="展开提示词优化" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}>⌃</Button>
-      {state.busy && <Button size="sm" variant="outline" type="button" className="omd-opt-stop" aria-label="停止提示词优化" onClick={() => controller.cancel()}>停止</Button>}
-      {open && createPortal(<section id={id} ref={panel} className="omd-opt-drawer omd-opt-theme" style={position} role="dialog" aria-label="提示词优化">
-        <header><strong><Sparkle/>提示词优化</strong><span>跟随当前模型</span><Button size="sm" variant="outline" type="button" aria-label="关闭提示词优化抽屉" onClick={close}>×</Button></header>
+    return <div className="omd-opt-entry omd-opt-theme" ref={anchor} onPointerEnter={event => { if (event.pointerType !== 'touch') reveal(); }} onPointerLeave={leave} onBlur={blur}>
+      <Button size="sm" variant="outline" type="button" className="omd-opt-star" aria-label={prefs.automatic ? '提示词优化：每次都优化已开启，点击关闭' : '提示词优化：点击开启每次都优化'} aria-pressed={prefs.automatic} aria-expanded={open} aria-controls={open ? id : undefined} aria-haspopup="dialog" title={prefs.automatic ? '每次都优化已开启 · 点击关闭 · 悬停展开' : '点击开启每次都优化 · 悬停展开'} onFocus={event => { if (!panel.current?.contains(event.relatedTarget)) reveal(); }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); reveal(); requestAnimationFrame(() => panel.current?.querySelector('button')?.focus()); } }} onClick={() => { reveal(); set({ automatic: !prefs.automatic }); }} data-busy={state.busy || undefined}><Sparkle/></Button>
+      {open && createPortal(<section id={id} ref={panel} className="omd-opt-drawer omd-opt-theme" style={position} role="dialog" aria-label="提示词优化" onPointerEnter={cancelClose} onPointerLeave={leave} onBlur={blur}>
+        <header><strong><Sparkle/>提示词优化</strong><span>跟随当前模型</span><Button size="sm" variant="outline" type="button" aria-label="关闭提示词优化浮层" onClick={close}>×</Button></header>
+        <p className="omd-opt-hint" role="status">每次都优化：{prefs.automatic ? '已开启' : '已关闭'}。点击输入框的 ✨ 切换，发送前自动轻润色。</p>
         <SegmentedControl id={id+"-mode"} label="优化模式" value={prefs.mode} disabled={!!state.busy} options={OPTIMIZER_MODES.map(([value, label]) => ({ value, label }))} onChange={mode => set({ mode })}/>
         <p className="omd-opt-hint" role="tabpanel" id={id+"-mode-"+prefs.mode+"-panel"} aria-labelledby={id+"-mode-"+prefs.mode}>{descriptions[prefs.mode]}</p>
         <div className="omd-opt-requirements">
@@ -99,7 +111,7 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
         {state.recoveries.map(({ id, draft }) => <div className="omd-opt-candidate" key={id}><strong>保留的草稿版本</strong><pre>{draft}</pre><Button size="sm" variant="outline" type="button" disabled={editingBlocked} onClick={() => controller.inspectRecovery(id)}>查看这份原稿与版本</Button></div>)}
         {(localError || state.error) && <p className="omd-opt-error" role="alert">{localError || state.error}</p>}
         {state.message && <p className="omd-opt-hint" role="status">{state.message}</p>}
-        <p className="omd-opt-hint">点亮星星即每次发送前自动轻润色。优化模板源自 <a href="https://github.com/linshenkx/prompt-optimizer/tree/93c37090846dd7ba9619a0ebc152f205624df9f1" target="_blank" rel="noreferrer">Prompt Optimizer（MIT 版本）</a>。</p>
+        <p className="omd-opt-hint">悬停 ✨ 展开此浮层；键盘聚焦后按 ↓ 进入。优化模板源自 <a href="https://github.com/linshenkx/prompt-optimizer/tree/93c37090846dd7ba9619a0ebc152f205624df9f1" target="_blank" rel="noreferrer">Prompt Optimizer（MIT 版本）</a>。</p>
       </section>, document.body)}
     </div>;
   }
