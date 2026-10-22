@@ -18,7 +18,11 @@ const CONTROL = 'button, [role="button"], [role="tab"], [role="menuitem"], [role
 const COMPOSER = '[data-content-phase="active"] [data-composer-seat]';
 const READABLE = '[data-composer-card], '+COMPOSER+', .Sixlwa_bubble, .tx-cu-user-bubble, [data-chat-flow-kind="assistant-step"], [data-chat-flow-kind] pre, [data-chat-flow-kind] table, [data-message-attachments]';
 const FLOATING = '[class*="_headline"], [class*="_heroWorkspaceRow"]';
-const WORKBENCH = '[data-omd-surface="workbench-column"], .P3OORG_tabBody';
+// Grid tracks retain their normal width in fullscreen, and floating hosts can
+// be zero-sized. Only the actual docked/floating surfaces describe coverage.
+const WORKBENCH = '[data-dockkit-pane], [data-dockkit-float], [data-dockkit-empty], .P3OORG_tabBody';
+const DOCKED = '[data-sidebar-right-panel][data-sidebar-right-open] :is([data-dockkit-pane], [data-dockkit-empty], .P3OORG_tabBody)';
+const GEOMETRY = /^(transform|translate|scale|rotate|opacity|visibility|clipPath|(?:min|max)?(?:Width|Height)|width|height|left|top|right|bottom|inset|gridTemplate|margin|padding)/;
 
 export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const background = canvas.getContext('2d');
@@ -36,7 +40,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   const clickWaves = [];
   const pointer = { x: -1000, y: -1000 }, font = '"SFMono-Regular", Menlo, monospace';
   let stopped = false, frame, last = 0, dirty = true, width = 0, height = 0, measurements, excludedContent;
-  const candidateCache=new Map(), resized=new Set();
+  const candidateCache=new Map(), resized=new Set(), moving=new Set();
   const candidates=selector=>{if(!candidateCache.has(selector))candidateCache.set(selector,[...document.querySelectorAll(selector)]);return candidateCache.get(selector);};
   const resizeObserver=new ResizeObserver(invalidate);
   let ink, muted, accent, line, boxes = [], brands = [], controls = [], ranges = [], covers = [];
@@ -53,12 +57,12 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     nextUltraWave=now+ULTRA_INTERVAL;
   }
   const still = () => reduced || motion.matches;
-  function visible(el, acceptHidden = false) {
+  function visible(el) {
     let value = measurements?.get(el);
     if (value?.excluded) return null;
     if (!value) {
       if (!el.isConnected || (excludedContent ? excludedContent(el) : el.closest(EXTERNAL) || inClosedDetails(el))
-        || el.checkVisibility?.({ contentVisibilityAuto: true }) === false) {
+        || el.checkVisibility?.({ contentVisibilityAuto: true, checkOpacity: true, checkVisibilityCSS: true }) === false) {
         measurements?.set(el, { excluded: true });
         return null;
       }
@@ -68,7 +72,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     const r = value.rect;
     if (r.width < 2 || r.height < 2 || r.bottom < 0 || r.top > height || r.right < 0 || r.left > width) return null;
     const style = value.style ??= getComputedStyle(el);
-    if (style.opacity === '0' || !acceptHidden && style.visibility === 'hidden') return null;
+    if (style.opacity === '0' || style.visibility === 'hidden') return null;
     return r;
   }
   const inside = (r, x, y) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
@@ -181,7 +185,9 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     accent=style.getPropertyValue('--omd-accent').trim()||ink;line=style.getPropertyValue('--omd-border').trim()||'#bcbcbc';
     const shell=document.querySelector('[data-omd-surface="frame"]');
     divider=shell?.querySelector('[data-omd-surface="sidebar-column"]');
-    rightDivider=shell?.querySelector('[data-omd-surface="workbench-column"]');
+    rightDivider=candidates(DOCKED).map(el=>({el,r:visible(el)}))
+      .filter(v=>v.r&&shell?.contains(v.el)&&!v.el.closest('[data-dockkit-float]'))
+      .sort((a,b)=>a.r.left-b.r.left)[0]?.el;
     header=shell?.querySelector('.wSkVaW_header');
     const solid=new Map();
     for(const panel of candidates(PANEL)) {
@@ -190,7 +196,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       for(const el of panel.querySelectorAll('header, footer, thead, th, [class*="header"], [class*="Header"], [class*="footer"], [class*="Footer"], [class*="toolbar"], [class*="savebar"], [role="alert"]'))
         if(['sticky','fixed'].includes(getComputedStyle(el).position))solid.set(el,'');
     }
-    covers=candidates(PANEL+', '+COMPOSER+', '+WORKBENCH+', '+NATIVE_CONTENT).filter(el=>!el.hidden&&!inClosedDetails(el)&&el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})).map(el=>({el,layer:Number(getComputedStyle(el).zIndex)||0,composer:el.hasAttribute('data-composer-seat'),r:el.getBoundingClientRect()})).filter(c=>c.r.width>2&&c.r.height>2);
+    covers=candidates(PANEL+', '+COMPOSER+', '+WORKBENCH+', '+NATIVE_CONTENT).filter(el=>!el.hidden&&!inClosedDetails(el)&&el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true,contentVisibilityAuto:true})).map(el=>({el,layer:Number(getComputedStyle(el).zIndex)||0,composer:el.hasAttribute('data-composer-seat'),r:el.getBoundingClientRect()})).filter(c=>c.r.width>2&&c.r.height>2&&c.r.bottom>=0&&c.r.top<height&&c.r.right>=0&&c.r.left<width);
     conversation=shell?.querySelector('[data-omd-surface="conversation"]');fieldRect=conversation&&visible(conversation);
     brands=candidates('.omd-glyph-brand').map(el=>{
       const r=visible(el),small=el.dataset.glyphSize==='small';
@@ -221,7 +227,9 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     controls=[];ranges=[];const currentControls=new Set();
     for(const el of candidates(CONTROL)) {
       if(el.namespaceURI!=='http://www.w3.org/1999/xhtml')continue;
-      let r=visible(el); const hiddenToggle=!r&&['checkbox','radio'].includes(el.type)&&getComputedStyle(el).opacity==='0';
+      let r=visible(el);
+      const toggleStyle=!r&&['checkbox','radio'].includes(el.type)&&!el.hidden?getComputedStyle(el):null;
+      const hiddenToggle=toggleStyle?.opacity==='0'&&toggleStyle.display!=='none'&&toggleStyle.visibility==='visible';
       if(hiddenToggle)r=visible(el.parentElement);
       if(!r||el.closest('[data-composer-input]')||el.type==='file') continue;
       if(conversation?.contains(el)&&!el.closest(FLOATING))obstacles.push(r);
@@ -258,7 +266,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       // Brand lettering is an SVG in the native shell. Rasterizing a 13 px
       // wordmark into 4 px glyphs makes both the name and logo unreadable.
       if(el.closest('[data-omd-nav-part="brand"], [class*="_logoRow"]'))continue;
-      const r=visible(el,true);if(!r||el.closest('[data-glyph-control],.omd-effort-control'))continue;
+      const r=visible(el);if(!r||el.closest('[data-glyph-control],.omd-effort-control'))continue;
       if(currentControls.has(el.closest(CONTROL)))continue;
       if(!isChromeIcon(el,r))continue;
       const item=pixels(el,r);if(!item.pixels?.length)continue;
@@ -277,15 +285,15 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     chrome.prepare([
       ...boxes,...controls,...ranges,
       ...brands.filter(v=>v.small),
-      ...rings.filter(v=>v.el.isConnected).map(v=>({el:v.el,r:v.el.getBoundingClientRect()})),
+      ...rings.map(v=>({el:v.el,r:visible(v.el)})).filter(v=>v.r),
     ]);
     own(conversation);
     occluded=createOcclusionIndex([
       ...obstacles.map(r=>{const pad=r.pad??10;return {left:r.left-pad,top:r.top-pad,right:r.right+pad,bottom:r.bottom+pad};}),
-      ...covers.filter(c=>c.layer>=ownerLayer&&c.el!==owner&&!c.el.contains(owner)&&!owner?.contains(c.el)
+      ...covers.filter(c=>c.layer>=ownerLayer&&c.el!==owner&&!c.el.contains(owner)
         &&!(c.composer&&owner?.closest(PANEL))).map(c=>c.r),
     ],width,height);
-    const observed=new Set([document.body,shell,conversation,divider,rightDivider,header,
+    const observed=new Set([document.body,shell,conversation,divider,rightDivider,header,...covers.map(v=>v.el),
       ...boxes.map(v=>v.el),...controls.map(v=>v.el),...ranges.map(v=>v.el),...brands.map(v=>v.el)].filter(Boolean));
     for(const el of resized)if(!observed.has(el)){resizeObserver.unobserve(el);resized.delete(el);}
     for(const el of observed)if(!resized.has(el)){resizeObserver.observe(el);resized.add(el);}
@@ -334,6 +342,12 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   function draw(now) {
     frame=undefined;if(stopped||document.hidden)return;
     g=background;local=false;
+    let animating=false;
+    for(const animation of moving){
+      if(!animation.effect?.target?.isConnected||['finished','idle'].includes(animation.playState))moving.delete(animation);
+      else if(animation.pending||animation.playState==='running')animating=true;
+    }
+    if(animating)dirty=true;
     // Scroll/layout updates must not wait for the background's 30 fps budget.
     const quiet=still();if(!quiet&&!dirty&&now-last<32){wake();return;}last=now;
     if(dirty)measure();
@@ -369,7 +383,8 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     }
     clip=null;
     for(const [el,side] of[[divider,'right'],[rightDivider,'left']]){
-      const r=el&&visible(el);own(el);if(r?.width>20)edge(r[side],24,r[side],height-24,time);
+      const r=el&&visible(el);own(el);
+      if(r?.width>20&&r[side]>0&&r[side]<width)edge(r[side],Math.max(24,r.top),r[side],Math.min(height-24,r.bottom),time);
     }
     if(header){const r=visible(header);own(header);if(r)edge(r.left+26,r.bottom,r.right-26,r.bottom,time);}
     chrome.beginFrame();
@@ -380,8 +395,8 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     clip=null;
     if(!quiet){
       for(let i=rings.length-1;i>=0;i--){const ring=rings[i],age=(now-ring.time)/650;if(age>=1||!ring.el.isConnected){rings.splice(i,1);continue;}if(!bind(ring))continue;const r=ring.el.getBoundingClientRect(),radius=6+age*46;for(let k=0;k<16;k++){const a=k/16*Math.PI*2;glyph(age<.4?'+':'·',r.left+ring.dx+Math.cos(a)*radius,r.top+ring.dy+Math.sin(a)*radius,accent,(1-age)*.7,9);}}
-      wake();
     }
+    if(!quiet||animating)wake();
   }
   function wake(){if(!stopped&&!document.hidden&&frame===undefined)frame=requestAnimationFrame(draw);}
   function invalidate(){dirty=true;wake();}
@@ -410,6 +425,14 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
   };
   const visibility=()=>{if(document.hidden){cancelAnimationFrame(frame);frame=undefined;rings.length=bursts.length=trails.length=clickWaves.length=0;}else invalidate();};
   const decoration=node=>node.nodeType===1&&node.matches('.omd-glyph-canvas,.omd-glyph-chrome,.omd-glyph-caption,[data-glyph-content]');
+  const motionStarted=event=>{
+    const el=event.target;
+    // Follow native layout motion, including transforms that never trigger a
+    // ResizeObserver. Ignore content-only animations such as loading spinners.
+    if(!el.getAnimations||decoration(el)||!resized.has(el)&&![...resized].some(node=>el.contains(node)))return;
+    for(const animation of el.getAnimations())if(animation.effect?.getKeyframes().some(key=>Object.keys(key).some(name=>GEOMETRY.test(name))))moving.add(animation);
+    invalidate();
+  };
   const observer=new MutationObserver(records=>{
     // Our canvases and SVG glyph groups do not change native layout. Do not
     // feed their insertion/removal back into another whole-document measure.
@@ -417,10 +440,10 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       &&(record.type!=='childList'||![...record.addedNodes,...record.removedNodes].every(decoration)));
     if(relevant.length){if(relevant.some(r=>r.type!=='characterData'))candidateCache.clear();invalidate();}
   });
-  observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','aria-selected','aria-expanded','aria-checked','aria-valuenow','data-content-phase','data-effort-value','data-effort-max','data-omd-surface','data-omd-nav-part','data-sidebar-collapsed','data-rightbar-fullscreen','disabled','checked','open','hidden']});
-  observer.observe(root,{attributes:true,attributeFilter:['data-appearance','data-omd-palette','data-omd-custom']});
-  const listeners=[['scroll',invalidate,true],['transitionend',invalidate,true],['animationend',invalidate,true],['pointermove',move,{passive:true}],['pointerdown',click,true],['pointerleave',leave],['focusin',invalidate],['focusout',invalidate],['visibilitychange',visibility],['input',effortChanged,true],['change',invalidate,true]];
+  observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class','style','aria-hidden','aria-selected','aria-expanded','aria-checked','aria-valuenow','data-content-phase','data-effort-value','data-effort-max','data-omd-surface','data-omd-nav-part','data-sidebar-collapsed','data-rightbar-fullscreen','data-sidebar-right-panel','data-sidebar-right-open','data-dockkit-host','data-dockkit-pane','data-dockkit-float','data-dockkit-empty','disabled','checked','open','hidden']});
+  observer.observe(root,{attributes:true,attributeFilter:['data-appearance','data-omd-palette','data-omd-custom','data-fullscreen','data-platform','style','class']});
+  const listeners=[['scroll',invalidate,true],['transitionrun',motionStarted,true],['animationstart',motionStarted,true],['transitionend',invalidate,true],['transitioncancel',invalidate,true],['animationend',invalidate,true],['animationcancel',invalidate,true],['pointermove',move,{passive:true}],['pointerdown',click,true],['pointerleave',leave],['focusin',invalidate],['focusout',invalidate],['visibilitychange',visibility],['input',effortChanged,true],['change',invalidate,true]];
   for(const args of listeners)document.addEventListener(...args);
   window.addEventListener('resize',invalidate);motion.addEventListener('change',invalidate);wake();
-  return()=>{stopped=true;cancelAnimationFrame(frame);observer.disconnect();resizeObserver.disconnect();candidateCache.clear();characterIcons.clear();chrome.dispose();opaque.dispose();window.removeEventListener('resize',invalidate);motion.removeEventListener('change',invalidate);for(const args of listeners)document.removeEventListener(...args);for(const el of marked){el.removeAttribute('data-glyph-icon');el.removeAttribute('data-glyph-control');}cache.clear();};
+  return()=>{stopped=true;cancelAnimationFrame(frame);observer.disconnect();resizeObserver.disconnect();candidateCache.clear();moving.clear();characterIcons.clear();chrome.dispose();opaque.dispose();window.removeEventListener('resize',invalidate);motion.removeEventListener('change',invalidate);for(const args of listeners)document.removeEventListener(...args);for(const el of marked){el.removeAttribute('data-glyph-icon');el.removeAttribute('data-glyph-control');}cache.clear();background.clearRect(0,0,canvas.width,canvas.height);};
 }
