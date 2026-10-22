@@ -148,6 +148,18 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
     },
     async select(reference, {signal} = {}) {
       alive();
+      const id = reference?.targetId ?? reference?.id;
+      if (browser && reference?.provider === 'browser' && typeof id === 'string' && reference.identity && typeof reference.identity === 'object' && Object.keys(reference.identity).length) {
+        // The provider and occurrence are already explicit. Let that provider
+        // verify the live reference without discovering every provider again.
+        checkSignal(signal);
+        const selected = wrap(await browser.select(unwrap(reference, 'browser'), {signal}), 'browser');
+        alive(); checkSignal(signal);
+        if (!referenceMatches(selected, reference)) fail('TARGET_NOT_FOUND', 'Reference does not match the live browser target');
+        if (!sameIdentity(selected.identity, reference.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed occurrence');
+        checkExpected(selected, reference.expected);
+        return selected;
+      }
       const matches = (await composite.listTargets({signal})).filter(target => referenceMatches(target, reference) && (!reference?.provider || target.provider === reference.provider));
       checkSignal(signal);
       if (matches.length !== 1) fail(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND', 'Reference must match one browser target');
