@@ -58,6 +58,14 @@ https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.
 
 **成功标志：** 回复包含真实读取结果；右侧 OMD 控制台可查看上下文与调用记录。
 
+## 组合工作台，也有独立插件
+
+0.99.0 将 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench** 的职责拆清，配合已经独立的 OpenCU，以及主题管理产品与 Glyph。你可以使用 OMD 组合好的完整工作台，也可以按需求选择已发布的独立产品。
+
+工作流负责执行与续跑，Rewind 负责对话和文件恢复，Persona 管人格，Extensions 管技能与工具接入，Workbench 管网页聊天和迁移。匹配的独立与内置入口协调服务和界面归属；可选组件启动失败时保留基础对话。独立插件的数据、版本和宿主要求分别管理。
+
+[插件架构、独立发行与共装说明](docs/architecture.md) · [升级与数据迁移](docs/upgrade.md)
+
 ## 从对话到交付
 
 ### 把工作过程放在同一处

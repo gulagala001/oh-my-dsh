@@ -58,6 +58,14 @@ Read this project’s README and explain its purpose and startup steps. Use only
 
 **Success looks like：** The answer reflects the actual file; the OMD console shows context and call records.
 
+## A composed workspace and independent products
+
+Version 0.99.0 separates the responsibilities of **Workflow, Rewind, Persona, Extensions and DeepSeek Workbench**, alongside the established OpenCU plugin, theme management and Glyph. Use the composed OMD workspace or choose a published independent product for a specific need.
+
+Workflow handles execution and resumption; Rewind restores conversations and files; Persona manages personalities; Extensions manages skills and tool connections; Workbench handles web chat and migration. Matching independent and embedded entries coordinate service and UI ownership. Optional startup failures retain core conversations, while plugin data, versions and host requirements keep their own boundaries.
+
+[Architecture, independent releases and coinstallation](docs/architecture_EN.md) · [Upgrade and data migration](docs/upgrade_EN.md)
+
 ## From conversation to delivery
 
 ### Keep the work in view

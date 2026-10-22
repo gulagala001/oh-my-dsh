@@ -28,7 +28,11 @@ New OMD needs no second OpenCU installation. Standalone use remains available; c
 
 The complete embedded browser, annotations and native monitor need matching Host, Client and preload adapters. Plugin installation does not automatically patch stock DSH. Text and file tasks do not require desktop control first. [Setup and boundaries (Chinese)](computer-use.md)
 
-## Independent companion projects
+## Independent products and composed use
+
+Workflow, Rewind and DeepSeek Workbench have independent public releases; Persona, Extensions and Glyph have independent source entries. OpenCU remains available independently, and theme management has its own product. See [plugin architecture](architecture_EN.md) for responsibilities, fixed releases and coinstallation. Each product has its own scope and host requirements.
+
+## Other plugins and integration boundaries
 
 | Project | Boundary |
 | --- | --- |
@@ -37,7 +41,7 @@ The complete embedded browser, annotations and native monitor need matching Host
 | **Subscriptions** | Independent login, account pools, routing and persistent Fast settings. OMD supplies no accounts, quota or server-priority guarantees. |
 | **Intent / requirement understanding** | Independent and off by default, separate from OMD's system instructions and manual draft refinement. |
 | **[dsh-ops](dsh-ops_EN.md)** | File, document and shell tools by T-Auto, with progressive tool discovery and result references. Fixed rc.1/rc.2 compatibility packages pin upstream `0.4.1`; native mode and PTC retain host permissions, sandbox policies and native tools. |
-| **DeepSeek Workbench** | Bundled; the recommendation page provides entry/state rather than third-party install/update/remove. |
+| **DeepSeek Workbench** | Independent web-chat and migration product. OMD controls its included entry under Features; a separately installed package is managed by the native plugin page. |
 | **OpenDesign / standard plugins** | Retain independent skills, tools, UI ownership, account requirements and licenses. |
 | **Development-injected projects** | Follow their project instructions when no standard artifact exists; do not disguise them as directly installable packages. |
 

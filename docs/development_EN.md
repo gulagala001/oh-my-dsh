@@ -3,9 +3,9 @@
 [简体中文](development.md) · [Documentation (Chinese)](README.md) · [Usage](usage_EN.md) · [Contributing](../CONTRIBUTING.md)
 
 For source trials and contributors. Ordinary users should install a [installation guide](install_EN.md), without running engineering tests.
-This checkout retains the fixed `0.10.0` base and later work. The default is the **OMD `0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2` release source**; 0.2.0-rc.2/alpha.3/0.2.1-rc.1 build paths, existing artifacts and data remain. [Package metadata](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json) retains `private`; distribution uses GitHub Releases, not npm. Matching public Chat, Conversation and host components are pinned in the [DSH manifest](../vendor/dsh.json). [Rewritten OpenCU 2.0.6](../vendor/opencu.json) is fully bundled, supplying the core, tools and original REA frontend with OMD alone. The 0.2.1-rc.2 build uses Cordis `4.0.5`, Schemastery `3.18.5` and a frozen dependency lock without relaxed compatibility checks.
+This checkout retains the fixed `0.10.0` base and later work. The default is the **OMD `0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2` release source**; current build targets are 0.2.1-rc.1 and rc.2; older hosts retain their historical tags and artifacts. [Package metadata](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json) retains `private`; distribution uses GitHub Releases, not npm. Matching public Chat, Conversation and host components are pinned in the [DSH manifest](../vendor/dsh.json). [Rewritten OpenCU 2.0.6](../vendor/opencu.json) is fully bundled, supplying the core, tools and original REA frontend with OMD alone. The 0.2.1-rc.2 build uses Cordis `4.0.5`, Schemastery `3.18.5` and a frozen dependency lock without relaxed compatibility checks.
 
-OMD tarballs omit the redundant standalone registration bundle `vendor/opencu/lib/client.js`: the integrated client is already in OMD’s main bundle, while `client.factory.mjs` remains available for offline rebuilds. The workspace snapshot and standalone OpenCU distribution are unchanged.
+OMD tarballs omit the redundant standalone registration bundle `vendor/opencu/lib/client.js`: the integrated client is already in OMD’s main bundle, and `client.factory.mjs` is generated during the build and also excluded from the final tarball. The workspace snapshot and standalone OpenCU distribution are unchanged.
 
 ## Running from Source
 
@@ -57,6 +57,9 @@ Closing the browser does not stop the background service. Use Ctrl+C to stop a f
 
 ## Build Responsibilities
 
+See [plugin architecture](architecture_EN.md) for product boundaries, independent releases and coinstallation. Fixed packages retain required source, matching compiled resources and provenance. End users install fixed Release assets; the source branch is not an installation package.
+
+
 | Path | Responsibility |
 | --- | --- |
 | `cordis.patch.yml`, `presets/` | Host/preset composition |
@@ -77,6 +80,8 @@ Closing the browser does not stop the background service. Use Ctrl+C to stop a f
 Temporary chat history comes from complete turns held in server memory. Native messages and model replay information are reused unchanged in the next request. Request numbers increase within each tab: a `done` receipt confirms commitment, while `stop` cancels only that request, fences its late arrival, and waits for real producer cleanup. After a disconnect, the client reconciles that turn and preserves the draft with sending paused until confirmation; recovery never repeats the model call. Tab entries own frontend state and components subscribe to their views. Closing erases history, and removing a tab stops its keepalive.
 
 The host build uses [`host-const-enums.mjs`](../scripts/host-const-enums.mjs) with the source-verified TypeScript `6.0.3`, explicitly pinned in the root `devDependencies`, to inline official `const enum` members through AST and real symbol binding and eliminate runtime enum references. DSH/Cordis reuse the host SDK singleton rather than bundle a second copy; the official source commit, SHA-256, and complete enum declarations/members are checked against the [enum manifest](../scripts/host-const-enums.json). The default build does not rely on an undeclared compiler fallback from a desktop SDK path.
+
+**Runtime boundaries:** core Chat/Conversation and optional UI enhancements mount separately behind a lightweight backend entry, retaining errors and recovery controls when dependencies fail. Tasks restore from native events; result shortening projects requests while preserving originals. Shared model-reply handling retains cancellation, failure and actual receipts. CommandCode compatibility centralizes the specific gateway's reasoning/tool-history replay without rewriting durable sessions or changing other providers' requests.
 
 ## Tests on Demand
 

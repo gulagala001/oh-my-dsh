@@ -13,6 +13,10 @@
 | [Glyph](skins.md) | 体验字符鲸鱼、局部波纹与原生控件，按需降低动态效果。 |
 
 
+## 插件架构也在变化
+
+Workflow、Rewind、Persona、Extensions、Workbench、OpenCU、主题管理与 Glyph 各自负责明确能力。整套安装、独立产品、共装、升级和数据备份的选择见[插件架构](architecture.md)。
+
 ## 选一种喜欢的工作氛围
 
 ![外观示例](images/release/themes.jpg)

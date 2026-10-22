@@ -57,7 +57,8 @@ The right-sidebar guide offers one **OMD Console** entry with overview, context,
 | **Call log / Background log** | Each model call (kind, model, tokens, duration, status) and each background mechanism record (prepare, hub decision, replacement, compaction, adaptive, Dream); searchable, filterable, paged. |
 | **Task evidence** | Opened from the BT menu “View task evidence”: requirement excerpts, status, and checks. |
 | Composer info bar | Native readings unchanged, with jumps to overview or call log; the context item appears while organizing or when a replacement is ready and can apply it; Dream jobs show progress. |
-| **Scope / BT** | Scope before first send; reminders at any time. |
+| **Permissions → Memory scope** | Choose session, project or global scope before first send; the fixed scope remains visible afterward. |
+| **BT** | Change task/verification reminders or open task evidence. |
 | Model / Fast | Native effort, Ultra and its three submodes, and a bolt when matching Subscriptions supports it. |
 
 [![OMD Console overview](images/release/monitor.jpg)](monitoring.md)
@@ -102,7 +103,7 @@ Busy sessions switch at the next request boundary. Returning to OMD first prepar
 
 The UI separates BC's outgoing estimate from local history. Independent archive/Dream calls keep their inputs and budgets outside the main BC conversation. Memory-cache preparation still copies the host request prefix; BC's wire rewriting can change cache reuse, and the existing input-budget wait remains in force. Other protocol/platform/version combinations require separate verification. [Detailed workflow](context-workflow.md#omd-与-billion-context)
 
-Background preparation stores facts, source-backed user decisions, and detailed material separately, applying representations at safe request boundaries. Originals, documents, images, and attachments remain; windows are finite. Choose scope before first send; it then locks:
+Background preparation stores facts, source-backed user decisions, and detailed material separately, applying representations at safe request boundaries. Originals, documents, images, and attachments remain; windows are finite. Choose **Permissions → Memory scope** before first send; it then locks:
 
 | Scope | Automatic injection and boundary |
 | --- | --- |
@@ -133,6 +134,15 @@ Each session retains up to 20 versions. Within the page, switching retains unsen
 ## Settings and Saving
 
 Oh My DSH settings use one page, with third-party features on a separate subpage. Switches and selections save immediately; personality text uses its editor's save button. Failed saves show an error and restore stored settings while retaining personality drafts.
+
+| Settings group | Common controls |
+| --- | --- |
+| Features | Workbench, Extensions, interactive answers, agent presets, code understanding and prompt optimization; third-party entry |
+| Personality | Global preset, four modules, files and session choices |
+| Context and memory | Optimization, preprocessing, coordination, caching, Auto Compact, default memory scope and Dream |
+| Background models / Global background | Background model routes and manually maintained fixed context |
+| Agent | Runtime and budget hints, background waits and constraint-first guidance |
+| About / Advanced | Versions and feature updates; advanced parameters and history page size under Other |
 
 **Personality preset** selects the global default. The collapsed **Advanced** section manages multiple personalities: create, copy, rename, update, delete, import and export. The editing selection is independent of the global selection, so saving an edit does not switch the global personality. Deleting the selected global preset preserves all its modules in Custom. Copy built-in presets to edit them.
 
@@ -205,6 +215,8 @@ Run `/侧栏` to open an independent temporary text chat using the currently sel
 OMD bundles `@gulagala001/dsh-undo-plugin`. Double Esc while idle or `/rewind` opens the rewind list above the composer; `/undo` restores the last rewind. Both require confirmation. While running, double Esc keeps the Stop behavior. The action next to a user message's Copy button opens confirmation, then withdraws that message and the following conversation in place. Available checkpoints also restore tool-generated file changes; older messages without backups explicitly show conversation-only recovery. Text, images and files return to the composer. Undo restores the previous conversation and files. External changes block conflicting restores and preserve the backups. This OMD version and the standalone plugin share one service and action; disabling either retains the remaining owner's functionality. Avoid enabling other history-mutating rewind plugins together. The old Turn Rewind recommendation and dedicated compatibility layer have been removed; existing third-party installations and data are retained.
 
 ## Data and Maintenance
+
+Personalities, rewind backups, workflows and website imports retain their own data. Copying only `oh-my-dsh/` does not cover every feature; include the locations in [plugin data ownership](architecture_EN.md#data-retains-its-owner).
 
 Use actual `DSH_HOME` (normally user `.dsh` for Web), OMD under `oh-my-dsh/`, source default repository `data/dsh/`. Back up profiles, credentials, sessions, attachments, context, memory together. Dream uses `dream-v1/memory.sqlite`, monitoring `monitor-v1/usage.sqlite`; retired automatic memory stays read-only. External projects/indexes need separate backups. Disable/uninstall does not clear user data.
 

@@ -16,6 +16,7 @@ Topics without an English edition are marked **Chinese**.
 
 | What you want | Guide |
 | --- | --- |
+| Understand independent products, coinstallation and data ownership | [Plugin architecture](architecture_EN.md) |
 | Understand the agent's system-level working practices | [System prompts and tools (Chinese)](prompt-adaptation.md) |
 | Change themes, colors, fonts or backgrounds | [Appearance (Chinese)](skins.md) |
 | Use a computer, browser or annotations | [OpenCU setup and boundaries (Chinese)](computer-use.md) |

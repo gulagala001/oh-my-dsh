@@ -3,9 +3,9 @@
 [English](development_EN.md) · [目录](README.md) · [用户指南](usage.md) · [贡献说明](../CONTRIBUTING.md)
 
 供源码试用和贡献者使用。普通用户用[安装指南](install.md)，无需跑工程测试。
-本 checkout 保留固定 `0.10.0` 底座与后续成果，默认为 **OMD `0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2` 发行源码**；0.2.0-rc.2／alpha.3／0.2.1-rc.1 的独立构建入口、旧工件与数据保留。[包元数据](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json)保留 `private`，使用 GitHub Release 分发而非 npm。匹配的公共 Chat、Conversation 与宿主组件来源见 [DSH manifest](../vendor/dsh.json)；[新版 OpenCU 2.0.6](../vendor/opencu.json)已整体内置，只装 OMD 即包含核心、工具与真实 REA 前端。0.2.1-rc.2 使用 Cordis `4.0.5`、Schemastery `3.18.5` 与冻结依赖锁，不放宽门禁。
+本 checkout 保留固定 `0.10.0` 底座与后续成果，默认为 **OMD `0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2` 发行源码**；当前构建入口只支持 0.2.1-rc.1／rc.2；旧宿主使用对应历史 tag 和工件。[包元数据](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json)保留 `private`，使用 GitHub Release 分发而非 npm。匹配的公共 Chat、Conversation 与宿主组件来源见 [DSH manifest](../vendor/dsh.json)；[新版 OpenCU 2.0.6](../vendor/opencu.json)已整体内置，只装 OMD 即包含核心、工具与真实 REA 前端。0.2.1-rc.2 使用 Cordis `4.0.5`、Schemastery `3.18.5` 与冻结依赖锁，不放宽门禁。
 
-OMD 发行包不重复携带 OpenCU 的独立注册包 `vendor/opencu/lib/client.js`：集成客户端已在 OMD 主包内，`client.factory.mjs` 仍保留用于离线重建；工作区快照和独立 OpenCU 发行不受影响。
+OMD 发行包不重复携带 OpenCU 的独立注册包 `vendor/opencu/lib/client.js`：集成客户端已在 OMD 主包内，`client.factory.mjs` 由构建过程生成，连同独立注册包一起排除出最终安装包；工作区快照和独立 OpenCU 发行不受影响。
 
 ## 源码运行
 
@@ -57,6 +57,9 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 
 ## 构建和职责
 
+产品边界、独立发行与共装行为见[插件架构](architecture.md)。发布包保留必要源码、对应编译资源与来源声明；普通用户从固定 Release 安装，源码主线不直接充当安装包。
+
+
 | 路径 | 内容 |
 | --- | --- |
 | `cordis.patch.yml`、`presets/` | 宿主与预设组合 |
@@ -81,6 +84,8 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 CodeGraph 的 `codegraph.json` 排除规则只作用于当前项目根，不会自动继承到独立子仓库。工作区与各子仓库分别排除隔离宿主、构建产物和 REA 提取包，查询保留手写适配层；调查提取包原件用定点文件读取。索引异常膨胀时先确认无活动写入者，再清理可重建的 `.codegraph` 数据库，执行 `codegraph_index` 并以实际查询确认；不得删除用户数据或源文件。
 
 **内置回合撤回：** `node scripts/sync-rewind.mjs ../rewind` 从已完成构建的独立 `@gulagala001/dsh-undo-plugin` 包同步实际发布文件，核对精确宿主并生成 `vendor/rewind.json`。服务端通过 `oh-my-dsh/rewind` 加载同一模块，客户端直接编译快照入口；独立插件与内置方使用共同运行时所有权，不能额外注册另一套回退引擎或按钮。同步后运行 OMD 构建；不在构建期间隐式拉取或重写快照。
+
+**运行边界：** 基础 Chat／Conversation 与可选客户端增强分开挂载，后台增强由轻量入口建立；依赖失败保留错误与恢复入口。任务状态从原生事件恢复，结果精简只投影请求并保存原文；共享模型回复处理保留取消、失败与原始回执。CommandCode 的请求兼容集中处理特定渠道的 reasoning／工具历史重放，保留原始会话日志，不改变其他提供方的请求。
 
 ## 按需测试
 

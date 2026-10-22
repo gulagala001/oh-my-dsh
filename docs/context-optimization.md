@@ -2,7 +2,7 @@
 
 ## 中文
 
-OMD 的核心功能，默认开启。在 **设置 → 上下文与记忆 → 上下文优化** 可以关闭，选择会保存。所需运行依赖随完整 OMD 安装包提供。
+OMD 的核心功能，默认开启。在 **设置 → Oh My DSH → 上下文与记忆 → 上下文优化** 可以关闭，选择会保存。所需运行依赖随完整 OMD 安装包提供。
 
 - 自动精简受支持的只读 JSON、同形表格和完全相同的连续行；只对识别出的成功 Node TAP 日志做概括。未知日志、报错、写入回执、编辑正文与差异保留。
 - 原生文件读取仍然真实执行。只有本次模型请求里保留着完整旧结果，才把重复读取改成引用，或把变化改成完整差异；基线消失就重新发送完整结果。使用 BC 时，此类依赖模型可见基线的优化自动保守处理。
@@ -19,7 +19,7 @@ OMD 的核心功能，默认开启。在 **设置 → 上下文与记忆 → 上
 
 ## English
 
-Context optimization is built into OMD and enabled by default. Turn it off under **Settings → Context and memory → Context optimization**; the preference persists. The complete matching OMD package includes its runtime dependencies and grammars.
+Context optimization is built into OMD and enabled by default. Turn it off under **Settings → Oh My DSH → Context and memory → Context optimization**; the preference persists. The complete matching OMD package includes its runtime dependencies and grammars.
 
 Supported read-only data receives reversible whitespace, table or exact-repeat views. Only recognized successful Node TAP output receives a summary. Errors, unknown logs, write receipts and exact editing material remain intact. Tools still execute and programmatic return values remain unchanged. Repeat reads and complete deltas require a full baseline in the current request; missing baselines and BC use conservative full results.
 

@@ -65,6 +65,12 @@ The plugin package is now named `oh-my-dsh`. Earlier versions used a different p
 
 To return to an earlier version, follow [Roll Back](#roll-back) with the complete pre-upgrade backup; do not let old and new versions alternate writes to one data directory.
 
+### Independent plugins and data migration
+
+Version 0.99.0 composes Workflow, Rewind, Persona, Extensions and Workbench capabilities. Existing OMD users upgrade the full package without duplicate installations; separately installed products remain managed by the native plugin page. Match each independent package to its own complete host version.
+
+Persona imports existing global and session choices on first use, retaining conflicting preset content. Subsequent data is scoped by profile under `DSH_HOME/dsh-persona-plugin/`. Backups also include rewind backups, Workflow budgets and project scripts, website imports and local appearance data. Keep native session exports together with their original-result archives, restoring sessions before importing the archives. [Data locations](architecture_EN.md#data-retains-its-owner)
+
 ## 4. Handle Relevant Version Differences
 
 When changing DSH versions, prepare matching versions of all required plugins and any desktop host adapters. Keep model channels, permission settings, data, and third-party plugins. Follow the relevant DSH release's migration instructions; do not relabel an incompatible package to make it install.

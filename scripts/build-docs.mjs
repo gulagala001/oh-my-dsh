@@ -18,7 +18,7 @@ const guides = [
   'claude-cli-terminal.md', 'google-material-expressive.md', 'context-workflow.md',
   'monitoring.md', 'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
   'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md',
-  'plugin-compatibility.md', 'development.md', 'deepseek-workbench.md', 'extensions.md',
+  'plugin-compatibility.md', 'architecture.md', 'architecture_EN.md', 'development.md', 'deepseek-workbench.md', 'extensions.md',
   'upstream-patches/README.md', 'site/README.md',
   'README_EN.md', 'install_EN.md', 'getting-started_EN.md', 'usage_EN.md', 'upgrade_EN.md',
   'troubleshooting_EN.md', 'showcase_EN.md', 'plugin-compatibility_EN.md',
@@ -30,7 +30,7 @@ const navigation = [
   ['继续探索', [['docs/context-workflow.md', '上下文与记忆'], ['docs/dream-memory.md', 'Dream 记忆'],
     ['docs/context-optimization.md', '上下文优化与原文'], ['docs/extensions.md', '扩展管理'], ['docs/deepseek-workbench.md', 'DeepSeek 工作台'],
     ['docs/usage.md#computer-use', '电脑操作'], ['docs/skins.md', '主题与定制'],
-    ['docs/workflow.md', 'Ultra 与 Workflow'], ['docs/plugin-compatibility.md', '插件兼容性'],
+    ['docs/workflow.md', 'Ultra 与 Workflow'], ['docs/architecture.md', '插件架构与独立产品'], ['docs/plugin-compatibility.md', '插件兼容性'],
     ['docs/plugin-submissions.md', '插件投稿'], ['docs/showcase.md', '演示来源']]],
   ['参与开发', [['docs/development.md', '开发指南'], ['CONTRIBUTING.md', '参与改进'], ['docs/site/README.md', '文档站']]],
 ];
@@ -40,7 +40,7 @@ const englishNavigation = [
   ['Explore', [['docs/context-workflow.md', 'Context and Memory'], ['docs/dream-memory.md', 'Dream Memory'],
     ['docs/context-optimization.md#english', 'Context Optimization'], ['docs/extensions.md', 'Extensions'], ['docs/deepseek-workbench.md', 'DeepSeek Workbench'],
     ['docs/usage_EN.md#computer-use', 'Computer Use'], ['docs/skins.md', 'Themes'],
-    ['docs/workflow.md', 'Ultra and Workflow'], ['docs/plugin-compatibility_EN.md', 'Plugin Compatibility'],
+    ['docs/workflow.md', 'Ultra and Workflow'], ['docs/architecture_EN.md', 'Plugin Architecture'], ['docs/plugin-compatibility_EN.md', 'Plugin Compatibility'],
     ['docs/plugin-submissions.md', 'Plugin Submissions'], ['docs/showcase_EN.md', 'Screenshots and Sources']]],
   ['Develop', [['docs/development_EN.md', 'Development Guide'], ['CONTRIBUTING.md', 'Contributing'], ['docs/site/README_EN.md', 'Documentation Site']]],
 ];

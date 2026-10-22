@@ -13,6 +13,10 @@
 | [Glyph](skins.md) | Try the character whale, local ripples and native controls, with reduced motion when needed. |
 
 
+## Plugin architecture evolves too
+
+Workflow, Rewind, Persona, Extensions, Workbench, OpenCU, theme management and Glyph have distinct responsibilities. See [plugin architecture](architecture_EN.md) for full versus independent installation, coinstallation, upgrades and data backups.
+
 ## Make the workspace yours
 
 ![Five themes](images/release/themes.jpg)
