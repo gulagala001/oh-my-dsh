@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="docs/release-0.99.0.md"><img alt="OMD 0.99.0" src="https://img.shields.io/badge/draft-OMD%200.99.0-0969da?style=flat-square"></a>
+  <a href="docs/release-0.99.1.md"><img alt="OMD 0.99.1" src="https://img.shields.io/badge/draft-OMD%200.99.1-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
@@ -42,10 +42,10 @@ Models use your DSH configuration. The default installation grants full file/com
 Open **Plugins → Add plugin** in the DSH instance you use, then paste:
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.0/oh-my-dsh-0.2.1-rc.2.omd.0.99.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.1/oh-my-dsh-0.2.1-rc.2.omd.0.99.1.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.0/SHA256SUMS).
+Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.1/SHA256SUMS).
 
 ### 2. Try this first
 
@@ -59,7 +59,7 @@ Read this project’s README and explain its purpose and startup steps. Use only
 
 ## A composed workspace and independent products
 
-Version 0.99.0 separates the responsibilities of **Workflow, Rewind, Persona, Extensions and DeepSeek Workbench**, alongside the established OpenCU plugin, theme management and its Glyph appearance. Use the composed OMD workspace or choose a published independent product for a specific need.
+Version 0.99.1 separates the responsibilities of **Workflow, Rewind, Persona, Extensions and DeepSeek Workbench**, alongside the established OpenCU plugin, theme management and its Glyph appearance. Use the composed OMD workspace or choose a published independent product for a specific need.
 
 Workflow handles execution and resumption; Rewind restores conversations and files; Persona manages personalities; Extensions manages skills and tool connections; Workbench handles web chat and migration. Matching independent and embedded entries coordinate service and UI ownership. Optional startup failures retain core conversations, while plugin data, versions and host requirements keep their own boundaries.
 

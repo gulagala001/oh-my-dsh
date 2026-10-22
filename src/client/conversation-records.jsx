@@ -4,7 +4,6 @@ import { sourceName } from '../message-source.mjs';
 import React, { useState, useSyncExternalStore } from 'react';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import { compactionGroups, taskInjectionDefinition, supersededTaskInjections } from './conversation-records.mjs';
-import { btwRecordDefinition } from './btw-record.mjs';
 import css from './conversation-records.css';
 
 function Record({ title, hint, kind, children }) {
@@ -35,18 +34,8 @@ export function applyConversationRecords(ctx) {
   });
   ctx.inject(['uiConversation'], scope => {
     scope.uiConversation.events.register(taskInjectionDefinition);
-    scope.uiConversation.events.register(btwRecordDefinition);
   });
   ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({ name: 'conversation.chat.node', key: 'omd-task-injection' }, TaskRecord));
-  function BtwRecord({ node }) {
-    const { question, outcome } = node.data;
-    return <article className="omd-btw-record" data-omd-record="btw" aria-label="侧问">
-      <div className="omd-btw-question"><span>/btw</span> {question}</div>
-      <div className="omd-btw-answer" role={outcome?.kind === 'error' ? 'alert' : 'status'}>{outcome?.text || (outcome ? '侧问已结束。' : '侧问处理中…')}</div>
-    </article>;
-  }
-  ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({ name: 'conversation.chat.node', key: 'omd-btw' }, BtwRecord));
-  ctx.slots.inject('conversation.chat.commandview', () => ctx.slots.register({ name: 'conversation.chat.commandview', key: 'btw' }, () => <span data-omd-record-hidden hidden/>));
   const cache = new WeakMap();
   const recordsFor = window => {
     if (!cache.has(window)) cache.set(window, { groups: compactionGroups(window.entries), hiddenInjections: supersededTaskInjections(window.entries) });

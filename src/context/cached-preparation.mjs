@@ -1,5 +1,5 @@
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
-import { assertBtwCachePrefix } from '../btw-policy.mjs';
+import { assertCachedRequestPrefix } from './request-prefix.mjs';
 import { summaryMessageReader, taskContextMeta } from '../task-context.mjs';
 import { hash } from './core.mjs';
 import { materialText } from './materials.mjs';
@@ -108,7 +108,7 @@ export class CachedPreparation {
     const task = `${CACHED_PREPARE_TASK}\n\n${JSON.stringify(payload)}`;
     const request = { ...snapshot.request, purpose: 'compaction',
       messages: [...snapshot.request.messages, p.adapter.message(task, 'cached-prepare-task')] };
-    assertBtwCachePrefix(snapshot.request, request);
+    assertCachedRequestPrefix(snapshot.request, request);
     if (Buffer.byteLength(JSON.stringify(request)) > p.config().prepareInputTokens * 4)
       return this.defer(session, '主执行前缀和预处理提示超过输入预算，原文保留', resume);
     this.waiting.delete(session.id);

@@ -3,14 +3,14 @@
 [English](development_EN.md) · [目录](README.md) · [用户指南](usage.md) · [贡献说明](../CONTRIBUTING.md)
 
 供源码试用和贡献者使用。普通用户用[安装指南](install.md)，无需跑工程测试。
-本 checkout 保留固定 `0.10.0` 底座与后续成果，默认为 **OMD `0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2` 发行源码**；当前构建入口只支持 0.2.1-rc.1／rc.2；旧宿主使用对应历史 tag 和工件。[包元数据](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json)保留 `private`，使用 GitHub Release 分发而非 npm。匹配的公共 Chat、Conversation 与宿主组件来源见 [DSH manifest](../vendor/dsh.json)；[新版 OpenCU 2.0.6](../vendor/opencu.json)已整体内置，只装 OMD 即包含核心、工具与真实 REA 前端。0.2.1-rc.2 使用 Cordis `4.0.5`、Schemastery `3.18.5` 与冻结依赖锁，不放宽门禁。
+本 checkout 保留固定 `0.10.0` 底座与后续成果，默认为 **OMD `0.2.1-rc.2.omd.0.99.1` / DSH `0.2.1-rc.2` 发行源码**；当前构建入口只支持 0.2.1-rc.1／rc.2；旧宿主使用对应历史 tag 和工件。[包元数据](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json)保留 `private`，使用 GitHub Release 分发而非 npm。匹配的公共 Chat、Conversation 与宿主组件来源见 [DSH manifest](../vendor/dsh.json)；[新版 OpenCU 2.0.7](../vendor/opencu.json)已整体内置，只装 OMD 即包含核心、工具与真实 REA 前端。0.2.1-rc.2 使用 Cordis `4.0.5`、Schemastery `3.18.5` 与冻结依赖锁，不放宽门禁。
 
 OMD 发行包不重复携带 OpenCU 的独立注册包 `vendor/opencu/lib/client.js`：集成客户端已在 OMD 主包内，`client.factory.mjs` 由构建过程生成，连同独立注册包一起排除出最终安装包；工作区快照和独立 OpenCU 发行不受影响。
 
 ## 源码运行
 
 需要 Node.js ≥22.19、Git，以及 checkout 的 `package.json` 指定的 pnpm。
-下面只演示已公开的固定 `0.10.0` 源码运行，不是当前 `0.99.0` 版本的安装命令。
+下面只演示已公开的固定 `0.10.0` 源码运行，不是当前 `0.99.1` 版本的安装命令。
 
 ```sh
 git clone --branch v0.2.1-alpha.1.omd.0.10.0 https://github.com/gulagala001/oh-my-dsh.git
@@ -96,3 +96,5 @@ CodeGraph 的 `codegraph.json` 排除规则只作用于当前项目根，不会�
 - 需要运行检查时，使用隔离数据/profile，保持当前工作 DSH 原状。
 
 图片、上下文预算和空闲预处理见[上下文整理与原文回查](context-workflow.md)；来源与许可见[第三方声明](../THIRD_PARTY_NOTICES.md)。
+
+内置 BTW 使用 `node scripts/sync-btw.mjs ../dsh-btw-plugin` 同步独立插件的完整构建；`vendor/btw.json` 记录来源提交、精确宿主及文件哈希。服务端与前端直接使用同一插件入口，匹配的独立与内置版本共用注册生命周期。

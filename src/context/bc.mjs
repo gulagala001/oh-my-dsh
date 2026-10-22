@@ -3,7 +3,7 @@ import { isAgentLoopRequest, markAgentLoopRequest, freezeMessage } from '@deepse
 import { installRequestProjection } from '../llm-request-projection.mjs';
 import { latestTaskContext } from '../task-context.mjs';
 import { sourceName } from '../message-source.mjs';
-import { isBtwSession } from '../btw-policy.mjs';
+import { isBtwSession } from '../dream/side-question.mjs';
 import { hash, activeRecords, liveSpan } from './core.mjs';
 import { BC_VERSION, BC_TOOL_NAMES, BC_EXCLUSIVE_TOOLS } from './bc-policy.mjs';
 

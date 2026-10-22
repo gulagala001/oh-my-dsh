@@ -5,7 +5,7 @@ import { eventTime, actualUser } from '../context/core.mjs';
 import { originalEvent } from '../context/original-search.mjs';
 import { messageOf } from '../context/materials.mjs';
 import { digest, splitSource, summaryIdentity, summaryFingerprint } from './core.mjs';
-import { isBtwSession, btwDescriptor } from '../btw-policy.mjs';
+import { isBtwSession, btwDescriptor } from './side-question.mjs';
 import { BC_REFERENCE_TOOLS } from '../context/bc-policy.mjs';
 
 const ignoredTools = new Set(['recall', 'memory_search', 'todo_write', 'verify_link', 'todos', ...BC_REFERENCE_TOOLS]);

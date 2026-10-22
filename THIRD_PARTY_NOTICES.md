@@ -7,8 +7,7 @@
 | 功能或组件 | 原作者／来源组织 | 原项目 |
 | --- | --- | --- |
 | DSH 宿主与基础组件 | [DeepSeek](https://github.com/deepseek-ai) | [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) |
-| `/btw` 侧问 | [JasonQQ](https://github.com/JasonQQ) | [dsh-btw-plugin](https://github.com/JasonQQ/dsh-btw-plugin) |
-| 历史可选回合回滚 · Turn Rewind | [Anionex](https://github.com/Anionex) | [dsh-turn-rewind](https://github.com/Anionex/dsh-turn-rewind) |
+| `/btw` 旁聊 | [gulagala001](https://github.com/gulagala001) | [DSH BTW](https://github.com/gulagala001/dsh-btw) |
 | 可选需求理解组件 | [啃轮胎的西狐（WestFox-AwA）](https://github.com/WestFox-AwA) | [dsh-prompt-optimizer](https://github.com/WestFox-AwA/dsh-prompt-optimizer) |
 | 可选文件、文档与命令工具 · dsh-ops | [T-Auto](https://github.com/T-Auto) 与 dsh-ops 贡献者 | [dsh-ops](https://github.com/T-Auto/dsh-ops)；[兼容发行说明](docs/dsh-ops.md) |
 | 提示词优化模板 | [linshenkx](https://github.com/linshenkx) | [prompt-optimizer](https://github.com/linshenkx/prompt-optimizer) |
@@ -42,27 +41,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-# Bundled /btw compatibility
+# Bundled DSH BTW
 
-`vendor/dsh-btw/lib/index.js` is an unchanged copy of [JasonQQ](https://github.com/JasonQQ)'s
-`@jasonqq/dsh-btw-plugin` 0.1.2 at commit
-`50c246cadcc9b3380c36b1bc301b6efbdd08584e`.
-The upstream package and README declare MIT, but this pinned source has no
-independent LICENSE file. Its declarations and source attribution are retained
-in `vendor/dsh-btw`; see `PROVENANCE.md`. OMD supplies only an execution and
-lifecycle façade. This is not an official upstream release.
-
-Source: [dsh-btw-plugin](https://github.com/JasonQQ/dsh-btw-plugin),
-[pinned revision](https://github.com/JasonQQ/dsh-btw-plugin/tree/50c246cadcc9b3380c36b1bc301b6efbdd08584e).
-
-The former optional `@anionex/dsh-turn-rewind` 0.3.9 recommendation by
-[Anionex](https://github.com/Anionex) uses commit
-`9610ab93c87e2405e7512d53a099b8fb2caf6936` and its actual BSD-3-Clause license.
-The recommendation and its OMD compatibility layer have been removed. Its code
-is not bundled with OMD; this attribution is retained for historical references.
-
-Source: [dsh-turn-rewind](https://github.com/Anionex/dsh-turn-rewind),
-[pinned revision](https://github.com/Anionex/dsh-turn-rewind/tree/9610ab93c87e2405e7512d53a099b8fb2caf6936).
+`vendor/btw` contains [gulagala001/dsh-btw](https://github.com/gulagala001/dsh-btw),
+package `@gulagala001/dsh-btw`, under the MIT License. OMD loads the same server
+and native popover client as the standalone product. The source commit, exact
+host, package version and per-file hashes are recorded in [vendor/btw.json](vendor/btw.json).
+Its [license](vendor/btw/LICENSE) accompanies the snapshot.
 
 # Bundled Rewind
 
@@ -121,9 +106,9 @@ The whale contours in `src/client/brand.mjs` are adapted from the animated whale
 
 Source: https://github.com/deepseek-ai/deepseek-harness
 
-The component sources under [vendor/dsh](vendor/dsh/README.md) are pinned to DeepSeek Harness **0.2.1-alpha.2**, tag `dsh-v0.2.1-alpha.2`, commit `d743267388641bc76f17c45ce8b4c231aed1d32c`. [vendor/dsh.json](vendor/dsh.json) records included sources and artifacts. OMD retains the native Tools service and adds scoped tool presentation, optional background controls, workflow journaling, JSONL/context recovery, and a wait-aware Conversation composer. Derived factories are generated from matching sources.
+The component sources under [vendor/dsh](vendor/dsh/README.md) are pinned to the exact DeepSeek Harness version, official tag and commit recorded in [vendor/dsh.json](vendor/dsh.json), together with the included sources and artifacts. OMD retains the native Tools service and adds scoped tool presentation, optional background controls, workflow journaling, JSONL/context recovery, and a wait-aware Conversation composer. Derived factories are generated from matching sources.
 
-The matching **public native Chat** implementation is retained separately under [vendor/dsh/ui-chat](vendor/dsh/ui-chat/README.md), with its complete upstream sources, upstream-built artifacts, DeepSeek MIT license, patch and [checksum manifest](vendor/dsh/ui-chat.json) pinned to the same official alpha.2 commit. It was recovered from the public DSH-component snapshot in the primary OMD source, not authored by or copied from OpenCU modules. The matching public Conversation component remains under [vendor/dsh/ui-conversation](vendor/dsh/ui-conversation/README.md). The rewritten [OpenCU bundle](vendor/opencu.json) no longer includes the old CU or its historical Chat snapshot. OMD mounts its own alpha.2 public Chat independently of OpenCU. All upstream copyright and license notices remain in place.
+The matching **public native Chat** implementation is retained separately under [vendor/dsh/ui-chat](vendor/dsh/ui-chat/README.md), with its complete upstream sources, upstream-built artifacts, DeepSeek MIT license, patch and [checksum manifest](vendor/dsh/ui-chat.json) pinned to the matching official host commit recorded in that manifest. It was recovered from the public DSH-component snapshot in the primary OMD source, not authored by or copied from OpenCU modules. The matching public Conversation component remains under [vendor/dsh/ui-conversation](vendor/dsh/ui-conversation/README.md). The rewritten [OpenCU bundle](vendor/opencu.json) no longer includes the old CU or its historical Chat snapshot. OMD mounts the matching public Chat independently of OpenCU. All upstream copyright and license notices remain in place.
 
 MIT License
 
@@ -147,37 +132,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-# Cua Driver
-
-The former CU implementation referenced Cua Driver 0.26.1, source commit `b4e3caecd709311d613dde29ddac03e29468bb38`. That implementation is no longer bundled; this historical attribution is retained. Cua Driver's runtime is not bundled or used as the default backend.
-
-Source: https://github.com/trycua/cua
-
-MIT License
-
-Copyright (c) 2025 Cua AI, Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
 # Rewritten OpenCU
 
-[OpenCU 0.1.0](vendor/opencu.json) is bundled from the rewritten plugin repository, replacing the old CU distribution. Its [notices](vendor/opencu/THIRD_PARTY_NOTICES.md) cover the original REA components, React runtime, browser and native dependencies. OMD and standalone OpenCU share the same core, tool registration and client presentation when co-installed. This local candidate does not confer redistribution rights to proprietary REA assets or change any upstream license.
+[OpenCU](vendor/opencu.json) is bundled from the rewritten plugin repository, replacing the old CU distribution. Its [notices](vendor/opencu/THIRD_PARTY_NOTICES.md) cover the original REA components, React runtime, browser and native dependencies. OMD and standalone OpenCU share the same core, tool registration and client presentation when co-installed. This distribution does not confer redistribution rights to proprietary REA assets or change any upstream license.
 
 # Acorn
 
@@ -212,7 +169,7 @@ Source: https://github.com/JetBrains/JetBrainsMono
 
 # sharp
 
-sharp 0.35.4 is used for screenshot pixel normalization under the Apache License 2.0. Its license and the notices for its native dependencies are included in the installed packages.
+sharp 0.35.5 is used for screenshot pixel normalization under the Apache License 2.0. Its license and the notices for its native dependencies are included in the installed packages.
 
 Source: https://github.com/lovell/sharp
 
@@ -223,11 +180,11 @@ Source: https://github.com/lovell/sharp
 Source: https://github.com/colbymchenry/codegraph
 License: https://github.com/colbymchenry/codegraph/blob/v1.6.0/LICENSE
 
-@modelcontextprotocol/client 2.0.0 provides the MCP transport under the MIT License. @deepseek-ai/dsh-mcp-client 0.2.1-alpha.2 provides the host tool/result adapter under the MIT License.
+@modelcontextprotocol/client 2.2.0 provides the MCP transport under the MIT License. @deepseek-ai/dsh-mcp-client 0.2.1-rc.2 provides the host tool/result adapter under the MIT License.
 
 Sources: https://github.com/modelcontextprotocol/typescript-sdk and https://github.com/deepseek-ai/deepseek-harness
 
-The modular main-agent prompt adaptation in `src/cc-adaptation` comes from the project's own DSH 0.1.6 CC migration candidate 0.4.0. Its fixed comparison source is [the CC prompt snapshot](https://github.com/asgeirtj/system_prompts_leaks/blob/8eb1be156b850d09c2bd05df7ea32b0f06c9887d/Anthropic/claude-code/claude-code-opus-5.md). The historical migration targeted DSH 0.1.6-alpha.1; the current OMD integration is adapted to DSH 0.2.1-alpha.2. This attribution does not grant additional rights to third-party prompt text.
+The modular main-agent prompt adaptation in `src/cc-adaptation` comes from the project's own DSH 0.1.6 CC migration candidate 0.4.0. Its fixed comparison source is [the CC prompt snapshot](https://github.com/asgeirtj/system_prompts_leaks/blob/8eb1be156b850d09c2bd05df7ea32b0f06c9887d/Anthropic/claude-code/claude-code-opus-5.md). The historical migration targeted DSH 0.1.6-alpha.1; the current OMD integration targets the exact DSH version recorded in package.json. This attribution does not grant additional rights to third-party prompt text.
 
 # Prompt Optimizer templates
 

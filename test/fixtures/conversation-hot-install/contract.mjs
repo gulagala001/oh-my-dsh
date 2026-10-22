@@ -82,7 +82,7 @@ export function assertStage(value, baseline, expected) {
   assert.equal(active[0].priority, baseline.priority - (enabled ? 0.5 : 0));
   const stock = model.occupants.filter(row => row.priority === baseline.priority); assert.equal(stock.length, 1);
   assert.equal(stock[0].active, !enabled, 'Retained stock occupant activation');
-  for (const kind of ['omd-task-injection', 'omd-btw']) assert.equal(ui.events.some(row => row.kind === kind), enabled, 'OMD contribution follows selection: ' + kind);
+  for (const kind of ['omd-task-injection']) assert.equal(ui.events.some(row => row.kind === kind), enabled, 'OMD contribution follows selection: ' + kind);
   assert(ui.views.includes('chat'), 'Real chat view present');
   assert.equal(value.modelButtonVisible, enabled, 'Unique visible 模型与思考强度 control follows OMD');
   assert.equal(value.modelButtonCount, enabled ? 1 : 0, 'OMD model button disappears completely when disabled');

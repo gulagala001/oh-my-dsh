@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
-import { assertBtwCachePrefix } from '../btw-policy.mjs';
+import { assertCachedRequestPrefix } from './request-prefix.mjs';
 import { taskContextMeta } from '../task-context.mjs';
 import { ADAPTIVE_TASK, SUMMARY_PROMPT_VERSION } from './prompts.mjs';
 import { activeRecords, candidateInput, hash, liveSpan, newRecord, normalizeChoices, preparationWorkload, prepareCandidate, recordBlocks, recordSnapshot, userRevision, validatePrepared } from './core.mjs';
@@ -119,7 +119,7 @@ export class AdaptiveCompaction {
     if (!force && status.lastKey === fingerprint) { wait('同一批材料已检查，等待变化'); return; }
     const task = `${ADAPTIVE_TASK}\n\n${JSON.stringify({ pressure_ratio: pressure, last_rejection: s.review.lastRejection || null, candidates })}`;
     const request = { ...snapshot.request, purpose: 'compaction', messages: [...snapshot.request.messages, p.adapter.message(task, 'adaptive-task')] };
-    assertBtwCachePrefix(snapshot.request, request);
+    assertCachedRequestPrefix(snapshot.request, request);
     if (Buffer.byteLength(JSON.stringify(request)) > cfg.prepareInputTokens * 4) { wait('请求超过后台输入预算，原文保留'); return; }
     const controller = new AbortController(), revision = s.compressionModeRevision || 0, seenEvents = s.eventsSincePrepare || 0;
     const signatures = new Map(offeredPrepared.map(r => [r.id, recordSnapshot(session, r)]));
