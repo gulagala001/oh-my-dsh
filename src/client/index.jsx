@@ -95,7 +95,8 @@ const cx = (...parts) => parts.filter(Boolean).join(' ');
 const hostConversation = createConversation(require), hostChat = createChat(require);
 // The embedded Conversation plugin provides both services during apply().
 // Waiting for either here would prevent their provider from ever starting.
-export const inject = [...new Set(['layout', ...hostConversation.inject, ...hostChat.inject])].filter(name => name !== 'uiConversation' && name !== 'conversation');
+// Projectless drafts belong to this owner, before the enhancement child mounts.
+export const inject = [...new Set(['layout', 'remote.agentPresets', ...hostConversation.inject, ...hostChat.inject])].filter(name => name !== 'uiConversation' && name !== 'conversation');
 export async function apply(ctx) {
   ctx.provide('omdConversationLifecycle', installConversationLifecycle(ctx));
   const report = applyStartupNotice(ctx);
@@ -105,7 +106,7 @@ export async function apply(ctx) {
   ctx.effect(() => () => chatSettings.dispose());
   await ctx.plugin(hostChat, { settings: chatSettings });
   await mountOptionalClient(ctx, 'OMD 界面增强', async () => ({
-    inject: ['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', 'remote.session', 'remote.subagents', 'remote.agentPresets'],
+    inject: ['slots', 'sidebarRightTabs', 'sidebarRight', 'theme', 'configForms', 'layout', 'modules', 'remote.session', 'remote.subagents', 'conversation'],
     apply: scope => applyEnhancements(scope, { chatSettings, projectlessDrafts, report }),
   }), report);
 }

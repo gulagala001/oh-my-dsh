@@ -25,6 +25,7 @@ core.push('test/context-optimization.test.mjs', 'test/bc-compatibility.test.mjs'
   'test/personality-files-session.test.mjs', 'test/projectless-disposal.test.mjs');
 core.push('test/result-reduction-memo.test.mjs', 'test/legacy-identity.test.mjs');
 core.push('test/evidence-lifecycle.test.mjs');
+core.push('test/client-injection.test.mjs');
 core.push('test/glyph-rendering.test.mjs');
 
 const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
