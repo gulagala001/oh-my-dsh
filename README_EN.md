@@ -17,6 +17,8 @@
 
 <p align="center"><a href="docs/images/omd-hero-en.png"><img src="docs/images/omd-hero-en.png" alt="Oh My DSH · From conversation to delivery" width="880"></a></p>
 
+<p align="center"><a href="docs/images/glyph-animation.gif"><img src="docs/images/glyph-animation.gif" alt="Glyph animated character whale and interface interactions" width="600" height="438"></a></p>
+
 <a id="quickstart"></a>
 <a id="desktop"></a>
 <a id="features"></a>

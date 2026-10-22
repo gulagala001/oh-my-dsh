@@ -1,7 +1,7 @@
 {
   "schemaVersion": 3,
   "capturedDate": "2026-09-28",
-  "source": "README and the product page share the current Launchpad screenshots. The primary manifest records their exact hashes and capture boundaries.",
+  "source": "README and the product page share Launchpad screenshots and the Glyph appearance recording. The primary manifest records Launchpad screenshot hashes; additional homepage media is recorded below.",
   "primaryManifest": "../site/media/manifest.json",
   "notes": [
     "Actual screenshots are not retouched.",
@@ -31,6 +31,19 @@
       "type": "mechanism-diagram",
       "width": 1200,
       "height": 420
+    },
+    {
+      "file": "docs/images/glyph-animation.gif",
+      "type": "native-ui-recording",
+      "capturedDate": "2026-10-22",
+      "source": "User-provided Glyph appearance recording, resized and compressed for homepage display.",
+      "width": 600,
+      "height": 438,
+      "durationSeconds": 11.5,
+      "framesPerSecond": 6,
+      "bytes": 1799415,
+      "mimeType": "image/gif",
+      "sha256": "cd8542d1af54a5badc353bab8b91c278d71a771e17c7be6b6c65487c75e973a1"
     }
   ]
 }
