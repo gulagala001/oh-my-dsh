@@ -134,7 +134,7 @@ export function monitorEventQuery(params, now = Date.now()) {
 export class MonitorLedger {
   constructor(directory, { now = Date.now } = {}) {
     this.now = now; this.error = null; this.imported = new Map(); this.closed = false;
-    this.groupCache = null; this.usageCache = null; this.legacyCache = null;
+    this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.overviewCache = null;
     try {
       mkdirSync(join(directory, 'monitor-v1'), { recursive: true, mode: 0o700 });
       this.db = new DatabaseSync(join(directory, 'monitor-v1', 'usage.sqlite'));
@@ -265,6 +265,39 @@ export class MonitorLedger {
     const copy = row => Object.assign(Object.create(Object.getPrototypeOf(row)), row);
     return Object.fromEntries(Object.entries(value).map(([group, rows]) => [group, Array.isArray(rows) ? rows.map(copy) : copy(rows)]));
   }
+  overviewMetrics(where, args, upperIndex, grain) {
+    // Only derived readings are retained. Pricing, live spans and empty time
+    // buckets still follow the current request, not the cached read snapshot.
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const key = this.metricCacheKey([where, grain, zone, process.env.TZ], args, upperIndex);
+    let value = this.overviewCache?.key === key ? this.overviewCache.value : null;
+    if (!value) {
+      this.overviewCache = null;
+      const performance = this.db.prepare(`SELECT AVG(t.firstTokenMs) avgFirstTokenMs,COUNT(t.firstTokenMs) firstTokenCalls,
+        COALESCE(SUM(CASE WHEN c.outputTokens>=0 AND c.durationMs>t.firstTokenMs THEN c.outputTokens END),0) decodeTokens,
+        COALESCE(SUM(CASE WHEN c.outputTokens>=0 AND c.durationMs>t.firstTokenMs THEN c.durationMs-t.firstTokenMs END),0) decodeMs,
+        COUNT(CASE WHEN c.outputTokens>=0 AND c.durationMs>t.firstTokenMs THEN 1 END) tpsCalls
+        FROM calls c LEFT JOIN call_timings t ON t.id=c.id WHERE ${where}`).get(...args);
+      const sessionSpans = this.db.prepare(`SELECT sessionId,
+        MIN(CASE WHEN startedAt<=at THEN startedAt WHEN durationMs<=at THEN at-durationMs ELSE at END) startedAt,
+        MAX(at) endedAt,COUNT(*) calls,
+        SUM(CASE WHEN startedAt<=at OR durationMs<=at THEN 0 ELSE 1 END) untimedCalls
+        FROM calls WHERE ${where} GROUP BY sessionId`).all(...args);
+      const buckets = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,MIN(at) at,${metricsSQL},
+        COALESCE(SUM(CASE WHEN kind IN ('main','subagent') THEN ${knownTotalSQL} END),0) main,
+        COALESCE(SUM(CASE WHEN kind NOT IN ('main','subagent') THEN ${knownTotalSQL} END),0) background
+        FROM calls WHERE ${where} GROUP BY label ORDER BY label`).all(...args);
+      const modelBuckets = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,
+        NULLIF(model,'') model,COALESCE(SUM(${knownTotalSQL}),0) tokens FROM calls WHERE ${where} GROUP BY label,NULLIF(model,'')`).all(...args);
+      value = { performance, sessionSpans, buckets, modelBuckets };
+      // One overview, at most 512 KiB serialized; large histories still use
+      // the same uncached queries. Never retain receipts or caller mutations.
+      if (Buffer.byteLength(JSON.stringify(value)) <= 512 * 1024) this.overviewCache = { key, value };
+    }
+    const copy = row => Object.assign(Object.create(Object.getPrototypeOf(row)), row);
+    return { performance: copy(value.performance), sessionSpans: value.sessionSpans.map(copy),
+      buckets: value.buckets.map(copy), modelBuckets: value.modelBuckets.map(copy) };
+  }
   query(states, ids, query, costOf, { callsOnly = false, usageOnly = false } = {}) {
     if (!this.db || this.closed) throw Error(this.error || '监控账本不可用');
     this.import(states);
@@ -302,19 +335,14 @@ export class MonitorLedger {
         ? { totals: emptyMonitorMetric(), components: this.metricRows('usageCache', `SELECT kind key,${metricsSQL} FROM calls WHERE ${where} GROUP BY kind ORDER BY knownTotalTokens DESC`, args, scopeArgs.length + 1) }
         : callsOnly ? { totals: this.db.prepare(`SELECT ${metricsSQL} FROM calls WHERE ${where}`).get(...args), components: [] }
         : this.metricGroups(where, args, scopeArgs.length + 1);
-      let performance;
+      let performance, overview, first, grain;
       if (!callsOnly && !usageOnly) {
-        performance = this.db.prepare(`SELECT AVG(t.firstTokenMs) avgFirstTokenMs,COUNT(t.firstTokenMs) firstTokenCalls,
-          COALESCE(SUM(CASE WHEN c.outputTokens>=0 AND c.durationMs>t.firstTokenMs THEN c.outputTokens END),0) decodeTokens,
-          COALESCE(SUM(CASE WHEN c.outputTokens>=0 AND c.durationMs>t.firstTokenMs THEN c.durationMs-t.firstTokenMs END),0) decodeMs,
-          COUNT(CASE WHEN c.outputTokens>=0 AND c.durationMs>t.firstTokenMs THEN 1 END) tpsCalls
-          FROM calls c LEFT JOIN call_timings t ON t.id=c.id WHERE ${where}`).get(...args);
+        first = this.db.prepare(`SELECT MIN(at) at FROM calls WHERE ${where}`).get(...args).at;
+        grain = query.period === 'today' ? '%Y-%m-%d %H:00' : first != null && until - first > 90 * 86400000 ? '%Y-%m' : '%Y-%m-%d';
+        overview = this.overviewMetrics(where, args, scopeArgs.length + 1, grain);
+        performance = overview.performance;
         performance.avgTps = performance.decodeMs > 0 ? performance.decodeTokens / (performance.decodeMs / 1000) : null;
-        performance.sessionSpans = this.db.prepare(`SELECT sessionId,
-          MIN(CASE WHEN startedAt<=at THEN startedAt WHEN durationMs<=at THEN at-durationMs ELSE at END) startedAt,
-          MAX(at) endedAt,COUNT(*) calls,
-          SUM(CASE WHEN startedAt<=at OR durationMs<=at THEN 0 ELSE 1 END) untimedCalls
-          FROM calls WHERE ${where} GROUP BY sessionId`).all(...args);
+        performance.sessionSpans = overview.sessionSpans;
       }
       const metrics = Object.fromEntries(groups.components.map(({ key, ...value }) => [key, value]));
       const legacy = this.legacy(states, scope, scopeArgs);
@@ -337,19 +365,12 @@ export class MonitorLedger {
       }
       let series, seriesSplit, costSummary;
       if (!callsOnly) {
-        const first = this.db.prepare(`SELECT MIN(at) at FROM calls WHERE ${where}`).get(...args).at;
-        const grain = query.period === 'today' ? '%Y-%m-%d %H:00' : first != null && until - first > 90 * 86400000 ? '%Y-%m' : '%Y-%m-%d';
-        const buckets = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,MIN(at) at,${metricsSQL},
-          COALESCE(SUM(CASE WHEN kind IN ('main','subagent') THEN ${knownTotalSQL} END),0) main,
-          COALESCE(SUM(CASE WHEN kind NOT IN ('main','subagent') THEN ${knownTotalSQL} END),0) background
-          FROM calls WHERE ${where} GROUP BY label ORDER BY label`).all(...args);
+        const { buckets, modelBuckets } = overview;
         series = buckets.map(({ main, background, ...row }) => row);
         const split = buckets.map(({ label, main, background, errors, calls }) => ({ label, main, background, errors, calls }));
         seriesSplit = fillBuckets(split, grain, query.period === 'all' ? first : from, Math.min(until, this.now()), { main: 0, background: 0, errors: 0, calls: 0 });
         const byLabel = new Map(seriesSplit.map(row => [row.label, row]));
         for (const row of seriesSplit) row.models = {};
-        const modelBuckets = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,
-          NULLIF(model,'') model,COALESCE(SUM(${knownTotalSQL}),0) tokens FROM calls WHERE ${where} GROUP BY label,NULLIF(model,'')`).all(...args);
         for (const row of modelBuckets) byLabel.get(row.label).models[JSON.stringify(row.model)] = row.tokens;
         costSummary = { totals: [], unpricedCalls: 0, partialCalls: 0 };
         if (costOf) {
@@ -438,7 +459,7 @@ export class MonitorLedger {
     }
     return result;
   }
-  close() { this.closed = true; this.groupCache = null; this.usageCache = null; this.legacyCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
+  close() { this.closed = true; this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.overviewCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
 }
 
 // Empty buckets keep the console trend on a steady time axis. Labels follow
