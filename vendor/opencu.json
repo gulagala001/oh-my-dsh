@@ -699,7 +699,7 @@
     "src/browser/playwright-keyboard.mjs": "3b68fce1f550cd81e2ec8aee01f65662deb2b03ffd0059df110cebda9010f444",
     "src/browser/resources.mjs": "1bc9f1d5616fada3cea44f6c30830f6c6bf825fdf0ea002e6c2a78fad3ee381a",
     "src/browser/unavailable-release.mjs": "fb78435de247bb5b54a07f9551bf8af7f61657188d32ea28a59575bc9f4657c3",
-    "src/browser/user-activity.mjs": "5435a54131a2e5cb4afa58b1e467acdaba5c23c0a356e95b88958c9538b77da0",
+    "src/browser/user-activity.mjs": "8aab15a7f24ff7b4c7f29712e76bdbea297c19dc6ce9da8ca2ba517e7fcc28c0",
     "src/control-capabilities.mjs": "5eaeb75426131669482eecd10c56ed8630ebf23b8d4265ed4d3b6a63d45decc4",
     "src/core/controller.mjs": "0f33ac717bf1c8ce0b579e8b671306f4782f37b4f425bc962aad7af0661072ae",
     "src/core/storage.mjs": "4398f66c2d43ea1bef79cd788adb68493501045d27de170f05152573a1cb7b3a",
@@ -745,6 +745,6 @@
     "src/runtime.mjs": "5ab64b04f72d4343f479da4f2342e44a1dc985903e0b213cd0bc5b2cf7ca09ed",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
   },
-  "sourceRevision": "877668c2018a931407636ced346d07ed6007b746",
+  "sourceRevision": "451bb6bdcd846628ba7182638740f3eec0c81c87",
   "baselineArchiveSha256": "a227e711071a07122afac58ca7262eb5aac9a798287f9ddae3ebfcab5ca19477"
 }

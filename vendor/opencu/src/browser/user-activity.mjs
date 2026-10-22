@@ -97,10 +97,17 @@ export async function createUserActivityMonitor(session, {onAcquire} = {}) {
   async function evaluate(expression, install = true) {
     const {frameTree} = await session.send('Page.getFrameTree');
     const {executionContextId} = await session.send('Page.createIsolatedWorld', {frameId: frameTree.frame.id, worldName});
-    const result = await session.send('Runtime.evaluate', {contextId: executionContextId,
-      expression: install ? `${source};${expression}` : expression, returnByValue: true});
-    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
-    return result.result.value;
+    async function run(expression) {
+      const result = await session.send('Runtime.evaluate', {contextId: executionContextId, expression, returnByValue: true});
+      if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
+      return result.result.value;
+    }
+    if (!install) return run(expression);
+    // The initial setup and new-document script normally own the monitor. Only
+    // reinstall when this live world has none; the missing branch runs no work.
+    const current = await run(`globalThis.opencuActivity ? {value:(${expression})} : null`);
+    if (current === null) return run(`${source};${expression}`);
+    return current?.value;
   }
   let scriptRemoved = false, disposed = false, disposing;
   const monitor = {
@@ -121,6 +128,6 @@ export async function createUserActivityMonitor(session, {onAcquire} = {}) {
   };
   // Registration must retain the cleanup handle before current-document setup can fail.
   onAcquire?.(monitor);
-  await evaluate('null');
+  await evaluate(`${source};null`, false);
   return monitor;
 }
