@@ -146,6 +146,7 @@ export class MonitorLedger {
           inputTokens REAL,outputTokens REAL,cacheReadTokens REAL,cacheWriteTokens REAL,reasoningTokens REAL,totalTokens REAL);
         CREATE INDEX IF NOT EXISTS monitor_session_time ON calls(sessionId,at DESC,id);
         CREATE INDEX IF NOT EXISTS monitor_time ON calls(at DESC,id);
+        CREATE INDEX IF NOT EXISTS monitor_filter_options ON calls(+provider,+model,+kind);
         CREATE TABLE IF NOT EXISTS call_timings(id TEXT PRIMARY KEY,firstTokenMs REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,sessionId TEXT,kind TEXT NOT NULL,at REAL NOT NULL,
@@ -424,7 +425,12 @@ export class MonitorLedger {
         return { ...value, usage: Object.keys(usage).length ? usage : null };
       });
       const tail = items.at(-1), nextCursor = more ? Buffer.from(JSON.stringify({ fingerprint, from, until, at: tail.at, id: tail.id })).toString('base64url') : null;
-      const available = this.db.prepare(`SELECT DISTINCT provider,model,kind FROM calls WHERE ${scope} ORDER BY provider,model,kind`).all(...scopeArgs);
+      // Unary + keeps the values and sort order, but isolates this index from
+      // receipt queries: changing their scan order can change floating-point costs.
+      // Scoped reads already use the session index; keep their original query.
+      const columns = query.range === 'all' ? '+provider provider,+model model,+kind kind' : 'provider,model,kind';
+      const order = query.range === 'all' ? '+provider,+model,+kind' : 'provider,model,kind';
+      const available = this.db.prepare(`SELECT DISTINCT ${columns} FROM calls WHERE ${scope} ORDER BY ${order}`).all(...scopeArgs);
       const count = this.db.prepare(`SELECT COUNT(*) total FROM calls WHERE ${where}`).get(...args).total;
       const sessionIds = callsOnly ? [] : this.db.prepare(`SELECT DISTINCT sessionId FROM calls WHERE ${scope} AND sessionId IS NOT NULL`).all(...scopeArgs).map(row => row.sessionId);
       const messages = [];

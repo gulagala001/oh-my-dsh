@@ -15,7 +15,7 @@ function fixture(t) {
     usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 } });
   const query = (at = now, params = {}, states = []) => ledger.query(states, new Set(['fixture']),
     monitorQuery({ session: 'fixture', ...params }, at), undefined, { usageOnly: true });
-  return { ledger, writer, append, query, now };
+  return { directory, ledger, writer, append, query, now };
 }
 
 test('usage reads follow snapshot versions, future cutoffs, filters and caller ownership', t => {
@@ -85,4 +85,54 @@ test('row caches discard oversized results and failures, then allow recovery', t
   assert.equal(ledger.legacyCache, null);
   ledger.db.prepare = prepare;
   assert.equal(Object.keys(query(undefined, { range: 'all' }, states).metrics).length, 1200);
+});
+
+test('filter index upgrades existing ledgers and preserves ordered live options for every scope', t => {
+  const { directory, ledger, writer, now } = fixture(t);
+  ledger.db.exec('DROP INDEX monitor_filter_options');
+  const values = [
+    ['one', 'z', 'm', 'main', 'fixture'], ['two', 'a', 'z', 'prepare', 'fixture'],
+    ['three', null, null, 'main', 'other'], ['four', '', '', 'main', 'fixture'],
+    ['five', 'a', 'z', 'main', 'fixture'], ['six', 'a', 'z', 'main', 'fixture'],
+    ['seven', 'A', 'm', 'main', 'other'], ['eight', '提供方', '模型', 'dream', 'other'],
+  ];
+  for (const [id, provider, model, kind, sessionId] of values) {
+    assert.equal(ledger.append({ id, at: now - 1, provider, model, kind, sessionId, source: 'native' }), true);
+  }
+  const before = ledger.db.prepare('SELECT * FROM calls ORDER BY id').all();
+  const upgraded = new MonitorLedger(directory, { now: () => now });
+  try { assert.equal(upgraded.error, null); } finally { upgraded.close(); }
+  assert.deepEqual(ledger.db.prepare('SELECT * FROM calls ORDER BY id').all(), before);
+  const read = (ids, params = {}) => ledger.query([], new Set(ids), monitorQuery({ ...params }, now), undefined, { callsOnly: true });
+  const expected = ids => {
+    const rows = writer.prepare(`SELECT DISTINCT provider,model,kind FROM calls WHERE ${ids ? 'sessionId IN (SELECT value FROM json_each(?))' : '1=1'} ORDER BY provider,model,kind`).all(...(ids ? [JSON.stringify(ids)] : []));
+    return { providers: [...new Set(rows.map(r => r.provider).filter(Boolean))],
+      models: [...new Map(rows.filter(r => r.model).map(r => [JSON.stringify([r.provider, r.model]), { provider: r.provider, model: r.model }])).values()],
+      kinds: [...new Set(rows.map(r => r.kind))] };
+  };
+  for (const ids of [[], ['fixture'], ['other'], ['fixture', 'other']]) assert.deepEqual(read(ids).filters, expected(ids));
+  const all = read([], { range: 'all' }); assert.deepEqual(all.filters, expected());
+  // Available options span the scope, including routes outside the active page/time/filter.
+  assert.deepEqual(read([], { range: 'all', provider: 'missing', period: 'today', status: 'error', limit: 1 }).filters, all.filters);
+  writer.prepare('UPDATE calls SET provider=?,model=?,kind=? WHERE id=?').run('new', 'new', 'changed', 'one');
+  assert.deepEqual(read(['fixture']).filters, expected(['fixture']));
+  writer.prepare('DELETE FROM calls WHERE id=?').run('two');
+  assert.deepEqual(read([], { range: 'all' }).filters, expected());
+  assert.equal(ledger.append({ id: 'late', at: now + 5000, provider: 'future', model: 'future', kind: 'main', sessionId: 'fixture' }), true);
+  assert.deepEqual(read(['fixture']).filters, expected(['fixture']));
+});
+
+test('filter index keeps receipt order and exact costs under provider and model filters', t => {
+  const { ledger, now } = fixture(t);
+  for (let i = 1; i <= 3; i++) assert.equal(ledger.append({ id: 'r' + i, at: now - 4 + i,
+    sessionId: 'fixture', kind: 'main', provider: 'p', model: 'm', usage: { outputTokens: i } }), true);
+  for (const filter of [{ provider: 'p' }, { provider: 'p', model: 'm' }, { model: 'm' }]) {
+    const visited = [];
+    const result = ledger.query([], new Set(), monitorQuery({ range: 'all', ...filter }, now), call => {
+      visited.push(call.usage.outputTokens);
+      return { currency: 'CNY', amount: call.usage.outputTokens / 10 };
+    });
+    assert.deepEqual(visited, [3, 2, 1]);
+    assert.equal(result.costSummary.totals[0].amount, [3, 2, 1].reduce((n, v) => n + v / 10, 0));
+  }
 });
