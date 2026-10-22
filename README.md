@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.19.0"><img alt="OMD 0.19.0" src="https://img.shields.io/badge/release-OMD%200.19.0-0969da?style=flat-square"></a>
+  <a href="docs/release-0.99.0.md"><img alt="OMD 0.99.0" src="https://img.shields.io/badge/draft-OMD%200.99.0-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub 累计下载量" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
@@ -38,13 +38,15 @@
 
 ### 1. 安装
 
+**0.99.0 正在准备，尚未发布。** 以下为拟定的固定安装地址，发布后生效；现在安装请使用 [0.18.8 公开发行](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8)。
+
 打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.0/oh-my-dsh-0.2.1-rc.2.omd.0.99.0.tgz
 ```
 
-等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/SHA256SUMS).
+等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.0/SHA256SUMS).
 
 ### 2. 先试这一件事
 
@@ -56,29 +58,49 @@ https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.
 
 **成功标志：** 回复包含真实读取结果；右侧 OMD 控制台可查看上下文与调用记录。
 
-## 把任务、上下文和结果放在一起
+## 从对话到交付
 
-- **持续推进任务**：系统提示词与实际工具、模式和权限共同装配；保留需求、来源与核验结果，适合需要多轮执行的工作。
-- **整理长对话**：上下文整理、Auto Compact 与 Dream 各自负责压缩和长期记忆，原话、附件与来源仍可回查。
-- **看见实际过程**：OMD 控制台集中展示上下文、记忆、调用用量与后台活动；内置电脑操作、任务证据和网页聊天入口。
+### 把工作过程放在同一处
 
-### 按自己的习惯安排工作空间
+会话总览集中展示产出、来源、后台进程、Workflow 和子智能体，点开成员即可继续侧栏对话。**Ultra** 提供 Workflow、Agent Team、自由三种协作方式；**Better Todo** 将原始需求、任务与验证结果关联，保留已完成检查和真实执行回执。
 
-原生、Codex Desktop、iOS Liquid Glass、Claude CLI 与 Google Material 提供不同布局和材质，搭配 29 套配色、自定义背景、字体与分区颜色。当前源码还包含 Glyph 动态字符外观；固定发行包的功能以对应 Release 为准。
+没有项目也能开始：首次发送时创建独立文件目录，后续对话继续复用。输入框的 **✨** 提供轻润色、结构化和步骤规划，可保存要求预设、比较版本、撤销或重做。
+
+[日常使用](docs/usage.md) · [Ultra 与 Workflow](docs/workflow.md)
+
+### 长对话保留背景，精简结果仍能回查
+
+**上下文优化**默认开启：精简可识别的只读结果，对已有完整基线的重复读取提供引用或差异，保留工具真实执行与获准原文。工具卡片的**查看原文**支持行号、搜索、翻页和导出；原文档案可随会话迁移。
+
+按需工具发现、文件与网页视图、AST 代码搜索和 CodeGraph 帮助定位材料。历史整理、Auto Compact 与 **Dream** 分别管理上下文和会话／项目／全局记忆；也可选用 Billion Context 管理压缩，Dream、回查、任务、侧问与分支继续协作。
+
+[上下文优化与原文](docs/context-optimization.md) · [压缩与 BC](docs/context-workflow.md) · [Dream](docs/dream-memory.md)
+
+### 让界面和表达方式适合自己
+
+**Glyph 动态字符**用立体字符鲸鱼、局部波纹和字符控件组织工作空间。还可选择 DSH 原生、Codex Desktop、iOS Liquid Glass、Claude CLI、Google Material，搭配 **29 套配色**、背景、字体和分区颜色；已有外观选择继续保留。
+
+**人格管理**分为身份与人格、语言风格、沟通方式、回答呈现四个模块，支持多个预设、复制修改、JSON 导入导出和 AI 创作提示词。启用会话人设后，可为不同主会话单独选择、继承全局或关闭人格。
 
 ![外观示例](docs/images/release/themes.jpg)
 
-### 长任务保留背景，结果保留依据
+[外观设置](docs/skins.md) · [人格与设置](docs/usage.md#人格预设与自定义身份)
 
-| 能力 | 行为与条件 |
-| --- | --- |
-| 上下文整理 | 按需保存事实摘要、用户决定与详细资料，仍可通过 `recall` 回查原始信息。 |
-| Auto Compact | 默认关闭；达到设置的 Token 阈值后压缩，可选择摘要＋资料或仅摘要。 |
-| Dream | 自动整理默认关闭；保存会话、项目与全局短记忆，沿用用户选择的共享范围。 |
-| Better Todo | 将需求、任务与证据关联；待办提醒默认开，验证提醒可单独选择。 |
-| 调用统计 | 来自实际回执；未知不是零，`≥` 表示已知下界，后台模型调用也计费。 |
+### 用好浏览器、电脑和扩展
 
-[上下文机制](docs/context-workflow.md) · [Dream 记忆](docs/dream-memory.md) · [统计口径](docs/monitoring.md)
+内置 **OpenCU 2.0.6**，提供浏览器与应用发现、观察、后台优先操作、批注和浮动监看。停止与取消跟踪真实键鼠释放；读取挂起、授权超时和目标替换都有明确的处理结果。完整内嵌界面需匹配宿主适配及系统权限。
+
+**扩展管理**在插件页集中管理 Skill、MCP、指令文件、命令和 Hooks。可选 **dsh-ops** 提供文件、文档、命令与按需工具能力，在第三方功能中安装匹配宿主的固定兼容包。
+
+[电脑与浏览器](docs/computer-use.md) · [扩展管理](docs/extensions.md) · [dsh-ops](docs/dsh-ops.md)
+
+### 临时讨论与实际用量，各有入口
+
+`/侧栏` 打开使用当前模型的临时文字聊天，关闭时停止并清空；`/侧栏（网页版）` 使用 DeepSeek 网页临时会话。普通网页聊天支持将可读取的历史和附件迁移到 DSH。`/btw` 可围绕主任务侧问，回合撤回支持恢复对话及已有检查点的文件改动。
+
+**OMD 控制台**汇总上下文、记忆、调用日志和后台工作，可按日期、模型、组件和会话筛选费用与用量。未知用量保留未知，`≥` 表示已知下界；优化估算与提供方实际账单分别展示。
+
+[临时聊天、侧问与撤回](docs/usage.md#侧问与回合回滚) · [DeepSeek Workbench](docs/deepseek-workbench.md) · [监控统计](docs/monitoring.md)
 
 ## 使用范围
 

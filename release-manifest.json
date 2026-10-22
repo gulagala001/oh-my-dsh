@@ -2,28 +2,54 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.2.omd.0.99.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "OMD 0.99.0 · DSH 0.2.1-rc.2",
+      "notes": [
+        "新增功能：上下文优化与原文档案、内容视图与 AST 搜索、可选 BC、人格管理、临时侧栏聊天、扩展管理、Glyph 和 dsh-ops。",
+        "体验优化：统一提示词入口与设置，优化长会话、字符外观、监控查询和电脑操作传输。",
+        "问题修复：独立聊天、模型与 Ultra 保存、任务验证、Dream／原文生命周期、目标取消及真实输入释放。",
+        "其他变更：统一 oh-my-dsh 包名并自动迁移；按完整宿主版本分别准备工件，当前尚未发布。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.0.md"
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.99.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "OMD 0.99.0 · DSH 0.2.1-rc.1",
+      "notes": [
+        "新增功能：上下文优化与原文档案、内容视图与 AST 搜索、可选 BC、人格管理、临时侧栏聊天、扩展管理、Glyph 和 dsh-ops。",
+        "体验优化：统一提示词入口与设置，优化长会话、字符外观、监控查询和电脑操作传输。",
+        "问题修复：独立聊天、模型与 Ultra 保存、任务验证、Dream／原文生命周期、目标取消及真实输入释放。",
+        "其他变更：统一 oh-my-dsh 包名并自动迁移；按完整宿主版本分别准备工件，当前尚未发布。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.0.md"
+    },
+    {
       "version": "0.2.1-rc.2.omd.0.19.0",
       "severity": "normal",
-      "unpublished": false,
+      "unpublished": true,
       "title": "接入固定版本 dsh-ops",
       "notes": [
         "新增功能：第三方功能页提供 dsh-ops，固定上游 0.4.1 与对应宿主的兼容发行包。",
         "问题修复：统一普通／PTC 工具作用域与展示，保留后台任务控制、原生工具及权限。",
         "其他变更：目录更新不跟随 latest，原生工具替换及 OPS 面板默认关闭，停用保留数据。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.19.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/releases.md"
     },
     {
       "version": "0.2.1-rc.1.omd.0.19.0",
       "severity": "normal",
-      "unpublished": false,
+      "unpublished": true,
       "title": "接入固定版本 dsh-ops",
       "notes": [
         "新增功能：第三方功能页提供 dsh-ops，固定上游 0.4.1 与对应宿主的兼容发行包。",
         "问题修复：统一普通／PTC 工具作用域与展示，保留后台任务控制、原生工具及权限。",
         "其他变更：目录更新不跟随 latest，原生工具替换及 OPS 面板默认关闭，停用保留数据。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.19.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/releases.md"
     },
     {
       "version": "0.2.1-rc.2.omd.0.18.8",

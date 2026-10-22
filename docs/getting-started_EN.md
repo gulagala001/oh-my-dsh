@@ -2,7 +2,7 @@
 
 [简体中文](getting-started.md) · [Docs index](README_EN.md) · [Public installation](../README_EN.md#readme-install) · [Usage](usage_EN.md) · [Troubleshooting](troubleshooting_EN.md)
 
-Start with an installed, fully restarted, matching environment. Current release **`0.2.1-rc.2.omd.0.19.0` / DSH `0.2.1-rc.2`** bundles OpenCU `2.0.6`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
+Start with an installed, fully restarted, matching environment. This guide covers the 0.99.0 source candidate; see [downloads](releases.md) for public availability. Current source **`0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2`** bundles OpenCU `2.0.6`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
 
 ## 1. Check Actual Versions and Model
 
@@ -43,7 +43,11 @@ Check the right file, successful actual tool result, and accessible deliverable.
 | Composer info bar | Native turn/token readings plus context and Dream job items; each opens the matching console section. |
 | **BT** | Task reminders on; verification reminders off. “View task evidence” opens requirements, status, and evidence. |
 | Model/Fast | Ultra has Workflow / Agent Team / Free submodes and prefers `xhigh`, otherwise highest. Agent Team requires DSH to enable it. Fast needs actual matching Subscriptions/model support. |
-| **Appearance** | Five themes, palettes, fonts, backgrounds, reduced motion. |
+| **Appearance** | Glyph and four other themes, native DSH, 29 palettes, fonts, backgrounds and reduced motion. |
+| **View original** | Read a tool result by line or keyword; import/export original-result archives from Context. |
+| **Session personality** | When enabled in settings, choose a personality in the main session permissions drawer, inherit the global one, or turn it off. |
+| **Plugins → Skills / MCP / Instructions / Commands / Hooks** | Manage available extensions and project instructions. |
+| `/侧栏` / `/侧栏（网页版）` | Start an independent temporary discussion without leaving the main conversation. |
 | **Base components** | CodeGraph readiness and retained native/third-party entries. |
 
 Workbench uses native content tabs alongside files/terminals. Tools, evidence, CodeGraph, and Workflow follow the current directory. Ordinary OMD-PTC operations use `run_code`, with four direct background controls in matching scopes. [Full usage](usage_EN.md)

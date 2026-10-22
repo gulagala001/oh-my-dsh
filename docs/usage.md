@@ -2,7 +2,7 @@
 
 [English](usage_EN.md) · [文档目录](README.md) · [首次使用](getting-started.md) · [排障](troubleshooting.md) · [开发入口](development.md)
 
-> 当前源码为 **OMD `0.2.1-rc.2.omd.0.18.1` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.1`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
+> 当前源码为 **OMD `0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.6`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
 
 OMD 继续使用 DSH 的模型、项目、会话、原生工具、文件、技能与内容标签。包 ID 与 preset 均为 `oh-my-dsh`；早期版本的设置、会话和数据目录在升级后自动迁移，见[升级说明](upgrade.md#package-name)。
 
@@ -92,6 +92,8 @@ OMD 保留原生 Tools registry、SDK、调度、权限和取消，不整套替�
 
 ## 上下文与记忆
 
+**上下文优化**默认开启。在 **设置 → 上下文与记忆 → 上下文优化** 控制工具结果精简、重复读取引用、按需工具发现和原文保留。工具卡片点 **查看原文**，可按行号、关键词、开头／结尾翻阅；上下文页可导入原文档案。`context_view` 提供文件与网页视图，`code_search` 提供 16 种语法的 AST 模式搜索，CodeGraph 继续负责索引和代码关系。关闭优化保留已有原文与回查入口。[使用方式、统计与迁移](context-optimization.md#中文)
+
 **上下文 → 上下文管理** 可按会话选择 OMD 或 Billion Context。当前适配 DSH **0.2.1-rc.2** 与原版 **billion-context 0.1.202**；在第三方功能安装并启用后选择 BC。只有自动压缩互斥，归档、Dream、任务、人格、原文与附件回查继续运行；显式手动操作会同步 BC，分支、侧问和回退保留各自边界。切换失败保留当前模式和原文，BC 不可用时明确报错。[兼容范围与使用方式](context-workflow.md#omd-与-billion-context)
 
 后台保存事实摘要、具有原话依据的用户决定和详细资料，在安全请求边界替换历史表示。原话、文档、图片和附件保留，模型窗口仍有限。首次发送前选范围，开始后锁定：
@@ -135,7 +137,7 @@ Oh My DSH 设置集中在一页，第三方功能进入独立子页。开关和�
 
 全局背景由用户手写维护，冲突时 **读取最新版本** 比较后合并或采用再保存，读取不覆盖草稿。Dream 不改手写背景。
 
-五种主题、28 套配色、背景独立，支持分区颜色、字体字号、Logo／标题和减少动态效果。[外观指南](skins.md)
+Glyph 等五套主题与 DSH 原生外观可选，29 套配色、背景独立，支持分区颜色、字体字号、Logo／标题和减少动态效果。[外观指南](skins.md)
 
 <a id="状态后台任务与阻塞处理"></a>
 
@@ -157,7 +159,7 @@ Oh My DSH 设置集中在一页，第三方功能进入独立子页。开关和�
 
 ## Computer Use
 
-新版 OpenCU `2.0.1` 已默认内置，替换旧 1.3.0 过渡快照。提供真实浏览器与原生目标发现、观察、后台优先输入、监看和批注。完整 UI 依赖匹配 Host／Client／preload 适配，不是 stock DSH 仅安装插件即可自动获得。[使用指南](computer-use.md) · [接入边界](plugin-compatibility.md#opencu)。
+OpenCU `2.0.6` 已默认内置。提供真实浏览器与原生目标发现、观察、后台优先输入、监看和批注。完整 UI 依赖匹配 Host／Client／preload 适配，不是 stock DSH 仅安装插件即可自动获得。[使用指南](computer-use.md) · [接入边界](plugin-compatibility.md#opencu)。
 
 ### 开始使用
 

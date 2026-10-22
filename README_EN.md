@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.19.0"><img alt="OMD 0.19.0" src="https://img.shields.io/badge/release-OMD%200.19.0-0969da?style=flat-square"></a>
+  <a href="docs/release-0.99.0.md"><img alt="OMD 0.99.0" src="https://img.shields.io/badge/draft-OMD%200.99.0-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
@@ -38,13 +38,15 @@ Models use your DSH configuration. The default installation grants full file/com
 
 ### 1. Install
 
+**0.99.0 is being prepared and is not published.** The fixed URL below becomes available on release. For installation now, use the [public 0.18.8 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8).
+
 Open **Plugins → Add plugin** in the DSH instance you use, then paste:
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/oh-my-dsh-0.2.1-rc.2.omd.0.19.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.0/oh-my-dsh-0.2.1-rc.2.omd.0.99.0.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.19.0/SHA256SUMS).
+Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.0/SHA256SUMS).
 
 ### 2. Try this first
 
@@ -56,29 +58,49 @@ Read this project’s README and explain its purpose and startup steps. Use only
 
 **Success looks like：** The answer reflects the actual file; the OMD console shows context and call records.
 
-## Keep tasks, context and results together
+## From conversation to delivery
 
-- **Sustain the work**: system instructions follow actual tools, modes and permissions, with requirements, sources and verification kept in view.
-- **Organize long conversations**: context processing, Auto Compact and Dream handle summaries and longer-term memory while retaining access to original messages, attachments and sources.
-- **See what happened**: the OMD console brings together context, memory, usage and background activity, with built-in computer use, task evidence and web chat.
+### Keep the work in view
 
-### Arrange the workspace around your work
+The session overview brings outputs, sources, background processes, Workflow and subagents together. Open a member to continue its sidebar conversation. **Ultra** offers Workflow, Agent Team and Free collaboration modes. **Better Todo** connects original requirements, tasks and verification results, retaining completed checks and actual execution receipts.
 
-Native, Codex Desktop, iOS Liquid Glass, Claude CLI and Google Material appearances offer different layouts and materials, alongside 29 palettes, custom backgrounds, fonts and region colors. Current source also includes the Glyph character appearance; fixed packages provide the features listed in their Release.
+Start without a project: the first message creates a dedicated file directory that subsequent turns reuse. The **✨** composer control offers light polish, structured rewriting and step planning, with saved requirements, versions, undo and redo.
+
+[Everyday usage](docs/usage_EN.md) · [Ultra and Workflow](docs/workflow.md)
+
+### Preserve context and retrieve original results
+
+**Context optimization** is on by default. It shortens recognized read-only results and uses references or deltas when a complete baseline remains available, while retaining actual tool execution and authorized originals. **View original** on a tool card supports line ranges, search, paging and export; evidence archives can migrate with their conversations.
+
+On-demand tool discovery, file and webpage views, AST pattern search and CodeGraph help locate relevant material. History processing, Auto Compact and **Dream** manage context and session/project/global memory. Optional Billion Context can own compaction while Dream, recall, tasks, side questions and branches continue working together.
+
+[Optimization and originals](docs/context-optimization.md#english) · [Compaction and BC](docs/context-workflow.md) · [Dream](docs/dream-memory.md)
+
+### Choose your workspace and voice
+
+**Glyph** combines a three-dimensional character whale, local ripples and character controls. Choose from Glyph, native DSH, Codex Desktop, iOS Liquid Glass, Claude CLI and Google Material, with **29 palettes**, backgrounds, fonts and region colors. Existing appearance choices remain saved.
+
+**Personality management** separates identity, language style, communication and answer presentation. Manage multiple presets, duplicate and edit them, import/export JSON, or use the supplied creation prompt with an AI. Optional session personalities let each main conversation inherit the global preset, select its own, or disable personality guidance.
 
 ![Appearance examples](docs/images/release/themes.jpg)
 
-### Keep context and evidence available
+[Appearance](docs/skins.md) · [Personalities and settings](docs/usage_EN.md#personalities)
 
-| Capability | Behavior and conditions |
-| --- | --- |
-| Context processing | Saves factual summaries, user decisions and details on demand; `recall` can retrieve originals. |
-| Auto Compact | Off by default; compresses at the configured token threshold, with summary-only or summary-plus-material modes. |
-| Dream | Automatic processing is off by default; stores session, project and global memory within the selected sharing scope. |
-| Better Todo | Connects requirements, tasks and evidence. Task reminders default on; verification reminders are separate. |
-| Usage reporting | Uses actual receipts. Unknown is not zero; `≥` indicates a known lower bound. Background model calls also incur usage. |
+### Work with browsers, apps and extensions
 
-[Context processing](docs/context-workflow.md) · [Dream memory](docs/dream-memory.md) · [Usage definitions](docs/monitoring.md)
+Bundled **OpenCU 2.0.6** provides browser and app discovery, observation, background-first actions, annotations and floating previews. Stop and cancellation track actual input release, with explicit outcomes for stalled reads, approval timeouts and replaced targets. Full embedded surfaces require matching host adapters and system permissions.
+
+**Extension management** brings skills, MCP, instruction files, commands and hooks into the plugin page. Optional **dsh-ops** adds file, document, shell and on-demand tool capabilities through a fixed compatibility package for the matching host.
+
+[Computer use](docs/computer-use.md) · [Extensions](docs/extensions.md) · [dsh-ops](docs/dsh-ops_EN.md)
+
+### Keep side discussions and usage visible
+
+`/侧栏` opens a temporary text chat using the current model; closing it stops generation and clears its messages. `/侧栏（网页版）` opens a temporary DeepSeek website conversation. Regular web chat can import readable history and attachments into DSH. `/btw` asks a side question about the main task, while turn rewind can restore conversation history and checkpointed file changes.
+
+The **OMD console** combines context, memory, call logs and background activity. Filter usage and costs by date, model, component or conversation. Unknown usage stays unknown, and `≥` denotes a known lower bound; optimization estimates remain separate from provider billing.
+
+[Side chats and rewind](docs/usage_EN.md#side-questions-and-turn-rewind) · [DeepSeek Workbench](docs/deepseek-workbench.md) · [Monitoring](docs/monitoring.md)
 
 ## Supported use
 

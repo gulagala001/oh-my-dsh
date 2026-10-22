@@ -8,7 +8,7 @@
 
 **[安装与版本配对](install.md) → [第一次使用](getting-started.md) → [日常使用](usage.md)**
 
-安装有两种方式：**[复制指令给 AI](install.md#ai)** 或 **[在“添加插件”中粘贴地址](install.md#gui)**。DSH 0.2.1-rc.2 配套 OMD 0.18.3，rc.1 同样配套 OMD 0.18.3；均内置 OpenCU。[下载与发行范围](releases.md)。
+安装有两种方式：**[复制指令给 AI](install.md#ai)** 或 **[在“添加插件”中粘贴地址](install.md#gui)**。当前文档介绍 OMD 0.99.0 源码候选，内置 OpenCU 2.0.6；0.99.0 尚未发布，现有公开版本为 0.18.8。[下载与发行范围](releases.md)。
 
 <a id="版本与文档范围"></a>
 <a id="按需查阅"></a>
@@ -23,6 +23,10 @@
 | 操作电脑、浏览器与侧栏批注 | [OpenCU 使用与边界](computer-use.md) |
 | 查看调用、Token、费用和后台工作 | [监控统计](monitoring.md) |
 | 管理长对话、自动压缩与原文回查 | [上下文机制](context-workflow.md) |
+| 精简工具结果、查看和迁移原文档案 | [上下文优化](context-optimization.md#中文) |
+| 设置人格、导入预设与会话人设 | [人格与设置](usage.md#人格预设与自定义身份) |
+| 打开临时侧栏聊天、侧问或撤回 | [侧问与回合回滚](usage.md#侧问与回合回滚) |
+| 安装和使用 dsh-ops | [dsh-ops](dsh-ops.md) |
 | 设置会话、项目与全局记忆 | [Dream](dream-memory.md) |
 | 使用 Ultra、PTC 和工作流 | [Workflow](workflow.md) |
 | 跟进任务、要求与证据 | [日常使用](usage.md#日常使用) |
@@ -38,7 +42,7 @@
 
 ### 各主题详细说明
 
-[Codex Desktop](codex-desktop.md) · [iOS Liquid Glass](ios-liquid-glass.md) · [Claude CLI](claude-cli-terminal.md) · [Google Material](google-material-expressive.md)
+[Glyph 动态字符](skins.md) · [Codex Desktop](codex-desktop.md) · [iOS Liquid Glass](ios-liquid-glass.md) · [Claude CLI](claude-cli-terminal.md) · [Google Material](google-material-expressive.md)
 
 ### 平台与素材
 

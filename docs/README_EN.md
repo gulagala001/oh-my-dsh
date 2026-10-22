@@ -8,7 +8,7 @@ Start with what you want to do. OMD retains your DSH models, conversations, tool
 
 **[Install and match versions](install_EN.md) → [First steps](getting-started_EN.md) → [Everyday usage](usage_EN.md)**
 
-Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. DSH 0.2.1-rc.2 uses OMD 0.18.3; rc.1 also uses OMD 0.18.3. Both include OpenCU. [Downloads and release scope](releases.md).
+Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. These docs cover the OMD 0.99.0 source candidate with OpenCU 2.0.6. Version 0.99.0 is unpublished; the current public version is 0.18.8. [Downloads and release scope](releases.md).
 
 ## Find your topic
 
@@ -21,6 +21,10 @@ Topics without an English edition are marked **Chinese**.
 | Use a computer, browser or annotations | [OpenCU setup and boundaries (Chinese)](computer-use.md) |
 | Inspect calls, tokens, costs and background work | [Monitoring (Chinese)](monitoring.md) |
 | Manage long conversations, auto compaction and original sources | [Context (Chinese)](context-workflow.md) |
+| Shorten tool results and retrieve or migrate originals | [Context optimization](context-optimization.md#english) |
+| Manage personalities and per-session choices | [Personalities](usage_EN.md#personalities) |
+| Open temporary side chats or rewind turns | [Side discussions and rewind](usage_EN.md#side-questions-and-turn-rewind) |
+| Install and use dsh-ops | [dsh-ops](dsh-ops_EN.md) |
 | Set session, project and global memory | [Dream (Chinese)](dream-memory.md) |
 | Use Ultra, PTC and workflows | [Workflow (Chinese)](workflow.md) |
 | Track tasks, requirements and evidence | [Everyday usage](usage_EN.md#everyday-work) |
@@ -36,7 +40,7 @@ Topics without an English edition are marked **Chinese**.
 
 ### Individual themes (Chinese)
 
-[Codex Desktop](codex-desktop.md) · [iOS Liquid Glass](ios-liquid-glass.md) · [Claude CLI](claude-cli-terminal.md) · [Google Material](google-material-expressive.md)
+[Glyph characters](skins.md) · [Codex Desktop](codex-desktop.md) · [iOS Liquid Glass](ios-liquid-glass.md) · [Claude CLI](claude-cli-terminal.md) · [Google Material](google-material-expressive.md)
 
 ### Platforms and visuals
 

@@ -2,7 +2,7 @@
 
 [简体中文](usage.md) · [Docs index](README_EN.md) · [First task](getting-started_EN.md) · [Troubleshooting](troubleshooting_EN.md) · [Development](development_EN.md)
 
-> Current source is **OMD `0.2.1-rc.2.omd.0.18.1` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.1`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
+> Current source is **OMD `0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.6`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
 
 OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. The package ID and preset are both `oh-my-dsh`; settings, conversations and data from earlier versions migrate automatically after upgrading, see [the upgrade guide](upgrade_EN.md#package-name).
 
@@ -92,6 +92,8 @@ Tools, verification commands, CodeGraph, and Workflow resolve paths in the host'
 
 ## Context and Memory
 
+**Context optimization** is on by default. **Settings → Context and memory → Context optimization** controls supported result shortening, repeat-read references, on-demand tool discovery and original-result preservation. Choose **View original** on a tool card for line ranges, search and head/tail paging; import evidence archives from the Context panel. `context_view` provides file and webpage views, `code_search` supports AST patterns in 16 grammars, and CodeGraph retains indexed code relationships. Disabling optimization keeps existing originals available. [Usage, accounting and migration](context-optimization.md#english)
+
 **Context → Context management** selects OMD or Billion Context (BC) per session; OMD is the default. The current integration targets DSH **0.2.1-rc.2** and the original **billion-context 0.1.202** npm package by [ranxianglei](https://github.com/ranxianglei/billion-context). Install and enable the pinned package in third-party features, then select BC.
 
 Only automatic compression ownership changes. In BC mode, OMD continues archive preparation, Dream, tasks, persona, original/attachment recall, side questions and branch handling. OMD's compression settings stay saved for switching back. In OMD mode, BC's `compress`/`absorb` writers are hidden and rejected; its search, recovery, rules and diagnostics remain available. Explicit material/compaction operations synchronize the BC history boundary. Native tools and PTC retain their own execution routes.
@@ -126,6 +128,8 @@ Each session retains up to 20 versions. Within the page, switching retains unsen
 
 <a id="settings"></a>
 
+<a id="personalities"></a>
+
 ## Settings and Saving
 
 Oh My DSH settings use one page, with third-party features on a separate subpage. Switches and selections save immediately; personality text uses its editor's save button. Failed saves show an error and restore stored settings while retaining personality drafts.
@@ -140,7 +144,7 @@ Enable **Session personalities** to add a **Session personality** section to the
 
 Global background is user-maintained. On conflict, **Read latest version**, compare, merge/adopt, then save; reading does not overwrite a draft. Dream does not edit this background.
 
-Five themes, 28 palettes, backgrounds, section colors, fonts, logos/titles, and reduced motion remain independent. [Appearance (Chinese)](skins.md)
+Choose native DSH or five themes including Glyph, with 29 palettes, backgrounds, section colors, fonts, logos/titles and reduced motion. [Appearance (Chinese)](skins.md)
 
 <a id="runtime-state-and-blockers"></a>
 
@@ -162,7 +166,7 @@ Connections watch changes, release when idle, and catch up later. Disable/uninst
 
 ## Computer Use
 
-New OpenCU `2.0.1` is bundled by default, replacing the frozen 1.3.0 transition snapshot. It provides real browser/native target discovery, observation, background-first input, monitoring and annotations. Complete UI requires matching Host, Client and preload adapters; plugin installation alone does not patch stock DSH. [Guide (Chinese)](computer-use.md) · [Integration boundaries](plugin-compatibility_EN.md#opencu).
+OpenCU `2.0.6` is bundled by default. It provides real browser/native target discovery, observation, background-first input, monitoring and annotations. Complete UI requires matching Host, Client and preload adapters; plugin installation alone does not patch stock DSH. [Guide (Chinese)](computer-use.md) · [Integration boundaries](plugin-compatibility_EN.md#opencu).
 
 <a id="get-started-with-computer-use"></a>
 
