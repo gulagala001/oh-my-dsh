@@ -172,14 +172,15 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       if (selected.id !== target.id || !sameIdentity(selected.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed occurrence');
       return selected;
     },
-    async focus(target) {
-      alive(); const {provider, backend} = providerFor(target);
+    async focus(target, {signal} = {}) {
+      alive(); checkSignal(signal); const {provider, backend} = providerFor(target);
       if (provider === 'extension') {
-        const verified = await verifyExtension(target);
+        const verified = await readOperation(() => verifyExtension(target, {signal}), signal);
+        checkSignal(signal);
         if (!verified.valid) fail('TARGET_IDENTITY_CHANGED', verified.reason);
       }
       if (typeof backend.focus !== 'function') fail('UNSUPPORTED_OPERATION', 'This browser backend cannot focus a target');
-      const result = await backend.focus(unwrap(target, provider));
+      const result = await backend.focus(unwrap(target, provider), {signal});
       return {...result, target: wrap(result.target ?? target, provider)};
     },
     async verify(target, options) {
@@ -216,10 +217,11 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
         const result = await backend.act(unwrap(target, provider), request);
         return result?.target ? {...result, target: wrap(result.target, provider)} : result;
       }
-      const verified = await verifyExtension(target);
+      const verified = await readOperation(() => verifyExtension(target, {signal: request.signal}), request.signal);
+      checkSignal(request.signal);
       if (!verified.valid) fail('TARGET_IDENTITY_CHANGED', verified.reason);
       held.set(target.id, target);
-      if (['activate', 'focus'].includes(request.action)) return {action: request.action, ...await composite.focus(target)};
+      if (['activate', 'focus'].includes(request.action)) return {action: request.action, ...await composite.focus(target, {signal: request.signal})};
       const {signal, ...action} = request;
       action.type = aliases[request.action] ?? request.action;
       if (request.action === 'selectOption') action.value = request.values ?? request.value;

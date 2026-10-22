@@ -464,12 +464,17 @@ export async function createController({dataDir, browser, native} = {}) {
         checkExpected(target, reference.expected);
       } else ({target, backend} = targetFor(request.targetId, request.targetIdentity));
       if (target.cold) fail('RECOVERY_REQUIRED', 'Resume and verify the saved target before opening it');
-      await verify(target, backend, false, operationEpoch);
-      if (typeof backend.focus !== 'function') fail('UNSUPPORTED_OPERATION', 'This backend cannot open the selected target');
-      const result = await backend.focus(json(target));
-      checkOperation(operationEpoch);
-      await persist();
-      return {targetId: target.id, result, state: snapshot()};
+      const recovery = aborter.signal.aborted ? new AbortController() : null;
+      if (recovery) recoveryOperations.add(recovery);
+      const signal = recovery?.signal ?? aborter.signal;
+      try {
+        await verify(target, backend, false, operationEpoch, signal);
+        if (typeof backend.focus !== 'function') fail('UNSUPPORTED_OPERATION', 'This backend cannot open the selected target');
+        const result = await backend.focus(json(target), {signal});
+        checkOperation(operationEpoch);
+        await persist();
+        return {targetId: target.id, result, state: snapshot()};
+      } finally { if (recovery) recoveryOperations.delete(recovery); }
     })),
     permissions: () => response(() => serial(async () => {
       alive();

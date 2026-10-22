@@ -9,19 +9,26 @@ const attached = new Map(), observations = new Map(), documents = new Map(), rel
 let connection, connecting = false, reconnectDisabled = false, running = false, controlEpoch = 0, commandChain = Promise.resolve(), downloadChain = Promise.resolve(), status = { connected: false };
 const tabEpochs = new Map();
 const readOperations = new Set();
-const controlToken = tabId => ({ connection, epoch: controlEpoch, tabId, tabEpoch: tabEpochs.get(tabId) ?? 0 });
+const controlToken = tabId => ({ connection, epoch: controlEpoch, tabId, tabEpoch: tabEpochs.get(tabId) ?? 0,
+  commandEpoch: tabEpochs.get(undefined) ?? 0 });
 function cancelReads(tabId) {
-  for (const read of readOperations) if (tabId === undefined || read.tabId === tabId) {
+  for (const read of readOperations) if (tabId === undefined || !read.monitoring || read.tabId === tabId) {
     read.controller.abort(Object.assign(new Error('Read operation was cancelled.'), { code: 'CONTROL_STOPPED', details: { inputDispatched: false } }));
   }
 }
 function cancelControl(tabId) {
   if (tabId === undefined) controlEpoch++;
-  else tabEpochs.set(tabId, (tabEpochs.get(tabId) ?? 0) + 1);
+  else {
+    tabEpochs.set(tabId, (tabEpochs.get(tabId) ?? 0) + 1);
+    // Read-only preflights share the command lane, including another target's
+    // selection. Cancel queued control too; independent monitoring stays live.
+    tabEpochs.set(undefined, (tabEpochs.get(undefined) ?? 0) + 1);
+  }
   cancelReads(tabId);
 }
 function checkControl(token) {
-  if (token && (token.connection !== connection || token.epoch !== controlEpoch || token.tabEpoch !== (tabEpochs.get(token.tabId) ?? 0))) fail('CONTROL_STOPPED', 'Input sequence was cancelled.');
+  if (token && (token.connection !== connection || token.epoch !== controlEpoch || token.tabEpoch !== (tabEpochs.get(token.tabId) ?? 0) ||
+      !token.monitoring && token.commandEpoch !== (tabEpochs.get(undefined) ?? 0))) fail('CONTROL_STOPPED', 'Input sequence was cancelled.');
 }
 const fail = (code, message, details = {}) => { const error = new Error(message); Object.assign(error, { code, details }); throw error; };
 const errorJSON = error => ({ code: error.code || 'BROWSER_FAILURE', message: error.message, details: error.details || {} });
@@ -31,7 +38,7 @@ const directRead = work => work();
 // command lane until Chrome acknowledges them, even when cancellation arrives.
 async function readOperation(token, work) {
   checkControl(token);
-  const operation = { tabId: token.tabId, controller: new AbortController() }, signal = operation.controller.signal;
+  const operation = { tabId: token.tabId, monitoring: token.monitoring, controller: new AbortController() }, signal = operation.controller.signal;
   const check = () => { checkControl(token); if (signal.aborted) throw signal.reason; };
   const read = async callback => {
     check();
@@ -87,13 +94,13 @@ async function content(tabId, method, input = {}, expectedDocumentId, read = dir
   if (!value?.ok) fail(value?.error?.code || 'CONTENT_FAILURE', value?.error?.message || 'Content script returned no result.');
   return { ...value.result, browserDocumentId: result[0].documentId };
 }
-async function tabInfo(tab) {
+async function tabInfo(tab, read = directRead) {
   let identity;
   if (allowed(tab.url)) {
     if (tab.status !== 'complete') return { tabId: tab.id, documentId: documents.get(tab.id) || `loading-${tab.id}`, url: tab.url,
       title: tab.title, windowId: tab.windowId, active: tab.active, supported: false, error: { code: 'PAGE_LOADING', message: 'Page is loading; discover again after navigation completes.' } };
-    try { identity = await content(tab.id, 'identity'); }
-    catch (error) { return { tabId: tab.id, documentId: documents.get(tab.id) || `unavailable-${tab.id}`, url: tab.url, title: tab.title,
+    try { identity = await content(tab.id, 'identity', {}, undefined, read); }
+    catch (error) { read.check?.(); return { tabId: tab.id, documentId: documents.get(tab.id) || `unavailable-${tab.id}`, url: tab.url, title: tab.title,
       windowId: tab.windowId, active: tab.active, supported: false, error: errorJSON(error) }; }
   } else identity = { documentId: documents.get(tab.id) || `restricted-${tab.id}` };
   return { tabId: tab.id, documentId: identity.documentId, browserDocumentId: identity.browserDocumentId, url: tab.url,
@@ -271,9 +278,11 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   let inputState, inputStart = 0;
   try {
   checkControl(epoch);
-  await attach(identity);
-  inputState = attached.get(identity.tabId); inputStart = inputState.inputSequence ?? 0;
-  const current = await verify(identity, true), tabId = identity.tabId;
+  const current = await readOperation(epoch, async read => {
+    await attach(identity, read);
+    inputState = attached.get(identity.tabId); inputStart = inputState.inputSequence ?? 0;
+    return verify(identity, true, read);
+  }), tabId = identity.tabId;
   checkControl(epoch);
   const click = ['click','double_click','right_click'].includes(action.type)
     ? clickParameters({...action,...(action.type === 'right_click' ? {button:'right'} : {})}, {mac:/Mac/u.test(navigator.platform),count:action.type === 'double_click' ? 2 : 1}) : undefined;
@@ -287,12 +296,12 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   if (['click', 'double_click', 'right_click', 'move', 'mouse_down', 'mouse_up', 'scroll', 'drag', 'type_text', 'press_key', 'key_down', 'key_up', 'fill', 'set_value'].includes(action.type)) {
     await cdp(tabId, 'Emulation.setFocusEmulationEnabled', { enabled: true });
     checkControl(epoch);
-    await verify(identity, true);
+    await readOperation(epoch, read => verify(identity, true, read));
     checkControl(epoch);
   }
   const verifyInputElement = async () => {
     if (action.elementId == null) return;
-    await verify(identity, true);
+    await readOperation(epoch, read => verify(identity, true, read));
     await elementOperation(tabId, (method, params) => cdp(tabId, method, params), 'verifyElement', action, attached.get(tabId)?.frameRouter);
     checkControl(epoch);
   };
@@ -526,25 +535,26 @@ async function navigateTab(tabId, token, action) {
   for (const event of events) event.addListener(changed);
   try {
     checkControl(token); await action();
-    const deadline = Date.now() + 10000;
-    do {
-      checkControl(token);
-      const tab = await chrome.tabs.get(tabId);
-      if (committed && tab.status === 'complete') {
-        const page = await tabInfo(tab); checkControl(token);
-        if (!page.supported) fail(page.error?.code || 'UNSUPPORTED_PAGE', page.error?.message || 'The navigated page is unavailable.');
-        return page;
-      }
-      await delay(50);
-    } while (Date.now() < deadline);
-    fail('NAVIGATION_TIMEOUT', 'Navigation has no completed document; discover the current tab before retrying.');
+    return await readOperation(token, async read => {
+      const deadline = Date.now() + 10000;
+      do {
+        const tab = await read(() => chrome.tabs.get(tabId));
+        if (committed && tab.status === 'complete') {
+          const page = await tabInfo(tab, read); read.check();
+          if (!page.supported) fail(page.error?.code || 'UNSUPPORTED_PAGE', page.error?.message || 'The navigated page is unavailable.');
+          return page;
+        }
+        await delay(50);
+      } while (Date.now() < deadline);
+      fail('NAVIGATION_TIMEOUT', 'Navigation has no completed document; discover the current tab before retrying.');
+    });
   } finally { for (const event of events) event.removeListener(changed); }
 }
-async function waitForTab(tabId, token) {
+async function waitForTab(tabId, read) {
   const deadline = Date.now() + 10000;
   let tab;
   do {
-    checkControl(token); tab = await chrome.tabs.get(tabId); checkControl(token);
+    tab = await read(() => chrome.tabs.get(tabId));
     if (tab.status === 'complete') return tab;
     await delay(100);
   } while (Date.now() < deadline);
@@ -556,7 +566,7 @@ async function newTab(url = 'https://example.com/', token) {
   const tab = await chrome.tabs.create({ url, active: false });
   try {
     checkControl(token);
-    const current = await tabInfo(await waitForTab(tab.id, token));
+    const current = await readOperation(token, async read => tabInfo(await waitForTab(tab.id, read), read));
     checkControl(token);
     return { created: true, tabId: tab.id, reselectRequired: true, ...current };
   } catch (error) {
@@ -570,17 +580,20 @@ async function command(message, token) {
   if (message.method !== 'release') checkControl(token);
   const { identity, options, action } = message.params || {};
   switch (message.method) {
-    case 'listTargets': return Promise.all((await chrome.tabs.query({})).filter(tab => !tab.incognito).map(tabInfo));
-    case 'select': {
-      const current = await verify(identity), expected = message.params.expected;
+    case 'listTargets': return readOperation(token, async read => {
+      const tabs = await read(() => chrome.tabs.query({}));
+      return Promise.all(tabs.filter(tab => !tab.incognito).map(tab => tabInfo(tab, read)));
+    });
+    case 'select': return readOperation(token, async read => {
+      const current = await verify(identity, false, read), expected = message.params.expected;
       if (expected && (expected.url != null && current.url !== expected.url || expected.title != null && current.title !== expected.title)) fail('STALE_TARGET', 'Tab URL/title changed since discovery.');
-      checkControl(token); await attach(identity); checkControl(token);
+      read.check(); await attach(identity, read); read.check();
       return { selected: true, identity, capabilities: ['native-ax', 'screenshot', 'trusted-input', 'cursor', 'persistent-download-events'] };
-    }
+    });
     case 'focus': {
-      await verify(identity); checkControl(token);
+      await readOperation(token, read => verify(identity, false, read)); checkControl(token);
       await chrome.tabs.update(identity.tabId, { active: true }); checkControl(token);
-      const tab = await chrome.tabs.get(identity.tabId); checkControl(token);
+      const tab = await readOperation(token, read => read(() => chrome.tabs.get(identity.tabId))); checkControl(token);
       await chrome.windows.update(tab.windowId, { focused: true }); checkControl(token);
       return { focused: true };
     }
@@ -596,7 +609,9 @@ async function command(message, token) {
       if (!Object.hasOwn(urls, section)) fail('UNSUPPORTED_OPERATION', 'Unknown browser settings section.');
       checkControl(token);
       const tab = await chrome.tabs.create({ url: urls[section], active: true });
+      checkControl(token);
       await chrome.windows.update(tab.windowId, { focused: true });
+      checkControl(token);
       return { opened: true, tabId: tab.id, url: urls[section] };
     }
     case 'newTab': return newTab(message.params.url, token);
@@ -713,8 +728,9 @@ async function loop(c) {
           // for a renderer reply from this early visual cleanup.
           void Promise.allSettled((tabId === undefined ? [...attached.keys()] : [tabId]).map(id => content(id, 'release')));
         }
-        const token = controlToken(message.params?.identity?.tabId);
-        const lane = message.monitoring === true && ['preview', 'verify'].includes(message.method) ? Promise.resolve() : commandChain;
+        const monitoring = message.monitoring === true && ['preview', 'verify'].includes(message.method);
+        const token = { ...controlToken(message.params?.identity?.tabId), monitoring };
+        const lane = monitoring ? Promise.resolve() : commandChain;
         const work = lane.then(async () => {
           if (connection !== c) return;
           let result;
@@ -736,7 +752,7 @@ async function loop(c) {
             await chrome.action.setBadgeText({ text: '' });
           }
         });
-        if (message.monitoring === true && ['preview', 'verify'].includes(message.method)) {
+        if (monitoring) {
           void work.catch(error => { status.monitoringError = errorJSON(error); });
         } else commandChain = work.catch(error => {
           cancelControl();

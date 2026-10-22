@@ -3,6 +3,7 @@ import { mkdir, readFile, appendFile, writeFile, stat, rename, open, unlink } fr
 import { join, resolve, isAbsolute } from 'node:path';
 import { ExtensionError, EXTENSION_PATH, PROTOCOL_VERSION, parseTarget, targetId, normalizeAction } from './protocol.mjs';
 import { createDeliveryStore } from '../browser/deliveries.mjs';
+import { readOperation } from '../protocol.mjs';
 
 const loopback = address => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address);
 const failure = (code, message) => new ExtensionError(code, message);
@@ -209,6 +210,26 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     });
   }
 
+  async function controlRequest(session, method, params, signal) {
+    signal?.throwIfAborted();
+    let interruption;
+    const abort = () => { interruption ??= request(session, 'release', { identity: params.identity })
+      .catch(error => ({ released: false, error: error.toJSON?.() ?? { message: error.message } })); };
+    signal?.addEventListener('abort', abort, { once: true });
+    try {
+      signal?.throwIfAborted();
+      const result = await request(session, method, params);
+      signal?.throwIfAborted();
+      return result;
+    } finally {
+      signal?.removeEventListener('abort', abort);
+      if (interruption) {
+        const release = await interruption;
+        if (release.released !== true) throw new ExtensionError('RELEASE_FAILED', 'Cancelled extension control was not acknowledged as released.', release);
+      }
+    }
+  }
+
   async function route(req, res, routeName) {
     let origin;
     try {
@@ -342,21 +363,22 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       }));
       return inventories.flat();
     },
-    async select(target) {
+    async select(target, {signal} = {}) {
+      signal?.throwIfAborted();
       if (typeof target === 'object' && !target.id && !target.targetId) {
-        const targets = await this.listTargets();
+        const targets = await readOperation(() => this.listTargets(), signal);
         const matches = targets.filter(value => ['url', 'title', 'browserId', 'kind'].every(key => target[key] === undefined || target[key] === value[key]));
         if (matches.length !== 1) throw failure(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND', 'Reference must match one extension tab.');
         target = { ...matches[0], expected: target.expected };
       }
       const { session, identity } = sessionFor(target);
-      const result = await request(session, 'select', { identity, expected: typeof target === 'object' ? { url: target.url, title: target.title, ...target.expected } : undefined });
+      const result = await controlRequest(session, 'select', { identity, expected: typeof target === 'object' ? { url: target.url, title: target.title, ...target.expected } : undefined }, signal);
       return { ...(typeof target === 'object' ? target : {}), ...result, id: targetId(identity), kind: 'tab', backend: 'extension',
         browserId: `extension:${session.instanceId}`, identity };
     },
-    async focus(target) {
+    async focus(target, {signal} = {}) {
       const { session, identity } = sessionFor(target);
-      return request(session, 'focus', { identity });
+      return controlRequest(session, 'focus', { identity }, signal);
     },
     async verify(target, options = {}) {
       try {
@@ -401,22 +423,9 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         for (const file of normalized.files) if (!(await stat(file)).isFile()) throw failure('INVALID_ARGUMENT', 'Upload source must be a regular file');
         action.signal?.throwIfAborted();
       }
-      let interruption;
-      const abort = () => { interruption ??= request(session, 'release', { identity }).catch(error => ({ released: false, error: error.toJSON?.() ?? { message: error.message } })); };
-      action.signal?.addEventListener('abort', abort, { once: true });
-      try {
-        action.signal?.throwIfAborted();
-        const result = await request(session, 'act', { identity, action: normalized });
-        action.signal?.throwIfAborted();
-        if (result.closed) result.closedTargetId = typeof target === 'string' ? target : target.id;
-        return result;
-      } finally {
-        action.signal?.removeEventListener('abort', abort);
-        if (interruption) {
-          const release = await interruption;
-          if (release.released !== true) throw new ExtensionError('RELEASE_FAILED', 'Cancelled extension input was not acknowledged as released.', release);
-        }
-      }
+      const result = await controlRequest(session, 'act', { identity, action: normalized }, action.signal);
+      if (result.closed) result.closedTargetId = typeof target === 'string' ? target : target.id;
+      return result;
     },
     async newTab(browserId, url = 'https://example.com/', {signal} = {}) {
       const session = [...sessions.values()].find(s => browserId === `extension:${s.instanceId}` || browserId === s.instanceId);

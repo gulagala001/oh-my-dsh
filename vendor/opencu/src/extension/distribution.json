@@ -5,7 +5,7 @@
   "files": {
     "README.md": "96bab308adff9b4399907a4bf08ae89c7a92e77a2963cc5d34616a2917c59a6a",
     "accessibility.js": "19f283a6105abcea35b15601a64a68941e0aae7a1e30d2d50cdfd6decba0d084",
-    "background.js": "84833444d352cc4f9b5c435301490ccdb06b18b077ecf28a13194eed64589ebb",
+    "background.js": "429ca08e22f3057f4535a4c5bf17c46b249e93c927598c89bc9229c2cf58d6da",
     "cdp-locator.d.ts": "9a2e97ddf5d1b7d0f2cf8f880e3b6d6508cca4aa2e9b5a85695326acb2c42342",
     "cdp-locator.js": "caa1b27f1b13c4b45bd9117049397ef931ea03063e25f1aee5978b7cf026113f",
     "click-options.js": "9ecbccb48f59601a0ab022a2d6296e01a95cd5ae3d19cd04e3b9b59390196714",
