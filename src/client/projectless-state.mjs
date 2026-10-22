@@ -14,6 +14,7 @@ export function initializeDraft(conversation, binding, options) {
 const checked = result => { if (!result.ok) throw Error(result.error?.message || '会话设置未保存'); return result.value; };
 
 export async function copyPermissions(source, target, signal) {
+  signal.throwIfAborted();
   const value = source.projections.faceOf('permissions').getSnapshot()?.currentValue;
   if (value === undefined) return; // Hosts without a permission service expose no selection.
   // The public projection exposes only the preset name, not custom sandbox /
@@ -22,13 +23,14 @@ export async function copyPermissions(source, target, signal) {
   const selection = target.projections.faceOf('permissions');
   if (selection.getSnapshot()?.currentValue === value) return;
   if (!checked(await target.command(`/permission ${value}`)).matched) throw Error('无法保留当前权限设置，草稿已保留');
+  signal.throwIfAborted();
   // Command admission is not settlement. Wait for the actual durable policy
   // projection before allowing any user message into the new Session.
   const waiting = AbortSignal.any([signal, AbortSignal.timeout(10_000)]);
   await new Promise((resolve, reject) => {
     let unsubscribe = () => {};
     const finish = error => { unsubscribe(); waiting.removeEventListener('abort', abort); error ? reject(error) : resolve(); };
-    const abort = () => finish(Error('权限设置未同步，请重试；草稿已保留'));
+    const abort = () => finish(signal.aborted ? signal.reason : Error('权限设置未同步，请重试；草稿已保留'));
     const inspect = () => { if (selection.getSnapshot()?.currentValue === value) finish(); };
     unsubscribe = selection.subscribe(inspect);
     waiting.addEventListener('abort', abort, { once: true });
@@ -143,18 +145,22 @@ export class ProjectlessDrafts {
     this.inspections.set(id, attempt); return attempt;
   }
   shell(id) { return this.ctx.get('conversation').input.for(this.ctx.sessions.binding(id).ctx); }
-  async copySettings(from, to) {
+  async copySettings(from, to, signal = this.lifetime.signal) {
+    signal.throwIfAborted();
     const source = this.ctx.sessions.binding(from).session;
     const projections = source.projections;
-    await copyPermissions(source, this.ctx.sessions.binding(to).session, this.lifetime.signal);
+    await copyPermissions(source, this.ctx.sessions.binding(to).session, signal);
+    signal.throwIfAborted();
     const preset = projections.faceOf('agentPreset').getSnapshot();
     const model = projections.faceOf('modelSelection').getSnapshot();
     if (preset) checked(await this.ctx.remote.agentPresets.select(to, preset));
+    signal.throwIfAborted();
     const selected = model?.next ?? model?.lastUsed;
     if (selected) checked(await this.ctx.remote.session.selectModel({ sessionId: to, ...selected }));
+    signal.throwIfAborted();
     if (preset?.startsWith('omaa-')) {
       const transferred = await fetch('omaa/api/session-transfer', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: this.lifetime.signal,
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
         body: JSON.stringify({ sourceSessionId: from, targetSessionId: to, requestId: this.drafts[from]?.requestId ?? to }),
       });
       if (!transferred.ok) {
@@ -162,18 +168,21 @@ export class ProjectlessDrafts {
         throw Error(error.error || '无法保留 OMAA 预设设置，请更新匹配的 OMAA；草稿已保留');
       }
       const result = await transferred.json();
+      signal.throwIfAborted();
       if (result.handledWorkMode) return;
     }
     // OMD mode and the remembered Ultra submode live beside native model
     // selection. Copy both, including the submode while Ultra is off.
-    const response = await fetch('oh-my-dsh/api/model-mode?session=' + encodeURIComponent(from), { signal: this.lifetime.signal });
+    const response = await fetch('oh-my-dsh/api/model-mode?session=' + encodeURIComponent(from), { signal });
     if (!response.ok) throw Error('无法读取当前模型模式');
     const mode = await response.json();
-    const targetResponse = await fetch('oh-my-dsh/api/model-mode?session=' + encodeURIComponent(to), { signal: this.lifetime.signal });
+    signal.throwIfAborted();
+    const targetResponse = await fetch('oh-my-dsh/api/model-mode?session=' + encodeURIComponent(to), { signal });
     if (!targetResponse.ok) throw Error('无法读取目标模型模式');
     const targetMode = await targetResponse.json();
+    signal.throwIfAborted();
     const saved = await fetch('oh-my-dsh/api/model-mode?session=' + encodeURIComponent(to), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: this.lifetime.signal,
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
       body: JSON.stringify({ ...mode.selected, mode: mode.mode ?? 'off', submode: (mode.mode === 'off' ? mode.savedSubmode : mode.submode) ?? mode.submode ?? 'free', expectedRevision: targetMode.revision }),
     });
     if (!saved.ok) throw Error((await saved.json()).error || '无法保留模型模式');
@@ -193,28 +202,33 @@ export class ProjectlessDrafts {
     return () => { if (shell.submit === submit) shell.submit = original; };
   }
   async send(id, source, mode, args) {
-    if (this.pending.has(id)) return;
+    if (this.lifetime.signal.aborted || this.pending.has(id)) return;
     const choice = this.drafts[id], draft = source.captureDraft();
-    const sourceRef = this.ctx.sessions.retain(id, { source: 'workspaceOperation' });
     const navigation = this.ctx.layout.beginNavigation();
+    // Preparation follows navigation. Native retain cancels only this waiter's
+    // readiness; the finally block still owns every acquired reference.
+    const signal = AbortSignal.any([navigation, this.lifetime.signal]);
     this.pending.set(id, choice); this.emit();
-    let targetRef, targetShell, rebound = false, transferred = false;
-    const current = () => !this.lifetime.signal.aborted && !navigation.aborted && this.current() === id && this.drafts[id] === choice;
+    let sourceRef, targetRef, targetShell, rebound = false, transferred = false;
+    const current = () => !signal.aborted && this.current() === id && this.drafts[id] === choice;
     try {
-      const workspace = await this.request('', { requestId: choice.requestId, prompt: draft.draft }, this.lifetime.signal);
+      signal.throwIfAborted();
+      sourceRef = this.ctx.sessions.retain(id, { source: 'workspaceOperation' });
+      const workspace = await this.request('', { requestId: choice.requestId, prompt: draft.draft }, signal);
       if (!current()) return;
       const target = await this.ctx.sessions.create({ cwd: workspace.cwd, sessionId: choice.sessionId });
-      targetRef = this.ctx.sessions.retain(target, { source: 'workspaceOperation' });
+      if (!current()) return;
+      targetRef = this.ctx.sessions.retain(target, { source: 'workspaceOperation', signal });
       await targetRef.ready;
       if (!current()) return;
-      await this.copySettings(id, target);
+      await this.copySettings(id, target, signal);
       if (!current()) return;
       const conversation = this.ctx.get('conversation');
       const files = new Map((conversation.resolveDraftAttachments?.(draft.attachmentIds) ?? []).map(attachment => [attachment.id, attachment.file]));
       rebound = true;
       conversation.rebindDraftFiles(target, draft.attachmentIds);
       await waitForDraftUploads(conversation, draft.attachmentIds,
-        AbortSignal.any([navigation, this.lifetime.signal, AbortSignal.timeout(60_000)]));
+        AbortSignal.any([signal, AbortSignal.timeout(60_000)]));
       if (!current()) return;
       // Edits via other UI integrations must not get silently overwritten.
       if (JSON.stringify(source.captureDraft()) !== JSON.stringify(draft)) throw Error('草稿已变化，请重新发送');
@@ -226,6 +240,9 @@ export class ProjectlessDrafts {
       targetShell = next;
       next.restoreDraft(draft);
       this.transferOptimizer?.(id, target);
+      signal.throwIfAborted();
+      // Once submitted, navigation cannot discard the actual admission receipt
+      // or return attachments that the host may already have consumed.
       if (draft.draft.trim()) await submitDraft(next, mode, args, this.lifetime.signal);
       else {
         // The native attachment-only shortcut emits no onSubmission events.
@@ -267,32 +284,36 @@ export class ProjectlessDrafts {
         });
       }
       if (rebound && !transferred && !this.lifetime.signal.aborted) this.ctx.get('conversation').rebindDraftFiles(id, draft.attachmentIds);
-      targetRef?.release(); sourceRef.release(); this.pending.delete(id); this.emit();
+      targetRef?.release(); sourceRef?.release(); this.pending.delete(id); this.emit();
     }
   }
   async startDraft(from, options) {
+    if (this.lifetime.signal.aborted) return;
     if (this.newDraft) return this.newDraft;
     const navigation = this.ctx.layout.beginNavigation();
+    const signal = AbortSignal.any([navigation, this.lifetime.signal]);
     const attempt = (async () => {
-      const sourceRef = this.ctx.sessions.retain(from, { source: 'workspaceOperation' });
-      let targetRef;
+      let sourceRef, targetRef;
       try {
+        sourceRef = this.ctx.sessions.retain(from, { source: 'workspaceOperation', signal });
         await sourceRef.ready;
-        if (navigation.aborted || this.lifetime.signal.aborted) return;
+        signal.throwIfAborted();
         // Native blank Sessions are hidden drafts. Reuse an existing directory
         // only for this unsent carrier; send() always allocates its own cwd.
         const cwd = this.ctx.sessions.list.getSnapshot().byId[from].cwd;
         const id = await this.ctx.sessions.create({ cwd });
-        targetRef = this.ctx.sessions.retain(id, { source: 'workspaceOperation' });
+        signal.throwIfAborted();
+        targetRef = this.ctx.sessions.retain(id, { source: 'workspaceOperation', signal });
         await targetRef.ready;
-        if (navigation.aborted || this.lifetime.signal.aborted) return;
-        await this.copySettings(from, id);
-        if (navigation.aborted || this.lifetime.signal.aborted) return;
+        signal.throwIfAborted();
+        await this.copySettings(from, id, signal);
+        signal.throwIfAborted();
         this.mark(id);
         if (options) initializeDraft(this.ctx.get('conversation'), targetRef.binding, options);
+        signal.throwIfAborted();
         this.ctx.uiWorkspace.openSession(id);
-      } catch (error) { if (!this.lifetime.signal.aborted) this.shell(from).notify('error', error.message); }
-      finally { targetRef?.release(); sourceRef.release(); }
+      } catch (error) { if (!signal.aborted) this.shell(from).notify('error', error.message); }
+      finally { targetRef?.release(); sourceRef?.release(); }
     })();
     this.newDraft = attempt;
     try { await attempt; } finally { if (this.newDraft === attempt) this.newDraft = null; }

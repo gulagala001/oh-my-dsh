@@ -39,6 +39,8 @@ Hover the workspace label and click **×**. Drafts, attachments, model, and acce
 
 If access shows Custom, select an access preset first. Synchronization failure keeps the draft and offers retry. File permissions and memory-sharing scope are different controls.
 
+Leaving during creation cancels the remaining preparation and releases its waits. The draft and attachments remain, and retry reuses the same directory allocation. Once the message reaches the host, its actual admission receipt still determines completion even if you leave. A failed admission can be retried; navigation never resends it automatically.
+
 <a id="local-development-or-trial"></a>
 
 Source trials use the [short development guide](development_EN.md). Public fixed installation needs no clone/manual build.

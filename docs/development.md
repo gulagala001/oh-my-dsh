@@ -20,7 +20,7 @@ pnpm build
 pnpm start
 ```
 
-**本地兼容构建：** `scripts/host-targets.mjs` 集中定义已审阅宿主的官方提交与框架；`scripts/align-host.mjs <完整宿主版本> <官方源码目录>` 对齐清单、枚举来源和框架 overrides。`scripts/sync-dsh.mjs` 接收独立匹配源码及其真实浏览产物，`scripts/sync-opencu.mjs` 接收对应新版 tgz。每份构建单独生成并核对冻结锁、peer 与工件，不改版本号混装。独立聊天的草稿初始化集中在 `src/client/projectless-state.mjs`：新版调用原生初始化接口，rc.2 使用同一目标 Session 的输入 facade，保留已有草稿、附件所有权及提交锁。本地安装包使用 `OMD_PNPM_ENTRY="$PNPM" node scripts/pack-local.mjs <输出目录>`，保留内置 macOS helper 的执行位与原签名字节。最小定点检查使用隔离数据/profile；日常部署与重启另需明确授权。
+**本地兼容构建：** `scripts/host-targets.mjs` 集中定义已审阅宿主的官方提交与框架；`scripts/align-host.mjs <完整宿主版本> <官方源码目录>` 对齐清单、枚举来源和框架 overrides。`scripts/sync-dsh.mjs` 接收独立匹配源码及其真实浏览产物，`scripts/sync-opencu.mjs` 接收对应新版 tgz。每份构建单独生成并核对冻结锁、peer 与工件，不改版本号混装。独立聊天的草稿初始化集中在 `src/client/projectless-state.mjs`：新版调用原生初始化接口，rc.2 使用同一目标 Session 的输入 facade，保留已有草稿、附件所有权及提交锁。准备过程共用导航与插件生命周期的取消信号，通过原生 `retain({ signal })` 取消就绪等待；每次已派发的设置写入等回执后再检查取消，消息提交后继续按真实接纳结果收尾，不因导航重放。本地安装包使用 `OMD_PNPM_ENTRY="$PNPM" node scripts/pack-local.mjs <输出目录>`，保留内置 macOS helper 的执行位与原签名字节。最小定点检查使用隔离数据/profile；日常部署与重启另需明确授权。
 
 默认数据目录为仓库内的 `data/dsh/`，profile 为 `oh-my-dsh`，端口为 3083；首次启动安装本地插件。
 打开终端输出的完整登录链接，在 DSH 中配置模型。仓库不提供私人数据或凭据。
