@@ -1,10 +1,10 @@
 # Plugin Architecture and Installation Choices
 
-[简体中文](architecture.md) · [Documentation](README_EN.md) · [Plugin compatibility](plugin-compatibility_EN.md) · [0.99.0 release notes](release-0.99.0.md#en-0990)
+[简体中文](architecture.md) · [Documentation](README_EN.md) · [Plugin compatibility](plugin-compatibility_EN.md) · [0.99.1 release notes](release-0.99.1.md#en-0990)
 
-OMD 0.99.0 reorganizes both features and plugin boundaries. Workflow, turn rewind, personalities, extension management and the web workbench have their own plugin entry points. Theme management and Glyph also have independent product forms. OMD provides a composed workspace, while each independent product has its own purpose, host requirements and releases.
+OMD 0.99.1 reorganizes both features and plugin boundaries. Workflow, turn rewind, personalities, extension management and the web workbench have their own plugin entry points. Theme management and Glyph also have independent product forms. OMD provides a composed workspace, while each independent product has its own purpose, host requirements and releases.
 
-This page describes the OMD 0.99.0 plugin structure and formal releases. Glyph is included in the theme plugin.
+This page describes the OMD 0.99.1 plugin structure and formal releases. Glyph is included in the theme plugin.
 
 ## Products you can choose independently
 
@@ -17,7 +17,7 @@ This page describes the OMD 0.99.0 plugin structure and formal releases. Glyph i
 | **Extensions** · `dsh-extensions` | Skills, MCP, instruction files, commands and hooks | Included and enabled by default on the plugin page | [0.1.0](https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
 | **Persona** · `@gulagala001/dsh-persona-plugin` | Presets, four style modules, file exchange and session personalities | Edited in OMD settings and selected in main-session permission menus | [0.1.0](https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
 | **dsh-theme-plugin** | Appearance settings, theme management, a theme market and installation checks | Optional theme-management product; OMD retains its own built-in appearance choices | [0.2.1 for DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.1-dsh.0.2.1-rc.2) |
-| **DSH BTW** · `@gulagala001/dsh-btw` | Native side-question popover, history, follow-ups and cancellation | Bundled; open with `/btw` while the main task continues | [0.1.1 for DSH rc.2](https://github.com/gulagala001/dsh-btw/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
+| **DSH BTW** · `@gulagala001/dsh-btw` | Native side-question popover, history, follow-ups and cancellation | Bundled; open with `/btw` while the main task continues | [0.1.2 for DSH rc.2](https://github.com/gulagala001/dsh-btw/releases/tag/v0.1.2-dsh.0.2.1-rc.2) |
 | **Glyph** · `dsh-glyph-theme` | Character whale, controls, ripples and reasoning-intensity effects | Selectable appearance, used by default for new appearance configurations | Included in Theme 0.2.1; no separate release |
 
 Independent products follow their own releases. An older fixed package does not automatically acquire subsequent fixes from current OMD source. Check that product's Release and exact host version.

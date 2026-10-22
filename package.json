@@ -1,6 +1,6 @@
 {
   "name": "oh-my-dsh",
-  "version": "0.2.1-rc.2.omd.0.99.0",
+  "version": "0.2.1-rc.2.omd.0.99.1",
   "private": true,
   "type": "module",
   "description": "DSH 增强插件：长上下文、任务验证、提示词优化、代码理解、电脑操作，以及 DSH 原生界面与可选主题、配色和背景。",

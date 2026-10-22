@@ -12,7 +12,7 @@ const rootDocuments = ['README.md', 'README_EN.md', 'CHANGELOG.md', 'CONTRIBUTIN
 // Publish authored user documentation, never a recursive copy of the workspace.
 const guides = [
   'README.md', 'releases.md', 'install.md', 'computer-use.md', 'context-optimization.md',
-  'release-0.99.0.md', 'dsh-ops.md', 'dsh-ops_EN.md',
+  'release-0.99.1.md', 'release-0.99.0.md', 'dsh-ops.md', 'dsh-ops_EN.md',
   'getting-started.md', 'usage.md', 'upgrade.md', 'troubleshooting.md',
   'windows.md', 'skins.md', 'codex-desktop.md', 'ios-liquid-glass.md',
   'claude-cli-terminal.md', 'google-material-expressive.md', 'context-workflow.md',
