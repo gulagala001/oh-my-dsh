@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "package": "@gulagala001/dsh-btw",
+  "version": "0.1.1-dsh.0.2.1-rc.2",
+  "host": "0.2.1-rc.2",
+  "source": "../dsh-btw-plugin",
+  "sourceCommit": "8371c74ec35854600203896daa01815caa7a5536",
+  "files": {
+    "CHANGELOG.md": "4676f8130c2c98300dd34abd156d0c260767cfea33af437a2b24f5ee334b7a7c",
+    "LICENSE": "34afbe3ace726d5a23cd5c54a95cf1e0ae2777153afc33959f55ac3e4bf6c187",
+    "README.md": "7f9e3f05f9d0435134d4705c932db17d97bde5cf54ec2c6c9d5f7da0c2023f5b",
+    "README.zh.md": "b6d61cdb31b6ef643adbad7d8bd16aeb6776fc64be16edd3cb827437907a7031",
+    "README_EN.md": "2583277f7ad1b596b75facbbadde7dca0808009ccb440e11fc4962e11cdba6b6",
+    "cordis.patch.yml": "2ed60d4bf1e33f35172fccb8627de11f0fc5b7451b282542e1bcd38bda71364a",
+    "docs/images/side-chat.png": "1d6c9f4ef9f0209e24a5010cb00ed8705e9675b1afc74a94096ba397fbb82b5f",
+    "docs/install.md": "bcc54e23f531a7f8242018087b864a49c369c08700898589dff58cbb226e004c",
+    "docs/install.zh.md": "d79140cceccb47950c731aafa5986ff8b85d7a7c8e222e617c7552c1003ee5c1",
+    "docs/releases/v0.1.0-dsh.0.2.1-rc.2.md": "67a23b39d8493046c70ace202a8b2470ae7dd0da5c156e5f35a64a517022fd63",
+    "docs/releases/v0.1.1-dsh.0.2.1-rc.2.md": "4676f8130c2c98300dd34abd156d0c260767cfea33af437a2b24f5ee334b7a7c",
+    "lib/client.js": "d364324e55b6a2afa07eb8a9df6046c2269799e80ba5d309302b02e7c3303a25",
+    "package.json": "80f0a085a158bdcdec132cc65fe35dcfc1d09a6b123d3669f8a2dd45fccd7763",
+    "scripts/build.mjs": "de04461003ace8245fcab71a0e14bd95ac3fa114ab00887702c16e509a71ba26",
+    "scripts/check-public-files.mjs": "ba03d52015a17b5f670128d5595e3341511bb5894f24418609022eb314339cdd",
+    "src/client/entry.mjs": "241582a790f4c9eae090a102776495e3c94f5ec5c6df8f26a05620eb29ca367a",
+    "src/client/index.jsx": "c38fbf5266c198917402eb28c686c850eb3e2bea44df72c2a6c0a7328968342b",
+    "src/client/store.mjs": "80a2e4f6c808a4a676bc73bf7b6f186ae6216003cd4a8af97d5fee24de5683eb",
+    "src/client/style.css": "2c84656f7bd3ee4373f0a603166d73f615907a4c4e39b6a230b423c750a0c567",
+    "src/context.mjs": "79ee1c5e6cfbec7d243462fdacbc5e1abd884d006644bfcbc16efc01e751c2e4",
+    "src/index.mjs": "85bb4034682fad89bb1193e48b307e22dcf8a60d4884272f23da17e946ee1bfc",
+    "src/shared.mjs": "0c93c2277ac4791d5cfb3030d8f19d28ad5314fa0ff532351d4417329e43459b",
+    "src/snapshot.mjs": "022108be589d7fd0b03998b2c082b4bee07aa466f43fa7d959680f809acbe3de"
+  }
+}

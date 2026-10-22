@@ -31,7 +31,7 @@ function stageValue(stage, index) {
         url: `plugins/??${id}/client.js&rev=artifact`, cachedId: id, materialized: true })) },
       entries: [{ name: enabled ? 'oh-my-dsh' : originals[0][1], state: 2 }],
       session: { id: sessionId, currentSessionId: sessionId, retainedMainView: 1, blank: true, promptAttempted: false },
-      events: enabled ? [{ kind: 'omd-task-injection' }, { kind: 'omd-btw' }] : [], views: ['chat'],
+      events: enabled ? [{ kind: 'omd-task-injection' }] : [], views: ['chat'],
       slots: [{ name: 'conversation.input.model', kind: 'single', occupants: [
         { priority: 0, active: !enabled }, ...enabled ? [{ priority: -0.5, active: true }] : []],
         children: [{ name: 'conversation.input.model.label', kind: 'single', declaredBy: baseline.labelOwner, occupants: [{ priority: 1017, active: true }], children: [] }] }] } };

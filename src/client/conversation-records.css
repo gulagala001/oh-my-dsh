@@ -8,12 +8,7 @@
 .omd-record-part > summary span { margin-left: 12px; color: var(--dsw-alias-label-caption); font-size: 12px; }
 /* Groups also carry a flow key; hide only the duplicate record's node seat. */
 .omd-shell [data-chat-node-key]:has([data-omd-record-hidden]) { display: none; }
-.omd-btw-record { margin: 10px 0; padding: 10px 14px; border-left: 2px solid var(--dsw-alias-brand-primary, #4c87ed); color: var(--dsw-alias-label-primary); font-size: 14px; line-height: 1.65; min-width: 0; }
-.omd-btw-question { color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
-.omd-btw-question > span { color: var(--dsw-alias-brand-primary, #4c87ed); }
-.omd-btw-answer { margin-top: 5px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .omd-context-record { --omd-record-line: color-mix(in srgb,var(--dsw-alias-label-primary) 12%,transparent); }
 .omd-record-body { border-left-color: var(--omd-record-line); max-width: 100%; }
 .omd-record-part > summary { overflow-wrap: anywhere; }
-.omd-btw-record { background: color-mix(in srgb,var(--dsw-alias-state-business-primary,#4c87ed) 3%,transparent); border-radius: 0 8px 8px 0; }
 @media (max-width: 480px) { .omd-record-part > summary span { display: block; margin-left: 0; } }

@@ -1,7 +1,7 @@
 import { sourceName } from '../message-source.mjs';
 import { appendShadow } from '../context/shadow.mjs';
 import { nodeKey } from './core.mjs';
-import { isBtwSession } from '../btw-policy.mjs';
+import { isBtwSession } from './side-question.mjs';
 
 export function publishDreamMemory(hub,session,enabled=true){
   if(isBtwSession(session))return;

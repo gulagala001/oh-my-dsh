@@ -8,7 +8,7 @@
 
 **[安装与版本配对](install.md) → [第一次使用](getting-started.md) → [日常使用](usage.md)**
 
-安装有两种方式：**[复制指令给 AI](install.md#ai)** 或 **[在“添加插件”中粘贴地址](install.md#gui)**。当前文档介绍 OMD 0.99.0 源码候选，内置 OpenCU 2.0.6；0.99.0 尚未发布，现有公开版本为 0.18.8。[下载与发行范围](releases.md)。
+安装有两种方式：**[复制指令给 AI](install.md#ai)** 或 **[在“添加插件”中粘贴地址](install.md#gui)**。当前文档介绍 OMD 0.99.0 与内置 OpenCU 2.0.7；正式安装包分别匹配 DSH rc.1／rc.2。[下载与发行范围](releases.md)。
 
 <a id="版本与文档范围"></a>
 <a id="按需查阅"></a>

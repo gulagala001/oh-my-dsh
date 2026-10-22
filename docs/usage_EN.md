@@ -2,7 +2,7 @@
 
 [简体中文](usage.md) · [Docs index](README_EN.md) · [First task](getting-started_EN.md) · [Troubleshooting](troubleshooting_EN.md) · [Development](development_EN.md)
 
-> Current source is **OMD `0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.6`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
+> Current source is **OMD `0.2.1-rc.2.omd.0.99.0` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.7`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
 
 OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. The package ID and preset are both `oh-my-dsh`; settings, conversations and data from earlier versions migrate automatically after upgrading, see [the upgrade guide](upgrade_EN.md#package-name).
 
@@ -176,7 +176,7 @@ Connections watch changes, release when idle, and catch up later. Disable/uninst
 
 ## Computer Use
 
-OpenCU `2.0.6` is bundled by default. It provides real browser/native target discovery, observation, background-first input, monitoring and annotations. Complete UI requires matching Host, Client and preload adapters; plugin installation alone does not patch stock DSH. [Guide (Chinese)](computer-use.md) · [Integration boundaries](plugin-compatibility_EN.md#opencu).
+OpenCU `2.0.7` is bundled by default. It provides real browser/native target discovery, observation, background-first input, monitoring and annotations. Complete UI requires matching Host, Client and preload adapters; plugin installation alone does not patch stock DSH. [Guide (Chinese)](computer-use.md) · [Integration boundaries](plugin-compatibility_EN.md#opencu).
 
 <a id="get-started-with-computer-use"></a>
 
@@ -210,7 +210,7 @@ Intent understanding, Subscriptions, IUI, and OMAA are optional. Do not invent r
 
 Run `/侧栏` to open an independent temporary text chat using the currently selected model. It starts without the main conversation context, keeps messages in memory, and stops the response and clears them when closed. This text chat does not execute workspace tools. `/侧栏（网页版）` opens a temporary chat with the DeepSeek website account; closing deletes its own website conversation, and a failed cleanup keeps the panel open for retry. Both preserve the main conversation and its position.
 
-`/btw question` uses the latest dispatched main-request prefix while main work runs, without tools. `/btw cancel` stops only the side question. Codex subscription requests reuse the parent cache key only at adapter dispatch; guards and logs still belong to the independent child. Cache reads use provider-reported usage, undisclosed values are not zero, and server-side hits are not guaranteed. Cold start waits for a verifiable main prefix; no project/global Dream propagation. Original author: JasonQQ. [Authors/licenses](../THIRD_PARTY_NOTICES.md)
+`/btw question` uses bundled [DSH BTW](https://github.com/gulagala001/dsh-btw) to open a native popover above the main composer. It uses the main conversation snapshot and model, with history, follow-ups and independent cancellation. Closing the popover keeps the answer running; Stop cancels only the side request. The latest 20 exchanges per main conversation stay in window memory and clear on reload. Side questions execute no tools and do not enter the main conversation or Dream. Maintained by gulagala001. [Attribution](../THIRD_PARTY_NOTICES.md#bundled-dsh-btw)
 
 OMD bundles `@gulagala001/dsh-undo-plugin`. Double Esc while idle or `/rewind` opens the rewind list above the composer; `/undo` restores the last rewind. Both require confirmation. While running, double Esc keeps the Stop behavior. The action next to a user message's Copy button opens confirmation, then withdraws that message and the following conversation in place. Available checkpoints also restore tool-generated file changes; older messages without backups explicitly show conversation-only recovery. Text, images and files return to the composer. Undo restores the previous conversation and files. External changes block conflicting restores and preserve the backups. This OMD version and the standalone plugin share one service and action; disabling either retains the remaining owner's functionality. Avoid enabling other history-mutating rewind plugins together. The old Turn Rewind recommendation and dedicated compatibility layer have been removed; existing third-party installations and data are retained.
 

@@ -39,6 +39,7 @@ import { applySessionOverview } from './session-overview.jsx';
 import { applyProjectlessWorkspaces } from './projectless-workspaces.jsx';
 import { apply as applyDeepSeekWorkbench } from '../../plugins/deepseek-workbench/src/client/index.jsx';
 import { apply as applyExtensions, inject as extensionsInject } from '../../plugins/dsh-extensions/src/client/index.jsx';
+import { apply as applyBtw, inject as btwInject } from '../../vendor/btw/src/client/index.jsx';
 import { mountOptionalClient } from './optional-client.mjs';
 import { applyStartupNotice } from './startup.jsx';
 
@@ -118,6 +119,7 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
   ctx.inject(['commandUi', 'sidebarRight', 'sidebarRightTabs'], installTemporaryChat);
   applyHistorySize(ctx);
   installDesktopLifecycle(ctx);
+  await mountOptionalClient(ctx, '旁聊', async () => ({ inject: btwInject, apply: applyBtw }), report);
   await mountOptionalClient(ctx, '回合撤回', async () => ({ inject: rewindInject, apply: applyRewind }), report);
   await mountOptionalClient(ctx, '电脑操作', async () => {
     const openCU = createOpenCU(require);

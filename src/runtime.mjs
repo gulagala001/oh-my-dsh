@@ -56,8 +56,8 @@ import { setRuntimeContext, taskContextMeta } from './task-context.mjs';
 import { installBackground } from './background.mjs';
 import { mountRecommendedPlugins } from './recommended-plugins.mjs';
 import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimizer.mjs';
-import { installBtwCompatibility } from './btw-compat.mjs';
-import { isBtwSession } from './btw-policy.mjs';
+import * as btwPlugin from '../vendor/btw/src/index.mjs';
+import { isBtwSession } from './dream/side-question.mjs';
 import { TemporaryChats, handleTemporaryChatApi } from './temporary-chat.mjs';
 import { createProjectlessWorkspaceService } from './projectless-workspaces.mjs';
 
@@ -321,9 +321,7 @@ export async function apply(ctx, config) {
     hub.observe(session, event);
     if (isX(session)) hub.context.observe(session, event);
   }, { global: true });
-  // Capture completed assemblies after OMD's mode-specific prompt middleware
-  // has been registered, so side questions reuse the full parent assembly.
-  installBtwCompatibility(ctx);
+  ctx.inject(btwPlugin.inject, scope => scope.plugin(btwPlugin));
   ctx.inject(['webServer'], web => {
     web.effect(() => web.webServer.register({ kind: 'prefix', path: '/oh-my-dsh/api', async handler(req, res) {
       try {

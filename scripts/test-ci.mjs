@@ -27,6 +27,7 @@ core.push('test/result-reduction-memo.test.mjs', 'test/legacy-identity.test.mjs'
 core.push('test/evidence-lifecycle.test.mjs');
 core.push('test/client-injection.test.mjs');
 core.push('test/glyph-rendering.test.mjs');
+core.push('test/btw-integration.test.mjs');
 
 const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
 if (command === 'matrix') {

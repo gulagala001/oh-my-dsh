@@ -11,23 +11,24 @@ This page describes the OMD 0.99.0 plugin structure and formal releases. Glyph i
 | Product | Capabilities | Use within OMD | Independent distribution |
 | --- | --- | --- | --- |
 | **OpenCU** | Browser/native app actions, observation, annotations, monitoring and sources | Included, retaining coordinated standalone and embedded entry points | [2.0.7](https://github.com/gulagala001/opencu/releases/tag/v2.0.7-dsh.0.2.1-rc.2), with separate rc.1/rc.2 packages |
-| **DSH Workflow** · `dsh-workflow-plus` | Scripts, subagents, phases, background execution, budgets and resumption | Provides the Workflow path in Ultra and workflow tools; native teams remain DSH-owned | [0.1.1 for DSH rc.2](https://github.com/gulagala001/dsh-workflow/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
-| **DSH Rewind** · `@gulagala001/dsh-undo-plugin` | Turn rollback, checkpointed file restoration, undo and draft recovery | Included through message actions, double Escape, `/rewind` and `/undo` | [0.1.0 for DSH rc.2](https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
-| **DeepSeek Workbench** · `dsh-deepseek-workbench` | Web chat, temporary website side chats, the API platform and history import | Controlled under **Oh My DSH → Features**, with web-chat and account entries | [0.1.0 for DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
+| **DSH Workflow** · `dsh-workflow-plus` | Scripts, subagents, phases, background execution, budgets and resumption | Provides the Workflow path in Ultra and workflow tools; native teams remain DSH-owned | [0.1.2 for DSH rc.2](https://github.com/gulagala001/dsh-workflow/releases/tag/v0.1.2-dsh.0.2.1-rc.2) |
+| **DSH Rewind** · `@gulagala001/dsh-undo-plugin` | Turn rollback, checkpointed file restoration, undo and draft recovery | Included through message actions, double Escape, `/rewind` and `/undo` | [0.1.1 for DSH rc.2](https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
+| **DeepSeek Workbench** · `dsh-deepseek-workbench` | Web chat, temporary website side chats, the API platform and history import | Controlled under **Oh My DSH → Features**, with web-chat and account entries | [0.1.1 for DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
 | **Extensions** · `dsh-extensions` | Skills, MCP, instruction files, commands and hooks | Included and enabled by default on the plugin page | [0.1.0](https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
 | **Persona** · `@gulagala001/dsh-persona-plugin` | Presets, four style modules, file exchange and session personalities | Edited in OMD settings and selected in main-session permission menus | [0.1.0](https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
-| **dsh-theme-plugin** | Appearance settings, theme management, a theme market and installation checks | Optional theme-management product; OMD retains its own built-in appearance choices | [0.2.0 for DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.1-dsh.0.2.1-rc.2) |
+| **dsh-theme-plugin** | Appearance settings, theme management, a theme market and installation checks | Optional theme-management product; OMD retains its own built-in appearance choices | [0.2.1 for DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.1-dsh.0.2.1-rc.2) |
+| **DSH BTW** · `@gulagala001/dsh-btw` | Native side-question popover, history, follow-ups and cancellation | Bundled; open with `/btw` while the main task continues | [0.1.1 for DSH rc.2](https://github.com/gulagala001/dsh-btw/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
 | **Glyph** · `dsh-glyph-theme` | Character whale, controls, ripples and reasoning-intensity effects | Selectable appearance, used by default for new appearance configurations | Included in Theme 0.2.1; no separate release |
 
 Independent products follow their own releases. An older fixed package does not automatically acquire subsequent fixes from current OMD source. Check that product's Release and exact host version.
 
-BTW, Intelligent UI and OMAA continue as established independent products; they did not first become independent in this release. dsh-ops is a third-party tool product installed through the matching compatibility entry in OMD's third-party page.
+Intelligent UI and OMAA continue as established independent products; they did not first become independent in this release. dsh-ops is a third-party tool product installed through the matching compatibility entry in OMD's third-party page.
 
 ## Full installation and coinstallation
 
 - Install the matching OMD package for its composed workspace. Included capabilities do not require duplicate independent installations.
 - For one independent product, follow its own fixed-package installation guide. OMD's rc.1 support does not extend the rc.2-only releases listed above.
-- Matching OpenCU, Workflow, Rewind, Persona, Extensions and DeepSeek Workbench installations coordinate runtime and UI ownership in the same host scope. This avoids duplicate tools, services and controls; a still-enabled owner can retain the capability when another is disabled.
+- Matching OpenCU, Workflow, Rewind, BTW, Persona, Extensions and DeepSeek Workbench installations coordinate runtime and UI ownership in the same host scope. This avoids duplicate tools, services and controls; a still-enabled owner can retain the capability when another is disabled.
 - Disabling an OMD feature controls its OMD entry. A separately installed plugin remains managed through DSH's plugin page. Check the actual enabled source before updating or removing it.
 - Theme management retains theme and preference ownership when taking over appearance controls. A failed takeover preserves the current appearance and reports the error. The Glyph theme and the theme-management product are distinct installation choices.
 
