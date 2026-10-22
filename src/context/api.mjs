@@ -27,7 +27,9 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
         send(res, 200, await service.evidence.export(target, ancestors, signal, url.searchParams.get('rawRef'))); return true;
       }
       if (path === '/context/evidence/import' && req.method === 'POST') {
-        send(res, 200, await service.evidence.import(await readBody(req, { maxBytes: 128 * 1024 * 1024 }), target, ancestors)); return true;
+        const bundle = await readBody(req, { maxBytes: 128 * 1024 * 1024 });
+        if (service.closed) throw Error('上下文优化已停止');
+        send(res, 200, await service.track(service.evidence.import(bundle, target, ancestors))); return true;
       }
       if (req.method !== 'GET') { send(res, 405, { error: '仅支持 GET' }); return true; }
       const rawRef = url.searchParams.get('rawRef');

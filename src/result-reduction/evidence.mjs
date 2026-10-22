@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile, rename, readdir, unlink, stat, open } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rename, readdir, unlink, open, link } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setImmediate as yieldImmediate } from 'node:timers/promises';
 
@@ -71,6 +71,7 @@ export class EvidenceStore {
     this.ready.catch(() => {});
     this.cache = new Map();
     this.index = null;
+    this.updates = new Map();
   }
   id(ref) { const match = refPattern.exec(ref); if (!match) throw Error('原文引用无效'); return match[1]; }
   async atomic(path, value) {
@@ -79,22 +80,48 @@ export class EvidenceStore {
     try { const file = await open(temporary, 'wx', 0o600); try { await file.writeFile(JSON.stringify(value)); await file.sync(); } finally { await file.close(); } await rename(temporary, path); }
     finally { await unlink(temporary).catch(() => {}); }
   }
+  // One reference has one metadata writer. Different archives stay concurrent;
+  // failures release the slot so a later verified restoration can continue.
+  update(ref, change) {
+    this.id(ref);
+    const previous = this.updates.get(ref) ?? Promise.resolve();
+    const current = previous.catch(() => {}).then(change);
+    this.updates.set(ref, current);
+    return current.finally(() => { if (this.updates.get(ref) === current) this.updates.delete(ref); });
+  }
+  async persist(record) {
+    await this.atomic(join(this.dir, this.id(record.ref) + '.json'), record);
+    this.remember(record);
+    return record;
+  }
+  async storeObject(sourceHash, text) {
+    await this.ready;
+    const object = join(this.dir, 'objects', sourceHash + '.txt');
+    const verify = async () => { if (hash(await readFile(object, 'utf8')) !== sourceHash) throw Error('原文对象校验失败'); };
+    try { await verify(); return; } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    const temporary = `${object}.${randomUUID()}.tmp`;
+    try {
+      const file = await open(temporary, 'wx', 0o600);
+      try { await file.writeFile(text); await file.sync(); } finally { await file.close(); }
+      // Publish a complete immutable object once. Other references can reuse it
+      // without ever seeing a partially written file or replacing its bytes.
+      try { await link(temporary, object); }
+      catch (error) { if (error.code !== 'EEXIST') throw error; await verify(); }
+    } finally { await unlink(temporary).catch(() => {}); }
+  }
   async save({ sessionId, callId, tool, args, text, complete = true, rule, parent }) {
     if (!validId(sessionId) || !validId(callId) || !validId(tool) || typeof text !== 'string') throw Error('原文身份不完整');
     if (!text.isWellFormed()) throw Error('原文包含无效 Unicode，保留工具原结果');
     const bytes = Buffer.byteLength(text);
     if (bytes > MAX_OBJECT_BYTES) throw Error('本次原文超过存档上限，保留工具原结果');
-    await this.ready;
-    const sourceHash = hash(text), object = join(this.dir, 'objects', sourceHash + '.txt');
-    try { const file = await open(object, 'wx', 0o600); try { await file.writeFile(text); await file.sync(); } finally { await file.close(); } }
-    catch (error) { if (error.code !== 'EEXIST') throw error; if (hash(await readFile(object, 'utf8')) !== sourceHash) throw Error('原文对象校验失败'); }
+    const sourceHash = hash(text);
+    await this.storeObject(sourceHash, text);
     const ref = 'omd-raw:' + randomUUID();
     const record = { version: 1, ref, sessionId, callId, tool, argumentsHash: hash(args ?? {}),
       sourceHash, bytes, characters: text.length, complete, rule, parent, createdAt: Date.now(),
       ...indexTerms(text), committed: false };
-    await this.atomic(join(this.dir, this.id(ref) + '.json'), record);
+    await this.persist(record);
     await this.indexOwner(record);
-    this.remember(record);
     return record;
   }
   async indexOwner(record, owner = record.sessionId) {
@@ -111,27 +138,31 @@ export class EvidenceStore {
     if (this.cache.has(ref)) return this.cache.get(ref);
     let record;
     try { record = JSON.parse(await readFile(join(this.dir, id + '.json'), 'utf8')); }
-    catch (error) { if (error.code === 'ENOENT') throw Error('原文引用不存在或已被删除'); throw error; }
+    catch (error) { if (error.code === 'ENOENT') throw Object.assign(Error('原文引用不存在或已被删除'), { code: 'ENOENT' }); throw error; }
     if (record.version !== 1 || record.ref !== ref || !/^[a-f0-9]{64}$/.test(record.sourceHash) || !validId(record.sessionId)) throw Error('原文记录校验失败');
     if (retain) this.remember(record); return record;
   }
-  async commit(ref, event) {
-    const previous = await this.meta(ref), m = message(event);
-    const record = { ...previous };
-    if (!m || m.toolCallId !== record.callId || m.isError || record.preparedHash && record.preparedHash !== hash(m.content)) return false;
-    record.committed = true; record.eventSeq = event.seq; record.messageId = m.id; record.contentHash = hash(m.content);
-    await this.atomic(join(this.dir, this.id(ref) + '.json'), record); this.remember(record); return true;
+  commit(ref, event) {
+    return this.update(ref, async () => {
+      const record = { ...await this.meta(ref) }, m = message(event);
+      if (!m || m.toolCallId !== record.callId || m.isError || record.preparedHash && record.preparedHash !== hash(m.content)) return false;
+      record.committed = true; record.eventSeq = event.seq; record.messageId = m.id; record.contentHash = hash(m.content);
+      await this.persist(record); return true;
+    });
   }
-  async prepare(ref, content) {
-    const record = { ...await this.meta(ref), preparedHash: hash(content) };
-    await this.atomic(join(this.dir, this.id(ref) + '.json'), record); this.remember(record); return record;
+  prepare(ref, content) {
+    return this.update(ref, async () => this.persist({ ...await this.meta(ref), preparedHash: hash(content) }));
   }
-  async abandon(ref) {
-    const record = await this.meta(ref);
-    if (record.committed) return;
-    this.cache.delete(ref); await unlink(join(this.dir, this.id(ref) + '.json')).catch(() => {});
-    await unlink(join(this.dir, 'owners', hash(record.sessionId), this.id(ref))).catch(() => {});
-    // Content objects may be shared. Never delete one without a full reference scan.
+  abandon(ref) {
+    return this.update(ref, async () => {
+      let record;
+      try { record = await this.meta(ref); } catch (error) { if (error.code === 'ENOENT') return; throw error; }
+      if (record.committed) return;
+      await unlink(join(this.dir, this.id(ref) + '.json')).catch(error => { if (error.code !== 'ENOENT') throw error; });
+      this.cache.delete(ref);
+      await unlink(join(this.dir, 'owners', hash(record.sessionId), this.id(ref))).catch(error => { if (error.code !== 'ENOENT') throw error; });
+      // Content objects may be shared. Never delete one without a full reference scan.
+    });
   }
   access(record, session, ancestors = [], index) {
     if (!record.committed || !validId(record.callId) || !validId(record.tool) || !validId(record.messageId)
@@ -176,7 +207,9 @@ export class EvidenceStore {
       if (!/^[a-f0-9-]{36}\.json$/.test(name)) continue;
       // A sweep larger than the cache must not evict every useful entry before
       // reaching it. Ordinary reads/writes still admit their current record.
-      let record = await this.meta('omd-raw:' + name.slice(0, -5), this.cache.size < MAX_META_CACHE);
+      let record;
+      try { record = await this.meta('omd-raw:' + name.slice(0, -5), this.cache.size < MAX_META_CACHE); }
+      catch (error) { if (error.code === 'ENOENT') continue; throw error; }
       // A process can end between durable tool/result and the observation hook.
       // Recover only our pre-published hash plus a genuine authorized event pair.
       if (!record.committed && record.preparedHash) for (const item of index.results.get(record.callId) || []) {
@@ -289,32 +322,29 @@ export class EvidenceStore {
       // Explicit import may restore a host-exported session under a new ID.
       // Only a complete matching logged call/result can grant that new owner.
       if (!this.access({ ...original, sessionId: session.id, importedSessions: [] }, session, [], index) || typeof text !== 'string' || !text.isWellFormed() || Buffer.byteLength(text) > MAX_OBJECT_BYTES || hash(text) !== original.sourceHash) throw Error('档案来源或内容与当前会话不匹配');
-      let record = { ...original, bytes: Buffer.byteLength(text), characters: text.length, importedSessions: original.sessionId === session.id ? [] : [session.id], ...indexTerms(text) };
-      await this.ready;
-      try {
-        const old = await this.meta(record.ref);
-        if (['sourceHash', 'callId', 'tool', 'argumentsHash', 'contentHash', 'messageId'].some(k => old[k] !== record[k])) throw Error('原文引用冲突，未覆盖');
-        record = { ...old, importedSessions: [...new Set([...(old.importedSessions ?? []), session.id])], ...indexTerms(text) };
-      }
-      catch (error) { if (error.message !== '原文引用不存在或已被删除') throw error; }
-      const path = join(this.dir, 'objects', record.sourceHash + '.txt');
-      try { await writeFile(path, text, { flag: 'wx', mode: 0o600 }); }
-      catch (error) { if (error.code !== 'EEXIST') throw error; if (hash(await readFile(path, 'utf8')) !== record.sourceHash) throw Error('原文对象冲突'); }
-      await this.atomic(join(this.dir, this.id(record.ref) + '.json'), record); await this.indexOwner(record, session.id); this.remember(record); count++;
+      await this.update(original.ref, async () => {
+        signal?.throwIfAborted();
+        let record = { ...original, bytes: Buffer.byteLength(text), characters: text.length, importedSessions: original.sessionId === session.id ? [] : [session.id], ...indexTerms(text) };
+        let old;
+        try { old = await this.meta(record.ref); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+        if (old) {
+          if (['sourceHash', 'callId', 'tool', 'argumentsHash'].some(k => old[k] !== record[k])
+            || old.committed && ['contentHash', 'messageId'].some(k => old[k] !== record[k])
+            || old.preparedHash && old.preparedHash !== record.contentHash) throw Error('原文引用冲突，未覆盖');
+          // The native event proof above completes an interrupted preparation.
+          // Keep its original owner and merge only this verified new owner.
+          record = { ...old, ...(old.committed ? {} : { committed: true, contentHash: record.contentHash, messageId: record.messageId, eventSeq: record.eventSeq }),
+            importedSessions: [...new Set([...(old.importedSessions ?? []), session.id])], ...indexTerms(text) };
+        }
+        await this.storeObject(record.sourceHash, text);
+        // Owner markers are only discovery hints. A failed metadata publication
+        // may leave a marker, which readers skip until a retry publishes it.
+        await this.indexOwner(record, session.id);
+        await this.persist(record);
+      });
+      count++;
     }
     return { imported: count };
-  }
-  async collect() {
-    await this.ready;
-    const referenced = new Set();
-    for (const name of await readdir(this.dir)) if (/^[a-f0-9-]{36}\.json$/.test(name)) {
-      const record = await this.meta('omd-raw:' + name.slice(0, -5));
-      if (!record.committed && Date.now() - record.createdAt > 86400000) await this.abandon(record.ref);
-      else referenced.add(record.sourceHash);
-    }
-    for (const name of await readdir(join(this.dir, 'objects'))) if (/^[a-f0-9]{64}\.txt$/.test(name) && !referenced.has(name.slice(0, -4))) {
-      const path = join(this.dir, 'objects', name);
-      if (Date.now() - (await stat(path)).mtimeMs > 86400000) await unlink(path);
-    }
   }
 }
