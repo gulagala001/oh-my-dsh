@@ -108,7 +108,7 @@ Version 0.99.0 brings together the changes since public release 0.18.8. This is 
 - **Build and delivery**: the source branch no longer tracks complete compiled client artifacts; normal updates install fixed Release assets. Large theme resources, Glyph and heavier OpenCU capabilities load on demand. Required provenance, licenses and host dependencies remain; current build targets no longer include old alpha/0.2.0 hosts.
 - Unifies the package, preset and data entry points under **oh-my-dsh**, automatically migrating existing configuration and conversations while retaining models, credentials, attachments, third-party plugins and user data. See the [package migration guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade_EN.md#package-name).
 - Bundled OpenCU 2.0.7 includes quality, cancellation and transport improvements. dsh-ops pins upstream 0.4.1; native-tool replacement, its panel and TUI entry remain off by default. Disabling retains data.
-- Separate packages are planned for the exact DSH 0.2.1-rc.1 and rc.2 versions. Full embedded browsing, annotations and native monitoring still require matching host adapters; BC support is scoped above.
+- Separate packages are provided for the exact DSH 0.2.1-rc.1 and rc.2 versions. Full embedded browsing, annotations and native monitoring still require matching host adapters; BC support is scoped above.
 
 ## 安装 / Installation
 
