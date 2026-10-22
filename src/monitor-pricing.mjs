@@ -47,8 +47,10 @@ function createPricing(data) {
     return [];
   }
   function selectEntry(provider, model) {
-    const route = routeKey(provider), key = modelKey(model), cacheKey = JSON.stringify([route, key]);
+    // Repeated receipts carry the same route spelling; normalize on misses.
+    const cacheKey = JSON.stringify([String(provider || ''), String(model || '')]);
     if (selections.has(cacheKey)) return selections.get(cacheKey);
+    const route = routeKey(provider), key = modelKey(model);
     const origin = originOf(model);
     const score = entry => (entry.provider === route ? 1000 : 0) + (entry.provider === origin ? 200 : 0)
       + (origins.has(entry.provider) ? 100 : 0) + (entry.provider === 'openrouter' ? 50 : 0)
@@ -72,7 +74,15 @@ function createPricing(data) {
       const entry = found?.entry, base = entry?.cost, usage = call.usage || {};
       const totalInput = known(usage.totalTokens) && known(usage.outputTokens) && usage.totalTokens >= usage.outputTokens
         ? usage.totalTokens - usage.outputTokens : ['inputTokens', 'cacheReadTokens', 'cacheWriteTokens'].reduce((n, key) => n + (known(usage[key]) ? usage[key] : 0), 0);
-      const tier = base?.tiers?.findLast(t => totalInput > t.above), cost = { ...base, ...tier };
+      const tier = base?.tiers?.findLast(t => totalInput > t.above);
+      // A route's resolved catalog rates depend on its current context tier,
+      // not the receipt's token counts. Keep one template per bounded selection.
+      // Custom settings stay live, and callers own both the object and array.
+      const cached = found?.price;
+      if (!override && cached && cached.tier === tier) {
+        return { ...cached.value, cacheFallback: [...cached.value.cacheFallback] };
+      }
+      const cost = { ...base, ...tier };
       const price = { currency: override?.currency || 'USD', ...Object.fromEntries(Object.entries(fields).map(([key, raw]) => [key, cost[raw]])) };
       const fallback = [];
       for (const key of ['cacheReadTokens', 'cacheWriteTokens']) if (!known(price[key]) && known(price.inputTokens)) {
@@ -84,19 +94,21 @@ function createPricing(data) {
           if (known(override[key])) price[key] = override[key];
         }
       }
-      return { ...price, model: override ? call.model : entry.model, provider: override ? call.provider : entry.provider,
+      const value = { ...price, model: override ? call.model : entry.model, provider: override ? call.provider : entry.provider,
         providerName: override ? '自定义单价' : data.providers[entry.provider], source: override ? 'custom' : 'catalog',
         url: override ? null : data.source, updatedAt: data.fetchedAt, threshold: override ? null : tier?.above ?? null,
         matchedBy: override ? 'custom' : found.routeMatch ? 'provider' : 'model', cacheFallback: override ? [] : fallback };
+      if (!override) found.price = { tier, value };
+      return { ...value, cacheFallback: [...value.cacheFallback] };
     },
     catalog({ query = '', provider = '', offset = 0, limit = 30 } = {}) {
       const q = normalize(query), route = routeKey(provider);
       const rows = data.entries.filter(e => (!route || e.provider === route) && (!q || normalize(`${e.provider} ${e.model} ${e.canonical} ${e.name}`).includes(q)));
       return { source: data.source, updatedAt: data.fetchedAt, total: rows.length, catalogTotal: data.entries.length,
-        providerCount: Object.keys(data.providers).length, providers: data.providers, offset, limit,
+        providerCount: Object.keys(data.providers).length, providers: { ...data.providers }, offset, limit,
         items: rows.slice(offset, offset + limit).map(e => ({ provider: e.provider, model: e.model, name: e.name,
           providerName: data.providers[e.provider], currency: data.currency, ...Object.fromEntries(Object.entries(fields).map(([key, raw]) => [key, e.cost[raw]])),
-          tiers: e.cost.tiers || [] })) };
+          tiers: (e.cost.tiers || []).map(tier => ({ ...tier })) })) };
     },
   };
 }

@@ -52,7 +52,7 @@ export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
   // Monitoring uses metadata, even when the corresponding native archive can
   // no longer be inspected. monitorStates reports unreadable OMD sidecars.
   let stored;
-  try { stored = id ? hub.store.peek(id) : undefined; } catch {}
+  try { stored = id && !session ? hub.store.monitorState(id) : undefined; } catch {}
   if (id && !session && !stored && !hub.monitor.hasSession(id)
     && !await coldNativeMonitorTarget(ctx, id, req, res)) {
     send(res, 404, { error: '会话不存在' }); return true;

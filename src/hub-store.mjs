@@ -4,6 +4,10 @@ import { projectKeyOf, sameProject } from './project.mjs';
 import { readonlyMonitorActivity } from './monitor-activity.mjs';
 
 const read = (path, fallback) => existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : fallback;
+const monitorState = value => ({ id: value.id, parentSession: value.parentSession,
+  ...(value.origin === undefined ? {} : { origin: value.origin }),
+  metrics: value.metrics || {}, actions: value.actions || {}, activity: value.activity || [],
+  ...(value.budget === undefined ? {} : { budget: value.budget }) });
 export const projectOf = cwd => projectKeyOf(cwd) ?? process.cwd();
 // Session keys are identities, not filesystem paths.
 export const matchesProject = (memory, current) => memory?.startsWith('session:') || current?.startsWith('session:') ? memory === current : sameProject(memory, current);
@@ -49,26 +53,39 @@ export class HubStore {
   }
   // Statistics do not need to retain every archived conversation body in RAM.
   // Active mutable states take precedence over archived snapshots.
-  monitorStates() {
-    const project = value => ({ id: value.id, parentSession: value.parentSession, ...(value.origin === undefined ? {} : { origin: value.origin }),
-      metrics: value.metrics || {}, actions: value.actions || {}, activity: value.activity || [] });
-    const files = readdirSync(join(this.dir, 'sessions')).filter(n => n.endsWith('.json'));
-    const present = new Set(files); this.monitorErrors.clear();
-    for (const name of this.monitorCache.keys()) if (!present.has(name)) this.monitorCache.delete(name);
-    return files.flatMap(name => {
-      try {
-      const id = validateSessionId(name.slice(0, -5));
-      if (this.states.has(id)) return [project(this.states.get(id))];
-      const file = join(this.dir, 'sessions', name), stat = statSync(file, { bigint: true });
+  monitorState(id) {
+    validateSessionId(id);
+    const live = this.states.get(id);
+    if (live) {
+      if (live.id !== id) throw Error('会话存档身份不匹配');
+      return monitorState(live);
+    }
+    const name = `${id}.json`, file = join(this.dir, 'sessions', name);
+    try {
+      const stat = statSync(file, { bigint: true });
       const signature = `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
       let cached = this.monitorCache.get(name);
       if (cached?.signature !== signature) {
         const value = read(file);
         if (value?.id !== id) throw Error('会话存档身份不匹配');
-        const snapshot = project(value); snapshot.activity = readonlyMonitorActivity(snapshot.activity);
+        const snapshot = monitorState(value); snapshot.activity = readonlyMonitorActivity(snapshot.activity);
         cached = { signature, value: snapshot }; this.monitorCache.set(name, cached);
       }
-      return [cached.value];
+      return cached.value;
+    } catch (error) {
+      this.monitorCache.delete(name);
+      if (error.code === 'ENOENT') return undefined;
+      throw error;
+    }
+  }
+  monitorStates() {
+    const files = readdirSync(join(this.dir, 'sessions')).filter(n => n.endsWith('.json'));
+    const present = new Set(files); this.monitorErrors.clear();
+    for (const name of this.monitorCache.keys()) if (!present.has(name)) this.monitorCache.delete(name);
+    return files.flatMap(name => {
+      try {
+      const value = this.monitorState(name.slice(0, -5));
+      return value ? [value] : [];
       } catch (error) {
         this.monitorCache.delete(name); this.monitorErrors.set(name, error.message);
         return [];

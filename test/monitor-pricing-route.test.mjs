@@ -63,6 +63,16 @@ test('route selections are bounded while tiers, overrides and refreshed catalogs
   const custom = [{ provider: call.provider, model: call.model, currency: 'CNY', inputTokens: 7 }];
   assert.equal(pricing.price(call, custom).inputTokens, 7);
   custom[0].inputTokens = 9; assert.equal(pricing.price(call, custom).inputTokens, 9);
+  assert.equal(pricing.price(call).inputTokens, 2, 'removing a custom override restores the catalog template');
+  assert.equal(pricing.price({ ...call, usage: { totalTokens: 102, outputTokens: 1 } }).inputTokens, 6);
+  assert.equal(pricing.price(call).threshold, null, 'returning to the boundary restores the base tier');
+  assert.equal(pricing.price({ ...call, provider: ' FIXTURE_0 ', model: 'MODEL_0' }).inputTokens, 2, 'aliases still normalize on a cache miss');
+  assert.equal(pricing.price(call).matchedBy, 'provider');
+  const page = pricing.catalog({ provider: call.provider, query: call.model, limit: 1 });
+  page.providers[call.provider] = 'caller-only'; page.items[0].tiers[0].input = 999;
+  assert.equal(pricing.price({ ...call, usage: { inputTokens: 101 } }).inputTokens, 6);
+  assert.equal(pricing.price(call).providerName, 'Fixture 0');
+  assert.equal(pricing.catalog({ provider: call.provider, query: call.model, limit: 1 }).items[0].tiers[0].input, 6);
   for (let i = 0; i < 512; i++) assert.equal(pricing.price({ provider: 'unknown', model: 'unknown-' + i }), null);
   const before = sorts; pricing.price(call);
   assert.equal(sorts, before + 1, 'old route is evicted instead of retaining unbounded identities');

@@ -12,7 +12,7 @@ function fixture(t) {
   t.after(() => { monitor.close(); rmSync(directory, { recursive: true, force: true }); });
   const state = { id: 'fixture', activity: [], metrics: { prepare: { calls: 3, inputTokens: 60, outputTokens: 12 } } };
   const session = { requestHeader: () => ({ tools: [{ name: 'fixture' }] }), eventAt: seq => ({ seq, type: 'user/message' }), deriveEventMessage: () => ({ role: 'user' }) };
-  const hub = { store: { monitorStates: () => [state], monitorErrors: new Set(), peek: () => state }, monitor, config: () => ({}), live: new Map(),
+  const hub = { store: { monitorStates: () => [state], monitorErrors: new Set(), monitorState: () => state }, monitor, config: () => ({}), live: new Map(),
     context: { adapter: { contextCapacity: () => 400000 } }, dream: { store: { usage: () => ({}), jobActivity: () => ({}) } } };
   const ctx = { agents: new Map(), sessions: new Map([['fixture', session]]), tokenMeter: { measure: () => ({ totalTokens: 100, nodes: [{ seq: 1, tokens: 70 }] }) } };
   for (const [id, kind, usage] of [['one', 'main', null], ['two', 'prepare', { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 }]]) {
