@@ -10,6 +10,7 @@ import { createPlaywrightAPI } from './browser-api.mjs';
 import { replOutput, partialReplError } from './repl-output.mjs';
 import { clickParameters } from '../../extension/click-options.js';
 import { pressParameters } from '../../extension/key-options.js';
+import { createInputReleaseState } from './input-release.mjs';
 
 function checked(result) {
   if (result?.ok === false) throw Object.assign(new Error(result.error.message), result.error);
@@ -19,7 +20,8 @@ function checked(result) {
 /** A fresh Node REPL context gives persistent lexical bindings and native top-level await. */
 export function createComputerRepl(request, report = () => {}) {
   let repl, current, closing, closed = false, releaseOnClose = false, generation = 0, tail = Promise.resolve();
-  const pending = new Set(), heldInputs = new Set(), execution = new AsyncLocalStorage();
+  const pending = new Set(), inputRelease = createInputReleaseState(), execution = new AsyncLocalStorage();
+  const stop = () => inputRelease.request('stop', undefined, () => request('stop')).then(checked);
   const outputs = [], images = [], deliveries = [];
   const returned = new Set(), documentationLoaded = new Set(), documentationSeen = new Set(), documentationInCell = new Set();
   const observations = createObservationProjector();
@@ -32,18 +34,9 @@ export function createComputerRepl(request, report = () => {}) {
   }
   async function call(endpoint, args) {
     const run = activeExecution();
-    const action = endpoint === 'act' ? args.action : null;
-    const key = ['keyDown', 'key_down', 'keyUp', 'key_up'].includes(action) ? JSON.stringify([args.targetId, 'key', args.key])
-      : ['mouseDown', 'mouse_down', 'mouseUp', 'mouse_up'].includes(action) ? JSON.stringify([args.targetId, 'button', args.button ?? 'left']) : null;
-    if (['keyDown', 'key_down', 'mouseDown', 'mouse_down'].includes(action)) heldInputs.add(key);
-    const work = request(endpoint, args).then(checked).then(result => {
-      if (['keyUp', 'key_up', 'mouseUp', 'mouse_up'].includes(action)) heldInputs.delete(key);
-      if (endpoint === 'stop') heldInputs.clear();
+    const work = inputRelease.request(endpoint, args, () => request(endpoint, args)).then(checked).then(result => {
       const projected = endpoint === 'observe' ? result : modelResult(result, args);
       const outcome = result.result ?? result;
-      if (action === 'handleDialog' && outcome.handled && !outcome.releasePending) {
-        for (const held of heldInputs) if (JSON.parse(held)[0] === args.targetId) heldInputs.delete(held);
-      }
       if (outcome.pendingDialog) {
         emit({ targetId: args.targetId, pendingDialog: outcome.pendingDialog,
           inputDispatched: outcome.inputDispatched, effectVerified: outcome.effectVerified,
@@ -412,7 +405,7 @@ export function createComputerRepl(request, report = () => {}) {
   async function reset() {
     generation++;
     current?.aborter.abort(new Error('Computer session reset'));
-    const stopping = request('stop').then(checked).then(result => { heldInputs.clear(); return result; });
+    const stopping = stop();
     const results = await Promise.allSettled([...pending, stopping]);
     clearContext();
     if (results.some(result => result.status === 'rejected' && result.reason?.code === 'RELEASE_FAILED')) throw results.find(result => result.status === 'rejected' && result.reason?.code === 'RELEASE_FAILED').reason;
@@ -423,16 +416,16 @@ export function createComputerRepl(request, report = () => {}) {
     close() {
       if (closing) return closing;
       closed = true; generation++;
-      releaseOnClose ||= Boolean(current || pending.size || heldInputs.size);
+      releaseOnClose ||= Boolean(current || pending.size || inputRelease.pending);
       current?.aborter.abort(new Error('Computer session disposed'));
       closing = (async () => {
-        const results = await Promise.allSettled([...(releaseOnClose ? [request('stop').then(checked)] : []), ...pending]);
+        const results = await Promise.allSettled([...(releaseOnClose ? [stop()] : []), ...pending]);
         await tail;
         clearContext(); execution.disable(); session.attachments = undefined;
         const failure = releaseOnClose && results[0]?.status === 'rejected' ? results[0]
           : results.find(result => result.status === 'rejected' && result.reason?.code === 'RELEASE_FAILED');
         if (failure) throw failure.reason;
-        releaseOnClose = false; heldInputs.clear();
+        releaseOnClose = false;
       })().catch(error => { closing = undefined; throw error; });
       return closing;
     },
@@ -498,7 +491,7 @@ export function createComputerRepl(request, report = () => {}) {
           // topics for recovery, and replay only those emitted in that failed cell.
           for (const topic of documentationInCell) documentationSeen.delete(topic);
           observations.reset();
-          if (aborter.signal.aborted && !closed) { checked(await request('stop')); await reset(); }
+          if (aborter.signal.aborted && !closed) { await stop(); await reset(); }
           throw failure;
         } finally {
           evaluationRepl._domain.removeListener('error', evaluationError); current?.signal.removeEventListener('abort', cancel); signal?.removeEventListener('abort', onAbort); current = undefined;

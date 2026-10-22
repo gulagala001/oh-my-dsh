@@ -5,7 +5,7 @@
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.2",
   "files": {
-    "DEVELOPMENT.md": "8a62bd02cd634af6d29e64fa057a0a98fb5418a571d0b5ac4a15f18547be8022",
+    "DEVELOPMENT.md": "da44d332d68834654bbaaf90d7344afdf41e455aae5dbd03530567d20a1c865e",
     "README.md": "633f12116c4dd4124fa577d60b555e8bb6b736e4b41513c321699926644982e7",
     "README_EN.md": "176b7d4a64dcb315cc68f476c7fb6035c8ce58f685d53541f48d06533572b611",
     "THIRD_PARTY_NOTICES.md": "e4ab08236d3fc27da96af6aa6ba40871c498f81ea890abbd873a905ecd8644b0",
@@ -709,9 +709,9 @@
     "src/dsh/browser-history.mjs": "33b2412e5cc42b9e37a7135436eb9be0bc8c968e568c5c97abb21d90f74f8a3b",
     "src/dsh/browser-host.mjs": "d12b98c350ffd3f01500686e3b2145b7ef4681be014b9dc1eac4032aa485c67d",
     "src/dsh/computer-docs.mjs": "08f10cbb7711fed24e22903e6c5d3248391cedf71feaed4857d07cae359e9056",
-    "src/dsh/computer-repl.mjs": "87f68c1f189f71b1026a444fa8ea9bd112840b1ca41e5e430cc964a366a68d8e",
+    "src/dsh/computer-repl.mjs": "a43ca44b1fe1fa41d94a0b3982d750670043dff7b8e945ffe9f48057239ec148",
     "src/dsh/computer-worker.mjs": "5e342bdf2aa0999217f4a42e39bc7bd59c9e7f7e77b2024fb966648658682e15",
-    "src/dsh/computer.mjs": "76f166a440eb2ffcf3c23e6ed2c500349869108cdc167a0d208123e1f85a30f0",
+    "src/dsh/computer.mjs": "6094796f2a5bc0f16a52df2a607b191d972a144d2fc44c351fb51acba69e886d",
     "src/dsh/config.mjs": "2918e8568e44834fdacda51589e83c455fef26e39811911999c391a319eb98cf",
     "src/dsh/delivery-files.mjs": "4d747907f5d1165fc539d188f5a7599cacf9ca439e3a9eec399d8c2a48791c34",
     "src/dsh/downloads.mjs": "2e9eed80f9052f7d875a1f5c198b1dfc4d6e5a0a223f95f1746ccc36ccc35009",
@@ -743,8 +743,9 @@
     "src/presentation-images.mjs": "ffc1b3507f0b35418bc2e8bf4d1817c7a87be91001e29e89954167619c1bc024",
     "src/protocol.mjs": "78bd4e2f4a39c84d4c37e7a7891576fa9682e42277d93734c4571b45a096533b",
     "src/runtime.mjs": "5ab64b04f72d4343f479da4f2342e44a1dc985903e0b213cd0bc5b2cf7ca09ed",
-    "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
+    "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90",
+    "src/dsh/input-release.mjs": "b20ad8264eadc08336baa63617d995fd25746615956c34e5354e705ff42d8a20"
   },
-  "sourceRevision": "877668c2018a931407636ced346d07ed6007b746",
+  "sourceRevision": "55519c67b195094d53d30022c5e711801c88f88e",
   "baselineArchiveSha256": "a227e711071a07122afac58ca7262eb5aac9a798287f9ddae3ebfcab5ca19477"
 }
