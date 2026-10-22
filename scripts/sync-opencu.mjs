@@ -54,4 +54,5 @@ catch (error) { await rename(join(staging, 'previous'), target); throw error; }
 await writeFile(join(root, 'vendor/opencu.json'), JSON.stringify({ name: manifest.name, version: manifest.version,
   source: source.endsWith('.tgz') ? `${manifest.name}@${manifest.version}` : '../opencu', policy: 'rewritten-plugin', hostVersion: manifest.opencu.host,
   archiveSha256: createHash('sha256').update(await readFile(archive)).digest('hex'), files }, null, 2) + '\n');
+execFileSync(process.execPath, [fileURLToPath(new URL('./build-credits.mjs', import.meta.url)), '--write'], { stdio: 'inherit' });
 console.log(`Bundled OpenCU ${manifest.version}; previous source preserved outside the package at ${staging}/previous`);

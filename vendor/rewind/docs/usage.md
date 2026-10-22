@@ -22,7 +22,7 @@ While running, double Esc keeps DSH’s Stop behavior; press it twice again afte
 
 Captures cover synchronous tool changes, including shell commands and same-workspace subagents. Git workspaces include tracked files and non-ignored new files; ordinary directories exclude `.git` and `node_modules`. Binary contents, additions, deletions, symlinks themselves and portable permission bits are recorded.
 
-Restoration checks for newer file changes. Ambiguous concurrent edits and changes across different workspaces are not overwritten automatically. Detached background processes, databases and remote side effects are outside file recovery. Messages from before installation, or whose snapshots expired, retain conversation-only recovery.
+Restoration checks for newer file changes before starting and again after reading the backup, immediately before each replacement or deletion. Interrupted recovery uses the same checks. Ambiguous concurrent edits and changes across different workspaces are not overwritten automatically. Detached background processes, databases and remote side effects are outside file recovery. Messages from before installation, or whose snapshots expired, retain conversation-only recovery.
 
 Conversation history is append-only. Recovery survives restart and does not call a model. Incomplete transactions retain their backups; unresolved external changes stop restoration rather than overwrite the current files.
 

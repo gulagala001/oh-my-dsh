@@ -57,4 +57,5 @@ catch (error) {
 }
 await writeFile(join(root, 'vendor/rewind.json'), JSON.stringify({ schema: 1, package: manifest.name,
   version: manifest.version, host: manifest.engines.dsh, source: '../rewind', files }, null, 2) + '\n');
+execFileSync(process.execPath, [fileURLToPath(new URL('./build-credits.mjs', import.meta.url)), '--write'], { stdio: 'inherit' });
 console.log(`Bundled Rewind ${manifest.version}: ${paths.length} files; previous snapshot retained at ${staging}/previous`);

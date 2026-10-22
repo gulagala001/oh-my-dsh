@@ -58,7 +58,7 @@
       "license": "MIT",
       "notice": "vendor/rewind/THIRD_PARTY_NOTICES.md",
       "version": "0.1.1-dsh.0.2.1-rc.2",
-      "sourceSha256": "9a79b12f677f1128b65df9c65db9b5e0acfd921880b75d1bee51b14cc50e4b4c",
+      "sourceSha256": "1c207c27c685e45edbe754de7d861f4cdcd6a3e91e3508280df87431530979fb",
       "group": "products"
     },
     {
@@ -98,7 +98,7 @@
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md",
       "version": "0.1.0-dsh.0.2.1-rc.2",
-      "sourceSha256": "17c9bb04554868c613a17dbc39e79f57dbe70797eb9f90845c7876895f8c85f4",
+      "sourceSha256": "182ae52793ed823f52498a7cd95e0495cddaedb49ceae52b2642a6a622488826",
       "group": "products"
     },
     {

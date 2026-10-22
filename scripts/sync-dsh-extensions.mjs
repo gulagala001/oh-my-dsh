@@ -22,4 +22,5 @@ const previous = await rename(join(root, 'plugins/dsh-extensions'), join(stage, 
 try { await rename(join(stage, 'package'), join(root, 'plugins/dsh-extensions')); }
 catch (error) { if (previous) await rename(join(stage, 'previous'), join(root, 'plugins/dsh-extensions')); throw error; }
 await writeFile(join(root, 'plugins/dsh-extensions.json'), JSON.stringify({ package: manifest.name, version: manifest.version, host: manifest.engines.dsh, source: '../dsh-extensions', files }, null, 2) + '\n');
+execFileSync(process.execPath, [fileURLToPath(new URL('./build-credits.mjs', import.meta.url)), '--write'], { stdio: 'inherit' });
 console.log(`Synced ${Object.keys(files).length} DSH Extensions files; previous snapshot retained in ${stage}/previous`);

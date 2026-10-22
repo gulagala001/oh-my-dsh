@@ -22,4 +22,5 @@ await rename(join(root, 'plugins/deepseek-workbench'), join(stage, 'previous'));
 try { await rename(join(stage, 'package'), join(root, 'plugins/deepseek-workbench')); }
 catch (error) { await rename(join(stage, 'previous'), join(root, 'plugins/deepseek-workbench')); throw error; }
 await writeFile(join(root, 'plugins/deepseek-workbench.json'), JSON.stringify({ package: manifest.name, version: manifest.version, host: manifest.engines.dsh, source: '../deepseek-workbench', files }, null, 2) + '\n');
+execFileSync(process.execPath, [fileURLToPath(new URL('./build-credits.mjs', import.meta.url)), '--write'], { stdio: 'inherit' });
 console.log(`Synced ${Object.keys(files).length} Workbench files; previous snapshot retained in ${stage}/previous`);

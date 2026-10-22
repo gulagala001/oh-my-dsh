@@ -68,7 +68,7 @@ export function prepareReplay(session,context,projections=[],activeTurn=false) {
 }
 export function appendPrepared(session,events) {
   for(const e of events) {
-    if(eventsOf(session).length!==e.seq)throw Error('会话在确认后发生变化，请重新检查');
+    if(session.seq!==e.seq)throw Error('会话在确认后发生变化，请重新检查');
     const {surfaceOp,sourceEventSeqs}=e;
     session.append(e.type,e.data,{...(surfaceOp===undefined?{}:{surfaceOp}),...(sourceEventSeqs?{sourceEventSeqs}:{})});
   }

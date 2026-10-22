@@ -174,3 +174,4 @@ async function manifest(directory) {
 }
 await writeFile(join(destination, 'ui-chat.json'), JSON.stringify(await manifest(chat), null, 2) + '\n');
 await writeFile(join(root, 'vendor/dsh.json'), JSON.stringify(await manifest(destination), null, 2) + '\n');
+execFileSync(process.execPath, [fileURLToPath(new URL('./build-credits.mjs', import.meta.url)), '--write'], { stdio: 'inherit' });

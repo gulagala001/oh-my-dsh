@@ -58,4 +58,5 @@ catch (error) {
 }
 await writeFile(join(root, 'vendor/btw.json'), JSON.stringify({ schema: 1, package: manifest.name,
   version: manifest.version, host: manifest.engines.dsh, source: '../dsh-btw-plugin', sourceCommit, files }, null, 2) + '\n');
+execFileSync(process.execPath, [fileURLToPath(new URL('./build-credits.mjs', import.meta.url)), '--write'], { stdio: 'inherit' });
 console.log(`Bundled BTW ${manifest.version}: ${paths.length} files; previous snapshot retained at ${staging}/previous`);

@@ -75,6 +75,8 @@ See [plugin architecture](architecture_EN.md) for product boundaries, independen
 | `vendor/opencu/` | Complete rewritten OpenCU distribution, synchronized from a matching tgz rather than edited in place |
 | `scripts/`, `test/` | Build, launch, checks |
 
+The component and price `scripts/sync-*.mjs` commands finish by running the shared credits generator to update the settings catalog and public source documentation. Run `npm run credits:write` after manually changing other catalog inputs. `npm run docs:check` verifies the generated content.
+
 `pnpm build` builds the frontend and generates the standard and OMD-PTC presets from `presets/oh-my-dsh/agent.cordis.yml`. Edit source configuration, not generated files.
 
 Temporary chat history comes from complete turns held in server memory. Native messages and model replay information are reused unchanged in the next request. Request numbers increase within each tab: a `done` receipt confirms commitment, while `stop` cancels only that request, fences its late arrival, and waits for real producer cleanup. After a disconnect, the client reconciles that turn and preserves the draft with sending paused until confirmation; recovery never repeats the model call. Tab entries own frontend state and components subscribe to their views. Closing erases history, and removing a tab stops its keepalive.

@@ -10,9 +10,14 @@ import { hash, atomic, read, lease, syncDirectory } from './store.mjs';
 const exec = promisify(execFile);
 const EXCLUDED = new Set(['.git','node_modules']);
 export const equal = (a,b) => a?.kind==='file'&&b?.kind==='file'?a.hash===b.hash&&a.mode===b.mode:JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+const entryAt = (manifest,path) => Object.hasOwn(manifest,path) ? manifest[path] : null;
 export function difference(before, after) {
-  return [...new Set([...Object.keys(before), ...Object.keys(after)])].sort().filter(p => !equal(before[p],after[p]))
-    .map(path => ({path,before:before[path] ?? null,after:after[path] ?? null}));
+  const changes=[];
+  for(const path of [...new Set([...Object.keys(before), ...Object.keys(after)])].sort()){
+    const a=entryAt(before,path),b=entryAt(after,path);
+    if(!equal(a,b))changes.push({path,before:a,after:b});
+  }
+  return changes;
 }
 export class Files {
   constructor(root, config = {}) { this.root = root; this.cache=new Map();this.workspaces=new Map();this.blobs=new Set();this.stats={filesRead:0,bytesRead:0,cacheHits:0,storedBytes:0};this.storageBytes=null;this.index={};this.pending=new Map();this.pendingBytes=0;this.flushTail=Promise.resolve();this.bigFileTail=Promise.resolve(); this.limits = { chunkBytes:4*1024*1024, maxBlobBytes:64*1024*1024, storageTargetBytes:2*1024*1024*1024, ...config }; }
@@ -42,7 +47,7 @@ export class Files {
         }
       }; await walk(root);
     }
-    const manifest={};let index=0;
+    const manifest=Object.create(null);let index=0;
     const candidates=names.sort().filter(path=>!path.split('/').some(p=>EXCLUDED.has(p))&&!path.endsWith('/'));
     await this.ensureStorage();
     const captureOne=async path=>{
@@ -135,12 +140,15 @@ export class Files {
     const digest=createHash('sha256');for await(const bytes of createReadStream(abs,{highWaterMark:this.limits.chunkBytes}))digest.update(bytes);
     return {kind:'file',hash:digest.digest('hex'),mode:st.mode & 0o777};
   }
-  async validate(root, changes, field='after') {
-    for(const item of changes) if(!equal(await this.inspect(root,item.path),item[field])) throw Error(`文件有新的改动，已停止恢复：${item.path}`);
+  async check(root,path,expected) {
+    if(!equal(await this.inspect(root,path),expected))throw Error(`文件有新的改动，已停止恢复：${path}`);
   }
-  async put(root,path,value) {
+  async validate(root, changes, field='after') {
+    for(const item of changes)await this.check(root,item.path,item[field]);
+  }
+  async put(root,path,value,expected) {
     const abs=await this.path(root,path);
-    if(value===null) { await unlink(abs).catch(e=>{if(e.code!=='ENOENT')throw e;}); await syncDirectory(dirname(abs)); return; }
+    if(value===null) { await this.check(root,path,expected);await unlink(abs).catch(e=>{if(e.code!=='ENOENT')throw e;}); await syncDirectory(dirname(abs)); return; }
     await mkdir(dirname(abs),{recursive:true});
     const temp=join(dirname(abs),`.dsh-rewind-${randomUUID()}`);
     try {
@@ -150,25 +158,25 @@ export class Files {
         try{for(const key of value.chunks||[value.hash]){const data=await this.readBlob(key);if(hash(data)!==key)throw Error(`备份校验失败：${path}`);digest.update(data);await h.writeFile(data);}if(digest.digest('hex')!==value.hash)throw Error(`备份校验失败：${path}`);await h.sync();}finally{await h.close();}
         await chmod(temp,value.mode);
       }
-      await this.path(root,path); await rename(temp,abs);
+      // Backup reads/decompression may take time. Fence the destination after
+      // preparing bytes, immediately before replacing it, on every write path.
+      await this.check(root,path,expected);await rename(temp,abs);
       await syncDirectory(dirname(abs));
     } finally {await unlink(temp).catch(()=>{});}
   }
   async apply(root,changes,direction='before') {
     const expected=direction==='before'?'after':'before'; await this.validate(root,changes,expected);
-    for(const item of changes) {
-      if(!equal(await this.inspect(root,item.path),item[expected])) throw Error(`恢复期间文件发生变化：${item.path}`);
-      await this.put(root,item.path,item[direction]);
-    }
+    for(const item of changes)await this.put(root,item.path,item[direction],item[expected]);
     await this.validate(root,changes,direction);
   }
   async recover(root,changes,direction) {
-    const other=direction==='before'?'after':'before';
+    const observed=[];
     for(const c of changes) {
       const now=await this.inspect(root,c.path);
       if(!equal(now,c.before) && !equal(now,c.after)) throw Error(`恢复中断后文件已被修改，请保留现场：${c.path}`);
+      observed.push(now);
     }
-    for(const c of changes) if(!equal(await this.inspect(root,c.path),c[direction]))await this.put(root,c.path,c[direction]);
+    for(const [i,c] of changes.entries())if(!equal(observed[i],c[direction]))await this.put(root,c.path,c[direction],observed[i]);
     await this.validate(root,changes,direction);
   }
 }
