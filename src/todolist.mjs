@@ -6,6 +6,7 @@ import { promptText } from './cc-adaptation/texts.mjs';
 // Task ledger carried over from the earlier OMD ledger: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { isDeepStrictEqual } from 'node:util'
 import { accessSync, constants, realpathSync } from 'node:fs'
 import { resolve as resolvePath, extname } from 'node:path'
 
@@ -15,6 +16,19 @@ export const TODO_NUDGE = promptText('runtime/task-nudge.md')
 const RUN_TAIL_CHARS = 2000
 /** 单个测试文件的执行上限（对齐本仓 run_verify 前例 tsc 300s；防挂死拖住取证轮） */
 const RUN_TIMEOUT_MS = 300_000
+// Select optional pytest by its actual installation, never by test output.
+// exec replaces the interpreter for plain scripts, preserving their ordinary
+// argv/import behavior within the same native cancellation and timeout scope.
+const PYTHON_VERIFY = `import importlib.util, os, sys
+path = sys.argv[1]
+if sys.path and sys.path[0] == '':
+    sys.path[0] = os.getcwd()
+if importlib.util.find_spec('pytest') is not None:
+    import pytest
+    status = pytest.main(['-x', '-q', path])
+    if status != 5:
+        sys.exit(status)
+os.execv(sys.executable, [sys.executable, path])`
 
 // ---------- transcript（单编号 [n]，取自会话全量日志、不受手术影响） ----------
 
@@ -156,10 +170,7 @@ async function runTestLink(link, real, execute, timeoutMs) {
   if (kind === 'pwsh') return run('pwsh', ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', real])
   if (kind === 'python') {
     const python = process.platform === 'win32' ? 'python' : 'python3'
-    const r = await run(python, ['-m', 'pytest', '-x', '-q', real])
-    if (r.ok || r.timedOut || r.aborted) return r
-    if (r.code === 5 || /No module named pytest/i.test(r.out)) return run(python, [real])
-    return r
+    return run(python, ['-c', PYTHON_VERIFY, real])
   }
   try { accessSync(real, constants.X_OK) } catch {
     return { ok: false, timedOut: false, out: `No runner for ${link.path} — give cmd (the repository's own test command for this file), or link a .js/.mjs/.cjs/.py/.sh/.ps1 file.` }
@@ -433,7 +444,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       let targets = next.tasks
       if (Array.isArray(args.tasks) && args.tasks.length) {
         targets = []
-        for (const id of args.tasks) {
+        for (const id of new Set(args.tasks)) {
           const t = next.tasks.find(x => x.id === id)
           if (!t) return err(`Rejected: unknown task id ${id}.`)
           targets.push(t)
@@ -443,30 +454,31 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       if (!jobs.length) return { text: 'Nothing to run: no test links on the given tasks.' }
       if (typeof execute !== 'function') return err('Native shell execution is unavailable; previous verification results are unchanged.')
       const results = []
+      let current = rec
       let aborted = false
       for (const { t, l } of jobs) {
         // Cancellation is not a test result; preserve unfinished and unstarted evidence.
         if (signal?.aborted) { aborted = true; break }
-        if (getRec(session) !== rec) throw Error('任务清单已更新；未继续执行旧任务的验证命令，请重新查看任务。')
+        if (getRec(session) !== current) throw Error('任务清单已更新；未继续执行旧任务的验证命令，请重新查看任务。')
         const real = existingPath(cwd, l.path)
         const startedAt = Date.now(), started = performance.now()
-        let r
-        try { r = real ? await runTestLink(l, real, execute, runTimeoutMs) : { ok: false, timedOut: false, out: `no such file ${l.path}` } }
-        catch (error) {
-          // A denied or unavailable execution is not a failed test. Preserve its
-          // previous evidence, but retain tests that actually finished earlier.
-          if (results.length) commit(session, rec, next)
-          throw error
-        }
+        const r = real ? await runTestLink(l, real, execute, runTimeoutMs) : { ok: false, timedOut: false, out: `no such file ${l.path}` }
         if (r.aborted) { aborted = true; break }
         l.lastRun = { pass: r.ok, timedOut: Boolean(r.timedOut), tail: (r.out ?? '').slice(-RUN_TAIL_CHARS),
           startedAt, finishedAt: Date.now(), durationMs: Math.max(0, Math.round(performance.now() - started)),
           // Only the native runner can supply execution identity. Old evidence
           // and results without a completed native call retain unknown provenance.
           execution: r.execution ?? null }
+        // Each independent result follows the ordinary native persistence path
+        // before another command starts. A later cancellation, denial or edit
+        // needs no special partial-batch save and cannot erase completed work.
+        commit(session, current, next)
+        current = getRec(session)
+        // A synchronous native observer may publish a new task snapshot while
+        // append notifies listeners. Never adopt that edit as our own revision.
+        if (!isDeepStrictEqual(current, next)) throw Error('任务清单已更新；本次结果已留在历史中，未继续执行旧任务。')
         results.push({ t, l, pass: r.ok, timedOut: l.lastRun.timedOut, timeoutMs: r.timeoutMs ?? runTimeoutMs, tail: l.lastRun.tail })
       }
-      if (results.length) commit(session, rec, next)
       // Completed failure is a valid result, not a broken tool. Always retain
       // command/output evidence, and distinguish timeout from a completed failure.
       const ran = results.length ? `Ran ${results.length} linked test${results.length === 1 ? '' : 's'}: ${results.map(r =>

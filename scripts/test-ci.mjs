@@ -10,7 +10,7 @@ const core = [
   'model-reply', 'temporary-chat',
   'dream-source-lifecycle',
   'context-controls', 'settings-state',
-  'task-ledger-authority', 'plugin-operation-state',
+  'task-ledger-authority', 'task-verification', 'plugin-operation-state',
   'session-migration-cache', 'host-component-reload', 'codegraph-lifecycle',
 ].map(name => `test/${name}.test.mjs`);
 core.push('test/opencu-browser-generation.test.mjs');

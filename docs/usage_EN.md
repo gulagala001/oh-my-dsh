@@ -70,6 +70,8 @@ BT completion reminders belong to the main conversation. Ordinary, Workflow and 
 
 Provide goals, inputs, boundaries, and delivery conditions. For multi-step tasks, preserve original requirements, track work, check artifacts, and then deliver. `todo_write` manages tasks/anchors; `verify_link` links, runs, or withdraws evidence. Evidence retains actual tool/callId, command, exit state, and timing. Task completion, process completion, and passing verification differ.
 
+A verification batch keeps its starting work directory and saves each completed result. Cancellation or a later execution failure preserves earlier results. After a task edit, old results remain in history and cannot overwrite the new tasks. Python's pytest and any necessary script fallback share one test deadline; test output never selects a different runner after a failure.
+
 **BT** persists per conversation: task reminders default on; verification reminders off. Verification checks missing or textual evidence and may use more time/tokens. Turning reminders off keeps the tools. A blocker can pause this turn's reminders without marking completion.
 
 ### Models and Work Modes

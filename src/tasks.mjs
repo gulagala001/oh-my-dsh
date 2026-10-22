@@ -100,7 +100,7 @@ export function currentTasks(session, cached, events) {
   });
 }
 
-export function createVerificationRunner(ctx, exec) {
+export function createVerificationRunner(ctx, exec, workdir = currentDirectory(ctx, exec.agent.session)) {
   const invoke = async (name, args, signal = exec.signal, callId = randomUUID()) => {
     const result = await ctx.tools.execute({ name, arguments: args, agent: exec.agent, signal,
       callId, rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
@@ -113,7 +113,7 @@ export function createVerificationRunner(ctx, exec) {
     const tool = windows ? 'pwsh' : 'bash', callId = randomUUID();
     const args = {
       command: windows ? `$ErrorActionPreference = 'Stop'\n& {\n${command}\n}\nif ($LASTEXITCODE -ne $null) { exit $LASTEXITCODE }` : command,
-      description: 'Run the linked task verification command', workdir: currentDirectory(ctx, exec.agent.session),
+      description: 'Run the linked task verification command', workdir,
       timeoutMs, run_in_background: false,
     };
     const result = await invoke(tool, args, exec.signal, callId);
@@ -139,7 +139,7 @@ export function createVerificationRunner(ctx, exec) {
     return { ok: value.exitCode === 0 && !value.signal && !value.timedOut && !value.aborted,
       code: value.exitCode, aborted: value.aborted, timedOut: value.timedOut, timeoutMs: value.timeoutMs,
       execution: { tool, callId, rootCallId: exec.rootCallId ?? exec.callId,
-        command: args.command, workdir: args.workdir, exitCode: value.exitCode ?? null,
+        command: args.command, workdir: value.cwd ?? workdir, exitCode: value.exitCode ?? null,
         signal: value.signal ?? null, timeoutMs: value.timeoutMs ?? timeoutMs },
       out: `${value.stdout?.text ?? ''}${value.stderr?.text ?? ''}`.trim() };
   };
@@ -162,7 +162,10 @@ export function registerTasks(ctx, store = createTodoStore()) {
     },
     {
       name: 'verify_link', description: VERIFICATION_DESCRIPTION, parameters: VERIFICATION_PARAMETERS, operations: VERIFICATION_OPERATIONS, title: '验证',
-      run: (args, session, exec) => store.execVerifyLink(session, args, currentDirectory(ctx, session), exec.signal, createVerificationRunner(ctx, exec)),
+      run: (args, session, exec) => {
+        const workdir = currentDirectory(ctx, session);
+        return store.execVerifyLink(session, args, workdir, exec.signal, createVerificationRunner(ctx, exec, workdir));
+      },
     },
   ];
   for (const { name, description, parameters, operations, title, run } of definitions) ctx.tools.register({
