@@ -201,7 +201,7 @@ export function createPluginRuntime(options = {}) {
     if (!['select', 'observe', 'act', 'resume', 'preview'].includes(endpoint)) return args;
     let target;
     if (endpoint === 'select') {
-      const inventory = await runtime.listTargets();
+      const inventory = await runtime.listTargets({signal});
       if (inventory.ok === false) throw Object.assign(new Error(inventory.error.message), inventory.error);
       const matches = inventory.targets.filter(value => referenceMatches(value, args.reference));
       if (matches.length !== 1) throw error(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND', 'Reference must match exactly one live target');
@@ -273,7 +273,7 @@ export function createPluginRuntime(options = {}) {
     }
     let browserConnection = null, targetInventory;
     if (endpoint === 'targets') {
-      targetInventory = await runtime.listTargets();
+      targetInventory = await runtime.listTargets({signal});
       signal?.throwIfAborted();
       // Inventory is not a browser choice. Preserve an explicit ID, existing
       // targets/connections and backend errors without unrelated pairing.
@@ -282,7 +282,7 @@ export function createPluginRuntime(options = {}) {
         && !targetInventory.errors?.length && sessionKey && runtime.runtimeInfo.backends.extension) {
         browserConnection = await runtime.connectBrowser({signal});
         signal?.throwIfAborted();
-        targetInventory = await runtime.listTargets();
+        targetInventory = await runtime.listTargets({signal});
         signal?.throwIfAborted();
       }
     }
@@ -349,7 +349,7 @@ export function createPluginRuntime(options = {}) {
           result = await runtime.openTarget(args);
         } else {
           if (args.bundleId || args.path) throw error('INVALID_TARGET', 'Native launch requires backend:native and launch:true');
-          const inventory = await runtime.listTargets();
+          const inventory = await runtime.listTargets({signal});
           if (inventory.ok === false) return inventory;
           const matches = inventory.targets.filter(target => target.backend === 'browser' && (!args.browserId || target.browserId === args.browserId) && (!args.targetId || target.id === args.targetId));
           const ids = new Set(matches.map(target => target.browserId));

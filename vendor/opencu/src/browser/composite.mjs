@@ -5,7 +5,7 @@
  * Extension download events stay metadata-only until explicitly imported and validated.
  */
 import {basename} from 'node:path';
-import {assertBackend, checkExpected, checkSignal, errorJSON, fail, inputReleased, json, referenceMatches, sameIdentity} from '../protocol.mjs';
+import {assertBackend, checkExpected, checkSignal, errorJSON, fail, inputReleased, json, readOperation, referenceMatches, sameIdentity} from '../protocol.mjs';
 import {parseTarget, targetId} from '../extension/protocol.mjs';
 import {normalizeBrowserAction} from './actions.mjs';
 
@@ -112,14 +112,17 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       }
       return {released: results.length > 0 && results.every(inputReleased)};
     },
-    async listBrowsers() {
-      alive();
-      return [...(await browser?.listBrowsers?.() ?? []), ...(extension?.connections?.() ?? []).map(item =>
+    async listBrowsers({signal} = {}) {
+      alive(); checkSignal(signal);
+      const browsers = await readOperation(() => browser?.listBrowsers?.({signal}) ?? [], signal);
+      checkSignal(signal);
+      return [...browsers, ...(extension?.connections?.() ?? []).map(item =>
         ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true}))];
     },
     async newTab(browserId, url, options) {
       alive(); checkSignal(options?.signal);
-      const matches = (await composite.listBrowsers()).filter(item => item.id === browserId);
+      const matches = (await composite.listBrowsers({signal: options?.signal})).filter(item => item.id === browserId);
+      checkSignal(options?.signal);
       if (matches.length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected browser ID');
       const {provider, backend} = providerFor(matches[0]);
       if (typeof backend.newTab !== 'function') fail('UNSUPPORTED_OPERATION', 'This browser cannot create a tab without an existing target');
@@ -127,27 +130,33 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       if (provider === 'extension') held.set(target.id, target);
       return target;
     },
-    async listTargets() {
-      alive(); inventoryErrors.length = 0;
-      const targets = [];
+    async listTargets({signal} = {}) {
+      alive(); checkSignal(signal);
+      const targets = [], errors = [];
       for (const [provider, backend] of [['browser', browser], ['extension', extension], ['dsh', dsh]]) {
         if (!backend) continue;
-        try { targets.push(...(await backend.listTargets()).map(target => wrap(target, provider))); }
-        catch (error) { inventoryErrors.push({provider, ...errorJSON(error)}); }
+        try { targets.push(...(await readOperation(() => backend.listTargets({signal}), signal)).map(target => wrap(target, provider))); }
+        catch (error) {
+          checkSignal(signal);
+          errors.push({provider, ...errorJSON(error)});
+        }
+        alive(); checkSignal(signal);
       }
-      if (!targets.length && inventoryErrors.length) fail('BROWSER_INVENTORY_FAILED', 'Browser providers could not list targets', inventoryErrors);
+      inventoryErrors.splice(0, inventoryErrors.length, ...errors);
+      if (!targets.length && errors.length) fail('BROWSER_INVENTORY_FAILED', 'Browser providers could not list targets', errors);
       return targets;
     },
-    async select(reference) {
+    async select(reference, {signal} = {}) {
       alive();
-      const matches = (await composite.listTargets()).filter(target => referenceMatches(target, reference) && (!reference?.provider || target.provider === reference.provider));
+      const matches = (await composite.listTargets({signal})).filter(target => referenceMatches(target, reference) && (!reference?.provider || target.provider === reference.provider));
+      checkSignal(signal);
       if (matches.length !== 1) fail(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND', 'Reference must match one browser target');
       const target = matches[0], {provider, backend} = providerFor(target);
       checkExpected(target, reference?.expected);
       if (reference?.identity && !sameIdentity(reference.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed document occurrence');
       if (stale.has(target.id)) fail('TARGET_IDENTITY_CHANGED', 'Navigation invalidated this document occurrence; select the new document');
       if (provider === 'extension') held.set(target.id, target);
-      const selected = wrap({...target, ...await backend.select(unwrap(target, provider))}, provider);
+      const selected = wrap({...target, ...await backend.select(unwrap(target, provider), {signal})}, provider);
       if (selected.id !== target.id || !sameIdentity(selected.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed occurrence');
       return selected;
     },
