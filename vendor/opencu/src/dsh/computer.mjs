@@ -1,5 +1,6 @@
 import { Worker } from 'node:worker_threads';
 import { partialReplError, serializeReplError, deserializeReplError } from './repl-output.mjs';
+import { createInputReleaseState } from './input-release.mjs';
 
 const checked = result => {
   if (result?.ok === false) throw Object.assign(new Error(result.error.message), result.error);
@@ -19,13 +20,9 @@ function timeoutFailure(run) {
 
 /** Keep persistent bindings off the Host thread; only the Host owns dispatch and release. */
 export function createComputerSession(request) {
-  let context, current, closing, closed = false, releaseOnClose = false, releaseRequired = false, generation = 0, sequence = 0, tail = Promise.resolve();
-  const pending = new Set(), heldInputs = new Set();
-  const stop = async () => {
-    releaseRequired = true;
-    const result = checked(await request('stop'));
-    releaseRequired = false; heldInputs.clear(); return result;
-  };
+  let context, current, closing, closed = false, releaseOnClose = false, generation = 0, sequence = 0, tail = Promise.resolve();
+  const pending = new Set(), inputRelease = createInputReleaseState();
+  const stop = async () => checked(await inputRelease.request('stop', undefined, () => request('stop')));
   function initialize() {
     // This plain ESM runtime needs no Host preload, eval or process-only flags.
     const record = { worker: new Worker(new URL('./computer-worker.mjs', import.meta.url), { execArgv: [] }), retired: false };
@@ -40,24 +37,14 @@ export function createComputerSession(request) {
         return;
       }
       if (message.type !== 'request' || run.signal.aborted) return;
-      const { endpoint, args } = message, action = endpoint === 'act' ? args?.action : null;
+      const { endpoint, args } = message;
       const stage = {endpoint, targetId: args?.targetId ?? args?.reference?.id, stage: 'backend-request'};
       run.requests.set(message.id, stage);
-      const key = ['keyDown', 'key_down', 'keyUp', 'key_up'].includes(action) ? JSON.stringify([args.targetId, 'key', args.key])
-        : ['mouseDown', 'mouse_down', 'mouseUp', 'mouse_up'].includes(action) ? JSON.stringify([args.targetId, 'button', args.button ?? 'left']) : null;
-      if (['keyDown', 'key_down', 'mouseDown', 'mouse_down'].includes(action)) heldInputs.add(key);
-      const work = Promise.resolve().then(() => { run.signal.throwIfAborted(); return request(endpoint, args, {onApprovalWait: approval => {
+      const work = inputRelease.request(endpoint, args, async () => { run.signal.throwIfAborted(); return request(endpoint, args, {onApprovalWait: approval => {
         if (record.retired || run.signal.aborted) return;
         Object.assign(stage, {stage: 'application-approval', ...approval});
         return () => { stage.stage = 'backend-request'; delete stage.requestId; delete stage.appDisplayName; };
-      }}); }).then(checked).then(result => {
-        if (['keyUp', 'key_up', 'mouseUp', 'mouse_up'].includes(action)) heldInputs.delete(key);
-        if (endpoint === 'stop') heldInputs.clear();
-        const outcome = result.result ?? result;
-        if (action === 'handleDialog' && outcome.handled && !outcome.releasePending)
-          for (const held of heldInputs) if (JSON.parse(held)[0] === args.targetId) heldInputs.delete(held);
-        return result;
-      });
+      }}); }).then(checked);
       pending.add(work);
       const respond = response => {
         if (!record.retired) record.worker.postMessage({ type: 'response', id: message.id, ...response });
@@ -100,7 +87,7 @@ export function createComputerSession(request) {
     close() {
       if (closing) return closing;
       closed = true; generation++;
-      releaseOnClose ||= Boolean(current || pending.size || heldInputs.size || releaseRequired);
+      releaseOnClose ||= Boolean(current || pending.size || inputRelease.pending);
       const record = context;
       current?.aborter.abort(new Error('Computer session disposed'));
       closing = (async () => {
