@@ -33,7 +33,7 @@ const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 export class ContextPipeline {
   constructor(hub, adapter) {
     this.hub = hub; this.adapter = adapter; this.activeCalls = 0; this.callWaiters = []; this.manualSessions = new Map(); this.store = new ContextStore(hub.store.dir);
-    this.agents = new Map(); this.releasing = new Set(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
+    this.agents = new Map(); this.releasing = new Set(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.cacheResuming = new Set(); this.closed = false;
     this.adaptive = new AdaptiveCompaction(this);
     this.autoCompact = new AutoCompaction(this);
     this.cachedPreparation = new CachedPreparation(this);
@@ -235,17 +235,11 @@ export class ContextPipeline {
     const agent = this.agents.get(session.id);
     if (agent && !this.closed && !delegated(session) && this.cachedPreparation.confirm(session, route)) {
       if (this.config().autoCompactEnabled) this.autoCompact.kick(agent);
-      const waiting = this.cachedPreparation.waiting.get(session.id);
-      if (waiting && this.mode(session) !== 'adaptive' && !this.manualSessions.has(session.id)) {
-        this.cachedPreparation.waiting.delete(session.id);
-        const resume = () => this.agents.get(session.id) === agent && !this.closed && this.config().memoryCacheEnabled
-          && this.mode(session) !== 'adaptive' ? this.prepare(agent, waiting.force, { retry: waiting.retry }) : undefined;
-        const running = this.jobs.get(session.id + ':prepare');
-        void (running ? running.then(resume) : resume()).catch(error => this.hub.ctx.logger?.warn?.(`记忆缓存预处理：${error.message}`));
-      }
+      this.resumeCachedPreparation(agent);
     }
-    if (!agent || this.closed || delegated(session) || !this.config().contextEnabled || this.manualSessions.has(session.id)) return;
+    if (!agent || this.closed || delegated(session) || !this.config().contextEnabled) return;
     if (this.mode(session) === 'adaptive') { this.adaptive.confirm(agent, route); return; }
+    if (this.manualSessions.has(session.id)) return;
     const s = this.state(session);
     for (const kind of ['prepare', 'coordinate']) {
       const key = session.id + ':' + kind;
@@ -258,6 +252,28 @@ export class ContextPipeline {
       }
       void this.resumeMainSuccess(agent, kind);
     }
+  }
+  resumeCachedPreparation(agent) {
+    const session = agent.session, id = session.id, cache = this.cachedPreparation;
+    const eligible = () => this.agents.get(id) === agent && !this.closed && this.config().contextEnabled
+      && this.config().memoryCacheEnabled && this.mode(session) !== 'adaptive' && !this.manualSessions.has(id);
+    if (!cache.waiting.has(id) || !eligible() || this.cacheResuming.has(id)) return;
+    this.cacheResuming.add(id);
+    let version = cache.version(session);
+    const resume = () => {
+      if (!eligible()) return;
+      const waiting = cache.waiting.get(id);
+      if (!waiting) return;
+      cache.waiting.delete(id); version = cache.version(session);
+      return this.prepare(agent, waiting.force, { retry: waiting.retry });
+    };
+    const running = this.jobs.get(id + ':prepare');
+    void Promise.resolve(running ? running.then(resume) : resume())
+      .catch(error => this.hub.ctx.logger?.warn?.(`记忆缓存预处理：${error.message}`))
+      .finally(() => {
+        this.cacheResuming.delete(id);
+        if (cache.version(session) !== version) this.resumeCachedPreparation(agent);
+      });
   }
   async resumeMainSuccess(agent, kind) {
     const id = agent.session.id, key = id + ':' + kind;
@@ -338,9 +354,10 @@ export class ContextPipeline {
       const batchLimit = recovering ? this.config().prepareBatchWindows : 1;
       do {
         const cfg = this.config(), events = prepareCandidate(session, s, cfg, this.adapter.pairing);
-        if (!events) break;
+        if (!events) { this.cachedPreparation.clearWaiting(session); break; }
         const workload = preparationWorkload(session, s, events);
         if (workload.estimatedTokens < cfg.prepareContinueTokens) {
+          this.cachedPreparation.clearWaiting(session);
           s.prepareDeferred = { ...workload, reason: 'below-minimum', at: Date.now() };
           s.prepareBacklog = backlogView(session, s, cfg); this.store.save(s); break;
         }
@@ -757,6 +774,11 @@ export class ContextPipeline {
       const agent = this.agents.get(id);
       if (agent) this.arm(agent, cfg.flushIdleMs, 'idle', since);
     }
+    for (const id of [...this.cachedPreparation.waiting.keys()]) {
+      const agent = this.agents.get(id);
+      if (agent) this.resumeCachedPreparation(agent);
+    }
+    this.adaptive.reconfigure();
   }
   recall(session, args = {}) {
     const s = this.state(session);
@@ -844,7 +866,9 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
       manualQueued: s.manualQueue.length, manualOperation: this.manualSessions.get(session.id) || null,
       queuedOperations: s.manualQueue.map(q => q.operation || 'ready'),
       estimate: (() => { try { return this.estimate(session, s, index, spans, cfg); } catch { return null; } })(),
-      review: { lastAt: s.review.lastAt, choices: s.review.lastChoices || [], lastRejection: s.review.lastRejection || null, lastDiscard: s.review.lastDiscard || null, discarded: s.review.discarded || 0 } };
+      review: { lastAt: s.review.lastAt, newRecords: s.review.newRecords, every: cfg.coordinatorEvery,
+        dueAt: this.reviewTimers.get(session.id + ':coordinate')?.dueAt ?? null,
+        choices: s.review.lastChoices || [], lastRejection: s.review.lastRejection || null, lastDiscard: s.review.lastDiscard || null, discarded: s.review.discarded || 0 } };
   }
   releaseState(id) {
     if ((!this.closed && !this.releasing.has(id)) || this.agents.has(id) || this.manualSessions.has(id) || this.runtimeRetirements?.has(id)

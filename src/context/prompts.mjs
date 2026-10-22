@@ -66,7 +66,7 @@ The main agent continues the user's task separately. This request only prepares 
 
 Use the supplied candidates and the zero-based message indexes to read only the designated source ranges in the preceding request. Choose whether their current representation is still needed for the current request. A high pressure reading is context for your decision, not an instruction to discard useful information.
 For a prepared candidate, choose keep, detail or brief using its existing content. Do not rewrite it or combine records.
-For new-window, summary_scope lists the only event seqs that may supply factual work. decision_sources lists the only user messages that may supply separate user decisions. Other messages, current requirements, tool definitions and earlier reasoning are reference context, not new completed work.
+For new-window, summary_scope.event_seqs lists the only event seqs that may supply factual work. Read only segment entries selected by that list: message_index points into the unchanged prefix and content_paths selects blocks within that message (nested tool-result content uses the literal key "content"). A segment marked new_since_snapshot supplies filtered text directly because it arrived after that request. decision_sources supplies the only verbatim user text that may support separate user decisions. Protected entries, user_messages, other messages, current requirements, task/recall payloads, tool definitions and earlier reasoning are reference context, not new completed work. Read attachment_references only; do not infer native media contents.
 
 ${FACT_SUMMARY_RULES}
 

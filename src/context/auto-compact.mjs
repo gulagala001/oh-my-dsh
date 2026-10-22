@@ -4,9 +4,9 @@ import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL } from './prompts.
 import { decodeCachedPreparation } from './cached-preparation.mjs';
 
 export class AutoCompaction {
-  constructor(pipeline) { this.pipeline = pipeline; this.signals = new WeakMap(); this.configuration = this.settingsKey(); }
+  constructor(pipeline) { this.pipeline = pipeline; this.signals = new WeakMap(); this.followups = new Set(); this.configuration = this.settingsKey(); }
   settingsKey(cfg = this.pipeline.config()) {
-    return JSON.stringify([cfg.autoCompactEnabled, cfg.autoCompactThreshold, cfg.autoCompactMode, cfg.memoryCacheEnabled]);
+    return JSON.stringify([cfg.autoCompactEnabled, cfg.autoCompactThreshold, cfg.autoCompactMode, cfg.memoryCacheEnabled, cfg.prepareInputTokens]);
   }
   reconfigure(cfg) {
     const next = this.settingsKey(cfg);
@@ -46,6 +46,7 @@ export class AutoCompaction {
     if (p.closed || !cfg.autoCompactEnabled || session.header?.origin === 'subagent' || Number(session.header?.delegationDepth) > 0
       || p.agents.get(id) !== agent || p.adaptive.isManaged && !p.adaptive.isManaged(session)) return Promise.resolve(null);
     if (p.jobs.has(key)) {
+      this.followups.add(id);
       const controller = p.controllers.get(key), abort = () => controller?.abort(signal.reason);
       if (signal?.aborted) abort(); else signal?.addEventListener('abort', abort, { once: true });
       return p.jobs.get(key).finally(() => { signal?.removeEventListener('abort', abort); signal?.throwIfAborted(); });
@@ -54,6 +55,8 @@ export class AutoCompaction {
     const s = p.state(session);
     if (s.transaction || s.manualQueue.length || this.used(session) < cfg.autoCompactThreshold) return Promise.resolve(null);
     if (s.autoCompact?.lastKey === this.fingerprint(session, s, cfg)) return Promise.resolve(null);
+    const startedKey = this.fingerprint(session, s, cfg);
+    let checkedKey;
     const controller = new AbortController();
     const joined = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
     p.controllers.set(key, controller);
@@ -122,6 +125,7 @@ export class AutoCompaction {
       }
       s.prepareBacklog = backlogView(session, s, cfg);
       s.autoCompact.afterTokens = this.used(session);
+      checkedKey = this.fingerprint(session, s, cfg);
       p.hub.event?.(session, { kind: 'autoCompact', status: result ? 'success' : 'skip',
         title: cfg.autoCompactMode === 'brief' ? 'Auto Compact · 仅摘要' : 'Auto Compact · 摘要＋资料',
         detail: result ? '阈值触发后已立即应用' : '当前没有可安全缩减的内容，原文保留',
@@ -132,7 +136,7 @@ export class AutoCompaction {
     // Register the job before maintenance emits status or replacement events.
     const job = Promise.resolve().then(() => maintenance && agent.status === 'idle' && agent.runMaintenance ? agent.runMaintenance(run) : run())
       .then(result => {
-        s.autoCompact = { ...s.autoCompact, lastKey: this.fingerprint(session, s, cfg) }; p.store.save(s);
+        s.autoCompact = { ...s.autoCompact, lastKey: checkedKey ?? startedKey }; p.store.save(s);
         return result;
       }).catch(error => {
         if (!joined.aborted && !p.closed) {
@@ -145,6 +149,12 @@ export class AutoCompaction {
         if (p.jobs.get(key) === job) p.jobs.delete(key);
         if (p.controllers.get(key) === controller) p.controllers.delete(key);
         p.manualSessions.delete(id); p.releaseState(id);
+        const followup = this.followups.delete(id);
+        if (followup && !signal?.aborted && !p.closed && p.agents.get(id) === agent && p.config().autoCompactEnabled
+          && this.fingerprint(session, s, p.config()) !== (checkedKey ?? startedKey)) this.kick(agent);
+        p.resumeCachedPreparation?.(agent);
+        if (followup && !signal?.aborted && !p.closed && p.agents.get(id) === agent && p.config().contextEnabled && p.mode(session) === 'adaptive')
+          void p.adaptive.check(agent).catch(error => p.hub.ctx.logger?.warn?.(`主动异步整理：${error.message}`));
         // Threshold maintenance does not consume the coordinator's turn.
         // Resume against the new surface only after releasing its exclusion.
         if (!reviewSignal.aborted && !p.closed && p.agents.get(id) === agent && p.config().contextEnabled

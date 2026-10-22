@@ -20,13 +20,14 @@ export function pipelineSteps(c) {
   const cacheWait = c.memoryCache?.enabled && c.memoryCache.waitingReason;
   const first = adaptive
     ? { key: 'check', title: '主动检查', running: a.running, tone: a.running ? 'blue' : a.error ? 'red' : 'green',
-      text: a.running ? '正在判断' : a.error ? `失败：${a.error}` : a.lastDecision === 'skip' ? `保留 · ${a.reason || ''}` : a.lastDecision === 'compress' ? '已准备替换' : '等待新内容' }
+      text: a.running ? '正在判断' : a.error ? `失败：${a.error}` : a.waitingReason || (a.lastDecision === 'skip' ? `保留 · ${a.reason || ''}` : a.lastDecision === 'compress' ? '已准备替换' : '等待新内容') }
     : { key: 'prepare', title: '预处理', running: c.preparing, tone: c.preparing ? 'blue' : prepareError ? 'red' : cacheWait ? 'gray' : 'green',
       text: c.preparing ? '正在生成摘要' : prepareError ? `${retryText(c.retry?.prepare) || '失败'}：${prepareError.message}` : cacheWait || `待处理 ${c.backlog?.events ?? 0} 条 · ≈${k(c.backlog?.estimatedTokens)}` };
   const second = adaptive
     ? { key: 'plan', title: '替换方案', tone: c.pending ? 'green' : 'gray', text: c.pending ? '结果已准备' : a.lastDecision === 'stale' ? '结果已过期' : '等待整理结果' }
     : { key: 'hub', title: '中枢', running: c.coordinating, tone: c.coordinating ? 'blue' : coordError ? 'red' : c.pending ? 'green' : 'gray',
-      text: c.coordinating ? '正在判断范围' : coordError ? `${retryText(c.retry?.coordinate) || '失败'}：${coordError.message}` : c.pending ? `已决定 ${c.pending.choices?.filter(x => x.action !== 'keep').length || 0} 项` : '等待新摘要' };
+      text: c.coordinating ? '正在判断范围' : coordError ? `${retryText(c.retry?.coordinate) || '失败'}：${coordError.message}` : c.pending ? `已决定 ${c.pending.choices?.filter(x => x.action !== 'keep').length || 0} 项`
+        : c.review?.dueAt ? '等待判断间隔' : c.review?.newRecords > 0 ? `已准备 ${c.review.newRecords} 段 · 累计至 ${c.review.every} 段后判断` : '等待新摘要' };
   const last = c.lastReplacement;
   const third = { key: 'apply', title: '替换', running: c.transactionPending || Boolean(c.manualOperation), tone: c.transactionPending ? 'blue' : c.pending ? 'amber' : last ? 'green' : 'gray',
     text: c.manualOperation ? (c.manualOperation === 'full' ? '正在全量压缩' : '正在压缩') : c.transactionPending ? '正在恢复事务'

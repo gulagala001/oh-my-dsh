@@ -5,53 +5,51 @@ import { taskContextMeta } from '../task-context.mjs';
 import { ADAPTIVE_TASK, SUMMARY_PROMPT_VERSION } from './prompts.mjs';
 import { activeRecords, candidateInput, hash, liveSpan, newRecord, normalizeChoices, preparationWorkload, prepareCandidate, recordBlocks, recordSnapshot, userRevision, validatePrepared } from './core.mjs';
 import { messageTokens } from './materials.mjs';
+import { RequestSnapshots, cachedRouteKey, cachedBudgetReason } from './request-snapshots.mjs';
+import { cachedPreparationInput } from './cached-preparation.mjs';
 
-export const adaptiveRouteKey = request => hash(['provider','model','reasoningEffort','temperature','maxTokens','stop'].map(key => request[key]));
+export const adaptiveRouteKey = cachedRouteKey;
 const routeKey = adaptiveRouteKey;
 
 // Request copies live only while their owning session is attached. Never persist
 // another conversation log or brand this independent call as an agent request.
 export class AdaptiveCompaction {
-  constructor(pipeline) { this.pipeline = pipeline; this.requests = new Map(); this.followups = new Set(); }
+  constructor(pipeline) {
+    this.pipeline = pipeline; this.followups = new Set(); this.forced = new Set();
+    this.snapshots = new RequestSnapshots(id => {
+      pipeline.controllers.get(id + ':adaptive')?.abort(Error('主会话模型路由已改变'));
+      const state = pipeline.store.cache.get(id);
+      if (state?.pending?.source === 'adaptive') { state.pending = null; pipeline.store.save(state); }
+    });
+    this.requests = this.snapshots.requests;
+  }
   capture(session, options) {
     const p = this.pipeline;
     if (p.closed || !p.config().contextEnabled || p.mode(session) !== 'adaptive' || !isAgentLoopRequest(options)) return;
-    const old = this.requests.get(session.id);
-    const routeChanged = old && routeKey(old.request) !== routeKey(options);
-    if (routeChanged) {
-      p.controllers.get(session.id + ':adaptive')?.abort(Error('主会话模型路由已改变'));
-      const state = p.state(session);
-      if (state.pending?.source === 'adaptive') { state.pending = null; p.store.save(state); }
-    }
-    // Avoid retaining unusually large provider replay blobs outside the host.
-    const { signal, ...request } = options;
-    if (Buffer.byteLength(JSON.stringify(request)) > p.config().prepareInputTokens * 4) {
-      this.requests.delete(session.id); return;
-    }
+    this.snapshots.capture(session, options, p.config().prepareInputTokens * 4);
+    const snapshot = this.snapshots.pending.get(session.id);
+    if (!snapshot.request) return;
     const messageIds = new Set(options.messages.map(m => m.id));
     const seqs = session.surface.nodes.filter(seq => messageIds.has(session.deriveEventMessage(session.eventAt(seq))?.id));
-    this.requests.set(session.id, { request, seqs: new Set(seqs), confirmed: false, userRevision: userRevision(session), routeChanged,
-      revision: p.state(session).compressionModeRevision || 0 });
+    snapshot.seqs = new Set(seqs);
   }
   confirm(agent, route) {
+    if (!this.snapshots.confirm(agent.session, route)) return;
     const snapshot = this.requests.get(agent.session.id);
-    if (!snapshot) return;
-    if (route && (snapshot.request.provider !== route.provider || snapshot.request.model !== route.model)) return;
-    snapshot.confirmed = true;
     const status = this.pipeline.state(agent.session).adaptive;
     const maxRetries = this.pipeline.config().backgroundMaxRetries;
-    if (status?.failures > maxRetries && (snapshot.routeChanged || status.failureRoute && status.failureRoute !== routeKey(snapshot.request))) {
+    if (snapshot && status?.failures > maxRetries && status.failureRoute && status.failureRoute !== routeKey(snapshot.request)) {
       // A newly confirmed usable route grants one probe, not an unbounded
       // burst. Same-route validation failures remain finite until manual retry.
       status.failures = maxRetries; this.pipeline.store.save(this.pipeline.state(agent.session));
     }
-    snapshot.routeChanged = false;
     void this.check(agent).catch(error => this.pipeline.hub.ctx.logger?.warn?.(`主动异步整理：${error.message}`));
   }
   drop(id) {
-    const p = this.pipeline, ids = id ? [id] : [...this.requests.keys()];
+    const p = this.pipeline, ids = id ? [id] : [...new Set([...this.snapshots.owners.keys(), ...this.followups, ...this.forced])];
+    this.snapshots.drop(id);
     for (const key of ids) {
-      this.requests.delete(key); this.followups.delete(key);
+      this.followups.delete(key); this.forced.delete(key);
       const timerKey = key + ':adaptive', timer = p.timers.get(timerKey);
       if (timer) { clearTimeout(timer); p.timers.delete(timerKey); }
     }
@@ -65,15 +63,25 @@ export class AdaptiveCompaction {
     }, Math.max(1, delay));
     timer.unref?.(); p.timers.set(key, timer);
   }
+  reconfigure() {
+    const p = this.pipeline;
+    for (const agent of p.agents.values()) {
+      if (p.store.cache.get(agent.session.id)?.adaptive?.waitingReason !== cachedBudgetReason) continue;
+      void this.check(agent).catch(error => p.hub.ctx.logger?.warn?.(`主动异步整理：${error.message}`));
+    }
+  }
   async check(agent, { force = false } = {}) {
     const p = this.pipeline, session = agent.session, id = session.id, key = id + ':adaptive', cfg = p.config();
-    if (p.closed || p.mode(session) !== 'adaptive' || !cfg.contextEnabled || p.manualSessions.has(id)) return;
+    if (p.closed || p.agents.get(id) !== agent || p.mode(session) !== 'adaptive' || !cfg.contextEnabled || p.manualSessions.has(id)) return;
     if (p.jobs.has(key)) { this.followups.add(id); return p.jobs.get(key); }
+    if (force) this.forced.add(id);
+    force ||= this.forced.has(id);
     const s = p.state(session), status = s.adaptive ||= {};
-    const snapshot = this.requests.get(id);
+    const snapshots = this.snapshots.candidates(session);
     const wait = reason => { if (status.waitingReason !== reason) { status.waitingReason = reason; p.store.save(s); } };
-    if (!snapshot?.confirmed) { wait('等待主会话完成一次请求后检查'); return; }
-    if (snapshot.userRevision !== userRevision(session)) { wait('等待包含当前用户要求的主请求'); return; }
+    if (!snapshots.length) { wait(this.snapshots.waitingReason(session)); return; }
+    const usable = snapshots.filter(snapshot => snapshot.userRevision === userRevision(session));
+    if (!usable.length) { wait(this.snapshots.latest.get(id)?.request === null ? cachedBudgetReason : '等待包含当前用户要求的主请求'); return; }
     if (s.transaction || s.pending || s.manualQueue.length) { wait('等待已有替换或手动操作完成'); return; }
     if (!force && (status.failures || 0) > cfg.backgroundMaxRetries) { wait('检查失败，等待手动重试'); return; }
     const pressure = p.adapter.pressure?.(session) ?? 0;
@@ -82,14 +90,30 @@ export class AdaptiveCompaction {
       wait('等待后台检查间隔'); this.schedule(agent, cfg.coordinatorMinGapMs - (Date.now() - status.lastAt)); return;
     }
     const events = prepareCandidate(session, s, cfg, p.adapter.pairing);
+    let built, reason;
+    for (const snapshot of usable) {
+      const attempt = this.buildRequest(session, s, cfg, snapshot, events, pressure);
+      if (attempt.request) { built = { ...attempt, snapshot }; break; }
+      reason ??= attempt.reason;
+    }
+    if (!built) { wait(reason); return; }
+    const { snapshot, raw, selected, offeredPrepared, candidates, request } = built;
+    const fingerprint = hash([candidates, snapshot.userRevision, snapshot.request.messages.at(-1)?.id, routeKey(snapshot.request), pressure >= 0.85]);
+    if (!force && status.lastKey === fingerprint) { wait('同一批材料已检查，等待变化'); return; }
+    this.forced.delete(id);
+    return this.run(agent, { snapshot, raw, selected, offeredPrepared, request, fingerprint, status, s, cfg });
+  }
+  buildRequest(session, s, cfg, snapshot, events, pressure) {
+    const p = this.pipeline;
+    if (snapshot.bytes > cfg.prepareInputTokens * 4) return { reason: cachedBudgetReason };
     const moved = new Set(s.traceSlot ? s.traceSlot.movedSourceSeqs || [s.traceSlot.sourceSeq] : []);
     const tracePresent = s.traceSlot && snapshot.seqs.has(s.traceSlot.carrierSeq);
     const projectedOut = e => tracePresent && moved.has(e.seq) && session.deriveEventMessage(e)?.role === 'assistant'
       && session.deriveEventMessage(e).content.every(b => b.type === 'reasoning' && typeof b.text === 'string');
     const raw = events && preparationWorkload(session, s, events.filter(e => !projectedOut(e))).estimatedTokens >= cfg.prepareContinueTokens
-      && events.every(e => !session.deriveEventMessage(e) || snapshot.seqs.has(e.seq) || projectedOut(e)) ? events : null;
+      && events.every(e => !session.deriveEventMessage(e) || snapshot.seqs.has(e.seq) || e.seq > snapshot.throughSeq || projectedOut(e)) ? events : null;
     const prepared = activeRecords(s).filter(r => !raw?.parents?.includes(r.id) && liveSpan(session, r) && liveSpan(session, r).seqs.every(seq => snapshot.seqs.has(seq)));
-    if (!raw && !prepared.length) { wait('当前没有足够的可整理材料'); return; }
+    if (!raw && !prepared.length) return { reason: '当前没有足够的可整理材料' };
     const selected = raw ? candidateInput(session, raw, 0) : null;
     if (selected) selected.summary_scope.event_seqs = selected.summary_scope.event_seqs.filter(seq => !projectedOut(session.eventAt(seq)));
     const position = new Map(snapshot.request.messages.map((m, i) => [m.id, i]));
@@ -108,19 +132,19 @@ export class AdaptiveCompaction {
       currentTokens: liveSpan(session, r).seqs.reduce((n, seq) => n + messageTokens(session.deriveEventMessage(session.eventAt(seq))), 0),
       detailTokens: messageTokens({ role: 'user', content: recordBlocks(r, 'detail') }), briefTokens: messageTokens({ role: 'user', content: recordBlocks(r, 'brief') }),
       allowed: ['keep', 'detail', 'brief'] }));
-    // A preceding user decision may already be in an archived brief record.
-    // Only offer sources whose verbatim text is present in this request; absence
-    // of that historical source must not block new factual work indefinitely.
-    if (selected) selected.decision_sources = selected.decision_sources.filter(d => messageIndex(d.seq) !== undefined);
-    if (raw) candidates.unshift({ id: 'new-window', type: 'original', messages: raw.filter(e => session.deriveEventMessage(e) && !projectedOut(e)).map(e => ({ seq: e.seq, index: messageIndex(e.seq) })),
-      summary_scope: selected.summary_scope.event_seqs, decision_sources: selected.decision_sources.map(d => ({ seq: d.seq, index: messageIndex(d.seq) })),
-      target_characters: cfg.summaryTargetChars });
-    const fingerprint = hash([candidates, snapshot.userRevision, snapshot.request.messages.at(-1)?.id, routeKey(snapshot.request), pressure >= 0.85]);
-    if (!force && status.lastKey === fingerprint) { wait('同一批材料已检查，等待变化'); return; }
+    if (raw) {
+      const { payload, reason } = cachedPreparationInput(session, snapshot, selected);
+      if (!payload) return { reason };
+      candidates.unshift({ id: 'new-window', type: 'original', ...payload, target_characters: cfg.summaryTargetChars });
+    }
     const task = `${ADAPTIVE_TASK}\n\n${JSON.stringify({ pressure_ratio: pressure, last_rejection: s.review.lastRejection || null, candidates })}`;
     const request = { ...snapshot.request, purpose: 'compaction', messages: [...snapshot.request.messages, p.adapter.message(task, 'adaptive-task')] };
     assertCachedRequestPrefix(snapshot.request, request);
-    if (Buffer.byteLength(JSON.stringify(request)) > cfg.prepareInputTokens * 4) { wait('请求超过后台输入预算，原文保留'); return; }
+    if (Buffer.byteLength(JSON.stringify(request)) > cfg.prepareInputTokens * 4) return { reason: cachedBudgetReason };
+    return { raw, selected, offeredPrepared, candidates, request };
+  }
+  run(agent, { snapshot, raw, selected, offeredPrepared, request, fingerprint, status, s, cfg }) {
+    const p = this.pipeline, session = agent.session, id = session.id, key = id + ':adaptive';
     const controller = new AbortController(), revision = s.compressionModeRevision || 0, seenEvents = s.eventsSincePrepare || 0;
     const signatures = new Map(offeredPrepared.map(r => [r.id, recordSnapshot(session, r)]));
     const rawSignature = raw ? hash(raw.map(e => [e.seq, e.type, e.data])) : null;
@@ -129,7 +153,7 @@ export class AdaptiveCompaction {
     const current = () => !p.closed && !controller.signal.aborted && p.agents.get(id) === agent
       && p.mode(session) === 'adaptive' && (s.compressionModeRevision || 0) === revision && p.config().contextEnabled && !p.manualSessions.has(id)
       && (this.isManaged?.(session) ?? true)
-      && this.requests.get(id) && routeKey(this.requests.get(id).request) === routeKey(snapshot.request);
+      && this.snapshots.current(snapshot);
     const job = (async () => {
       const result = await p.call(agent, 'adaptive', request, controller.signal, () => { if (!current()) throw Error('后台检查条件已改变'); });
       controller.signal.throwIfAborted();
@@ -190,7 +214,7 @@ export class AdaptiveCompaction {
       if (p.jobs.get(key) === job) p.jobs.delete(key);
       if (p.controllers.get(key) === controller) p.controllers.delete(key);
       p.releaseState(id);
-      if (this.followups.delete(id) && current()) void this.check(agent);
+      if (this.followups.delete(id) && !p.closed && p.agents.get(id) === agent) void this.check(agent);
     });
     p.jobs.set(key, job); return job;
   }
