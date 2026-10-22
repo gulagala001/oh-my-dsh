@@ -33,6 +33,7 @@
 
 ### 问题修复
 
+- 修复 Glyph 在工作台放大、浮窗移动／动画和关闭后残留字符或分隔线的问题；背景字符避让内嵌原生预览，隐藏控件、图标与点击光圈及时清除，停用后立即清空画布。
 - 修复独立聊天首次发送／新建草稿的服务作用域错误，以及切换会话时目录准备未及时取消的问题；保留草稿、附件和已获宿主接纳的发送结果。
 - 修复模型与 Ultra 保存准备期间的并发变更、能力失效及失败后旧选择残留；保存结束核对当前状态，显式重试，不自动重放失败写入。
 - 修复临时聊天发送、关闭和清理之间的竞态；网页聊天恢复独立脚本执行和原生窗口拖动行为。
@@ -86,6 +87,7 @@ Version 0.99.0 brings together the changes since public release 0.18.8. It is no
 
 ### Bug Fixes
 
+- Fixes lingering Glyph characters and dividers when expanding the workbench or moving, animating and closing floating panels. Background characters respect embedded native previews; hidden controls, icons and click rings are cleared, and disabling Glyph immediately clears its canvas.
 - Fixes service-scope failures during projectless first-send/draft creation and cancels remaining directory preparation when navigating away, preserving drafts, attachments and messages already accepted by the host.
 - Handles concurrent model/Ultra changes, unavailable capabilities and stale choices after failed saves. Reconciles state after saving and supports explicit retry without replaying failed writes automatically.
 - Fixes temporary-chat send/close/cleanup races, restores standalone webpage scripts and uses native drag behavior for web-chat headers.
