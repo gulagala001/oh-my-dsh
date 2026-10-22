@@ -56,14 +56,18 @@ export class Extensions extends Service {
     if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
     const url = new URL(req.url, 'http://localhost');
     const route = url.pathname.slice(API.length) || '/';
+    const controller = new AbortController();
+    const disconnect = () => controller.abort(new Error('Extensions request disconnected'));
+    res.once('close', disconnect);
     try {
+      if (!this.enabled) fail('service-missing', 'Extensions service is stopped', {}, 503);
       if (req.method === 'GET') send(res, 200, await this.read(route, url.searchParams));
-      else if (req.method === 'POST') send(res, 200, await this.write(route, await body(req)));
+      else if (req.method === 'POST') send(res, 200, await this.write(route, await body(req), controller.signal));
       else send(res, 405, { error: 'Method not allowed', code: 'method' });
     } catch (error) {
       const known = error instanceof ExtensionError || error?.code === 'invalid-frontmatter';
-      send(res, known ? error.status ?? 400 : 500, { error: errorText(error), code: known ? error.code : 'internal', params: error.params ?? {} });
-    }
+      if (!res.destroyed && !res.writableEnded) send(res, known ? error.status ?? 400 : 500, { error: errorText(error), code: known ? error.code : 'internal', params: error.params ?? {} });
+    } finally { res.off('close', disconnect); }
   }
   async read(route, query) {
     const scope = () => this.scope(query.get('scope'));
@@ -81,7 +85,9 @@ export class Extensions extends Service {
       default: fail('not-found', 'Not found', {}, 404);
     }
   }
-  async write(route, input) {
+  async write(route, input, signal) {
+    signal?.throwIfAborted();
+    if (!this.enabled) fail('service-missing', 'Extensions service is stopped', {}, 503);
     const scope = () => this.scope(input.scope);
     const done = (value = {}) => ({ ok: true, ...value });
     switch (`${route}#${input.action}`) {
@@ -105,7 +111,7 @@ export class Extensions extends Service {
       case '/hooks#delete': await this.hooks.remove(input.id, input.expected); return done();
       case '/hooks#enable': await this.hooks.setEnabled(input.id, input.expected, input.enabled === true); return done();
       case '/hooks#all': await this.hooks.setAll(input.enabled === true); return done();
-      case '/hooks#test': return done({ run: await this.hooks.test(input) });
+      case '/hooks#test': return done({ run: await this.hooks.test(input, signal) });
       default: fail('not-found', 'Unknown action', {}, 404);
     }
   }

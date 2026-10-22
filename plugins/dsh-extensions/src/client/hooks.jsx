@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Input, RiskConfirmation, StateDot, Switch, Tag, IconSlidersTwoOutlineRegular, IconPlusOutlineRegular, IconPlayOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { api } from './api.mjs';
 import { ActionsMenu, Confirm, Editor, Field, Group, Page, RefreshButton, Row, Select, Status, TextArea, errorMessage, useAction, useResource, useT } from './ui.jsx';
@@ -68,6 +68,8 @@ export function HooksPage() {
 function HookEditor({ editor, data, onClose, onSaved }) {
   const t = useT(), action = useAction(), test = useAction();
   const [draft, setDraft] = useState(editor), [result, setResult] = useState(null);
+  const testing = useRef(null);
+  useEffect(() => () => testing.current?.abort(), []);
   const set = key => event => setDraft(current => ({ ...current, [key]: event.target.value }));
   const timeout = () => draft.timeout.trim() ? Number(draft.timeout) : undefined;
   const matcher = data.matcherEvents.includes(draft.event);
@@ -76,9 +78,17 @@ function HookEditor({ editor, data, onClose, onSaved }) {
     if (await action.run(() => api('/hooks', input))) onSaved();
   };
   const run = async () => {
+    if (testing.current) return;
+    const controller = new AbortController();
+    testing.current = controller;
     setResult(null);
-    const response = await test.run(() => api('/hooks', { action: 'test', event: draft.event, command: draft.command, timeout: timeout() }));
-    if (response) setResult(response.run);
+    try {
+      const response = await test.run(async () => {
+        try { return await api('/hooks', { action: 'test', event: draft.event, command: draft.command, timeout: timeout() }, controller.signal); }
+        catch (error) { if (!controller.signal.aborted) throw error; }
+      });
+      if (response && !controller.signal.aborted) setResult(response.run);
+    } finally { if (testing.current === controller) testing.current = null; }
   };
   return <Editor open wide title={editor.id ? t('hooks.edit.title') : t('hooks.new.title')} onClose={onClose} onSave={save} busy={action.busy} error={action.error}>
     <div className="dshx-field-row">
@@ -92,6 +102,7 @@ function HookEditor({ editor, data, onClose, onSaved }) {
     <Field label={t('hooks.timeout')} hint={t('hooks.timeout.hint')}><Input value={draft.timeout} onChange={set('timeout')} inputMode="numeric" placeholder="60"/></Field>
     <div className="dshx-test">
       <Button type="button" variant="outline" size="sm" icon={<IconPlayOutlineRegular size={13}/>} disabled={test.busy || !draft.command.trim()} onClick={run}>{test.busy ? t('hooks.testing') : t('hooks.test')}</Button>
+      {test.busy && <Button type="button" variant="outline" size="sm" onClick={() => testing.current?.abort()}>{t('cancel')}</Button>}
       {test.error && <span className="dshx-error-text">{errorMessage(t, test.error)}</span>}
       {result && <span className="dshx-muted">{result.timedOut ? t('hooks.test.timeout') : result.error ? result.error : t('hooks.test.result', { code: result.code, ms: result.durationMs })}
         {result.result && (result.result.block || result.result.halt || result.result.permission === 'deny') ? ` · ${t('hooks.outcome.blocked')}` : ''}</span>}

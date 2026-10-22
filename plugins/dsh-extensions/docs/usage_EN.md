@@ -29,6 +29,7 @@ Every page is a tab at the top of the **Plugins** page in the left sidebar: Skil
 - **Add server** supports local commands (stdio) and remote URLs (Streamable HTTP). **Paste JSON** adds every server from an MCP server's setup instructions at once.
 - Once connected, tools are offered to the model as `mcp__server__tool`. The detail view switches tools individually; switched-off tools are recorded in the server's `disabledTools`.
 - Switching a server off disconnects it and writes `"disabled": true`. Changed settings reconnect automatically; use **Reconnect** in the menu after a failure.
+- If another provider already owns the tool namespace, the connection reports a conflict. Failed or disabled connections do not apply their tool switches to other providers; reconnecting restores the saved switches.
 - After editing `mcp.json` by hand, return to the page or refresh to apply it.
 - MCP servers already defined in the profile configuration are listed under "Servers in profile configuration" and can only be switched on or off.
 - Environment and header values are never shown.
@@ -84,5 +85,6 @@ Every page is a tab at the top of the **Plugins** page in the left sidebar: Skil
 
 - Commands run in the system shell with the event as JSON on standard input (`session_id`, `cwd`, `hook_event_name` and event fields such as `tool_name`, `tool_input`, `prompt`), in the session directory, with `DSH_PROJECT_DIR` and `CLAUDE_PROJECT_DIR` set. The default timeout is 60 seconds.
 - A `PreToolUse` `allow` never skips DSH's own approvals. Subagents do not run session, prompt or turn-stop hooks.
-- **Test run** in the editor runs the command once with sample data and affects no conversation. The bottom of the page lists the last 50 runs.
+- **Test run** in the editor runs the command once with sample data and affects no conversation. You can cancel a running test; closing the editor also cancels its request. Disabling the plugin cancels active Hooks and waits for their commands to exit. The bottom of the page lists the last 50 runs.
+- Configuration edits within one host are saved in order, reading the current file each time. Other fields already saved externally are retained; malformed files are never overwritten.
 - Each hook can be switched off on its own (written as `"enabled": false`); the switch at the top maps to `disableAllHooks`.

@@ -84,3 +84,5 @@ DSH 内置或由其他插件提供的 Skill 只读。可以复制到个人或项
 ## 许可
 
 [MIT](LICENSE)
+
+[文档结构与贡献](docs/documentation.md)

@@ -44,25 +44,26 @@ const subagent = agent => agent?.session?.header?.origin === 'subagent';
 const valid = timeout => Number.isFinite(timeout) && timeout > 0 && timeout <= 600;
 
 function execute(command, input, { cwd, timeout = 60, signal }) {
+  signal?.throwIfAborted();
   return new Promise(resolve => {
     const started = Date.now(), windows = process.platform === 'win32';
-    let stdout = '', stderr = '', timedOut = false, settled = false, child;
+    let stdout = '', stderr = '', timedOut = false, settled = false, child, aborted = false;
     const finish = value => { if (settled) return; settled = true; clearTimeout(timer); signal?.removeEventListener('abort', abort); resolve({ stdout, stderr, timedOut, durationMs: Date.now() - started, ...value }); };
     const kill = () => { try { if (!windows && child?.pid) process.kill(-child.pid, 'SIGKILL'); else child?.kill('SIGKILL'); } catch {} };
-    const abort = () => { kill(); finish({ code: null, error: 'aborted' }); };
-    const timer = setTimeout(() => { timedOut = true; kill(); finish({ code: null }); }, timeout * 1000);
+    const abort = () => { aborted = true; kill(); };
+    const timer = setTimeout(() => { timedOut = true; kill(); }, timeout * 1000);
     try {
       child = spawn(command, { shell: true, cwd, windowsHide: true, detached: !windows, stdio: ['pipe', 'pipe', 'pipe'],
         env: { ...process.env, DSH_PROJECT_DIR: cwd, CLAUDE_PROJECT_DIR: cwd } });
     } catch (error) { finish({ code: null, error: errorText(error) }); return; }
-    if (signal?.aborted) { abort(); return; }
     signal?.addEventListener('abort', abort, { once: true });
     child.stdout.on('data', chunk => { if (stdout.length < OUTPUT_LIMIT) stdout += chunk; });
     child.stderr.on('data', chunk => { if (stderr.length < OUTPUT_LIMIT) stderr += chunk; });
     child.stdin.on('error', () => {});
     child.stdin.end(JSON.stringify(input));
     child.on('error', error => finish({ code: null, error: errorText(error) }));
-    child.on('close', code => finish({ code }));
+    child.on('close', code => finish({ code, ...aborted ? { error: 'aborted' } : {} }));
+    if (signal?.aborted) abort();
   });
 }
 
@@ -72,10 +73,12 @@ export class Hooks {
     this.ctx = ctx; this.file = join(homes.dsh, 'hooks.json');
     this.cache = { mtime: undefined, document: { hooks: {} }, error: null };
     this.runs = []; this.stops = new WeakMap();
+    this.queue = Promise.resolve(); this.running = new Set(); this.controller = new AbortController();
+    ctx.effect(() => () => this.close());
   }
-  async load() {
+  async load({ force = false } = {}) {
     const mtime = await stat(this.file).then(info => info.mtimeMs, () => null);
-    if (mtime === this.cache.mtime) return this.cache;
+    if (!force && mtime === this.cache.mtime) return this.cache;
     let document = { hooks: {} }, error = null;
     if (mtime !== null) {
       try {
@@ -102,12 +105,23 @@ export class Hooks {
     return hooks;
   }
   cwdOf(agent) { return (agent && (this.ctx.get('workingDirectory')?.get?.(agent.session) ?? agent.session?.header?.cwd)) || homedir(); }
+  async execute(command, input, options) {
+    const signal = options.signal ? AbortSignal.any([options.signal, this.controller.signal]) : this.controller.signal;
+    const task = execute(command, input, { ...options, signal });
+    this.running.add(task);
+    try { const result = await task; signal.throwIfAborted(); return result; }
+    finally { this.running.delete(task); }
+  }
+  async close() {
+    this.controller.abort(new Error('Extensions service is stopped'));
+    await Promise.allSettled([...this.running, this.queue]);
+  }
   async run(event, hooks, fields, { agent, signal } = {}) {
     const cwd = this.cwdOf(agent);
     const workdir = await kind(cwd) === 'directory' ? cwd : homedir();
     const input = { session_id: agent?.session?.id ?? null, cwd, hook_event_name: event, agent_type: subagent(agent) ? 'subagent' : 'main', ...fields };
     return Promise.all(hooks.map(async hook => {
-      const run = await execute(hook.command, input, { cwd: workdir, timeout: hook.timeout, signal });
+      const run = await this.execute(hook.command, input, { cwd: workdir, timeout: hook.timeout, signal });
       const result = interpret(event, run);
       const outcome = run.error ? 'error' : run.timedOut ? 'timeout' : result.block || result.halt || result.permission === 'deny' ? 'blocked' : run.code === 0 ? 'ok' : 'error';
       this.runs.unshift({ at: Date.now(), event, command: trimTo(hook.command, 200), code: run.code, durationMs: run.durationMs, outcome,
@@ -119,7 +133,7 @@ export class Hooks {
   start() {
     const guard = (event, task) => async (...args) => {
       try { return await task(...args); }
-      catch (error) { this.ctx.logger?.warn?.(`dsh-extensions: ${event} hooks: ${errorText(error)}`); }
+      catch (error) { if (!this.controller.signal.aborted) this.ctx.logger?.warn?.(`dsh-extensions: ${event} hooks: ${errorText(error)}`); }
     };
     this.ctx.on('tools/pre-execute', async (exec, next) => {
       let hooks = [];
@@ -200,10 +214,17 @@ export class Hooks {
     }
     return { file: tilde(this.file), error, enabled: document.disableAllHooks !== true, events: EVENTS, matcherEvents: MATCHER_EVENTS, hooks: items, runs: this.runs };
   }
-  async edit(change) {
-    const { error } = await this.load();
+  edit(change) {
+    this.controller.signal.throwIfAborted();
+    const task = this.queue.then(() => this.write(change));
+    this.queue = task.catch(() => {});
+    return task;
+  }
+  async write(change) {
+    // The file is authoritative. A cached read is only for event dispatch/UI.
+    const { document: current, error } = await this.load({ force: true });
     if (error) fail('hooks-file-invalid', 'hooks.json cannot be parsed; fix or remove it first', { file: this.file });
-    const document = structuredClone(this.cache.document);
+    const document = structuredClone(current);
     change(document);
     for (const event of Object.keys(document.hooks)) {
       const groups = (document.hooks[event] ?? []).filter(group => !Array.isArray(group?.hooks) || group.hooks.length);
@@ -247,12 +268,12 @@ export class Hooks {
   }
   setAll(enabled) { return this.edit(document => { if (enabled) delete document.disableAllHooks; else document.disableAllHooks = true; }); }
   /** Try a command with a representative input; nothing reaches a session. */
-  async test({ event, command, timeout }) {
+  async test({ event, command, timeout }, signal) {
     Hooks.validate({ event, command, timeout });
     const samples = { SessionStart: { source: 'startup' }, UserPromptSubmit: { prompt: 'Example prompt' }, PreToolUse: { tool_name: 'bash', tool_input: { command: 'ls' }, tool_use_id: 'test' },
       PostToolUse: { tool_name: 'bash', tool_input: { command: 'ls' }, tool_use_id: 'test', tool_response: { stdout: '' } }, Stop: { stop_hook_active: false }, SessionEnd: {} };
     const input = { session_id: 'test', cwd: homedir(), hook_event_name: event, agent_type: 'main', ...samples[event] };
-    const run = await execute(command.trim(), input, { cwd: homedir(), timeout: timeout || 60 });
+    const run = await this.execute(command.trim(), input, { cwd: homedir(), timeout: timeout || 60, signal });
     return { ...run, stdout: trimTo(run.stdout, 4000), stderr: trimTo(run.stderr, 4000), result: interpret(event, run) };
   }
 }

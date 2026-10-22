@@ -57,25 +57,30 @@ export class Mcp {
     this.ctx = ctx;
     this.file = join(homes.dsh, 'mcp.json');
     this.cacheFile = join(homes.dsh, 'dsh-extensions', 'mcp-tools.json');
-    this.records = new Map(); this.servers = new Map(); this.toolCache = {}; this.restrictions = new Map();
+    this.records = new Map(); this.servers = new Map(); this.toolCache = new Map(); this.restrictions = new Map();
     this.fileError = null; this.mtime = undefined; this.queue = Promise.resolve();
+    ctx.effect(() => () => this.close());
   }
   async start() {
-    this.toolCache = await readFile(this.cacheFile, 'utf8').then(JSON.parse).catch(() => ({}));
+    const cached = await readFile(this.cacheFile, 'utf8').then(JSON.parse).catch(() => ({}));
+    this.toolCache = new Map(Object.entries(cached && typeof cached === 'object' && !Array.isArray(cached) ? cached : {})
+      .filter(([, tools]) => Array.isArray(tools))
+      .map(([name, tools]) => [name, tools.filter(tool => tool && typeof tool.name === 'string' && typeof tool.description === 'string')]));
+    if (this.closed) return;
     this.ctx.effect(() => this.ctx.on('tools/change', () => { this.observeTools(); this.applyRestriction(); }));
     this.ctx.effect(() => this.ctx.on('agent/created', ({ agent }) => this.restrictAgent(agent)));
     this.ctx.effect(() => this.ctx.on('agent/disposed', ({ agent }) => { this.restrictions.get(agent)?.dispose(); this.restrictions.delete(agent); }));
-    this.ctx.effect(() => () => { this.closed = true; for (const entry of this.restrictions.values()) entry.dispose(); this.restrictions.clear(); });
     await this.sync({ force: true });
   }
   serial(task) { return this.queue = this.queue.catch(() => {}).then(task); }
   async readDocument() {
     let text;
-    try { text = await readFile(this.file, 'utf8'); } catch (error) { if (error.code === 'ENOENT') return { mcpServers: {} }; throw error; }
+    try { text = await readFile(this.file, 'utf8'); } catch (error) { if (error.code === 'ENOENT') return { mcpServers: Object.create(null) }; throw error; }
     const value = JSON.parse(text);
     if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('mcp.json must contain an object');
     value.mcpServers ??= {};
     if (typeof value.mcpServers !== 'object' || Array.isArray(value.mcpServers)) throw Error('mcpServers must be an object');
+    value.mcpServers = Object.assign(Object.create(null), value.mcpServers);
     return value;
   }
   /** Reload when the file changed; unchanged servers keep their connection. */
@@ -105,11 +110,10 @@ export class Mcp {
   }
   conflict(name) {
     const tools = this.ctx.get('tools');
-    const owned = this.records.has(name);
-    if (!owned && tools?.schemas().some(schema => schema.name.startsWith(prefix(name)))) return true;
-    return false;
+    return tools?.schemas().some(schema => schema.name.startsWith(prefix(name))) ?? false;
   }
   launch(server) {
+    if (this.closed) return;
     const record = { key: launchKey(server), status: 'starting', error: null, fiber: null, startedAt: Date.now() };
     this.records.set(server.name, record);
     if (server.transport === 'sse') { Object.assign(record, { status: 'failed', error: 'unsupported-transport' }); return; }
@@ -117,44 +121,77 @@ export class Mcp {
     record.ready = (async () => {
       try {
         const module = await import(MCP_MODULE);
-        if (this.records.get(server.name) !== record) return;
+        if (this.closed || this.records.get(server.name) !== record) return;
+        // The import yields: another provider may have claimed this namespace.
+        if (this.conflict(server.name)) { Object.assign(record, { status: 'failed', error: 'name-in-use' }); return; }
         record.fiber = this.ctx.plugin(module, clientConfig(server));
         await record.fiber;
-        if (this.records.get(server.name) === record) { record.status = 'connected'; record.connectedAt = Date.now(); this.observeTools(); }
+        if (!this.closed && this.records.get(server.name) === record) {
+          record.status = 'connected'; record.connectedAt = Date.now(); this.observeTools(); this.applyRestriction();
+        }
       } catch (error) {
         record.status = 'failed'; record.error = errorText(error);
         const fiber = record.fiber; record.fiber = null;
-        await fiber?.dispose().catch(() => {});
+        try { await fiber?.dispose(); } catch (failure) { this.ctx.logger?.warn?.(`dsh-extensions: stopping MCP ${server.name}: ${errorText(failure)}`); }
       }
     })();
   }
   async stop(name) {
     const record = this.records.get(name);
     this.records.delete(name);
-    if (record?.fiber) await record.fiber.dispose().catch(error => this.ctx.logger?.warn?.(`dsh-extensions: stopping MCP ${name}: ${errorText(error)}`));
+    this.applyRestriction();
+    if (record?.fiber) {
+      try { await record.fiber.dispose(); await record.fiber.await(); }
+      catch (error) { this.ctx.logger?.warn?.(`dsh-extensions: stopping MCP ${name}: ${errorText(error)}`); }
+    }
+    await record?.ready;
+  }
+  async close() {
+    this.closed = true;
+    clearTimeout(this.cacheTimer);
+    for (const entry of this.restrictions.values()) entry.dispose();
+    this.restrictions.clear();
+    await this.queue.catch(() => {});
+    await Promise.all([...this.records.keys()].map(name => this.stop(name)));
+    if (this.cacheTimer) await this.saveToolCache();
+    else await this.cacheWrite;
   }
   visibleTools(name) {
     const schemas = this.ctx.get('tools')?.schemas() ?? [];
     return schemas.filter(schema => schema.name.startsWith(prefix(name)))
       .map(schema => ({ name: schema.name.slice(prefix(name).length), description: schema.description ?? '' }));
   }
-  /** Hidden tools leave the schema list, so their last seen description is cached. */
+  /** Preserve descriptions for disconnected servers; live tools come from the host. */
   observeTools() {
+    if (this.closed) return;
     let changed = false;
     for (const [name, record] of this.records) {
       if (record.status !== 'connected') continue;
       const visible = this.visibleTools(name), hidden = new Set(this.servers.get(name)?.disabledTools ?? []);
-      const known = (this.toolCache[name] ?? []).filter(tool => hidden.has(tool.name) && !visible.some(item => item.name === tool.name));
+      const known = (this.toolCache.get(name) ?? []).filter(tool => hidden.has(tool.name) && !visible.some(item => item.name === tool.name));
       const next = [...visible, ...known].sort((a, b) => a.name.localeCompare(b.name));
-      if (JSON.stringify(next) !== JSON.stringify(this.toolCache[name])) { this.toolCache[name] = next; changed = true; }
+      if (JSON.stringify(next) !== JSON.stringify(this.toolCache.get(name))) { this.toolCache.set(name, next); changed = true; }
     }
-    if (changed) { clearTimeout(this.cacheTimer); this.cacheTimer = setTimeout(() => void writeAtomic(this.cacheFile, JSON.stringify(this.toolCache, null, 2)).catch(() => {}), 500); this.cacheTimer.unref?.(); }
+    if (changed) {
+      clearTimeout(this.cacheTimer);
+      this.cacheTimer = setTimeout(() => void this.saveToolCache(), 500);
+      this.cacheTimer.unref?.();
+    }
+  }
+  saveToolCache() {
+    clearTimeout(this.cacheTimer); this.cacheTimer = undefined;
+    const text = JSON.stringify(Object.fromEntries(this.toolCache), null, 2);
+    return this.cacheWrite = Promise.resolve(this.cacheWrite).then(() => writeAtomic(this.cacheFile, text))
+      .catch(error => this.ctx.logger?.warn?.(`dsh-extensions: MCP tool cache: ${errorText(error)}`));
   }
   /** Switched-off tools that are registered now; DSH rejects restrictions naming unknown tools. */
   denied() {
     const known = new Set((this.ctx.get('tools')?.schemas() ?? []).map(schema => schema.name));
     const deny = [];
-    for (const server of this.servers.values()) for (const tool of server.disabledTools ?? []) if (known.has(prefix(server.name) + tool)) deny.push(prefix(server.name) + tool);
+    for (const server of this.servers.values()) {
+      if (!server.enabled || this.records.get(server.name)?.status !== 'connected') continue;
+      for (const tool of server.disabledTools ?? []) if (known.has(prefix(server.name) + tool)) deny.push(prefix(server.name) + tool);
+    }
     return deny.sort();
   }
   /** DSH only accepts tool restrictions per agent, so each session gets its own. */
@@ -166,11 +203,12 @@ export class Mcp {
   restrictAgent(agent, deny = this.denied()) {
     const key = deny.join('\n'), current = this.restrictions.get(agent);
     if (this.closed || current?.key === key) return;
-    current?.dispose(); this.restrictions.delete(agent);
-    if (!deny.length || !agent?.ctx) return;
-    // Recorded first: applying the restriction emits tools/change, which re-enters here.
+    // Removing the old restriction also emits tools/change. Publish the new
+    // decision first, so neither removal nor registration can re-enter a swap.
     const entry = { key, dispose: () => {} };
     this.restrictions.set(agent, entry);
+    current?.dispose();
+    if (!deny.length || !agent?.ctx) { this.restrictions.delete(agent); return; }
     try {
       const fiber = agent.ctx.inject(['tools'], scope => { scope.tools.restrict({ deny }); });
       entry.dispose = () => { try { (typeof fiber === 'function' ? fiber : fiber?.dispose)?.call(fiber); } catch {} };
@@ -198,7 +236,7 @@ export class Mcp {
       const status = server.invalid ? 'invalid' : !server.enabled ? 'disabled' : record?.status ?? 'starting';
       const visible = record?.status === 'connected' ? this.visibleTools(server.name) : [];
       const hidden = new Set(server.disabledTools);
-      const known = new Map((this.toolCache[server.name] ?? []).map(tool => [tool.name, tool]));
+      const known = new Map((this.toolCache.get(server.name) ?? []).map(tool => [tool.name, tool]));
       for (const tool of visible) known.set(tool.name, tool);
       return { name: server.name, transport: server.transport ?? null, status, error: server.invalid ?? record?.error ?? null,
         target: server.transport === 'stdio' ? [server.command, ...server.args].join(' ') : server.url ?? null,
@@ -220,6 +258,7 @@ export class Mcp {
   }
   /** Read-modify-write the current file so hand edits made meanwhile survive. */
   edit(change) {
+    if (this.closed) return Promise.reject(new Error('Extensions service is stopped'));
     return this.serial(async () => {
       let document;
       try { document = await this.readDocument(); }

@@ -84,3 +84,5 @@ Skills bundled with DSH or provided by other plugins are read-only. Copy them to
 ## License
 
 [MIT](LICENSE)
+
+[Documentation structure and contributing](docs/documentation.md)
