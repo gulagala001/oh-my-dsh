@@ -65,3 +65,19 @@ test('projection GET routes keep identity checks and no-store with object and UR
   const partial = f.read('usage'); assert.equal(partial.coverage.partial, true); assert.match(partial.coverage.message, /历史档案无法读取/); assert.match(partial.coverage.message, /写入失败/);
   await assert.rejects(() => handleMonitorApi({ hub: f.hub, ctx: f.ctx, req: { method: 'GET' }, res: {}, url: new URL('http://isolated.invalid/oh-my-dsh/api/monitor?session=..&view=context') }), /会话编号/);
 });
+
+test('full monitor API reuses costs while custom settings remain immediately visible', t => {
+  const f = fixture(t), custom = [{ provider: 'deepseek', model: 'deepseek-chat', currency: 'CNY',
+    inputTokens: 2, outputTokens: 3, cacheReadTokens: 0, cacheWriteTokens: 0 }];
+  f.hub.config = () => ({ monitorPrices: custom });
+  assert.equal(f.hub.monitor.append({ id: 'priced', sessionId: 'fixture', kind: 'main', provider: 'deepseek', model: 'deepseek-chat',
+    at: Date.now() - 1, usage: { inputTokens: 1000000, outputTokens: 1000000, cacheReadTokens: 0, cacheWriteTokens: 0 } }), true);
+  const first = f.read(), cache = f.hub.monitor.costCache;
+  assert.ok(cache); assert.equal(first.costSummary.totals[0].amount, 5);
+  assert.deepEqual(f.read().costSummary, first.costSummary); assert.equal(f.hub.monitor.costCache, cache);
+  custom[0].inputTokens = 7;
+  const changed = f.read(); assert.equal(changed.costSummary.totals[0].amount, 10);
+  assert.equal(changed.activity.find(call => call.id === 'priced').cost.amount, 10);
+  custom[0].currency = 'USD'; assert.equal(f.read().costSummary.totals[0].currency, 'USD');
+  custom.length = 0; assert.notEqual(f.read().costSummary.totals[0].amount, 10);
+});

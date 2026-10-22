@@ -134,7 +134,7 @@ export function monitorEventQuery(params, now = Date.now()) {
 export class MonitorLedger {
   constructor(directory, { now = Date.now } = {}) {
     this.now = now; this.error = null; this.imported = new Map(); this.closed = false;
-    this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.overviewCache = null;
+    this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.overviewCache = null; this.costCache = null;
     try {
       mkdirSync(join(directory, 'monitor-v1'), { recursive: true, mode: 0o700 });
       this.db = new DatabaseSync(join(directory, 'monitor-v1', 'usage.sqlite'));
@@ -298,7 +298,39 @@ export class MonitorLedger {
     return { performance: copy(value.performance), sessionSpans: value.sessionSpans.map(copy),
       buckets: value.buckets.map(copy), modelBuckets: value.modelBuckets.map(copy) };
   }
-  query(states, ids, query, costOf, { callsOnly = false, usageOnly = false } = {}) {
+  receiptCosts(where, args, upperIndex, grain, costOf, pricing) {
+    // Only known immutable pricing catalogs opt in; arbitrary callbacks stay live.
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const key = pricing ? this.metricCacheKey([where, grain, zone, process.env.TZ], args, upperIndex) : null;
+    let value = pricing && this.costCache?.key === key && this.costCache.catalog === pricing.catalog
+      && this.costCache.custom === pricing.custom ? this.costCache.value : null;
+    if (!value) {
+      this.costCache = null;
+      const summary = { totals: [], unpricedCalls: 0, partialCalls: 0 }, buckets = new Map(), totals = new Map();
+      // Preserve receipt order, per-call tiers, missing usage and floating-point sums.
+      const receipts = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,provider,model,${fields.join(',')} FROM calls WHERE ${where}`);
+      for (const row of receipts.iterate(...args)) {
+        let bucket = buckets.get(row.label);
+        if (!bucket) { bucket = { label: row.label, costs: {}, unpricedCalls: 0 }; buckets.set(row.label, bucket); }
+        const cost = costOf({ provider: row.provider, model: row.model,
+          usage: Object.fromEntries(fields.filter(key => row[key] !== null).map(key => [key, row[key]])) });
+        if (!cost) { summary.unpricedCalls++; bucket.unpricedCalls++; continue; }
+        const total = totals.get(cost.currency) || { currency: cost.currency, amount: 0, calls: 0 };
+        total.amount += cost.amount; total.calls++; totals.set(cost.currency, total);
+        if (cost.partial) summary.partialCalls++;
+        bucket.costs[cost.currency] = (bucket.costs[cost.currency] || 0) + cost.amount;
+      }
+      summary.totals = [...totals.values()].sort((a, b) => a.currency.localeCompare(b.currency));
+      value = { summary, buckets: [...buckets.values()] };
+      // One selection, at most 512 KiB including custom rates; never retain receipts.
+      if (pricing && Buffer.byteLength(JSON.stringify(value)) + Buffer.byteLength(pricing.custom) <= 512 * 1024) {
+        this.costCache = { key, catalog: pricing.catalog, custom: pricing.custom, value };
+      }
+    }
+    return { summary: { ...value.summary, totals: value.summary.totals.map(row => ({ ...row })) },
+      buckets: new Map(value.buckets.map(row => [row.label, { ...row, costs: { ...row.costs } }])) };
+  }
+  query(states, ids, query, costOf, { callsOnly = false, usageOnly = false, costCacheKey } = {}) {
     if (!this.db || this.closed) throw Error(this.error || '监控账本不可用');
     this.import(states);
     const scope = query.range === 'all' ? '1=1' : 'sessionId IN (SELECT value FROM json_each(?))';
@@ -374,20 +406,12 @@ export class MonitorLedger {
         for (const row of modelBuckets) byLabel.get(row.label).models[JSON.stringify(row.model)] = row.tokens;
         costSummary = { totals: [], unpricedCalls: 0, partialCalls: 0 };
         if (costOf) {
-          const totalsByCurrency = new Map();
-          for (const row of seriesSplit) { row.costs = {}; row.unpricedCalls = 0; }
-          // Price each receipt before summing: context tiers and missing buckets are per call.
-          const receipts = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,provider,model,${fields.join(',')} FROM calls WHERE ${where}`);
-          for (const row of receipts.iterate(...args)) {
-            const bucket = byLabel.get(row.label), cost = costOf({ provider: row.provider, model: row.model,
-              usage: Object.fromEntries(fields.filter(key => row[key] !== null).map(key => [key, row[key]])) });
-            if (!cost) { costSummary.unpricedCalls++; if (bucket) bucket.unpricedCalls++; continue; }
-            const total = totalsByCurrency.get(cost.currency) || { currency: cost.currency, amount: 0, calls: 0 };
-            total.amount += cost.amount; total.calls++; totalsByCurrency.set(cost.currency, total);
-            if (cost.partial) costSummary.partialCalls++;
-            if (bucket) bucket.costs[cost.currency] = (bucket.costs[cost.currency] || 0) + cost.amount;
+          const costs = this.receiptCosts(where, args, scopeArgs.length + 1, grain, costOf, costCacheKey);
+          costSummary = costs.summary;
+          for (const row of seriesSplit) {
+            const bucket = costs.buckets.get(row.label);
+            row.costs = bucket?.costs || {}; row.unpricedCalls = bucket?.unpricedCalls || 0;
           }
-          costSummary.totals = [...totalsByCurrency.values()].sort((a, b) => a.currency.localeCompare(b.currency));
           if (includeLegacy) costSummary.unpricedCalls += Object.entries(legacy).filter(([kind]) => !query.kind || query.kind === kind).reduce((n, [, value]) => n + value.calls, 0);
         }
       }
@@ -459,7 +483,7 @@ export class MonitorLedger {
     }
     return result;
   }
-  close() { this.closed = true; this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.overviewCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
+  close() { this.closed = true; this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.overviewCache = null; this.costCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
 }
 
 // Empty buckets keep the console trend on a steady time axis. Labels follow

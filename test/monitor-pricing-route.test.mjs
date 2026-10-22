@@ -6,6 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { monitorCallCost } from '../src/monitor-call.mjs';
+import { MonitorLedger, monitorQuery } from '../src/monitor-ledger.mjs';
 
 test('exact catalog provider routes take priority over provider aliases', () => {
   const fields = { input: 'inputTokens', output: 'outputTokens', cache_read: 'cacheReadTokens', cache_write: 'cacheWriteTokens' };
@@ -49,6 +50,16 @@ test('route selections are bounded while tiers, overrides and refreshed catalogs
   const pricing = new MonitorPricing(directory, { now: () => now, fetch: async () => new Response(source()) });
   t.after(async () => { await pricing.close(); await rm(directory, { recursive: true, force: true }); });
   await pricing.refresh();
+  const initialCosts = pricing.costCacheKey();
+  assert.deepEqual(pricing.costCacheKey(), initialCosts);
+  const ledger = new MonitorLedger(directory, { now: () => now }); t.after(() => ledger.close());
+  for (const inputTokens of [100, 101]) assert.equal(ledger.append({ id: String(inputTokens), sessionId: 'fixture', kind: 'main',
+    provider: 'fixture-0', model: 'model-0', at: now - inputTokens,
+    usage: { inputTokens, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 } }), true);
+  let costReads = 0;
+  const costs = () => ledger.query([], new Set(['fixture']), monitorQuery({}, now), call => {
+    costReads++; return monitorCallCost(call, [], pricing.price(call));
+  }, { costCacheKey: pricing.costCacheKey() });
   const call = { provider: 'fixture-0', model: 'model-0', usage: { inputTokens: 100 } };
   const sort = Array.prototype.sort; let sorts = 0;
   Array.prototype.sort = function(...args) { sorts++; return sort.apply(this, args); };
@@ -63,6 +74,8 @@ test('route selections are bounded while tiers, overrides and refreshed catalogs
   const custom = [{ provider: call.provider, model: call.model, currency: 'CNY', inputTokens: 7 }];
   assert.equal(pricing.price(call, custom).inputTokens, 7);
   custom[0].inputTokens = 9; assert.equal(pricing.price(call, custom).inputTokens, 9);
+  const beforeOverride = pricing.costCacheKey(custom); custom[0].inputTokens = 11;
+  assert.notEqual(pricing.costCacheKey(custom).custom, beforeOverride.custom); custom[0].inputTokens = 9;
   assert.equal(pricing.price(call).inputTokens, 2, 'removing a custom override restores the catalog template');
   assert.equal(pricing.price({ ...call, usage: { totalTokens: 102, outputTokens: 1 } }).inputTokens, 6);
   assert.equal(pricing.price(call).threshold, null, 'returning to the boundary restores the base tier');
@@ -77,7 +90,13 @@ test('route selections are bounded while tiers, overrides and refreshed catalogs
   const before = sorts; pricing.price(call);
   assert.equal(sorts, before + 1, 'old route is evicted instead of retaining unbounded identities');
   } finally { Array.prototype.sort = sort; }
+  const initialSummary = costs().costSummary; assert.equal(costReads, 2);
+  assert.deepEqual(costs().costSummary, initialSummary); assert.equal(costReads, 2);
+  assert.equal(initialSummary.totals[0].amount, (100 * 2 / 1e6 + 4 / 1e6) + (101 * 6 / 1e6 + 8 / 1e6));
   rate = 5; now += 86400001; await pricing.refresh();
+  assert.notEqual(pricing.costCacheKey().catalog, initialCosts.catalog);
+  assert.equal(costs().costSummary.totals[0].amount, (100 * 5 / 1e6 + 4 / 1e6) + (101 * 15 / 1e6 + 8 / 1e6));
+  assert.equal(costReads, 4); costs(); assert.equal(costReads, 4);
   assert.equal(pricing.price(call).inputTokens, 5, 'new catalog replaces cached entry selections');
   assert.equal(pricing.price({ ...call, usage: { inputTokens: 101 } }).inputTokens, 15);
 });

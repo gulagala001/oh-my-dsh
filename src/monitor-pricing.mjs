@@ -23,6 +23,8 @@ function originOf(model) {
     : /^(qwen|qwq|qvq)/.test(id) ? 'alibaba' : /^(mistral|codestral|devstral|pixtral|ministral)/.test(id) ? 'mistral' : '';
 }
 function createPricing(data) {
+  // Catalog data is private and replaced as a whole on load/refresh.
+  const catalogIdentity = {};
   const routeKey = value => { const key = normalize(value); return Object.hasOwn(data.providers, key) ? key : providerKey(key); };
   const byModel = new Map(), undated = new Map(), selections = new Map();
   for (const entry of data.entries) {
@@ -68,6 +70,9 @@ function createPricing(data) {
     return selected;
   }
   return {
+    costCacheKey(custom = []) {
+      return { catalog: catalogIdentity, custom: JSON.stringify(custom, ['provider', 'model', 'currency', ...Object.keys(fields)]) };
+    },
     price(call, custom = []) {
       const found = selectEntry(call.provider, call.model), override = custom.find(p => p.provider === call.provider && p.model === call.model);
       if (!found && !override) return null;
@@ -117,6 +122,7 @@ let bundledPricing;
 const bundled = () => bundledPricing ??= (data => ({ data, pricing: createPricing(data) }))(
   JSON.parse(readFileSync(new URL('./monitor-prices.json', import.meta.url), 'utf8')));
 export const monitorCallPrice = (call, custom) => bundled().pricing.price(call, custom);
+export const monitorCostCacheKey = custom => bundled().pricing.costCacheKey(custom);
 export const monitorPriceCatalog = options => bundled().pricing.catalog(options);
 // The cache keeps the parsed table; older caches kept the raw upstream document.
 function cachedPriceData(data, fetchedAt) {
@@ -151,6 +157,7 @@ export class MonitorPricing {
     } catch {}
   }
   price(call, custom) { return (this.current ?? bundled().pricing).price(call, custom); }
+  costCacheKey(custom) { return (this.current ?? bundled().pricing).costCacheKey(custom); }
   catalog(options) { return { ...(this.current ?? bundled().pricing).catalog(options), updating: Boolean(this.pending), error: this.error, nextUpdateAt: this.nextAt }; }
   refresh() {
     if (this.closed) return this.pending;
