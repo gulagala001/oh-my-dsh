@@ -4,20 +4,20 @@
 
 OMD 0.99.0 reorganizes both features and plugin boundaries. Workflow, turn rewind, personalities, extension management and the web workbench have their own plugin entry points. Theme management and Glyph also have independent product forms. OMD provides a composed workspace, while each independent product has its own purpose, host requirements and releases.
 
-This page describes the upcoming 0.99.0 source. OMD 0.99.0 is not published; the table distinguishes public independent releases from products still being prepared.
+This page describes the OMD 0.99.0 plugin structure and formal releases. Glyph is included in the theme plugin.
 
 ## Products you can choose independently
 
 | Product | Capabilities | Use within OMD | Independent distribution |
 | --- | --- | --- | --- |
-| **OpenCU** | Browser/native app actions, observation, annotations, monitoring and sources | Included, retaining coordinated standalone and embedded entry points | [2.0.6](https://github.com/gulagala001/opencu/releases/tag/v2.0.6-dsh.0.2.1-rc.2), with separate rc.1/rc.2 packages |
+| **OpenCU** | Browser/native app actions, observation, annotations, monitoring and sources | Included, retaining coordinated standalone and embedded entry points | [2.0.7](https://github.com/gulagala001/opencu/releases/tag/v2.0.7-dsh.0.2.1-rc.2), with separate rc.1/rc.2 packages |
 | **DSH Workflow** · `dsh-workflow-plus` | Scripts, subagents, phases, background execution, budgets and resumption | Provides the Workflow path in Ultra and workflow tools; native teams remain DSH-owned | [0.1.1 for DSH rc.2](https://github.com/gulagala001/dsh-workflow/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
 | **DSH Rewind** · `@gulagala001/dsh-undo-plugin` | Turn rollback, checkpointed file restoration, undo and draft recovery | Included through message actions, double Escape, `/rewind` and `/undo` | [0.1.0 for DSH rc.2](https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
-| **DeepSeek Workbench** · `dsh-deepseek-workbench` | Web chat, temporary website side chats, the API platform and history import | Controlled under **Oh My DSH → Features**, with web-chat and account entries | [0.1.0 for DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
-| **Extensions** · `dsh-extensions` | Skills, MCP, instruction files, commands and hooks | Included and enabled by default on the plugin page | Independent source is ready; no public release entry yet |
-| **Persona** · `@gulagala001/dsh-persona-plugin` | Presets, four style modules, file exchange and session personalities | Edited in OMD settings and selected in main-session permission menus | Independent source is ready; no public release entry yet |
-| **dsh-theme-plugin** | Appearance settings, theme management, a theme market and installation checks | Optional theme-management product; OMD retains its own built-in appearance choices | [0.2.0 for DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.0-dsh.0.2.1-rc.2) |
-| **Glyph** · `dsh-glyph-theme` | Character whale, controls, ripples and reasoning-intensity effects | Selectable appearance, used by default for new appearance configurations | Independent source and local build entry are ready; no public release entry yet |
+| **DeepSeek Workbench** · `dsh-deepseek-workbench` | Web chat, temporary website side chats, the API platform and history import | Controlled under **Oh My DSH → Features**, with web-chat and account entries | [0.1.0 for DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
+| **Extensions** · `dsh-extensions` | Skills, MCP, instruction files, commands and hooks | Included and enabled by default on the plugin page | [0.1.0](https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
+| **Persona** · `@gulagala001/dsh-persona-plugin` | Presets, four style modules, file exchange and session personalities | Edited in OMD settings and selected in main-session permission menus | [0.1.0](https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
+| **dsh-theme-plugin** | Appearance settings, theme management, a theme market and installation checks | Optional theme-management product; OMD retains its own built-in appearance choices | [0.2.0 for DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.1-dsh.0.2.1-rc.2) |
+| **Glyph** · `dsh-glyph-theme` | Character whale, controls, ripples and reasoning-intensity effects | Selectable appearance, used by default for new appearance configurations | Included in Theme 0.2.1; no separate release |
 
 Independent products follow their own releases. An older fixed package does not automatically acquire subsequent fixes from current OMD source. Check that product's Release and exact host version.
 

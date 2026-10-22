@@ -30,7 +30,7 @@ The complete embedded browser, annotations and native monitor need matching Host
 
 ## Independent products and composed use
 
-Workflow, Rewind and DeepSeek Workbench have independent public releases; Persona, Extensions and Glyph have independent source entries. OpenCU remains available independently, and theme management has its own product. See [plugin architecture](architecture_EN.md) for responsibilities, fixed releases and coinstallation. Each product has its own scope and host requirements.
+Workflow, Rewind, DeepSeek Workbench, Persona and Extensions have independent formal releases; Glyph is included in the theme plugin. OpenCU remains available independently, and theme management has its own product. See [plugin architecture](architecture_EN.md) for responsibilities, fixed releases and coinstallation. Each product has its own scope and host requirements.
 
 ## Other plugins and integration boundaries
 

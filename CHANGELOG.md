@@ -6,7 +6,7 @@
 
 ## 中文
 
-0.99.0 汇总自公开版 0.18.8 以来的功能与改进。本版尚未发布，以下为准备中的更新说明。此前 0.19.0 草稿不作为安装入口。
+0.99.0 汇总自公开版 0.18.8 以来的功能与改进。本版为正式发行；此前 0.19.0 草稿不作为安装入口。
 
 ### 新增功能
 
@@ -48,19 +48,19 @@
 
 ### 其他变更
 
-- **独立插件架构**：Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench 各自承担执行、恢复、人格、扩展接入与网页工作台职责，拥有独立插件入口。OMD 组合这些能力；主题基座与 Glyph 作为不同产品提供主题管理和字符外观。[完整架构与发行状态](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/architecture.md)。
+- **独立插件架构**：Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench 各自承担执行、恢复、人格、扩展接入与网页工作台职责，拥有独立插件入口。OMD 组合这些能力；主题插件提供主题管理与 Glyph 字符外观。[完整架构与发行状态](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/architecture.md)。
 - **共装与生命周期**：匹配的内置／独立入口协调服务和界面归属，避免重复工具与按钮；停用一方保留仍启用方的能力。基础对话先建立，可选增强按独立作用域挂载，缺依赖或启动失败时保留基础会话与恢复提示。
 - **数据与状态归属**：人格迁移到按 profile 保存的独立数据；撤回备份、工作流预算与项目脚本、网页导入各自保留。任务从原生 `todo/write` 恢复，监控从实际调用回执派生，工具精简视图保留可回查原文；完整备份需覆盖这些数据。
 - **构建与交付**：源码主线不跟踪完整客户端编译产物，普通更新安装固定 Release 工件；体积较大的主题资源、Glyph 和 OpenCU 客户端能力按需加载。保留必要来源、许可和宿主依赖，不再提供旧 alpha／0.2.0 的当前构建入口。
 - 包、预设与数据入口统一为 **oh-my-dsh**，升级自动迁移已有配置与会话，保留模型、凭据、附件、第三方插件和用户数据。见[包名迁移说明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade.md#package-name)。
-- 内置 OpenCU 保持 2.0.6，并整合后续质量与传输改进。dsh-ops 固定上游 0.4.1；原生工具替换、OPS 面板与 TUI 入口默认关闭，停用保留数据。
+- 内置 OpenCU 2.0.7，整合质量、取消与传输改进。dsh-ops 固定上游 0.4.1；原生工具替换、OPS 面板与 TUI 入口默认关闭，停用保留数据。
 - 分别准备精确匹配 DSH 0.2.1-rc.1／rc.2 的包。完整内置浏览器、批注和原生监看继续需要对应宿主适配；BC 的已适配范围见上文。
 
 <a id="en-0990"></a>
 
 ## English
 
-Version 0.99.0 brings together the changes since public release 0.18.8. It is not yet published. These notes are being prepared, and the earlier 0.19.0 drafts are not installation targets.
+Version 0.99.0 brings together the changes since public release 0.18.8. This is a formal release; the earlier 0.19.0 drafts are not installation targets.
 
 ### New Features
 
@@ -102,19 +102,17 @@ Version 0.99.0 brings together the changes since public release 0.18.8. It is no
 
 ### Other Changes
 
-- **Independent plugin architecture**: Workflow, Rewind, Persona, Extensions and DeepSeek Workbench own execution, recovery, personalities, extension access and the web workspace through separate plugin entries. OMD composes these capabilities; theme management and Glyph remain distinct products. [Architecture and release status](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/architecture_EN.md).
+- **Independent plugin architecture**: Workflow, Rewind, Persona, Extensions and DeepSeek Workbench own execution, recovery, personalities, extension access and the web workspace through separate plugin entries. OMD composes these capabilities; the theme plugin provides theme management and Glyph character appearance. [Architecture and release status](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/architecture_EN.md).
 - **Coinstallation and lifecycle**: matching embedded/independent entries coordinate service and UI ownership, avoiding duplicate tools and controls. A still-enabled owner retains the capability. Core conversations start first; optional features mount in separate scopes, preserving basic conversations and recovery notices on startup failure.
 - **Data and state ownership**: personalities migrate into profile-scoped storage; rewind backups, workflow budgets/project scripts and website imports retain their locations. Tasks restore from native `todo/write`, monitoring derives from actual receipts, and compact tool views retain retrievable originals. Full backups include these stores.
 - **Build and delivery**: the source branch no longer tracks complete compiled client artifacts; normal updates install fixed Release assets. Large theme resources, Glyph and heavier OpenCU capabilities load on demand. Required provenance, licenses and host dependencies remain; current build targets no longer include old alpha/0.2.0 hosts.
 - Unifies the package, preset and data entry points under **oh-my-dsh**, automatically migrating existing configuration and conversations while retaining models, credentials, attachments, third-party plugins and user data. See the [package migration guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/upgrade_EN.md#package-name).
-- Bundled OpenCU remains at 2.0.6 with subsequent quality and transport improvements. dsh-ops pins upstream 0.4.1; native-tool replacement, its panel and TUI entry remain off by default. Disabling retains data.
+- Bundled OpenCU 2.0.7 includes quality, cancellation and transport improvements. dsh-ops pins upstream 0.4.1; native-tool replacement, its panel and TUI entry remain off by default. Disabling retains data.
 - Separate packages are planned for the exact DSH 0.2.1-rc.1 and rc.2 versions. Full embedded browsing, annotations and native monitoring still require matching host adapters; BC support is scoped above.
 
 ## 安装 / Installation
 
-**待发布：以下固定地址在正式发布后生效。现在安装请使用 [0.18.8 公开发行](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8)。**
 
-**Pending release: these fixed URLs become available when published. For installation now, use the [public 0.18.8 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8).**
 
 打开 **插件 → ＋ 添加插件**，使用与当前 DSH **完整版本**一致的包；保留原 profile、配置和数据，等任务结束后重启对应实例。Open **Plugins → Add Plugin**, match the **complete DSH version**, retain the existing profile and data, and restart the instance after active tasks finish.
 

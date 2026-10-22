@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "package": "dsh-workflow-plus",
-  "version": "0.1.1-dsh.0.2.1-rc.2",
+  "version": "0.1.2-dsh.0.2.1-rc.2",
   "host": "0.2.1-rc.2",
   "upstream": {
     "repository": "https://github.com/deepseek-ai/deepseek-harness",
@@ -17,7 +17,7 @@
     "lib/host/workflow-ptc.factory.mjs": "3f6ee51bd5395e302e7b9e14616a95dd5e5ffc620b87c4ff5490b86428e7dcd5",
     "lib/host/workflow-spawn.factory.mjs": "f46d22d001b294f8b66c6805c40d3adc9b7d2e5bfb2a9b8fff09ec134687e785",
     "LICENSE": "5122e186494989a8d9a492cae953cfb88ac124239af0ab0ad8fb53eca1a1ccc5",
-    "package.json": "8a49aca9eddb9a1177f96590bbf48433d3dde8d1fa6a17d8f8743f6d9773775a",
+    "package.json": "f4aff2a2bf4f44e044abe3521471b6cbaf9db7e4fe9a7d445ea73f419ab9d16a",
     "src/budget.mjs": "35e2f70c7c0a947f7a1f4d1fb02a2c212634f9390c1bcd404aa0601dd49d3c2a",
     "src/client/index.jsx": "98bd28bdb8026779aa69a9276504149e965928e5d9956be87336cd48c59aef92",
     "src/client/slot-decoration.mjs": "ae89a29a99e861b01823d32205c83c51458efde9388fc5ec597d0ec218b3375c",

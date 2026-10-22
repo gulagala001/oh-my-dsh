@@ -38,7 +38,6 @@
 
 ### 1. 安装
 
-**0.99.0 正在准备，尚未发布。** 以下为拟定的固定安装地址，发布后生效；现在安装请使用 [0.18.8 公开发行](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8)。
 
 打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
 
@@ -60,7 +59,7 @@ https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.
 
 ## 组合工作台，也有独立插件
 
-0.99.0 将 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench** 的职责拆清，配合已经独立的 OpenCU，以及主题管理产品与 Glyph。你可以使用 OMD 组合好的完整工作台，也可以按需求选择已发布的独立产品。
+0.99.0 将 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench** 的职责拆清，配合已经独立的 OpenCU，以及主题插件及其 Glyph 外观。你可以使用 OMD 组合好的完整工作台，也可以按需求选择已发布的独立产品。
 
 工作流负责执行与续跑，Rewind 负责对话和文件恢复，Persona 管人格，Extensions 管技能与工具接入，Workbench 管网页聊天和迁移。匹配的独立与内置入口协调服务和界面归属；可选组件启动失败时保留基础对话。独立插件的数据、版本和宿主要求分别管理。
 
@@ -96,7 +95,7 @@ https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.
 
 ### 用好浏览器、电脑和扩展
 
-内置 **OpenCU 2.0.6**，提供浏览器与应用发现、观察、后台优先操作、批注和浮动监看。停止与取消跟踪真实键鼠释放；读取挂起、授权超时和目标替换都有明确的处理结果。完整内嵌界面需匹配宿主适配及系统权限。
+内置 **OpenCU 2.0.7**，提供浏览器与应用发现、观察、后台优先操作、批注和浮动监看。停止与取消跟踪真实键鼠释放；读取挂起、授权超时和目标替换都有明确的处理结果。完整内嵌界面需匹配宿主适配及系统权限。
 
 **扩展管理**在插件页集中管理 Skill、MCP、指令文件、命令和 Hooks。可选 **dsh-ops** 提供文件、文档、命令与按需工具能力，在第三方功能中安装匹配宿主的固定兼容包。
 

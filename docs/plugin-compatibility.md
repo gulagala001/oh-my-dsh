@@ -30,7 +30,7 @@ OMD 保留 DSH 原生工具、技能、会话及第三方插件入口。**请使
 
 ## 独立产品与组合使用
 
-Workflow、Rewind、DeepSeek Workbench 已有各自的独立发行；Persona、Extensions 与 Glyph 已具备独立源码入口。OpenCU 继续支持独立使用，主题管理也有专门产品。完整职责、固定发行和共装行为见[插件架构](architecture.md)。独立产品各自完整，不以 OMD 的版本号代替它们的宿主要求。
+Workflow、Rewind、DeepSeek Workbench、Persona 和 Extensions 均有独立正式发行；Glyph 随主题插件提供。OpenCU 继续支持独立使用，主题管理也有专门产品。完整职责、固定发行和共装行为见[插件架构](architecture.md)。独立产品各自完整，不以 OMD 的版本号代替它们的宿主要求。
 
 ## 其他插件与协作边界
 

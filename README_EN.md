@@ -38,7 +38,6 @@ Models use your DSH configuration. The default installation grants full file/com
 
 ### 1. Install
 
-**0.99.0 is being prepared and is not published.** The fixed URL below becomes available on release. For installation now, use the [public 0.18.8 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8).
 
 Open **Plugins → Add plugin** in the DSH instance you use, then paste:
 
@@ -60,7 +59,7 @@ Read this project’s README and explain its purpose and startup steps. Use only
 
 ## A composed workspace and independent products
 
-Version 0.99.0 separates the responsibilities of **Workflow, Rewind, Persona, Extensions and DeepSeek Workbench**, alongside the established OpenCU plugin, theme management and Glyph. Use the composed OMD workspace or choose a published independent product for a specific need.
+Version 0.99.0 separates the responsibilities of **Workflow, Rewind, Persona, Extensions and DeepSeek Workbench**, alongside the established OpenCU plugin, theme management and its Glyph appearance. Use the composed OMD workspace or choose a published independent product for a specific need.
 
 Workflow handles execution and resumption; Rewind restores conversations and files; Persona manages personalities; Extensions manages skills and tool connections; Workbench handles web chat and migration. Matching independent and embedded entries coordinate service and UI ownership. Optional startup failures retain core conversations, while plugin data, versions and host requirements keep their own boundaries.
 
@@ -96,7 +95,7 @@ On-demand tool discovery, file and webpage views, AST pattern search and CodeGra
 
 ### Work with browsers, apps and extensions
 
-Bundled **OpenCU 2.0.6** provides browser and app discovery, observation, background-first actions, annotations and floating previews. Stop and cancellation track actual input release, with explicit outcomes for stalled reads, approval timeouts and replaced targets. Full embedded surfaces require matching host adapters and system permissions.
+Bundled **OpenCU 2.0.7** provides browser and app discovery, observation, background-first actions, annotations and floating previews. Stop and cancellation track actual input release, with explicit outcomes for stalled reads, approval timeouts and replaced targets. Full embedded surfaces require matching host adapters and system permissions.
 
 **Extension management** brings skills, MCP, instruction files, commands and hooks into the plugin page. Optional **dsh-ops** adds file, document, shell and on-demand tool capabilities through a fixed compatibility package for the matching host.
 

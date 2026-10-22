@@ -6,6 +6,7 @@
 
 ## Install into the current instance
 
+
 In the instance you use, open **Plugins → + Add plugin** and paste the pinned release URL:
 
 ```text
@@ -49,3 +50,17 @@ Restart the same instance afterwards. These files are your data and are kept on 
 - the MCP tool description cache in `~/.dsh/dsh-extensions/`, which can be deleted.
 
 When reporting a problem, include the full version, profile type and the first error with secrets removed.
+
+<a id="build-from-source"></a>
+
+## Build from source
+
+With Node.js 22.19+ and pnpm 11.28.5 installed, run from the repository:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+npm pack
+```
+
+Add the generated `dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz` through **Plugins → Add plugin** using its local absolute path.

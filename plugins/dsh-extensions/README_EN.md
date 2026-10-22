@@ -24,6 +24,7 @@ DSH already reads skills, MCP servers, AGENTS.md and similar extensions, but mos
 
 ### 1. Install
 
+
 In the DSH instance you use, open **Plugins → + Add plugin** and paste:
 
 ```text

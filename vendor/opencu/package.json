@@ -1,6 +1,6 @@
 {
   "name": "opencu",
-  "version": "2.0.6-dsh.0.2.1-rc.2",
+  "version": "2.0.7-dsh.0.2.1-rc.2",
   "description": "Computer-use plugin with original REA browser, annotation and monitoring components for DSH",
   "type": "module",
   "engines": {
@@ -54,7 +54,8 @@
     "!**/.*",
     "README_EN.md",
     "DEVELOPMENT.md",
-    "docs/"
+    "docs/",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",

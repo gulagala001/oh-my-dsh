@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-undo-plugin",
-  "version": "0.1.0-dsh.0.2.1-rc.2",
+  "version": "0.1.1-dsh.0.2.1-rc.2",
   "type": "module",
   "license": "MIT",
   "description": "Rewind conversations and workspace files in DeepSeek Harness, with undo.",
@@ -30,7 +30,8 @@
     "LICENSE.DSH",
     "README.zh.md",
     "docs",
-    "README_EN.md"
+    "README_EN.md",
+    "CHANGELOG.md"
   ],
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.5",

@@ -4,20 +4,20 @@
 
 OMD 0.99.0 同时整理了功能和插件边界：工作流、回合撤回、人格、扩展管理与网页工作台都有各自的插件入口；主题管理和 Glyph 也有独立产品形态。OMD 继续提供组合好的工作台，独立插件则按自己的定位、宿主范围和版本发行。
 
-本页介绍准备中的 0.99.0 源码。OMD 0.99.0 尚未发布；下面分别列出已经公开的独立发行与仍在准备的产品。
+本页介绍 OMD 0.99.0 的插件结构与对应正式发行。Glyph 随主题插件提供。
 
 ## 哪些能力可以独立选择
 
 | 产品 | 负责的能力 | 在 OMD 中怎样使用 | 独立分发状态 |
 | --- | --- | --- | --- |
-| **OpenCU** | 浏览器与原生应用操作、观察、批注、监看和来源 | 已内置，沿用独立插件与内置方共用的入口 | [2.0.6](https://github.com/gulagala001/opencu/releases/tag/v2.0.6-dsh.0.2.1-rc.2)，分别有 rc.1／rc.2 包 |
+| **OpenCU** | 浏览器与原生应用操作、观察、批注、监看和来源 | 已内置，沿用独立插件与内置方共用的入口 | [2.0.7](https://github.com/gulagala001/opencu/releases/tag/v2.0.7-dsh.0.2.1-rc.2)，分别有 rc.1／rc.2 包 |
 | **DSH Workflow** · `dsh-workflow-plus` | 工作流脚本、子代理、阶段面板、后台执行、预算与续跑 | Ultra 的 Workflow 路径及工作流工具使用该能力；原生团队仍由 DSH 提供 | [0.1.1，DSH rc.2](https://github.com/gulagala001/dsh-workflow/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
 | **DSH Rewind** · `@gulagala001/dsh-undo-plugin` | 回合撤回、已有检查点的文件恢复、撤销撤回与草稿回填 | 已内置，通过消息按钮、双击 Esc、`/rewind` 与 `/undo` 使用 | [0.1.0，DSH rc.2](https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
-| **DeepSeek Workbench** · `dsh-deepseek-workbench` | 网页聊天、临时网页侧栏、开放平台及历史导入 | 在 **Oh My DSH → 功能** 中开关，保留网页聊天与账号入口 | [0.1.0，DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
-| **Extensions** · `dsh-extensions` | Skill、MCP、指令文件、自定义命令和 Hooks | 默认内置启用，入口在插件页 | 独立源码已就绪；尚无公开发行入口 |
-| **Persona** · `@gulagala001/dsh-persona-plugin` | 人格预设、四个表达模块、文件交换及会话人设 | 在 OMD 设置中编辑，在主会话权限菜单选择 | 独立源码已就绪；尚无公开发行入口 |
-| **dsh-theme-plugin** | 外观设置、主题管理、主题市场与安装预检 | 可另行选择主题管理产品；OMD 本身保留内置外观选择 | [0.2.0，DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.0-dsh.0.2.1-rc.2) |
-| **Glyph** · `dsh-glyph-theme` | 字符鲸鱼、字符控件、波纹与思考强度动效 | OMD 外观中的可选主题，新外观配置默认采用 Glyph | 独立源码和本地构建入口已就绪；尚无公开发行入口 |
+| **DeepSeek Workbench** · `dsh-deepseek-workbench` | 网页聊天、临时网页侧栏、开放平台及历史导入 | 在 **Oh My DSH → 功能** 中开关，保留网页聊天与账号入口 | [0.1.0，DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
+| **Extensions** · `dsh-extensions` | Skill、MCP、指令文件、自定义命令和 Hooks | 默认内置启用，入口在插件页 | [0.1.0](https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
+| **Persona** · `@gulagala001/dsh-persona-plugin` | 人格预设、四个表达模块、文件交换及会话人设 | 在 OMD 设置中编辑，在主会话权限菜单选择 | [0.1.0](https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
+| **dsh-theme-plugin** | 外观设置、主题管理、主题市场与安装预检 | 可另行选择主题管理产品；OMD 本身保留内置外观选择 | [0.2.0，DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.1-dsh.0.2.1-rc.2) |
+| **Glyph** · `dsh-glyph-theme` | 字符鲸鱼、字符控件、波纹与思考强度动效 | OMD 外观中的可选主题，新外观配置默认采用 Glyph | 随 Theme 0.2.1 提供，本次无独立发行 |
 
 独立包按自己的版本更新。一个独立产品已经发布，不代表其旧固定包包含 OMD 当前源码的全部后续修复；请核对该产品的固定 Release 与完整宿主版本。
 

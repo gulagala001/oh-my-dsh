@@ -39,7 +39,6 @@ OMD 已内置 OpenCU，不重复安装。不要把仓库 main 当成已发布安
 
 ### 2. 复制与你的 DSH 对应的地址
 
-**OMD 0.99.0 尚未发布。** 以下地址为本地准备稿，待正式发布后生效；现在安装请从 [0.18.8 公开发行](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8) 选择对应宿主的包。
 
 **DSH 0.2.1-rc.2 → OMD 0.99.0：**
 

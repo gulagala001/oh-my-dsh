@@ -39,7 +39,6 @@ Read the **complete host version** in DSH's About/version information, for examp
 
 ### 2. Copy the URL for your host
 
-**OMD 0.99.0 is not published.** These are prepared URLs for the upcoming release. For installation now, select the matching host from the [public 0.18.8 release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.18.8).
 
 **DSH 0.2.1-rc.2 → OMD 0.99.0:**
 

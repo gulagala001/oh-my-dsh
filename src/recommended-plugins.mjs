@@ -48,7 +48,7 @@ export async function latestPluginVersion(plugin, signal) {
     const version = plugin.review?.releaseTag ? plugin.review.version : manifest.tag_name?.replace(/^v/, '');
     if (plugin.review?.releaseTag && manifest.tag_name !== plugin.review.releaseTag) throw Error('GitHub Release 与固定桥接版本不一致');
     parseVersion(version);
-    const reviewedPrerelease = plugin.review?.allowPrerelease === true && plugin.review.releaseTag === 'v' + version && /^[a-f0-9]{64}$/.test(plugin.review.sha256 ?? '');
+    const reviewedPrerelease = plugin.review?.allowPrerelease === true && plugin.review.releaseTag === 'v' + (plugin.review.releaseVersion || version) && /^[a-f0-9]{64}$/.test(plugin.review.sha256 ?? '');
     if (manifest.draft || (manifest.prerelease && !reviewedPrerelease) || !manifest.assets?.some(asset => asset.browser_download_url === pluginInstallSpec(plugin, version)))
       throw Error('GitHub Release 缺少预期的 DSH 插件安装包');
     return version;
@@ -185,7 +185,7 @@ export class RecommendedPluginManager {
         const reviewedForkMigration = typeof plugin.review?.upstreamVersion === 'string'
           && current?.version === plugin.review.upstreamVersion
           && version === plugin.review?.version && plugin.githubRelease
-          && plugin.review?.releaseTag === 'v' + version && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 || '')
+          && plugin.review?.releaseTag === 'v' + (plugin.review.releaseVersion || version) && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 || '')
           && (version.startsWith(current.version + '-omd.') || !automatic && plugin.requireReviewedVersion && plugin.hostBuilds && plugin.review.dsh === this.hostVersion);
         const reviewedBuildMigration = !!plugin.hostBuilds && plugin.review?.dsh === this.hostVersion && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 ?? '')
           && [...Object.entries(plugin.historicalHostBuilds ?? {}), ...Object.entries(plugin.hostBuilds)].some(([host, build]) => host !== this.hostVersion && build.version === current?.version);

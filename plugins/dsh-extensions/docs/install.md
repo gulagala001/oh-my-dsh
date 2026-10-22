@@ -6,6 +6,7 @@
 
 ## 安装到当前实例
 
+
 在实际使用的实例打开 **插件 → ＋ 添加插件**，粘贴固定发行地址：
 
 ```text
@@ -49,3 +50,17 @@ dsh plugin --profile web remove dsh-extensions
 - `~/.dsh/dsh-extensions/` 中的 MCP 工具描述缓存，可直接删除。
 
 反馈时请提供完整版本、profile 类型和脱敏后的第一处错误。
+
+<a id="build-from-source"></a>
+
+## 从源码构建
+
+安装 Node.js 22.19+ 与 pnpm 11.28.5 后，在仓库目录执行：
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+npm pack
+```
+
+在 **插件 → 添加插件** 中输入生成的 `dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz` 的本地绝对路径。

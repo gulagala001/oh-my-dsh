@@ -1,48 +1,45 @@
 # DSH Extensions 0.1.0 · DSH 0.2.1-rc.2
 
-[中文](#zh) · [English](#en) · [安装 / Installation](#installation)
+[中文](#zh-010) | [English](#en-010)
 
-<a id="zh"></a>
+<a id="zh-010"></a>
+
 ## 中文
 
 ### 新增功能
 
-- 在插件页加入 Skill 标签页：按来源分组查看 Skill，开关模型调用与手动调用，新建、导入、编辑和删除。
-- 加入 MCP 标签页：添加 stdio 与 Streamable HTTP 服务器、粘贴 `mcpServers` JSON，查看连接状态与工具，逐个开关工具，重新连接；profile 配置中的服务器可开关。
-- 加入指令标签页：查看、创建、编辑和删除 DSH 加载的个人与项目 AGENTS.md／CLAUDE.md。
-- 加入自定义命令：把提示词模板存为 `/命令`，支持 `$ARGUMENTS`、`$1`…`$9`、个人与项目两级。
-- 加入 Hooks：在会话开始、发送消息、工具调用前后、回合结束和会话关闭时运行命令，兼容 Claude Code 的 `hooks.json` 格式；支持试运行和最近运行记录。
+- 在插件页集中管理 Skill、MCP、指令文件、自定义命令与 Hooks。
+- 按来源查看 Skill，切换模型／手动调用，支持创建、导入、编辑和删除。
+- 添加 stdio 与 Streamable HTTP MCP 服务器，导入配置、管理服务器及工具开关，并重新连接。
+- 管理个人与项目指令文件；使用带参数的自定义斜杠命令，并试运行会话与工具事件 Hooks。
 
 ### 其他变更
 
-- 精确适配 DSH **0.2.1-rc.2**、Cordis **4.0.5** 与 Node.js **22.19+**。
-- 使用 MIT 许可，通过固定 GitHub Release 包分发。
+- 首次正式发行，使用固定 GitHub 安装包、MIT 许可与精确宿主版本。
 
-<a id="en"></a>
+<a id="en-010"></a>
+
 ## English
 
-### New features
+### New Features
 
-- Skills tab on the Plugins page: skills grouped by source, model and manual invocation switches, create, import, edit and delete.
-- MCP tab: add stdio and Streamable HTTP servers or paste `mcpServers` JSON, see connection status and tools, switch tools individually and reconnect; servers in the profile configuration can be switched on or off.
-- Instructions tab: view, create, edit and delete the personal and project AGENTS.md / CLAUDE.md files DSH loads.
-- Custom commands: save prompt templates as `/commands` with `$ARGUMENTS` and `$1`…`$9`, personal and per project.
-- Hooks: run commands on session start, prompt submit, before and after tool use, turn stop and session end, compatible with the Claude Code `hooks.json` format; test runs and recent runs.
+- Manages skills, MCP servers, instruction files, custom commands and hooks from the Plugins page.
+- Groups skills by source and supports model/manual invocation switches, creation, import, editing and deletion.
+- Adds stdio and Streamable HTTP MCP servers, imports configuration, manages server/tool switches and reconnects.
+- Manages personal and project instruction files, parameterized slash commands and trial runs of session/tool event hooks.
 
-### Other changes
+### Other Changes
 
-- Exact compatibility with DSH **0.2.1-rc.2**, Cordis **4.0.5** and Node.js **22.19+**.
-- MIT licensed, distributed through pinned GitHub Release packages.
+- First formal release with fixed GitHub installation packages, an MIT license and exact host targeting.
 
-<a id="installation"></a>
 ## 安装 / Installation
 
-**宿主 / Host:** DSH `0.2.1-rc.2` · **Cordis:** `4.0.5` · **Node.js:** `>=22.19`
+在 **插件 → 添加插件** 安装与当前 DSH 完整版本一致的固定包，保留原 profile、配置和数据，待当前任务结束后重启。
 
-```bash
-dsh plugin --profile desktop add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz"
-```
+Install the fixed package matching the complete DSH version through **Plugins → Add plugin**. Preserve the profile, settings and data, and restart after active tasks finish.
 
-将 `desktop` 换成实际 profile，待当前任务结束后重启。Replace `desktop` with your actual profile and restart it after active tasks finish.
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.1-rc.2 | [DSH Extensions 0.1.0](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/SHA256SUMS) |
 
-[固定安装包 / Pinned package](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz) · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/SHA256SUMS) · [安装指南](https://github.com/gulagala001/dsh-extensions/blob/main/docs/install.md) · [Installation guide](https://github.com/gulagala001/dsh-extensions/blob/main/docs/install_EN.md)
+[安装指南](https://github.com/gulagala001/dsh-extensions/blob/main/docs/install.md) · [Installation guide](https://github.com/gulagala001/dsh-extensions/blob/main/docs/install_EN.md)

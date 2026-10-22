@@ -27,8 +27,8 @@ Intel Mac、Linux ARM64、Windows ARM64 等其他目标不提供安装入口。�
 
 | 精确宿主 | 固定兼容包 | 校验文件 |
 | --- | --- | --- |
-| `0.2.1-rc.2` | [dsh-ops-0.2.1-rc.2.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.ops.0.1.0/dsh-ops-0.2.1-rc.2.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.ops.0.1.0/SHA256SUMS) |
-| `0.2.1-rc.1` | [dsh-ops-0.2.1-rc.1.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.ops.0.1.0/dsh-ops-0.2.1-rc.1.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.ops.0.1.0/SHA256SUMS) |
+| `0.2.1-rc.2` | [dsh-ops-0.2.1-rc.2.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.0/dsh-ops-0.2.1-rc.2.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.0/SHA256SUMS) |
+| `0.2.1-rc.1` | [dsh-ops-0.2.1-rc.1.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.99.0/dsh-ops-0.2.1-rc.1.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.99.0/SHA256SUMS) |
 
 ## 使用与默认设置
 

@@ -17,8 +17,8 @@ export const recommendedPlugins = [
     category: '操作工具', url: 'https://github.com/T-Auto/dsh-ops', githubRelease: 'gulagala001/oh-my-dsh',
     supportedRuntimeTargets: ['darwin-arm64', 'linux-x64', 'win32-x64'], requireReviewedVersion: true,
     hostBuilds: {
-      '0.2.1-rc.2': { version: '0.2.1-rc.2.ops.0.1.0', upstreamVersion: '0.4.1', releaseTag: 'v0.2.1-rc.2.ops.0.1.0', asset: 'dsh-ops-0.2.1-rc.2.ops.0.1.0.tgz', sha256: 'd2a13073db75f11b7262b388c786bfb8fab35e541e35938f67bc0dd90dfe04c5', dsh: '0.2.1-rc.2', allowPrerelease: true },
-      '0.2.1-rc.1': { version: '0.2.1-rc.1.ops.0.1.0', upstreamVersion: '0.4.1', releaseTag: 'v0.2.1-rc.1.ops.0.1.0', asset: 'dsh-ops-0.2.1-rc.1.ops.0.1.0.tgz', sha256: '5343ead8b3816f0e070f254da5cc95a98abb173fc3440881888c16d55f8b325c', dsh: '0.2.1-rc.1', allowPrerelease: true },
+      '0.2.1-rc.2': { version: '0.2.1-rc.2.ops.0.1.0', upstreamVersion: '0.4.1', releaseVersion: '0.2.1-rc.2.omd.0.99.0', releaseTag: 'v0.2.1-rc.2.omd.0.99.0', asset: 'dsh-ops-0.2.1-rc.2.ops.0.1.0.tgz', sha256: 'd2a13073db75f11b7262b388c786bfb8fab35e541e35938f67bc0dd90dfe04c5', dsh: '0.2.1-rc.2', allowPrerelease: true },
+      '0.2.1-rc.1': { version: '0.2.1-rc.1.ops.0.1.0', upstreamVersion: '0.4.1', releaseVersion: '0.2.1-rc.1.omd.0.99.0', releaseTag: 'v0.2.1-rc.1.omd.0.99.0', asset: 'dsh-ops-0.2.1-rc.1.ops.0.1.0.tgz', sha256: '5343ead8b3816f0e070f254da5cc95a98abb173fc3440881888c16d55f8b325c', dsh: '0.2.1-rc.1', allowPrerelease: true },
     },
   },
   {
@@ -38,8 +38,8 @@ export const recommendedPlugins = [
     description: '在回答中使用交互图表、表单、计算器、模拟和小游戏。',
     category: '界面增强', url: 'https://github.com/gulagala001/dsh-intelligent-ui', githubRelease: 'gulagala001/dsh-intelligent-ui',
     hostBuilds: {
-      '0.2.1-rc.2': { version: '0.2.1-rc.2.iui.1.0.10', releaseTag: 'v0.2.1-rc.2.iui.1.0.10', asset: 'dsh-intelligent-ui-0.2.1-rc.2.iui.1.0.10.tgz', sha256: 'e09a2e1e911482a23bdb23d61562cf421868dc2cef5dc9113ec7c590210bd51f', dsh: '0.2.1-rc.2', allowPrerelease: true },
-      '0.2.1-rc.1': { version: '0.2.1-rc.1.iui.1.0.10', releaseTag: 'v0.2.1-rc.1.iui.1.0.10', asset: 'dsh-intelligent-ui-0.2.1-rc.1.iui.1.0.10.tgz', sha256: 'cc1f97255889ea2100ec2f020615d2081f9dd816daf72a76e40cbb577cabd867', dsh: '0.2.1-rc.1', allowPrerelease: true },
+      '0.2.1-rc.2': { version: '0.2.1-rc.2.iui.1.0.11', releaseTag: 'v0.2.1-rc.2.iui.1.0.11', asset: 'dsh-intelligent-ui-0.2.1-rc.2.iui.1.0.11.tgz', sha256: '9e355ba93a24a53f928d2970d9c8af5e291eab047cd5ec0e5d11e2b88f65e468', dsh: '0.2.1-rc.2', allowPrerelease: false },
+      '0.2.1-rc.1': { version: '0.2.1-rc.1.iui.1.0.11', releaseTag: 'v0.2.1-rc.1.iui.1.0.11', asset: 'dsh-intelligent-ui-0.2.1-rc.1.iui.1.0.11.tgz', sha256: 'ed2f5b40afea2faf975513f1e44ab45c792bbee77cae0e8ec6b01ac15f7a70db', dsh: '0.2.1-rc.1', allowPrerelease: false },
     },
     historicalHostBuilds: {
       '0.2.1-rc.2': { version: '0.2.1-rc.2.iui.1.0.9' },
@@ -58,8 +58,8 @@ export const recommendedPlugins = [
     description: '选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。',
     category: '智能体', url: 'https://github.com/gulagala001/oh-my-agents-above-all', githubRelease: 'gulagala001/oh-my-agents-above-all',
     hostBuilds: {
-      '0.2.1-rc.2': { version: '0.2.1-rc.2.omaa.0.16.3', releaseTag: 'v0.2.1-rc.2.omaa.0.16.3', asset: 'oh-my-agents-above-all-0.2.1-rc.2.omaa.0.16.3.tgz', sha256: '74fba4fa2b08c0cbc185b6de23b8f815bce21e1c0ca7de1b31de5f3d7b4a494c', dsh: '0.2.1-rc.2', allowPrerelease: true },
-      '0.2.1-rc.1': { version: '0.2.1-rc.1.omaa.0.16.3', releaseTag: 'v0.2.1-rc.1.omaa.0.16.3', asset: 'oh-my-agents-above-all-0.2.1-rc.1.omaa.0.16.3.tgz', sha256: '34b46defce9802c5c19028b585ce25d14ea98dc166283c02a6400f3a836e64c3', dsh: '0.2.1-rc.1', allowPrerelease: true },
+      '0.2.1-rc.2': { version: '0.2.1-rc.2.omaa.0.16.5', releaseTag: 'v0.2.1-rc.2.omaa.0.16.5', asset: 'oh-my-agents-above-all-0.2.1-rc.2.omaa.0.16.5.tgz', sha256: '15cafa081ea7f1a8b7f88a1dc8331ee85e5da0f84ff92e6093a48dadd7885ac1', dsh: '0.2.1-rc.2', allowPrerelease: false },
+      '0.2.1-rc.1': { version: '0.2.1-rc.1.omaa.0.16.5', releaseTag: 'v0.2.1-rc.1.omaa.0.16.5', asset: 'oh-my-agents-above-all-0.2.1-rc.1.omaa.0.16.5.tgz', sha256: 'e67576fda249ee29f4e521abaf110cdeefed3d386010239a3c53b74724bf5d9d', dsh: '0.2.1-rc.1', allowPrerelease: false },
     },
   },
   {
@@ -153,6 +153,6 @@ export function resolveRecommendedPlugin(plugin, hostVersion) {
   if (plugin.unavailable && (!plugin.unavailableHosts || plugin.unavailableHosts.includes(hostVersion))) return { ...plugin, review };
   if (!review) return { ...plugin, review: undefined, unavailable: hostVersion ? `当前 DSH ${hostVersion} 没有已核验的对应构建，暂不提供安装或更新。支持的完整宿主版本：${supportedHosts.join('、')}。已有安装仍可卸载。` : '未能核实当前 DSH 完整版本，暂不提供安装或更新。已有安装仍可卸载。', unavailableHosts: undefined };
   const prefix = hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.';
-  const valid = review.dsh === hostVersion && typeof review.version === 'string' && review.version.startsWith(prefix) && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.version.slice(prefix.length)) && review.releaseTag === 'v' + review.version && review.asset === plugin.packageName + '-' + review.version + '.tgz' && /^[a-f0-9]{64}$/.test(review.sha256 ?? '');
+  const valid = review.dsh === hostVersion && typeof review.version === 'string' && review.version.startsWith(prefix) && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.version.slice(prefix.length)) && review.releaseTag === 'v' + (review.releaseVersion || review.version) && (!review.releaseVersion || (plugin.id === 'dsh-ops' && review.releaseVersion === hostVersion + '.omd.0.99.0')) && review.asset === plugin.packageName + '-' + review.version + '.tgz' && /^[a-f0-9]{64}$/.test(review.sha256 ?? '');
   return { ...plugin, review, unavailable: valid ? null : `DSH ${hostVersion} 对应的 ${plugin.name} 核验发行包尚未准备完成，暂不提供安装或更新。`, unavailableHosts: undefined };
 }

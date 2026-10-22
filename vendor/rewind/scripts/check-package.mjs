@@ -2,7 +2,7 @@ import {execFileSync} from 'node:child_process';
 import {readFile,access} from 'node:fs/promises';
 const root=new URL('../',import.meta.url);
 const forbiddenPath=path=>/(^|\/)(?:node_modules|\.local|dist|data|work|test-results|playwright-report|AGENTS\.md|CLAUDE\.md|AI_README\.md|PLAN\.md)(\/|$)|\.log$|\.tgz$|\.env(?:\.|$)/.test(path);
-const publicPath=path=>/^(?:\.gitignore|\.github\/workflows\/[^/]+\.ya?ml|LICENSE(?:\.[\w-]+)?|THIRD_PARTY_NOTICES\.md|README(?:\.(?:zh|en)|_EN)?\.md|package(?:-lock)?\.json|cordis\.patch\.yml|(?:src|lib|scripts|test)\/.+\.(?:mjs|js|jsx|cjs|json)|docs\/(?:[^/]+\.md|images\/[^/]+\.(?:png|jpe?g|webp|svg)))$/.test(path);
+const publicPath=path=>/^(?:\.gitignore|\.github\/workflows\/[^/]+\.ya?ml|LICENSE(?:\.[\w-]+)?|THIRD_PARTY_NOTICES\.md|CHANGELOG\.md|README(?:\.(?:zh|en)|_EN)?\.md|package(?:-lock)?\.json|cordis\.patch\.yml|(?:src|lib|scripts|test)\/.+\.(?:mjs|js|jsx|cjs|json)|docs\/(?:[^/]+\.md|images\/[^/]+\.(?:png|jpe?g|webp|svg)))$/.test(path);
 const check=(paths,label)=>{const bad=paths.filter(path=>forbiddenPath(path)||!publicPath(path));if(bad.length)throw Error(label+': '+bad.join(', '));};
 const checkContent=(path,data)=>{
   if(!/\.(?:mjs|js|jsx|cjs|json|md|yml|yaml)$/.test(path))return;

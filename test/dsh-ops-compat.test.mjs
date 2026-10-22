@@ -45,7 +45,7 @@ test('OPS installation is pinned per full host, and incompatible installed versi
     assert.equal(plugin.unavailable, null);
     assert.equal(plugin.review.dsh, host);
     assert.equal(plugin.review.upstreamVersion, '0.4.1');
-    assert.match(pluginInstallSpec(plugin, plugin.review.version), new RegExp(`/releases/download/v${host.replaceAll('.', '\\.')}\\.ops\\.0\\.1\\.0/`));
+    assert.match(pluginInstallSpec(plugin, plugin.review.version), new RegExp(`/releases/download/v${host.replaceAll('.', '\\.')}\\.omd\\.0\\.99\\.0/`));
     assert.throws(() => pluginInstallSpec(plugin, '9.0.0'));
   }
   for (const host of [null, '0.2.1', '0.2.1-rc.3', '0.2.2']) assert.ok(resolveRecommendedPlugin(entry, host).unavailable);
