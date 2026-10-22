@@ -54,3 +54,5 @@
 [反馈 Bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [提出建议](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [推荐插件](plugin-submissions.md) · [更新记录](../CHANGELOG.md) · [来源与许可](../THIRD_PARTY_NOTICES.md)
 
 提供完整版本、运行方式、最短复现与第一处脱敏错误。不要上传凭据或整个数据目录。
+
+[项目、组件与致谢](components.md) · [文档结构与维护](documentation.md)

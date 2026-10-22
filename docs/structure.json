@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "documents": [
+    {
+      "path": "CHANGELOG.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "role": "development",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "README.md",
+      "role": "home",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "README_EN.md",
+      "role": "home",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "role": "sources",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/README.md",
+      "role": "index",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/README_EN.md",
+      "role": "index",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/architecture.md",
+      "role": "development",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/architecture_EN.md",
+      "role": "development",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/claude-cli-terminal.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/codex-desktop.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/computer-use.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/context-optimization.md",
+      "role": "guide",
+      "language": "bilingual",
+      "site": true
+    },
+    {
+      "path": "docs/context-workflow.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/deepseek-workbench.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/development.md",
+      "role": "development",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/development_EN.md",
+      "role": "development",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/documentation.md",
+      "role": "development",
+      "language": "bilingual",
+      "site": true
+    },
+    {
+      "path": "docs/dream-memory.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/dsh-ops.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/dsh-ops_EN.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/extensions.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/getting-started.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/getting-started_EN.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/google-material-expressive.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/install.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/install_EN.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/ios-liquid-glass.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/monitoring.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/open-design.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/plugin-compatibility.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/plugin-compatibility_EN.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/plugin-submissions.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/prompt-adaptation.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/release-0.99.0.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
+    },
+    {
+      "path": "docs/release-0.99.1.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
+    },
+    {
+      "path": "docs/releases.md",
+      "role": "release",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/runtime-state-background.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/showcase.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/showcase_EN.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/site/README.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/site/README_EN.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/skins.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/troubleshooting.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/troubleshooting_EN.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/upgrade.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/upgrade_EN.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/upstream-patches/README.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/usage.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/usage_EN.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/windows.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "docs/workflow.md",
+      "role": "guide",
+      "language": "zh",
+      "site": true
+    },
+    {
+      "path": "scripts/simulator/README.md",
+      "role": "development",
+      "language": "zh",
+      "site": false
+    },
+    {
+      "path": "docs/components.md",
+      "role": "sources",
+      "language": "zh",
+      "translation": "docs/components_EN.md",
+      "site": true
+    },
+    {
+      "path": "docs/components_EN.md",
+      "role": "sources",
+      "language": "en",
+      "translation": "docs/components.md",
+      "site": true
+    }
+  ]
+}

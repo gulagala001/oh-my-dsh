@@ -161,3 +161,35 @@ The repository contains code and materials from multiple sources; a blanket MIT 
 For a bug report, include the full DSH and plugin versions, the entry point, minimal reproduction steps, and expected versus actual behavior. Remove private data before sharing logs or screenshots.
 
 <p align="center"><a href="#readme-top">Back to top</a> · <a href="https://github.com/gulagala001/oh-my-dsh/releases">Versions and downloads</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">Feedback</a></p>
+
+[Documentation structure and contributing](docs/documentation.md)
+
+<!-- project-credits:start -->
+## Projects, components and acknowledgements
+
+[Complete project, source and dependency inventory](docs/components_EN.md)
+
+| Project | Purpose |
+| --- | --- |
+| [OpenCU](https://github.com/gulagala001/opencu) | Computer and browser observation, interaction, annotations and previews |
+| [DSH Workflow](https://github.com/gulagala001/dsh-workflow) | Task planning, execution, budgets and recovery |
+| [DSH Rewind](https://github.com/gulagala001/dsh-undo-plugin) | Turn undo and conversation rewind |
+| [DSH Persona](https://github.com/gulagala001/dsh-persona-plugin) | Personality import, management and global or per-chat selection |
+| [DSH Extensions](https://github.com/gulagala001/dsh-extensions) | Manage skills, MCP, instructions, commands and hooks |
+| [DeepSeek Workbench](https://github.com/gulagala001/dsh-deepseek-workbench) | DeepSeek web workspace and conversation import |
+| [DSH BTW](https://github.com/gulagala001/dsh-btw) | Side chats, local history, follow-ups and independent cancellation |
+| [DSH Theme](https://github.com/gulagala001/dsh-theme-plugin) | Themes, colors, backgrounds, fonts and appearance management |
+| [Glyph](https://github.com/gulagala001/dsh-theme-plugin) | Animated character interface and whale visuals |
+| [Billion Context](https://github.com/ranxianglei/billion-context) | Long-context compression, original-content recovery and cache diagnostics. |
+| [dsh-ops](https://github.com/T-Auto/dsh-ops) | Bounded file, document and shell tools with on-demand discovery. |
+| [DSH Intelligent UI](https://github.com/gulagala001/dsh-intelligent-ui) | Interactive charts, forms, calculators, simulations and games in answers. |
+| [Oh My Agents Above All](https://github.com/gulagala001/oh-my-agents-above-all) | Agent presets and interfaces for Codex, Claude Code, Grok, Pi and ZCode workflows. |
+| [Subscription Login](https://github.com/V1ki/dsh-plugin-subscriptions) | Connect supported subscription providers and discover models. |
+| [OpenDesign](https://github.com/omegapaopao/dsh-open-design) | Design skills, templates and design systems. |
+| [Prompt Optimizer](https://github.com/WestFox-AwA/dsh-prompt-optimizer) | Review and clarify requests before sending. |
+| [DSH Market](https://github.com/dsh-market/dsh-market) | Browse and manage community plugins and themes. |
+| [Infinite Gen 4](https://github.com/Minglink/dsh-infinite-gen-4) | Prompt research and response-state presentation. |
+| [Status Rotator](https://github.com/01Virex/dsh-status-rotator) | Rotating activity text in the interface. |
+| [DSH × Blender](https://github.com/sixtysevenlf/dsh-blender-plugin) | Connect DSH tools to Blender. |
+| [Balance Whale Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget) | Usage and balance widget with interactive characters. |
+<!-- project-credits:end -->

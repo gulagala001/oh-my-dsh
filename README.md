@@ -161,3 +161,35 @@ https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.99.
 反馈时请提供完整 DSH／插件版本、实际入口、最小复现步骤，以及预期和实际表现；日志与截图先移除私人数据。
 
 <p align="center"><a href="#readme-top">返回顶部</a> · <a href="https://github.com/gulagala001/oh-my-dsh/releases">版本与下载</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈</a></p>
+
+[文档结构与贡献](docs/documentation.md)
+
+<!-- project-credits:start -->
+## 项目、组件与致谢
+
+[完整项目、来源与依赖清单](docs/components.md)
+
+| 项目 | 用途 |
+| --- | --- |
+| [OpenCU](https://github.com/gulagala001/opencu) | 电脑与浏览器观察、操作、批注和预览 |
+| [DSH Workflow](https://github.com/gulagala001/dsh-workflow) | 任务规划、执行、预算与恢复 |
+| [DSH Rewind](https://github.com/gulagala001/dsh-undo-plugin) | 完整回合撤回与会话回退 |
+| [DSH Persona](https://github.com/gulagala001/dsh-persona-plugin) | 人格导入、管理、全局和会话选择 |
+| [DSH Extensions](https://github.com/gulagala001/dsh-extensions) | 管理技能、MCP、指令、命令与 Hooks |
+| [DeepSeek Workbench](https://github.com/gulagala001/dsh-deepseek-workbench) | DeepSeek 网页工作台和历史导入 |
+| [DSH BTW](https://github.com/gulagala001/dsh-btw) | 临时旁聊、历史、追问和独立停止 |
+| [DSH Theme](https://github.com/gulagala001/dsh-theme-plugin) | 主题、配色、背景、字体和外观管理 |
+| [Glyph](https://github.com/gulagala001/dsh-theme-plugin) | 动态字符界面与字符鲸鱼视觉 |
+| [Billion Context](https://github.com/ranxianglei/billion-context) | 管理长会话的上下文压缩、原文恢复和缓存诊断；在 OMD 上下文页按会话切换。 |
+| [dsh-ops](https://github.com/T-Auto/dsh-ops) | 增强文件、文档与命令操作，按需加载工具并复用结果；支持普通模式和 PTC，保留原生工具。 |
+| [DSH Intelligent UI](https://github.com/gulagala001/dsh-intelligent-ui) | 在回答中使用交互图表、表单、计算器、模拟和小游戏。 |
+| [Oh My Agents Above All](https://github.com/gulagala001/oh-my-agents-above-all) | 选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。 |
+| [Subscription Login](https://github.com/V1ki/dsh-plugin-subscriptions) | 直接登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。 |
+| [OpenDesign](https://github.com/omegapaopao/dsh-open-design) | 使用 52 个设计技能、模板和设计系统，技能入口为 open-design。 |
+| [Prompt Optimizer](https://github.com/WestFox-AwA/dsh-prompt-optimizer) | 发送前梳理本轮需求，保留原话，支持审查、自动模式和只读查证；启用后可在输入框选择模式。 |
+| [DSH Market](https://github.com/dsh-market/dsh-market) | 在 DSH 内浏览、搜索和安装社区插件与主题，支持分类筛选、更新管理及配置备份。安装后在设置中打开插件市场。 |
+| [Infinite Gen 4](https://github.com/Minglink/dsh-infinite-gen-4) | 用于提示词对抗研究和回复状态展示；启用后会向所有会话注入内容生成提示词。 |
+| [Status Rotator](https://github.com/01Virex/dsh-status-rotator) | 把“深度求索中…”替换为轮换文案，支持打字机、彩色渐变、弹幕和主题词库，可在设置中编辑。 |
+| [DSH × Blender](https://github.com/sixtysevenlf/dsh-blender-plugin) | 让模型直接操控 Blender：查看视口、编辑场景、渲染、批量任务与事务回滚。需要 Blender 及配套连接插件。 |
+| [Balance Whale Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget) | 在 DSH 界面显示 DeepSeek 余额、今日用量与每轮消耗，支持拖拽吸附、自定义角色和互动泡泡。 |
+<!-- project-credits:end -->

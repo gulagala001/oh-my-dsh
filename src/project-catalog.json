@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "projects": [
+    {
+      "id": "opencu",
+      "name": "OpenCU",
+      "url": "https://github.com/gulagala001/opencu",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "电脑与浏览器观察、操作、批注和预览",
+        "en": "Computer and browser observation, interaction, annotations and previews"
+      },
+      "relationship": {
+        "zh": "内置插件；支持独立安装与共装",
+        "en": "Bundled plugin; also distributed independently"
+      },
+      "source": "vendor/opencu/package.json",
+      "license": "See component notices",
+      "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "id": "workflow",
+      "name": "DSH Workflow",
+      "url": "https://github.com/gulagala001/dsh-workflow",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "任务规划、执行、预算与恢复",
+        "en": "Task planning, execution, budgets and recovery"
+      },
+      "relationship": {
+        "zh": "内置工作流插件",
+        "en": "Bundled workflow plugin"
+      },
+      "source": "vendor/workflow/package.json",
+      "license": "MIT",
+      "notice": "vendor/workflow/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "id": "rewind",
+      "name": "DSH Rewind",
+      "url": "https://github.com/gulagala001/dsh-undo-plugin",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "完整回合撤回与会话回退",
+        "en": "Turn undo and conversation rewind"
+      },
+      "relationship": {
+        "zh": "内置撤回插件",
+        "en": "Bundled undo plugin"
+      },
+      "source": "vendor/rewind/package.json",
+      "license": "MIT",
+      "notice": "vendor/rewind/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "id": "persona",
+      "name": "DSH Persona",
+      "url": "https://github.com/gulagala001/dsh-persona-plugin",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "人格导入、管理、全局和会话选择",
+        "en": "Personality import, management and global or per-chat selection"
+      },
+      "relationship": {
+        "zh": "内置人格插件",
+        "en": "Bundled personality plugin"
+      },
+      "source": "plugins/persona/package.json",
+      "license": "MIT",
+      "notice": "plugins/persona/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "id": "dsh-extensions",
+      "name": "DSH Extensions",
+      "url": "https://github.com/gulagala001/dsh-extensions",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "管理技能、MCP、指令、命令与 Hooks",
+        "en": "Manage skills, MCP, instructions, commands and hooks"
+      },
+      "relationship": {
+        "zh": "内置扩展管理插件",
+        "en": "Bundled extension management plugin"
+      },
+      "source": "plugins/dsh-extensions/package.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "id": "dsh-deepseek-workbench",
+      "name": "DeepSeek Workbench",
+      "url": "https://github.com/gulagala001/dsh-deepseek-workbench",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "DeepSeek 网页工作台和历史导入",
+        "en": "DeepSeek web workspace and conversation import"
+      },
+      "relationship": {
+        "zh": "内置工作台插件",
+        "en": "Bundled workspace plugin"
+      },
+      "source": "plugins/deepseek-workbench/package.json",
+      "license": "MIT",
+      "notice": "plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "id": "btw",
+      "name": "DSH BTW",
+      "url": "https://github.com/gulagala001/dsh-btw",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "临时旁聊、历史、追问和独立停止",
+        "en": "Side chats, local history, follow-ups and independent cancellation"
+      },
+      "relationship": {
+        "zh": "内置旁聊插件",
+        "en": "Bundled side-chat plugin"
+      },
+      "source": "vendor/btw/package.json",
+      "license": "MIT",
+      "notice": "vendor/btw/LICENSE"
+    },
+    {
+      "id": "theme",
+      "name": "DSH Theme",
+      "url": "https://github.com/gulagala001/dsh-theme-plugin",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "主题、配色、背景、字体和外观管理",
+        "en": "Themes, colors, backgrounds, fonts and appearance management"
+      },
+      "relationship": {
+        "zh": "独立产品；OMD 与它共用外观源码",
+        "en": "Independent product sharing appearance source with OMD"
+      },
+      "source": "src/client/skins/runtime.mjs",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons"
+    },
+    {
+      "id": "glyph",
+      "name": "Glyph",
+      "url": "https://github.com/gulagala001/dsh-theme-plugin",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "动态字符界面与字符鲸鱼视觉",
+        "en": "Animated character interface and whale visuals"
+      },
+      "relationship": {
+        "zh": "主题组件；随主题插件提供",
+        "en": "Theme component distributed with DSH Theme"
+      },
+      "source": "plugins/glyph-theme/package.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md"
+    },
+    {
+      "id": "dsh",
+      "name": "DeepSeek Harness / Cordis",
+      "url": "https://github.com/deepseek-ai/deepseek-harness",
+      "authors": "DeepSeek and contributors",
+      "purpose": {
+        "zh": "宿主、会话、工具与界面组件",
+        "en": "Host, sessions, tools and UI components"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "vendor/dsh.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md#dsh"
+    },
+    {
+      "id": "rea",
+      "name": "Codex frontend / REA",
+      "url": "https://openai.com/codex/",
+      "authors": "OpenAI; source extraction via REA",
+      "purpose": {
+        "zh": "OpenCU 使用的原始界面组件及来源记录",
+        "en": "Original frontend assets used by OpenCU and provenance"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "vendor/opencu/lib/rea-assets/manifest.json",
+      "license": "Original upstream rights apply",
+      "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
+      "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json"
+    },
+    {
+      "id": "models-dev",
+      "name": "models.dev",
+      "url": "https://github.com/sst/models.dev",
+      "authors": "models.dev contributors",
+      "purpose": {
+        "zh": "模型价格数据",
+        "en": "Model pricing data"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/monitor-prices.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md#modelsdev-api-pricing-data"
+    },
+    {
+      "id": "prompt-templates",
+      "name": "Prompt Optimizer",
+      "url": "https://github.com/linshenkx/prompt-optimizer",
+      "authors": "linshenkx and contributors",
+      "purpose": {
+        "zh": "提示词优化模板",
+        "en": "Prompt optimization templates"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "vendor/prompt-optimizer/manifest.json",
+      "license": "MIT at pinned revision",
+      "notice": "THIRD_PARTY_NOTICES.md#prompt-optimizer-templates"
+    },
+    {
+      "id": "google-sans-flex",
+      "name": "Google Sans Flex",
+      "url": "https://github.com/googlefonts/googlesans-flex",
+      "authors": "Google and contributors",
+      "purpose": {
+        "zh": "Google Material 字体",
+        "en": "Google Material typeface"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/google-material-expressive/assets/fonts.json",
+      "license": "OFL-1.1",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons"
+    },
+    {
+      "id": "google-sans-code",
+      "name": "Google Sans Code",
+      "url": "https://github.com/googlefonts/googlesans-code",
+      "authors": "Google and contributors",
+      "purpose": {
+        "zh": "Google Material 等宽字体",
+        "en": "Google Material monospace typeface"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/google-material-expressive/assets/fonts.json",
+      "license": "OFL-1.1",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons"
+    },
+    {
+      "id": "noto",
+      "name": "Noto Sans SC",
+      "url": "https://github.com/google/fonts",
+      "authors": "Google and contributors",
+      "purpose": {
+        "zh": "中文字体子集",
+        "en": "Chinese font subsets"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/google-material-expressive/assets/fonts.json",
+      "license": "OFL-1.1",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons"
+    },
+    {
+      "id": "material-symbols",
+      "name": "Material Symbols",
+      "url": "https://github.com/google/material-design-icons",
+      "authors": "Google and contributors",
+      "purpose": {
+        "zh": "Google Material 图标",
+        "en": "Google Material icons"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/google-material-expressive/assets/fonts.json",
+      "license": "Apache-2.0",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons"
+    },
+    {
+      "id": "jetbrains-mono",
+      "name": "JetBrains Mono",
+      "url": "https://github.com/JetBrains/JetBrainsMono",
+      "authors": "JetBrains and contributors",
+      "purpose": {
+        "zh": "Claude CLI 主题字体",
+        "en": "Claude CLI theme typeface"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/claude-cli-terminal/assets/OFL.txt",
+      "license": "OFL-1.1",
+      "notice": "THIRD_PARTY_NOTICES.md#other-bundled-skin-fonts"
+    },
+    {
+      "id": "claude-prompt",
+      "name": "Claude Code prompt reference",
+      "url": "https://github.com/asgeirtj/system_prompts_leaks",
+      "authors": "Anthropic; snapshot maintained by asgeirtj",
+      "purpose": {
+        "zh": "主代理提示词适配的固定比较来源",
+        "en": "Pinned comparison source for agent prompt adaptation"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/cc-adaptation/prompts/main/01-identity.md",
+      "license": "Original upstream rights apply",
+      "notice": "THIRD_PARTY_NOTICES.md#codegraph"
+    }
+  ]
+}

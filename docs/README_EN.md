@@ -52,3 +52,5 @@ Topics without an English edition are marked **Chinese**.
 [Report a bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) · [Suggest a feature](https://github.com/gulagala001/oh-my-dsh/issues/new?template=feature-request.yml) · [Recommend a plugin (Chinese)](plugin-submissions.md) · [Changelog](../CHANGELOG.md) · [Sources and licensing](../THIRD_PARTY_NOTICES.md)
 
 Provide full versions, your launch method, a minimal reproduction and the first redacted error. Do not upload credentials or the entire data directory.
+
+[Projects, components and acknowledgements](components_EN.md) · [Documentation structure](documentation.md)

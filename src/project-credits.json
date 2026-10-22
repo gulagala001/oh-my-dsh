@@ -1,0 +1,614 @@
+{
+  "schemaVersion": 1,
+  "projects": [
+    {
+      "id": "opencu",
+      "name": "OpenCU",
+      "url": "https://github.com/gulagala001/opencu",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "电脑与浏览器观察、操作、批注和预览",
+        "en": "Computer and browser observation, interaction, annotations and previews"
+      },
+      "relationship": {
+        "zh": "内置插件；支持独立安装与共装",
+        "en": "Bundled plugin; also distributed independently"
+      },
+      "source": "vendor/opencu/package.json",
+      "license": "See component notices",
+      "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
+      "version": "2.0.7-dsh.0.2.1-rc.2",
+      "sourceSha256": "8db3121a12e059242d759c2c74ff56203c83f05158bc37ae52c34225a8cd8175",
+      "group": "products"
+    },
+    {
+      "id": "workflow",
+      "name": "DSH Workflow",
+      "url": "https://github.com/gulagala001/dsh-workflow",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "任务规划、执行、预算与恢复",
+        "en": "Task planning, execution, budgets and recovery"
+      },
+      "relationship": {
+        "zh": "内置工作流插件",
+        "en": "Bundled workflow plugin"
+      },
+      "source": "vendor/workflow/package.json",
+      "license": "MIT",
+      "notice": "vendor/workflow/THIRD_PARTY_NOTICES.md",
+      "version": "0.1.2-dsh.0.2.1-rc.2",
+      "sourceSha256": "f4aff2a2bf4f44e044abe3521471b6cbaf9db7e4fe9a7d445ea73f419ab9d16a",
+      "group": "products"
+    },
+    {
+      "id": "rewind",
+      "name": "DSH Rewind",
+      "url": "https://github.com/gulagala001/dsh-undo-plugin",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "完整回合撤回与会话回退",
+        "en": "Turn undo and conversation rewind"
+      },
+      "relationship": {
+        "zh": "内置撤回插件",
+        "en": "Bundled undo plugin"
+      },
+      "source": "vendor/rewind/package.json",
+      "license": "MIT",
+      "notice": "vendor/rewind/THIRD_PARTY_NOTICES.md",
+      "version": "0.1.1-dsh.0.2.1-rc.2",
+      "sourceSha256": "9a79b12f677f1128b65df9c65db9b5e0acfd921880b75d1bee51b14cc50e4b4c",
+      "group": "products"
+    },
+    {
+      "id": "persona",
+      "name": "DSH Persona",
+      "url": "https://github.com/gulagala001/dsh-persona-plugin",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "人格导入、管理、全局和会话选择",
+        "en": "Personality import, management and global or per-chat selection"
+      },
+      "relationship": {
+        "zh": "内置人格插件",
+        "en": "Bundled personality plugin"
+      },
+      "source": "plugins/persona/package.json",
+      "license": "MIT",
+      "notice": "plugins/persona/THIRD_PARTY_NOTICES.md",
+      "version": "0.1.0-dsh.0.2.1-rc.2",
+      "sourceSha256": "45d48d4fb976d60fa0c8f5d0f0b59ece149faf72d81da7f7640ebad2194ee32c",
+      "group": "products"
+    },
+    {
+      "id": "dsh-extensions",
+      "name": "DSH Extensions",
+      "url": "https://github.com/gulagala001/dsh-extensions",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "管理技能、MCP、指令、命令与 Hooks",
+        "en": "Manage skills, MCP, instructions, commands and hooks"
+      },
+      "relationship": {
+        "zh": "内置扩展管理插件",
+        "en": "Bundled extension management plugin"
+      },
+      "source": "plugins/dsh-extensions/package.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md",
+      "version": "0.1.0-dsh.0.2.1-rc.2",
+      "sourceSha256": "17c9bb04554868c613a17dbc39e79f57dbe70797eb9f90845c7876895f8c85f4",
+      "group": "products"
+    },
+    {
+      "id": "dsh-deepseek-workbench",
+      "name": "DeepSeek Workbench",
+      "url": "https://github.com/gulagala001/dsh-deepseek-workbench",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "DeepSeek 网页工作台和历史导入",
+        "en": "DeepSeek web workspace and conversation import"
+      },
+      "relationship": {
+        "zh": "内置工作台插件",
+        "en": "Bundled workspace plugin"
+      },
+      "source": "plugins/deepseek-workbench/package.json",
+      "license": "MIT",
+      "notice": "plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md",
+      "version": "0.1.1-dsh.0.2.1-rc.2",
+      "sourceSha256": "75327be7de8331949fe4b2dc76393ae1cfe6f504c6c162858260ea452082b873",
+      "group": "products"
+    },
+    {
+      "id": "btw",
+      "name": "DSH BTW",
+      "url": "https://github.com/gulagala001/dsh-btw",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "临时旁聊、历史、追问和独立停止",
+        "en": "Side chats, local history, follow-ups and independent cancellation"
+      },
+      "relationship": {
+        "zh": "内置旁聊插件",
+        "en": "Bundled side-chat plugin"
+      },
+      "source": "vendor/btw/package.json",
+      "license": "MIT",
+      "notice": "vendor/btw/LICENSE",
+      "version": "0.1.2-dsh.0.2.1-rc.2",
+      "sourceSha256": "695ddf1af15830044e76129cb88d52a2b84283bcef2c30ccc5cb5340e472f951",
+      "group": "products"
+    },
+    {
+      "id": "theme",
+      "name": "DSH Theme",
+      "url": "https://github.com/gulagala001/dsh-theme-plugin",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "主题、配色、背景、字体和外观管理",
+        "en": "Themes, colors, backgrounds, fonts and appearance management"
+      },
+      "relationship": {
+        "zh": "独立产品；OMD 与它共用外观源码",
+        "en": "Independent product sharing appearance source with OMD"
+      },
+      "source": "src/client/skins/runtime.mjs",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
+      "version": "SHA256:4ed8fbb028b05c579a4700d52d7290ca3ae7c697fb9204504de563d79949d0bb",
+      "sourceSha256": "4ed8fbb028b05c579a4700d52d7290ca3ae7c697fb9204504de563d79949d0bb",
+      "group": "products"
+    },
+    {
+      "id": "glyph",
+      "name": "Glyph",
+      "url": "https://github.com/gulagala001/dsh-theme-plugin",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "动态字符界面与字符鲸鱼视觉",
+        "en": "Animated character interface and whale visuals"
+      },
+      "relationship": {
+        "zh": "主题组件；随主题插件提供",
+        "en": "Theme component distributed with DSH Theme"
+      },
+      "source": "plugins/glyph-theme/package.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md",
+      "version": "1.0.0-dsh.0.2.1-rc.2",
+      "sourceSha256": "7eef8764029bdd3865ac798df4a88664c7773290f8532f26946d2438969f1c5a",
+      "group": "products"
+    },
+    {
+      "id": "dsh",
+      "name": "DeepSeek Harness / Cordis",
+      "url": "https://github.com/deepseek-ai/deepseek-harness",
+      "authors": "DeepSeek and contributors",
+      "purpose": {
+        "zh": "宿主、会话、工具与界面组件",
+        "en": "Host, sessions, tools and UI components"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "vendor/dsh.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md#dsh",
+      "version": "0.2.1-rc.2",
+      "sourceSha256": "0a2e5fb2064985834091ca57b6057e717e2bd3b3ff566459889508e0860eb0a9",
+      "group": "sources"
+    },
+    {
+      "id": "rea",
+      "name": "Codex frontend / REA",
+      "url": "https://openai.com/codex/",
+      "authors": "OpenAI; source extraction via REA",
+      "purpose": {
+        "zh": "OpenCU 使用的原始界面组件及来源记录",
+        "en": "Original frontend assets used by OpenCU and provenance"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "vendor/opencu/lib/rea-assets/manifest.json",
+      "license": "Original upstream rights apply",
+      "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
+      "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json",
+      "version": "SHA256:ce36eedf4afc6cc52b9981b352335cd23bd6513237f2dffab310f0ca7eae3bf5",
+      "sourceSha256": "ce36eedf4afc6cc52b9981b352335cd23bd6513237f2dffab310f0ca7eae3bf5",
+      "group": "sources"
+    },
+    {
+      "id": "models-dev",
+      "name": "models.dev",
+      "url": "https://github.com/sst/models.dev",
+      "authors": "models.dev contributors",
+      "purpose": {
+        "zh": "模型价格数据",
+        "en": "Model pricing data"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/monitor-prices.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md#modelsdev-api-pricing-data",
+      "version": "SHA256:1e6f6274f532e79be26c37cab37a92352b74507f8893345792718c462a9f42ce",
+      "sourceSha256": "1e6f6274f532e79be26c37cab37a92352b74507f8893345792718c462a9f42ce",
+      "group": "sources"
+    },
+    {
+      "id": "prompt-templates",
+      "name": "Prompt Optimizer",
+      "url": "https://github.com/linshenkx/prompt-optimizer",
+      "authors": "linshenkx and contributors",
+      "purpose": {
+        "zh": "提示词优化模板",
+        "en": "Prompt optimization templates"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "vendor/prompt-optimizer/manifest.json",
+      "license": "MIT at pinned revision",
+      "notice": "THIRD_PARTY_NOTICES.md#prompt-optimizer-templates",
+      "version": "SHA256:7d9f0a65779aecd73282732ee6dc6d748ead29ca4da88b0ea6898e4bcef15120",
+      "sourceSha256": "7d9f0a65779aecd73282732ee6dc6d748ead29ca4da88b0ea6898e4bcef15120",
+      "group": "sources"
+    },
+    {
+      "id": "google-sans-flex",
+      "name": "Google Sans Flex",
+      "url": "https://github.com/googlefonts/googlesans-flex",
+      "authors": "Google and contributors",
+      "purpose": {
+        "zh": "Google Material 字体",
+        "en": "Google Material typeface"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/google-material-expressive/assets/fonts.json",
+      "license": "OFL-1.1",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
+      "version": "SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c",
+      "sourceSha256": "60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c",
+      "group": "sources"
+    },
+    {
+      "id": "google-sans-code",
+      "name": "Google Sans Code",
+      "url": "https://github.com/googlefonts/googlesans-code",
+      "authors": "Google and contributors",
+      "purpose": {
+        "zh": "Google Material 等宽字体",
+        "en": "Google Material monospace typeface"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/google-material-expressive/assets/fonts.json",
+      "license": "OFL-1.1",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
+      "version": "SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c",
+      "sourceSha256": "60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c",
+      "group": "sources"
+    },
+    {
+      "id": "noto",
+      "name": "Noto Sans SC",
+      "url": "https://github.com/google/fonts",
+      "authors": "Google and contributors",
+      "purpose": {
+        "zh": "中文字体子集",
+        "en": "Chinese font subsets"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/google-material-expressive/assets/fonts.json",
+      "license": "OFL-1.1",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
+      "version": "SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c",
+      "sourceSha256": "60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c",
+      "group": "sources"
+    },
+    {
+      "id": "material-symbols",
+      "name": "Material Symbols",
+      "url": "https://github.com/google/material-design-icons",
+      "authors": "Google and contributors",
+      "purpose": {
+        "zh": "Google Material 图标",
+        "en": "Google Material icons"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/google-material-expressive/assets/fonts.json",
+      "license": "Apache-2.0",
+      "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
+      "version": "SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c",
+      "sourceSha256": "60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c",
+      "group": "sources"
+    },
+    {
+      "id": "jetbrains-mono",
+      "name": "JetBrains Mono",
+      "url": "https://github.com/JetBrains/JetBrainsMono",
+      "authors": "JetBrains and contributors",
+      "purpose": {
+        "zh": "Claude CLI 主题字体",
+        "en": "Claude CLI theme typeface"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/client/skins/claude-cli-terminal/assets/OFL.txt",
+      "license": "OFL-1.1",
+      "notice": "THIRD_PARTY_NOTICES.md#other-bundled-skin-fonts",
+      "version": "SHA256:a76abf002c49097d146e86740a3105a5d00450b1592e820a1109a8c5680cd697",
+      "sourceSha256": "a76abf002c49097d146e86740a3105a5d00450b1592e820a1109a8c5680cd697",
+      "group": "sources"
+    },
+    {
+      "id": "claude-prompt",
+      "name": "Claude Code prompt reference",
+      "url": "https://github.com/asgeirtj/system_prompts_leaks",
+      "authors": "Anthropic; snapshot maintained by asgeirtj",
+      "purpose": {
+        "zh": "主代理提示词适配的固定比较来源",
+        "en": "Pinned comparison source for agent prompt adaptation"
+      },
+      "relationship": {
+        "zh": "宿主／来源／素材，具体使用范围见来源记录",
+        "en": "Host, source or asset; scope documented in provenance"
+      },
+      "source": "src/cc-adaptation/prompts/main/01-identity.md",
+      "license": "Original upstream rights apply",
+      "notice": "THIRD_PARTY_NOTICES.md#codegraph",
+      "version": "SHA256:eeb4fd3517bf2b72b801c7afa3551eb97af08b998d89df078cea38293ceeb595",
+      "sourceSha256": "eeb4fd3517bf2b72b801c7afa3551eb97af08b998d89df078cea38293ceeb595",
+      "group": "sources"
+    },
+    {
+      "id": "billion-context",
+      "name": "Billion Context",
+      "url": "https://github.com/ranxianglei/billion-context",
+      "authors": "ranxianglei",
+      "purpose": {
+        "zh": "管理长会话的上下文压缩、原文恢复和缓存诊断；在 OMD 上下文页按会话切换。",
+        "en": "Long-context compression, original-content recovery and cache diagnostics."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.1.202",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "dsh-ops",
+      "name": "dsh-ops",
+      "url": "https://github.com/T-Auto/dsh-ops",
+      "authors": "原作者：T-Auto · 兼容适配：gulagala001",
+      "purpose": {
+        "zh": "增强文件、文档与命令操作，按需加载工具并复用结果；支持普通模式和 PTC，保留原生工具。",
+        "en": "Bounded file, document and shell tools with on-demand discovery."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.2.1-rc.2.ops.0.1.0 / 0.2.1-rc.1.ops.0.1.0",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "dsh-intelligent-ui",
+      "name": "DSH Intelligent UI",
+      "url": "https://github.com/gulagala001/dsh-intelligent-ui",
+      "authors": "gulagala001",
+      "purpose": {
+        "zh": "在回答中使用交互图表、表单、计算器、模拟和小游戏。",
+        "en": "Interactive charts, forms, calculators, simulations and games in answers."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.2.1-rc.2.iui.1.0.11 / 0.2.1-rc.1.iui.1.0.11",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "oh-my-agents-above-all",
+      "name": "Oh My Agents Above All",
+      "url": "https://github.com/gulagala001/oh-my-agents-above-all",
+      "authors": "gulagala001",
+      "purpose": {
+        "zh": "选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。",
+        "en": "Agent presets and interfaces for Codex, Claude Code, Grok, Pi and ZCode workflows."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.2.1-rc.2.omaa.0.16.5 / 0.2.1-rc.1.omaa.0.16.5",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "dsh-plugin-subscriptions",
+      "name": "Subscription Login",
+      "url": "https://github.com/V1ki/dsh-plugin-subscriptions",
+      "authors": "原作者：V1ki · OMD 适配：gulagala001",
+      "purpose": {
+        "zh": "直接登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。",
+        "en": "Connect supported subscription providers and discover models."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.9.8-omd.1",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "dsh-open-design",
+      "name": "OpenDesign",
+      "url": "https://github.com/omegapaopao/dsh-open-design",
+      "authors": "omegapaopao · 技能来源：nexu-io/open-design 及各技能作者",
+      "purpose": {
+        "zh": "使用 52 个设计技能、模板和设计系统，技能入口为 open-design。",
+        "en": "Design skills, templates and design systems."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.1.0-omd.1.0.0",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "omd-intent-assistant",
+      "name": "Prompt Optimizer",
+      "url": "https://github.com/WestFox-AwA/dsh-prompt-optimizer",
+      "authors": "原作者：啃轮胎的西狐（WestFox-AwA） · OMD 适配：gulagala001",
+      "purpose": {
+        "zh": "发送前梳理本轮需求，保留原话，支持审查、自动模式和只读查证；启用后可在输入框选择模式。",
+        "en": "Review and clarify requests before sending."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.3.0",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "dsh-market",
+      "name": "DSH Market",
+      "url": "https://github.com/dsh-market/dsh-market",
+      "authors": "dsh-market",
+      "purpose": {
+        "zh": "在 DSH 内浏览、搜索和安装社区插件与主题，支持分类筛选、更新管理及配置备份。安装后在设置中打开插件市场。",
+        "en": "Browse and manage community plugins and themes."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "1.66.14",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "dsh-infinite-gen-4",
+      "name": "Infinite Gen 4",
+      "url": "https://github.com/Minglink/dsh-infinite-gen-4",
+      "authors": "Minglink",
+      "purpose": {
+        "zh": "用于提示词对抗研究和回复状态展示；启用后会向所有会话注入内容生成提示词。",
+        "en": "Prompt research and response-state presentation."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.4.0",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "dsh-status-rotator",
+      "name": "Status Rotator",
+      "url": "https://github.com/01Virex/dsh-status-rotator",
+      "authors": "01Virex",
+      "purpose": {
+        "zh": "把“深度求索中…”替换为轮换文案，支持打字机、彩色渐变、弹幕和主题词库，可在设置中编辑。",
+        "en": "Rotating activity text in the interface."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.35.0",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "dsh-blender-plugin",
+      "name": "DSH × Blender",
+      "url": "https://github.com/sixtysevenlf/dsh-blender-plugin",
+      "authors": "sixtysevenlf",
+      "purpose": {
+        "zh": "让模型直接操控 Blender：查看视口、编辑场景、渲染、批量任务与事务回滚。需要 Blender 及配套连接插件。",
+        "en": "Connect DSH tools to Blender."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "1.0.5",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    },
+    {
+      "id": "dsh-whale-widget",
+      "name": "Balance Whale Widget",
+      "url": "https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget",
+      "authors": "MeteorNOX",
+      "purpose": {
+        "zh": "在 DSH 界面显示 DeepSeek 余额、今日用量与每轮消耗，支持拖拽吸附、自定义角色和互动泡泡。",
+        "en": "Usage and balance widget with interactive characters."
+      },
+      "relationship": {
+        "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",
+        "en": "Optional recommendation; see compatibility guide for current support"
+      },
+      "source": "src/recommended-plugin-catalog.mjs",
+      "version": "0.3.18",
+      "license": "See upstream license and notices",
+      "notice": "docs/plugin-compatibility.md",
+      "group": "optional"
+    }
+  ]
+}

@@ -52,30 +52,6 @@
       "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.0.md"
     },
     {
-      "version": "0.2.1-rc.2.omd.0.19.0",
-      "severity": "normal",
-      "unpublished": true,
-      "title": "接入固定版本 dsh-ops",
-      "notes": [
-        "新增功能：第三方功能页提供 dsh-ops，固定上游 0.4.1 与对应宿主的兼容发行包。",
-        "问题修复：统一普通／PTC 工具作用域与展示，保留后台任务控制、原生工具及权限。",
-        "其他变更：目录更新不跟随 latest，原生工具替换及 OPS 面板默认关闭，停用保留数据。"
-      ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/releases.md"
-    },
-    {
-      "version": "0.2.1-rc.1.omd.0.19.0",
-      "severity": "normal",
-      "unpublished": true,
-      "title": "接入固定版本 dsh-ops",
-      "notes": [
-        "新增功能：第三方功能页提供 dsh-ops，固定上游 0.4.1 与对应宿主的兼容发行包。",
-        "问题修复：统一普通／PTC 工具作用域与展示，保留后台任务控制、原生工具及权限。",
-        "其他变更：目录更新不跟随 latest，原生工具替换及 OPS 面板默认关闭，停用保留数据。"
-      ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/releases.md"
-    },
-    {
       "version": "0.2.1-rc.2.omd.0.18.8",
       "severity": "normal",
       "unpublished": false,
@@ -227,28 +203,6 @@
         "恢复新任务预设选择器与会话标题栏标识，保留会话就绪保护。",
         "包含记忆预处理缓存、Ultra、原生总览与审批／Web CU 修复。",
         "内置 OpenCU 2.0.1；替代已撤回的 OMD 0.18.0。"
-      ]
-    },
-    {
-      "version": "0.2.1-rc.2.omd.0.18.0",
-      "severity": "normal",
-      "unpublished": true,
-      "title": "已撤回：预设入口回归",
-      "notes": [
-        "新增可选记忆预处理缓存，整合 Ultra 与原生会话总览。",
-        "修复审批、Web CU、子智能体／代码预览布局、Purge 共存及图像批注。",
-        "内置 OpenCU 2.0.1，MCP client 更新至 2.2.0。"
-      ]
-    },
-    {
-      "version": "0.2.1-rc.1.omd.0.18.0",
-      "severity": "normal",
-      "unpublished": true,
-      "title": "已撤回：预设入口回归",
-      "notes": [
-        "新增可选记忆预处理缓存，整合 Ultra 与原生会话总览。",
-        "修复审批、Web CU、子智能体／代码预览布局、Purge 共存及图像批注。",
-        "内置 OpenCU 2.0.1，MCP client 更新至 2.2.0。"
       ]
     },
     {

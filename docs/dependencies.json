@@ -1,0 +1,5947 @@
+{
+  "lockFiles": {
+    "pnpm-lock.yaml": "2903b44202eb59146f326c0f0bd63dcf4c86cea998aef820f0ae60ca990508b9",
+    "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml": "df6e43a1bdc827729275c7e65345ed7c84a671eae787197f3a99c468a14b9113",
+    "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml": "98aa09fc8a2abd6789fe7b4c18dc12cec0094119d738a0a3f56a186ef1bd316e",
+    "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml": "77293248eafc9e6fc61e45b94686bc1e991a285792a174c82aea2e8d1a621f4c"
+  },
+  "dependencies": [
+    {
+      "name": "@agentclientprotocol/sdk",
+      "version": "1.4.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@anthropic-ai/sdk",
+      "version": "0.129.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@asamuzakjp/css-color",
+      "version": "3.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@ast-grep/wasm",
+      "version": "0.51.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/client-bedrock-runtime",
+      "version": "3.1127.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/core",
+      "version": "3.977.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/credential-provider-env",
+      "version": "3.972.70",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/credential-provider-http",
+      "version": "3.972.72",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/credential-provider-ini",
+      "version": "3.973.15",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/credential-provider-login",
+      "version": "3.972.77",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/credential-provider-node",
+      "version": "3.972.82",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/credential-provider-process",
+      "version": "3.972.70",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/credential-provider-sso",
+      "version": "3.973.14",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/credential-provider-web-identity",
+      "version": "3.972.76",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/eventstream-handler-node",
+      "version": "3.972.34",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/middleware-eventstream",
+      "version": "3.972.29",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/middleware-websocket",
+      "version": "3.972.52",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/nested-clients",
+      "version": "3.997.44",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/signature-v4-multi-region",
+      "version": "3.996.46",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/token-providers",
+      "version": "3.1116.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/token-providers",
+      "version": "3.1127.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/types",
+      "version": "3.974.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws-sdk/xml-builder",
+      "version": "3.972.40",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@aws/lambda-invoke-store",
+      "version": "0.3.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/code-frame",
+      "version": "7.29.7",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/generator",
+      "version": "7.29.7",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/helper-globals",
+      "version": "7.29.7",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/helper-string-parser",
+      "version": "7.29.7",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/parser",
+      "version": "7.29.7",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/runtime",
+      "version": "7.29.7",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/template",
+      "version": "7.29.7",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/traverse",
+      "version": "7.29.7",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@babel/types",
+      "version": "7.29.8",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@colbymchenry/codegraph-darwin-arm64",
+      "version": "1.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@colbymchenry/codegraph-darwin-x64",
+      "version": "1.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@colbymchenry/codegraph-linux-arm64",
+      "version": "1.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@colbymchenry/codegraph-linux-x64",
+      "version": "1.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@colbymchenry/codegraph-win32-arm64",
+      "version": "1.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@colbymchenry/codegraph-win32-x64",
+      "version": "1.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@colbymchenry/codegraph",
+      "version": "1.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@csstools/color-helpers",
+      "version": "5.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@csstools/css-calc",
+      "version": "2.1.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@csstools/css-color-parser",
+      "version": "3.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@csstools/css-parser-algorithms",
+      "version": "3.0.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@csstools/css-tokenizer",
+      "version": "3.0.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/cordis-plugin-group",
+      "version": "1.0.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/cordis-plugin-include",
+      "version": "1.0.10",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/cordis-plugin-loader",
+      "version": "1.0.6",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/cordis-plugin-timer",
+      "version": "1.1.7",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/cordis",
+      "version": "4.0.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/cosmokit",
+      "version": "1.8.6",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-acp-app",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-acp",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-default-model",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-instructions",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-loop",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-preset-registry",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-preset",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-tool-presentation",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-anonymous-user-id",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-account-controller",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-gateway",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-job-controller",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-remote-access",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-remotes",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-session-controller",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-settings-controller",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-terminal-controller",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-workspace-controller",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-workspace-files",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-app-boot",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-atomic-write",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment-local",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-authorization",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-base",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-bash-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-bash-sandbox",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-brand",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-brand",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-chunked-list",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-connection",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-file-upload",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-hmr",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-locale",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-modules",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-product-analytics",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-resources",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-shortcuts",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-agent-preset",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-approval",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-attachment",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-brand-official",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-chat",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-commands",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-conversation",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-cordis",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-deepseek-model-label-1017",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-deliverables",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-directory-picker-browse",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-directory-picker-native",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-goal",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-input-trigger",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-jobs",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-layout",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-message-feedback",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-model-selection",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-open-in-app",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-permission-presets",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-plan",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-plugin-manager",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-plugin-market",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-reference",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-renderer",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-schedule",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-secret-mask",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-session",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-account",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-agent-loop",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-general",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-models",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-plugin-inventory",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-plugins",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-session-log",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-shell",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-subagent",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-web-search",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-shortcuts",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-sidebar-browser",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-sidebar-documentpreview",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-sidebar-files",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-sidebar-right",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-sidebar-terminal",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-sidebar",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-skill",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-subagent",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-theme",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-tool",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-trajectory",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-user-questions",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-workflow-run",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-workspace",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-cmdline",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-command-compact",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-command-feedback",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-command-goal",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-commands",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-compaction-basic",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-compaction-image-offload",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-compaction-tool-result-pruner",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-compaction",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-config-editor",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-cordis-client-runner",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-cordis-host-runner",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-credentials-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-credentials",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-deepseek-account-platform",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-deepseek-account",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-deepseek-llm-api-extensions",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-deque",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-agent-team-profile",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-agent-team",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-api-speech-to-text",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-auto-review",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-badge-skill-bundle",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-client-ui-agent-team",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-client-ui-cot-translation",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-client-ui-voice-input",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-cot-translation-bundle",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-inspector-profile",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-inspector",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-plugin-market-bundle",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-ralph-bundle",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-session-inspector",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-session-search",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-session-titles-bundle",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-speech-to-text-sensevoice",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-speech-to-text",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-terminal-bundle",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-tool-agent-team",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-tool-worktree",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-translator",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-voice-input-bundle",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-experimental-worktree",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-file-reference-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-file-reference",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs-observation-policy",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs-sandbox",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-goal-round-driver",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-goal",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-harness-dev-context",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-headless",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-hmr",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-home-paths",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-home-paths",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-directory-picker-auto",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-directory-picker-browse",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-directory-picker-native",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-directory-picker",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-frontend-static",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-open-in-app",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-plugin-inventory",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-product-telemetry-otel",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-webserver",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-http-proxy",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-jobs-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-jobs",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-launch-environment",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-lazy-require",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-lazy-require",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-deepseek-account",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-deepseek-api-key",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-deepseek",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-pi-ai",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-retry",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-mcp-client",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-mcp-resources",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-message-feedback",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-native-command",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-office-to-pdf",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-otel",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-output-retention",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-package-manifest",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-permission-presets",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-persona",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-plan-mode",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-plugin-manager",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-plugin-market-index",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-plugin-market",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-plugin-package-inventory-deepseek",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-ptc-runtime-node",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-ptc-runtime",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-ptc-runtime",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-pwsh-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-pwsh-sandbox",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-repeat-tool-reminder",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sandbox-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sandbox-policy",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sandbox-policy",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sandbox-windows-acl",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sandbox",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sandbox",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-schedule",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-scope",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-scope",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sdk-app",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sdk-jsonrpc-server",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sdk-minimal",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-sdk-protocol",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-checkpoint-policy",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-format-catalog",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-format-v0-to-v1",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-format-v1-to-v2",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-format-v2-to-v3",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-format-v3-to-v4",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-format",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-log-deepseek",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-log-export",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-persistence",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-projection-cache",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-projection",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-projection",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-query-sqlite",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-query",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-reference",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-stats",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-telemetry-otel",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-telemetry",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-title-all-prompts-llm",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-title-first-prompt-llm",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-title-llm",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-title",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-turn-outline",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-session",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-settings",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-shell-env",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-shell",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-skill-badge",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-skill-filesystem",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-skill-office",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-skill",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-spill-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-spill-policy",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-spill",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-storage-domain",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-storage-json",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-storage",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent-fork-in-process",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent-spawn-in-process",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-subprocess-local",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-subprocess",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-system-prompt",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-system-prompt",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-terminal-bash",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-terminal",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-time-context",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-timeout",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-timeout",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tmux-context",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-token-meter",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-ask-user",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-bash-persistent",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-bash",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-call-timeout-policy",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-cordis",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-fs-search",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-fs",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-goal",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-jobs",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-present",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-pwsh-persistent",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-pwsh",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-ralph",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-schedule",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-session-query",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-skill",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-str-replace-editor",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-subagent-control",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-subagent",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-terminal",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-todo",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-web",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-workflow",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-working-directory",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-workspace-dependencies",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tools",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-tools",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-typert-loader",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-typert-protocol",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-typert-protocol",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-typert-registry",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-user-approval",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-user-approval",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-user-questions",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-code-language",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-crypto",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-crypto",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-time",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-values",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-values",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-util-workspace-path",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-web-app",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-web-deepseek-api",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-web-fetch-http",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-web-frontend",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-web-search-deepseek",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-web",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-win32-process",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-workflow-ptc",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-workflow",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-working-directory",
+      "version": "0.2.1-rc.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-working-directory",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-workspace-changes",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh-workspace",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/dsh",
+      "version": "0.2.1-rc.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/libreoffice-kit-darwin-arm64",
+      "version": "0.1.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/libreoffice-kit-darwin-x64",
+      "version": "0.1.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/libreoffice-kit-wasm",
+      "version": "0.1.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/libreoffice-kit-win32-arm64",
+      "version": "0.1.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/libreoffice-kit-win32-x64",
+      "version": "0.1.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/libreoffice-kit",
+      "version": "0.1.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/node-addon-system-darwin-arm64",
+      "version": "0.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/node-addon-system-darwin-x64",
+      "version": "0.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/node-addon-system-linux-arm64",
+      "version": "0.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/node-addon-system-linux-x64",
+      "version": "0.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/node-addon-system",
+      "version": "0.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@deepseek-ai/schemastery",
+      "version": "3.18.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@earendil-works/pi-ai",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@earendil-works/pi-telemetry",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@electron-internal/extract-zip",
+      "version": "1.0.5",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@electron/get",
+      "version": "5.1.0",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@emnapi/runtime",
+      "version": "1.11.3",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/aix-ppc64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/android-arm",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/android-arm64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/android-x64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/darwin-x64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/freebsd-arm64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/freebsd-x64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/linux-arm",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/linux-arm64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/linux-ia32",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/linux-loong64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/linux-mips64el",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/linux-ppc64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/linux-riscv64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/linux-s390x",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/linux-x64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/netbsd-arm64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/netbsd-x64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/openbsd-arm64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/openbsd-x64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/openharmony-arm64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/sunos-x64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/win32-arm64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/win32-ia32",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@esbuild/win32-x64",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@eslint-community/regexpp",
+      "version": "4.12.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@google/genai",
+      "version": "2.21.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@hono/node-server",
+      "version": "2.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/colour",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-darwin-arm64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-darwin-x64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-freebsd-wasm32",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-darwin-arm64",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-darwin-x64",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-linux-arm",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-linux-arm64",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-linux-ppc64",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-linux-riscv64",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-linux-s390x",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-linux-x64",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-linuxmusl-arm64",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-libvips-linuxmusl-x64",
+      "version": "1.3.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-linux-arm",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-linux-arm64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-linux-ppc64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-linux-riscv64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-linux-s390x",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-linux-x64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-linuxmusl-arm64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-linuxmusl-x64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-wasm32",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-webcontainers-wasm32",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-win32-arm64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-win32-ia32",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@img/sharp-win32-x64",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@joplin/turndown-plugin-gfm",
+      "version": "1.0.68",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@jridgewell/gen-mapping",
+      "version": "0.3.13",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@jridgewell/resolve-uri",
+      "version": "3.1.2",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@jridgewell/sourcemap-codec",
+      "version": "1.6.0",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@js-temporal/polyfill",
+      "version": "0.5.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@keyv/serialize",
+      "version": "1.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-darwin-arm64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-darwin-x64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-freebsd-arm64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-freebsd-ia32",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-freebsd-x64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-linux-arm64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-linux-ia32",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-linux-loong64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-linux-riscv64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-linux-x64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-openbsd-ia32",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-openbsd-x64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-win32-arm64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-win32-ia32",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@koromix/koffi-win32-x64",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@mermaid-js/tiny",
+      "version": "12.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@mixmark-io/domino",
+      "version": "2.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@modelcontextprotocol/client",
+      "version": "2.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@modelcontextprotocol/core",
+      "version": "2.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@modelcontextprotocol/sdk",
+      "version": "1.30.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@mozilla/readability",
+      "version": "0.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/api-logs",
+      "version": "0.222.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/api",
+      "version": "1.9.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/core",
+      "version": "2.11.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/otlp-exporter-base",
+      "version": "0.222.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/otlp-transformer",
+      "version": "0.222.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/resources",
+      "version": "2.11.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/sdk-logs",
+      "version": "0.222.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/sdk-metrics",
+      "version": "2.11.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/sdk-trace",
+      "version": "2.11.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@opentelemetry/semantic-conventions",
+      "version": "1.43.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@protobufjs/aspromise",
+      "version": "1.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@protobufjs/base64",
+      "version": "1.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@protobufjs/codegen",
+      "version": "2.0.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@protobufjs/eventemitter",
+      "version": "1.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@protobufjs/fetch",
+      "version": "1.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@protobufjs/float",
+      "version": "1.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@protobufjs/path",
+      "version": "1.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@protobufjs/pool",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@protobufjs/utf8",
+      "version": "1.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@sec-ant/readable-stream",
+      "version": "0.4.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@selderee/plugin-htmlparser2",
+      "version": "0.12.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@sindresorhus/is",
+      "version": "7.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@sindresorhus/merge-streams",
+      "version": "4.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@smithy/core",
+      "version": "3.33.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@smithy/credential-provider-imds",
+      "version": "4.5.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@smithy/fetch-http-handler",
+      "version": "5.8.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@smithy/node-http-handler",
+      "version": "4.12.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@smithy/signature-v4",
+      "version": "5.7.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@smithy/types",
+      "version": "4.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@stablelib/base64",
+      "version": "1.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@standard-schema/spec",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@swc/helpers",
+      "version": "0.5.23",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@toon-format/toon",
+      "version": "4.4.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@types/http-cache-semantics",
+      "version": "4.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@types/node",
+      "version": "22.20.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@types/node",
+      "version": "24.19.2",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@types/node",
+      "version": "26.5.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@types/retry",
+      "version": "0.12.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-darwin-arm64",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-darwin-x64",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-linux-arm",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-linux-arm64",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-linux-ia32",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-linux-ppc64",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-linux-riscv64",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-linux-s390x",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-linux-x64",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-win32-arm64",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-win32-ia32",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep-win32-x64",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/ripgrep",
+      "version": "1.18.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@vscode/tree-sitter-wasm",
+      "version": "0.3.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@xterm/addon-serialize",
+      "version": "0.14.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "@xterm/headless",
+      "version": "6.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "accepts",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "acorn",
+      "version": "8.18.0",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "agent-base",
+      "version": "7.1.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "agent-base",
+      "version": "9.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ajv-formats",
+      "version": "3.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ajv",
+      "version": "8.20.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "argparse",
+      "version": "2.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "base64-js",
+      "version": "1.5.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "bignumber.js",
+      "version": "9.3.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "body-parser",
+      "version": "2.3.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "bowser",
+      "version": "2.14.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "brotli",
+      "version": "1.3.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "buffer-equal-constant-time",
+      "version": "1.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "bundle-name",
+      "version": "4.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "byte-counter",
+      "version": "0.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "bytes",
+      "version": "3.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "cacheable-lookup",
+      "version": "7.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "cacheable-request",
+      "version": "13.0.19",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "call-bind-apply-helpers",
+      "version": "1.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "call-bound",
+      "version": "1.0.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "chokidar",
+      "version": "5.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "clone",
+      "version": "2.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "commander",
+      "version": "15.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "compressible",
+      "version": "2.0.18",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "compression",
+      "version": "1.8.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "content-disposition",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "content-type",
+      "version": "1.0.5",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "content-type",
+      "version": "2.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "cookie-signature",
+      "version": "1.2.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "cookie",
+      "version": "0.7.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "cors",
+      "version": "2.8.6",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "cross-spawn",
+      "version": "7.0.6",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "cssstyle",
+      "version": "4.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "data-uri-to-buffer",
+      "version": "4.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "data-urls",
+      "version": "5.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "debug",
+      "version": "2.6.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "debug",
+      "version": "4.4.3",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "decimal.js",
+      "version": "10.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "decompress-response",
+      "version": "10.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "deepmerge-ts",
+      "version": "8.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "default-browser-id",
+      "version": "5.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "default-browser",
+      "version": "5.5.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "define-lazy-prop",
+      "version": "3.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "depd",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "detect-libc",
+      "version": "2.1.2",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "dfa",
+      "version": "1.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "diff",
+      "version": "9.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "dom-serializer",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "domelementtype",
+      "version": "2.3.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "domhandler",
+      "version": "5.0.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "domutils",
+      "version": "3.2.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "dunder-proto",
+      "version": "1.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ecdsa-sig-formatter",
+      "version": "1.0.11",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ee-first",
+      "version": "1.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "electron-chrome-extensions",
+      "version": "4.9.0",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "electron",
+      "version": "44.7.0",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "encodeurl",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "entities",
+      "version": "4.5.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "entities",
+      "version": "6.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "entities",
+      "version": "7.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "env-paths",
+      "version": "3.0.0",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "es-define-property",
+      "version": "1.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "es-errors",
+      "version": "1.3.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "es-object-atoms",
+      "version": "1.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "esbuild",
+      "version": "0.25.12",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "escape-html",
+      "version": "1.0.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "etag",
+      "version": "1.8.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "eventsource-parser",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "eventsource",
+      "version": "3.0.7",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "execa",
+      "version": "10.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "express-rate-limit",
+      "version": "8.7.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "express",
+      "version": "5.2.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "extend",
+      "version": "3.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "fast-deep-equal",
+      "version": "3.1.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "fast-sha256",
+      "version": "1.3.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "fast-uri",
+      "version": "3.1.7",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "fetch-blob",
+      "version": "3.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "fflate",
+      "version": "0.8.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "figures",
+      "version": "6.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "finalhandler",
+      "version": "2.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "fontkit",
+      "version": "2.0.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "form-data-encoder",
+      "version": "4.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "formdata-polyfill",
+      "version": "4.0.10",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "forwarded",
+      "version": "0.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "fresh",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "function-bind",
+      "version": "1.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "gaxios",
+      "version": "7.3.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "gcp-metadata",
+      "version": "8.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "get-intrinsic",
+      "version": "1.3.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "get-proto",
+      "version": "1.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "get-stream",
+      "version": "9.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "google-auth-library",
+      "version": "10.9.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "google-logging-utils",
+      "version": "1.1.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "gopd",
+      "version": "1.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "got",
+      "version": "14.6.6",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "graceful-fs",
+      "version": "4.2.11",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "has-symbols",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "hasown",
+      "version": "2.0.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "hono",
+      "version": "4.13.7",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "html-encoding-sniffer",
+      "version": "4.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "html-to-text",
+      "version": "10.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "htmlparser2",
+      "version": "10.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "http-cache-semantics",
+      "version": "4.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "http-errors",
+      "version": "2.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "http-proxy-agent",
+      "version": "7.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "http-proxy-agent",
+      "version": "9.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "http2-wrapper",
+      "version": "2.2.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "https-proxy-agent",
+      "version": "7.0.6",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "https-proxy-agent",
+      "version": "9.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "human-signals",
+      "version": "8.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "iconv-lite",
+      "version": "0.6.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "iconv-lite",
+      "version": "0.7.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "inherits",
+      "version": "2.0.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ip-address",
+      "version": "10.7.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ipaddr.js",
+      "version": "1.9.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ipaddr.js",
+      "version": "2.5.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "is-docker",
+      "version": "3.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "is-in-ssh",
+      "version": "1.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "is-inside-container",
+      "version": "1.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "is-plain-obj",
+      "version": "4.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "is-potential-custom-element-name",
+      "version": "1.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "is-promise",
+      "version": "4.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "is-stream",
+      "version": "4.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "is-unicode-supported",
+      "version": "2.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "is-wsl",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "isexe",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "jose",
+      "version": "6.2.12",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "js-tokens",
+      "version": "4.0.0",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "js-yaml",
+      "version": "4.3.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "jsbi",
+      "version": "4.3.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "jsdom",
+      "version": "26.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "jsesc",
+      "version": "3.1.0",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "json-bigint",
+      "version": "1.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "json-schema-to-ts",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "json-schema-traverse",
+      "version": "1.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "json-schema-typed",
+      "version": "8.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "jwa",
+      "version": "2.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "jws",
+      "version": "4.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "keyv",
+      "version": "5.6.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "koffi",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "leac",
+      "version": "0.7.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "long",
+      "version": "5.3.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "loose-envify",
+      "version": "1.4.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "lowercase-keys",
+      "version": "3.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "lru-cache",
+      "version": "10.4.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "marked",
+      "version": "18.0.12",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "math-intrinsics",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "media-typer",
+      "version": "1.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "merge-descriptors",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "mime-db",
+      "version": "1.54.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "mime-types",
+      "version": "3.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "mimic-response",
+      "version": "4.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "minisearch",
+      "version": "7.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ms",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ms",
+      "version": "2.1.3",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "negotiator",
+      "version": "0.6.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "negotiator",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-api",
+      "version": "7.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-native-custom-loader",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin-darwin-arm64",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin-darwin-x64",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin-linux-arm64-gnu",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin-linux-arm64-musl",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin-linux-x64-gnu",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin-linux-x64-musl",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin-win32-arm64-msvc",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin-win32-ia32-msvc",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin-win32-x64-msvc",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-addon-require-builtin",
+      "version": "0.1.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-domexception",
+      "version": "1.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-fetch",
+      "version": "3.3.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "node-pty",
+      "version": "1.2.0-beta.15",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "normalize-url",
+      "version": "8.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "npm-run-path",
+      "version": "6.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "nwsapi",
+      "version": "2.2.28",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "object-assign",
+      "version": "4.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "object-inspect",
+      "version": "1.13.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "on-finished",
+      "version": "2.4.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "on-headers",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "once",
+      "version": "1.4.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "open",
+      "version": "11.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "openai",
+      "version": "7.19.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "p-cancelable",
+      "version": "4.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "p-limit",
+      "version": "7.3.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "p-retry",
+      "version": "4.6.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "pako",
+      "version": "0.2.9",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "parse-ms",
+      "version": "4.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "parse5",
+      "version": "7.3.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "parseley",
+      "version": "0.13.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "parseurl",
+      "version": "1.3.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "partial-json",
+      "version": "0.1.7",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "path-key",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "path-key",
+      "version": "4.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "path-to-regexp",
+      "version": "8.4.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "peberminta",
+      "version": "0.10.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "picocolors",
+      "version": "1.1.1",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "picomatch",
+      "version": "4.0.7",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "pkce-challenge",
+      "version": "5.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "playwright-core",
+      "version": "1.63.0",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "playwright",
+      "version": "1.63.0",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "powershell-utils",
+      "version": "0.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "powershell-utils",
+      "version": "0.2.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "pretty-ms",
+      "version": "9.3.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "progress",
+      "version": "2.0.3",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "protobufjs",
+      "version": "7.6.6",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "proxy-addr",
+      "version": "2.0.7",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "proxy-agent-negotiate",
+      "version": "1.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "punycode",
+      "version": "2.3.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "qs",
+      "version": "6.16.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "quick-lru",
+      "version": "5.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "range-parser",
+      "version": "1.3.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "raw-body",
+      "version": "3.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "react-compiler-runtime",
+      "version": "1.0.0",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "react-dom",
+      "version": "18.3.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "react-dom",
+      "version": "19.2.7",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "react",
+      "version": "18.3.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "react",
+      "version": "19.2.7",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "readdirp",
+      "version": "5.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "require-from-string",
+      "version": "2.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "resolve-alpn",
+      "version": "1.2.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "resolve.exports",
+      "version": "2.0.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "responselike",
+      "version": "4.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "restructure",
+      "version": "3.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "retry",
+      "version": "0.13.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "router",
+      "version": "2.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "rrweb-cssom",
+      "version": "0.8.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "run-applescript",
+      "version": "7.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "safe-buffer",
+      "version": "5.2.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "safer-buffer",
+      "version": "2.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "saxes",
+      "version": "6.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "scheduler",
+      "version": "0.23.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "scheduler",
+      "version": "0.27.0",
+      "sources": [
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "selderee",
+      "version": "0.12.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "semver",
+      "version": "7.8.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "send",
+      "version": "1.2.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "serve-static",
+      "version": "2.2.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "setprototypeof",
+      "version": "1.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "sharp",
+      "version": "0.35.5",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "shebang-command",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "shebang-regex",
+      "version": "3.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "sherpa-onnx-darwin-arm64",
+      "version": "1.13.8",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "sherpa-onnx-darwin-x64",
+      "version": "1.13.8",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "sherpa-onnx-linux-arm64",
+      "version": "1.13.8",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "sherpa-onnx-linux-x64",
+      "version": "1.13.8",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "sherpa-onnx-node",
+      "version": "1.13.8",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "sherpa-onnx-win-ia32",
+      "version": "1.13.8",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "sherpa-onnx-win-x64",
+      "version": "1.13.8",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "side-channel-list",
+      "version": "1.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "side-channel-map",
+      "version": "1.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "side-channel-weakmap",
+      "version": "1.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "side-channel",
+      "version": "1.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "signal-exit",
+      "version": "4.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "standardwebhooks",
+      "version": "1.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "statuses",
+      "version": "2.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "strip-final-newline",
+      "version": "4.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "sumchecker",
+      "version": "3.0.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "symbol-tree",
+      "version": "3.2.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "tiny-inflate",
+      "version": "1.0.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "tldts-core",
+      "version": "6.1.86",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "tldts",
+      "version": "6.1.86",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "toidentifier",
+      "version": "1.0.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "tough-cookie",
+      "version": "5.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "tr46",
+      "version": "5.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ts-algebra",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "tslib",
+      "version": "2.8.1",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "turndown",
+      "version": "7.2.4",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "type-fest",
+      "version": "4.41.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "type-is",
+      "version": "2.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "typebox",
+      "version": "1.3.27",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "typescript",
+      "version": "6.0.3",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "undici-types",
+      "version": "6.21.0",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "undici-types",
+      "version": "7.24.6",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "undici-types",
+      "version": "8.9.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "undici",
+      "version": "7.30.1",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "undici",
+      "version": "8.11.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "unicode-properties",
+      "version": "1.4.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "unicode-trie",
+      "version": "2.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "unicorn-magic",
+      "version": "0.3.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "unpipe",
+      "version": "1.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "vary",
+      "version": "1.1.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "w3c-xmlserializer",
+      "version": "5.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "web-streams-polyfill",
+      "version": "3.3.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "web-tree-sitter",
+      "version": "0.26.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "webidl-conversions",
+      "version": "7.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "whatwg-encoding",
+      "version": "3.1.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "whatwg-mimetype",
+      "version": "4.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "whatwg-url",
+      "version": "14.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "which-command",
+      "version": "0.1.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "which",
+      "version": "2.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "wrappy",
+      "version": "1.0.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "ws",
+      "version": "8.21.3",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "wsl-utils",
+      "version": "1.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "xml-name-validator",
+      "version": "5.0.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "xmlchars",
+      "version": "2.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "yaml",
+      "version": "2.8.1",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "yaml",
+      "version": "2.9.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "yocto-queue",
+      "version": "1.2.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "yoctocolors",
+      "version": "2.2.0",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "zod-to-json-schema",
+      "version": "3.25.2",
+      "sources": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "zod",
+      "version": "4.4.3",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "zod",
+      "version": "4.5.4",
+      "sources": [
+        "pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml"
+      ]
+    },
+    {
+      "name": "zod",
+      "version": "4.6.7",
+      "sources": [
+        "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml",
+        "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml"
+      ]
+    }
+  ]
+}

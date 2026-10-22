@@ -8,22 +8,6 @@ import { Parser } from 'htmlparser2';
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const outputMarker = '.omd-docs-site';
 const markerContent = 'oh-my-dsh-docs/v1\n';
-const rootDocuments = ['README.md', 'README_EN.md', 'CHANGELOG.md', 'CONTRIBUTING.md', 'THIRD_PARTY_NOTICES.md'];
-// Publish authored user documentation, never a recursive copy of the workspace.
-const guides = [
-  'README.md', 'releases.md', 'install.md', 'computer-use.md', 'context-optimization.md',
-  'release-0.99.1.md', 'release-0.99.0.md', 'dsh-ops.md', 'dsh-ops_EN.md',
-  'getting-started.md', 'usage.md', 'upgrade.md', 'troubleshooting.md',
-  'windows.md', 'skins.md', 'codex-desktop.md', 'ios-liquid-glass.md',
-  'claude-cli-terminal.md', 'google-material-expressive.md', 'context-workflow.md',
-  'monitoring.md', 'dream-memory.md', 'prompt-adaptation.md', 'runtime-state-background.md',
-  'workflow.md', 'open-design.md', 'plugin-submissions.md', 'showcase.md',
-  'plugin-compatibility.md', 'architecture.md', 'architecture_EN.md', 'development.md', 'deepseek-workbench.md', 'extensions.md',
-  'upstream-patches/README.md', 'site/README.md',
-  'README_EN.md', 'install_EN.md', 'getting-started_EN.md', 'usage_EN.md', 'upgrade_EN.md',
-  'troubleshooting_EN.md', 'showcase_EN.md', 'plugin-compatibility_EN.md',
-  'development_EN.md', 'site/README_EN.md',
-];
 const navigation = [
   ['开始使用', [['docs/README.md', '文档目录'], ['docs/getting-started.md', '首次使用'],
     ['docs/install.md', '安装'], ['docs/upgrade.md', '升级与迁移'], ['docs/usage.md', '完整使用指南'], ['docs/troubleshooting.md', '遇到问题']]],
@@ -31,7 +15,7 @@ const navigation = [
     ['docs/context-optimization.md', '上下文优化与原文'], ['docs/extensions.md', '扩展管理'], ['docs/deepseek-workbench.md', 'DeepSeek 工作台'],
     ['docs/usage.md#computer-use', '电脑操作'], ['docs/skins.md', '主题与定制'],
     ['docs/workflow.md', 'Ultra 与 Workflow'], ['docs/architecture.md', '插件架构与独立产品'], ['docs/plugin-compatibility.md', '插件兼容性'],
-    ['docs/plugin-submissions.md', '插件投稿'], ['docs/showcase.md', '演示来源']]],
+    ['docs/plugin-submissions.md', '插件投稿'], ['docs/showcase.md', '演示来源'], ['docs/components.md', '项目、组件与致谢']]],
   ['参与开发', [['docs/development.md', '开发指南'], ['CONTRIBUTING.md', '参与改进'], ['docs/site/README.md', '文档站']]],
 ];
 const englishNavigation = [
@@ -41,7 +25,7 @@ const englishNavigation = [
     ['docs/context-optimization.md#english', 'Context Optimization'], ['docs/extensions.md', 'Extensions'], ['docs/deepseek-workbench.md', 'DeepSeek Workbench'],
     ['docs/usage_EN.md#computer-use', 'Computer Use'], ['docs/skins.md', 'Themes'],
     ['docs/workflow.md', 'Ultra and Workflow'], ['docs/architecture_EN.md', 'Plugin Architecture'], ['docs/plugin-compatibility_EN.md', 'Plugin Compatibility'],
-    ['docs/plugin-submissions.md', 'Plugin Submissions'], ['docs/showcase_EN.md', 'Screenshots and Sources']]],
+    ['docs/plugin-submissions.md', 'Plugin Submissions'], ['docs/showcase_EN.md', 'Screenshots and Sources'], ['docs/components_EN.md', 'Projects and Credits']]],
   ['Develop', [['docs/development_EN.md', 'Development Guide'], ['CONTRIBUTING.md', 'Contributing'], ['docs/site/README_EN.md', 'Documentation Site']]],
 ];
 const privateDocument = /^(?:AGENTS|CLAUDE|AI_README|PLAN|OMAA_HANDOFF|PROMPT_MAINTENANCE|PROMPT_CHANGES|COMPUTER_USE_(?:HANDOFF|BASELINE|ASSESSMENT)|WINDOWS_HANDOFF|claude-cli-skin-research|google-material-expressive-research|rea-development|dsh-0\.2-preparation)\.md$/i;
@@ -364,13 +348,13 @@ export async function buildDocs({ root = projectRoot, outDir = path.join(root, '
   await checkOutputDirectory(root, outDir);
   const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   const repository = (typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url || 'https://github.com/gulagala001/oh-my-dsh').replace(/^git\+/, '').replace(/\.git$/, '');
-  const releases = (await readdir(path.join(root, 'docs'))).filter(file => /^release-[\w.-]+\.md$/.test(file)).map(file => 'docs/' + file);
+  const structure = JSON.parse(await readFile(path.join(root, 'docs/structure.json'), 'utf8'));
   const pages = new Set();
-  for (const file of [...rootDocuments, ...guides.map(file => 'docs/' + file), ...releases]) {
-    if (await regularFile(root, file, ['README.md', 'docs/README.md'].includes(file))) pages.add(file);
+  for (const entry of structure.documents.filter(entry => entry.site)) {
+    if (await regularFile(root, entry.path, true)) pages.add(entry.path);
   }
   const staticAssets = [
-    'docs/index.html', 'docs/index_EN.html', 'docs/site/site.css', 'docs/site/site.js', 'docs/site/docs.css', 'docs/site/docs.js',
+    'docs/dependencies.json', 'docs/structure.json', 'docs/index.html', 'docs/index_EN.html', 'docs/site/site.css', 'docs/site/site.js', 'docs/site/docs.css', 'docs/site/docs.js',
     ...await assetFiles(root, 'docs/images', file => imageExtensions.has(path.extname(file)) || file === 'docs/images/readme-screenshots.json'),
     ...await assetFiles(root, 'docs/site/media', file => imageExtensions.has(path.extname(file)) || ['.mp4', '.webm'].includes(path.extname(file)) || file === 'docs/site/media/manifest.json'),
     ...await assetFiles(root, 'docs/skin-font-licenses', file => file.endsWith('-OFL.txt')),

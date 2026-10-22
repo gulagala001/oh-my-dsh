@@ -4,6 +4,7 @@ import { Icon } from './native-icons.jsx';
 import { contextFrequencyOf, contextFrequencyPatch, contextRouteMode } from './context-client.mjs';
 import { PersonaSettings } from '../../plugins/persona/src/client/settings.jsx';
 import { recommendedPlugins } from './recommended-plugins.mjs';
+import projectCredits from '../project-credits.json';
 import { pluginApi } from './recommended-plugins.jsx';
 import { usePollingAction } from './use-polling-action.mjs';
 import { createSettingsState } from './settings-state.mjs';
@@ -340,6 +341,26 @@ function ThirdParty({ features, onBack }) {
   </>;
 }
 
+function ProjectCredits({ onBack }) {
+  const head = useRef(null);
+  useEffect(() => { head.current?.querySelector('button')?.focus(); }, []);
+  return <>
+    <header className="omd-set-subhead" ref={head}>
+    <Button type="button" size="sm" variant="ghost" aria-label="返回 Oh My DSH 设置" onClick={onBack}><Icon name="chevron" size={14} className="omd-set-back"/>Oh My DSH</Button>
+      <h2>项目、组件与致谢</h2>
+    </header>
+    <Group title="来源清单">
+      <Row title="完整来源与依赖" hint="自有独立产品、社区集成、宿主、数据和素材；各项目保留原作者、维护者和许可。">
+        <a className="omd-set-link" href="https://github.com/gulagala001/oh-my-dsh/blob/main/docs/components.md" target="_blank" rel="noreferrer">完整清单与许可</a>
+      </Row>
+      {projectCredits.projects.map(project => <Row key={project.id} title={project.name} hint={<>{project.purpose.zh}<br/>{project.authors}<br/>{project.relationship.zh}</>}>
+        <a className="omd-set-link" href={project.url} target="_blank" rel="noreferrer">项目</a>
+        {' · '}<a className="omd-set-link" href={`https://github.com/gulagala001/oh-my-dsh/blob/main/${project.notice}`} target="_blank" rel="noreferrer">来源与许可</a>
+      </Row>)}
+    </Group>
+  </>;
+}
+
 export function applyOmdSettings(ctx, { optimizer, persona }) {
   ctx.effect(() => {
     const tag = document.createElement('style'); tag.dataset.plugin = 'omd-settings'; tag.textContent = css; document.head.append(tag);
@@ -382,7 +403,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
 
     const features_ = recommendedPlugins.filter(plugin => plugin.section === 'features');
     const featureUpdating = features.state?.updating || features.state?.busy?.action === 'update';
-    const content = page === 'third-party' ? <ThirdParty features={features} onBack={() => go('main')}/> : !c ? <div className="omd-set-empty">
+    const content = page === 'credits' ? <ProjectCredits onBack={() => go('main')}/> : page === 'third-party' ? <ThirdParty features={features} onBack={() => go('main')}/> : !c ? <div className="omd-set-empty">
       {error ? <Status error action={<Button type="button" size="sm" variant="ghost" onClick={reload}>重试</Button>}>{error}</Status> : <p>正在读取设置…</p>}
     </div> : <>
       <Status error action={<Button type="button" size="sm" variant="ghost" onClick={reload}>重新读取</Button>}>{error}</Status>
@@ -423,6 +444,9 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
       <Group title="全局背景"><GlobalBackground/></Group>
       <Group title="智能体"><AgentHints config={c} commit={commit}/></Group>
       <Group title="关于">
+        <button type="button" className="omd-set-row omd-set-nav" onClick={() => go('credits')}>
+          <span className="omd-set-copy"><strong>项目、组件与致谢</strong><small>查看独立产品、社区作者、组件来源与许可。</small></span><Icon name="chevron" size={16}/>
+        </button>
         <Row title="版本" extra={featureUpdating && <Status>正在更新已开启的功能…</Status>}>
           <VersionInfo row onCheck={() => void features.act({ action: 'update-all' })}/>
         </Row>
