@@ -1,6 +1,6 @@
 import { monitorQuery, monitorEventQuery } from './monitor-ledger.mjs';
 import { monitorCallCost } from './monitor-call.mjs';
-import { monitorCallPrice, monitorPriceCatalog } from './monitor-pricing.mjs';
+import { monitorCallPrice, monitorPriceCatalog, monitorCostCacheKey } from './monitor-pricing.mjs';
 import { monitorSelection, monitorPerformance } from './monitoring.mjs';
 import { sourceName } from './message-source.mjs';
 import { validateSessionId } from './hub-store.mjs';
@@ -86,7 +86,8 @@ export function monitorSnapshot({ hub, ctx, params, id, session, agent, stored }
   const prices = hub.config().monitorPrices || [];
   hub.pricing?.refresh();
   const priceOf = call => hub.pricing ? hub.pricing.price(call, prices) : monitorCallPrice(call, prices);
-  const data = hub.monitor.query(selection.selected, ids, query, call => monitorCallCost(call, prices, priceOf(call)), { callsOnly });
+  const costCacheKey = callsOnly ? undefined : hub.pricing ? hub.pricing.costCacheKey?.(prices) : monitorCostCacheKey(prices);
+  const data = hub.monitor.query(selection.selected, ids, query, call => monitorCallCost(call, prices, priceOf(call)), { callsOnly, costCacheKey });
   data.activity = data.activity.map(call => {
     const price = priceOf(call);
     return { ...call, price, cost: monitorCallCost(call, prices, price) };

@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { MonitorLedger, monitorQuery } from '../src/monitor-ledger.mjs';
+import { monitorCallCost } from '../src/monitor-call.mjs';
+import { monitorCostCacheKey } from '../src/monitor-pricing.mjs';
 
 function fixture(t) {
   const directory = mkdtempSync(join(tmpdir(), 'omd-overview-cache-')), now = Date.UTC(2026, 9, 22, 12);
@@ -118,4 +120,103 @@ test('overview rebuilds calendar buckets and never retains oversized or failed r
   ledger.db.exec('COMMIT');
   const large = ledger.query([], new Set(), monitorQuery({ range: 'all' }, now));
   assert.equal(large.performance.sessionSpans.length, 3001); assert.equal(ledger.overviewCache, null);
+});
+
+test('receipt costs reuse exact sums with live custom rates and caller-owned outputs', t => {
+  const { ledger, append, read, now } = fixture(t);
+  append('one'); append('partial', now - 2, { usage: { outputTokens: 2 } });
+  append('unknown', now - 3, { model: 'unpriced' });
+  const custom = [{ provider: 'fixture', model: 'fixture', currency: 'CNY', inputTokens: 2, outputTokens: 3, cacheReadTokens: 0, cacheWriteTokens: 0 }];
+  let prices = 0;
+  const cost = call => { prices++; return monitorCallCost(call, custom); };
+  const cached = (at = now, params = {}) => read(at, params, cost, { costCacheKey: monitorCostCacheKey(custom) });
+  const cold = cached(); assert.equal(prices, 3); assert.ok(ledger.costCache);
+  const expected = read(now, {}, cost); assert.deepEqual(cold, expected); assert.equal(prices, 6);
+  cached(); const cache = ledger.costCache; assert.equal(prices, 9);
+  const warm = cached(now + 3000); assert.equal(prices, 9); assert.equal(ledger.costCache, cache);
+  cold.costSummary.totals[0].amount = -1; cold.costSummary.unpricedCalls = -1;
+  cold.seriesSplit[0].costs.CNY = -1;
+  warm.costSummary.totals[0].amount = -1; warm.seriesSplit[0].costs.CNY = -1;
+  assert.deepEqual(cached(now + 3000), read(now + 3000, {}, cost));
+  custom[0].inputTokens = 7;
+  assert.equal(cached().costSummary.totals[0].amount, 10 * 7 / 1e6 + 5 * 3 / 1e6);
+  custom[0].currency = 'USD'; assert.equal(cached().costSummary.totals[0].currency, 'USD');
+  custom[0].outputTokens = undefined; assert.equal(cached().costSummary.unpricedCalls, 3);
+  custom.length = 0; assert.equal(cached().costSummary.unpricedCalls, 3);
+  ledger.close(); assert.equal(ledger.costCache, null);
+});
+
+test('receipt cost snapshots follow writers, filters, future receipts and pagination', t => {
+  const { ledger, writer, append, read, now } = fixture(t);
+  const custom = [{ provider: 'fixture', model: 'fixture', inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 }];
+  const cost = call => monitorCallCost(call, custom);
+  const cached = (at = now, params = {}) => read(at, params, cost, { costCacheKey: monitorCostCacheKey(custom) });
+  const calls = result => result.costSummary.totals.reduce((n, row) => n + row.calls, 0);
+  append('one'); assert.equal(calls(cached()), 1); const initial = ledger.costCache;
+  append('two', now - 86400000); assert.equal(calls(cached()), 2); assert.notEqual(ledger.costCache, initial);
+  writer.prepare('UPDATE calls SET inputTokens=20,totalTokens=25 WHERE id=?').run('one');
+  assert.equal(cached().costSummary.totals[0].amount, 0.00004);
+  const prepare = ledger.db.prepare.bind(ledger.db); let pending;
+  ledger.db.prepare = sql => {
+    const stmt = prepare(sql);
+    if (!sql.includes('pragma_data_version')) return stmt;
+    return new Proxy(stmt, { get(target, key) {
+      const value = Reflect.get(target, key, target);
+      if (key !== 'get') return typeof value === 'function' ? value.bind(target) : value;
+      return (...args) => { const result = value.apply(target, args), write = pending; pending = undefined; write?.(); return result; };
+    } });
+  };
+  pending = () => writer.prepare('UPDATE calls SET inputTokens=30,totalTokens=35 WHERE id=?').run('one');
+  assert.equal(cached().costSummary.totals[0].amount, 0.00004);
+  assert.equal(cached().costSummary.totals[0].amount, 30 / 1e6 + 5 / 1e6 + (10 / 1e6 + 5 / 1e6));
+  ledger.db.prepare = prepare;
+  append('future', now + 6000);
+  assert.equal(calls(cached(now + 3000)), 2); assert.equal(calls(cached(now + 6000)), 3);
+  const page = cached(now + 9000, { limit: 1 }), cache = ledger.costCache;
+  const next = cached(now + 10000, { limit: 1, cursor: page.nextCursor });
+  assert.equal(ledger.costCache, cache); assert.deepEqual(next.costSummary, page.costSummary);
+  for (const params of [{ kind: 'prepare' }, { provider: 'other' }, { model: 'other' }, { status: 'error' }, { query: 'missing' }]) {
+    assert.equal(calls(cached(now + 9000, params)), 0);
+  }
+  assert.equal(calls(cached(now + 9000, { period: 'today' })), 2);
+  assert.equal(calls(cached(now + 86400000, { period: 'today' })), 0);
+  const other = ledger.query([], new Set(['other']), monitorQuery({}, now + 9000), cost, { costCacheKey: monitorCostCacheKey(custom) });
+  assert.equal(calls(other), 0);
+});
+
+test('receipt costs keep arbitrary callbacks live, recover after failure and bound retained rates', t => {
+  const { ledger, append, read, now } = fixture(t); append('one');
+  let amount = 1, prices = 0;
+  const cost = () => { prices++; return { currency: 'USD', amount }; };
+  assert.equal(read(now, {}, cost).costSummary.totals[0].amount, 1);
+  amount = 2; assert.equal(read(now, {}, cost).costSummary.totals[0].amount, 2); assert.equal(prices, 2);
+  const key = monitorCostCacheKey();
+  assert.throws(() => read(now, {}, () => { throw Error('isolated cost failure'); }, { costCacheKey: key }), /isolated cost failure/);
+  assert.equal(ledger.costCache, null);
+  assert.equal(read(now, {}, cost, { costCacheKey: key }).costSummary.totals[0].amount, 2);
+  const large = monitorCostCacheKey(Array.from({ length: 4000 }, (_, i) => ({ provider: 'p'.repeat(200), model: String(i), inputTokens: 1 })));
+  read(now, {}, cost, { costCacheKey: large }); assert.equal(ledger.costCache, null);
+  read(now, {}, cost, { costCacheKey: key }); assert.ok(ledger.costCache);
+});
+
+test('receipt costs rebuild empty calendar buckets and keep legacy counters live', t => {
+  const { ledger, append, read, now } = fixture(t), beforeTZ = process.env.TZ;
+  process.env.TZ = 'UTC'; t.after(() => { if (beforeTZ === undefined) delete process.env.TZ; else process.env.TZ = beforeTZ; });
+  append('one'); const options = { costCacheKey: monitorCostCacheKey() };
+  const cost = () => ({ currency: 'USD', amount: 1 });
+  const first = read(now, {}, cost, options), cache = ledger.costCache;
+  const later = read(now + 2 * 86400000, {}, cost, options);
+  assert.equal(ledger.costCache, cache); assert.equal(later.seriesSplit.length, first.seriesSplit.length + 2);
+  assert.deepEqual(later.seriesSplit.at(-1).costs, {}); assert.equal(later.seriesSplit.at(-1).unpricedCalls, 0);
+  const month = read(now + 91 * 86400000, {}, cost, options);
+  assert.equal(month.seriesSplit[0].label, '2026-10'); assert.equal(month.seriesSplit[0].costs.USD, 1);
+  read(now, {}, cost, options); const zoneCache = ledger.costCache;
+  process.env.TZ = 'Pacific/Kiritimati';
+  const zoned = read(now, {}, cost, options); assert.notEqual(ledger.costCache, zoneCache);
+  assert.equal(zoned.seriesSplit[0].label, '2026-10-23'); assert.equal(zoned.seriesSplit[0].costs.USD, 1);
+  const state = { id: 'fixture', activity: [], metrics: { main: { calls: 5 } } };
+  const legacy = () => ledger.query([state], new Set(['fixture']), monitorQuery({}, now), cost, options);
+  assert.equal(legacy().costSummary.unpricedCalls, 4); const legacyCache = ledger.costCache;
+  state.metrics.main.calls = 7;
+  assert.equal(legacy().costSummary.unpricedCalls, 6); assert.equal(ledger.costCache, legacyCache);
 });
