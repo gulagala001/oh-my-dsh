@@ -92,6 +92,8 @@ test('Shell path and variable guards survive native and SDK adaptation', async (
     for (const name of ['bash', 'pwsh']) {
       const text = runtime ? section(result, 'tools:sdk') : result.tools.find(t => t.name === name).description;
       assert.ok(text.includes('resolved absolute target path'));
+      assert.ok(text.includes('withIsolatedBrowser') && text.includes('--use-mock-keychain') && text.includes('--password-store=basic'));
+      assert.ok(text.includes('file:') && text.includes('/src/browser/automation.mjs'), 'the installed helper is directly importable from project scripts');
       assert.ok(text.includes(name === 'bash' ? '${VAR:?}' : '$HOME'));
       if (name === 'pwsh') assert.ok(text.includes('case-insensitive') && text.includes('$home'));
     }

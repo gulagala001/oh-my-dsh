@@ -9,6 +9,8 @@ import {createInputState} from './input-state.mjs';
 import {createUserActivityMonitor} from './user-activity.mjs';
 import {createPageDialogs} from './dialogs.mjs';
 import {createCDPFrameRouter} from '../../extension/frame-router.js';
+import {isolatedLaunchOptions} from './automation.mjs';
+export {withIsolatedBrowser} from './automation.mjs';
 
 /** A lazy Chromium backend. Existing contexts/CDP browsers are never shut down as owned browsers. */
 export async function createBrowserBackend(options = {}) {
@@ -85,12 +87,12 @@ export async function createBrowserBackend(options = {}) {
         await mkdir(profile, {recursive: true});
         const headless = options.launchOptions?.headless ?? options.headless ?? true;
         // Emulated DPR makes headed Retina Chromium zoom back and forth during captures.
-        context = await playwright.chromium.launchPersistentContext(profile, {
+        context = await playwright.chromium.launchPersistentContext(profile, isolatedLaunchOptions({
           headless,
           viewport: options.viewport !== undefined ? options.viewport : headless ? {width: 1280, height: 800} : null,
           acceptDownloads: true,
           ...options.launchOptions,
-        });
+        }));
         ownContext = true;
         browser = context.browser();
         connectionId = `owned:${randomUUID()}`;

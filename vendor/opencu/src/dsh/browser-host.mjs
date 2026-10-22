@@ -4,7 +4,7 @@ import { compactPresentationImages } from '../presentation-images.mjs';
 
 /** The authenticated DSH renderer owns each real sidebar guest, not a screenshot proxy. */
 export function createBrowserHost() {
-  const clients = new Map(), pending = new Map(), sessionOwners = new Map(), bindings = new Map();
+  const clients = new Map(), pending = new Map(), sessionOwners = new Map(), bindings = new Map(), retired = new Map();
   let closed = false;
   const resetPresentationImages = client => { client.presentationSequence++; client.presentationFrames = []; };
   function disconnect(client, reason) {
@@ -51,6 +51,10 @@ export function createBrowserHost() {
       client.wake?.();
     });
   }
+  function retire(target) {
+    retired.set(target.id, json(target));
+    if (sameIdentity(bindings.get(target.id)?.target.identity, target.identity)) bindings.delete(target.id);
+  }
   function presentationOwner(target, sessionId) {
     const available = liveClients().filter(client => client.presentation);
     const ownerId = target.identity?.rendererId ?? sessionOwners.get(sessionId);
@@ -60,6 +64,14 @@ export function createBrowserHost() {
   }
   const backend = {
     kind: 'browser',
+    async listBrowsers() { return liveClients().map(client => ({id: `dsh:${client.id}`, provider: 'dsh', name: 'DSH Browser'})); },
+    async newTab(browserId, url, {sessionId, signal} = {}) {
+      signal?.throwIfAborted();
+      const client = liveClients().find(client => browserId === `dsh:${client.id}`);
+      if (!client) fail('BROWSER_HOST_DISCONNECTED', 'Choose one connected sidebar browser');
+      const result = await request(client, 'openTab', {sessionId, url});
+      return result.target;
+    },
     getDiagnostics() {
       const renderers = liveClients();
       const targetCount = renderers.reduce((count, client) => count + client.targets.length, 0);
@@ -130,7 +142,10 @@ export function createBrowserHost() {
     },
     async release({ targets = [], dismissDialogs = true } = {}) {
       const failures = [];
-      for (const target of targets) if (target.cold && !bindings.has(target.id))
+      const retiredTargetIds = targets.filter(target => sameIdentity(retired.get(target.id)?.identity, target.identity)
+        || target.cold && target.releaseAcknowledged === true && !bindings.has(target.id)
+          && !liveClients().some(client => client.targets.some(current => sameIdentity(current.identity, target.identity)))).map(target => target.id);
+      for (const target of targets) if (target.cold && !retiredTargetIds.includes(target.id) && !bindings.has(target.id))
         bindings.set(target.id, {target: json(target), needsRelease: true});
       await Promise.all(liveClients().map(async client => {
         try {
@@ -142,7 +157,7 @@ export function createBrowserHost() {
       }));
       for (const binding of bindings.values()) if (binding.needsRelease) failures.push({targetId: binding.target.id,
         code: 'STALE_TARGET', message: 'The original sidebar guest has not acknowledged input release', identity: binding.target.identity});
-      return { released: failures.length === 0, failures };
+      return { released: failures.length === 0, failures, retiredTargetIds };
     },
     async confirmClosedTargets(targets) {
       for (const target of targets) {
@@ -239,10 +254,18 @@ export function createBrowserHost() {
       }
       if (method === 'browser/publish') {
         if (!Array.isArray(args.targets)) fail('INVALID_TARGET', 'Expected the live sidebar target list');
-        client.targets = args.targets.map(target => {
+        const validate = target => {
           if (typeof target.id !== 'string' || typeof target.identity?.guestId !== 'string' || target.identity.rendererId !== client.id) fail('INVALID_TARGET', 'Invalid sidebar guest identity');
+          const bound = bindings.get(target.id)?.target;
+          if (bound && !sameIdentity(bound.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'A sidebar target ID cannot replace another occurrence');
           return { ...target, backend: 'browser', provider: 'dsh', kind: 'tab', browserId: `dsh:${client.id}` };
-        });
+        };
+        const targets = args.targets.map(validate);
+        if (args.retiredTargets !== undefined && !Array.isArray(args.retiredTargets)) fail('INVALID_TARGET', 'Expected released sidebar targets');
+        const released = (args.retiredTargets ?? []).map(validate);
+        if (released.some(target => targets.some(live => live.id === target.id))) fail('INVALID_TARGET', 'A live sidebar target cannot be retired');
+        for (const target of released) retire(target);
+        client.targets = targets.filter(target => !sameIdentity(retired.get(target.id)?.identity, target.identity));
         return { ok: true };
       }
       if (method === 'browser/result') {
@@ -268,11 +291,16 @@ export function createBrowserHost() {
         return { ok: true, commands: connected ? client.commands.splice(0) : [], connected };
       }
       if (method === 'browser/disconnect') {
-        if (inputReleased(args)) for (const [id, binding] of bindings) if (binding.client === client) bindings.delete(id);
+        if (inputReleased(args)) {
+          const targets = [...client.targets, ...[...bindings.values()].filter(binding => binding.client === client).map(binding => binding.target)];
+          if (args.retiredTargets !== undefined && (!Array.isArray(args.retiredTargets) || args.retiredTargets.some(target =>
+            typeof target.id !== 'string' || typeof target.identity?.guestId !== 'string' || target.identity.rendererId !== client.id))) fail('INVALID_TARGET', 'Invalid retired sidebar targets');
+          for (const target of [...targets.filter(target => target.identity.rendererId === client.id), ...(args.retiredTargets ?? [])]) retire(target);
+        }
         disconnect(client, 'The sidebar renderer disconnected'); return { ok: true };
       }
       fail('UNSUPPORTED_METHOD', 'Unknown sidebar browser transport operation');
     },
-    close() { closed = true; for (const client of [...clients.values()]) disconnect(client, 'OpenCU unloaded'); sessionOwners.clear(); bindings.clear(); },
+    close() { closed = true; for (const client of [...clients.values()]) disconnect(client, 'OpenCU unloaded'); sessionOwners.clear(); bindings.clear(); retired.clear(); },
   };
 }

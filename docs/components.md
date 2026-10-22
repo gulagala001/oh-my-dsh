@@ -214,7 +214,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 OpenCU 使用的原始界面组件及来源记录 宿主／来源／素材，具体使用范围见来源记录。
 
-- 固定来源／版本: [SHA256:ce36eedf4afc6cc52b9981b352335cd23bd6513237f2dffab310f0ca7eae3bf5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- 固定来源／版本: [SHA256:8bffea1ae7a886fbce8dcacd475c33ba7a1b08f391ccad3b129b28f879ee82a7](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

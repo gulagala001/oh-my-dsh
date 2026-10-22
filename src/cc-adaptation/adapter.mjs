@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { sessionPersonality } from '../personality-session.mjs';
 import { createHash } from 'node:crypto';
+import { browserTestingGuide } from '#opencu/src/dsh/browser-testing.mjs';
 
 import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
 const bindings = JSON.parse(readFileSync(new URL('./bindings.json', import.meta.url), 'utf8'));
@@ -67,6 +68,10 @@ export function transformAssembly(assembly, context, options = {}) {
     }
     if (['bash', 'pwsh'].includes(tool.name) && !Object.hasOwn(fields, 'sandbox_permissions')) {
       description = description.split('\n').filter(line => !line.includes('`sandbox_permissions`')).join('\n');
+    }
+    if (['bash', 'pwsh'].includes(tool.name)) {
+      description += '\n\n' + (known.has('computer_use') ? browserTestingGuide
+        : browserTestingGuide.replace('through computer_use when available', 'through an available browser tool'));
     }
     if (tool.name === 'web_search' && !known.has('web_fetch')) {
       description = description.replace(/Open relevant result URLs with `web_fetch`[^.]*\./g, 'Use returned source snippets when full-page retrieval is unavailable.');

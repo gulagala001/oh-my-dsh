@@ -40,6 +40,8 @@ Chrome / Edge 扩展的 loopback bridge 由插件自动管理，监听本机 193
 
 浏览器资源使用 Playwright 的共享缓存，不捆绑 Node、Chromium 或独立应用。宿主使用 Node >=22.19。缺少 Chromium 时，可从 DSH 的“电脑与浏览器”设置安装匹配的 Playwright 浏览器资源；由插件管理安装进程，关闭时终止尚未完成的安装。
 
+需要隔离检查页面渲染、WebGL 或截图时，可从 `opencu/browser` 导入 `withIsolatedBrowser(check, options)`。`check` 接收 `{ context, signal }`，可使用完整 Playwright 页面 API；把相关检查放在同一回调中复用浏览器。`options` 支持临时目录父路径 `directory`、`launchOptions`、检查时限 `timeoutMs` 和取消 `signal`。入口创建独立临时资料目录，保留 `--use-mock-keychain`／`--password-store=basic`，并在成功、抛错、检查超时或取消后关闭自己的浏览器及删除临时目录；自定义参数与默认参数过滤不会移除凭据隔离。CDP 和外部传入的浏览器上下文保持原有凭据与生命周期。直接启动 Chromium 时，独立资料目录与这两个隔离参数须同时保留，无头模式本身不隔离钥匙串。
+
 ## 能力与边界
 
 工具提供真实目标发现、选择、观察、操作、文件交付和持久 JavaScript。已删除强制 takeover 协议；用户活动通过 userActivity 通知，不停止控制、不要求用户点恢复。stop 用于明确任务取消并确认输入释放；故障／冷恢复的 resume 核验身份，不能清状态绕过。截图保存到真实 DSH attachments 并返回持久 ImageAttachmentRef。普通批注保存不标记为 AI 操作，也不取消工具。macOS 人工活动通知使用已授权的只读输入监听，只保存所选目标的活动种类、时间与序号，不保存按键内容、不请求权限或改变控制权；缺少输入监听权限时明确报告不可检测。产品鼠标使用同一 REA 原件，承载层透明且点击穿透；可见浏览器页面和 macOS 等待到达回执后发送对应输入，隐藏页面明确延后视觉回执而不阻塞后台输入，Windows/Linux 的原生移动通过独立显示通道传给所属 DSH 窗口，不以动画回执冒充输入成功。取消会隐藏鼠标并释放实际按键。内置浏览器鼠标的位置／可见性独立于单次动作活动状态；macOS 原生鼠标不再 1.5 秒超时隐藏，在动作间隙保留最后位置，取消／释放／目标失效时移除。托管浏览器和扩展页面沿用同一 REA 鼠标，在页面存续期间不按空闲时间隐藏。Windows/Linux 显式前台输入保留系统指针，同时把真实位置接到同一 REA 鼠标；后台无障碍动作不移动系统指针；Windows 物理像素由宿主换算为 DIP，Linux X11 单屏按真实比例换算，Wayland 使用 portal 逻辑坐标与显示器原点。鼠标在动作间隙保持，取消／目标失效／helper 或所属窗口退出时清理；用户鼠标不被覆盖层捕获。

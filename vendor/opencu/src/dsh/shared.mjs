@@ -101,11 +101,10 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
           computer.attachments = attachments;
           result = endpoint === 'computer_use_reset' ? await computer.reset() : await computer.run(args, signal);
         } else if (endpoint === 'openTarget' && String(args.browserId).startsWith('dsh:')) {
-          const target = await entry.browserHost.openTab({ ...args, sessionId: typeof sessionKey === 'string' ? sessionKey : undefined });
-          result = await entry.runtime.request('select', { reference: { id: target.id, identity: target.identity } }, { attachments, signal, sessionKey });
+          result = await entry.runtime.request(endpoint, { ...args, sessionId: typeof sessionKey === 'string' ? sessionKey : undefined }, { attachments, signal, sessionKey });
         } else {
           result = await entry.runtime.request(endpoint, args, { attachments, signal, sessionKey, modelProjection, onApprovalWait });
-          if (endpoint === 'state' || endpoint === 'targets') result = { ...result, browsers: [...entry.browserHost.listBrowsers(), ...(result.browsers ?? [])],
+          if (endpoint === 'state' || endpoint === 'targets') result = { ...result, browsers: result.browsers ?? entry.browserHost.listBrowsers(),
             ...(!modelProjection ? { presentation: entry.presentation.snapshot() } : {}) };
         }
         signal?.throwIfAborted();

@@ -22,7 +22,9 @@ export async function createController({dataDir, browser, native} = {}) {
     if (native) { assertBackend(native, 'native'); backends.set('native', native); }
   } catch (error) { await storage.close(); throw error; }
 
-  const selected = new Map((saved?.targets ?? []).map(target => [target.id, {...target, verified: false, cold: true}]));
+  const cleanShutdown = saved?.closed === true && saved.releasePending === false && !saved.releaseErrors?.length;
+  const selected = new Map((saved?.targets ?? []).map(target => [target.id, {...target, verified: false, cold: true,
+    releaseAcknowledged: cleanShutdown || target.releaseAcknowledged === true}]));
   const userActivity = new Map();
   const observedActivity = new Map();
   const previews = new Map();
@@ -206,7 +208,7 @@ export async function createController({dataDir, browser, native} = {}) {
       if (!request.browserId || browsers.filter(item => item.id === request.browserId).length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected browser ID');
       let target;
       try {
-        target = assertTarget(await backend.newTab(request.browserId, request.url, {signal: aborter.signal}), 'browser');
+        target = assertTarget(await backend.newTab(request.browserId, request.url, {signal: aborter.signal, sessionId: request.sessionId}), 'browser');
         checkOperation(operationEpoch);
         if (target.browserId !== request.browserId) fail('TARGET_IDENTITY_CHANGED', 'Created tab belongs to another browser');
         const current = assertTarget(await backend.select(json(target), {signal: aborter.signal}), 'browser');
@@ -249,7 +251,8 @@ export async function createController({dataDir, browser, native} = {}) {
         await verify(target, backend, previous?.cold ?? false, operationEpoch);
         checkOperation(operationEpoch);
         // Selection cannot bypass cold recovery or a previous stop.
-        Object.assign(target, {verified: mode === 'active' && !releasePending && !previous?.cold, cold: previous?.cold ?? false});
+        Object.assign(target, {verified: mode === 'active' && !releasePending && !previous?.cold, cold: previous?.cold ?? false,
+          releaseAcknowledged: previous?.releaseAcknowledged === true});
         selected.set(target.id, target);
         activeTargetId = target.id;
         await persist();
@@ -296,6 +299,9 @@ export async function createController({dataDir, browser, native} = {}) {
       const operationEpoch = epoch;
       const {target, backend} = targetFor(request.targetId, request.targetIdentity);
       if (target.cold || !dialogAction && !target.verified) fail('RECOVERY_REQUIRED', 'Resume this target before acting');
+      // A clean shutdown receipt survives another restart, but never a new
+      // dispatch. Persist invalidation first so a crash cannot reuse the receipt.
+      if (target.releaseAcknowledged) { target.releaseAcknowledged = false; await persist(); checkOperation(operationEpoch); }
       let result;
       const recovery = dialogAction && aborter.signal.aborted ? new AbortController() : null;
       if (recovery) recoveryOperations.add(recovery);

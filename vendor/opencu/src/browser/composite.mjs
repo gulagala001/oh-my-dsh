@@ -72,6 +72,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       if (!backend) continue;
       try {
         const result = await backend.release({targets: targets.filter(target => providerName(target) === provider).map(target => unwrap(target, provider)), dismissDialogs});
+        retiredTargetIds.push(...(result?.retiredTargetIds ?? []));
         results.push({provider, result});
         if (!inputReleased(result)) failures.push({provider, code: 'RELEASE_UNACKNOWLEDGED', result});
       } catch (error) { failures.push({provider, ...errorJSON(error)}); }
@@ -115,8 +116,9 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
     async listBrowsers({signal} = {}) {
       alive(); checkSignal(signal);
       const browsers = await readOperation(() => browser?.listBrowsers?.({signal}) ?? [], signal);
+      const sidebar = await readOperation(() => dsh?.listBrowsers?.({signal}) ?? [], signal);
       checkSignal(signal);
-      return [...browsers, ...(extension?.connections?.() ?? []).map(item =>
+      return [...browsers, ...sidebar, ...(extension?.connections?.() ?? []).map(item =>
         ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true}))];
     },
     async newTab(browserId, url, options) {
