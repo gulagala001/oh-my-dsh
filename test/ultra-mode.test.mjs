@@ -19,10 +19,12 @@ function fixture(saved, teamEnabled = false) {
       const { sessionId, ...selected } = input;
       events.push({ seq: events.length, type: 'model/selection', data: selected }); return { selected };
     } } : undefined };
-  const control = new UltracodeControl(ctx, () => true, store);
+  let omd = true;
+  const control = new UltracodeControl(ctx, () => omd, store);
   const select = (mode, submode) => control.select(session.id, { provider: 'local', model: 'main', mode, submode, expectedRevision: control.view(session, agent).revision });
   const turn = n => { const event = { seq: events.length, type: 'turn/start', data: { turn: n } }; events.push(event); control.committed(session, event); };
-  return { agent, session, state, ctx, control, select, turn, setTeamEnabled: enabled => { teamEnabled = enabled; } };
+  return { agent, session, state, ctx, control, select, turn, events,
+    setOmd: enabled => { omd = enabled; }, setTeamEnabled: enabled => { teamEnabled = enabled; } };
 }
 
 test('legacy Pro becomes Ultra Workflow while the retired mode cannot reactivate', async () => {
@@ -123,4 +125,65 @@ test('mode reads wait until an already queued native selection and plugin save f
   releaseFlush(); await writing;
   const value = await reading;
   assert.equal(value.savedMode, 'ultra'); assert.equal(value.currentSubmode, 'workflow');
+});
+
+test('model preparation cannot overwrite a newer native selection', async () => {
+  const f = fixture({ mode: 'ultra', submode: 'free', selectionSeq: 0 });
+  const started = Promise.withResolvers(), prepared = Promise.withResolvers();
+  f.ctx.llm.resolveModelInfo = () => { started.resolve(); return prepared.promise; };
+  const writing = f.select('ultra', 'workflow');
+  await started.promise;
+  f.events.push({ seq: f.session.seq, type: 'model/selection', data: { provider: 'local', model: 'newer' } });
+  const saved = structuredClone(f.state.ultracode);
+  prepared.resolve({ reasoning: { efforts: [{ id: 'xhigh' }] } });
+  await assert.rejects(writing, /另一处更新/);
+  assert.equal(f.events.length, 2, 'the rejected operation must not dispatch a native selection');
+  assert.equal(f.control.view(f.session).selected.model, 'newer');
+  assert.deepEqual(f.state.ultracode, saved, 'a conflict must not rewrite saved mode intent');
+  assert.equal(f.control.writes.size, 0);
+  assert.equal((await f.select('ultra', 'workflow')).selected.model, 'main', 'an explicit retry uses the new revision');
+});
+
+test('Ultra admission uses capabilities after model preparation', async t => {
+  for (const unavailable of ['team', 'preset']) {
+    await t.test(unavailable, async () => {
+      const f = fixture({ mode: 'ultra', submode: 'free', selectionSeq: 0 }, true);
+      const started = Promise.withResolvers(), prepared = Promise.withResolvers();
+      f.ctx.llm.resolveModelInfo = () => { started.resolve(); return prepared.promise; };
+      const writing = f.select('ultra', unavailable === 'team' ? 'team' : 'workflow');
+      await started.promise;
+      if (unavailable === 'team') f.setTeamEnabled(false); else f.setOmd(false);
+      const saved = structuredClone(f.state.ultracode);
+      prepared.resolve({ reasoning: { efforts: [{ id: 'xhigh' }] } });
+      await assert.rejects(writing, unavailable === 'team' ? /启用 Agent Team/ : /OMD 协作能力/);
+      assert.equal(f.events.length, 1, unavailable + ': no native model write');
+      assert.deepEqual(f.state.ultracode, saved);
+      assert.equal(f.control.writes.size, 0);
+    });
+  }
+});
+
+test('queued mode choices conflict without replay and native changes during flush keep their ownership', async () => {
+  const f = fixture();
+  const started = Promise.withResolvers(), prepared = Promise.withResolvers();
+  f.ctx.llm.resolveModelInfo = () => { started.resolve(); return prepared.promise; };
+  const first = f.select('ultra', 'workflow');
+  await started.promise;
+  const second = f.select('ultra', 'free');
+  const rejected = assert.rejects(second, /另一处更新/);
+  prepared.resolve({ reasoning: { efforts: [{ id: 'xhigh' }] } });
+  await first; await rejected;
+  assert.equal(f.events.length, 2); assert.equal(f.state.ultracode.submode, 'workflow');
+  const saved = structuredClone(f.state.ultracode);
+  const flushed = Promise.withResolvers(), flushing = Promise.withResolvers();
+  f.ctx.sessions.flush = () => { flushing.resolve(); return flushed.promise; };
+  const writing = f.select('off');
+  await flushing.promise;
+  f.events.push({ seq: f.session.seq, type: 'model/selection', data: { provider: 'local', model: 'native-newer' } });
+  flushed.resolve();
+  await assert.rejects(writing, /再次变更/);
+  assert.deepEqual(f.state.ultracode, saved);
+  assert.equal(f.control.view(f.session).selected.model, 'native-newer');
+  assert.equal(f.control.view(f.session).mode, 'off');
+  assert.equal(f.control.writes.size, 0);
 });

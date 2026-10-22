@@ -54,11 +54,11 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   const pendingSubmode = useRef(null);
   const id = useId();
   useEffect(() => { live.current = true; return () => { live.current = false; clearTimeout(commitTimer.current); }; }, []);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (preserveError = false) => {
     if (!available || writing.current) return;
     const revision = ++ticket.current;
-    try { const next = await modeApi(sessionId); if (live.current && revision === ticket.current) { setMode(next); setError(''); } }
-    catch (e) { if (live.current && revision === ticket.current) setError(e.message); }
+    try { const next = await modeApi(sessionId); if (live.current && revision === ticket.current) { setMode(next); if (!preserveError) setError(''); } }
+    catch (e) { if (live.current && revision === ticket.current) setError(current => preserveError && current ? current : e.message); }
   }, [sessionId, available]);
   useEffect(() => { void refresh(); }, [refresh, projected, preset]);
   useEffect(() => ctx.modules?.entries.state.subscribe(() => { void refresh(); }), [ctx, refresh]);
@@ -148,7 +148,16 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
       }
       return true;
     } catch (e) { if (live.current) setError(e.message); return false; }
-    finally { writing.current = false; pendingSubmode.current = null; if (live.current) { setSaving(false); setSubmodeDraft(null); setDraft(null); draftRef.current = null; } }
+    finally {
+      writing.current = false; pendingSubmode.current = null;
+      if (live.current) {
+        setSaving(false); setSubmodeDraft(null); setDraft(null); draftRef.current = null;
+        // Projection refreshes were skipped during this write. Reconcile
+        // once with the native state, including a conflict or a lost response,
+        // while retaining the save error until the user retries.
+        void refresh(true);
+      }
+    }
   };
   const chooseSubmode = next => {
     if (!submodes.some(item => item.id === next) || locked || !mode || !selected || state.pending !== null) return;

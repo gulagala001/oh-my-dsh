@@ -211,6 +211,10 @@ export class UltracodeControl {
         || (input.submode !== undefined && !ULTRA_SUBMODES.has(input.submode))
         || typeof input.provider !== 'string' || !input.provider.trim() || typeof input.model !== 'string' || !input.model.trim()
         || (input.reasoningEffort !== undefined && (typeof input.reasoningEffort !== 'string' || !input.reasoningEffort))) throw new Error('模型、档位和工作模式无效');
+      // Capability lookup can await provider work. Inspect the live owner,
+      // native revision and available tools only after preparation completes;
+      // no plugin-owned wait may separate that decision from native admission.
+      const info = await this.ctx.llm.resolveModelInfo(input.provider, input.model);
       const agent = await this.agent(sessionId), session = agent.session;
       const before = this.view(session, agent);
       const submode = input.submode ?? (mode === 'off' ? before.savedSubmode : before.submode);
@@ -220,7 +224,6 @@ export class UltracodeControl {
       if (mode === 'ultra' && submode === 'team' && !before.teamAvailable && !restoring) throw new Error('请先在 DSH 中启用 Agent Team');
       const controller = this.ctx.get('sessionController');
       if (!controller) throw new Error('当前宿主未提供模型选择服务');
-      const info = await this.ctx.llm.resolveModelInfo(input.provider, input.model);
       const effort = mode === 'ultra' && info.reasoning?.efforts?.some(level => level.id === 'xhigh')
         ? 'xhigh'
         : mode !== 'off' ? highestEffort(info.reasoning) : input.reasoningEffort;
