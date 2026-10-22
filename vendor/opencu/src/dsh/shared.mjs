@@ -97,7 +97,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
         if (endpoint === 'computer_use' || endpoint === 'computer_use_reset') {
           const id = sessionKey ?? root;
           let computer = entry.computers.get(id);
-          if (!computer) { computer = createComputerSession((method, payload, waiting) => entry.request(method, payload, { signal: method === 'stop' ? undefined : computer.signal, attachments: computer.attachments, sessionKey: id, modelProjection: method === 'state' || method === 'targets', onApprovalWait: waiting?.onApprovalWait })); entry.computers.set(id, computer); }
+          if (!computer) { computer = createComputerSession((method, payload, waiting) => entry.request(method, payload, { signal: method === 'stop' ? undefined : computer.signal, attachments: computer.attachments, sessionKey: id, modelProjection: true, onApprovalWait: waiting?.onApprovalWait })); entry.computers.set(id, computer); }
           computer.attachments = attachments;
           result = endpoint === 'computer_use_reset' ? await computer.reset() : await computer.run(args, signal);
         } else if (endpoint === 'openTarget' && String(args.browserId).startsWith('dsh:')) {
