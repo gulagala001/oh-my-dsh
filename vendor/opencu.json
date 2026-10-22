@@ -711,8 +711,8 @@
     "src/dsh/browser-host.mjs": "d12b98c350ffd3f01500686e3b2145b7ef4681be014b9dc1eac4032aa485c67d",
     "src/dsh/computer-docs.mjs": "08f10cbb7711fed24e22903e6c5d3248391cedf71feaed4857d07cae359e9056",
     "src/dsh/computer-repl.mjs": "a43ca44b1fe1fa41d94a0b3982d750670043dff7b8e945ffe9f48057239ec148",
-    "src/dsh/computer-worker.mjs": "5e342bdf2aa0999217f4a42e39bc7bd59c9e7f7e77b2024fb966648658682e15",
-    "src/dsh/computer.mjs": "6094796f2a5bc0f16a52df2a607b191d972a144d2fc44c351fb51acba69e886d",
+    "src/dsh/computer-worker.mjs": "252a47df482740d1b086d3918a34ef90263bf88cbb468e0b996c53dd6b38a8ab",
+    "src/dsh/computer.mjs": "aeceb21f18feab2d21a7cd05d34ac74b23524a3d48c5fdfceddb2c10e9baf7af",
     "src/dsh/config.mjs": "2918e8568e44834fdacda51589e83c455fef26e39811911999c391a319eb98cf",
     "src/dsh/delivery-files.mjs": "4d747907f5d1165fc539d188f5a7599cacf9ca439e3a9eec399d8c2a48791c34",
     "src/dsh/downloads.mjs": "2e9eed80f9052f7d875a1f5c198b1dfc4d6e5a0a223f95f1746ccc36ccc35009",
@@ -724,8 +724,8 @@
     "src/dsh/preferences.mjs": "9fe12ecd020ce8acf4621cbe22876d896c464c080e15dbcbd1f1fafd1e2741f1",
     "src/dsh/presentation.mjs": "8217eda88a533f35842f6ecf4f78d77bacf154e45619286822777c268193f3d0",
     "src/dsh/repl-output.mjs": "b6bff1e63f0d640ecf03ff5e907b4c382c27a7c66ab028adc31071e06089bb14",
-    "src/dsh/runtime.mjs": "c1bc87d6bade5142c81267fccda07b0e9c9b0395fab8325a6408531e1634d5fe",
-    "src/dsh/shared.mjs": "abe191fdd753451b4cd109d2f362038073eedd60f61d4067287f90871595648d",
+    "src/dsh/runtime.mjs": "627de1cc571e4147a33a5563cd156d1da656fcaa27b39a291ff128e0d149f61c",
+    "src/dsh/shared.mjs": "44a5314fcfe49303e94a847ba4e4b12136b98b1339f45dc2b0921bf734be6b92",
     "src/dsh/tools.mjs": "f56b4fcb5e7d98b2545b43f224cbf14feb47681eef81072a08c86ee295ad7891",
     "src/extension/backend.mjs": "7d49dd2700df47021d0f1173753dc98debdf6a25750ec3c36033d48d17cd1a90",
     "src/extension/distribution.json": "894f3457d1b89dd6221fffa9a82145b0bc484bf118f971dd1a4a1365caac7e6d",
@@ -747,5 +747,6 @@
     "src/protocol.mjs": "78bd4e2f4a39c84d4c37e7a7891576fa9682e42277d93734c4571b45a096533b",
     "src/runtime.mjs": "5ab64b04f72d4343f479da4f2342e44a1dc985903e0b213cd0bc5b2cf7ca09ed",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
-  }
+  },
+  "sourceRevision": "be63259b1b30b90afe27404c73f69a132e858d81"
 }

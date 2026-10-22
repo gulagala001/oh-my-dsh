@@ -377,7 +377,9 @@ export function createPluginRuntime(options = {}) {
       if (endpoint === 'targets' || endpoint === 'state') result.browserProviders = runtime.runtimeInfo.browserProviders;
       if (result.observation) { result = await attachScreenshot(result, attachments); lastObservation = { targetId: result.targetId, observation: stripPaths(result.observation), image: result.image ?? null }; }
       if (result.state) result = { ...result, state: { ...result.state, status: result.state.mode, selectedTarget: result.state.targets.find(target => target.id === result.state.activeTargetId) ?? null, annotations, lastObservation, revision, activity }, service: { name: 'OpenCU', ...runtime.runtimeInfo }, config: publicConfig(getConfig()) };
-      return stripPaths(modelProjection && endpoint === 'state' ? modelResult(result, args) : result);
+      // The worker still needs raw AX nodes for diffing and details:true. Omit
+      // duplicate text/history before cloning them across the worker boundary.
+      return stripPaths(modelProjection ? modelResult(result, {...args, ...(endpoint === 'observe' ? {details:true} : {})}) : result);
     } finally {
       if (active.has(endpoint)) { revision++; activity = { ...activity, status: 'settled', finishedAt: new Date().toISOString() }; }
     }

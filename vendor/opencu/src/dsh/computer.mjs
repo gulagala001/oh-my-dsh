@@ -29,7 +29,10 @@ export function createComputerSession(request) {
     record.worker.on('message', message => {
       const run = record.run;
       if (record.retired || !run || message.cell !== run.id) return;
-      if (message.type === 'progress') { run.partial = message.partial; return; }
+      if (message.type === 'progress') {
+        run.partial = {...message.partial, outputs: run.partial.outputs.concat(message.partial.outputs)};
+        return;
+      }
       if (message.type === 'result') {
         if (performance.now() >= run.deadline) { run.aborter.abort(timeoutFailure(run)); return; }
         if (message.error) run.reject(deserializeReplError(message.error));
