@@ -6,7 +6,7 @@ import { rmSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
 import { launchNativeHost } from './native-host.mjs';
-import { cleanEnvironment } from './process.mjs';
+import { cleanEnvironment, dependencyDirectory } from './process.mjs';
 import { LIMITS, packageDigest, problem, redact } from './shared.mjs';
 
 if (process.env.OMD_PLUGIN_PREFLIGHT !== '1') throw Error('Plugin preflight requires its disposable launcher');
@@ -132,7 +132,7 @@ async function prepare() {
   if (!source.startsWith(root + '/') && !source.startsWith(root + '\\')) {
     const snapshot = join(root, 'candidate');
     await cp(source, snapshot, { recursive: true, dereference: false, verbatimSymlinks: true, filter: path => !['node_modules', '.git', '.local'].includes(path.split(/[\\/]/).at(-1)) });
-    await symlink(await exists(join(source, 'node_modules')) ? join(source, 'node_modules') : modules,
+    await symlink(await dependencyDirectory(source, modules),
       join(snapshot, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
     const link = join(modules, candidate.name); await mkdir(dirname(link), { recursive: true });
     await rm(link, { recursive: true, force: true });
@@ -223,6 +223,9 @@ async function checkPage(chromium, executablePath, bootstrap) {
     '隔离插件组合存在加载失败：' + failed.map(row => row.moduleName).join('、')), { details: hostLog });
   const waiting = inventory.plugins.filter(row => ownIds.has(row.entryId) && row.enabled && row.fiberPhase === 'pending');
   if (waiting.length) throw Object.assign(problem('environment-unavailable', '候选插件仍在等待依赖服务，预检未完成'), { details: hostLog });
+  const diagnostic = page.getByRole('alert', { name: 'Oh My DSH 启动诊断', exact: true });
+  if (await diagnostic.isVisible()) throw Object.assign(problem('client-failed', '隔离页面报告增强功能启动失败'),
+    { details: await diagnostic.innerText() });
   if (await input.getAttribute('contenteditable') === 'false' && await input.getAttribute('data-phase') === 'inert') {
     // A fresh native profile asks for a workspace before editing. Exercise
     // that picker rather than treating the intentional empty state as a crash.

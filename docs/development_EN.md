@@ -10,7 +10,7 @@ OMD tarballs omit the redundant standalone registration bundle `vendor/opencu/li
 ## Running from Source
 
 Use Node.js ≥22.19, Git, and the pnpm specified in the checkout's `package.json`.
-The example runs the published fixed `0.10.0` source, not this current `0.99.3` release.
+The example runs the published fixed `0.10.0` source, not this current `0.100.0` release.
 
 ```sh
 git clone --branch v0.2.1-alpha.1.omd.0.10.0 https://github.com/gulagala001/oh-my-dsh.git

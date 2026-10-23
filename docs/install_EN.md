@@ -52,7 +52,7 @@ https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100
 https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.100.0/oh-my-dsh-0.2.1-rc.1.omd.0.100.0.tgz
 ```
 
-The first part of the complete plugin version identifies DSH; the trailing 0.99.3 identifies OMD. For other hosts, use [downloads and historical versions](releases.md).
+The first part of the complete plugin version identifies DSH; the trailing 0.100.0 identifies OMD. For other hosts, use [downloads and historical versions](releases.md).
 
 ### 3. Paste and install
 

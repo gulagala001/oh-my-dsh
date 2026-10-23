@@ -10,7 +10,7 @@ OMD 发行包不重复携带 OpenCU 的独立注册包 `vendor/opencu/lib/client
 ## 源码运行
 
 需要 Node.js ≥22.19、Git，以及 checkout 的 `package.json` 指定的 pnpm。
-下面只演示已公开的固定 `0.10.0` 源码运行，不是当前 `0.99.3` 版本的安装命令。
+下面只演示已公开的固定 `0.10.0` 源码运行，不是当前 `0.100.0` 版本的安装命令。
 
 ```sh
 git clone --branch v0.2.1-alpha.1.omd.0.10.0 https://github.com/gulagala001/oh-my-dsh.git
