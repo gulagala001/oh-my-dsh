@@ -219,13 +219,36 @@ export class MonitorLedger {
     const imported = []; let opened = false;
     try {
       this.db.exec('SAVEPOINT monitor_import'); opened = true;
-      // The old ring is intentionally not promoted to complete historical data.
-      for (const [state, signature] of pending) {
-        const duplicates = new Map(); let complete = true;
+      // Reopening archives usually finds receipts already in the ledger. Resolve
+      // identities once, then check them in this same write snapshot before doing
+      // usage normalization or INSERT OR IGNORE for every historical entry.
+      const batches = pending.map(([state, signature]) => {
+        const duplicates = new Map(), entries = [];
         for (const entry of state.activity || []) {
-          if (number(entry.at) === null) continue; // Old undated totals cannot be placed on today's timeline.
-          const key = hash([state.id, entry]), ordinal = duplicates.get(key) || 0; duplicates.set(key, ordinal + 1);
-          if (!this.append({ ...entry, id: entry.id || `legacy:${key}:${ordinal}`, sessionId: state.id, source: entry.source || 'legacy' })) complete = false;
+          if (number(entry.at) === null) continue; // Undated totals cannot enter the timeline.
+          let id = entry.id;
+          if (!id) {
+            const key = hash([state.id, entry]), ordinal = duplicates.get(key) || 0;
+            duplicates.set(key, ordinal + 1); id = `legacy:${key}:${ordinal}`;
+          }
+          entries.push({ entry, id });
+        }
+        return { state, signature, entries };
+      });
+      // INSERT OR IGNORE used to acquire a writer reservation before any read.
+      // Keep that protection: a competing writer must not invalidate the lookup
+      // snapshot before a missing receipt or timing can be inserted. No rows change.
+      if (batches.some(({ entries }) => entries.length)) this.db.exec('UPDATE calls SET id=id WHERE 0');
+      const ids = batches.flatMap(({ entries }) => entries.map(({ id }) => text(id, 512))).filter(Boolean);
+      const existing = new Map(this.db.prepare(`SELECT id,EXISTS(SELECT 1 FROM call_timings WHERE call_timings.id=calls.id) timed
+        FROM calls WHERE id IN (SELECT value FROM json_each(?))`).all(JSON.stringify(ids)).map(row => [row.id, row.timed]));
+      // The old ring is intentionally not promoted to complete historical data.
+      for (const { state, signature, entries } of batches) {
+        let complete = true;
+        for (const { entry, id } of entries) {
+          const key = text(id, 512);
+          if (existing.has(key) && (number(entry.firstTokenMs) === null || existing.get(key))) continue;
+          if (!this.append({ ...entry, id, sessionId: state.id, source: entry.source || 'legacy' })) complete = false;
         }
         if (complete) imported.push([state.id, signature]);
       }
