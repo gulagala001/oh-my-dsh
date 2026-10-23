@@ -41,6 +41,8 @@ If access shows Custom, select an access preset first. Synchronization failure k
 
 Leaving during creation cancels the remaining preparation and releases its waits. The draft and attachments remain, and retry reuses the same directory allocation. Once the message reaches the host, its actual admission receipt still determines completion even if you leave. A failed admission can be retried; navigation never resends it automatically.
 
+If a disk error or process exit interrupts initial creation, retry preserves any existing directory whose ownership was not confirmed and chooses another numbered name. Its files are never adopted into the chat. Confirmed chats continue using their original directory.
+
 <a id="local-development-or-trial"></a>
 
 Source trials use the [short development guide](development_EN.md). Public fixed installation needs no clone/manual build.

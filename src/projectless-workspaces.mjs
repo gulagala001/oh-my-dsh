@@ -184,41 +184,53 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
 
   async function prepare({ requestId, prompt } = {}) {
     const id = requestKey(requestId);
-    const baseName = chatName(prompt);
+    const requestedName = chatName(prompt);
     return serialize(storeDir, async () => {
       await safeDirectory(storeDir, true);
       return withLock(storeDir, async () => {
         await safeDirectory(requestsDir, true);
         await safeDirectory(claimsDir, true);
         let record = await load(id);
-        if (record) {
+        if (record?.state === 'ready') {
           const workspace = result(record, id);
           await safeDirectory(workspace.cwd, true);
-          if (record.state !== 'ready') await writeJson(fileFor(id), { ...record, state: 'ready' });
           return workspace;
         }
-        const instant = now();
-        if (!(instant instanceof Date) || !Number.isFinite(instant.getTime())) throw fail('now must return a valid Date');
-        const date = `${instant.getFullYear()}-${String(instant.getMonth() + 1).padStart(2, '0')}-${String(instant.getDate()).padStart(2, '0')}`;
+        // A pending record reserves a name, not ownership of a directory. A
+        // crash can occur on either side of mkdir, so recovery must use the
+        // same exclusive allocation as a first attempt, never adopt an entry.
+        const baseName = record?.name ?? requestedName;
+        const numberedName = chatName(baseName);
+        let date = record?.date;
+        if (!date) {
+          const instant = now();
+          if (!(instant instanceof Date) || !Number.isFinite(instant.getTime())) throw fail('now must return a valid Date');
+          date = `${instant.getFullYear()}-${String(instant.getMonth() + 1).padStart(2, '0')}-${String(instant.getDate()).padStart(2, '0')}`;
+        }
+        const requestHash = keyFor(id);
+        // Called only under the allocation lock; another request's reservation
+        // survives even when the filesystem name is currently occupied.
+        const releaseClaim = async file => {
+          if ((await readJson(file))?.requestHash === requestHash) await fs.unlink(file);
+        };
         await safeDirectory(path.join(root, date), true);
         for (let suffix = 1; suffix <= 100_000; suffix++) {
-          const name = suffix === 1 ? baseName : `${baseName}-${suffix}`;
+          const name = suffix === 1 ? baseName : `${numberedName}-${suffix}`;
           const cwd = path.join(root, date, name);
           const claimFile = path.join(claimsDir, `${hash(cwd)}.json`);
-          const requestHash = keyFor(id);
+          // Check before claiming so ordinary name collisions make no writes.
+          const occupied = await fs.lstat(cwd).catch((error) => { if (error.code === 'ENOENT') return null; throw error; });
+          if (occupied) { await releaseClaim(claimFile); continue; }
           try { await writeJson(claimFile, { requestHash }, true); }
           catch (error) {
             if (error.code !== 'EEXIST') throw error;
             if ((await readJson(claimFile))?.requestHash !== requestHash) continue;
           }
-          // Existing directories and symlinks belong to the user; reserve a new name.
-          const occupied = await fs.lstat(cwd).catch((error) => { if (error.code === 'ENOENT') return null; throw error; });
-          if (occupied) continue;
           record = { version: 1, requestId: id, root, date, name, state: 'pending' };
           await writeJson(fileFor(id), record);
           try { await fs.mkdir(cwd, { mode: 0o700 }); }
           catch (error) {
-            if (error.code === 'EEXIST') { await fs.unlink(fileFor(id)); continue; }
+            if (error.code === 'EEXIST') { await releaseClaim(claimFile); continue; }
             throw error;
           }
           await safeDirectory(cwd);
