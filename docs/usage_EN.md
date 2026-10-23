@@ -228,6 +228,8 @@ OMD bundles `@gulagala001/dsh-undo-plugin`. Double Esc while idle or `/rewind` o
 
 ## Data and Maintenance
 
+Rewind, undo and failure recovery use one historical cutoff for tasks, original-wording excerpts and verification evidence. Tools, the task dock, context and completion checks read the same native task record. Replayed messages are not counted as new user requirements and cannot resume paused reminders within a turn. Existing quotation numbers remain stable and may have gaps where replayed copies were skipped. Restored evidence is historical, not a fresh verification run. Legacy message-only snapshots without an event cutoff do not infer or overwrite task records.
+
 Personalities, rewind backups, workflows and website imports retain their own data. Copying only `oh-my-dsh/` does not cover every feature; include the locations in [plugin data ownership](architecture_EN.md#data-retains-its-owner).
 
 Use actual `DSH_HOME` (normally user `.dsh` for Web), OMD under `oh-my-dsh/`, source default repository `data/dsh/`. Back up profiles, credentials, sessions, attachments, context, memory together. Dream uses `dream-v1/memory.sqlite`, monitoring `monitor-v1/usage.sqlite`; retired automatic memory stays read-only. External projects/indexes need separate backups. Disable/uninstall does not clear user data.

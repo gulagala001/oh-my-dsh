@@ -153,6 +153,7 @@ export class RewindEngine {
       for(const a of foreign){try{if(await this.root(a.session)===root)reason='同一工作区还有其他会话正在执行。';}catch{}}
       try{await this.files.validate(root,changes);}catch(e){reason=e.message;}
       const context=undo?base.context:{atSeq:seq};
+      if(Array.isArray(context))warnings.push('这份旧撤销备份没有任务历史截点；对话和文件恢复后，任务清单保持现状。');
       // Preflight every native append before offering the confirmation.
       prepareReplay(s,context,this.projections());
       const plan={id:randomUUID(),sessionId:id,revision:st.revision,seq:s.seq,expires:Date.now()+5*60000,undo,target,root,changes,context,
