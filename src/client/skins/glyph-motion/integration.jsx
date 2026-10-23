@@ -1,8 +1,6 @@
 import React, { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { decorateSlotComponent } from '../../slot-decoration.mjs';
 import { mountGlyphRenderer } from '../../../../plugins/glyph-theme/src/theme/renderer.mjs';
-import { GlyphBrand } from '../../../../plugins/glyph-theme/src/theme/brand.jsx';
 
 const enabled = state => state.active !== false && state.skins.find(s => s.id === state.selected)?.layout === 'glyph-motion';
 
@@ -19,16 +17,4 @@ export function applyGlyphIntegration(ctx, getRuntime, { priority = 0 } = {}) {
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay', id: 'omd-glyph-renderer', order: 20, priority,
   }, Renderer));
-  for (const name of ['conversation.hero.brand.mark', 'sidebar.brand.mark']) {
-    ctx.slots.inject(name, () => decorateSlotComponent(ctx.slots, name, () => true, original => {
-      const Original = original.component;
-      return function GlyphMark(props) {
-        const runtime = getRuntime();
-        const state = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
-        return enabled(state)
-          ? <GlyphBrand small={name.startsWith('sidebar')}/>
-          : <Original {...props}/>;
-      };
-    }));
-  }
 }

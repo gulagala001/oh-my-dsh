@@ -7,6 +7,7 @@ import { extraPalettes } from './palettes.mjs';
 import { createBackgroundRuntime, backgroundDefaults } from './background.mjs';
 import { appearanceCoordinator } from './coordinator.mjs';
 import { createAttributeMarkers } from '../attribute-markers.mjs';
+import { glyphOwnership } from '../../../plugins/glyph-theme/src/shared/ownership.mjs';
 import windowChromeCss from '../../../plugins/glyph-theme/src/shared/window-chrome.css';
 export const STORAGE_KEY = 'omd.skins.v1';
 // OMD and the standalone theme manager ship this file unchanged; product
@@ -17,7 +18,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   const defaults = () => advancedDefaults(brand);
   const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
   let state = { active: false, skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: defaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
-  let disposeTokens, style, customStyle, windowStyle, disposed = false, logoSequence = 0, owning = false;
+  let disposeTokens, releaseGlyph, style, customStyle, windowStyle, disposed = false, logoSequence = 0, owning = false;
   const effectsRoot = document.documentElement;
   const effectsMarkers = createAttributeMarkers('data-omd-reduce-effects');
   const syncEffects = () => effectsMarkers.update(new Map(state.reduceEffects ? [[effectsRoot, '']] : []));
@@ -94,10 +95,20 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     if (!owning) return;
     owning = false; background.setEnabled(false); clearTheme();
     disposeTokens?.(); disposeTokens = undefined;
+    releaseGlyph?.(); releaseGlyph = undefined;
   };
   const apply = () => {
     if (!disposed) syncEffects();
     if (!state.active || disposed) { release(); return; }
+    const active = prepared.get(state.selected);
+    // Release a standalone Glyph owner BEFORE writing this owner's attributes
+    // and tokens. Use the layout, since imported Glyph skins have their own ids.
+    if (active?.skin.layout === 'glyph-motion' && !releaseGlyph) {
+      releaseGlyph = () => {};
+      releaseGlyph = glyphOwnership().claimOmd();
+    } else if (active?.skin.layout !== 'glyph-motion' && releaseGlyph) {
+      const off = releaseGlyph; releaseGlyph = undefined; off();
+    }
     // Theme edits retain appearance ownership and the existing background DOM.
     // Only coordinator handoff/unload releases surfaces and their observers.
     clearTheme();
@@ -107,7 +118,6 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     windowStyle = document.createElement('style'); windowStyle.dataset.omdWindowChrome = '';
     windowStyle.textContent = windowChromeCss; document.head.append(windowStyle);
     const root = document.documentElement;
-    const active = prepared.get(state.selected);
     if (active?.css === null) load(active);
     const source = state.palettes.find(p => p.id === state.palette);
     const composed = composePalette(active?.skin, source);

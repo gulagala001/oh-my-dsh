@@ -14,7 +14,7 @@ import materialLayout from './google-material-expressive/layout.css';
 import { MaterialAppearance } from './google-material-expressive/appearance.jsx';
 import { applyMaterialIntegration, MATERIAL_LAYOUT } from './google-material-expressive/integration.jsx';
 import claudeTerminalLayout from './claude-cli-terminal/layout.css';
-import { applyTerminalPresentation } from './claude-cli-terminal/presentation.jsx';
+import { applySkinBrands } from './brand.jsx';
 import glyphLayout from '../../../plugins/glyph-theme/src/theme/layout.css';
 import { applyGlyphIntegration } from './glyph-motion/integration.jsx';
 import { applySidebarPresentation } from '../sidebar.jsx';
@@ -86,7 +86,7 @@ export function applySkins(ctx) {
   ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-cli-terminal': claudeTerminalLayout, 'glyph-motion': glyphLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, surfaces, layoutBaseCss); return () => runtime.dispose(); });
   applyMaterialIntegration(ctx, () => runtime);
   applyCodexIntegration(ctx, () => runtime);
-  applyTerminalPresentation(ctx, () => runtime);
+  applySkinBrands(ctx, () => runtime);
   applyGlyphIntegration(ctx, () => runtime);
   ctx.slots.inject('settings.section', () => {
     const coordinator = appearanceCoordinator();
