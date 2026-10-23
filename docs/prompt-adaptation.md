@@ -2,7 +2,29 @@
 
 [文档目录](README.md) · [项目介绍](../README.md#prompts) · [专属执行模式](workflow.md)
 
-Oh My DSH 把主提示词、工具说明和动态提醒分别装配到 DSH 的原生执行流程。主代理与工作流参考 Claude Code 的固定版本材料，适配依据是宿主当前拥有的能力。当前源码 `0.2.1-rc.2.omd.0.99.3` 匹配 DSH `0.2.1-rc.2`；默认内置的新 OpenCU 保留自己的实时工具说明，不用旧描述覆盖。安装状态见[版本配对](install.md)。
+Oh My DSH 把主提示词、工具说明和动态提醒分别装配到 DSH 的原生执行流程。默认主代理与工作流参考 Claude Code 的固定版本材料，适配依据是宿主当前拥有的能力。当前源码 `0.2.1-rc.2.omd.0.99.3` 匹配 DSH `0.2.1-rc.2`；默认内置的新 OpenCU 保留自己的实时工具说明，不用旧描述覆盖。安装状态见[版本配对](install.md)。
+
+## 系统提示词风格
+
+在 **设置 → Oh My DSH → 智能体** 选择 **OMD 默认、DSH 原生、Codex、Cursor、Pi、Grok、ZCode**。默认固定为 OMD 默认，沿用现有主提示词与工具适配。DSH 原生保留当前宿主的原生提示词及工具说明，并按固定宿主原文恢复被 OMD 全局配置隐藏的身份段；所有风格继续移除与实际已关闭文件观察策略不符的断言。
+
+**启用会话提示词风格**默认关闭；开启后，OMD／OMD-PTC 主会话的权限菜单才显示同样七个选项。未单独选择的会话跟随全局，各会话的显式选择独立保存。关闭开关时使用全局风格，重新开启恢复已保存的会话选择。修改在下一回合生效，进行中的回合保持原选择。人格设置独立生效；子代理、OMAA 和专用后台任务不通过此入口切换。
+
+原始提示词位于 [`src/prompt-styles/upstream/`](../src/prompt-styles/upstream/)，逐文件保留上游字节、固定提交、核对日期、SHA-256 和许可。除身份、工具／参数／等待方式、界面格式、动态环境与宿主协议的必要适配外，保留原版的行为要求、章节顺序和措辞。Pi 与 ZCode 从固定源码生成文本构建器；适配没有移植产品运行时。
+
+2026-10-23 核对的来源：
+
+| 选项 | 固定来源 | 使用范围 |
+| --- | --- | --- |
+| Codex | [0.164.0](https://github.com/openai/codex/releases/tag/rust-v0.164.0)，`6aaac694` | `gpt-6-astra` 的完整 `instructions_template`；本次该文本未变。专门开启的 persistent mode 不属于默认模板，未开启 |
+| Cursor | [公开样本](https://github.com/asgeirtj/system_prompts_leaks/blob/3d535771ea2a5c33bbc1c8cf7845caaf9b959a56/Cursor/cursor.md)，文件 blob `f6951fa5` | 非官方资料；对应产品版本、真实性和完整性无法独立确认，本次文本未变 |
+| Pi | [1.4.0](https://github.com/earendil-works/pi/releases/tag/v1.4.0)，`4a080252` | 原版结构化系统提示词构建器，本次文本未变 |
+| Grok | [Grok Build](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8)，`2bdd1d6a` | 交互式主模板，按实际工具渲染条件段，本次文本未变 |
+| ZCode | [3.16.2 源码](https://github.com/zai-org/ZCode/tree/3c5b227649371507ddc4eb46ac5133afe6db1cab)，`3c5b2276` | 已更新的 CLI 前缀、身份、沟通／行为、会话指导和上下文管理；不是将该源码版本称为正式 Release |
+
+Codex 的消息通道、编排和技能读取改用实际宿主接口；Cursor 的专有代码引用、IDE 终端目录、MCP 描述文件与工具列表改用当前宿主渲染及工具契约；Grok 的文件记忆协议不启用，沿用 OMD 记忆，公开文档替代未安装的 TUI 路径。Pi 的文档路径指向固定公开源码，工具列表取实时契约；ZCode 的 token 统计元数据不参与文本。工作目录、技能、仓库规则、权限、计划模式、任务、Ultra、Dream 与记忆继续由现有宿主及 OMD 组件提供。
+
+运行 `npm run prompts:check` 核对原文哈希、文本生成器与适配锚点。更新来源后运行 `node scripts/check-prompt-styles.mjs --write` 重建，再核对适配；构建、CI 和 prepack 使用同一检查。许可与来源归属见[第三方声明](../THIRD_PARTY_NOTICES.md#system-prompt-style-sources)。
 
 ## 三个层次
 

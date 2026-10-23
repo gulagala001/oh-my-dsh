@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { sessionPersonality } from '../personality-session.mjs';
 import { createHash } from 'node:crypto';
 import { browserTestingGuide } from '#opencu/src/dsh/browser-testing.mjs';
+import { agentPromptStyle } from '../prompt-styles/session.mjs';
+import { DSH_IDENTITY, renderPromptStyle } from '../prompt-styles/render.mjs';
+import { renderPersonality } from '../../plugins/persona/src/shared/prompt.mjs';
 
 import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
 const bindings = JSON.parse(readFileSync(new URL('./bindings.json', import.meta.url), 'utf8'));
@@ -32,7 +35,8 @@ export function transformAssembly(assembly, context, options = {}) {
   const activeSdk = assembly.sections.some(section => section.name === 'tools:sdk' && section.text);
   const toolMode = !activeSdk ? 'native' : assembly.sections.some(section => section.name === 'tools:ptc-only' && section.text) ? 'ptc' : 'both';
   const constraintGuidance = options.todoConstraintFirst === true ? load('tools/todo-constraints.md') : '';
-  const map = options.bindings ?? bindings;
+  const style = options.promptStyle ?? 'omd';
+  const map = style === 'omd' ? options.bindings ?? bindings : {};
   const known = new Map((options.schemas ?? assembly.tools ?? []).map(tool => [tool.name, tool]));
   const applied = new Set(), retained = [], missing = [], changedSchemas = new Map();
   for (const tool of known.values()) {
@@ -82,7 +86,11 @@ export function transformAssembly(assembly, context, options = {}) {
     changedSchemas.set(tool.name, { ...tool, description });
     applied.add(tool.name);
   }
-  let persona = options.main ?? buildMainPrompt(options.identityPrompt, { toolMode, personalityModules: options.personalityModules });
+  const source = style === 'omd' ? undefined : renderPromptStyle(style, { schemas: [...known.values()], toolMode });
+  let persona = source ? [source.text,
+    renderPersonality(options.personalityModules ?? { identity: options.identityPrompt }),
+    toolMode !== 'native' ? load('runtime/ptc-guidance.md') : '',
+  ].filter(Boolean).join('\n\n') : options.main ?? buildMainPrompt(options.identityPrompt, { toolMode, personalityModules: options.personalityModules });
   if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '');
   if (options.stateHintsEnabled && known.has('runtime_status')) persona += '\n\n' + load('runtime/state-guidance.md');
   if (options.backgroundTasksEnabled && known.has('job_output')) {
@@ -96,7 +104,7 @@ export function transformAssembly(assembly, context, options = {}) {
   let sdkRegenerated = false;
   const sections = assembly.sections.flatMap(section => {
     if (section.name === 'oh-my-dsh:persona') return [{ ...section, text: persona, interpolate: false }];
-    if (section.name === 'harness:identity') return [];
+    if (section.name === 'harness:identity' && style !== 'dsh') return [];
     if (section.name === 'tool:jobs' && applied.has('job_output') && applied.has('job_kill')) {
       return [{ ...section, text: load(options.backgroundTasksEnabled ? 'runtime/job-collection-background.md' : 'runtime/job-collection.md'), interpolate: false }];
     }
@@ -107,7 +115,7 @@ export function transformAssembly(assembly, context, options = {}) {
       ) }];
     }
     // Generated SDK needs live descriptions AND live return contracts, not copied old stubs.
-    if (section.name === 'tools:sdk' && section.text) {
+    if (section.name === 'tools:sdk' && section.text && style === 'omd') {
       if (typeof options.renderSdk !== 'function' || typeof options.definition !== 'function') {
         throw new Error('An active tools:sdk needs the current runtime SDK renderer and output contracts.');
       }
@@ -123,6 +131,9 @@ export function transformAssembly(assembly, context, options = {}) {
     if (suppressed.has(section.name)) return [];
     return [section];
   });
+  if (style === 'dsh' && !sections.some(section => section.name === 'harness:identity')) {
+    sections.unshift({ name: 'harness:identity', text: DSH_IDENTITY, interpolate: false });
+  }
   if (known.has('note') && known.has('recall') && !sections.some(x => x.name === 'oh-my-dsh:cc-memory')) {
     sections.splice(sections.findIndex(section => section.name === 'oh-my-dsh:persona') + 1, 0,
       { name: 'oh-my-dsh:cc-memory', text: load('context/memory.md'), interpolate: false });
@@ -138,7 +149,7 @@ export function transformAssembly(assembly, context, options = {}) {
     throw new Error('Prompt adapter attempted to change a callable schema.');
   }
   return { assembly: result, audit: { applied: true, changed: [...applied].sort(), retained, incompatible: missing,
-    sdkRegenerated, toolsHash: sha(result.tools), mainHash: sha(persona) } };
+    sdkRegenerated, style, toolsHash: sha(result.tools), mainHash: sha(persona) } };
 }
 
 /** Install once in the preset scope; the main-agent check excludes all internal/child requests. */
@@ -149,9 +160,10 @@ export function installPromptAdapter(ctx) {
     if (!context?.agent || context.agent.session?.header?.origin === 'subagent'
         || !assembly.sections.some(section => section.name === 'oh-my-dsh:persona')) return assembly;
     const schemas = ctx.tools.schemas(context.scope ?? context.agent);
+    const style = agentPromptStyle(ctx.omd, context.agent);
     const activeSdk = assembly.sections.some(section => section.name === 'tools:sdk' && section.text);
     let renderSdk;
-    if (activeSdk) {
+    if (activeSdk && style === 'omd') {
       const { renderToolsSdk, renderToolsSdkPy } = await import('@deepseek-ai/dsh-tools');
       const runtime = ctx.get('ptcRuntime');
       const language = runtime?.language;
@@ -162,6 +174,7 @@ export function installPromptAdapter(ctx) {
     const config = ctx.omd.config();
     const personality = sessionPersonality(ctx.omd, context.agent.session);
     const result = transformAssembly(assembly, context, {
+      promptStyle: style,
       identityPrompt: personality.modules.identity, personalityModules: personality.modules,
       todoConstraintFirst: config.todoConstraintFirst, stateHintsEnabled: config.stateHintsEnabled,
       backgroundTasksEnabled: ctx.omd.backgroundOptions?.(context.agent)?.interruptibleWait === true,
@@ -171,7 +184,7 @@ export function installPromptAdapter(ctx) {
     const key = sha(result.audit);
     if (!seen.has(key)) {
       seen.add(key);
-      ctx.logger?.info?.('CC prompt adapter coverage: ' + JSON.stringify(result.audit));
+      ctx.logger?.info?.('OMD prompt adapter coverage: ' + JSON.stringify(result.audit));
     }
     return result.assembly;
   });

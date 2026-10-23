@@ -29,6 +29,7 @@ import { handleSkinAsset } from './skin-assets.mjs';
 import { installImageBudget } from './image-budget.mjs';
 import { Config } from './config.mjs';
 import { neutralizeHostEnvironment } from './cc-adaptation/environment.mjs';
+import { agentPromptStyle, capturePromptStyle } from './prompt-styles/session.mjs';
 import { Hub } from "./hub.mjs";
 import { installContextErrorRecovery } from './context/host.mjs';
 import { currentTasks, restoreTaskProjection } from './tasks.mjs';
@@ -184,7 +185,7 @@ export async function apply(ctx, config) {
     const assembly = await next();
     // Children inherit the preset; stock sessions and non-agent calls stay exact.
     if (!context?.agent || !isX(context.agent.session)) return assembly;
-    const result = neutralizeHostEnvironment(assembly);
+    const result = agentPromptStyle(hub, context.agent) === 'omd' ? neutralizeHostEnvironment(assembly) : assembly;
     return { ...result, sections: result.sections.map(s => {
       if (!['tool:write', 'tool:edit'].includes(s.name)) return s;
       const text = s.text.replace(' (the default fs-observation-policy requires it)', '');
@@ -319,6 +320,11 @@ export async function apply(ctx, config) {
   ctx.on('session/event', (session, event) => {
     if (!hub.dream.closed) hub.dream.sources.observe(session, event);
     if(isBtwSession(session))return;
+    // Native prompt assembly precedes pre-step; pin at the earlier turn event.
+    if (event.type === 'turn/start' && isX(session) && session.header.origin !== 'subagent') {
+      const agent = ctx.agents.get(session.id);
+      if (agent) capturePromptStyle(hub, agent, event.data.turn);
+    }
     hub.ultracode.committed(session, event);
     hub.workflowBudget.observe(session, event);
     if (!monitored(session) && !hub.requestStarts.has(session.id)) return;

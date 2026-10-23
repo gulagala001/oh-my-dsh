@@ -1,3 +1,5 @@
 # Vendored source, licenses and runtime manifests are verified byte for byte.
 # Preserve Git blobs on every platform, including Windows checkouts.
 * -text
+# Pinned prompts retain upstream Markdown hard breaks and trailing whitespace.
+src/prompt-styles/upstream/** whitespace=-blank-at-eol,-blank-at-eof

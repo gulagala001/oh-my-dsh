@@ -3,6 +3,7 @@ import { DEFAULT_IDENTITY } from './cc-adaptation/identity.mjs';
 import { personalityPatch, personalityPreset } from './cc-adaptation/personality.mjs';
 import { CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
 import { DEFAULT_IMAGE_RULES, validateImageRules } from './image-rules.mjs';
+import { PROMPT_STYLES, isPromptStyle } from './prompt-styles/options.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
 const personalityModules = z.object({ style: z.string(), communication: z.string(), presentation: z.string() });
@@ -53,6 +54,8 @@ export const Config = z.object({
   identityCustomModules: personalityModules,
   identityCustomDescription: z.string(),
   sessionPersonalityEnabled: z.boolean().default(false),
+  promptStyle: z.union(PROMPT_STYLES.map(option => option.value)).default('omd'),
+  sessionPromptStyleEnabled: z.boolean().default(false),
   stateHintsEnabled: z.boolean().default(false),
   budgetHintsEnabled: z.boolean().default(false),
   budgetEveryStep: z.boolean().default(false),
@@ -92,6 +95,7 @@ for (const [key, field] of Object.entries(Config.dict)) if (!['dataDir', 'projec
 // Defaults apply to omitted values. An explicit null is not a numeric or
 // boolean setting; use the same schema for API writes and pipeline options.
 export function contextConfig(raw = {}) {
+  if (Object.hasOwn(raw, 'promptStyle') && !isPromptStyle(raw.promptStyle)) throw Error('无效的系统提示词风格');
   if (Object.hasOwn(raw, 'multiImageFixRules')) validateImageRules(raw.multiImageFixRules);
   personalityPatch(raw, personalityPreset(raw));
   for (const [key, value] of Object.entries(raw)) {

@@ -289,6 +289,51 @@ Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源�
 - 固定来源／版本: [SHA256:eeb4fd3517bf2b72b801c7afa3551eb97af08b998d89df078cea38293ceeb595](https://github.com/gulagala001/oh-my-dsh/blob/main/src/cc-adaptation/prompts/main/01-identity.md)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#codegraph)
 
+### Codex prompt source
+
+[项目](https://github.com/openai/codex) · OpenAI and contributors
+
+系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+
+- 固定来源／版本: [0.164.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/codex/source.json)
+- 许可／归属: Apache-2.0 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### Cursor public prompt sample
+
+[项目](https://github.com/asgeirtj/system_prompts_leaks) · asgeirtj collection; text attributed to Cursor
+
+系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+
+- 固定来源／版本: [public sample 2026-06-04](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/cursor/source.json)
+- 许可／归属: Collection license; third-party material unverified · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### Pi prompt source
+
+[项目](https://github.com/earendil-works/pi) · Mario Zechner and contributors
+
+系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+
+- 固定来源／版本: [1.4.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/pi/source.json)
+- 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### Grok Build prompt source
+
+[项目](https://github.com/xai-org/grok-build) · xAI and contributors
+
+系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+
+- 固定来源／版本: [2bdd1d6a](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/grok/source.json)
+- 许可／归属: Apache-2.0 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### ZCode prompt source
+
+[项目](https://github.com/zai-org/ZCode) · Z.ai and contributors
+
+系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+
+- 固定来源／版本: [3.16.2 (source)](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/zcode/source.json)
+- 许可／归属: Apache-2.0 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
 ## 完整锁定依赖清单
 
 下表列出 OMD 与内置 OpenCU 宿主／前端锁文件中的全部 826 个不同包版本，覆盖直接、间接、构建和可选平台依赖。它们是依赖输入，不代表全部在运行时加载。包页面提供原作者／维护者与许可信息，实际随包许可为准。[机器可读清单](dependencies.json)。

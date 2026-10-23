@@ -1,0 +1,21 @@
+{
+  "id": "cursor",
+  "repo": "asgeirtj/system_prompts_leaks",
+  "commit": "3d535771ea2a5c33bbc1c8cf7845caaf9b959a56",
+  "version": "public sample 2026-06-04",
+  "kind": "third-party-sample",
+  "authenticity": "Not an official Cursor release; product version and completeness unverified.",
+  "files": [
+    {
+      "path": "prompt.md",
+      "upstream": "Cursor/cursor.md",
+      "sha256": "d0b29a77fd270b80562eaa91eb79a902658ba248188d07e27d54c1752cdc0ec5"
+    },
+    {
+      "path": "LICENSE",
+      "upstream": "LICENSE",
+      "sha256": "f99ae25b6325d3a2fcebe74ee92296e2058fe84e97f228a5b81b5e8a1821f04f"
+    }
+  ],
+  "checkedAt": "2026-10-23"
+}

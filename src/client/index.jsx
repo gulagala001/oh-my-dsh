@@ -32,6 +32,7 @@ import { applyPromptOptimizer } from './prompt-optimizer.jsx';
 import { applyModelPanel } from './model-panel.jsx';
 import { applySubscriptionFast } from './subscription-fast.jsx';
 import { applyMemoryPermissions } from './permission-memory.jsx';
+import { applyPromptStylePermissions } from './permission-prompt-style.jsx';
 import { acquirePersonaClient } from '../../plugins/persona/src/client/index.jsx';
 import { useMainConversation } from './main-conversation.mjs';
 import { apply as applyWorkflowClient } from '../../vendor/workflow/src/client/index.jsx';
@@ -141,6 +142,7 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
   applyModelPanel(ctx);
   applySubscriptionFast(ctx);
   applyMemoryPermissions(ctx);
+  applyPromptStylePermissions(ctx);
   await mountOptionalClient(ctx, '工作流', async () => ({ apply: applyWorkflowClient }), report);
   function RunningMarker(props) {
     const running = props.useSessionStatus(s => Boolean(s.get(props.sessionId)?.running));

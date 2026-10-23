@@ -13,6 +13,20 @@
 | 提示词优化模板 | [linshenkx](https://github.com/linshenkx) | [prompt-optimizer](https://github.com/linshenkx/prompt-optimizer) |
 | OpenDesign 技能桥接 | [omegapaopao](https://github.com/omegapaopao)；技能来源为 [nexu-io](https://github.com/nexu-io) 及各技能作者 | [dsh-open-design](https://github.com/omegapaopao/dsh-open-design)、[open-design](https://github.com/nexu-io/open-design)；[完整来源与许可](docs/open-design.md) |
 
+## System prompt style sources
+
+OMD bundles fixed prompt text/source for optional system prompt styles. Upstream originals and licenses are preserved under `src/prompt-styles/upstream/`; each `source.json` records the repository, commit, retrieval date, original paths and SHA-256 values. Text adaptations are maintained separately in `render.mjs`; Pi/ZCode text builders are compiled from those sources. These integrations do not imply endorsement or install the upstream runtimes.
+
+| Source / authors | Fixed version / commit | License and scope |
+| --- | --- | --- |
+| [OpenAI Codex](https://github.com/openai/codex) — OpenAI and contributors | 0.164.0 / `6aaac694803004a63c6f393d153c96d22521a6b9` | [Apache-2.0](src/prompt-styles/upstream/codex/LICENSE); the `gpt-6-astra` default instructions template extracted from `models.json` |
+| [Cursor public sample](https://github.com/asgeirtj/system_prompts_leaks) — asgeirtj collection; text attributed to Cursor | `3d535771ea2a5c33bbc1c8cf7845caaf9b959a56`, file blob `f6951fa520e3e37f0ce09ab47ee564818769d034` | [Collection license](src/prompt-styles/upstream/cursor/LICENSE); third-party sample, not an official release. Product version, completeness and authenticity unverified. Collection licensing does not independently establish rights to third-party material |
+| [Pi](https://github.com/earendil-works/pi) — Mario Zechner and contributors | 1.4.0 / `4a080252f06caf63a525d7873c5d94d3c23887e0` | [MIT](src/prompt-styles/upstream/pi/LICENSE); structured system prompt builder |
+| [Grok Build](https://github.com/xai-org/grok-build) — xAI and contributors | `2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8` | [Apache-2.0](src/prompt-styles/upstream/grok/LICENSE); interactive main prompt template |
+| [ZCode](https://github.com/zai-org/ZCode) — Z.ai and contributors | 3.16.2 source / `3c5b227649371507ddc4eb46ac5133afe6db1cab` | [Apache-2.0](src/prompt-styles/upstream/zcode/LICENSE); prefix, identity, behavior and context builders; assembly source retained for provenance |
+
+Checked 2026-10-23. Necessary adaptations cover truthful host/model identity, available tools and contracts, transport, UI rendering and live context. Host permissions, project rules, skills and OMD memory/task protocols remain supplied by their existing owners. The source licenses remain authoritative. [Adaptation details](docs/prompt-adaptation.md).
+
 # Models.dev API pricing data
 
 `src/monitor-prices.json` contains the pricing-only projection of [models.dev](https://models.dev/api.json), retrieved on 2026-10-15 (230 providers, 8,414 priced model routes). `scripts/sync-monitor-prices.mjs` refreshes this bundled snapshot; the runtime retrieves the same public feed daily and keeps a separate local cache. Model names, per-million-token rates and context tiers are retained; matching, overrides and presentation are OMD additions. The snapshot records the source timestamp and SHA-256 of the full source response.

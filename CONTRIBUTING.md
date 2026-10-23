@@ -12,6 +12,7 @@
 - 优先使用宿主公共 SDK 和扩展点，不手改 SDK、生成文件或 `vendor/opencu/` 发行快照。
 - OpenCU、Workflow、Rewind、Persona 与 BTW 在各自独立仓库维护；通过对应 `scripts/sync-*.mjs` 同步完整快照和来源清单，不直接手改 vendor 或 `plugins/persona` 文件。同步包含公开文档、文档清单和检查脚本的输入，按独立包的实际分发清单维护。前端／宿主构建只针对受影响部分执行。
 - 组件及价格同步命令会自动重新生成设置页与公开来源清单。手工修改其他来源输入后运行 `npm run credits:write`，并用 `npm run docs:check` 检查一致性。
+- 系统提示词原文与许可保存在 `src/prompt-styles/upstream/<来源>/`，`source.json` 固定提交、核对日期与原始字节哈希；公开样本必须注明非官方与核验边界。适配只处理真实宿主差异，不改写行为风格。修改来源后重建 `node scripts/check-prompt-styles.mjs --write`，再执行 `npm run prompts:check`；构建、CI 与 prepack 检查同一份原文、构建器和适配锚点。来源说明原位维护于提示词指南、第三方声明和项目目录，不新增内部维护流水。
 - 测试使用隔离数据目录与受控模型；个人配置、会话、密钥和原始用户报告不进入提交或安装包。
 - 专注实现，尽量少做测试；按需做最小构建／启动检查，仅为具体问题或用户明确要求做定点验证（含 CU）。兼容调查按需查[插件兼容性](docs/plugin-compatibility.md)。
 - PR 说明问题、最终行为、验证结果和未覆盖范围；跳过或模拟通过不等于对应平台的真实验证通过。

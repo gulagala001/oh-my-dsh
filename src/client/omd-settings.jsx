@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Button, Checkbox, Choice, Input, SegmentedControl, Switch } from './native-controls.jsx';
+import { PROMPT_STYLES } from '../prompt-styles/options.mjs';
 import { Icon } from './native-icons.jsx';
 import { contextFrequencyOf, contextFrequencyPatch, contextRouteMode } from './context-client.mjs';
 import { PersonaSettings } from '../../plugins/persona/src/client/settings.jsx';
@@ -289,6 +290,8 @@ function AgentHints({ config: c, commit }) {
   const [customBudget, setCustomBudget] = useState(false);
   const budgetCustom = customBudget || !intervals.includes(c.budgetInjectionEvery ?? 1);
   return <>
+    <Row title="系统提示词风格"><Choice aria-label="系统提示词风格" value={c.promptStyle ?? 'omd'} options={PROMPT_STYLES} onChange={value => commit({ promptStyle: value })}/></Row>
+    <Toggle title="启用会话提示词风格" checked={c.sessionPromptStyleEnabled === true} onChange={value => commit({ sessionPromptStyleEnabled: value })}/>
     <Toggle title="向模型提供运行状态" hint="与待办一起投递时间、上下文与后台任务状态，从下一次请求生效。" checked={c.stateHintsEnabled} onChange={v => commit({ stateHintsEnabled: v })}/>
     <Toggle title="向模型提供预算" hint="用 /预算 token=100k 轮次=30 时间=20m 设置；未设置显示无限制，达到预算不强制停止。" checked={c.budgetHintsEnabled} onChange={v => commit({ budgetHintsEnabled: v })}
       extra={c.budgetHintsEnabled && <div className="omd-set-sub">

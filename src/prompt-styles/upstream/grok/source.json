@@ -1,0 +1,20 @@
+{
+  "id": "grok",
+  "repo": "xai-org/grok-build",
+  "commit": "2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8",
+  "version": "2bdd1d6a",
+  "kind": "official-source",
+  "files": [
+    {
+      "path": "prompt.md",
+      "upstream": "crates/codegen/xai-grok-agent/templates/prompt.md",
+      "sha256": "f31b8827bf571d606221c734af7aee1c259c633956c9b81cf9c8dd02c2fdd14b"
+    },
+    {
+      "path": "LICENSE",
+      "upstream": "LICENSE",
+      "sha256": "116f7778b9802e569b7fa3a532b17bd80eb13c67837def01eed093d4ea472f28"
+    }
+  ],
+  "checkedAt": "2026-10-23"
+}

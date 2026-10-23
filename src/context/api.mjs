@@ -4,6 +4,7 @@ import { compactionMessage } from './commands.mjs';
 import { Config, contextConfig } from '../config.mjs';
 import { actualUser } from './core.mjs';
 import { handlePersonalityApi } from '../personality-session.mjs';
+import { handlePromptStyleApi } from '../prompt-styles/session.mjs';
 import { CONFIG_KEYS as PERSONA_KEYS } from '../../plugins/persona/src/store.mjs';
 
 export async function handleContextApi({ hub, ctx, req, res, url, session, agent, inspection, archivedOnly, refreshSession, id, send, readBody }) {
@@ -45,6 +46,10 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
   if (path === '/context/optimization' && req.method === 'GET') { send(res, 200, hub.optimization.snapshot(needSession())); return true; }
   if (path === '/personality') {
     await handlePersonalityApi({ hub, ctx, req, res, session, inspection, archivedOnly, refreshSession, id, readBody, send });
+    return true;
+  }
+  if (path === '/prompt-style') {
+    await handlePromptStyleApi({ hub, ctx, req, res, session, inspection, archivedOnly, refreshSession, id, readBody, send });
     return true;
   }
   if (path === '/scope') {

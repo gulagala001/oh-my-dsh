@@ -16,6 +16,7 @@ const core = [
 core.push('test/opencu-browser-generation.test.mjs');
 core.push('test/opencu-app-approval-session-cancel.test.mjs');
 core.push('test/prompt-adaptation.test.mjs');
+core.push('test/prompt-styles.test.mjs');
 core.push('test/context-memory-cache.test.mjs');
 core.push('test/image-budget.test.mjs');
 core.push('test/context-first-window.test.mjs');

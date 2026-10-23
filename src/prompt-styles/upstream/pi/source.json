@@ -1,0 +1,20 @@
+{
+  "id": "pi",
+  "repo": "earendil-works/pi",
+  "commit": "4a080252f06caf63a525d7873c5d94d3c23887e0",
+  "version": "1.4.0",
+  "kind": "official-source",
+  "files": [
+    {
+      "path": "system-prompt.ts",
+      "upstream": "packages/coding-agent/src/core/system-prompt.ts",
+      "sha256": "5e28c82634113d0cca7ff5da6fa94e27aaae80e461cd5664ced9dbcef6f89089"
+    },
+    {
+      "path": "LICENSE",
+      "upstream": "LICENSE",
+      "sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48"
+    }
+  ],
+  "checkedAt": "2026-10-23"
+}

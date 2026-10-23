@@ -1,0 +1,35 @@
+{
+  "id": "zcode",
+  "repo": "zai-org/ZCode",
+  "commit": "3c5b227649371507ddc4eb46ac5133afe6db1cab",
+  "version": "3.16.2 (source)",
+  "kind": "official-source",
+  "files": [
+    {
+      "path": "builder.ts",
+      "upstream": "apps/zcode-cli/packages/core/src/context/builder.ts",
+      "sha256": "b171c2d0640beda7ebe3c2101b991000a56c2b00389ac16dc97a26d4ba0cae7a"
+    },
+    {
+      "path": "identity.ts",
+      "upstream": "apps/zcode-cli/packages/core/src/context/sections/identity.ts",
+      "sha256": "5828c184c999c2eca969bd16529de42c4994dd84b99ca764e795cf1c557453e8"
+    },
+    {
+      "path": "cli-prefix.ts",
+      "upstream": "apps/zcode-cli/packages/core/src/context/sections/cli-prefix.ts",
+      "sha256": "6be0dcda661415ec5c1d13c97b3a3a8ad59b54af887d5d5c5dff516b66962fd2"
+    },
+    {
+      "path": "dynamic-sections.ts",
+      "upstream": "apps/zcode-cli/packages/core/src/context/dynamic-sections.ts",
+      "sha256": "3fe09a5400770dc4d7c773be64aa18e12aa849e75c42439dfdfc72bbe60d8377"
+    },
+    {
+      "path": "LICENSE",
+      "upstream": "LICENSE",
+      "sha256": "606c36baf38b973227273df12a74930e4b4137280eea835c5cd623aa4553c13b"
+    }
+  ],
+  "checkedAt": "2026-10-23"
+}

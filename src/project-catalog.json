@@ -324,6 +324,91 @@
       "source": "src/cc-adaptation/prompts/main/01-identity.md",
       "license": "Original upstream rights apply",
       "notice": "THIRD_PARTY_NOTICES.md#codegraph"
+    },
+    {
+      "id": "prompt-style-codex",
+      "name": "Codex prompt source",
+      "url": "https://github.com/openai/codex",
+      "authors": "OpenAI and contributors",
+      "purpose": {
+        "zh": "系统提示词风格的固定原文与文本构建",
+        "en": "Pinned system prompt text and text construction"
+      },
+      "relationship": {
+        "zh": "必要宿主适配；原文与许可随包保留",
+        "en": "Necessary host adaptations; originals and licenses included"
+      },
+      "source": "src/prompt-styles/upstream/codex/source.json",
+      "license": "Apache-2.0",
+      "notice": "THIRD_PARTY_NOTICES.md#system-prompt-style-sources"
+    },
+    {
+      "id": "prompt-style-cursor",
+      "name": "Cursor public prompt sample",
+      "url": "https://github.com/asgeirtj/system_prompts_leaks",
+      "authors": "asgeirtj collection; text attributed to Cursor",
+      "purpose": {
+        "zh": "系统提示词风格的固定原文与文本构建",
+        "en": "Pinned system prompt text and text construction"
+      },
+      "relationship": {
+        "zh": "必要宿主适配；原文与许可随包保留",
+        "en": "Necessary host adaptations; originals and licenses included"
+      },
+      "source": "src/prompt-styles/upstream/cursor/source.json",
+      "license": "Collection license; third-party material unverified",
+      "notice": "THIRD_PARTY_NOTICES.md#system-prompt-style-sources"
+    },
+    {
+      "id": "prompt-style-pi",
+      "name": "Pi prompt source",
+      "url": "https://github.com/earendil-works/pi",
+      "authors": "Mario Zechner and contributors",
+      "purpose": {
+        "zh": "系统提示词风格的固定原文与文本构建",
+        "en": "Pinned system prompt text and text construction"
+      },
+      "relationship": {
+        "zh": "必要宿主适配；原文与许可随包保留",
+        "en": "Necessary host adaptations; originals and licenses included"
+      },
+      "source": "src/prompt-styles/upstream/pi/source.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md#system-prompt-style-sources"
+    },
+    {
+      "id": "prompt-style-grok",
+      "name": "Grok Build prompt source",
+      "url": "https://github.com/xai-org/grok-build",
+      "authors": "xAI and contributors",
+      "purpose": {
+        "zh": "系统提示词风格的固定原文与文本构建",
+        "en": "Pinned system prompt text and text construction"
+      },
+      "relationship": {
+        "zh": "必要宿主适配；原文与许可随包保留",
+        "en": "Necessary host adaptations; originals and licenses included"
+      },
+      "source": "src/prompt-styles/upstream/grok/source.json",
+      "license": "Apache-2.0",
+      "notice": "THIRD_PARTY_NOTICES.md#system-prompt-style-sources"
+    },
+    {
+      "id": "prompt-style-zcode",
+      "name": "ZCode prompt source",
+      "url": "https://github.com/zai-org/ZCode",
+      "authors": "Z.ai and contributors",
+      "purpose": {
+        "zh": "系统提示词风格的固定原文与文本构建",
+        "en": "Pinned system prompt text and text construction"
+      },
+      "relationship": {
+        "zh": "必要宿主适配；原文与许可随包保留",
+        "en": "Necessary host adaptations; originals and licenses included"
+      },
+      "source": "src/prompt-styles/upstream/zcode/source.json",
+      "license": "Apache-2.0",
+      "notice": "THIRD_PARTY_NOTICES.md#system-prompt-style-sources"
     }
   ]
 }

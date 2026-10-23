@@ -151,8 +151,10 @@ Wide windows show an **On this page** outline to the left of the content. Select
 | Personality | Global preset, four modules, files and session choices |
 | Context and memory | Multi-image request repair, optimization, preprocessing, coordination, caching, Auto Compact, default memory scope and Dream |
 | Background models / Global background | Background model routes and manually maintained fixed context |
-| Agent | Runtime and budget hints, background waits and constraint-first guidance |
+| Agent | System prompt style, per-chat entry switch, runtime and budget hints, background waits and constraint-first guidance |
 | About / Advanced | Versions and feature updates; advanced parameters and history page size under Other |
+
+**System prompt style**, in the Agent group, offers seven choices: OMD default, native DSH, Codex, Cursor, Pi, Grok and ZCode. OMD default remains selected initially. **Enable per-chat prompt style** is off by default; enabling it reveals the selector in OMD/OMD-PTC main-chat permission menus. Chats without a saved choice follow the global selection. Disabling the switch uses the global style while preserving saved choices for re-enabling. Changes apply at the next turn. Personality, tools, tasks and memory retain their own functions. [Pinned sources and adaptations (Chinese)](prompt-adaptation.md).
 
 **Personality preset** selects the global default. The collapsed **Advanced** section manages multiple personalities: create, copy, rename, update, delete, import and export. The editing selection is independent of the global selection, so saving an edit does not switch the global personality. Deleting the selected global preset preserves all its modules in Custom. Copy built-in presets to edit them.
 

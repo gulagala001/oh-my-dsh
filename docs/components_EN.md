@@ -289,6 +289,51 @@ Pinned comparison source for agent prompt adaptation Host, source or asset; scop
 - Pinned source / version: [SHA256:eeb4fd3517bf2b72b801c7afa3551eb97af08b998d89df078cea38293ceeb595](https://github.com/gulagala001/oh-my-dsh/blob/main/src/cc-adaptation/prompts/main/01-identity.md)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#codegraph)
 
+### Codex prompt source
+
+[Project](https://github.com/openai/codex) · OpenAI and contributors
+
+Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+
+- Pinned source / version: [0.164.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/codex/source.json)
+- License / attribution: Apache-2.0 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### Cursor public prompt sample
+
+[Project](https://github.com/asgeirtj/system_prompts_leaks) · asgeirtj collection; text attributed to Cursor
+
+Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+
+- Pinned source / version: [public sample 2026-06-04](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/cursor/source.json)
+- License / attribution: Collection license; third-party material unverified · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### Pi prompt source
+
+[Project](https://github.com/earendil-works/pi) · Mario Zechner and contributors
+
+Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+
+- Pinned source / version: [1.4.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/pi/source.json)
+- License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### Grok Build prompt source
+
+[Project](https://github.com/xai-org/grok-build) · xAI and contributors
+
+Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+
+- Pinned source / version: [2bdd1d6a](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/grok/source.json)
+- License / attribution: Apache-2.0 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### ZCode prompt source
+
+[Project](https://github.com/zai-org/ZCode) · Z.ai and contributors
+
+Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+
+- Pinned source / version: [3.16.2 (source)](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/zcode/source.json)
+- License / attribution: Apache-2.0 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
 ## Locked dependency inventory
 
 All 826 distinct package versions in the OMD and embedded OpenCU host/frontend lockfiles are listed below, including direct, transitive, build and optional platform dependencies. These are dependency inputs, not a claim that every package is loaded at runtime. Package pages provide original maintainers and license metadata; distributed licenses remain authoritative. [Machine-readable inventory](dependencies.json).

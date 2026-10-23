@@ -1,0 +1,27 @@
+{
+  "id": "codex",
+  "repo": "openai/codex",
+  "commit": "6aaac694803004a63c6f393d153c96d22521a6b9",
+  "version": "0.164.0",
+  "kind": "official-source",
+  "profile": "gpt-6-astra",
+  "files": [
+    {
+      "path": "instructions_template.md",
+      "upstream": "codex-rs/models-manager/models.json",
+      "extraction": "models[slug=gpt-6-astra].model_messages.instructions_template",
+      "sha256": "35bd51b5f577cb7b24cd5f4629e49e37cb724ab57754ce6f8f202001635bab8a"
+    },
+    {
+      "path": "LICENSE",
+      "upstream": "LICENSE",
+      "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+    },
+    {
+      "path": "NOTICE",
+      "upstream": "NOTICE",
+      "sha256": "9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915"
+    }
+  ],
+  "checkedAt": "2026-10-23"
+}
