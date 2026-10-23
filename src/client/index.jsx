@@ -43,6 +43,7 @@ import { apply as applyBtw, inject as btwInject } from '../../vendor/btw/src/cli
 import { mountOptionalClient } from './optional-client.mjs';
 import { applyStartupNotice } from './startup.jsx';
 import { applyPluginPreflight } from './plugin-preflight.jsx';
+import { applyPresetProjection } from './preset-projection.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 
@@ -100,6 +101,7 @@ const hostConversation = createConversation(require), hostChat = createChat(requ
 // Projectless drafts belong to this owner, before the enhancement child mounts.
 export const inject = [...new Set(['layout', 'remote.agentPresets', ...hostConversation.inject, ...hostChat.inject])].filter(name => name !== 'uiConversation' && name !== 'conversation');
 export async function apply(ctx) {
+  applyPresetProjection(ctx);
   ctx.provide('omdConversationLifecycle', installConversationLifecycle(ctx));
   const report = applyStartupNotice(ctx);
   const projectlessDrafts = applyProjectlessWorkspaces(ctx, { onError: error => report('新会话', error) });

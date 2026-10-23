@@ -15,6 +15,7 @@ import { apiSessionTarget } from './api-session.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
 import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { installToolCancellationPresentation } from './tool-cancellation.mjs';
+import { installPtcLifecycle } from './ptc-lifecycle.mjs';
 import { installSearchCompatibility } from './search-compat.mjs';
 import { monitorSelection, compactMonitorSnapshot, unavailableMonitorMetrics } from './monitoring.mjs';
 import { handleMonitorApi } from './monitor-api.mjs';
@@ -72,6 +73,7 @@ export async function apply(ctx, config) {
   await migrateSessionStorage(ctx, directory);
   installToolSchedulerCompatibility(ctx);
   installToolCancellationPresentation(ctx);
+  installPtcLifecycle(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });
   hub.omaaWorkflowComposition = omaaWorkflowComposition;
   hub.omaaIdentityPrompt = session => omaaIdentityPrompt(hub, session);

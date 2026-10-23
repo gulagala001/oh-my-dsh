@@ -1,4 +1,4 @@
-function cancellationMessage(reason) {
+export function cancellationMessage(reason) {
   try {
     if (reason instanceof Error || typeof reason?.message === 'string') return reason.message;
     if (reason?.kind === 'user') return 'tool call cancelled by user';

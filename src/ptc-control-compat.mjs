@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 
-const controls = new Set(['job_output', 'job_list', 'job_kill', 'runtime_status']);
+export const PTC_CONTROL_NAMES = Object.freeze(['job_output', 'job_list', 'job_kill', 'runtime_status']);
+const controls = new Set(PTC_CONTROL_NAMES);
 const adapters = new WeakMap();
 
 function unsupported(detail) {

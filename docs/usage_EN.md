@@ -89,6 +89,8 @@ If another window has changed the model during save preparation, or the required
 
 OMD retains native registry, SDK, scheduling, permissions, and cancellation instead of replacing Tools wholesale. Ordinary OMD-PTC operations use `run_code`; only matching, sampled scopes retain direct **`job_output`, `job_list`, `job_kill`, `runtime_status`**. Nested SDKs, native presets, and third-party tools stay host-owned. Request projection is reversible; uninstall retains other wrappers. [Adaptation boundary (Chinese)](prompt-adaptation.md)
 
+`run_code` uses the current PTC runtime's deadline (the host defaults to 120 seconds, with a 600-second per-call cap). Preparation, nested tools, result processing, and process cleanup also have bounded waits. Timeout or cancellation returns an explicit error. If the underlying call has not finished cleaning up, further business operations in that session are refused until it settles; existing direct job controls can still inspect and stop jobs. Do not repeat operations whose effects are unknown. Native human approval before program execution continues to wait for the user's decision without spending the program budget. Preset labels and pickers prefer the loaded session's live projection, including after navigation or reconnection, instead of a stale list summary.
+
 Tools, verification commands, CodeGraph, and Workflow resolve paths in the host's **current execution directory**, not permanently in the initial cwd. Project identity and memory ownership remain. A directory change does not bypass access or make independent Chat shared.
 
 ## Context and Memory
