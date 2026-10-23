@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -8,7 +8,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { PluginPreflight, withPluginPreflight } from '../src/plugin-preflight/service.mjs';
 import { packageDigest, LIMITS } from '../src/plugin-preflight/shared.mjs';
-import { runProbe, sweep, packageEnvironment, cleanEnvironment, dependencyDirectory } from '../src/plugin-preflight/process.mjs';
+import { runProbe, sweep, packageEnvironment, cleanEnvironment, copyCandidate } from '../src/plugin-preflight/process.mjs';
 
 test('copied installed candidates retain real imports with hoisted, scoped and private dependencies', async t => {
   const root = await mkdtemp(join(tmpdir(), 'omd-preflight-deps-'));
@@ -18,16 +18,34 @@ test('copied installed candidates retain real imports with hoisted, scoped and p
     ['scoped', 'profile/node_modules/@scope/candidate', false],
     ['private', 'workspace/candidate', true],
   ]) {
-    const base = join(root, label), source = join(base, relative), snapshot = join(base, 'copy');
+    const base = join(root, label), source = join(base, relative);
     const modules = own ? join(source, 'node_modules') : join(base, 'profile/node_modules');
-    await mkdir(source, { recursive: true }); await mkdir(snapshot, { recursive: true });
+    await mkdir(source, { recursive: true });
     await mkdir(join(modules, 'fixture-dependency'), { recursive: true });
     await writeFile(join(modules, 'fixture-dependency/package.json'), JSON.stringify({ name: 'fixture-dependency', type: 'module', exports: './index.mjs' }));
     await writeFile(join(modules, 'fixture-dependency/index.mjs'), `export default ${JSON.stringify(label)};`);
-    await writeFile(join(snapshot, 'entry.mjs'), "export { default } from 'fixture-dependency';");
-    await symlink(await dependencyDirectory(source, join(base, 'empty')), join(snapshot, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+    await writeFile(join(source, 'entry.mjs'), "export { default } from 'fixture-dependency';");
+    const snapshot = await copyCandidate(source, join(base, 'copy'), join(base, 'empty'));
     assert.equal((await import(pathToFileURL(join(snapshot, 'entry.mjs')).href)).default, label);
   }
+});
+
+test('a copied package retains private overrides and shared hoisted dependencies together', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'omd-preflight-mixed-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const source = join(root, 'profile/node_modules/plugin');
+  for (const [directory, name, value] of [
+    [join(root, 'profile/node_modules'), 'fixture-private', 'wrong-global-version'],
+    [join(root, 'profile/node_modules'), 'fixture-shared', 'shared'],
+    [join(source, 'node_modules'), 'fixture-private', 'private'],
+  ]) {
+    const path = join(directory, name); await mkdir(path, { recursive: true });
+    await writeFile(join(path, 'package.json'), JSON.stringify({ name, type: 'module', exports: './index.mjs' }));
+    await writeFile(join(path, 'index.mjs'), `export default ${JSON.stringify(value)};`);
+  }
+  await writeFile(join(source, 'entry.mjs'), "import a from 'fixture-private';import b from 'fixture-shared';export default [a,b];");
+  const snapshot = await copyCandidate(source, join(root, 'copy'), join(root, 'empty'));
+  assert.deepEqual((await import(pathToFileURL(join(snapshot, 'entry.mjs')).href)).default, ['private', 'shared']);
 });
 
 async function fixture(t, probe = async () => ({ ok: true })) {

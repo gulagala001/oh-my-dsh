@@ -19,7 +19,7 @@
 
 ### 问题修复
 
-- 修复扁平依赖安装下插件预检副本的依赖查找，启动诊断明确返回实际错误；补齐原文回查所需的原生会话依赖声明。
+- 修复插件预检副本的扁平／私有混合依赖查找，保留依赖优先级，启动诊断明确返回实际错误；临时进程 RSS 预算调整为 2 GiB，补齐原文回查所需的原生会话依赖声明。
 
 - 首批预处理按有效事实材料满窗触发，统一预算等待、回退和重启恢复；多图失败重建请求后继续发送，不重复执行工具。
 - 修复 Dream 停止、自动开关、手动继续和跨进程控制的状态竞争；提示词优化保留完整草稿、版本和待应用结果。
@@ -47,7 +47,7 @@
 
 ### Bug Fixes
 
-- Fixes dependency resolution for preflight copies of hoisted installations and reports actual startup diagnostics; declares the native Session dependency required by original-history search.
+- Preserves private and hoisted dependency lookup order in preflight copies and reports actual startup diagnostics; sets the temporary process-tree RSS budget to 2 GiB and declares the native Session dependency required by original-history search.
 
 - Triggers initial preparation only after a full window of factual material, aligning budget waits and rewind/restart recovery; image-limit recovery rebuilds the request without rerunning tools.
 - Fixes Dream state races involving stop, automatic mode, manual continuation and cross-process control; prompt optimization preserves complete drafts, versions and pending results.
