@@ -137,6 +137,8 @@ Each session retains up to 20 versions. Within the page, switching retains unsen
 
 Oh My DSH settings use one page, with third-party features on a separate subpage. Switches and selections save immediately; personality text uses its editor's save button. Failed saves show an error and restore stored settings while retaining personality drafts.
 
+Wide windows show an **On this page** outline to the left of the content. Select a group to scroll to it; scrolling updates the active group, and selecting **Advanced** expands it. At smaller available widths, the outline collapses into a group menu at the top. The outline is hidden on the third-party and credits subpages, and returning restores the previous scroll position. The console's Dream settings shortcut also jumps to the corresponding controls.
+
 | Settings group | Common controls |
 | --- | --- |
 | Features | Workbench, Extensions, interactive answers, agent presets, code understanding and prompt optimization; third-party entry |

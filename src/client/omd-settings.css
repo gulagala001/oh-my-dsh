@@ -11,7 +11,17 @@
 }
 .omd-settings *, .omd-settings *::before, .omd-settings *::after { box-sizing: border-box; }
 .omd-settings :is(h2, h3, p) { margin: 0; }
-.omd-set-body { flex: 1; min-height: 0; overflow: auto; padding: 4px 22px 28px; scrollbar-width: thin; overscroll-behavior: contain; }
+.omd-set-layout { display: flex; flex: 1; min-height: 0; min-width: 0; }
+.omd-set-body { flex: 1; min-height: 0; min-width: 0; overflow: auto; padding: 4px 22px 28px; scrollbar-width: thin; overscroll-behavior: contain; container: omdfields / inline-size; }
+.omd-set-layout[data-outline] > .omd-set-body { padding-left: 12px; }
+.omd-set-outline { flex: 0 0 120px; min-height: 0; overflow: auto; padding: 14px 4px 20px 12px; scrollbar-width: thin; }
+.omd-set-outline-label { display: block; font-size: 12px; color: var(--cx-muted); }
+.omd-set-outline > .omd-set-outline-label { margin: 0 0 10px 12px; }
+.omd-set-outline-items { display: flex; flex-direction: column; border-left: 1px solid var(--cx-line); }
+.omd-set-outline .omd-set-outline-link { position: relative; flex: none; justify-content: flex-start; width: 100%; min-height: 36px; padding: 8px 4px 8px 12px; white-space: normal; text-align: left; font-size: 12px; color: var(--cx-muted); border-radius: 0 6px 6px 0; }
+.omd-set-outline .omd-set-outline-link[aria-current] { color: var(--cx-text); font-weight: 600; }
+.omd-set-outline-link[aria-current]::before { content: ''; position: absolute; left: -1px; top: 9px; bottom: 9px; width: 2px; background: currentColor; border-radius: 2px; }
+.omd-set-outline-compact { display: none; }
 .omd-set-group { margin-top: 22px; }
 .omd-set-group:first-child { margin-top: 8px; }
 .omd-set-group > h3 { font-size: 13px; font-weight: 600; margin: 0 0 8px 2px; }
@@ -70,7 +80,18 @@
 .omd-version-row-text { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; color: var(--cx-muted); }
 @container omdset (max-width: 460px) {
   .omd-set-body { padding: 4px 14px 22px; }
+}
+@container omdset (max-width: 560px) {
+  .omd-set-layout { flex-direction: column; }
+  .omd-set-outline { display: none; }
+  .omd-set-outline-compact { display: flex; align-items: center; justify-content: space-between; flex: none; gap: 12px; padding: 10px 14px; border-bottom: .5px solid var(--cx-line); }
+  .omd-set-layout[data-outline] > .omd-set-body { padding-left: 14px; }
+}
+@container omdfields (max-width: 460px) {
   .omd-set-line { flex-wrap: wrap; }
   .omd-set-control { max-width: 100%; }
   .omd-set-fields { grid-template-columns: 1fr; }
+}
+@media (pointer: coarse) {
+  .omd-set-outline .omd-set-outline-link { min-height: 44px; }
 }

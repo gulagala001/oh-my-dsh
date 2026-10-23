@@ -11,7 +11,7 @@ import { createSettingsState } from './settings-state.mjs';
 import { scaledSettingValue, savedBackground } from './settings-values.mjs';
 import { HISTORY_SIZE_KEY, HISTORY_SIZES, historySize } from './history-settings.jsx';
 import { VersionInfo } from './version-info.jsx';
-import { subscribeSettingsAnchor, takeSettingsAnchor } from './settings-nav.mjs';
+import { SettingsOutline, useSettingsOutline } from './settings-outline.jsx';
 import css from './omd-settings.css';
 
 async function request(path, body, signal) {
@@ -28,7 +28,7 @@ const operationLabel = { enable: '正在开启…', disable: '正在关闭…', 
 // ---- Layout -----------------------------------------------------------------
 
 function Group({ title, anchor, children }) {
-  return <section className="omd-set-group" data-anchor={anchor}><h3>{title}</h3><div className="omd-set-card">{children}</div></section>;
+  return <section className="omd-set-group" data-anchor={anchor}><h3 tabIndex={anchor ? -1 : undefined}>{title}</h3><div className="omd-set-card">{children}</div></section>;
 }
 function Row({ title, hint, children, extra, disabled }) {
   return <div className="omd-set-row" data-disabled={disabled || undefined}>
@@ -377,7 +377,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
     const dream = usePollingAction(dreamApi, 30000);
     const prefs = useSyncExternalStore(optimizer.subscribe, optimizer.getSnapshot);
     const [page, setPage] = useState('main');
-    const body = useRef(null), mainScroll = useRef(0), advanced = useRef(null);
+    const body = useRef(null), mainScroll = useRef(0);
 
     const commitDream = dream.act;
     const setPref = patch => { try { optimizer.set(patch); } catch { report('浏览器无法保存设置，原设置保持不变。'); } };
@@ -387,19 +387,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
       setPage(next);
     };
     useLayoutEffect(() => { if (page === 'main' && body.current) body.current.scrollTop = mainScroll.current; else if (body.current) body.current.scrollTop = 0; }, [page]);
-    // Deep links from the console (for example, the Dream settings shortcut).
-    useEffect(() => {
-      const reveal = () => {
-        const anchor = takeSettingsAnchor(); if (!anchor) return;
-        setPage('main');
-        requestAnimationFrame(() => {
-          const target = body.current?.querySelector(`[data-anchor="${anchor}"]`);
-          if (target?.closest('details') && advanced.current) advanced.current.open = true;
-          target?.scrollIntoView({ block: 'start' });
-        });
-      };
-      reveal(); return subscribeSettingsAnchor(reveal);
-    }, [c !== null]);
+    const outline = useSettingsOutline(body, page, Boolean(c), setPage);
 
     const features_ = recommendedPlugins.filter(plugin => plugin.section === 'features');
     const featureUpdating = features.state?.updating || features.state?.busy?.action === 'update';
@@ -407,7 +395,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
       {error ? <Status error action={<Button type="button" size="sm" variant="ghost" onClick={reload}>重试</Button>}>{error}</Status> : <p>正在读取设置…</p>}
     </div> : <>
       <Status error action={<Button type="button" size="sm" variant="ghost" onClick={reload}>重新读取</Button>}>{error}</Status>
-      <Group title="功能">
+      <Group title="功能" anchor="features">
         {features.error && <Status error action={<Button type="button" size="sm" variant="ghost" onClick={() => features.refresh()}>重新读取</Button>}>{features.error}</Status>}
         {features.requestError && <Status error>{features.requestError}</Status>}
         {features_.map(plugin => <FeatureRow key={plugin.id} plugin={plugin} features={features}/>)}
@@ -417,7 +405,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
           <span className="omd-set-copy"><strong>第三方功能</strong><small>社区作者制作的功能，开启即自动安装。</small></span><Icon name="chevron" size={16}/>
         </button>
       </Group>
-      <Group title="人格"><PersonaSettings client={persona}/></Group>
+      <Group title="人格" anchor="personality"><PersonaSettings client={persona}/></Group>
       <Group title="上下文与记忆" anchor="context">
         <Toggle title="上下文优化" hint="默认开启：精简重复内容、按需加载工具，保留原文供回查。关闭不影响 CodeGraph、历史压缩和记忆。" checked={c.contextOptimizationEnabled !== false} onChange={v => commit({ contextOptimizationEnabled: v })}/>
         <Toggle title="后台预处理与中枢" hint="提前生成基础摘要和详细资料，再判断如何替换。" checked={c.contextEnabled} onChange={v => commit({ contextEnabled: v })}/>
@@ -440,10 +428,10 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
           extra={c.traceEnabled && <Fields><NumberField label="推理文本字符上限" value={c.traceMaxChars} min={0} hint="0 保留全文；正数保留尾部并标注截取。" onCommit={v => commit({ traceMaxChars: v })}/></Fields>}/>
         <div data-anchor="dream"><Dream dream={dream} commit={commitDream}/></div>
       </Group>
-      <Group title="后台模型"><BackgroundModels config={c} directory={directory} commit={commit} dream={dream} commitDream={commitDream}/></Group>
-      <Group title="全局背景"><GlobalBackground/></Group>
-      <Group title="智能体"><AgentHints config={c} commit={commit}/></Group>
-      <Group title="关于">
+      <Group title="后台模型" anchor="models"><BackgroundModels config={c} directory={directory} commit={commit} dream={dream} commitDream={commitDream}/></Group>
+      <Group title="全局背景" anchor="background"><GlobalBackground/></Group>
+      <Group title="智能体" anchor="agents"><AgentHints config={c} commit={commit}/></Group>
+      <Group title="关于" anchor="about">
         <Toggle title="插件安装预检" hint="安装前在临时环境检查启动和基础界面；通过后自动继续，失败时可选择仍然安装或复制 AI 修复信息。" checked={c.pluginPreflightEnabled !== false}
           onChange={value => commit({ pluginPreflightEnabled: value })}/>
         <button type="button" className="omd-set-row omd-set-nav" onClick={() => go('credits')}>
@@ -455,7 +443,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
         <Toggle title="自动更新扩展功能" hint="空闲时检查已开启的功能，只使用已核验版本；需要重启时会提示。" checked={features.state?.autoUpdate === true}
           disabled={!features.state || features.pending || !!features.state?.busy} onChange={value => void features.act({ action: 'settings', autoUpdate: value })}/>
       </Group>
-      <details className="omd-set-advanced" ref={advanced}>
+      <details className="omd-set-advanced" data-anchor="advanced">
         <summary>高级</summary>
         <Group title="预处理与额度">
           <Row extra={<Fields>
@@ -491,7 +479,10 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
     </>;
     return <div className="cx-panel cx-settings omd-settings">
       {notice && <div className="omd-set-notice" role="alert"><span>{notice}</span><Button type="button" size="sm" variant="ghost" aria-label="关闭提示" onClick={() => setNotice('')}><Icon name="close" size={14}/></Button></div>}
-      <div className="omd-set-body" ref={body}>{content}</div>
+      <div className="omd-set-layout" data-outline={outline.enabled || undefined}>
+        {outline.enabled && <SettingsOutline {...outline}/>}
+        <div className="omd-set-body" ref={body}>{content}</div>
+      </div>
     </div>;
   }
 }
