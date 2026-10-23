@@ -32,7 +32,7 @@ core.push('test/client-injection.test.mjs');
 core.push('test/glyph-rendering.test.mjs');
 core.push('test/btw-integration.test.mjs');
 core.push('test/persona-settings-api.test.mjs');
-core.push('test/monitor-import.test.mjs');
+core.push('test/monitor-import.test.mjs', 'test/monitor-aggregate-cache.test.mjs');
 core.push('test/ptc-lifecycle.test.mjs', 'test/preset-projection.test.mjs');
 
 const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
