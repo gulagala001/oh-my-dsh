@@ -55,6 +55,7 @@ import { installOverviewProjection } from './session-overview-projection.mjs';
 import { setRuntimeContext, taskContextMeta } from './task-context.mjs';
 import { installBackground } from './background.mjs';
 import { mountRecommendedPlugins } from './recommended-plugins.mjs';
+import { mountPluginPreflight } from './plugin-preflight/service.mjs';
 import { createPromptOptimizer, handlePromptOptimizerApi } from './prompt-optimizer.mjs';
 import * as btwPlugin from '../vendor/btw/src/index.mjs';
 import { isBtwSession } from './dream/side-question.mjs';
@@ -146,6 +147,7 @@ export async function apply(ctx, config) {
   mountComponents(ctx, hub.components);
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
   mountRecommendedPlugins(ctx, hub);
+  mountPluginPreflight(ctx, hub);
   const isX = session => isOmdPreset(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
   installResultReduction(ctx, hub, session => isX(session) || isOmaaEnhanced(session));

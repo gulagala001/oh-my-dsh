@@ -47,6 +47,10 @@ Workflow, Rewind, DeepSeek Workbench, Persona and Extensions have independent fo
 
 ## Recommendations, updates and data
 
+Plugin preflight wraps the running host’s `pluginManager`, independently of marketplace names and without changing marketplace UI. `installBundle`, `setBundleEnabled`, and `setPluginEnabled` entries with an identifiable bundle use the same check. OMD recommended updates check their candidate before removing the old bundle. Checks reuse the selected bundles’ code and enablement, without copying private plugin configuration or accounts; plugins requiring external services may therefore receive an incomplete result. This validates basic operation, not every feature or delayed failure.
+
+Current validation targets an isolated macOS DSH `0.2.1-rc.2` host, including native installation, the dsh-market desktop bridge and isolated startup through the desktop app’s packaged CLI; the running desktop app was not updated. On macOS/Linux, process-tree and temporary-directory sampling stops a check at approximately 1.5 GiB summed process memory or 1 GiB temporary files; sampling is not an OS hard quota. Windows uses process-tree termination and timeouts, has not been verified on a physical machine, and does not claim equivalent RSS/disk sampling. Other host builds and complete external CLI coverage need separate integration and validation. Preflight installs no resident daemon and does not rewrite the user’s command-line entry points.
+
 The catalog lists purpose, original author, fixed source, full host, SHA-256 and state. Unknown hosts, missing artifacts and unpublished targets do not get invented installation entries. Use the current profile's native manager; on desktop, use the app or its bundled CLI.
 
 Automatic updates default off and apply only to eligible installed/enabled releases. They do not cross hosts, approve scripts or restart. Accounts, OAuth, Fast and paid behavior need separate confirmation.

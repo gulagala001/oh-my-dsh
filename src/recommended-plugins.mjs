@@ -6,6 +6,7 @@ import { recommendedPlugins, resolveRecommendedPlugin } from './recommended-plug
 import { prepareReviewedPackage } from './recommended-plugin-package.mjs';
 import { compareVersions, parseVersion, releaseHostVersion, INSTALLED_VERSION } from './version.mjs';
 import { pluginManagementError, requirePluginChange } from './plugin-operation.mjs';
+import { withPluginPreflight } from './plugin-preflight/service.mjs';
 
 export const AUTO_UPDATE_INTERVAL = 6 * 60 * 60 * 1000;
 export function pluginInstallSpec(plugin, version) {
@@ -210,16 +211,16 @@ export class RecommendedPluginManager {
         spec = `${plugin.packageName}@${spec}`;
       }
       const enabled = action === 'install' ? true : bundle.enabled;
-      if (action === 'update') {
-        // Match the native update flow: retire the old bundle before installing.
-        // A running bundle without HMR stays installed until the required restart.
-        const removed = await this.manager.removeBundle(plugin.packageName);
-        if (removed.error?.code !== 'stop-profile' && !['applied', 'restart-required'].includes(removed.application)) result = removed;
-      }
-      if (!result) {
+      result = await withPluginPreflight(this.manager, spec, { enabled, requestId: this.current.requestId }, async () => {
+        if (action === 'update') {
+          // Retire the old bundle only after the candidate passed preflight.
+          // A running bundle without HMR stays until the required restart.
+          const removed = await this.manager.removeBundle(plugin.packageName);
+          if (removed.error?.code !== 'stop-profile' && !['applied', 'restart-required'].includes(removed.application)) return removed;
+        }
         this.abort.signal.throwIfAborted();
-        result = await this.manager.installBundle(spec, { enabled, requestId: this.current.requestId });
-      }
+        return this.manager.installBundle(spec, { enabled, requestId: this.current.requestId });
+      });
     }
     this.finish(plugin, action, result, version);
   }

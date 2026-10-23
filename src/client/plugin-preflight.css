@@ -1,0 +1,6 @@
+.omd-preflight-progress{position:fixed;right:20px;bottom:20px;z-index:1000;max-width:min(360px,90vw);padding:10px 14px;border:1px solid var(--dsw-border-color,#8884);border-radius:10px;background:var(--dsw-bg-elevated,Canvas);color:var(--dsw-text-primary,CanvasText);font-size:12px;box-shadow:0 4px 18px #0002;pointer-events:none}
+.omd-preflight-dialog{max-width:min(620px,94vw)}
+.omd-preflight-dialog p,.omd-preflight-dialog small{overflow-wrap:anywhere}
+.omd-preflight-target{font-weight:600}
+.omd-preflight-dialog details{margin-top:14px}
+.omd-preflight-dialog pre{max-height:35vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;user-select:text}

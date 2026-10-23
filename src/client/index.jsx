@@ -42,6 +42,7 @@ import { apply as applyExtensions, inject as extensionsInject } from '../../plug
 import { apply as applyBtw, inject as btwInject } from '../../vendor/btw/src/client/index.jsx';
 import { mountOptionalClient } from './optional-client.mjs';
 import { applyStartupNotice } from './startup.jsx';
+import { applyPluginPreflight } from './plugin-preflight.jsx';
 
 export { CONTEXT_UI_VERSION as contextUIVersion } from './context-client.mjs';
 
@@ -113,6 +114,7 @@ export async function apply(ctx) {
 }
 
 async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report }) {
+  applyPluginPreflight(ctx);
   const persona = acquirePersonaClient(ctx, { embedded: true });
   applySessionTimeZone(ctx);
   applyFeatureClients(ctx, { 'dsh-deepseek-workbench': applyDeepSeekWorkbench, 'dsh-extensions': { apply: applyExtensions, inject: extensionsInject } });

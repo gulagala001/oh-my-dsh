@@ -55,6 +55,7 @@ export const Config = z.object({
   componentAutoSetup: z.boolean().default(true),
   recommendedPluginsPageEnabled: z.boolean().default(true),
   recommendedPluginsAutoUpdate: z.boolean().default(false),
+  pluginPreflightEnabled: z.boolean().default(true),
   memoryScope: z.union(['full', 'project', 'session', 'global']).default('project'),
   dreamAutoEnabled: z.boolean().default(false),
   dreamIntervalMs: z.number().step(1).min(60000).default(3600000),
