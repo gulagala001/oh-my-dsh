@@ -6,7 +6,7 @@ import { rmSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
 import { launchNativeHost } from './native-host.mjs';
-import { cleanEnvironment, dependencyDirectory } from './process.mjs';
+import { cleanEnvironment, copyCandidate } from './process.mjs';
 import { LIMITS, packageDigest, problem, redact } from './shared.mjs';
 
 if (process.env.OMD_PLUGIN_PREFLIGHT !== '1') throw Error('Plugin preflight requires its disposable launcher');
@@ -130,10 +130,7 @@ async function prepare() {
   const source = candidate.path;
   const modules = join(dir, 'node_modules'); await mkdir(modules, { recursive: true });
   if (!source.startsWith(root + '/') && !source.startsWith(root + '\\')) {
-    const snapshot = join(root, 'candidate');
-    await cp(source, snapshot, { recursive: true, dereference: false, verbatimSymlinks: true, filter: path => !['node_modules', '.git', '.local'].includes(path.split(/[\\/]/).at(-1)) });
-    await symlink(await dependencyDirectory(source, modules),
-      join(snapshot, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+    const snapshot = await copyCandidate(source, root, modules);
     const link = join(modules, candidate.name); await mkdir(dirname(link), { recursive: true });
     await rm(link, { recursive: true, force: true });
     await symlink(snapshot, link, process.platform === 'win32' ? 'junction' : 'dir');
