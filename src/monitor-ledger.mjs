@@ -27,17 +27,19 @@ const cacheMeasuredSQL = `(${inputSQL})>0 AND cacheReadTokens IS NOT NULL AND ca
   AND COALESCE(inputTokens,0)+cacheReadTokens+COALESCE(cacheWriteTokens,0)<=(${inputSQL})
   AND (inputTokens IS NULL OR cacheWriteTokens IS NULL OR inputTokens+cacheReadTokens+cacheWriteTokens=(${inputSQL}))
   AND (totalTokens IS NULL OR outputTokens IS NULL OR totalTokens>=outputTokens)`;
-const metricsSQL = `COUNT(*) calls, COALESCE(SUM(status='error'),0) errors,
-  COALESCE(SUM(CASE WHEN ${cacheMeasuredSQL} THEN 1 ELSE 0 END),0) cacheMeasuredCalls,
-  CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(CASE WHEN ${cacheMeasuredSQL} THEN (${inputSQL}) END) END cacheMeasuredInputTokens,
-  CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(CASE WHEN ${cacheMeasuredSQL} THEN cacheReadTokens END) END cacheMeasuredReadTokens,
-  COALESCE(SUM(status='cancelled'),0) cancelled, COALESCE(SUM(totalTokens IS NULL OR outputTokens IS NULL OR (${inputSQL}) IS NULL),0) unmetered,
-  COALESCE(SUM((${knownTotalSQL}) IS NULL),0) usageUnreported,
-  COALESCE(SUM(totalTokens IS NULL),0) totalUnreported, COALESCE(SUM(outputTokens IS NULL),0) outputUnreported,
-  COALESCE(SUM(inputTokens IS NULL),0) inputBucketUnreported,
-  COALESCE(SUM(cacheReadTokens IS NULL),0) cacheUnreported, COALESCE(SUM(cacheWriteTokens IS NULL),0) cacheWriteUnreported,
+// FILTER skips aggregate steps for non-matching receipts. Keep the original
+// predicates, NULL readings and SUM order, including zero for an empty range.
+const metricsSQL = `COUNT(*) calls, COUNT(*) FILTER (WHERE status='error') errors,
+  COUNT(*) FILTER (WHERE ${cacheMeasuredSQL}) cacheMeasuredCalls,
+  CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${inputSQL}) FILTER (WHERE ${cacheMeasuredSQL}) END cacheMeasuredInputTokens,
+  CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(cacheReadTokens) FILTER (WHERE ${cacheMeasuredSQL}) END cacheMeasuredReadTokens,
+  COUNT(*) FILTER (WHERE status='cancelled') cancelled, COUNT(*) FILTER (WHERE totalTokens IS NULL OR outputTokens IS NULL OR (${inputSQL}) IS NULL) unmetered,
+  COUNT(*) FILTER (WHERE (${knownTotalSQL}) IS NULL) usageUnreported,
+  COUNT(*) FILTER (WHERE totalTokens IS NULL) totalUnreported, COUNT(*) FILTER (WHERE outputTokens IS NULL) outputUnreported,
+  COUNT(*) FILTER (WHERE inputTokens IS NULL) inputBucketUnreported,
+  COUNT(*) FILTER (WHERE cacheReadTokens IS NULL) cacheUnreported, COUNT(*) FILTER (WHERE cacheWriteTokens IS NULL) cacheWriteUnreported,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(durationMs) END durationMs,
-  COALESCE(SUM(durationMs IS NULL),0) durationUnreported, COALESCE(SUM((${inputSQL}) IS NULL),0) inputUnreported,
+  COUNT(*) FILTER (WHERE durationMs IS NULL) durationUnreported, COUNT(*) FILTER (WHERE (${inputSQL}) IS NULL) inputUnreported,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${inputSQL}) END inputTotalTokens,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${knownInputSQL}) END knownInputTokens,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${knownTotalSQL}) END knownTotalTokens,

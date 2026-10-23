@@ -88,3 +88,31 @@ test('cache formatter keeps genuine zero hits, rejects unknown or contradictory 
     assert.ok(format.cacheReason(metric));
   }
 });
+
+test('conditional metrics preserve empty, unknown and measured-zero readings across read families', t => {
+  const { ledger, append, now } = fixture(t);
+  const ids = new Set(['synthetic']), params = monitorQuery({ range: 'all' }, now);
+  const read = options => ledger.query([], ids, params, undefined, options);
+  assert.deepEqual({ ...read().totals }, emptyMonitorMetric());
+  append('unknown', null, { status: 'error' });
+  append('zero', { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
+    reasoningTokens: 0, totalTokens: 0 }, { hasOutput: false, status: 'cancelled', durationMs: 0 });
+  append('partial', { inputTokens: 0.25, outputTokens: 1.25, cacheReadTokens: 0.5 });
+  append('measured', { inputTokens: 0.25, outputTokens: 0.5, cacheReadTokens: 0.5, cacheWriteTokens: 0.25 });
+  append('missing-cache', { inputTokens: 2, outputTokens: 3, totalTokens: 5 });
+  append('contradiction', { inputTokens: 5, outputTokens: 2, cacheReadTokens: 10, cacheWriteTokens: 0, totalTokens: 7 });
+  const expected = { calls: 6, errors: 1, cancelled: 1, unmetered: 2, usageUnreported: 1,
+    totalUnreported: 2, outputUnreported: 1, inputBucketUnreported: 1, cacheUnreported: 2,
+    cacheWriteUnreported: 3, durationUnreported: 5, inputUnreported: 2,
+    cacheMeasuredCalls: 1, cacheMeasuredInputTokens: 1, cacheMeasuredReadTokens: 0.5,
+    durationMs: 0, knownTotalTokens: 15.5 };
+  const full = read(), usage = read({ usageOnly: true }), calls = read({ callsOnly: true });
+  const rows = [full.totals, full.metrics.main, ...Object.values(full.groups).flat(), ...full.series,
+    usage.metrics.main, calls.totals];
+  for (const row of rows) for (const [key, value] of Object.entries(expected)) assert.equal(row[key], value, key);
+  const missing = ledger.query([], ids, { ...params, status: 'error' }).totals;
+  assert.equal(missing.cacheMeasuredCalls, 0);
+  assert.equal(missing.cacheMeasuredInputTokens, null);
+  assert.equal(missing.cacheMeasuredReadTokens, null);
+  assert.equal(missing.durationMs, null);
+});
