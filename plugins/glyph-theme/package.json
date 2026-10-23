@@ -1,6 +1,6 @@
 {
   "name": "dsh-glyph-theme",
-  "version": "1.0.0-dsh.0.2.1-rc.2",
+  "version": "1.0.0-dsh.0.2.1-rc.1",
   "description": "DSH 的完整动态字符主题：黑白、DeepSeek 字符鲸鱼和交互波纹。",
   "type": "module",
   "license": "MIT",
@@ -22,7 +22,7 @@
   ],
   "engines": {
     "node": ">=22.19",
-    "dsh": "0.2.1-rc.2"
+    "dsh": "0.2.1-rc.1"
   },
   "dsh": {
     "bundle": {
