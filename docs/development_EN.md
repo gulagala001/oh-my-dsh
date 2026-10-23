@@ -3,7 +3,7 @@
 [简体中文](development.md) · [Documentation (Chinese)](README.md) · [Usage](usage_EN.md) · [Contributing](../CONTRIBUTING.md)
 
 For source trials and contributors. Ordinary users should install a [installation guide](install_EN.md), without running engineering tests.
-This checkout retains the fixed `0.10.0` base and later work. The default is the **OMD `0.2.1-rc.2.omd.0.100.0` / DSH `0.2.1-rc.2` release source**; current build targets are 0.2.1-rc.1 and rc.2; older hosts retain their historical tags and artifacts. [Package metadata](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json) retains `private`; distribution uses GitHub Releases, not npm. Matching public Chat, Conversation and host components are pinned in the [DSH manifest](../vendor/dsh.json). [Rewritten OpenCU 2.0.8](../vendor/opencu.json) is fully bundled, supplying the core, tools and original REA frontend with OMD alone. The 0.2.1-rc.2 build uses Cordis `4.0.5`, Schemastery `3.18.5` and a frozen dependency lock without relaxed compatibility checks.
+This checkout retains the fixed `0.10.0` base and later work. The default is the **OMD `0.2.1-rc.2.omd.0.100.0` / DSH `0.2.1-rc.2` release source**; current build targets are 0.2.1-rc.1 and rc.2; older hosts retain their historical tags and artifacts. [Package metadata](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json) retains `private`; distribution uses GitHub Releases, not npm. Matching public Chat, Conversation and host components are pinned in the [DSH manifest](../vendor/dsh.json). [Rewritten OpenCU](../vendor/opencu.json) is fully bundled, supplying the core, tools and original REA frontend with OMD alone. The 0.2.1-rc.2 build uses Cordis `4.0.5`, Schemastery `3.18.5` and a frozen dependency lock without relaxed compatibility checks.
 
 OMD tarballs omit the redundant standalone registration bundle `vendor/opencu/lib/client.js`: the integrated client is already in OMD’s main bundle, and `client.factory.mjs` is generated during the build and also excluded from the final tarball. The workspace snapshot and standalone OpenCU distribution are unchanged.
 
@@ -72,10 +72,12 @@ See [plugin architecture](architecture_EN.md) for product boundaries, independen
 | `src/codegraph.mjs` | Indexing/queries |
 | `src/client/` | Conversation, workbench, settings, themes |
 | `vendor/dsh/` | Public Chat, Conversation and host components matching the current build target |
-| `vendor/opencu/` | Complete rewritten OpenCU distribution, synchronized from a matching tgz rather than edited in place |
+| `vendor/opencu/` | OpenCU distribution snapshot; source, built assets and digests maintained by the sync script |
 | `scripts/`, `test/` | Build, launch, checks |
 
 The component and price `scripts/sync-*.mjs` commands finish by running the shared credits generator to update the settings catalog and public source documentation. Run `npm run credits:write` after manually changing other catalog inputs. `npm run docs:check` verifies the generated content.
+
+For same-version server ESM, host source and documentation changes, use `node scripts/sync-opencu.mjs ../opencu --files src/dsh/downloads.mjs host/downloads.ts DEVELOPMENT.md docs/install.md docs/install_EN.md`. This copies only the listed committed distribution files and preserves existing built assets. It rejects dirty source, mismatched destination digests, generated assets and new package members. `vendor/opencu.json` records `sourceCommit` and actual file hashes, removing the old `archiveSha256` because it no longer describes the snapshot. File membership, version, frontend and generated-input changes still require a matching full package. Synchronizing host source does not rebuild or update the desktop.
 
 `pnpm build` builds the frontend and generates the standard and OMD-PTC presets from `presets/oh-my-dsh/agent.cordis.yml`. Edit source configuration, not generated files.
 

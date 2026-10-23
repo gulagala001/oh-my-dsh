@@ -53,6 +53,7 @@ https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/op
 - Both fixed Releases include the plugin and `host-adapters.zip` source materials, **not a complete desktop installer**. The full embedded browser, native monitoring and related UI need matching Host, Client and preload source adapters and a host build. Installing the plugin does not supply those host changes. Builders can follow the [developer instructions (Chinese)](../DEVELOPMENT.md#构建和本地插件包).
 - Web capabilities depend on the service machine, backend and permissions. They do not directly grant control over the computer visiting the page.
 - Before upgrading, back up and keep the original profile, `DSH_HOME`, data directory and third-party plugins. Install the matching package and restart the affected instance. Do not create or reset configuration for an upgrade.
+- Completed, failed and canceled download results survive late progress reports. After a restart, unfinished downloads remain unavailable until the desktop confirms their live state; they are not downloaded again automatically. Missing completed files retain their history and show a file error without blocking other downloads. Clearing history keeps the files. Exact pause/resume ordering also requires the updated host adapter.
 - **Main-branch updates do not update fixed Releases.** These URLs do not automatically include later fixes. See the [changelog](../CHANGELOG.md) for published packages and checksums.
 
 <details>

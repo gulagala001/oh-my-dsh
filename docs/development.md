@@ -3,7 +3,7 @@
 [English](development_EN.md) · [目录](README.md) · [用户指南](usage.md) · [贡献说明](../CONTRIBUTING.md)
 
 供源码试用和贡献者使用。普通用户用[安装指南](install.md)，无需跑工程测试。
-本 checkout 保留固定 `0.10.0` 底座与后续成果，默认为 **OMD `0.2.1-rc.2.omd.0.100.0` / DSH `0.2.1-rc.2` 发行源码**；当前构建入口只支持 0.2.1-rc.1／rc.2；旧宿主使用对应历史 tag 和工件。[包元数据](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json)保留 `private`，使用 GitHub Release 分发而非 npm。匹配的公共 Chat、Conversation 与宿主组件来源见 [DSH manifest](../vendor/dsh.json)；[新版 OpenCU 2.0.8](../vendor/opencu.json)已整体内置，只装 OMD 即包含核心、工具与真实 REA 前端。0.2.1-rc.2 使用 Cordis `4.0.5`、Schemastery `3.18.5` 与冻结依赖锁，不放宽门禁。
+本 checkout 保留固定 `0.10.0` 底座与后续成果，默认为 **OMD `0.2.1-rc.2.omd.0.100.0` / DSH `0.2.1-rc.2` 发行源码**；当前构建入口只支持 0.2.1-rc.1／rc.2；旧宿主使用对应历史 tag 和工件。[包元数据](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json)保留 `private`，使用 GitHub Release 分发而非 npm。匹配的公共 Chat、Conversation 与宿主组件来源见 [DSH manifest](../vendor/dsh.json)；[新版 OpenCU](../vendor/opencu.json)已整体内置，只装 OMD 即包含核心、工具与真实 REA 前端。0.2.1-rc.2 使用 Cordis `4.0.5`、Schemastery `3.18.5` 与冻结依赖锁，不放宽门禁。
 
 OMD 发行包不重复携带 OpenCU 的独立注册包 `vendor/opencu/lib/client.js`：集成客户端已在 OMD 主包内，`client.factory.mjs` 由构建过程生成，连同独立注册包一起排除出最终安装包；工作区快照和独立 OpenCU 发行不受影响。
 
@@ -72,10 +72,12 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 | `src/codegraph.mjs` | 索引／查询；取消及初始化失败保留可读错误与原始 cause |
 | `src/client/` | 对话、工作台、设置、主题 |
 | `vendor/dsh/` | 匹配当前构建目标的公共 Chat、Conversation 与宿主组件 |
-| `vendor/opencu/` | 新版 OpenCU 完整发行快照；对应目标 tgz 整体同步，不手改 |
+| `vendor/opencu/` | OpenCU 分发快照；由同步脚本维护源码、构建产物与摘要，不手改 |
 | `scripts/`、`test/` | 构建／启动／检查 |
 
 修改组件或价格来源的 `scripts/sync-*.mjs` 在同步完成后调用同一个来源清单生成器，更新设置页与公开来源文档；其他手工修改来源清单输入后运行 `npm run credits:write`。`npm run docs:check` 检查生成内容是否一致。
+
+OpenCU 同版本的服务端 ESM、宿主源码与文档可运行 `node scripts/sync-opencu.mjs ../opencu --files src/dsh/downloads.mjs host/downloads.ts DEVELOPMENT.md docs/install.md docs/install_EN.md`，只替换列出的已提交、已分发文件并保留现有构建产物。入口拒绝未提交源文件、目标摘要不符、生成产物和新增文件；`vendor/opencu.json` 记录 `sourceCommit` 与逐文件摘要，并移除已不代表当前快照的 `archiveSha256`。新增／删除文件、变更版本、前端或生成输入时仍同步匹配宿主的完整包。宿主源码进入发行包不等于已经重建或更新桌面。
 
 Persona 在独立仓库维护，`node scripts/sync-persona.mjs` 按实际 npm 分发清单同步至 `plugins/persona/`，包含公开文档与检查输入。人格设置写入仅使用 `/api/dsh-persona/settings`：GET 返回配置和 `ETag`，POST 通过 `If-Match` 提交读取时的标记；冲突返回 409 和当前配置，缺少标记返回 428。旧 OMD `/settings` 不再接受人格字段，已有配置字段仍用于迁移和读取。
 

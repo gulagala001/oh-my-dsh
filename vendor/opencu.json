@@ -1,13 +1,12 @@
 {
   "name": "opencu",
   "version": "2.1.0-dsh.0.2.1-rc.2",
-  "source": "opencu@2.1.0-dsh.0.2.1-rc.2",
+  "source": "../opencu",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.2",
-  "archiveSha256": "7d0e43128bb2bfdd505efa45238bcae93bc097520c8a0f3078a23122eb91d2e0",
   "files": {
     "CHANGELOG.md": "a70c46be3cb488863525ed387aa06773d9faf2a177b1c41f7d3024ae3162bb59",
-    "DEVELOPMENT.md": "a7b28d1b93cc085efbe9469805141e85df320c131638909c812fc7ed672795c0",
+    "DEVELOPMENT.md": "eaa784502b2bf646cbfa3fc11574b8c88d612f7c1672ea8a53599f008c01bee1",
     "README.md": "af4bbf3772c803f546173f829d8c890be53aadcb022e070110d8ec882497fb05",
     "README_EN.md": "ec5743268ad6656e5f452a9a6082d349c42f94cbff31b800e6e6a3dfeda396ea",
     "THIRD_PARTY_NOTICES.md": "e4ab08236d3fc27da96af6aa6ba40871c498f81ea890abbd873a905ecd8644b0",
@@ -16,8 +15,8 @@
     "docs/images/browser-annotations.jpg": "4af796a459d906657ad848f308bd2d6e7a02f204303e89b65376c7a49d7be9ef",
     "docs/images/opencu-hero-en.jpg": "05845682c2f5b3fe5497e64873832e4a3c559165adbc06fcc73a80e8de3fe3d8",
     "docs/images/opencu-hero-zh.jpg": "f279d4d69e3f9feac9620acb24a3b26eddd332dc9e6a382f2c0942f923a3602f",
-    "docs/install.md": "bcb868ab4786ecadf0b618edc62c1e1eb54901bbb98dbccb3558d73eb2a5d109",
-    "docs/install_EN.md": "e166cf27bb490f8074b215de6cdddc2867acb3083f007c88b370b5ddfb171c80",
+    "docs/install.md": "a4d8ef849bd4115c04ff7153b08549ecaf67769941be1c7464403258a7adc3cc",
+    "docs/install_EN.md": "a93a2a731aae007569378c3c9472bf0fc28b28d951aa88bb74b529a675519f3e",
     "docs/licenses/playwright-keyboard.txt": "45873d00a0dd243596deb4aa23b2493b3d1f0671921bf2538ea431d7380220eb",
     "docs/releases.md": "c1b538330f8945def4c04ef06e61382aa88f37b8c95491b561b066d724cb97b5",
     "docs/structure.json": "e912503564f7165f5acc328bb18ac63d779c2fcc5a6683e19812ac0e7445b326",
@@ -65,7 +64,7 @@
     "host/composer-references.mjs": "5758046f279fb18bbf0da0a19ccced5e73920747ba6ac6b8bb987c6752ebbb5e",
     "host/cursor.ts": "12e3c538767bcaa540a418bcaf5286d9cd17c2fe98007a8602c02806e522f053",
     "host/dialogs.ts": "552eaa7165e29dbc53f3c71f3a8a68f4d4d03a7cc192d2b1ec65fb8942dc4415",
-    "host/downloads.ts": "8092bcbb049052d27fd73ffd88c88dd2a0698189b18f6e91b696270476dd5653",
+    "host/downloads.ts": "dda01c27ef3485022f12f695877f6d7ccfe5f0aa30c29560cec9b26acd09f9ca",
     "host/extensions.ts": "28ab3f4b799fb3deebbcbe5e51c327844228fda2c807283a53eaf179c4c01ad5",
     "host/files.ts": "77dd05a32d41dd591377a2b7f1c150c7a9f0ad34b11a3429e975caf05cac2700",
     "host/guest-adapter.ts": "f8c9a934001fd17ee56e03f3bde83a3a10ba38dff9ef0866fd1875d40ba33cde",
@@ -725,7 +724,7 @@
     "src/dsh/computer.mjs": "aeceb21f18feab2d21a7cd05d34ac74b23524a3d48c5fdfceddb2c10e9baf7af",
     "src/dsh/config.mjs": "2918e8568e44834fdacda51589e83c455fef26e39811911999c391a319eb98cf",
     "src/dsh/delivery-files.mjs": "4d747907f5d1165fc539d188f5a7599cacf9ca439e3a9eec399d8c2a48791c34",
-    "src/dsh/downloads.mjs": "2e9eed80f9052f7d875a1f5c198b1dfc4d6e5a0a223f95f1746ccc36ccc35009",
+    "src/dsh/downloads.mjs": "eec3314f33cbc3a051d4dcf7ad444a63b075b3b6f50de9a4df38a1b7989c924e",
     "src/dsh/image-registry.mjs": "c1df2c0d464ce5a16c2ba3be7dc364a6de8e29a6066f7ffbc9ba1826d7524ee0",
     "src/dsh/index.mjs": "e88256d915d4ad36b8589f83509b9f0e03bd47cfbfa153bce1363aeafb2bb564",
     "src/dsh/input-release.mjs": "b20ad8264eadc08336baa63617d995fd25746615956c34e5354e705ff42d8a20",
@@ -758,5 +757,6 @@
     "src/protocol.mjs": "78bd4e2f4a39c84d4c37e7a7891576fa9682e42277d93734c4571b45a096533b",
     "src/runtime.mjs": "5ab64b04f72d4343f479da4f2342e44a1dc985903e0b213cd0bc5b2cf7ca09ed",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
-  }
+  },
+  "sourceCommit": "866799b7e34e60fb7b9bb46ab5788f94460004f6"
 }

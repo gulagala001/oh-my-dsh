@@ -103,12 +103,12 @@ export function captureOpenCUDownload(lease: DownloadLease, item: DownloadItem):
   else item.setSavePath(path)
   lease.downloads.add(item)
   item.on('updated', (_event, state) => {
-    Object.assign(value, { updatedAtMs: Date.now(), status: item.isPaused() || state === 'interrupted' ? 'paused' : 'in_progress',
+    Object.assign(value, { updatedAtMs: Math.max(Date.now(), value.updatedAtMs + 1), status: item.isPaused() || state === 'interrupted' ? 'paused' : 'in_progress',
       receivedBytes: item.getReceivedBytes(), totalBytes: item.getTotalBytes(), canPause: !item.isPaused() && state !== 'interrupted', canResume: item.canResume() })
   })
   item.once('done', (_event, state) => {
     lease.downloads.delete(item)
-    Object.assign(value, { updatedAtMs: Date.now(), status: state === 'completed' ? 'complete' : state === 'cancelled' ? 'canceled' : 'failed',
+    Object.assign(value, { updatedAtMs: Math.max(Date.now(), value.updatedAtMs + 1), status: state === 'completed' ? 'complete' : state === 'cancelled' ? 'canceled' : 'failed',
       receivedBytes: item.getReceivedBytes(), totalBytes: item.getTotalBytes(), canPause: false, canResume: false, canCancel: false,
       fileExists: false })
     if (state === 'completed') {

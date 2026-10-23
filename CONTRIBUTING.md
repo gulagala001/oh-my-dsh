@@ -10,7 +10,7 @@
 ## 开发
 
 - 优先使用宿主公共 SDK 和扩展点，不手改 SDK、生成文件或 `vendor/opencu/` 发行快照。
-- OpenCU、Workflow、Rewind、Persona 与 BTW 在各自独立仓库维护；通过对应 `scripts/sync-*.mjs` 同步完整快照和来源清单，不直接手改 vendor 或 `plugins/persona` 文件。同步包含公开文档、文档清单和检查脚本的输入，按独立包的实际分发清单维护。前端／宿主构建只针对受影响部分执行。
+- OpenCU、Workflow、Rewind、Persona 与 BTW 在各自独立仓库维护；通过对应 `scripts/sync-*.mjs` 同步快照和来源清单，不直接手改 vendor 或 `plugins/persona` 文件。同步包含公开文档、文档清单和检查脚本的输入，按独立包的实际分发清单维护。OpenCU 同版本的直接服务端模块、宿主源码与文档可用 `sync-opencu.mjs <source> --files <paths...>` 同步已提交文件，保留原构建产物；清单记录来源提交与实际文件摘要，不继续声称对应旧整包摘要。文件集合、版本、前端或生成输入变化仍走完整构建／包同步。前端／宿主构建只针对受影响部分执行。
 - 组件及价格同步命令会自动重新生成设置页与公开来源清单。手工修改其他来源输入后运行 `npm run credits:write`，并用 `npm run docs:check` 检查一致性。
 - 系统提示词原文与许可保存在 `src/prompt-styles/upstream/<来源>/`，`source.json` 固定提交、核对日期与原始字节哈希；公开样本必须注明非官方与核验边界。适配只处理真实宿主差异，不改写行为风格。修改来源后重建 `node scripts/check-prompt-styles.mjs --write`，再执行 `npm run prompts:check`；构建、CI 与 prepack 检查同一份原文、构建器和适配锚点。来源说明原位维护于提示词指南、第三方声明和项目目录，不新增内部维护流水。
 - 测试使用隔离数据目录与受控模型；个人配置、会话、密钥和原始用户报告不进入提交或安装包。

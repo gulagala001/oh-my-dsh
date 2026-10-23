@@ -2,14 +2,52 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { copyFile, mkdir, readFile, writeFile, rename, mkdtemp, stat, readdir, lstat, realpath } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { resolve, join } from 'node:path';
-import { nativePackageModes } from './native-package-modes.mjs';
+import { resolve, join, dirname } from 'node:path';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const source = resolve(process.argv[2] || join(root, '../opencu'));
 const local = join(root, '../.local');
 await mkdir(local, { recursive: true });
 const staging = await mkdtemp(join(local, 'opencu-bundle-'));
+// Direct server/host-source fixes do not require replacing host-specific client
+// output. Membership/version/build-input changes still use the full package path.
+if (process.argv[3] === '--files') {
+  const selected = [...new Set(process.argv.slice(4))], target = join(root, 'vendor/opencu');
+  if (!selected.length) throw new Error('Select existing distributed source files');
+  const manifestPath = join(root, 'vendor/opencu.json'), originalManifest = await readFile(manifestPath);
+  const manifest = JSON.parse(originalManifest), pkg = JSON.parse(await readFile(join(source, 'package.json')));
+  if (pkg.name !== manifest.name || pkg.version !== manifest.version || pkg.opencu?.host !== manifest.hostVersion) throw new Error('Source-only sync requires the same package and host version');
+  const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim();
+  const updates = [];
+  for (const name of selected) {
+    if (!Object.hasOwn(manifest.files, name) || name.includes('\\') || name.split('/').includes('..') ||
+      !/^(?:src\/(?!client\/)|host\/(?!build-inputs\/)|docs\/|DEVELOPMENT\.md$)/.test(name) || !/\.(?:mjs|js|ts|json|md|css|ya?ml)$/.test(name)) throw new Error(`Not an existing distributed source file: ${name}`);
+    const from = join(source, name), destination = join(target, name);
+    if (await realpath(from) !== from || await realpath(destination) !== destination) throw new Error(`Refusing a non-owned source file: ${name}`);
+    const bytes = await readFile(from), previous = await readFile(destination);
+    const committed = execFileSync('git', ['show', `${commit}:${name}`], { cwd: source, maxBuffer: 8 * 1024 * 1024 });
+    if (!bytes.equals(committed)) throw new Error(`Commit the source file before synchronizing: ${name}`);
+    if (createHash('sha256').update(previous).digest('hex') !== manifest.files[name]) throw new Error(`Bundled source differs from its manifest: ${name}`);
+    const staged = join(staging, 'next', name);
+    await mkdir(dirname(staged), { recursive: true }); await writeFile(staged, bytes, { mode: (await stat(destination)).mode & 0o777 });
+    updates.push({ name, destination, previous, staged });
+    manifest.files[name] = createHash('sha256').update(bytes).digest('hex');
+  }
+  manifest.source = '../opencu'; manifest.sourceCommit = commit;
+  delete manifest.archiveSha256; // No new archive was built for this mixed source/output snapshot.
+  const applied = [];
+  try {
+    for (const update of updates) { await rename(update.staged, update.destination); applied.push(update); }
+    await writeFile(join(staging, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+    await rename(join(staging, 'manifest.json'), manifestPath);
+  } catch (error) {
+    const rollback = await Promise.allSettled([...applied.map(update => writeFile(update.destination, update.previous)), writeFile(manifestPath, originalManifest)]);
+    throw new AggregateError([error, ...rollback.filter(result => result.status === 'rejected').map(result => result.reason)], 'OpenCU source sync failed');
+  }
+  execFileSync(process.execPath, [fileURLToPath(new URL('./build-credits.mjs', import.meta.url)), '--write'], { stdio: 'inherit' });
+  console.log(`Synced ${selected.length} committed OpenCU source files; existing built assets retained`);
+  process.exit(0);
+}
 let archive;
 if ((await stat(source)).isDirectory()) {
   if (!process.env.OMD_NPM_ENTRY) throw new Error('Supply the build-owned OMD_NPM_ENTRY or an already built OpenCU tgz');
@@ -19,6 +57,7 @@ if ((await stat(source)).isDirectory()) {
   archive = join(staging, 'opencu.tgz');
   await copyFile(source, archive);
 }
+const { nativePackageModes } = await import('./native-package-modes.mjs');
 await nativePackageModes(archive);
 const members = execFileSync('tar', ['-tzf', archive], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim().split('\n');
 if (!members.length || members.some(name => !name.startsWith('package/') || name.includes('\\') || name.split('/').includes('..'))) throw new Error('Expected a package-only OpenCU archive');

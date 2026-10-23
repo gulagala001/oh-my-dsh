@@ -44,6 +44,6 @@ OMD 0.100.0 源码默认内置 OpenCU `2.1.0`。独立安装与内置共装复�
 - Windows 使用 UIA／Win32，Linux 使用 X11／AT-SPI 或 Wayland portal；可用操作取决于系统依赖、权限和应用支持。Wayland 共享显示器不等于独占某个应用截图。
 - 多屏混合缩放不在当前支持范围。
 - 动作回执说明派发状态，实际结果需重新观察。
-- 本地数据按配置的 `dataDir` 保存，未配置时使用 `DSH_HOME/opencu` 或 `~/.opencu`。下载历史清理不删除已交付文件。
+- 本地数据按配置的 `dataDir` 保存，未配置时使用 `DSH_HOME/opencu` 或 `~/.opencu`。下载的完成、失败和取消结果不受迟到进度影响；重启后未确认仍在运行的下载暂不可操作，真实宿主状态到达后恢复，不自动重新下载。文件丢失保留历史与文件错误，不阻塞其他下载；清理历史不删除文件。暂停／继续的精确先后需要匹配的新版宿主适配。
 
 工程说明及后端边界见[内置 OpenCU 说明](../vendor/opencu/README.md)，组件来源和分发条件见[第三方声明](../vendor/opencu/THIRD_PARTY_NOTICES.md)。视觉展示见[功能展示](showcase.md)。

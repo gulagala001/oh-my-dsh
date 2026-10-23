@@ -2,7 +2,7 @@
 
 [简体中文](usage.md) · [Docs index](README_EN.md) · [First task](getting-started_EN.md) · [Troubleshooting](troubleshooting_EN.md) · [Development](development_EN.md)
 
-> Current source is **OMD `0.2.1-rc.2.omd.0.100.0` / DSH `0.2.1-rc.2`**, bundling OpenCU `2.0.8`. Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
+> Current source is **OMD `0.2.1-rc.2.omd.0.100.0` / DSH `0.2.1-rc.2`**, bundling OpenCU; component versions are listed in [credits](components_EN.md). Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
 
 OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. The package ID and preset are both `oh-my-dsh`; settings, conversations and data from earlier versions migrate automatically after upgrading, see [the upgrade guide](upgrade_EN.md#package-name).
 
@@ -194,7 +194,9 @@ Connections watch changes, release when idle, and catch up later. Disable/uninst
 
 ## Computer Use
 
-OpenCU `2.0.8` is bundled by default. It provides real browser/native target discovery, observation, background-first input, monitoring and annotations. Complete UI requires matching Host, Client and preload adapters; plugin installation alone does not patch stock DSH. [Guide (Chinese)](computer-use.md) · [Integration boundaries](plugin-compatibility_EN.md#opencu).
+OpenCU is bundled by default. It provides real browser/native target discovery, observation, background-first input, monitoring and annotations. Complete UI requires matching Host, Client and preload adapters; plugin installation alone does not patch stock DSH. [Guide (Chinese)](computer-use.md) · [Integration boundaries](plugin-compatibility_EN.md#opencu).
+
+Completed, failed and canceled downloads retain their results when older progress arrives. After a restart, unconfirmed active downloads stay unavailable until live desktop status returns, without automatically downloading again. Missing files keep their history and file errors without blocking other downloads; clearing history keeps the files. Exact pause/resume ordering also needs the matching updated host adapter.
 
 <a id="get-started-with-computer-use"></a>
 
