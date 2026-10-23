@@ -212,9 +212,14 @@ export class DreamSources {
     const handle=await p.open(id,'read',{signal});
     try {
       signal.throwIfAborted();
-      const {events}=await handle.read(0,undefined,{signal});
+      const {events,eventState}=await handle.read(0,undefined,{signal});
       signal.throwIfAborted();
-      return {header:structuredClone(handle.header),inherited:handle.inheritedEventCount||0,events:structuredClone(events)};
+      // All source consumers read events without mutation; attachment delivery
+      // clones its selected blocks separately. Adopt the native caller-owned
+      // slice and its detached or deeply frozen graph. Older backends without
+      // an ownership declaration still need the defensive copy.
+      return {header:structuredClone(handle.header),inherited:handle.inheritedEventCount||0,
+        events:eventState==='detached'||eventState==='shared-frozen'?events:structuredClone(events)};
     } finally { await handle.close(); }
   }
   inspect(id,signal) { return this.track(()=>this.inspectSnapshot(id,this.signal(signal))); }

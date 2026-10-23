@@ -78,13 +78,17 @@ function jsonArguments(value) {
 
 function dispatchContent(blocks, calls) {
   if (!Array.isArray(blocks)) return false;
-  const pending = [...blocks].reverse(), seen = new Set(), nested = new Map(calls);
+  const pending = [...blocks].reverse(), seen = new Set(), nested = new Map();
+  // Validation is synchronous. Keep only this dispatch's overrides instead of
+  // copying every earlier call for each PTC result in a long session. Nothing
+  // is published to calls until the complete dispatch has passed validation.
+  const lookup = { get: id => nested.has(id) ? nested.get(id) : calls.get(id) };
   while (pending.length) {
     const block = pending.pop();
     if (!record(block) || seen.has(block)) return false;
     seen.add(block);
     if (block.type === 'tool-call' && callId(block.id) && callId(block.name)) nested.set(block.id, block.name);
-    if (echoValue(block, nested)) continue;
+    if (echoValue(block, lookup)) continue;
     if (['text', 'reasoning'].includes(block.type)) { if (typeof block.text !== 'string') return false; }
     else if (block.type === 'tool-call') {
       if (!callId(block.id) || !callId(block.name) || !jsonArguments(block.arguments)) return false;
