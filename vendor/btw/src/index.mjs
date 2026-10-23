@@ -1,5 +1,6 @@
 import { acquireShared } from './shared.mjs';
-import { answer, sideMessages, validateQuestion } from './context.mjs';
+import { answer, sideMessages } from './context.mjs';
+import { validateQuestion } from './protocol.mjs';
 import { readSnapshot } from './snapshot.mjs';
 
 export const name = 'dsh-btw';

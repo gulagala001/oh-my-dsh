@@ -36,3 +36,5 @@ Preserve my configuration and data. Restart only after active tasks finish.
 Verify a downloaded archive against the release attachment [SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.2-dsh.0.2.1-rc.2/SHA256SUMS).
 
 After sending a main message, enter `/btw your question`. Enter `/btw` to reopen the popover and its history. Side history is stored only in the current window and is cleared on reload.
+
+Closing the popover only hides it. Stop cancels the current side request and preserves text already received. Only explicitly completed, untruncated replies enter follow-up context; failed or interrupted replies can be retried manually. Disabling the last side-chat entry cancels requests and clears history from window memory.

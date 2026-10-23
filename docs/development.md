@@ -101,4 +101,4 @@ CodeGraph 的 `codegraph.json` 排除规则只作用于当前项目根，不会�
 
 图片、上下文预算和空闲预处理见[上下文整理与原文回查](context-workflow.md)；来源与许可见[第三方声明](../THIRD_PARTY_NOTICES.md)。
 
-内置 BTW 使用 `node scripts/sync-btw.mjs ../dsh-btw-plugin` 同步独立插件的完整构建；`vendor/btw.json` 记录来源提交、精确宿主及文件哈希。服务端与前端直接使用同一插件入口，匹配的独立与内置版本共用注册生命周期。
+内置 BTW 使用 `node scripts/sync-btw.mjs ../dsh-btw-plugin` 按 npm 实际分发清单同步独立插件的完整构建、文档清单和检查脚本；`vendor/btw.json` 记录来源提交、精确宿主及文件哈希。服务端与前端直接使用同一插件入口，匹配的独立与内置版本共用注册生命周期。

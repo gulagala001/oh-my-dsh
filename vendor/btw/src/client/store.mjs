@@ -1,4 +1,6 @@
-const LIMIT = 20;
+import { MAX_ANSWER, MAX_HISTORY, validateQuestion } from '../protocol.mjs';
+
+const EMPTY_STATE = Object.freeze({ entries: Object.freeze([]), selected: -1, draft: '', error: '' });
 const busy = entry => entry?.status === 'connecting' || entry?.status === 'answering';
 
 /** Browser-memory only. React mount/unmount never owns a network request. */
@@ -13,18 +15,22 @@ export class SideChatStore {
     this.active = null;
     this.disposed = false;
   }
-  subscribe = listener => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
+  subscribe = listener => {
+    if (this.disposed) return () => {};
+    this.listeners.add(listener); return () => this.listeners.delete(listener);
+  };
   emit() { for (const listener of this.listeners) listener(); }
-  get(id) {
-    if (!this.states.has(id)) this.states.set(id, { entries: [], selected: -1, draft: '', error: '' });
-    return this.states.get(id);
+  get(id) { return this.states.get(id) ?? EMPTY_STATE; }
+  update(id, patch) {
+    if (this.disposed) return;
+    this.states.set(id, { ...this.get(id), ...patch }); this.emit();
   }
-  update(id, patch) { this.states.set(id, { ...this.get(id), ...patch }); this.emit(); }
   patch(id, entryId, patch) {
     const state = this.get(id);
     this.update(id, { entries: state.entries.map(entry => entry.id === entryId ? { ...entry, ...patch } : entry) });
   }
   mount(id, owner) {
+    if (this.disposed) return () => {};
     let owners = this.owners.get(id);
     if (!owners) this.owners.set(id, owners = new Set());
     owners.add(owner);
@@ -46,25 +52,25 @@ export class SideChatStore {
   }
   stop(id) { this.running.get(id)?.abort(Error('已停止旁聊')); }
   async ask(id, rawQuestion) {
-    const question = rawQuestion.trim();
     if (this.disposed) throw Error('旁聊插件已停用');
-    if (!question) throw Error('请输入旁聊问题');
-    if (question.length > 16000) throw Error('问题过长，请控制在 16000 字符内');
+    const question = validateQuestion(rawQuestion);
     if (this.isBusy(id)) throw Error('旁聊正在回答，请先停止或等待完成');
     const state = this.get(id);
     const history = state.entries.filter(entry => entry.status === 'done' && !entry.truncated)
-      .slice(-LIMIT).map(({ question, answer, provider, model }) => ({ question, answer, provider, model }));
+      .slice(-MAX_HISTORY).map(({ question, answer, provider, model }) => ({ question, answer, provider, model }));
     const entry = { id: crypto.randomUUID(), question, answer: '', status: 'connecting', error: '', model: '' };
     const controller = new AbortController();
     this.running.set(id, controller);
-    const entries = [...state.entries, entry].slice(-LIMIT);
+    const entries = [...state.entries, entry].slice(-MAX_HISTORY);
     this.update(id, { entries, selected: entries.length - 1, error: '' });
+    let response;
     try {
-      const response = await this.fetch('/api/dsh-btw/ask', {
+      response = await this.fetch('/api/dsh-btw/ask', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId: this.clientId, sessionId: id, question, history }),
         signal: controller.signal,
       });
+      controller.signal.throwIfAborted();
       if (!response.ok) {
         const value = await response.json();
         throw Error(value.error || '旁聊请求失败');
@@ -75,21 +81,28 @@ export class SideChatStore {
       // continues while the popover is closed or another session is selected.
       void this.drain(id, entry.id, response.body, controller);
     } catch (error) {
-      this.patch(id, entry.id, { status: controller.signal.aborted ? 'stopped' : 'error', error: error.message });
+      const failure = controller.signal.aborted ? controller.signal.reason : error;
+      this.patch(id, entry.id, { status: controller.signal.aborted ? 'stopped' : 'error', error: failure.message });
       if (this.running.get(id) === controller) this.running.delete(id);
       this.update(id, {});
-      throw error;
+      controller.abort();
+      await response?.body?.cancel().catch(() => {});
+      throw failure;
     }
   }
   async drain(id, entryId, body, controller) {
-    const reader = body.getReader(), decoder = new TextDecoder();
+    const decoder = new TextDecoder();
+    let reader;
+    // Own the reader as well as the fetch signal: cancellation must wake a
+    // pending read, including when a transport wrapper does not forward abort.
+    const cancel = () => { void reader.cancel().catch(() => {}); };
     let buffer = '', answer = '', finished = false, thinking = false;
     const accept = line => {
       if (!line.trim()) return;
       const event = JSON.parse(line);
       if (event.type === 'text') {
         answer += event.text;
-        if (answer.length > 64000) throw Error('回答超过长度上限');
+        if (answer.length > MAX_ANSWER) throw Error('回答超过长度上限');
         this.patch(id, entryId, { answer, thinking: false });
       } else if (event.type === 'meta') {
         this.patch(id, entryId, { provider: event.provider, model: event.model });
@@ -104,17 +117,24 @@ export class SideChatStore {
       } else if (event.type === 'error') throw Error(event.error || '旁聊请求失败');
     };
     try {
-      while (true) {
+      reader = body.getReader();
+      controller.signal.addEventListener('abort', cancel, { once: true });
+      controller.signal.throwIfAborted();
+      while (!finished) {
         const { value, done } = await reader.read();
         controller.signal.throwIfAborted();
         buffer += decoder.decode(value, { stream: !done });
         let newline;
-        while ((newline = buffer.indexOf('\n')) >= 0) {
+        while (!finished && (newline = buffer.indexOf('\n')) >= 0) {
           accept(buffer.slice(0, newline));
           buffer = buffer.slice(newline + 1);
         }
+        // The server emits done only after the model iterator has closed.
+        // Transport EOF (or anything after the terminal event) is not a
+        // second authority for whether this answer completed.
+        if (finished) break;
         if (buffer.length > 256000) throw Error('旁聊响应格式无效');
-        if (done) { if (buffer.trim()) accept(buffer); break; }
+        if (done) { if (!finished && buffer.trim()) accept(buffer); break; }
       }
       if (!finished) throw Error('连接提前结束，回答可能不完整');
     } catch (error) {
@@ -124,15 +144,20 @@ export class SideChatStore {
         thinking: false,
       });
     } finally {
-      await reader.cancel().catch(() => {});
-      reader.releaseLock();
+      controller.signal.removeEventListener('abort', cancel);
+      controller.abort();
+      await reader?.cancel().catch(() => {});
+      reader?.releaseLock();
       if (this.running.get(id) === controller) this.running.delete(id);
       this.update(id, {});
     }
   }
   dispose() {
+    if (this.disposed) return;
     this.disposed = true;
-    for (const controller of this.running.values()) controller.abort();
+    for (const controller of this.running.values()) controller.abort(Error('旁聊插件已停用'));
+    this.running.clear();
+    this.states.clear();
     this.active = null;
     this.listeners.clear();
     this.owners.clear();

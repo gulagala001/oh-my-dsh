@@ -1,14 +1,5 @@
 import { createAssistantMessage, createToolResultMessage } from '@deepseek-ai/dsh-llm';
-
-export const MAX_QUESTION = 16000;
-export const MAX_ANSWER = 64000;
-export const MAX_HISTORY = 20;
-
-export function validateQuestion(value) {
-  if (typeof value !== 'string' || !value.trim()) throw Error('请输入旁聊问题');
-  if (value.length > MAX_QUESTION) throw Error('问题过长，请控制在 16000 字符内');
-  return value.trim();
-}
+import { MAX_QUESTION, MAX_ANSWER, MAX_HISTORY, validateQuestion } from './protocol.mjs';
 
 /** A detached request projection. Frozen source messages are never edited. */
 export function sideMessages(source, question, history = [], config = { provider: 'side-chat', model: 'side-chat' }) {
@@ -49,7 +40,8 @@ export function sideMessages(source, question, history = [], config = { provider
 
 /** Consume the independent LLM stream; completion must be explicit. */
 export async function answer(llm, snapshot, messages, signal, emit) {
-  let terminal, length = 0, hasText = false;
+  signal.throwIfAborted();
+  let terminal, length = 0, hasText = false, thinking = false;
   // Match the main request's provider projection and cache affinity. Schemas
   // remain cache material; this one-shot consumer has no tool executor.
   for await (const chunk of llm.stream({
@@ -62,7 +54,8 @@ export async function answer(llm, snapshot, messages, signal, emit) {
       if (length > MAX_ANSWER) throw Error('回答达到长度上限；已保留已收到的内容');
       hasText ||= !!chunk.text;
       emit({ type: 'text', text: chunk.text });
-    } else if (chunk.type === 'reasoning-delta') {
+    } else if (chunk.type === 'reasoning-delta' && !thinking && !hasText) {
+      thinking = true;
       emit({ type: 'thinking' });
     } else if (chunk.type === 'usage') {
       emit({ type: 'usage', usage: chunk.usage });

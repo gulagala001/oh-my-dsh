@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url)).replace(/\/$/, '');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
-const allowed = /^(?:\.gitignore|\.github\/workflows\/ci\.yml|package(?:-lock)?\.json|cordis\.patch\.yml|README(?:\.zh|_EN)?\.md|CHANGELOG\.md|LICENSE|src\/(?:client\/)?[\w.-]+|lib\/client\.js|scripts\/(?:build|check-public-files)\.mjs|test\/isolation\.test\.mjs|docs\/install(?:\.zh)?\.md|docs\/images\/side-chat\.png|docs\/releases\/v[\w.-]+\.md)$/;
+const allowed = /^(?:docs\/(?:documentation\.md|structure\.json)|scripts\/(?:check-docs|check-release-assets)\.mjs|\.gitignore|\.github\/workflows\/(?:ci|documentation-structure|release-assets)\.yml|package(?:-lock)?\.json|cordis\.patch\.yml|README(?:\.zh|_EN)?\.md|CHANGELOG\.md|LICENSE|src\/(?:client\/)?[\w.-]+|lib\/client\.js|scripts\/(?:build|check-docs|check-release-assets|check-public-files)\.mjs|test\/(?:isolation|stream-lifecycle)\.test\.mjs|docs\/install(?:\.zh)?\.md|docs\/images\/side-chat\.png|docs\/releases\/v[\w.-]+\.md)$/;
 
 const forbidden = path => /(?:^|\/)(?:AGENTS|CLAUDE|AI_README|PLAN|REFERENCE|COMPONENT-ALLOCATION|.*HANDOFF.*|PROMPT_(?:MAINTENANCE|CHANGES))\.md$/i.test(path)
   || /(?:^|\/)[^/]*(?:raw[-_ ](?:research|review|audit)|prompt[-_ ]maintenance|agent[-_ ](?:allocation|handoff)|session[-_ ](?:transcript|archive))[^/]*$/i.test(path)

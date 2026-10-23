@@ -97,4 +97,4 @@ See [context preparation and original recall (Chinese)](context-workflow.md) for
 
 **Bundled rewind:** `node scripts/sync-rewind.mjs ../rewind` synchronizes a completed standalone build and records the exact host and file hashes in `vendor/rewind.json`. Rebuild OMD after synchronization. The standalone and bundled owners share one runtime.
 
-Sync bundled BTW with `node scripts/sync-btw.mjs ../dsh-btw-plugin` after building the standalone plugin. `vendor/btw.json` records the source commit, exact host and file hashes. Both server and client use the same plugin entries; matching standalone and embedded versions share registration ownership.
+Sync bundled BTW with `node scripts/sync-btw.mjs ../dsh-btw-plugin` after building the standalone plugin. The actual npm distribution inventory supplies the complete build, documentation inventory and check scripts. `vendor/btw.json` records the source commit, exact host and file hashes. Both server and client use the same plugin entries; matching standalone and embedded versions share registration ownership.

@@ -17,8 +17,11 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.mjs",
-    "prepack": "npm run build && npm run check:public",
-    "check:public": "node scripts/check-public-files.mjs"
+    "prepack": "node scripts/check-docs.mjs && npm run build && npm run check:public",
+    "check:public": "node scripts/check-public-files.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
+    "docs:write": "node scripts/check-docs.mjs --write",
+    "release:check": "node scripts/check-release-assets.mjs"
   },
   "files": [
     "src",

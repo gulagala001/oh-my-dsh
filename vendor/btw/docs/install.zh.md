@@ -36,3 +36,5 @@ https://github.com/gulagala001/dsh-btw/releases/download/v0.1.2-dsh.0.2.1-rc.2/g
 下载后可用发行附件 [SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.2-dsh.0.2.1-rc.2/SHA256SUMS) 核对安装包。
 
 在主会话发送过消息后，输入 `/btw 问题` 提问；输入 `/btw` 重新打开弹窗和历史列表。旁聊记录仅在当前窗口保存，刷新即清空。
+
+关闭弹窗只隐藏界面；停止会取消当前旁聊并保留已收到的文字。只有明确完成且未截断的回答会用于后续追问；失败或中断时可手动重试。停用最后一个旁聊入口会取消请求并清空窗口内存中的记录。

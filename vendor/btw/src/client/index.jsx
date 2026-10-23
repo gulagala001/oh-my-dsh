@@ -6,6 +6,7 @@ import {
   IconCloseOutlineRegular, IconSendOutlineRegular, IconStopFillRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import { SideChatStore, busy } from './store.mjs';
+import { MAX_QUESTION } from '../protocol.mjs';
 import { installEntry } from './entry.mjs';
 import css from './style.css';
 
@@ -96,7 +97,7 @@ function install(ctx) {
       </div>}
       <form className="dsh-btw-form" onSubmit={submit}>
         <Input ref={input} aria-label="旁聊问题" placeholder={entry ? '继续问…' : '顺便问一下…'}
-          className="dsh-btw-input" value={state.draft} maxLength={16000}
+          className="dsh-btw-input" value={state.draft} maxLength={MAX_QUESTION}
           onCompositionStart={() => { composing.current = true; }}
           onCompositionEnd={() => { composing.current = false; }}
           onKeyDown={event => { if (event.key === 'Enter' && (composing.current || event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault(); }}
