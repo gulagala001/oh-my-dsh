@@ -56,7 +56,7 @@ test('legacy reconciliation reuses database rows while reading live cumulative c
   const before = query(undefined, {}, [state]); assert.equal(before.metrics.main.calls, 3);
   let scans = 0;
   const prepare = ledger.db.prepare.bind(ledger.db);
-  ledger.db.prepare = sql => { if (sql.includes('GROUP BY sessionId,kind')) scans++; return prepare(sql); };
+  ledger.db.prepare = sql => { if (sql.includes('GROUP BY sessionId,kind') && sql.includes('durationMs')) scans++; return prepare(sql); };
   assert.equal(query(undefined, {}, [state]).metrics.main.calls, 3); assert.equal(scans, 0);
   state.metrics.main.calls = 5; state.metrics.main.inputTokens = 200;
   assert.equal(query(undefined, {}, [state]).metrics.main.calls, 5); assert.equal(scans, 0);
@@ -64,7 +64,7 @@ test('legacy reconciliation reuses database rows while reading live cumulative c
   writer.prepare('UPDATE calls SET source=? WHERE id=?').run('dream', 'one');
   assert.equal(query(undefined, {}, [state]).metrics.main.calls, 6); assert.equal(scans, 1);
   assert.equal(state.metrics.main.calls, 5);
-  ledger.close(); assert.equal(ledger.legacyCache, null);
+  ledger.close(); assert.equal(ledger.legacyCache, null); assert.equal(ledger.legacyCountCache, null);
 });
 
 test('row caches discard oversized results and failures, then allow recovery', t => {
@@ -73,7 +73,7 @@ test('row caches discard oversized results and failures, then allow recovery', t
   for (let i = 0; i < 1200; i++) ledger.append({ id: 'c' + i, at: 100, sessionId: 's' + i, kind: 'kind' + i,
     usage: { inputTokens: 1, outputTokens: 1 } });
   ledger.db.exec('COMMIT');
-  const states = [{ id: 's0', metrics: { kind0: { calls: 2 } } }];
+  const states = Array.from({ length: 1200 }, (_, i) => ({ id: 's' + i, metrics: { ['kind' + i]: { calls: 2 } } }));
   assert.equal(Object.keys(query(undefined, { range: 'all' }, states).metrics).length, 1200);
   assert.equal(ledger.usageCache, null); assert.equal(ledger.legacyCache, null);
   const prepare = ledger.db.prepare.bind(ledger.db);
@@ -85,6 +85,66 @@ test('row caches discard oversized results and failures, then allow recovery', t
   assert.equal(ledger.legacyCache, null);
   ledger.db.prepare = prepare;
   assert.equal(Object.keys(query(undefined, { range: 'all' }, states).metrics).length, 1200);
+});
+
+test('covered legacy counters skip full aggregation and newly missing groups are reconciled', t => {
+  const { ledger, writer, append, query } = fixture(t);
+  append('one');
+  const state = { id: 'fixture', metrics: { main: { calls: 1, inputTokens: 100, outputTokens: 40 } } };
+  const prepare = ledger.db.prepare.bind(ledger.db);
+  let sums = 0;
+  ledger.db.prepare = sql => {
+    if (sql.includes('GROUP BY sessionId,kind') && sql.includes('durationMs')) sums++;
+    return prepare(sql);
+  };
+  assert.equal(query(undefined, {}, [state]).metrics.main.calls, 1);
+  assert.equal(sums, 0);
+  // Same database, but live counters may move in either direction.
+  state.metrics.main.calls = 3;
+  assert.equal(query(undefined, {}, [state]).metrics.main.calls, 3);
+  assert.equal(sums, 1);
+  state.metrics.main.calls = 1;
+  assert.equal(query(undefined, {}, [state]).metrics.main.calls, 1);
+  assert.equal(sums, 1);
+  writer.prepare('DELETE FROM calls WHERE id=?').run('one');
+  const missing = query(undefined, {}, [state]).metrics.main;
+  assert.equal(missing.calls, 1); assert.equal(missing.inputTokens, 100);
+  assert.equal(sums, 2);
+  append('one');
+  assert.equal(query(undefined, {}, [state]).metrics.main.calls, 1);
+  assert.equal(sums, 2);
+});
+
+test('legacy candidates use exact session and kind pairs within one database snapshot', t => {
+  const { ledger, writer, now } = fixture(t);
+  const states = [{ id: 'fixture', metrics: { main: { calls: 2, inputTokens: 40 }, prepare: { calls: 1, inputTokens: 20 } } },
+    { id: 'other', metrics: { main: { calls: 1, inputTokens: 10 }, prepare: { calls: 3, inputTokens: 60 } } }];
+  for (const [sessionId, kind] of [['fixture', 'main'], ['fixture', 'prepare'], ['other', 'main'], ['other', 'prepare']]) {
+    ledger.append({ id: sessionId + kind, sessionId, kind, source: 'native', at: now - 1,
+      usage: { inputTokens: 10, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } });
+  }
+  const read = () => ledger.query(states, new Set(['fixture', 'other']), monitorQuery({ range: 'all' }, now), undefined, { usageOnly: true });
+  const prepare = ledger.db.prepare.bind(ledger.db);
+  let changed = false;
+  ledger.db.prepare = sql => {
+    const statement = prepare(sql);
+    if (!sql.startsWith('SELECT sessionId,kind,COUNT(*)')) return statement;
+    return new Proxy(statement, { get(target, key) {
+      const value = Reflect.get(target, key, target);
+      if (key !== 'all') return typeof value === 'function' ? value.bind(target) : value;
+      return (...args) => {
+        const result = value.apply(target, args);
+        if (!changed) { changed = true; writer.prepare('DELETE FROM calls WHERE id=?').run('fixtureprepare'); }
+        return result;
+      };
+    } });
+  };
+  const first = read();
+  assert.equal(first.metrics.main.calls, 3); assert.equal(first.metrics.prepare.calls, 4);
+  assert.equal(first.metrics.main.inputTokens, 50); assert.equal(first.metrics.prepare.inputTokens, 70);
+  const next = read();
+  assert.equal(next.metrics.prepare.calls, 4); assert.equal(next.metrics.prepare.inputTokens, 80);
+  assert.deepEqual(ledger.legacyCache.value.map(row => [row.sessionId, row.kind]).sort(), [['fixture', 'main'], ['other', 'prepare']]);
 });
 
 test('filter index upgrades existing ledgers and preserves ordered live options for every scope', t => {
