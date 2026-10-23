@@ -52,7 +52,7 @@ https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100
 https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.100.0/oh-my-dsh-0.2.1-rc.1.omd.0.100.0.tgz
 ```
 
-完整插件版本中的前半段对应 DSH，末尾 0.99.3 才是 OMD 版本。其他宿主版本请看[下载与旧版入口](releases.md)，不要直接粘贴不匹配的包。
+完整插件版本中的前半段对应 DSH，末尾 0.100.0 才是 OMD 版本。其他宿主版本请看[下载与旧版入口](releases.md)，不要直接粘贴不匹配的包。
 
 ### 3. 粘贴并安装
 

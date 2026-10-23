@@ -1,13 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { spawn, spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { PluginPreflight, withPluginPreflight } from '../src/plugin-preflight/service.mjs';
 import { packageDigest, LIMITS } from '../src/plugin-preflight/shared.mjs';
-import { runProbe, sweep, packageEnvironment, cleanEnvironment } from '../src/plugin-preflight/process.mjs';
+import { runProbe, sweep, packageEnvironment, cleanEnvironment, dependencyDirectory } from '../src/plugin-preflight/process.mjs';
+
+test('copied installed candidates retain real imports with hoisted, scoped and private dependencies', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'omd-preflight-deps-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const [label, relative, own] of [
+    ['hoisted', 'profile/node_modules/candidate', false],
+    ['scoped', 'profile/node_modules/@scope/candidate', false],
+    ['private', 'workspace/candidate', true],
+  ]) {
+    const base = join(root, label), source = join(base, relative), snapshot = join(base, 'copy');
+    const modules = own ? join(source, 'node_modules') : join(base, 'profile/node_modules');
+    await mkdir(source, { recursive: true }); await mkdir(snapshot, { recursive: true });
+    await mkdir(join(modules, 'fixture-dependency'), { recursive: true });
+    await writeFile(join(modules, 'fixture-dependency/package.json'), JSON.stringify({ name: 'fixture-dependency', type: 'module', exports: './index.mjs' }));
+    await writeFile(join(modules, 'fixture-dependency/index.mjs'), `export default ${JSON.stringify(label)};`);
+    await writeFile(join(snapshot, 'entry.mjs'), "export { default } from 'fixture-dependency';");
+    await symlink(await dependencyDirectory(source, join(base, 'empty')), join(snapshot, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+    assert.equal((await import(pathToFileURL(join(snapshot, 'entry.mjs')).href)).default, label);
+  }
+});
 
 async function fixture(t, probe = async () => ({ ok: true })) {
   const root = await mkdtemp(join(tmpdir(), 'omd-preflight-'));
