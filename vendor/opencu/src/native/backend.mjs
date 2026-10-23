@@ -7,6 +7,7 @@ import {createHelperTransport} from './transport.mjs';
 import {NativeBackendError, nativeError, normalizeAction} from './protocol.mjs';
 import {installMacHelper} from './macos-install.mjs';
 import {checkMacHelperIdentity} from './macos-identity.mjs';
+import {linuxHelper} from './linux-helper.mjs';
 import {MACOS_AX_EXTENSIONS, checkSignal} from '../protocol.mjs';
 
 /** Plain backend contract; the controller owns public ok/error envelopes. */
@@ -58,9 +59,11 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     }
   }
   const transportOptions = { onEvent: cursorEvent, onExit: hideCursor };
+  let handBack = false;
   try {
     if (process.platform === 'linux') {
-      const helper = process.env.XDG_SESSION_TYPE === 'wayland' || process.env.WAYLAND_DISPLAY ? 'wayland.py' : 'helper.py';
+      const helper = linuxHelper();
+      handBack = helper === 'hyprland.py';
       transport = createHelperTransport(helperPath || '/usr/bin/python3', [fileURLToPath(new URL(`../../native/linux/${helper}`, import.meta.url)), '--data-dir', directory], transportOptions);
     } else if (process.platform === 'win32') {
       const script = fileURLToPath(new URL('../../native/windows/helper.ps1', import.meta.url));
@@ -155,6 +158,9 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
       known.set(value.id, value);
       return {focused: true, target: value};
     },
+    // Giving the view back is a Hyprland concept: the other helpers never take it away,
+    // so they do not offer the method and the controller treats the request as a no-op.
+    ...(handBack ? {async away(_target, options = {}) { return (await request('away', {relinquish: options.relinquish === true})).away === true; }} : {}),
     async permissions() { return {...await currentPermissions(), ...(onCursor ? {cursor: {host: process.platform === 'darwin' ? 'REA-native' : 'REA-desktop', error: cursorError ?? null}} : {})}; },
     async getPermissions() { return backend.permissions(); },
     async applicationMetadata(target) {

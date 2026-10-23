@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.0.8-dsh.0.2.1-rc.2"><img alt="OpenCU 2.0.8" src="https://img.shields.io/badge/release-OpenCU%202.0.8-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.1.0-dsh.0.2.1-rc.2"><img alt="OpenCU 2.1.0" src="https://img.shields.io/badge/release-OpenCU%202.1.0-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>
@@ -31,10 +31,10 @@ The full in-app browser, sidebar annotations and native monitoring require match
 Open **Plugins → Add plugin** in the DSH instance you use, then paste:
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/opencu-2.0.8-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.2/opencu-2.1.0-dsh.0.2.1-rc.2.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/SHA256SUMS).
+Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.2/SHA256SUMS).
 
 ### 2. Try this first
 
@@ -66,7 +66,8 @@ Target selection and actions prefer the background. Binding or viewing a target 
 
 ## Scope
 
-macOS uses Accessibility and targeted input, Windows uses UI Automation, and Linux uses AT-SPI/X11 or Wayland portals. Capabilities depend on the backend, OS permissions and application. A Web deployment operates the server’s machine, not automatically the computer viewing its page.
+macOS uses Accessibility and targeted input, Windows uses UI Automation, and Linux uses AT-SPI/X11, Hyprland IPC or Wayland portals.
+Capabilities depend on the backend, OS permissions and application. A Web deployment operates the server’s machine, not automatically the computer viewing its page.
 
 Mixed-scale multi-monitor operation, audio, account cloud services and complete Playwright equivalence are outside the current scope. Full real-device coverage is not complete across platforms; installation alone does not establish support for every application.
 

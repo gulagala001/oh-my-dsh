@@ -12,7 +12,7 @@ This catalog covers independently maintained products, optional integrations, ho
 
 Computer and browser observation, interaction, annotations and previews Bundled plugin; also distributed independently。
 
-- Pinned source / version: [2.0.8-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- Pinned source / version: [2.1.0-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - License / attribution: See component notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -21,7 +21,7 @@ Computer and browser observation, interaction, annotations and previews Bundled 
 
 Task planning, execution, budgets and recovery Bundled workflow plugin。
 
-- Pinned source / version: [0.1.3-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
+- Pinned source / version: [0.1.4-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
 
 ### DSH Rewind
@@ -30,7 +30,7 @@ Task planning, execution, budgets and recovery Bundled workflow plugin。
 
 Turn undo and conversation rewind Bundled undo plugin。
 
-- Pinned source / version: [0.1.2-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
+- Pinned source / version: [0.1.3-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/THIRD_PARTY_NOTICES.md)
 
 ### DSH Persona
@@ -66,7 +66,7 @@ DeepSeek web workspace and conversation import Bundled workspace plugin。
 
 Side chats, local history, follow-ups and independent cancellation Bundled side-chat plugin。
 
-- Pinned source / version: [0.1.2-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
+- Pinned source / version: [0.1.3-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/LICENSE)
 
 ### DSH Theme
@@ -113,7 +113,7 @@ Bounded file, document and shell tools with on-demand discovery. Optional recomm
 
 Interactive charts, forms, calculators, simulations and games in answers. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.2.1-rc.2.iui.1.0.11 / 0.2.1-rc.1.iui.1.0.11](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.2.1-rc.2.iui.1.0.12 / 0.2.1-rc.1.iui.1.0.12](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Oh My Agents Above All
@@ -122,7 +122,7 @@ Interactive charts, forms, calculators, simulations and games in answers. Option
 
 Agent presets and interfaces for Codex, Claude Code, Grok, Pi and ZCode workflows. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.2.1-rc.2.omaa.0.16.5 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Subscription Login
@@ -214,7 +214,7 @@ Host, sessions, tools and UI components Host, source or asset; scope documented 
 
 Original frontend assets used by OpenCU and provenance Host, source or asset; scope documented in provenance。
 
-- Pinned source / version: [SHA256:36b86d59037cede29f23bc02b9b00596b1bfe354d3dd32d661ad0b21087f8a4b](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- Pinned source / version: [SHA256:6cf90ce4ee446c5dc38baebccee648e5ef3e6c06cd81d91fafeaca0a0d197724](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

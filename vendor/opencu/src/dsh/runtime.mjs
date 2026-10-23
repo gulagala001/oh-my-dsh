@@ -17,7 +17,7 @@ import { createBrowserPairing } from '../extension/pairing.mjs';
 import { listenExtension } from '../extension/listen.mjs';
 import { referenceMatches, sameIdentity, checkExpected, json } from '../protocol.mjs';
 
-const methods = { state: 'getState', targets: 'listTargets', select: 'selectTarget', observe: 'observe', act: 'act', stop: 'stop', userActivity: 'notifyUserActivity', resume: 'resume', deliveries: 'deliveries', permissions: 'permissions', openPermissionSettings: 'openPermissionSettings', requestPermission: 'requestPermission', revealPermissionHelper: 'revealPermissionHelper' };
+const methods = { state: 'getState', targets: 'listTargets', select: 'selectTarget', observe: 'observe', act: 'act', away: 'away', stop: 'stop', userActivity: 'notifyUserActivity', resume: 'resume', deliveries: 'deliveries', permissions: 'permissions', openPermissionSettings: 'openPermissionSettings', requestPermission: 'requestPermission', revealPermissionHelper: 'revealPermissionHelper' };
 const active = new Set(['select', 'observe', 'act', 'focus', 'openTarget', 'stop', 'resume']);
 
 function error(code, message) { return Object.assign(new Error(message), { code }); }
@@ -198,9 +198,10 @@ export function createPluginRuntime(options = {}) {
     return { ok: true, deliveries: records };
   }
   async function authorizeApplication(runtime, endpoint, args, sessionKey, signal, onApprovalWait) {
-    if (!['select', 'observe', 'act', 'resume', 'preview'].includes(endpoint)) return args;
+    if (!['select', 'observe', 'act', 'focus', 'resume', 'preview'].includes(endpoint)) return {args};
+    const bindingReference = endpoint === 'select' || endpoint === 'focus' && args.reference !== undefined;
     let target;
-    if (endpoint === 'select') {
+    if (bindingReference) {
       const inventory = await runtime.listTargets({signal});
       if (inventory.ok === false) throw Object.assign(new Error(inventory.error.message), inventory.error);
       const matches = inventory.targets.filter(value => referenceMatches(value, args.reference));
@@ -219,13 +220,13 @@ export function createPluginRuntime(options = {}) {
     // Keep the selected occurrence across approval and controller queue waits.
     // Neither a peer's selection nor a reused ID can change the approved target.
     const identity = json(target.identity);
-    const bound = endpoint === 'select'
+    const bound = bindingReference
       ? {...args, reference: {...(typeof args.reference === 'object' ? args.reference : {}), id: target.id, targetId: target.id, identity}}
       : {...args, targetId: target.id, targetIdentity: identity};
     if (target?.backend === 'native') await appApprovals.authorize(target, sessionKey, signal, () => runtime.applicationMetadata(target), onApprovalWait);
-    return bound;
+    return {args: bound, target};
   }
-  async function request(endpoint, args = {}, { attachments, signal, sessionKey, modelProjection = false, onApprovalWait } = {}) {
+  async function request(endpoint, args = {}, { attachments, signal, sessionKey, modelProjection = false, onApprovalWait, handBackGuard, onControlStart } = {}) {
     if (disposed) throw new Error('OpenCU plugin is unloading');
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw error('INVALID_ARGUMENT', 'OpenCU payload must be an object');
     if (endpoint === 'appApprovals/read') return { ok: true, approvals: await appApprovals.read() };
@@ -313,13 +314,16 @@ export function createPluginRuntime(options = {}) {
       await imageRegistry.retain(image);
       return { ok: true, image };
     }
-    args = await authorizeApplication(runtime, endpoint, args, sessionKey, signal, onApprovalWait);
+    const authorized = await authorizeApplication(runtime, endpoint, args, sessionKey, signal, onApprovalWait);
+    args = authorized.args;
     signal?.throwIfAborted();
+    onControlStart?.(authorized.target);
     if (active.has(endpoint)) { revision++; activity = { endpoint, targetId: args.targetId ?? null, at: new Date().toISOString(), status: 'running' }; }
     try {
       let result;
       if (endpoint === 'preview') return runtime.preview(args);
       if (endpoint === 'stopPreview') return runtime.stopPreview(args);
+      if (endpoint === 'away') return runtime.away(args, {isCurrent: handBackGuard});
       if (endpoint === 'image') {
         const ref = imageRegistry.get(args.attachmentId);
         if (!ref) throw error('IMAGE_NOT_FOUND', 'Image is not in this OpenCU image registry');
@@ -413,6 +417,8 @@ export function createPluginRuntime(options = {}) {
     },
     pendingAppApprovals: () => appApprovals.snapshot(),
     forgetSession: sessionId => appApprovals.forgetSession(sessionId),
+    /** Whether a controller already exists; asking before start() keeps idle sessions from spawning one. */
+    started: () => Boolean(controller) && !disposed,
     get dataDir() { return dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR); },
     request: (endpoint, args, context = {}) => cursorContext.run(context.sessionKey, () => request(endpoint, args, context)),
     async close() {

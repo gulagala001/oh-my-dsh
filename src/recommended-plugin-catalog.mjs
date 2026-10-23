@@ -38,8 +38,8 @@ export const recommendedPlugins = [
     description: '在回答中使用交互图表、表单、计算器、模拟和小游戏。',
     category: '界面增强', url: 'https://github.com/gulagala001/dsh-intelligent-ui', githubRelease: 'gulagala001/dsh-intelligent-ui',
     hostBuilds: {
-      '0.2.1-rc.2': { version: '0.2.1-rc.2.iui.1.0.11', releaseTag: 'v0.2.1-rc.2.iui.1.0.11', asset: 'dsh-intelligent-ui-0.2.1-rc.2.iui.1.0.11.tgz', sha256: '9e355ba93a24a53f928d2970d9c8af5e291eab047cd5ec0e5d11e2b88f65e468', dsh: '0.2.1-rc.2', allowPrerelease: false },
-      '0.2.1-rc.1': { version: '0.2.1-rc.1.iui.1.0.11', releaseTag: 'v0.2.1-rc.1.iui.1.0.11', asset: 'dsh-intelligent-ui-0.2.1-rc.1.iui.1.0.11.tgz', sha256: 'ed2f5b40afea2faf975513f1e44ab45c792bbee77cae0e8ec6b01ac15f7a70db', dsh: '0.2.1-rc.1', allowPrerelease: false },
+      '0.2.1-rc.2': { version: '0.2.1-rc.2.iui.1.0.12', releaseTag: 'v0.2.1-rc.2.iui.1.0.12', asset: 'dsh-intelligent-ui-0.2.1-rc.2.iui.1.0.12.tgz', sha256: '04087b3832f018e9d2ff186b029c9561f52328741a4028fbfcf79bbed37e54f6', dsh: '0.2.1-rc.2', allowPrerelease: false },
+      '0.2.1-rc.1': { version: '0.2.1-rc.1.iui.1.0.12', releaseTag: 'v0.2.1-rc.1.iui.1.0.12', asset: 'dsh-intelligent-ui-0.2.1-rc.1.iui.1.0.12.tgz', sha256: 'e2cbfe4af65064003f0d0db347c2231127be4493ceff7e332146bde8c8f325c3', dsh: '0.2.1-rc.1', allowPrerelease: false },
     },
     historicalHostBuilds: {
       '0.2.1-rc.2': { version: '0.2.1-rc.2.iui.1.0.9' },
@@ -58,7 +58,7 @@ export const recommendedPlugins = [
     description: '选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。',
     category: '智能体', url: 'https://github.com/gulagala001/oh-my-agents-above-all', githubRelease: 'gulagala001/oh-my-agents-above-all',
     hostBuilds: {
-      '0.2.1-rc.2': { version: '0.2.1-rc.2.omaa.0.16.5', releaseTag: 'v0.2.1-rc.2.omaa.0.16.5', asset: 'oh-my-agents-above-all-0.2.1-rc.2.omaa.0.16.5.tgz', sha256: '15cafa081ea7f1a8b7f88a1dc8331ee85e5da0f84ff92e6093a48dadd7885ac1', dsh: '0.2.1-rc.2', allowPrerelease: false },
+      '0.2.1-rc.2': { version: '0.2.1-rc.2.omaa.0.17.0', releaseTag: 'v0.2.1-rc.2.omaa.0.17.0', asset: 'oh-my-agents-above-all-0.2.1-rc.2.omaa.0.17.0.tgz', sha256: '4ecd4e4d0f7928729bf5074ea2e576d4e7bc655121add66147006a458143d7d4', dsh: '0.2.1-rc.2', allowPrerelease: false },
       '0.2.1-rc.1': { version: '0.2.1-rc.1.omaa.0.16.5', releaseTag: 'v0.2.1-rc.1.omaa.0.16.5', asset: 'oh-my-agents-above-all-0.2.1-rc.1.omaa.0.16.5.tgz', sha256: 'e67576fda249ee29f4e521abaf110cdeefed3d386010239a3c53b74724bf5d9d', dsh: '0.2.1-rc.1', allowPrerelease: false },
     },
   },

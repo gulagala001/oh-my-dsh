@@ -340,13 +340,15 @@ export async function createController({dataDir, browser, native} = {}) {
         const rejectedSecondary = request.action === 'performSecondaryAction' && error.details?.inputDispatched === false
           && ['INVALID_ARGUMENT','UNSUPPORTED_ACTION','ELEMENT_DISABLED','STALE_ELEMENT'].includes(error.code);
         const rejectedClick = ['click','doubleClick','double_click','rightClick','right_click'].includes(request.action) && error.details?.inputDispatched === false
-          && ['INVALID_ARGUMENT','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION'].includes(error.code);
-        const rejectedPress = ['press','pressKey','press_key','keypress','key'].includes(request.action) && error.details?.inputDispatched === false
-          && ['INVALID_ARGUMENT','INVALID_ACTION','UNKNOWN_KEY','UNSUPPORTED_KEY','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION'].includes(error.code);
-        const staleTextInput = ['fill','setValue','set_value','type','typeText','type_text'].includes(request.action) && error.details?.inputDispatched === false
-          && ['STALE_ELEMENT','STALE_OBSERVATION'].includes(error.code);
+          && ['INVALID_ARGUMENT','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION','FOREGROUND_REQUIRED','TARGET_NOT_ACTIVE'].includes(error.code);
+        const rejectedPress = ['press','pressKey','press_key','keypress','key','keyDown','keyUp','key_down','key_up'].includes(request.action) && error.details?.inputDispatched === false
+          && ['INVALID_ARGUMENT','INVALID_ACTION','UNKNOWN_KEY','UNSUPPORTED_KEY','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION','FOREGROUND_REQUIRED','TARGET_NOT_ACTIVE'].includes(error.code);
+        const staleTextInput = ['fill','setValue','set_value','type','typeText','type_text','input','ax_press'].includes(request.action) && error.details?.inputDispatched === false
+          && ['STALE_ELEMENT','STALE_OBSERVATION','FOREGROUND_REQUIRED','TARGET_NOT_ACTIVE','UNSUPPORTED_ACTION','INPUT_ALREADY_HELD'].includes(error.code);
+        const rejectedPointer = ['scroll','drag','move','mouse_move','mouseDown','mouseUp','mouse_down','mouse_up','hitTest','hit_test','cursor'].includes(request.action) && error.details?.inputDispatched === false
+          && ['INVALID_ARGUMENT','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION','FOREGROUND_REQUIRED','TARGET_NOT_ACTIVE'].includes(error.code);
         const recoverableDialog = ['JS_DIALOG_OPEN', 'STALE_DIALOG'].includes(error.code);
-        if (operationEpoch === epoch && !unresolvedLocator && !rejectedEditing && !rejectedSecondary && !rejectedClick && !rejectedPress && !staleTextInput && !recoverableDialog) {
+        if (operationEpoch === epoch && !unresolvedLocator && !rejectedEditing && !rejectedSecondary && !rejectedClick && !rejectedPress && !staleTextInput && !rejectedPointer && !recoverableDialog) {
           block('faulted');
           await releaseAll();
         }
@@ -481,6 +483,26 @@ export async function createController({dataDir, browser, native} = {}) {
         await persist();
         return {targetId: target.id, result, state: snapshot()};
       } finally { if (recovery) recoveryOperations.delete(recovery); }
+    })),
+    // Hand the screen back while keeping the selection, so a model that stops to ask
+    // the user something does not hold the monitor while it waits for the answer.
+    away: (request = {}, {isCurrent} = {}) => response(() => serial(async () => {
+      alive();
+      if (isCurrent && !isCurrent()) return {away: false, state: snapshot()};
+      if (!selected.size || !activeTargetId) return {away: false, state: snapshot()};
+      const {target, backend} = request.targetId ? targetFor(request.targetId, request.targetIdentity) : targetFor();
+      // Only the Hyprland helper ever takes the view away from the user. Elsewhere there is
+      // nothing to give back, so the hand-back is a no-op rather than an error the caller
+      // would report on every turn end.
+      if (typeof backend.away !== 'function') return {away: false, state: snapshot()};
+      const relinquish = request.relinquish === true;
+      try {
+        return {targetId: target.id, relinquish, away: await backend.away(json(target), {relinquish}), state: snapshot()};
+      } catch (error) {
+        block('faulted');
+        await releaseAll();
+        throw error;
+      }
     })),
     permissions: () => response(() => serial(async () => {
       alive();

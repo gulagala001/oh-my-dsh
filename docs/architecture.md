@@ -1,10 +1,10 @@
 # 插件架构与安装方式
 
-[English](architecture_EN.md) · [文档目录](README.md) · [插件共用](plugin-compatibility.md) · [0.99.3 更新说明](release-0.99.3.md#zh-0993)
+[English](architecture_EN.md) · [文档目录](README.md) · [插件共用](plugin-compatibility.md) · [0.99.3 更新说明](release-0.100.0.md#zh-01000)
 
 OMD 的功能与插件边界如下：工作流、回合撤回、人格、扩展管理与网页工作台都有各自的插件入口；主题管理和 Glyph 也有独立产品形态。OMD 继续提供组合好的工作台，独立插件则按自己的定位、宿主范围和版本发行。
 
-本页介绍 OMD 0.99.3 的插件结构与对应正式发行。Glyph 随主题插件提供。
+本页介绍 OMD 0.100.0 的插件结构与对应正式发行。Glyph 随主题插件提供。
 
 ## 哪些能力可以独立选择
 

@@ -17,10 +17,10 @@ export function controlCapabilities(target) {
     click: platform === 'darwin'
       ? {modifiers:['Shift','Control','Alt','Meta'],durationMs:{min:0,max:10000,integer:true},clickCount:[1,2],holdPerClick:true,requiresNoHeldInputsForOptions:true,route:'process-directed-events; no AXPress for modified/timed clicks'}
       : {modifiers:false,durationMs:false,reason:'Modified and timed native clicks require macOS'},
-    input: platform === 'darwin' ? 'process-directed-events-and-accessibility' : 'accessibility-only',
+    input: platform === 'darwin' ? 'process-directed-events-and-accessibility' : target.input ?? 'accessibility-only',
     backgroundActions: target.kind === 'desktop' ? [] : platform === 'darwin' && !window ? ['set_value', 'ax_press', 'hitTest', ...axExtensions] : platform === 'darwin' && window
       ? ['click', 'doubleClick', 'move', 'mouseDown', 'mouseUp', 'scroll', 'drag', 'type', 'press', 'keyDown', 'keyUp', 'set_value', 'ax_press', ...axExtensions]
-      : ['set_value', 'ax_press', 'click', 'scroll', 'hitTest'],
+      : Array.isArray(target.backgroundActions) ? target.backgroundActions : ['set_value', 'ax_press', 'click', 'scroll', 'hitTest'],
     scroll: platform === 'darwin' ? 'target pixel events' : 'application-defined steps, not exact pixels',
     keyboard: platform === 'darwin' ? 'application-focused-window-only' : 'foreground-required; use set_value for editable elements',
     textEditing: platform === 'darwin' ? 'selectText: exact full AXValue/UTF-16 selection; paste: writable AXSelectedText only, text/md literal; no clipboard/focus fallback' : 'selectText/paste unsupported',

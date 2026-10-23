@@ -18,6 +18,16 @@ import { createBrowserHistory } from './browser-history.mjs';
 const key = Symbol.for('opencu.shared-root.v1');
 const roots = globalThis[key] ??= new WeakMap();
 const mutating = new Set(['select', 'observe', 'act', 'focus', 'openTarget', 'resume', 'computer_use']);
+const handBackTools = new Set(['ask_user_question']);
+
+// A turn that ends has finished with the desktop, so the window, the view and the control
+// bar go back to the user; a turn that stops to ask the user something is still running,
+// so only the screen goes back and the selection keeps its workspace.
+function handBackFor(event) {
+  if (event?.type === 'turn/end') return {endpoint: 'away', args: {relinquish: true}};
+  if (event?.type === 'tool/call' && handBackTools.has(event.data?.name)) return {endpoint: 'away', args: {}};
+  return null;
+}
 
 function failure(error) {
   return { ok: false, error: { code: error?.code || 'OPENCU_ERROR', message: error?.message || String(error), details: error?.details ?? {} } };
@@ -49,18 +59,33 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     entry.computers = new Map();
     const turns = new WeakMap();
     entry.activity = createActivityFeed(id => turns.get(root.get('sessions')?.get(id)));
+    // Only explicit native focus/foreground input owns the desktop. Keep its
+    // occurrence even when the same session subsequently works in a browser.
+    entry.handBack = async (session, {endpoint, args}) => {
+      const driver = entry.driver;
+      if (!entry.runtime.started() || driver?.sessionId !== session.id) return;
+      const result = await entry.runtime.request(endpoint, { ...args, targetId: driver.target.id, targetIdentity: driver.target.identity },
+        { sessionKey: session.id, handBackGuard: () => entry.driver === driver });
+      if (result.ok === false) throw Object.assign(new Error(result.error.message), result.error);
+      if (args.relinquish && entry.driver === driver) entry.driver = undefined;
+    };
     entry.offSessionEvent = root.on('session/event', (session, event) => {
       if (event.type === 'turn/start') turns.set(session, event.data.turn);
       else if (event.type === 'turn/end' && turns.get(session) === event.data.turn) turns.delete(session);
+      const handBack = event.type === 'turn/end' && turns.has(session) && turns.get(session) !== event.data.turn ? null : handBackFor(event);
+      if (handBack) void entry.handBack(session, handBack).catch(error => console.error('OpenCU desktop hand-back', error));
       entry.activity.sessionEvent(session.id, event);
     }, { global: true });
     entry.offSessionDisposed = root.on('session/disposed', session => {
       turns.delete(session);
       entry.runtime.forgetSession(session.id);
       entry.activity.forget(session.id);
+      const handBack = entry.handBack(session, {endpoint: 'away', args: {relinquish: true}});
       const computer = entry.computers.get(session.id);
-      if (!computer) return;
-      return computer.close().then(() => {
+      return (async () => {
+        try { await handBack; }
+        finally { await computer?.close(); }
+      })().then(() => {
         if (entry.computers.get(session.id) === computer) entry.computers.delete(session.id);
         entry.activity.forget(session.id);
       }).catch(error => console.error('OpenCU computer session cleanup', error));
@@ -103,7 +128,13 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
         } else if (endpoint === 'openTarget' && String(args.browserId).startsWith('dsh:')) {
           result = await entry.runtime.request(endpoint, { ...args, sessionId: typeof sessionKey === 'string' ? sessionKey : undefined }, { attachments, signal, sessionKey });
         } else {
-          result = await entry.runtime.request(endpoint, args, { attachments, signal, sessionKey, modelProjection, onApprovalWait });
+          let onControlStart;
+          if (endpoint === 'focus' || endpoint === 'act' && (args.inputMode === 'foreground' || ['focus', 'activate'].includes(args.action ?? args.type))) {
+            // The runtime supplies the approved occurrence immediately before
+            // dispatch. Queued hand-backs recheck this token in the input lane.
+            onControlStart = target => { if (target?.backend === 'native') entry.driver = {sessionId: sessionKey, target}; };
+          }
+          result = await entry.runtime.request(endpoint, args, { attachments, signal, sessionKey, modelProjection, onApprovalWait, onControlStart });
           if (endpoint === 'state' || endpoint === 'targets') result = { ...result, browsers: result.browsers ?? entry.browserHost.listBrowsers(),
             ...(!modelProjection ? { presentation: entry.presentation.snapshot() } : {}) };
         }

@@ -12,7 +12,7 @@
 
 电脑与浏览器观察、操作、批注和预览 内置插件；支持独立安装与共装。
 
-- 固定来源／版本: [2.0.8-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- 固定来源／版本: [2.1.0-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - 许可／归属: See component notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -21,7 +21,7 @@
 
 任务规划、执行、预算与恢复 内置工作流插件。
 
-- 固定来源／版本: [0.1.3-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
+- 固定来源／版本: [0.1.4-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
 
 ### DSH Rewind
@@ -30,7 +30,7 @@
 
 完整回合撤回与会话回退 内置撤回插件。
 
-- 固定来源／版本: [0.1.2-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
+- 固定来源／版本: [0.1.3-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/THIRD_PARTY_NOTICES.md)
 
 ### DSH Persona
@@ -66,7 +66,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 临时旁聊、历史、追问和独立停止 内置旁聊插件。
 
-- 固定来源／版本: [0.1.2-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
+- 固定来源／版本: [0.1.3-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/LICENSE)
 
 ### DSH Theme
@@ -113,7 +113,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 在回答中使用交互图表、表单、计算器、模拟和小游戏。 可选安装／推荐；当前兼容范围见插件兼容说明。
 
-- 固定来源／版本: [0.2.1-rc.2.iui.1.0.11 / 0.2.1-rc.1.iui.1.0.11](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- 固定来源／版本: [0.2.1-rc.2.iui.1.0.12 / 0.2.1-rc.1.iui.1.0.12](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Oh My Agents Above All
@@ -122,7 +122,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。 可选安装／推荐；当前兼容范围见插件兼容说明。
 
-- 固定来源／版本: [0.2.1-rc.2.omaa.0.16.5 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- 固定来源／版本: [0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Subscription Login
@@ -214,7 +214,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 OpenCU 使用的原始界面组件及来源记录 宿主／来源／素材，具体使用范围见来源记录。
 
-- 固定来源／版本: [SHA256:36b86d59037cede29f23bc02b9b00596b1bfe354d3dd32d661ad0b21087f8a4b](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- 固定来源／版本: [SHA256:6cf90ce4ee446c5dc38baebccee648e5ef3e6c06cd81d91fafeaca0a0d197724](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

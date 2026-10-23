@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.0.8-dsh.0.2.1-rc.2"><img alt="OpenCU 2.0.8" src="https://img.shields.io/badge/release-OpenCU%202.0.8-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.1.0-dsh.0.2.1-rc.2"><img alt="OpenCU 2.1.0" src="https://img.shields.io/badge/release-OpenCU%202.1.0-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub 累计下载量" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>
@@ -31,10 +31,10 @@
 打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/opencu-2.0.8-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.2/opencu-2.1.0-dsh.0.2.1-rc.2.tgz
 ```
 
-等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/SHA256SUMS).
+等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.2/SHA256SUMS).
 
 ### 2. 先试这一件事
 
@@ -68,7 +68,7 @@ OpenCU 通过 DSH 原生工具调用操作真实浏览器和桌面应用。页�
 
 ## 支持范围
 
-macOS 使用 Accessibility 与定向输入；Windows 使用 UI Automation；Linux 使用 AT-SPI／X11 或 Wayland portal。能力取决于后端、系统授权与目标应用。Web 服务控制的是服务所在机器，不能直接控制访问网页的另一台电脑。
+macOS 使用 Accessibility 与定向输入；Windows 使用 UI Automation；Linux 使用 AT-SPI／X11、Hyprland IPC 或 Wayland portal。能力取决于后端、系统授权与目标应用。Web 服务控制的是服务所在机器，不能直接控制访问网页的另一台电脑。
 
 多屏混合缩放、声音、账号云服务及完整 Playwright 等价能力不在当前范围。不同平台尚未完成全部实机验证；不要仅凭安装成功推断所有应用均可操作。
 

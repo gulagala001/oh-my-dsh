@@ -220,6 +220,12 @@
       "site": true
     },
     {
+      "path": "docs/release-0.100.0.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
+    },
+    {
       "path": "docs/release-0.99.0.md",
       "role": "release",
       "language": "bilingual",

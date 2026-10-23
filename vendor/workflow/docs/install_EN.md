@@ -11,12 +11,12 @@ Subagents use host models and permissions and incur normal model usage. Resume r
 Open **Plugins → Add plugin** in the instance you actually use and paste this fixed release address:
 
 ```text
-https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.3-dsh.0.2.1-rc.2/dsh-workflow-plus-0.1.3-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.4-dsh.0.2.1-rc.2/dsh-workflow-plus-0.1.4-dsh.0.2.1-rc.2.tgz
 ```
 
 Finish active tasks, follow the host’s activation/restart prompt, and keep your existing profile, DSH_HOME, model configuration and conversations.
 
-Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.3-dsh.0.2.1-rc.2/SHA256SUMS).
+Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.4-dsh.0.2.1-rc.2/SHA256SUMS).
 
 ### First success check
 
@@ -34,7 +34,7 @@ The workflow panel shows actual phases, members and status, with agents running 
 Use the CLI belonging to the same DSH instance; replace `web` with its actual profile.
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.3-dsh.0.2.1-rc.2/dsh-workflow-plus-0.1.3-dsh.0.2.1-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.4-dsh.0.2.1-rc.2/dsh-workflow-plus-0.1.4-dsh.0.2.1-rc.2.tgz"
 ```
 
 </details>

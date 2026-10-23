@@ -1,34 +1,34 @@
-# OpenCU 2.0.8 · DSH 0.2.1-rc.1 / 0.2.1-rc.2
+# OpenCU 2.1.0 · DSH 0.2.1-rc.1 / 0.2.1-rc.2
 
-[中文](#zh-208) | [English](#en-208)
+[中文](#zh-210) | [English](#en-210)
 
-<a id="zh-208"></a>
+<a id="zh-210"></a>
 
 ## 中文
 
+### 新增功能
+
+- 新增 Linux Hyprland 原生控制后端，通过 compositor IPC 操作受控窗口，提供独立工作区和当前步骤控制条。
+
 ### 问题修复
 
-- 私有测试浏览器统一隔离凭据，避免访问系统钥匙串；原生与 SDK 工具说明补齐实际启动和清理入口，保留网页测试、截图与 WebGL。
-- 修复首次页面就绪竞态、关闭后的请求释放、停止状态下创建标签和异常清理；故障回执保留原始错误。
-- 干净重启保留已确认的输入释放结果，避免误报仍有未释放输入。
+- 修复桌面协议转发省略 Content-Length 时扩展 ZIP 无法下载的问题，兼容分块和压缩响应；保留类型、ETag、大小及完整性检查。
+- 下载取消、错误及迟到响应统一释放读取流，拒绝非法长度、部分响应、空包和超过 8 MiB 的内容。
+- Hyprland 控制支持取消和连接断开收尾，切换工作区后等待画面稳定；模型让出控制或发生拒绝时可靠交还桌面。
 
-### 其他变更
-
-- 修复隔离发行目录的文档检查入口，使用真实源码清单检查生成包中的文档。
-
-<a id="en-208"></a>
+<a id="en-210"></a>
 
 ## English
 
+### New Features
+
+- Adds a native Linux Hyprland backend using compositor IPC to control windows, with an isolated workspace and a current-step control bar.
+
 ### Bug Fixes
 
-- Isolates private test-browser credentials to avoid system-keychain access. Native and SDK tool guidance now includes working launch and cleanup entry points while retaining website testing, screenshots and WebGL.
-- Fixes first-page readiness races, request release after closing, tab creation while stopped and failure cleanup. Failure receipts preserve the original error.
-- Preserves verified input-release results across clean restarts to prevent false reports of unreleased input.
-
-### Other Changes
-
-- Fixes documentation checks in isolated release directories by using the source inventory to check generated package documentation.
+- Fixes extension ZIP downloads when desktop protocol forwarding omits Content-Length, supports chunked and compressed responses, and retains type, ETag, size and completeness checks.
+- Releases response streams on cancellation, errors and late responses, rejecting invalid lengths, partial responses, empty archives and content exceeding 8 MiB.
+- Makes Hyprland control cancellable, cleans up disconnected sessions, waits for workspace transitions before capture and returns the desktop when the model yields or a control request is refused.
 
 ## 安装 / Installation
 
@@ -38,7 +38,7 @@ Install the fixed package matching the complete DSH version through **Plugins �
 
 | DSH | 固定安装包 / Fixed package | SHA256SUMS |
 | --- | --- | --- |
-| 0.2.1-rc.2 | [OpenCU 2.0.8](https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/opencu-2.0.8-dsh.0.2.1-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/SHA256SUMS) |
-| 0.2.1-rc.1 | [OpenCU 2.0.8](https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.1/opencu-2.0.8-dsh.0.2.1-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.1/SHA256SUMS) |
+| 0.2.1-rc.2 | [OpenCU 2.1.0](https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.2/opencu-2.1.0-dsh.0.2.1-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.2/SHA256SUMS) |
+| 0.2.1-rc.1 | [OpenCU 2.1.0](https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/opencu-2.1.0-dsh.0.2.1-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/SHA256SUMS) |
 
 [安装指南](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install_EN.md)
