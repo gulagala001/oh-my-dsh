@@ -1,5 +1,5 @@
 import {mkdir,unlink} from 'node:fs/promises';
-import {atomic,lease} from './store.mjs';
+import {atomic,lease,isLockFailure} from './store.mjs';
 import {randomUUID} from 'node:crypto';
 import {collectGarbage} from './garbage.mjs';
 import { join } from 'node:path';
@@ -36,9 +36,9 @@ export async function install(ctx,config={}) {
   const maintenance=engine.maintenance=new Maintenance(engine,ownerFile,config);
   ctx.effect(()=>()=>maintenance.dispose());
   ctx.effect(()=>{const key=Symbol.for('dsh-rewind-plus.engine');ctx.root[key]=engine;return()=>{if(ctx.root[key]===engine)delete ctx.root[key];};});
-  ctx.on('agent/pre-step',(payload,next)=>maintenance.run(()=>engine.preStep(payload,next),error=>{engine.backupGap(payload.agent,error);return next();}),{prepend:true});
+  ctx.on('agent/pre-step',(payload,next)=>maintenance.run(()=>engine.preStep(payload,next),error=>{if(payload.signal?.aborted||isLockFailure(error))throw error;engine.backupGap(payload.agent,error);return next();},{signal:payload.signal}),{prepend:true});
   ctx.on('session/event',(session,event)=>engine.finish(session,event));
-  ctx.on('tools/execute',(exec,next)=>maintenance.run(()=>engine.tool(exec,next),error=>{if(exec.agent)engine.backupGap(exec.agent,error);return next();}),{prepend:true});
+  ctx.on('tools/execute',(exec,next)=>maintenance.run(()=>engine.tool(exec,next),error=>{if(exec.signal?.aborted||isLockFailure(error))throw error;if(exec.agent)engine.backupGap(exec.agent,error);return next();},{signal:exec.signal}),{prepend:true});
   ctx.effect(()=>()=>{for(const [id,op]of engine.operations){const agent=ctx.agents.get(id);agent?.inbox.remove(op.marker);agent?.cancel({kind:'user'},{keepInbox:true});op.reject(Error('撤回插件已卸载；未完成操作的备份已保留'));}engine.operations.clear();});
   const operations=['state','candidates','preview','apply','undo-preview','undo','stop','recover','ack','attachment'];
   for(const operation of operations)ctx.effect(()=>ctx.webServer.register({kind:'exact',path:`/api/dsh-rewind/${operation}`,handler:async(req,res)=>{

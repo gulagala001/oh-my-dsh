@@ -1,6 +1,6 @@
 import {join} from 'node:path';
 import {unlink} from 'node:fs/promises';
-import {atomic,read,lease} from './store.mjs';
+import {atomic,read,lease,TOOL_LOCK_WAIT_MS} from './store.mjs';
 import {collectGarbage} from './garbage.mjs';
 
 /** Cooperative idle collection. Busy markers also protect in-memory pre-images
@@ -10,12 +10,13 @@ export class Maintenance {
     this.engine=engine;this.ownerFile=ownerFile;this.config=config;
     this.active=0;this.lastSweep=Date.now();this.sweptBytes=0;this.timer=null;this.disposed=false;
   }
-  async run(fn,onUnavailable){
+  async run(fn,onUnavailable,{signal}={}){
+    const deadline=performance.now()+TOOL_LOCK_WAIT_MS;
     try{
       await this.engine.store.lock('maintenance-owner',async()=>{
         clearTimeout(this.timer);this.timer=null;
         if(!this.active){
-          const root=this.engine.store.root,release=await lease(join(root,'collection.lock'),{waitMs:60000});
+          const root=this.engine.store.root,release=await lease(join(root,'collection.lock'),{waitMs:Math.max(0,deadline-performance.now()),signal});
           try{
             await atomic(this.ownerFile,{pid:process.pid,protocol:2,busy:true});
             const generation=await read(join(root,'collection-generation.json'),null);
@@ -23,7 +24,7 @@ export class Maintenance {
           }finally{await release();}
         }
         this.active++;
-      });
+      },{signal,waitMs:TOOL_LOCK_WAIT_MS});
     }catch(error){if(onUnavailable)return onUnavailable(error);throw error;}
     try{return await fn();}
     finally{

@@ -30,6 +30,8 @@ Conversation history is append-only. Recovery survives restart and does not call
 
 ## Storage
 
+Before a tool starts, backup maintenance and workspace locks each wait at most 30 seconds. A timeout returns an error without running the tool without its lock; a workspace being restored also rejects new tools. Cancellation releases queued operations that have not started, while active backups finish their cleanup. Locks with uncertain ownership are retained rather than forcibly removed.
+
 Plain chat creates lightweight checkpoints without scanning the project. Files are captured before tools run. Unchanged content is reused; large files use 4 MiB chunks, SHA-256 deduplication and compression where useful.
 
 Up to 100 checkpoints and 20 undo records are retained per session. Idle session file backups expire after about 30 days. During idle time, unreferenced backups are collected and older records roll off toward a 2 GiB target covering backup content, indexes and recovery metadata. Open confirmations, incomplete transactions and the latest active recovery take priority. The target never rejects a new capture or interrupts normal tools.

@@ -2,7 +2,7 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { appendPluginRecord } from '@deepseek-ai/dsh-session';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { Store, hash, lease } from './store.mjs';
+import { Store, hash, lease, TOOL_LOCK_WAIT_MS, isLockFailure } from './store.mjs';
 import { Files, difference, equal } from './files.mjs';
 import { eventsOf, snapshot, beforeMessage, userTarget, prepareReplay, appendPrepared, hidden, mergeRanges } from './conversation.mjs';
 
@@ -45,11 +45,13 @@ export class RewindEngine {
     if(!exec.agent || exec.parent)return next();
     const owner=this.owner(exec.agent);let root,wave;
     try{root=await this.root(exec.agent.session);}catch(error){this.backupGap(exec.agent,error);return next();}
+    const deadline=performance.now()+TOOL_LOCK_WAIT_MS;
     try{await this.store.lock('workspace:'+root,async()=>{
+      if(this.busy.has(root))throw Object.assign(Error('工作区正在回退或恢复，本次工具尚未执行，请稍后重试。'),{code:'REWIND_WORKSPACE_BUSY'});
       wave=this.waves.get(root);
-      if(!wave){const release=await lease(join(this.store.root,'workspace-locks',hash(root)+'.json'),{waitMs:Infinity,signal:exec.signal});wave={release,count:0,owners:new Set(),before:null,error:null};this.waves.set(root,wave);try{wave.before=await this.files.capture(root);}catch(e){wave.error=e.message;}}
+      if(!wave){const release=await lease(join(this.store.root,'workspace-locks',hash(root)+'.json'),{waitMs:Math.max(0,deadline-performance.now()),signal:exec.signal});wave={release,count:0,owners:new Set(),before:null,error:null};this.waves.set(root,wave);try{wave.before=await this.files.capture(root);}catch(e){wave.error=e.message;}}
       wave.count++;wave.owners.add(owner.id);
-    });}catch(error){if(exec.signal?.aborted)throw error;this.backupGap(exec.agent,error);return next();}
+    },{signal:exec.signal,waitMs:TOOL_LOCK_WAIT_MS});}catch(error){if(exec.signal?.aborted||isLockFailure(error))throw error;this.backupGap(exec.agent,error);return next();}
     try {return await next();} finally {
       try{await this.store.lock('workspace:'+root,async()=>{
         if(--wave.count!==0)return;
