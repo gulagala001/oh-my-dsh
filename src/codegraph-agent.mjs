@@ -27,15 +27,9 @@ export async function apply(ctx) {
     const revision = runtime.catalogRevision;
     attempted = revision;
     loading = owner.track((async () => {
-      let tools;
-      try { ({ tools } = await owner.wait(runtime.catalog({ signal: owner.signal }))); }
+      let tools, createMcpToolDefinition;
+      try { ({ tools, createMcpToolDefinition } = await owner.wait(runtime.catalog())); }
       catch (error) { if (owner.active()) ctx.logger?.warn?.('CodeGraph: ' + error.message); return; }
-      let createMcpToolDefinition;
-      try { ({ createMcpToolDefinition } = await owner.wait(import('@deepseek-ai/dsh-mcp-client'))); }
-      catch (error) {
-        if (owner.active() && runtime.catalogRevision === revision) runtime.catalogError = error?.message ?? String(error);
-        throw error;
-      }
       if (!owner.active() || runtime.catalogRevision !== revision) return;
       for (const tool of tools) {
         if (!owner.active()) return;

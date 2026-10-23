@@ -245,7 +245,9 @@ export class CodegraphRuntime {
   catalog() {
     if (this.disposed) return Promise.reject(new Error('CodeGraph 已停止。'));
     const previous = this.catalogJob;
-    if (previous?.revision === this.catalogRevision && !previous.error) return previous.promise;
+    // Success and failure both belong to this revision. Opening another agent
+    // is a new waiter, not permission to restart a failed metadata process.
+    if (previous?.revision === this.catalogRevision) return previous.promise;
     const job = { revision: this.catalogRevision, error: null };
     this.catalogJob = job;
     // A retry invalidates the result, not ownership of a live process. The new
@@ -253,12 +255,16 @@ export class CodegraphRuntime {
     job.promise = (async () => {
       if (previous) await previous.promise.catch(() => {});
       this.catalogController.signal.throwIfAborted();
+      // The catalog is usable only with the host's tool adapter. Keep its
+      // loading failure in the same receipt/status, before starting a probe.
+      const { createMcpToolDefinition } = await import('@deepseek-ai/dsh-mcp-client');
+      this.catalogController.signal.throwIfAborted();
       const directory = await mkdtemp(join(tmpdir(), 'oh-my-dsh-codegraph-'));
       let connection, failure;
       try {
         connection = await this.connect(directory, this.catalogController.signal, { catalog: true });
         const { tools } = await connection.client.listTools({}, { signal: this.catalogController.signal });
-        return { tools, instructions: connection.client.getInstructions() || '' };
+        return { tools, instructions: connection.client.getInstructions() || '', createMcpToolDefinition };
       } catch (error) {
         failure = connectionFailure(error, connection, 'catalog');
         throw failure;
@@ -286,11 +292,23 @@ export class CodegraphRuntime {
     throwIfAborted(combined);
     const connectionKey = JSON.stringify([directory, sessionKey]);
     let entry = this.connections.get(connectionKey);
-    if (!entry) {
+    if (!entry || entry.connection?.closed) {
+      const previous = entry, owner = this.controller.signal;
+      clearTimeout(previous?.timer);
       entry = { busy: 0, timer: null };
       // Startup belongs to the runtime; one cancelled caller must not abort
-      // another session's shared connection handshake.
-      entry.ready = this.connect(directory, this.controller.signal).then(connection => entry.connection = connection);
+      // another waiter's handshake. Retire a known closed connection before
+      // starting its replacement, and publish that one replacement immediately.
+      entry.ready = Promise.resolve().then(async () => {
+        if (previous?.connection) await this.close(previous.connection);
+        throwIfAborted(owner);
+        return this.connect(directory, owner);
+      }).then(connection => entry.connection = connection).catch(error => {
+        // The producer owns eviction even if all its callers already cancelled.
+        clearTimeout(entry.timer);
+        if (this.connections.get(connectionKey) === entry) this.connections.delete(connectionKey);
+        throw error;
+      });
       this.connections.set(connectionKey, entry);
     }
     clearTimeout(entry.timer);
@@ -305,9 +323,10 @@ export class CodegraphRuntime {
       // Never replay a failed call. A later call reconnects after a crash.
       const connection = entry.connection;
       const failure = connectionFailure(error, connection, 'call');
-      if ((!connection && !combined.aborted) || connection?.closed) {
+      if (connection?.closed) {
+        clearTimeout(entry.timer);
         if (this.connections.get(connectionKey) === entry) this.connections.delete(connectionKey);
-        if (connection) try { await this.close(connection); } catch {}
+        try { await this.close(connection); } catch {}
       }
       throw failure;
     } finally {

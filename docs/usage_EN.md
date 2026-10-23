@@ -174,6 +174,8 @@ The OMD Console overview, call log, and background log share session/time scopes
 
 Bundled 1.6.0 prepares `.codegraph/` in the current code directory without a global CLI. Ask “Which functions handle login?” Queries follow the current execution directory and nearest ancestor index; use explicit `projectPath` for another repository. First query waits for preparation. Retry failures; ordinary file/search tools remain.
 
+If tool preparation fails, CodeGraph settings retain the original cause. Opening another chat does not repeat the failed preparation. After fixing the environment, choose “Prepare again” or disable and re-enable CodeGraph. A disconnected query connection is replaced before the next query; failed queries are never replayed automatically.
+
 Connections watch changes, release when idle, and catch up later. Disable/uninstall stops owned processes but keeps indexes. They are outside DSH session backups and normally not committed. Source results enter model requests; structure is not compilation/testing. Explicit read-only/no-index directories must not be prepared.
 
 <a id="computer-use"></a>
