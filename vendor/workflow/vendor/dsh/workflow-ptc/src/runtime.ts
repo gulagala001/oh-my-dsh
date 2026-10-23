@@ -253,7 +253,10 @@ export class WorkflowExecution {
         this.observer.agentEnd({ ...info, outcome: 'failed' })
         return null
       } finally {
-        await run.dispose()
+        try { await run.dispose() }
+        catch (error) {
+          throw new WorkflowError(`child agent settlement failed: ${renderThrown(error)}`, 'AGENT_RESULT', { cause: error })
+        }
       }
     } finally {
       this.releaseSlot()

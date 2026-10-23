@@ -152,6 +152,27 @@ function requestKey(value) {
   return (0, import_node_crypto2.createHash)("sha256").update(JSON.stringify(canonical(value))).digest("hex");
 }
 
+// vendor/dsh/workflow-ptc/src/realm.ts
+function compactGuestLocations(text) {
+  return text.replace(/data:(?:text|application)\/(?:javascript|ecmascript)[^\s]+/g, (location) => {
+    const tail = /(:\d+:\d+)(\)?)$/.exec(location);
+    return `workflow-guest${tail ? tail[1] + tail[2] : ""}`;
+  });
+}
+function renderThrown(error) {
+  try {
+    const stack = error?.stack;
+    if (typeof stack === "string" && stack.length > 0) {
+      return compactGuestLocations(stack);
+    }
+    const message = error?.message;
+    if (typeof message === "string" && message.length > 0) return compactGuestLocations(message);
+    return compactGuestLocations(String(error));
+  } catch {
+    return "[unrenderable thrown value]";
+  }
+}
+
 // vendor/dsh/workflow-ptc/src/hub.ts
 function workflowSupport(ctx, session, owner) {
   const runtime = ctx.get("dshWorkflow");
@@ -162,6 +183,9 @@ function workflowSupport(ctx, session, owner) {
 var name = "dsh-workflow-spawn";
 var inject = ["subagents", "sandboxPolicy", "fs"];
 var WORKFLOW_PROVIDER = "dsh-workflow";
+function cleanupFailure(errors, message) {
+  return new AggregateError(errors, [message, ...errors.map(renderThrown)].join("\n"), { cause: errors[0] });
+}
 function inside(root, candidate) {
   const rel = (0, import_node_path2.relative)(root, candidate);
   return rel !== ".." && !rel.startsWith(".." + import_node_path2.sep) && !(0, import_node_path2.isAbsolute)(rel);
@@ -301,7 +325,11 @@ function apply(ctx) {
               delivery: "caller"
             });
             let disposal;
+            let quiesced = false;
             const activation = {
+              get quiesced() {
+                return quiesced;
+              },
               childId: nativeActivation.childId,
               messageId: nativeActivation.messageId,
               result: nativeActivation.result,
@@ -310,6 +338,7 @@ function apply(ctx) {
                   const errors = [];
                   try {
                     await nativeActivation.dispose();
+                    quiesced = true;
                   } catch (error) {
                     errors.push(error);
                   }
@@ -320,7 +349,7 @@ function apply(ctx) {
                   } finally {
                     activations.delete(activation);
                   }
-                  if (errors.length) throw new AggregateError(errors, "Workflow child cleanup failed", { cause: errors[0] });
+                  if (errors.length) throw cleanupFailure(errors, "Workflow child cleanup failed");
                 })();
                 return disposal;
               }
@@ -331,7 +360,7 @@ function apply(ctx) {
             try {
               if (record.worktree !== void 0) report(record, await record.worktree.retain("Native workflow startup failed; checkout retained for inspection"));
             } catch (cleanupError) {
-              const failure = new AggregateError([error, cleanupError], "Workflow startup and cleanup failed", { cause: error });
+              const failure = cleanupFailure([error, cleanupError], "Workflow startup and cleanup failed");
               startupCleanupErrors.push(failure);
               throw failure;
             }
@@ -362,7 +391,7 @@ function apply(ctx) {
     await Promise.allSettled([...startups]);
     const settled = await Promise.allSettled([...activations].map((activation) => activation.dispose()));
     const errors = [...startupCleanupErrors, ...settled.filter((row) => row.status === "rejected").map((row) => row.reason)];
-    if (errors.length) throw new AggregateError(errors, "Workflow child cleanup failed");
+    if (errors.length) throw cleanupFailure(errors, "Workflow child cleanup failed");
   });
   refreshProvider();
 }

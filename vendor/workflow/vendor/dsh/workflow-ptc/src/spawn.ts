@@ -10,6 +10,7 @@ import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import { WorkflowWorktree } from './worktree.ts'
 import type { WorktreeArtifact } from './worktree.ts'
 import { requestKey } from './journal.ts'
+import { renderThrown } from './realm.ts'
 import { workflowSupport } from './hub.ts'
 
 export const name = 'dsh-workflow-spawn'
@@ -25,9 +26,18 @@ export interface WorkflowSpawnOptions {
 }
 
 export type WorkflowStartRequest = SubagentStartRequest
+export interface WorkflowActivation extends SubagentActivation {
+  /** Native disposal completed, even if later worktree settlement failed. */
+  readonly quiesced: boolean
+}
+
+function cleanupFailure(errors: unknown[], message: string): AggregateError {
+  return new AggregateError(errors, [message, ...errors.map(renderThrown)].join('\n'), { cause: errors[0] })
+}
+
 export interface WorkflowProvider extends SubagentProvider {
   /** Apply workflow options while native admission owns startup and descendants. */
-  startWorkflow(request: WorkflowStartRequest, options: WorkflowSpawnOptions): Promise<SubagentActivation>
+  startWorkflow(request: WorkflowStartRequest, options: WorkflowSpawnOptions): Promise<WorkflowActivation>
 }
 
 function inside(root: string, candidate: string): boolean {
@@ -59,7 +69,7 @@ interface PendingChild {
 
 export function apply(ctx: Context): void {
   const pending = new Map<SessionId, PendingChild>()
-  const activations = new Set<SubagentActivation>()
+  const activations = new Set<WorkflowActivation>()
   const startups = new Set<Promise<SubagentActivation>>()
   const startupCleanupErrors: unknown[] = []
   const lifecycle = new AbortController()
@@ -172,19 +182,20 @@ export function apply(ctx: Context): void {
             const nativeActivation = await ctx.subagents.startActivation({ provider: WORKFLOW_PROVIDER, childId,
               label: label ?? 'Workflow child', request: inputs, signal, delivery: 'caller' })
             let disposal: Promise<void> | undefined
-            const activation: SubagentActivation = { childId: nativeActivation.childId, messageId: nativeActivation.messageId, result: nativeActivation.result,
+            let quiesced = false
+            const activation: WorkflowActivation = { get quiesced() { return quiesced }, childId: nativeActivation.childId, messageId: nativeActivation.messageId, result: nativeActivation.result,
               dispose() {
                 disposal ??= (async () => {
                   // Native disposal joins owned descendants before a checkout is inspected.
                   const errors: unknown[] = []
-                  try { await nativeActivation.dispose() } catch (error) { errors.push(error) }
+                  try { await nativeActivation.dispose(); quiesced = true } catch (error) { errors.push(error) }
                   try {
                     if (record.worktree !== undefined) report(record, await (errors.length
                       ? record.worktree.retain('Native child cleanup failed; checkout retained for inspection')
                       : record.worktree.settle()))
                   } catch (error) { errors.push(error) }
                   finally { activations.delete(activation) }
-                  if (errors.length) throw new AggregateError(errors, 'Workflow child cleanup failed', { cause: errors[0] })
+                  if (errors.length) throw cleanupFailure(errors, 'Workflow child cleanup failed')
                 })()
                 return disposal
               } }
@@ -194,7 +205,7 @@ export function apply(ctx: Context): void {
             try {
               if (record.worktree !== undefined) report(record, await record.worktree.retain('Native workflow startup failed; checkout retained for inspection'))
             } catch (cleanupError) {
-              const failure = new AggregateError([error, cleanupError], 'Workflow startup and cleanup failed', { cause: error })
+              const failure = cleanupFailure([error, cleanupError], 'Workflow startup and cleanup failed')
               startupCleanupErrors.push(failure)
               throw failure
             }
@@ -216,7 +227,7 @@ export function apply(ctx: Context): void {
     await Promise.allSettled([...startups])
     const settled = await Promise.allSettled([...activations].map(activation => activation.dispose()))
     const errors = [...startupCleanupErrors, ...settled.filter((row): row is PromiseRejectedResult => row.status === 'rejected').map(row => row.reason)]
-    if (errors.length) throw new AggregateError(errors, 'Workflow child cleanup failed')
+    if (errors.length) throw cleanupFailure(errors, 'Workflow child cleanup failed')
   })
   refreshProvider()
 }

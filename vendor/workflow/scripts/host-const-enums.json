@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/deepseek-ai/deepseek-harness",
+  "commit": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "tag": "dsh-v0.2.1-rc.2",
+  "version": "0.2.1-rc.2",
+  "typescript": "6.0.3",
+  "sdkSourcePackageSha256": "12bb41cd8212021a784b33a20c2b84372189a9505b42081d5e3869e21ff5cffc",
+  "packages": [
+    {
+      "name": "@deepseek-ai/cordis",
+      "version": "4.0.5",
+      "sources": [
+        {
+          "path": "src/fiber.ts",
+          "officialPath": "vendor/cordis/src/fiber.ts",
+          "sha256": "b7661d6c19be76cef6b97d88719a8112c0f8b5abe65bd9e7d5947773fd4b96d4",
+          "enums": [
+            "FiberState"
+          ]
+        },
+        {
+          "path": "src/logger.ts",
+          "officialPath": "vendor/cordis/src/logger.ts",
+          "sha256": "05cb6be3e4cf8d078185b5d10c87e536c7d2b2b3ad43c270a0dbafaa28f41fef",
+          "enums": [
+            "LoggerLevel"
+          ]
+        }
+      ]
+    }
+  ]
+}
