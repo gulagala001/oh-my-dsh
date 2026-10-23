@@ -1,8 +1,10 @@
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, mkdtemp, readFile, writeFile, readdir, lstat, rm, rename } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile, readdir, lstat, stat, rm, rename } from 'node:fs/promises';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
 import { FORMAT, LIMITS, problem, redact } from './shared.mjs';
 
 const alive = pid => { try { process.kill(pid, 0); return true; } catch (e) { return e.code !== 'ESRCH'; } };
@@ -15,16 +17,19 @@ async function writeOwner(root, pid) {
   await rename(path, join(root, 'owner.json'));
 }
 
-async function processTable() {
+async function processTable(commands = false) {
   if (process.platform === 'win32') return [];
-  const { stdout } = await exec('ps', ['-axo', 'pid=,ppid=,pgid=,rss=,stat=,lstart='], { timeout: 2000, maxBuffer: 2 * 1024 * 1024 });
+  const { stdout } = await exec('ps', [...(commands ? ['-ww'] : []), '-axo', 'pid=,ppid=,pgid=,rss=,stat=,lstart=' + (commands ? ',args=' : '')], { timeout: 2000, maxBuffer: 4 * 1024 * 1024 });
   return stdout.trim().split('\n').map(line => {
-    const [id, parent, group, rss, status, ...birth] = line.trim().split(/\s+/);
-    return { id: +id, parent: +parent, group: +group, rss: +rss, status, birth: birth.join(' ') };
-  });
+    const row = line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+((?:\S+\s+){4}\S+)(?:\s+(.*))?$/);
+    if (!row) return null;
+    const [, id, parent, group, rss, status, birth, command = ''] = row;
+    return { id: +id, parent: +parent, group: +group, rss: +rss, status, birth: birth.replace(/\s+/g, ' '),
+      ...(commands ? { command } : {}) };
+  }).filter(Boolean);
 }
-async function processTree(pid) {
-  const rows = await processTable();
+async function processTree(pid, rows) {
+  rows ??= await processTable();
   const ids = new Set([pid]);
   for (let n = -1; n !== ids.size;) { n = ids.size; for (const row of rows) if (ids.has(row.parent)) ids.add(row.id); }
   return rows.filter(row => ids.has(row.id));
@@ -40,7 +45,20 @@ export function cleanEnvironment(root, inherited = process.env) {
     DSH_TELEMETRY_DISABLED: '1', ELECTRON_RUN_AS_NODE: '1', OMD_PLUGIN_PREFLIGHT: '1' };
 }
 
-export async function stopTree(child, observed = new Map()) {
+// Package acquisition may reuse the launcher's native caches. Runtime and
+// browser environment remain isolated; no second permanent cache is created.
+export async function packageEnvironment(inherited = process.env, home = homedir(), platform = process.platform) {
+  const env = Object.fromEntries(['PNPM_HOME', 'COREPACK_HOME', 'npm_config_cache', 'NPM_CONFIG_CACHE', 'LOCALAPPDATA']
+    .filter(key => inherited[key]).map(key => [key, inherited[key]]));
+  env.XDG_DATA_HOME = inherited.XDG_DATA_HOME || join(home, platform === 'darwin' ? 'Library' : '.local/share');
+  if (!env.COREPACK_HOME) {
+    const native = join(inherited.XDG_CACHE_HOME || inherited.LOCALAPPDATA || join(home, platform === 'win32' ? 'AppData/Local' : '.cache'), 'node/corepack');
+    if (await stat(native).then(value => value.isDirectory(), () => false)) env.COREPACK_HOME = native;
+  }
+  return env;
+}
+
+export async function stopTree(child, observed = new Map(), directory) {
   if (!child?.pid) return;
   if (process.platform === 'win32') {
     if (gone(child)) return;
@@ -49,9 +67,16 @@ export async function stopTree(child, observed = new Map()) {
       killer.once('error', resolve); killer.once('exit', resolve);
     });
   } else {
-    const current = await processTable();
-    const descendants = await processTree(child.pid);
+    const current = await processTable(Boolean(directory));
+    const descendants = await processTree(child.pid, current);
     for (const row of descendants) observed.set(row.id, row);
+    // A native hard crash can happen before the first sampling tick. Chromium
+    // may already lead a detached group; its unique owned profile identifies it
+    // even after reparenting. Never match a browser by executable name alone.
+    if (directory) {
+      const marker = '--user-data-dir=' + join(directory, 'browser');
+      for (const row of current) if (row.command.endsWith(marker) || row.command.includes(marker + ' ')) observed.set(row.id, row);
+    }
     // pnpm can create another process group for build scripts. Stop those
     // verified descendants as well, before their parent is allowed to exit.
     const groups = [...new Set(current.filter(p => p.group !== child.pid && observed.get(p.id)?.birth === p.birth
@@ -86,6 +111,9 @@ export async function sweep(directory) {
       const owner = JSON.parse(await readFile(join(path, 'owner.json'), 'utf8'));
       if (owner.format !== FORMAT || !Number.isSafeInteger(owner.pid) || owner.pid < 1) continue;
       if (alive(owner.pid) || process.platform !== 'win32' && alive(-owner.pid)) continue;
+      // Reclaim a detached browser left by an abrupt parent/worker shutdown
+      // before deleting the only directory that proves its ownership.
+      if (process.platform !== 'win32') await stopTree({ pid: owner.pid, exitCode: 0, signalCode: null }, new Map(), path);
       await rm(path, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     } catch (e) { if (e.code !== 'ENOENT' && !(e instanceof SyntaxError)) throw e; }
   }
@@ -96,17 +124,18 @@ export async function runProbe(input, { directory, signal, progress = () => {}, 
   const root = await mkdtemp(join(directory, 'run-'));
   let child, timer, monitor, ownerWrite, result, log = '', stop, started = Date.now(), stage = 'preparation', sampling = false, peakRssMiB = 0, samples = 0, running = true;
   const env = cleanEnvironment(root);
+  const channelKey = randomUUID();
   const observed = new Map();
   try {
-    await writeFile(join(root, 'input.json'), JSON.stringify({ ...input, root }), { mode: 0o600 });
+    await writeFile(join(root, 'input.json'), JSON.stringify({ ...input, root, channelKey }), { mode: 0o600 });
     await writeOwner(root, process.pid);
-    child = spawn(process.execPath, [...(input.cli.includes('.asar/') ? ['--expose-internals'] : []), '--max-old-space-size=512',
+    child = spawn(process.execPath, [...(/[\\/]app\.asar[\\/]/.test(input.cli) ? ['--expose-internals'] : []), '--max-old-space-size=512', '--max-semi-space-size=8',
       fileURLToPath(worker), join(root, 'input.json')], {
       cwd: root, env, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     });
     const outcome = await new Promise((resolve, reject) => {
       let stopping;
-      stop = error => { if (!stopping) stopping = stopTree(child, observed).then(() => reject(error), reject); };
+      stop = error => { if (!stopping) stopping = stopTree(child, observed, root).then(() => reject(error), reject); };
       const bound = ms => { clearTimeout(timer); timer = setTimeout(() => stop(problem('probe-timeout', stage === 'preparation' ? '准备插件超时，预检未完成' : '启动检查超时，预检未完成')), ms); };
       bound(limits.preparationMs);
       signal?.addEventListener('abort', abort, { once: true });
@@ -128,6 +157,9 @@ export async function runProbe(input, { directory, signal, progress = () => {}, 
       const output = bytes => { log = (log + bytes).slice(-LIMITS.logBytes); };
       child.stdout.on('data', output); child.stderr.on('data', output);
       child.on('message', value => {
+        // Candidate plugins now share the disposable process. Their unrelated
+        // IPC must never be mistaken for the controller's check result.
+        if (value?.channelKey !== channelKey) return;
         if (value?.type === 'phase') {
           const previous = stage; stage = value.stage; progress(value.message);
           if (stage === 'runtime' && previous !== 'runtime') bound(limits.runtimeMs);
@@ -137,7 +169,8 @@ export async function runProbe(input, { directory, signal, progress = () => {}, 
       child.once('close', code => {
         if (stopping) return;
         if (code === 0 && result?.ok) resolve(result);
-        else reject(Object.assign(problem(result?.code || 'probe-failed', result?.message || '隔离启动未通过检查'), { details: redact(result?.details || log) }));
+        else reject(Object.assign(problem(result?.ok ? 'cleanup-failed' : result?.code || 'probe-failed',
+          result?.ok ? '隔离宿主未正常退出，预检未完成' : result?.message || '隔离启动未通过检查'), { details: redact(result?.details || log) }));
       });
       if (child.pid) { ownerWrite = writeOwner(root, child.pid); void ownerWrite.catch(stop); }
       if (signal?.aborted) stop(signal.reason);
@@ -151,7 +184,7 @@ export async function runProbe(input, { directory, signal, progress = () => {}, 
     // Never delete a directory while an owned process may still be writing it.
     try {
       await ownerWrite?.catch(() => {});
-      await stopTree(child, observed);
+      await stopTree(child, observed, root);
       await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     } catch (error) { throw Object.assign(problem('cleanup-failed', '预检进程或临时目录尚未清理完成，已停止安装，请稍后重试'), { cause: error }); }
   }

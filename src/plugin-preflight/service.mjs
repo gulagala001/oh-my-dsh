@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { symbols } from '@deepseek-ai/cordis';
-import { runProbe, sweep } from './process.mjs';
+import { runProbe, sweep, packageEnvironment } from './process.mjs';
 import { LIMITS, packageDigest, profileStamp, problem, redact, repairPrompt } from './shared.mjs';
 import { readJsonBody, rejectUntrusted, sendJson } from '../http.mjs';
 
@@ -139,11 +139,7 @@ export class PluginPreflight {
         }
         job.checked = await this.probe({ profile: this.profile, cli: this.cli, hostVersion: this.hostVersion, action: job.action,
           target: job.target, options, ...extra, entryStates: await read(() => this.getEntryStates()), userHome: homedir(), localAppData: process.env.LOCALAPPDATA,
-          packageEnvironment: {
-            ...Object.fromEntries(['PNPM_HOME', 'COREPACK_HOME', 'npm_config_cache', 'NPM_CONFIG_CACHE'].filter(key => process.env[key]).map(key => [key, process.env[key]])),
-            XDG_DATA_HOME: process.env.XDG_DATA_HOME || join(homedir(), process.platform === 'darwin' ? 'Library' : '.local/share'),
-            ...(process.env.LOCALAPPDATA ? { LOCALAPPDATA: process.env.LOCALAPPDATA } : {}),
-          },
+          packageEnvironment: await read(() => packageEnvironment({ ...process.env, ...this.profile.packageManager?.env })),
         }, {
           directory: this.directory, signal: job.abort.signal, progress: phase => this.publish(state(phase)),
         });

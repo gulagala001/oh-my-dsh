@@ -4,9 +4,10 @@ import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { spawn, spawnSync } from 'node:child_process';
 import { PluginPreflight, withPluginPreflight } from '../src/plugin-preflight/service.mjs';
 import { packageDigest, LIMITS } from '../src/plugin-preflight/shared.mjs';
-import { runProbe, sweep } from '../src/plugin-preflight/process.mjs';
+import { runProbe, sweep, packageEnvironment, cleanEnvironment } from '../src/plugin-preflight/process.mjs';
 
 async function fixture(t, probe = async () => ({ ok: true })) {
   const root = await mkdtemp(join(tmpdir(), 'omd-preflight-'));
@@ -119,7 +120,8 @@ test('worker completion, rejection, timeout and cancellation remove their entire
   const f = await fixture(t), worker = new URL('./fixtures/preflight-worker.mjs', import.meta.url);
   const input = { cli: '/unused', scenario: 'pass' };
   assert.equal((await runProbe(input, { directory: join(f.root, 'runs'), worker })).ok, true);
-  for (const scenario of ['fail', 'exit']) await assert.rejects(runProbe({ ...input, scenario }, { directory: join(f.root, 'runs'), worker }));
+  for (const scenario of ['fail', 'exit', 'forged']) await assert.rejects(runProbe({ ...input, scenario }, { directory: join(f.root, 'runs'), worker }));
+  await assert.rejects(runProbe({ ...input, scenario: 'cleanup-failure' }, { directory: join(f.root, 'runs'), worker }), { code: 'cleanup-failed' });
   await assert.rejects(runProbe({ ...input, scenario: 'wait' }, { directory: join(f.root, 'runs'), worker,
     limits: { ...LIMITS, runtimeMs: 100 } }), /超时/);
   const abort = new AbortController();
@@ -135,12 +137,29 @@ test('stale cleanup removes only owned dead runs and preserves foreign/live dire
   await writeFile(join(dir, 'run-live/owner.json'), JSON.stringify({ format: 'omd-plugin-preflight/v1', pid: process.pid }));
   await sweep(dir); assert.deepEqual((await readdir(dir)).sort(), ['foreign', 'run-live']);
 });
-test('a crashed worker cannot strand an observed detached subprocess', { skip: process.platform === 'win32', timeout: 10000 }, async t => {
-  const f = await fixture(t); let pid;
-  await assert.rejects(runProbe({ cli: '/unused', scenario: 'orphan' }, { directory: join(f.root, 'runs'),
-    worker: new URL('./fixtures/preflight-worker.mjs', import.meta.url), progress: value => { pid = Number(value.split(':')[1]); } }));
-  assert.ok(pid); assert.throws(() => process.kill(pid, 0), error => error.code === 'ESRCH');
-  assert.deepEqual(await readdir(join(f.root, 'runs')), []);
+test('stale cleanup stops the owned browser before reclaiming a dead worker directory', { skip: process.platform === 'win32' }, async t => {
+  const f = await fixture(t), directory = join(f.root, 'runs'), root = join(directory, 'run-stale');
+  await mkdir(root, { recursive: true });
+  await writeFile(join(root, 'owner.json'), JSON.stringify({ format: 'omd-plugin-preflight/v1', pid: 2147483000 }));
+  const child = spawn(process.execPath, ['-e', 'setInterval(()=>{},10000)', '--', '--user-data-dir=' + join(root, 'browser')], { detached: true, stdio: 'ignore' });
+  t.after(() => { try { process.kill(-child.pid, 'SIGKILL'); } catch {} });
+  await new Promise((resolve, reject) => { child.once('spawn', resolve); child.once('error', reject); });
+  const ended = new Promise(resolve => child.once('exit', resolve));
+  await sweep(directory); await ended;
+  assert.deepEqual(await readdir(directory), []);
+});
+test('a crashed worker cannot strand a detached subprocess, including before the first sample', { skip: process.platform === 'win32', timeout: 10000 }, async t => {
+  const f = await fixture(t), directory = join(f.root, 'runs with  spaces');
+  for (const scenario of ['orphan', 'early-browser']) {
+    let pid;
+    await assert.rejects(runProbe({ cli: '/unused', scenario }, { directory,
+      worker: new URL('./fixtures/preflight-worker.mjs', import.meta.url), progress: value => { pid = Number(value.split(':')[1]); } }));
+    assert.ok(pid);
+    t.after(() => { try { process.kill(-pid, 'SIGKILL'); } catch {} });
+    const status = spawnSync('ps', ['-p', String(pid), '-o', 'stat='], { encoding: 'utf8' });
+    assert.ok(status.status === 1 || /^Z/.test(status.stdout.trim()), 'owned subprocess must be gone or awaiting OS reaping');
+    assert.deepEqual(await readdir(directory), []);
+  }
 });
 test('cleanup failures cannot be bypassed while resources remain unaccounted for', async t => {
   const f = await fixture(t, async () => { throw Object.assign(Error('cleanup is incomplete'), { code: 'cleanup-failed' }); });
@@ -176,4 +195,38 @@ test('cancelling a stuck inventory read returns without starting a worker', asyn
   const pending = f.manager.installBundle('fixture', { requestId: 'inventory' }); await until(() => started);
   assert.equal((await f.manager.cancelInstall('inventory')).status, 'cancelled');
   assert.equal((await pending).application, 'cancelled'); assert.equal(probes, 0);
+});
+
+test('the shared native process preserves startup failure and native shutdown before reporting success', { skip: process.platform === 'win32' }, async t => {
+  const f = await fixture(t), cli = join(f.root, 'native.mjs'), marker = join(f.root, 'disposed');
+  const worker = new URL('./fixtures/preflight-native-worker.mjs', import.meta.url);
+  for (const scenario of ['success', 'throw', 'exit', 'cleanup', 'separate']) await t.test(scenario, async () => {
+    await rm(marker, { force: true });
+    await writeFile(cli, `import{writeFileSync}from'node:fs';
+const cwd=process.cwd(),argv=process.argv.slice(2);
+export function runCli(){
+ if(${JSON.stringify(scenario)}==='throw')throw Error('native startup failure');
+ if(${JSON.stringify(scenario)}==='exit')process.exit(0);
+ if(cwd!==process.cwd()||argv.join(' ')!=='--profile omd-preflight --no-open --port 0')throw Error('wrong native startup environment');
+ setInterval(()=>{},1000);
+ process.on('SIGTERM',()=>{if(${JSON.stringify(scenario)}==='cleanup')return;writeFileSync(${JSON.stringify(marker)},'disposed');process.exit(0)});
+ console.log('dsh web: http://127.0.0.1:1/?token=fixture');
+}if(import.meta.main)runCli();`);
+    const pending = runProbe({ cli, separate: scenario === 'separate' }, { directory: join(f.root, 'runs'), worker });
+    if (scenario === 'success' || scenario === 'separate') {
+      assert.equal((await pending).ok, true); assert.equal(await readFile(marker, 'utf8'), 'disposed');
+    } else await assert.rejects(pending, scenario === 'cleanup' ? { code: 'cleanup-failed' } : undefined);
+    assert.deepEqual(await readdir(join(f.root, 'runs')), []);
+  });
+});
+
+test('package preparation reuses an existing Corepack cache without exposing it to the trial host', async t => {
+  const f = await fixture(t), native = join(f.root, '.cache/node/corepack');
+  assert.equal((await packageEnvironment({}, f.root, 'darwin')).COREPACK_HOME, undefined);
+  await mkdir(native, { recursive: true });
+  assert.equal((await packageEnvironment({}, f.root, 'darwin')).COREPACK_HOME, native);
+  const explicit = await packageEnvironment({ COREPACK_HOME: '/configured-cache', API_KEY: 'private' }, f.root, 'darwin');
+  assert.equal(explicit.COREPACK_HOME, '/configured-cache'); assert.equal(explicit.API_KEY, undefined);
+  const runtime = cleanEnvironment(f.root, explicit);
+  assert.equal(runtime.COREPACK_HOME, undefined); assert.equal(runtime.HOME, join(f.root, 'home'));
 });

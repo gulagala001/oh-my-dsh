@@ -1,15 +1,16 @@
 // Disposable process only. Never import this module into the working host.
 import { readFile, writeFile, mkdir, cp, symlink, access, realpath, rm, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { join, dirname, resolve } from 'node:path';
+import { join, dirname } from 'node:path';
+import { rmSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
+import { launchNativeHost } from './native-host.mjs';
 import { cleanEnvironment } from './process.mjs';
 import { LIMITS, packageDigest, problem, redact } from './shared.mjs';
 
 if (process.env.OMD_PLUGIN_PREFLIGHT !== '1') throw Error('Plugin preflight requires its disposable launcher');
-const input = JSON.parse(await readFile(process.argv[2], 'utf8'));
+const { channelKey, ...input } = JSON.parse(await readFile(process.argv[2], 'utf8'));
 await rm(process.argv[2], { force: true });
 const { root, cli, profile, action, target, options = {} } = input;
 const env = cleanEnvironment(root), home = env.DSH_HOME, dir = join(home, 'profiles', 'omd-preflight');
@@ -17,28 +18,38 @@ const req = createRequire(profile.installAnchor);
 const sdk = name => import(pathToFileURL(req.resolve(name)).href);
 const exists = path => access(path).then(() => true, () => false);
 const json = async path => JSON.parse(await readFile(path, 'utf8'));
-const notify = message => { if (process.connected) process.send(message); };
+const send = process.send.bind(process);
+const notify = message => { if (process.connected) send({ ...message, channelKey }, () => {}); };
 const phase = (stage, message) => notify({ type: 'phase', stage, message });
 const abort = new AbortController();
-let child, browser, closing, preparing, disconnected = false, hostLog = '', candidate;
+let browser, browserLaunch, preparing, finishing, nativeHost, disconnected = false, hostStopping = false, hostLog = '', candidate;
+const nativeExit = process.exit.bind(process);
+const terminate = () => { abort.abort(problem('cancelled', '预检已取消')); void finish({ ok: false, code: 'cancelled', message: '预检已取消' }); };
 
-async function cleanup() {
-  if (closing) return closing;
-  closing = (async () => {
-    abort.abort(problem('cancelled', '预检已取消'));
+function finish(result) {
+  return finishing ??= (async () => {
+    abort.abort(problem('cancelled', '预检已结束'));
     await preparing?.catch(() => {});
+    await browserLaunch?.catch(() => {});
     await browser?.close().catch(() => {});
-    if (child && child.exitCode === null && child.signalCode === null) {
-      await new Promise(resolve => {
-        const timer = setTimeout(() => child.kill('SIGKILL'), 1000);
-        child.once('exit', () => { clearTimeout(timer); resolve(); }); child.kill('SIGTERM');
-      });
-    }
+    if (!disconnected && process.connected) await new Promise(resolve => send({ type: 'result', result, channelKey }, () => resolve()));
+    process.removeListener('SIGTERM', terminate);
+    if (!nativeHost) { nativeExit(result?.ok ? 0 : 1); return; }
+    hostStopping = true;
+    nativeHost.quit(result?.ok ? 0 : 1, () => notify({ type: 'result', result: {
+      ok: false, code: 'cleanup-failed', message: '隔离宿主退出超时，预检未完成',
+    } }));
   })();
-  return closing;
 }
-process.once('SIGTERM', () => { abort.abort(problem('cancelled', '预检已取消')); void cleanup().finally(() => process.exit(1)); });
-process.once('disconnect', () => { disconnected = true; void cleanup().then(() => rm(root, { recursive: true, force: true })).finally(() => process.exit(1)); });
+process.once('SIGTERM', terminate);
+process.once('disconnect', () => { disconnected = true; terminate(); });
+process.once('exit', code => {
+  // A healthy parent owns normal cleanup. If it vanished, native shutdown has
+  // already disposed the host; failed shutdown leaves a recoverable owner file.
+  if (disconnected && hostStopping && code === 0) {
+    try { rmSync(root, { recursive: true, force: true }); } catch {}
+  }
+});
 
 async function findBrowser() {
   const { chromium } = createRequire(import.meta.url)('playwright');
@@ -65,8 +76,13 @@ async function findBrowser() {
 }
 
 async function prepare() {
+  // SDK modules must see the same working directory and argv as native boot,
+  // including modules which capture these values when they are imported.
+  await mkdir(join(root, 'workspace'), { recursive: true });
+  process.chdir(join(root, 'workspace'));
+  process.argv = [process.execPath, cli, '--profile', 'omd-preflight', '--no-open', '--port', '0'];
   const { initProfile, resolveBundleDir, loadProfileDirectory } = await sdk('@deepseek-ai/dsh-app-boot');
-  await mkdir(dir, { recursive: true }); await mkdir(join(root, 'workspace'));
+  await mkdir(dir, { recursive: true });
   initProfile(dir, []);
   const original = await json(join(profile.dir, 'package.json'));
   if (action === 'install') {
@@ -166,9 +182,11 @@ async function prepare() {
 
 async function checkPage(chromium, executablePath, bootstrap) {
   const errors = [];
-  browser = await chromium.launchPersistentContext(join(root, 'browser'), { executablePath, headless: true, env,
+  browser = await (browserLaunch = chromium.launchPersistentContext(join(root, 'browser'), { executablePath, headless: true, env,
     downloadsPath: join(root, 'downloads'), tracesDir: join(root, 'traces'), viewport: { width: 1024, height: 768 },
-    args: process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : [] });
+    args: ['--js-flags=--max-semi-space-size=8',
+      ...(process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : [])] }));
+  abort.signal.throwIfAborted();
   const page = browser.pages()[0] || await browser.newPage();
   let rejectFatal;
   const fatal = new Promise((_, reject) => { rejectFatal = reject; });
@@ -223,19 +241,12 @@ try {
   const { chromium, executablePath } = await findBrowser();
   const prepared = await (preparing = prepare()); preparing = undefined; abort.signal.throwIfAborted();
   phase('runtime', '正在检查插件启动与基础界面');
-  const bootstrap = await new Promise((resolve, reject) => {
-    child = spawn(process.execPath, [...(cli.includes('.asar/') ? ['--expose-internals'] : []), '--max-old-space-size=512', cli,
-      '--profile', 'omd-preflight', '--no-open', '--port', '0'], { cwd: join(root, 'workspace'), env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
-    const observe = bytes => { hostLog = (hostLog + bytes).slice(-LIMITS.logBytes); const url = hostLog.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[\w-]+/)?.[0]; if (url) resolve(url); };
-    child.stdout.on('data', observe); child.stderr.on('data', observe);
-    child.once('error', reject); child.once('exit', code => reject(Object.assign(problem('host-failed', `隔离 DSH 启动退出（${code}）`), { details: hostLog })));
-  });
-  await checkPage(chromium, executablePath, bootstrap);
-  if (child.exitCode !== null || child.signalCode !== null) throw problem('host-failed', '隔离宿主在检查期间退出');
+  nativeHost = launchNativeHost(cli, join(root, 'workspace'), log => { hostLog = log; });
+  const bootstrap = await nativeHost.listening;
+  await Promise.all([checkPage(chromium, executablePath, bootstrap), nativeHost.boot]);
+  nativeHost.assertAlive?.();
   result = { ok: true, ...prepared, checks: ['host-start', 'plugin-activation', 'page-load', 'composer', 'settings'] };
 } catch (error) {
   result = { ok: false, code: error.code || 'probe-failed', message: error.message,
     details: redact(error.details || hostLog || error.stack) };
-} finally { await cleanup(); }
-if (!disconnected && process.connected) await new Promise(resolve => process.send({ type: 'result', result }, () => resolve()));
-process.exit(result?.ok ? 0 : 1);
+} finally { await finish(result); }
