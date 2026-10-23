@@ -9,6 +9,13 @@ const compress=promisify(brotliCompress),decompress=promisify(brotliDecompress);
 import { hash, atomic, read, lease, syncDirectory } from './store.mjs';
 const exec = promisify(execFile);
 const EXCLUDED = new Set(['.git','node_modules']);
+// Share only overlapping directory checks. Settled observations are discarded
+// before any caller resumes, so later files still check the live filesystem.
+function pendingRead(pending,key,read){
+  if(!pending)return read();
+  if(!pending.has(key))pending.set(key,read().finally(()=>pending.delete(key)));
+  return pending.get(key);
+}
 export const equal = (a,b) => a?.kind==='file'&&b?.kind==='file'?a.hash===b.hash&&a.mode===b.mode:JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const entryAt = (manifest,path) => Object.hasOwn(manifest,path) ? manifest[path] : null;
 export function difference(before, after) {
@@ -47,11 +54,11 @@ export class Files {
         }
       }; await walk(root);
     }
-    const manifest=Object.create(null);let index=0;
+    const manifest=Object.create(null),pathReads=new Map();let index=0;
     const candidates=names.sort().filter(path=>!path.split('/').some(p=>EXCLUDED.has(p))&&!path.endsWith('/'));
     await this.ensureStorage();
     const captureOne=async path=>{
-      const abs=await this.path(root,path);let info;
+      const abs=await this.path(root,path,pathReads);let info;
       try{info=await lstat(abs);}catch(e){if(e.code==='ENOENT')return;throw e;}
       if(info.isSymbolicLink()){manifest[path]={kind:'link',target:await readlink(abs)};return;}
       if(info.isDirectory())return;
@@ -119,17 +126,18 @@ export class Files {
     else bytes=await readFile(this.blob(key));
     if(bytes[0]!==0&&bytes[0]!==1)throw Error('备份编码无效');return bytes[0]===1?decompress(bytes.subarray(1),{maxOutputLength:this.limits.maxBlobBytes}):bytes.subarray(1);
   }
-  async path(root, path) {
+  async path(root, path, pending) {
     if(!path || isAbsolute(path) || path.includes('\\') || path.split('/').some(p=>!p||p==='.'||p==='..') || path.includes('\0')) throw Error('无效文件路径');
     const abs=resolve(root,path);
     if(!abs.startsWith(root+sep)) throw Error('恢复路径越界');
     let parent=dirname(abs);
     while(parent!==root) {
-      try { const stat=await lstat(parent); if(!stat.isDirectory() || stat.isSymbolicLink()) throw Error(`恢复路径的父目录已改变：${path}`); }
+      const directory=parent;
+      try { const stat=await pendingRead(pending,'stat:'+directory,()=>lstat(directory)); if(!stat.isDirectory() || stat.isSymbolicLink()) throw Error(`恢复路径的父目录已改变：${path}`); }
       catch(e) { if(e.code!=='ENOENT')throw e; }
       parent=dirname(parent);
     }
-    if(await realpath(root)!==root)throw Error('工作区路径已改变');
+    if(await pendingRead(pending,'root:'+root,()=>realpath(root))!==root)throw Error('工作区路径已改变');
     return abs;
   }
   async inspect(root,path) {
