@@ -44,7 +44,7 @@ export class DreamService {
   }
   jobEvent(job,status,title,detail){
     this.hub?.event?.(job.scope==='session'?job.target:null,{kind:'dream',status,title,detail,
-      data:{jobId:job.id,scope:job.scope,target:job.target,auto:Boolean(job.auto)}});
+      data:{jobId:job.id,scope:job.scope,target:job.target,auto:Boolean(job.automatic)}});
   }
   notice(error){if(!this.closed)this.store.setMeta('lastError',String(error?.message||error));}
   async enqueue(scope,target,agent){
@@ -63,15 +63,38 @@ export class DreamService {
     void this.drain().catch(e=>this.notice(e));return job;
   }
   pause(id){
+    this.lifecycle.signal.throwIfAborted();
     const next=this.store.updateJobIf(id,['queued','running','budget'],{state:'paused',notice:'用户已停止；保留已完成部分'});
     if(next.state==='paused'&&this.activeJob===id)this.controller?.abort(Error('用户已停止 Dream'));
     return next;
   }
   resume(id,agent){
+    this.lifecycle.signal.throwIfAborted();
     const job=this.store.job(id);if(!job)throw Error('Dream 作业不存在');
     if(['complete','running','queued'].includes(job.state))return job;
     const route=this.route(agent)||job.route;if(!route?.provider||!route.model)throw Error('请先配置 Dream 模型');
-    const next=this.store.updateJobIf(id,['paused','failed','budget'],{state:'queued',error:null,code:null,httpStatus:null,failure:null,route});void this.drain().catch(e=>this.notice(e));return next;
+    const next=this.store.updateJobIf(id,['paused','failed','budget'],{state:'queued',automatic:false,error:null,code:null,httpStatus:null,failure:null,notice:null,resumeAt:null,route});void this.drain().catch(e=>this.notice(e));return next;
+  }
+  checkJob(job,signal){
+    this.lifecycle.signal.throwIfAborted();signal.throwIfAborted();
+    // The durable job, not the snapshot captured at claim time, owns admission.
+    // A manual request may adopt automatic work while it waits for a model slot.
+    let current=this.store.requireJob(job.id,this.epoch);
+    if(current.automatic&&!this.config().dreamAutoEnabled){
+      const notice='自动 Dream 已关闭；已完成部分保留，可手动继续';
+      // A different process may adopt this range after the first read. Fence
+      // the policy change with the same transaction used by manual controls.
+      current=this.store.tx(()=>{
+        const latest=this.store.requireJob(job.id,this.epoch);
+        return latest.automatic?this.store.updateJob(job.id,{state:'paused',notice}):latest;
+      });
+      if(current.state==='paused'){
+        const error=Error(notice);
+        if(this.activeJob===job.id)this.controller?.abort(error);
+        throw error;
+      }
+    }
+    return current;
   }
   tick(){if(this.ticking)return this.ticking;return this.ticking=this.checkQueue().finally(()=>{this.ticking=null;});}
   async checkQueue(){
@@ -102,17 +125,22 @@ export class DreamService {
         for(let job;!this.closed&&(job=this.store.claimJob(epoch));){
           this.activeJob=job.id;this.controller=new AbortController();
           try{
+            this.checkJob(job,this.controller.signal);
             await this.runJob(job,this.controller.signal);
+            this.checkJob(job,this.controller.signal);
             const skipped=(this.store.meta('indexWarnings')||[]).filter(item=>item.scope!=='session'&&(job.scope==='global'||job.scope==='project'&&item.project===job.target)).length;
-            this.store.settleJob(job.id,{state:'complete',notice:skipped?`已整理可读取范围；${skipped} 个会话日志异常，未参与本次汇总`:'本次范围已整理；未到时长的下层资料继续保留'},epoch);
-            this.jobEvent(job,'success','Dream 整理完成',skipped?`${skipped} 个会话日志异常未参与`:null);
+            // Pause/resume and lease handoff can reject settlement. Only the
+            // accepted row can announce a terminal outcome, never this old run.
+            const settled=this.store.settleJob(job.id,{state:'complete',notice:skipped?`已整理可读取范围；${skipped} 个会话日志异常，未参与本次汇总`:'本次范围已整理；未到时长的下层资料继续保留'},epoch);
+            if(settled)this.jobEvent(settled,'success','Dream 整理完成',skipped?`${skipped} 个会话日志异常未参与`:null);
           }catch(error){
-            try{this.store.settleJob(job.id,{state:this.closed?'queued':error.budget?'budget':'failed',error:error.message,
+            let settled;
+            try{settled=this.store.settleJob(job.id,{state:this.closed?'queued':error.budget?'budget':'failed',error:error.message,
               ...(typeof error.code==='string'?{code:error.code}:{}),
               ...(Number.isInteger(error.status??error.failure?.status)?{httpStatus:error.status??error.failure.status}:{}),
               ...(error.failure?{failure:error.failure}:{}),...(error.budget?{resumeAt:this.store.usage().resetsAt}:{})},epoch);}
             catch(settleError){throw new DreamCleanupError([error,settleError]);}
-            if(!this.closed)this.jobEvent(job,'error',error.budget?'Dream 超出今日额度':'Dream 整理失败',error.message);
+            if(settled&&!this.closed)this.jobEvent(settled,'error',error.budget?'Dream 超出今日额度':'Dream 整理失败',error.message);
             if(error.cleanup)throw error;
           }finally{this.activeJob=null;this.controller=null;}
         }
@@ -139,7 +167,7 @@ export class DreamService {
     this.store.clearTargetFailures(job.id,this.epoch);
     let skipped=0,lastError=null;
     for(let target;(target=this.store.nextTarget(job.id));){
-      signal.throwIfAborted();
+      this.checkJob(job,signal);
       // An aggregate built while a source failed would publish an incomplete
       // range, and finishing it would suppress its own refresh through the
       // next run. Leave the remaining parents unfinished, the way a failing
@@ -234,7 +262,6 @@ export class DreamService {
       let result,last;
       for(let attempt=0;attempt<=Math.min(2,this.config().backgroundMaxRetries??2);attempt++){
         signal.throwIfAborted();
-        if(job.automatic&&!this.config().dreamAutoEnabled)throw new Error('自动 Dream 已关闭；已完成部分保留');
         try{
           if(attempt)await delay(Math.min(2000,500*2**attempt),undefined,{signal});
           const raw=await this.generate(last?{...base,retry_hint:last.message.slice(0,180)}:base,job,signal);
@@ -242,7 +269,7 @@ export class DreamService {
         }catch(error){if(error.cleanup||error.budget||signal.aborted||authenticationFailure(error))throw error;last=error;}
       }
       if(!result)throw last;
-      signal.throwIfAborted();await validate(batch);signal.throwIfAborted();
+      this.checkJob(job,signal);await validate(batch);this.checkJob(job,signal);
       this.store.publish({kind,target,baseRevision:old?.revision||0,baseInvalid:Boolean(old?.invalid),...result,sources:batch.map(x=>x.source),consumed:batch.map(({key,fingerprint})=>({key,fingerprint})),epoch:this.epoch,jobId:job.id});
     }
   }
@@ -250,7 +277,7 @@ export class DreamService {
   async generate(input,job,signal){
     signal=AbortSignal.any([signal,this.lifecycle.signal]);
     const run=async()=>{
-      signal.throwIfAborted();this.lifecycle.signal.throwIfAborted();
+      this.checkJob(job,signal);
       const c=this.config(),request=this.request(input),estimated=estimateTokens(request),route=job.route;
       if(estimated>LIMITS.input)throw Error('Dream 请求超过单次输入上限');
       const timeoutMs=c.jobTimeoutMs??600000,controller=new AbortController();
@@ -271,7 +298,7 @@ export class DreamService {
           const capacity=prepared.context?.contextWindow;
           if(capacity&&estimated+maxTokens+1024>capacity)throw Error('Dream 请求超过当前模型容量，请使用更大上下文的后台模型');
         }
-        joined.throwIfAborted();
+        this.checkJob(job,joined);
         callId=this.store.reserve(estimated+maxTokens,c.dreamDailyTokens??200000,{jobId:job.id,kind:input.kind,route:actual,promptVersion:DREAM_PROMPT_VERSION},this.epoch);
         if(!callId)throw new BudgetWait();
         startedAt=Date.now();

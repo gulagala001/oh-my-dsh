@@ -157,7 +157,12 @@ export class DreamStore {
   enqueue(scope, target, automatic = false, extra = {}) {
     return this.tx(() => {
       const existing = this.db.prepare("SELECT data FROM jobs WHERE scope=? AND target=? AND state IN ('queued','running','budget') ORDER BY created LIMIT 1").get(scope,target);
-      if (existing) return decode(existing);
+      if (existing) {
+        const job=decode(existing);
+        // Explicit work adopts the existing range and progress, including when
+        // automatic scheduling has since been disabled. Never duplicate its run.
+        return !automatic&&job.automatic?this.updateJob(job.id,{automatic:false}):job;
+      }
       const latest = decode(this.db.prepare('SELECT data FROM jobs WHERE scope=? AND target=? ORDER BY created DESC,rowid DESC LIMIT 1').get(scope,target));
       if (automatic && latest?.state==='paused') return latest;
       const value = { id: randomUUID(), scope, target, automatic, state:'queued', createdAt:this.now(), done:0, calls:0, ...extra };
@@ -169,7 +174,7 @@ export class DreamStore {
   updateJob(id, patch) {
     const before = this.job(id); if (!before) throw Error('Dream 作业不存在');
     const next = { ...before, ...patch, updatedAt: this.now() };
-    this.db.prepare('UPDATE jobs SET state=?,data=? WHERE id=?').run(next.state,encode(next),id);
+    this.db.prepare('UPDATE jobs SET state=?,automatic=?,data=? WHERE id=?').run(next.state,Number(next.automatic),encode(next),id);
     if(next.state==='complete')this.db.prepare('DELETE FROM job_targets WHERE job=?').run(id);
     return next;
   }

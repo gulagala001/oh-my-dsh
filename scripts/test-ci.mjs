@@ -8,7 +8,7 @@ const core = [
   'file-upload-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update',
   'context-store-cache', 'context-coordinate-release',
   'model-reply', 'temporary-chat',
-  'dream-source-lifecycle',
+  'dream-source-lifecycle', 'dream-job-control',
   'context-controls', 'settings-state',
   'task-ledger-authority', 'task-verification', 'plugin-operation-state',
   'session-migration-cache', 'host-component-reload', 'codegraph-lifecycle',

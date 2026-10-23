@@ -155,7 +155,7 @@ test('a granted queue slot still checks shutdown before dispatch', async t => {
 test('a detached session releases its state after its remaining Dream consumer retires', async t => {
   const { pipeline, hub, agent } = await fixture(t), entered = Promise.withResolvers(), reply = Promise.withResolvers();
   hub.live = new Map();
-  const dream = new DreamService(hub, { store: { reserve: () => 'held', settle() {} }, sources: {},
+  const dream = new DreamService(hub, { store: { requireJob: () => ({ automatic: false }), reserve: () => 'held', settle() {} }, sources: {},
     generate: async () => { entered.resolve(); return reply.promise; } });
   const state = pipeline.state(agent.session); state.steps = 8; pipeline.store.touch(state);
   const running = dream.generate({ kind: 'session', target: agent.session.id, sources: [] }, { id: 'job', route: { provider: 'fixture', model: 'fixture' } }, new AbortController().signal);

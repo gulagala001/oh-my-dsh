@@ -6,6 +6,7 @@ import { Button as NativeButton } from '../native-controls.jsx';
 import { openOmdSettings } from '../settings-nav.mjs';
 
 const JOB = { queued: ['排队', 'gray'], running: ['整理中', 'blue'], paused: ['已停止', 'amber'], budget: ['等待额度', 'amber'], failed: ['失败', 'red'], complete: ['完成', 'green'] };
+const jobNotice = job => job.state === 'paused' ? job.notice || '已停止，已完成部分保留' : `Dream 作业：${JOB[job.state]?.[0] || job.state}`;
 const openDreamSettings = () => { try { openOmdSettings('dream'); } catch (error) { console.error(error); } };
 const SCOPE = { session: '会话', project: '项目', global: '全局' };
 const folderName = path => path === '@unclassified' ? '未归类' : path?.split(/[\\/]/).filter(Boolean).at(-1) || '项目';
@@ -28,8 +29,8 @@ export function MemorySection({ sessionId, visible, params }) {
   const catalog = usePoll(signal => api(catalogPath, undefined, signal), `${catalogPath}:${d?.catalogRevision}`, { enabled: visible && Boolean(d) && (layer !== 'session' || Boolean(sid)), interval: 30000 });
 
   if (!d) return error ? <Alert>{error}</Alert> : <Skeleton cards={3} rows={5}/>;
-  const run = scope => action.run('run:' + scope, () => api(`/dream/run?${qs({ session: sessionId })}`, { scope, sessionId: sid, project: pid }), '已加入 Dream 队列，可以继续对话');
-  const job = (id, act) => action.run('job:' + id, () => api(`/dream/job?${qs({ session: sessionId })}`, { id, action: act }), act === 'stop' ? '已停止，已完成部分保留' : '已继续');
+  const run = scope => action.run('run:' + scope, () => api(`/dream/run?${qs({ session: sessionId })}`, { scope, sessionId: sid, project: pid }), jobNotice);
+  const job = (id, act) => action.run('job:' + id, () => api(`/dream/job?${qs({ session: sessionId })}`, { id, action: act }), jobNotice);
   const read = args => sources.read(`/dream/read?${qs(args)}`, { loading: true, args, back: reader?.value ? reader : null },
     value => ({ args, value: { ...value, args }, back: reader?.value ? reader : null }));
   const openDoc = (session, id) => documents.read(`/dream/document?${qs({ sessionId: session, id })}`);
