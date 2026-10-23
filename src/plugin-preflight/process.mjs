@@ -1,7 +1,7 @@
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, mkdtemp, readFile, writeFile, readdir, lstat, stat, rm, rename } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -56,6 +56,19 @@ export async function packageEnvironment(inherited = process.env, home = homedir
     if (await stat(native).then(value => value.isDirectory(), () => false)) env.COREPACK_HOME = native;
   }
   return env;
+}
+
+// A hoisted installed package has no node_modules of its own. Preserve its
+// nearest dependency directory when copying it out of the native profile.
+export async function dependencyDirectory(source, fallback) {
+  for (let current = source;; current = dirname(current)) {
+    const directory = join(current, 'node_modules');
+    if (await stat(directory).then(value => value.isDirectory(), error => {
+      if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false;
+      throw error;
+    })) return directory;
+    if (dirname(current) === current) return fallback;
+  }
 }
 
 export async function stopTree(child, observed = new Map(), directory) {

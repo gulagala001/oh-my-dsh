@@ -19,6 +19,8 @@
 
 ### 问题修复
 
+- 修复扁平依赖安装下插件预检副本的依赖查找，启动诊断明确返回实际错误；补齐原文回查所需的原生会话依赖声明。
+
 - 首批预处理按有效事实材料满窗触发，统一预算等待、回退和重启恢复；多图失败重建请求后继续发送，不重复执行工具。
 - 修复 Dream 停止、自动开关、手动继续和跨进程控制的状态竞争；提示词优化保留完整草稿、版本和待应用结果。
 - 为 PTC 准备、执行及收尾补齐超时和取消，实时显示当前模式；回退统一任务历史截点，备份锁等待有界且可取消。
@@ -44,6 +46,8 @@
 - Reduces duplicate work in monitor-history reimport, legacy-counter reconciliation, workflow-history reads and backup-directory checks, and reuses the preflight host and native tool caches.
 
 ### Bug Fixes
+
+- Fixes dependency resolution for preflight copies of hoisted installations and reports actual startup diagnostics; declares the native Session dependency required by original-history search.
 
 - Triggers initial preparation only after a full window of factual material, aligning budget waits and rewind/restart recovery; image-limit recovery rebuilds the request without rerunning tools.
 - Fixes Dream state races involving stop, automatic mode, manual continuation and cross-process control; prompt optimization preserves complete drafts, versions and pending results.
