@@ -20,7 +20,7 @@ export class AdaptiveCompaction {
       pipeline.controllers.get(id + ':adaptive')?.abort(Error('主会话模型路由已改变'));
       const state = pipeline.store.cache.get(id);
       if (state?.pending?.source === 'adaptive') { state.pending = null; pipeline.store.save(state); }
-    });
+    }, snapshot => pipeline.hub.images?.snapshotReason(snapshot));
     this.requests = this.snapshots.requests;
   }
   capture(session, options) {

@@ -173,8 +173,8 @@ export async function apply(ctx, config) {
     ? hub.ultracode.assemble(context.agent, next) : next(), { global: true, prepend: true });
   installBackground(ctx, hub, isX);
   trackProviderProfiles(ctx);
-  installImageBudget(ctx, isX);
-  installCommandCodeCompatibility(ctx, isX);
+  hub.images = installImageBudget(ctx, session => isX(session) || isOmaaEnhanced(session), hub);
+  installCommandCodeCompatibility(ctx);
   installComputerUseImageCompatibility(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);
   hub.bc.install(ctx, isX);

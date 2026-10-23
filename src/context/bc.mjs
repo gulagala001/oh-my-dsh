@@ -156,7 +156,15 @@ export class BillionContext {
       const message = session.deriveEventMessage(session.eventAt(seq));
       return message && (!sourceName(message.source) || message.source?.kind === 'user' || message.source?.kind === 'assistant' || message.role === 'tool') ? [message.id] : [];
     });
-    if (bc.material && !bc.material.every((id, i) => ids[i] === id)) bc = this.rebase(session, '会话有效历史已改变');
+    const media = session.deriveMessages().flatMap(message => message.content.filter(block => block.type === 'image')
+      .map(block => [message.id, block.attachment?.attachmentId, block.offloaded === true]));
+    const changedImages = bc.imageMaterial ? !bc.imageMaterial.every((item, i) => hash(item) === hash(media[i]))
+      : media.some(item => item[2]);
+    if (changedImages || bc.material && !bc.material.every((id, i) => ids[i] === id))
+      bc = this.rebase(session, changedImages ? '图片发送表示已更新' : '会话有效历史已改变');
+    // Append-only observations preserve BC's cache boundary; only changes to
+    // an already supplied occurrence need a native reconciliation boundary.
+    if (hash(bc.imageMaterial || []) !== hash(media)) { bc.imageMaterial = media; this.hub.context.store.save(this.state(session)); }
     if (hash(bc.material || []) !== hash(ids)) { bc.material = ids; this.hub.context.store.save(this.state(session)); }
     return bc;
   }

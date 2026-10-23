@@ -12,6 +12,7 @@ import { scaledSettingValue, savedBackground } from './settings-values.mjs';
 import { HISTORY_SIZE_KEY, HISTORY_SIZES, historySize } from './history-settings.jsx';
 import { VersionInfo } from './version-info.jsx';
 import { SettingsOutline, useSettingsOutline } from './settings-outline.jsx';
+import { ImageFixSettings } from './image-fix-settings.jsx';
 import css from './omd-settings.css';
 
 async function request(path, body, signal) {
@@ -407,6 +408,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
       </Group>
       <Group title="人格" anchor="personality"><PersonaSettings client={persona}/></Group>
       <Group title="上下文与记忆" anchor="context">
+        <ImageFixSettings config={c} directory={directory} commit={commit}/>
         <Toggle title="上下文优化" hint="默认开启：精简重复内容、按需加载工具，保留原文供回查。关闭不影响 CodeGraph、历史压缩和记忆。" checked={c.contextOptimizationEnabled !== false} onChange={v => commit({ contextOptimizationEnabled: v })}/>
         <Toggle title="后台预处理与中枢" hint="提前生成基础摘要和详细资料，再判断如何替换。" checked={c.contextEnabled} onChange={v => commit({ contextEnabled: v })}/>
         <Toggle title="自动应用已完成决定" hint="在请求边界应用；关闭后仍可手动替换。" checked={c.automaticReplace} onChange={v => commit({ automaticReplace: v })}/>

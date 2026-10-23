@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { createSurfaceIndex, hash, liveSpan, recordText, recordBlocks, exposedTrace, actualUser, carrierBarrier, recordSnapshot, sourceHash, splitGroups, resolveTraceSlot } from './core.mjs';
 import { combineAssets, attachmentsOf, contentChars, messageTokens } from './materials.mjs';
 import { TRACE_HEAD } from './prompts.mjs';
+import { retainImageOffloads } from '../image-request-state.mjs';
 
 export function createTransaction(session, state, plan, cfg, pairing, pricing = {}) {
   if (state.transaction) return state.transaction;
@@ -63,7 +64,7 @@ export function createTransaction(session, state, plan, cfg, pairing, pricing = 
     const anchor = slotLive ? session.eventAt(traceSlot.carrierSeq) : session.surface.nodes.slice(0, firstChanged).map(seq => session.eventAt(seq)).find(e => (actualUser(e) || sourceName(e.data?.source) === 'oh-my-dsh:todo-prefix') && !covered.has(e.seq));
     if (!anchor && !state.fullCompaction) throw new Error('所选摘要之前没有安全的推理承载位置；原文保留。');
     if (anchor && (!slotLive || traceSlot.traceHash !== hash(trace))) {
-      const original = slotLive ? traceSlot.original : structuredClone(withoutTodo(anchor.data));
+      const original = retainImageOffloads(slotLive ? traceSlot.original : withoutTodo(anchor.data), withoutTodo(sourceMessage(anchor.seq)));
       const text = `[${TRACE_HEAD} · source event ${trace.sourceSeq}${trace.truncated ? ' · excerpt' : ''}]\n${trace.text}\n[End previous analysis]\n`;
       const content = [{ type: 'text', text }, ...(original.content || [])];
       const previous = sourceMessage(anchor.seq), savedTodo = previous?.[TODO_META];

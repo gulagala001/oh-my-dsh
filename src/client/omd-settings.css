@@ -78,6 +78,25 @@
 .omd-set-empty { padding: 40px 0; text-align: center; color: var(--cx-muted); }
 .omd-version-row { display: inline-flex; align-items: center; gap: 10px; }
 .omd-version-row-text { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; color: var(--cx-muted); }
+.omd-image-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.omd-image-disclosure { flex: 1; min-width: 0; justify-content: flex-start; text-align: left; white-space: normal; gap: 8px; }
+.omd-image-disclosure .omd-set-copy { align-items: flex-start; overflow-wrap: anywhere; }
+.omd-image-open { transform: rotate(90deg); }
+.omd-image-body { margin: 12px 0 0 24px; }
+.omd-image-channels { border: .5px solid var(--cx-line); border-radius: 10px; overflow: hidden; margin-bottom: 8px; }
+.omd-image-channel { padding: 6px 8px; }
+.omd-image-channel + .omd-image-channel { border-top: .5px solid var(--cx-line); }
+.omd-image-fields { margin: 2px 8px 8px 26px; }
+.omd-image-field { display: grid; grid-template-columns: minmax(0, 1fr) 114px; align-items: center; gap: 8px 12px; padding: 8px 0; }
+.omd-image-field + .omd-image-field { border-top: .5px solid var(--cx-line); }
+.omd-image-value { display: grid; grid-template-columns: minmax(0, 1fr) 25px; align-items: center; gap: 8px; }
+.omd-image-value > input, .omd-image-value > span:has(input) { width: 100%; min-width: 0; }
+.omd-image-value input { text-align: right; font-variant-numeric: tabular-nums; }
+.omd-image-value small, .omd-image-note, .omd-image-empty, .omd-image-unavailable { font-size: 12px; color: var(--cx-muted); }
+.omd-image-note { margin-top: 10px !important; }
+.omd-image-empty { padding: 12px; }
+.omd-image-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.omd-image-add > .omd-native-select { flex: 1; min-width: 140px; }
 @container omdset (max-width: 460px) {
   .omd-set-body { padding: 4px 14px 22px; }
 }
@@ -91,6 +110,9 @@
   .omd-set-line { flex-wrap: wrap; }
   .omd-set-control { max-width: 100%; }
   .omd-set-fields { grid-template-columns: 1fr; }
+  .omd-image-body { margin-left: 0; }
+  .omd-image-fields { margin-left: 6px; }
+  .omd-image-field { grid-template-columns: minmax(0, 1fr) 100px; }
 }
 @media (pointer: coarse) {
   .omd-set-outline .omd-set-outline-link { min-height: 44px; }

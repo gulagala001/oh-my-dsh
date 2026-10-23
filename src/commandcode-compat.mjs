@@ -4,7 +4,7 @@ import { installRequestProjection, providerProfile } from './llm-request-project
 import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 
 // CommandCode (api.commandcode.ai) gateway compatibility: Responses reasoning
-// replay, Chat replay of old Responses tool turns, historical image replay and
+// replay, Chat replay of old Responses tool turns and
 // zero-usage context rejections. Every projection leaves the durable log intact.
 const DEEPSEEK = /(?:^|\/)deepseek(?:-|\/)/i;
 function commandCode(profile, api) {
@@ -148,31 +148,6 @@ export function projectResponsesToolsForCommandCodeChat(options, profile) {
   return isAgentLoopRequest(options) ? markAgentLoopRequest(projected) : projected;
 }
 
-// Only cmdgoat-responses replays images from the current user turn.
-// Context notices and projected tool results also use role=user, so only the
-// actual user source starts a turn. Keep the durable log and attachments intact.
-export function withoutHistoricalCommandCodeImages(options, profile) {
-  if (options.provider !== 'cmdgoat-responses' || !commandCode(profile, 'openai-responses')) return options;
-  const boundary = options.messages.findLastIndex(message => message.role === 'user' && message.source?.kind === 'user');
-  if (boundary <= 0) return options;
-  let changed = false;
-  const messages = options.messages.map((message, index) => {
-    if (index >= boundary) return message;
-    const content = message.content.filter(block => block.type !== 'image');
-    if (content.length === message.content.length) return message;
-    changed = true;
-    const replay = message.source?.replayState;
-    const source = Array.isArray(replay?.blocks) && replay.blocks.length === message.content.length
-      ? { ...message.source, replayState: { ...replay,
-        blocks: replay.blocks.filter((_block, i) => message.content[i].type !== 'image') } }
-      : message.source;
-    return freezeMessage({ ...message, content, source });
-  });
-  if (!changed) return options;
-  const projected = Object.freeze({ ...options, messages: Object.freeze(messages) });
-  return isAgentLoopRequest(options) ? markAgentLoopRequest(projected) : projected;
-}
-
 const rejection = chunk => chunk.type === 'finish' && chunk.reason?.kind === 'error'
   && chunk.reason.failure?.code === 'INVALID_REQUEST'
   && /\binput\s+is\s+longer\s+than\s+the\s+model(?:['’]s)?\s+context\s+length\b/i.test(chunk.reason.failure.message || '');
@@ -230,16 +205,11 @@ function installRetry(ctx) {
   });
 }
 
-export function installCommandCodeCompatibility(ctx, isManagedSession) {
+export function installCommandCodeCompatibility(ctx) {
   installRetry(ctx);
-  // Applied in this order: historical images, Chat tool replay, Responses reasoning.
+  // Image delivery is owned by the shared image budget; retain protocol compatibility.
   installRequestProjection(ctx, options => DEEPSEEK.test(options.model || '')
     ? normalizeResponsesReasoning(options, providerProfile(ctx, options.provider)) : options);
   installRequestProjection(ctx, options => isAgentLoopRequest(options) && DEEPSEEK.test(options.model || '')
     ? projectResponsesToolsForCommandCodeChat(options, providerProfile(ctx, options.provider)) : options);
-  installRequestProjection(ctx, options => {
-    if (options.provider !== 'cmdgoat-responses' || !isAgentLoopRequest(options)) return options;
-    const session = options.sessionId && ctx.sessions.get(options.sessionId);
-    return session && isManagedSession(session) ? withoutHistoricalCommandCodeImages(options, providerProfile(ctx, options.provider)) : options;
-  });
 }

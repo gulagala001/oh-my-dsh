@@ -97,6 +97,10 @@ Tools, verification commands, CodeGraph, and Workflow resolve paths in the host'
 
 **Context optimization** is on by default. **Settings → Context and memory → Context optimization** controls supported result shortening, repeat-read references, on-demand tool discovery and original-result preservation. Choose **View original** on a tool card for line ranges, search and head/tail paging; import evidence archives from the Context panel. `context_view` provides file and webpage views, `code_search` supports AST patterns in 16 grammars, and CodeGraph retains indexed code relationships. Disabling optimization keeps existing originals available. [Usage, accounting and migration](context-optimization.md#english)
 
+**Multi-image request repair** is enabled with CMD selected by default and stays collapsed in the same settings group. Expand it to add configured providers, then expand a provider to edit its image count, total image size and retention target: **20 images, 10 MB and 10 retained images** by default. Size counts the Base64 content of the actual request images. Each request is checked; older images are offloaded in batches only when a limit is exceeded, while original files and attachment recall remain available. Requests below the limit keep the existing history unchanged. Retention is a target: the size limit may require fewer images, while the newest unread batch is always protected. If that batch alone exceeds a limit, split the input or adjust the rule. Rules apply to OMD sessions and sessions with OMD enhancements enabled. Disabling the feature or removing a provider restores the existing host limits.
+
+Image offload is independent of text compaction and preserves existing summaries and valid prepared decisions. An offload changes that request's prefix and may affect caching. Cached background preparation only reuses successful snapshots that meet the current image limits; it never rewrites a borrowed prefix and waits if no suitable snapshot exists. BC receives a boundary update when image delivery changes, while Dream, archives and recall remain available.
+
 **Context → Context management** selects OMD or Billion Context (BC) per session; OMD is the default. The current integration targets DSH **0.2.1-rc.2** and the original **billion-context 0.1.202** npm package by [ranxianglei](https://github.com/ranxianglei/billion-context). Install and enable the pinned package in third-party features, then select BC.
 
 Only automatic compression ownership changes. In BC mode, OMD continues archive preparation, Dream, tasks, persona, original/attachment recall, side questions and branch handling. OMD's compression settings stay saved for switching back. In OMD mode, BC's `compress`/`absorb` writers are hidden and rejected; its search, recovery, rules and diagnostics remain available. Explicit material/compaction operations synchronize the BC history boundary. Native tools and PTC retain their own execution routes.
@@ -145,7 +149,7 @@ Wide windows show an **On this page** outline to the left of the content. Select
 | --- | --- |
 | Features | Workbench, Extensions, interactive answers, agent presets, code understanding and prompt optimization; third-party entry |
 | Personality | Global preset, four modules, files and session choices |
-| Context and memory | Optimization, preprocessing, coordination, caching, Auto Compact, default memory scope and Dream |
+| Context and memory | Multi-image request repair, optimization, preprocessing, coordination, caching, Auto Compact, default memory scope and Dream |
 | Background models / Global background | Background model routes and manually maintained fixed context |
 | Agent | Runtime and budget hints, background waits and constraint-first guidance |
 | About / Advanced | Versions and feature updates; advanced parameters and history page size under Other |

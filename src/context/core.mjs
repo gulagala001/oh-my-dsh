@@ -2,6 +2,7 @@ import { sourceName } from '../message-source.mjs';
 import { isTaskInjection, summaryMessageReader, withoutTodo, TODO_META } from '../task-context.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 import { attachmentsOf, combineAssets, combineUsers, userDocument, describeAsset, materialText, contentChars, messageTokens, assetBlocks } from './materials.mjs';
+import { imageSourceValue } from '../image-request-state.mjs';
 
 export const hash = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
 export const textBlocks = blocks => (blocks || []).flatMap(b => {
@@ -94,7 +95,7 @@ export function resolveTraceSlot(session, slot) {
   const matches = seq => {
     const message = withoutTodo(session.deriveEventMessage(session.eventAt(seq)));
     return sourceName(message?.source) === 'oh-my-dsh:trace'
-      && hash(message.content.slice(1)) === hash(slot.original?.content || []);
+      && hash(imageSourceValue(message.content.slice(1))) === hash(imageSourceValue(slot.original?.content || []));
   };
   if (session.surface.nodes.includes(slot.carrierSeq) && matches(slot.carrierSeq)) return slot;
   // Rebind stale sidecar positions only to the same original request carried
@@ -156,9 +157,9 @@ export function liveSpan(session, record, index = createSurfaceIndex(session)) {
 export function recordSnapshot(session, record, index = createSurfaceIndex(session)) {
   if (!record || record.mergedInto) return null;
   const span = liveSpan(session, record, index); if (!span) return null;
-  return hash([record.version, record.mode, record.carrierSeq ?? null, record.sourceHash,
+  return hash(imageSourceValue([record.version, record.mode, record.carrierSeq ?? null, record.sourceHash,
     record.summary, record.documents, record.assets || [], span.seqs,
-    span.seqs.map(seq => session.deriveEventMessage(session.eventAt(seq)))]);
+    span.seqs.map(seq => session.deriveEventMessage(session.eventAt(seq)))]));
 }
 
 // Continuation considers fresh work only, never lookback, protected messages,

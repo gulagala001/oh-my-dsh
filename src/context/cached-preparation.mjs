@@ -5,6 +5,7 @@ import { hash } from './core.mjs';
 import { materialText } from './materials.mjs';
 import { CACHED_PREPARE_TASK } from './prompts.mjs';
 import { RequestSnapshots, cachedBudgetReason } from './request-snapshots.mjs';
+import { imageSourceValue } from '../image-request-state.mjs';
 
 const parts = (blocks, path = []) => (blocks || []).flatMap((block, index) => {
   const at = [...path, index];
@@ -67,7 +68,8 @@ export class CachedPreparation {
   constructor(pipeline) {
     this.pipeline = pipeline;
     this.active = new Map(); this.waiting = new Map(); this.enabled = false;
-    this.snapshots = new RequestSnapshots(id => this.active.get(id)?.abort(Error('主会话模型路由已改变')));
+    this.snapshots = new RequestSnapshots(id => this.active.get(id)?.abort(Error('主会话模型路由已改变')),
+      snapshot => pipeline.hub.images?.snapshotReason(snapshot));
     this.pending = this.snapshots.pending; this.requests = this.snapshots.requests;
   }
   configure() {
@@ -112,12 +114,12 @@ export class CachedPreparation {
     for (const snapshot of this.snapshots.candidates(session)) {
       const built = this.buildRequest(session, snapshot, inputs);
       if (!built.request) { reason ??= built.reason; continue; }
-      const sourceSignature = hash(events.map(summaryMessageReader(session)));
+      const sourceSignature = hash(imageSourceValue(events.map(summaryMessageReader(session))));
       this.waiting.delete(session.id);
       const state = p.state(session);
       state.memoryCache = { ...state.memoryCache, waitingReason: null, cacheReadTokens: null }; p.store.save(state);
       const current = () => !p.closed && this.configure() && p.agents.get(session.id) === agent
-        && this.snapshots.current(snapshot) && hash(events.map(summaryMessageReader(session))) === sourceSignature;
+        && this.snapshots.current(snapshot) && hash(imageSourceValue(events.map(summaryMessageReader(session)))) === sourceSignature;
       return { request: built.request, current };
     }
     return this.defer(session, reason || this.snapshots.waitingReason(session), resume);

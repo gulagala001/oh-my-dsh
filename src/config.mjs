@@ -2,6 +2,7 @@ import z from '@deepseek-ai/schemastery';
 import { DEFAULT_IDENTITY } from './cc-adaptation/identity.mjs';
 import { personalityPatch, personalityPreset } from './cc-adaptation/personality.mjs';
 import { CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
+import { DEFAULT_IMAGE_RULES, validateImageRules } from './image-rules.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
 const personalityModules = z.object({ style: z.string(), communication: z.string(), presentation: z.string() });
@@ -19,6 +20,13 @@ export const Config = z.object({
   })).default([]),
   contextEnabled: z.boolean().default(true),
   contextOptimizationEnabled: z.boolean().default(true),
+  multiImageFixEnabled: z.boolean().default(true),
+  multiImageFixRules: z.array(z.object({
+    provider: z.string().pattern(/\S/).required(),
+    maxImages: z.number().step(1).min(2).required(),
+    maxBytes: z.number().step(1).min(1).required(),
+    keepImages: z.number().step(1).min(1).required(),
+  })).default(DEFAULT_IMAGE_RULES.map(rule => ({ ...rule }))),
   automaticReplace: z.boolean().default(true),
   autoCompactEnabled: z.boolean().default(false),
   autoCompactThreshold: z.number().step(1).min(1).default(400000),
@@ -84,12 +92,14 @@ for (const [key, field] of Object.entries(Config.dict)) if (!['dataDir', 'projec
 // Defaults apply to omitted values. An explicit null is not a numeric or
 // boolean setting; use the same schema for API writes and pipeline options.
 export function contextConfig(raw = {}) {
+  if (Object.hasOwn(raw, 'multiImageFixRules')) validateImageRules(raw.multiImageFixRules);
   personalityPatch(raw, personalityPreset(raw));
   for (const [key, value] of Object.entries(raw)) {
     const type = Config.dict[key]?.type;
     if (value === null && ['number', 'boolean'].includes(type)) throw new Error(key + ' expected ' + type + ', got null');
   }
   const value = structuredClone(configSnapshot(Config(raw))), routes = new Set();
+  validateImageRules(value.multiImageFixRules);
   for (const price of value.monitorPrices) {
     for (const key of ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']) {
       if (Object.hasOwn(price, key) && (typeof price[key] !== 'number' || !Number.isFinite(price[key]) || price[key] < 0)) throw new Error('单价必须是非负有限数值，未知请留空');
