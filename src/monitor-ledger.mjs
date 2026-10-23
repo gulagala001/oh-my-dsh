@@ -337,11 +337,18 @@ export class MonitorLedger {
       const summary = { totals: [], unpricedCalls: 0, partialCalls: 0 }, buckets = new Map(), totals = new Map();
       // Preserve receipt order, per-call tiers, missing usage and floating-point sums.
       const receipts = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,provider,model,${fields.join(',')} FROM calls WHERE ${where}`);
-      for (const row of receipts.iterate(...args)) {
-        let bucket = buckets.get(row.label);
-        if (!bucket) { bucket = { label: row.label, costs: {}, unpricedCalls: 0 }; buckets.set(row.label, bucket); }
-        const cost = costOf({ provider: row.provider, model: row.model,
-          usage: Object.fromEntries(fields.filter(key => row[key] !== null).map(key => [key, row[key]])) });
+      // Stream positional rows directly into the callback contract. Avoid a
+      // named SQLite object plus filter/map entry arrays for every receipt.
+      const positional = typeof receipts.setReturnArrays === 'function';
+      if (positional) receipts.setReturnArrays(true);
+      for (const entry of receipts.iterate(...args)) {
+        // Some non-LTS Node releases lack the array API; keep them readable.
+        const row = positional ? entry : [entry.label, entry.provider, entry.model, ...fields.map(key => entry[key])];
+        const label = row[0], usage = {};
+        for (let i = 0; i < fields.length; i++) if (row[i + 3] !== null) usage[fields[i]] = row[i + 3];
+        let bucket = buckets.get(label);
+        if (!bucket) { bucket = { label, costs: {}, unpricedCalls: 0 }; buckets.set(label, bucket); }
+        const cost = costOf({ provider: row[1], model: row[2], usage });
         if (!cost) { summary.unpricedCalls++; bucket.unpricedCalls++; continue; }
         const total = totals.get(cost.currency) || { currency: cost.currency, amount: 0, calls: 0 };
         total.amount += cost.amount; total.calls++; totals.set(cost.currency, total);

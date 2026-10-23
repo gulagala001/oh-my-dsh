@@ -199,6 +199,45 @@ test('receipt costs keep arbitrary callbacks live, recover after failure and bou
   read(now, {}, cost, { costCacheKey: key }); assert.ok(ledger.costCache);
 });
 
+test('receipt cost scans stream positional rows with independent complete callback values', t => {
+  const { ledger, append, read, now } = fixture(t);
+  const usage = { inputTokens: 1.25, outputTokens: 2.5, cacheReadTokens: 0, cacheWriteTokens: 3.75,
+    reasoningTokens: 0.5, totalTokens: 7.5 };
+  append('complete', now - 1, { provider: 'provider-中文', model: 'model-🙂', usage });
+  append('missing', now - 2, { provider: null, model: null, usage: null });
+  append('partial', now - 3, { usage: { outputTokens: 0, totalTokens: 2 ** 53 } });
+  const prepare = ledger.db.prepare.bind(ledger.db);
+  let arrayScans = 0, callbacks = [], allowArrays = true;
+  ledger.db.prepare = sql => {
+    const statement = prepare(sql);
+    if (!sql.includes(' label,provider,model,')) return statement;
+    return new Proxy(statement, { get(target, key) {
+      const value = Reflect.get(target, key, target);
+      if (key === 'all') return () => assert.fail('cost scan must stay streaming');
+      if (key === 'setReturnArrays') return allowArrays ? enabled => { assert.equal(enabled, true); arrayScans++; return value.call(target, enabled); } : undefined;
+      return typeof value === 'function' ? value.bind(target) : value;
+    } });
+  };
+  const result = read(now, {}, call => { callbacks.push(call); return { currency: 'USD', amount: callbacks.length / 10 }; });
+  assert.equal(arrayScans, 1);
+  assert.deepEqual(callbacks, [
+    { provider: 'provider-中文', model: 'model-🙂', usage },
+    { provider: null, model: null, usage: {} },
+    { provider: 'fixture', model: 'fixture', usage: { outputTokens: 0, totalTokens: 2 ** 53 } },
+  ]);
+  assert.equal(new Set(callbacks).size, 3); assert.equal(new Set(callbacks.map(call => call.usage)).size, 3);
+  assert.equal(result.costSummary.totals[0].amount, 0.1 + 0.2 + 0.3);
+  callbacks[2].usage.outputTokens = -1;
+  callbacks = [];
+  read(now, {}, call => { callbacks.push(call); return null; });
+  assert.equal(callbacks[2].usage.outputTokens, 0);
+  assert.equal(arrayScans, 2);
+  allowArrays = false; callbacks = [];
+  const fallback = read(now, {}, call => { callbacks.push(call); return { currency: 'USD', amount: callbacks.length / 10 }; });
+  assert.deepEqual(fallback, result); assert.equal(arrayScans, 2);
+  assert.deepEqual(callbacks[0], { provider: 'provider-中文', model: 'model-🙂', usage });
+});
+
 test('receipt costs rebuild empty calendar buckets and keep legacy counters live', t => {
   const { ledger, append, read, now } = fixture(t), beforeTZ = process.env.TZ;
   process.env.TZ = 'UTC'; t.after(() => { if (beforeTZ === undefined) delete process.env.TZ; else process.env.TZ = beforeTZ; });
