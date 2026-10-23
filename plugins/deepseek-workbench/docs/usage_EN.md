@@ -22,9 +22,10 @@ Open the intended ordinary website conversation, ensure its history has loaded, 
 
 - Imports retain user and assistant roles, readable text, names and attachments.
 - Requests are limited to 48 MiB including attachment encoding. Text and decoded attachment content together are limited to 32 MiB.
-- Unreadable attachments produce warnings. Add necessary missing files before continuing.
+- Unreadable attachments produce warnings. Add necessary missing files before continuing. Files already read must be saved to DSH attachment storage; missing storage or a failed write stops the import instead of retaining only filenames.
 - Imported history does not replay website tools, send model requests or execute instructions contained in the text. The next new message uses the DSH conversation's model and tools.
-- The original website conversation remains available. Lost import receipts can be retried; a request identifier prevents duplicate sessions for the same request.
+- The original website conversation remains available. After a failed import or lost receipt, keep the workbench panel open and click **Continue in DSH** again to retry the same messages and attachments. The plugin does not re-read the page to replace an unconfirmed request. Later website messages can be imported after that request succeeds.
+- DSH session storage must be available before the imported session is created. A successful receipt is returned after persistence completes. Closing the entire workbench panel or restarting the app loses the unconfirmed frontend request; check DSH history before importing again to avoid duplicates.
 
 Import indexes live in `$DSH_HOME/deepseek-workbench/imports/` (default `~/.dsh/deepseek-workbench/imports/`). DSH stores imported conversations and attachments in its native storage.
 

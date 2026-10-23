@@ -127,6 +127,7 @@ export class ConversationImporter {
       return { sessionId, title: record.title, warnings: record.warnings };
     }
     if (!session) {
+      if (!this.ctx.get('sessionPersistence')) throw Error('DSH 会话持久化不可用，请启用会话存储后重试迁移');
       const defaultModel = this.ctx.get('agentDefaultModel');
       const selection = defaultModel?.currentSelection();
       if (!selection?.provider || !selection.model) throw Error('请先在 DSH 设置中选择用于续聊的模型');
@@ -155,19 +156,34 @@ export class ConversationImporter {
   }
   async materializeAttachments(messages, warnings) {
     const store = this.ctx.get('attachments');
-    return Promise.all(messages.map(async row => {
+    if (!store && messages.some(row => row.attachments.some(file => file.data !== undefined))) throw Error('DSH 附件存储不可用，请启用附件存储后重试迁移');
+    const materialize = async row => {
+      const rowWarnings = [];
       const content = row.text ? [{ type: 'text', text: row.text }] : [];
       for (const file of row.attachments) {
-        if (file.data !== undefined && store) {
+        if (file.data !== undefined) {
           const data = Buffer.from(file.data, 'base64');
           if (['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.mediaType)) content.push({ type: 'image', attachment: await store.saveImage({ data, mediaType: file.mediaType, name: file.name }) });
           else content.push({ type: 'file', attachment: await store.saveFile({ data, name: file.name }) });
         } else {
           content.push({ type: 'text', text: `\n[原网页附件：${file.name}]${file.url ? `(${file.url})` : ''}` });
-          warnings.push(`附件“${file.name}”未取得原始文件，保留了名称${file.url ? '和链接' : ''}。`);
+          rowWarnings.push(`附件“${file.name}”未取得原始文件，保留了名称${file.url ? '和链接' : ''}。`);
         }
       }
-      return content;
-    }));
+      return { content, warnings: rowWarnings };
+    };
+    const rows = [];
+    // Bound durable writes without serializing every file fsync. These native
+    // writes cannot be cancelled: settle the whole batch before reporting any
+    // error, then start no further work. A retry never races abandoned writes.
+    const batchSize = 16;
+    for (let index = 0; index < messages.length; index += batchSize) {
+      const results = await Promise.allSettled(messages.slice(index, index + batchSize).map(materialize));
+      const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+      if (errors.length === 1) throw errors[0];
+      if (errors.length) throw new AggregateError(errors, '附件写入失败：' + errors.map(error => error.message).join('；'));
+      for (const { value } of results) { rows.push(value.content); warnings.push(...value.warnings); }
+    }
+    return rows;
   }
 }

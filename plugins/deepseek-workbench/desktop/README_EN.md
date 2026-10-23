@@ -16,7 +16,7 @@ The standard host already supplies isolated webviews and page extraction. This a
    ```
 
 3. Install DSH dependencies from its frozen lock. rc.2 uses pnpm `11.28.5`, TypeScript `6.0.3` and Electron `44.7.0`. Follow that source revision's build instructions to rebuild affected Host, Client, Web, desktop main and preloads, then package and sign through upstream platform workflows.
-4. Install the pinned plugin Release package into the new host's actual profile. See the [installation guide](../README_EN.md#install).
+4. Install the pinned plugin Release package into the new host's actual profile. See the [installation guide](../docs/install_EN.md).
 
 The adapter checks versions and every replacement anchor before writing changes. Mismatched inputs fail. Reapplying checks the policy and returns. Existing recognized browser capabilities retain their asynchronous release transaction; unrecognized variants are rejected.
 

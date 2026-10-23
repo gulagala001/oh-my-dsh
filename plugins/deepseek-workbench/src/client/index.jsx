@@ -7,6 +7,7 @@ import { NativeChat } from './native-chat.jsx';
 import { NativePlatformPage } from './platform-page.jsx';
 import { statusScript, previewScript, commandScript } from './native-chat-bridge.mjs';
 import { initializeHostCapabilities } from './host-capabilities.mjs';
+import { ConversationImport } from './conversation-import.mjs';
 import css from './style.css';
 import nativeCss from './native-chat.css';
 import { installTemporarySidebar } from './temporary-sidebar.jsx';
@@ -40,10 +41,11 @@ function useBackendState(enabled = true) {
 }
 function WarningList({ warnings }) { return warnings?.length ? <div className="dswb-notice" role="status">{warnings.map((text, index) => <p key={index}>{text}</p>)}</div> : null; }
 export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workbench', chat = true, native = false, temporary, ownerSignal, notify = () => {} }) {
-  const container = useRef(null), adapter = useRef(null), alive = useRef(true), generation = useRef(0), draft = useRef(null);
+  const container = useRef(null), adapter = useRef(null), alive = useRef(true), generation = useRef(0);
   const [frame, setFrame] = useState({ loading: true, ready: false, url, warnings: [] });
   const [revision, setRevision] = useState(0), [operation, setOperation] = useState(''), [error, setError] = useState('');
-  const imported = useRef(null), lastLoginState = useRef('');
+  const [migration] = useState(() => new ConversationImport());
+  const lastLoginState = useRef('');
   const [backend, retryBackend] = useBackendState(chat);
   const verificationStarted = useRef(false), cleanupRecovery = useRef(false);
   useEffect(() => {
@@ -102,21 +104,17 @@ export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workben
     if (temporary || operation) return;
     const ticket = generation.current;
     const current = () => alive.current && generation.current === ticket;
-    setOperation('extract'); setError('');
+    setOperation(migration.request ? 'import' : 'extract'); setError('');
     try {
-      const conversation = await adapter.current.extract(extractionScript);
+      const result = await migration.run(async () => {
+        const conversation = await adapter.current.extract(extractionScript);
+        if (!current()) throw Error('页面已关闭，迁移读取已取消。');
+        return conversation;
+      }, request => api('/import', request), stage => { if (current()) setOperation(stage); });
       if (!current()) return;
-      if (!conversation?.messages?.length) throw new Error('未找到可以迁移的消息。');
-      const fingerprint = JSON.stringify(conversation);
-      if (imported.current?.fingerprint === fingerprint) { await openImported(imported.current.result, ticket); return; }
-      if (JSON.stringify(draft.current?.conversation) !== fingerprint) draft.current = { requestId: crypto.randomUUID(), conversation };
-      setOperation('import');
-      const result = await api('/import', draft.current);
-      if (!current()) return;
-      imported.current = { result, fingerprint };
-      notify({ title: '已创建 DSH 会话：' + result.title, warnings: result.warnings ?? conversation.warnings });
+      notify({ title: 'DSH 会话已就绪：' + result.title, warnings: result.warnings });
       await openImported(result, ticket);
-    } catch (failure) { if (current()) setError(failure.message); }
+    } catch (failure) { if (current()) setError(failure.message + (migration.request ? ' 再次点击“在 DSH 中继续”将重试本次已读取的内容。' : '')); }
     finally { if (current()) setOperation(''); }
   };
   const retry = () => { setError(''); if (chat) retryBackend(); if (frame.ready) adapter.current?.reload(); else setRevision(value => value + 1); };

@@ -26,8 +26,11 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:public": "node scripts/check-public-files.mjs",
-    "prepack": "node scripts/prepack.mjs",
-    "test": "node --test test/*.test.mjs"
+    "prepack": "node scripts/check-docs.mjs && node scripts/prepack.mjs",
+    "test": "node --test test/*.test.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
+    "docs:write": "node scripts/check-docs.mjs --write",
+    "release:check": "node scripts/check-release-assets.mjs"
   },
   "engines": {
     "node": ">=22.19",
