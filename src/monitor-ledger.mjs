@@ -134,7 +134,7 @@ export function monitorEventQuery(params, now = Date.now()) {
 export class MonitorLedger {
   constructor(directory, { now = Date.now } = {}) {
     this.now = now; this.error = null; this.imported = new Map(); this.closed = false;
-    this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.overviewCache = null; this.costCache = null;
+    this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.legacyCountCache = null; this.overviewCache = null; this.costCache = null;
     try {
       mkdirSync(join(directory, 'monitor-v1'), { recursive: true, mode: 0o700 });
       this.db = new DatabaseSync(join(directory, 'monitor-v1', 'usage.sqlite'));
@@ -455,9 +455,21 @@ export class MonitorLedger {
   }
   legacy(states, scope, args) {
     if (!states.some(state => Object.values(state.metrics || {}).some(metric => metric.calls > 0))) return {};
-    const seen = this.metricRows('legacyCache', `SELECT sessionId,kind,${metricsSQL} FROM calls WHERE ${scope} AND source!='dream' GROUP BY sessionId,kind`, args);
-    const byId = new Map(seen.map(row => [JSON.stringify([row.sessionId, row.kind]), row])), result = {};
+    // Most old counters are already covered by receipts. Only reconcile token
+    // and timing subtotals for groups that still have unrecorded calls. Both
+    // reads stay in query()'s transaction; live saved counters are never cached.
+    const counts = this.metricRows('legacyCountCache', `SELECT sessionId,kind,COUNT(*) calls FROM calls WHERE ${scope} AND source!='dream' GROUP BY sessionId,kind`, args);
+    const callsById = new Map(counts.map(row => [JSON.stringify([row.sessionId, row.kind]), row.calls]));
+    const needed = [];
     for (const state of states) for (const [kind, saved] of Object.entries(state.metrics || {})) {
+      if ((saved.calls || 0) > (callsById.get(JSON.stringify([state.id, kind])) || 0)) needed.push({ state, kind, saved });
+    }
+    if (!needed.length) return {};
+    const seen = this.metricRows('legacyCache', `SELECT sessionId,kind,${metricsSQL} FROM calls WHERE ${scope} AND source!='dream'
+      AND (sessionId,kind) IN (SELECT json_extract(value,'$[0]'),json_extract(value,'$[1]') FROM json_each(?)) GROUP BY sessionId,kind`,
+    [...args, JSON.stringify(needed.map(({ state, kind }) => [state.id, kind]))]);
+    const byId = new Map(seen.map(row => [JSON.stringify([row.sessionId, row.kind]), row])), result = {};
+    for (const { state, kind, saved } of needed) {
       const known = byId.get(JSON.stringify([state.id, kind])) || emptyMonitorMetric(), calls = Math.max(0, (saved.calls || 0) - known.calls);
       if (!calls) continue;
       const value = emptyMonitorMetric();
@@ -489,7 +501,7 @@ export class MonitorLedger {
     }
     return result;
   }
-  close() { this.closed = true; this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.overviewCache = null; this.costCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
+  close() { this.closed = true; this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.legacyCountCache = null; this.overviewCache = null; this.costCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
 }
 
 // Empty buckets keep the console trend on a steady time axis. Labels follow
