@@ -73,3 +73,56 @@ test('aggregate reuse does not retain oversized or failed query results', t => {
   assert.equal(ledger.groupCache, null);
   ledger.db.prepare = prepare; assert.equal(ledger.query([], new Set(), query).totals.calls, 600);
 });
+
+test('event-only writes preserve receipt caches while events and live counters stay current', t => {
+  const directory = mkdtempSync(join(tmpdir(), 'omd-event-cache-')), now = 1792190400000;
+  const ledger = new MonitorLedger(directory, { now: () => now });
+  t.after(() => { ledger.close(); rmSync(directory, { recursive: true, force: true }); });
+  ledger.append({ id: 'receipt', sessionId: 'fixture', kind: 'main', at: now - 1, source: 'native',
+    usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 } });
+  const states = [{ id: 'fixture', metrics: { main: { calls: 2, inputTokens: 30 } } }];
+  const query = monitorQuery({ range: 'all' }, now), ids = new Set(['fixture']);
+  const pricing = { catalog: {}, custom: '[]' }, price = () => ({ currency: 'USD', amount: 1 });
+  const read = () => ledger.query(states, ids, query, price, { costCacheKey: pricing });
+  const usage = () => ledger.query(states, ids, query, undefined, { usageOnly: true });
+  const initial = read(), initialUsage = usage();
+  const names = ['groupCache', 'usageCache', 'legacyCache', 'legacyCountCache', 'overviewCache', 'costCache'];
+  const caches = names.map(name => { assert.ok(ledger[name], name); return ledger[name]; });
+  const event = { id: 'event', sessionId: 'fixture', kind: 'autoCompact', status: 'skip', at: now - 1 };
+  assert.equal(ledger.appendEvent(event), true);
+  assert.equal(ledger.appendEvent(event), true, 'duplicate event inserts remain harmless');
+  assert.deepEqual(read(), initial); assert.deepEqual(usage(), initialUsage);
+  for (const [i, name] of names.entries()) assert.equal(ledger[name], caches[i], name);
+  assert.equal(ledger.events(ids, { ...query, offset: 0 }).total, 1);
+  states[0].metrics.main.calls = 3;
+  assert.equal(read().totals.calls, 3, 'live legacy counters are not hidden by reuse');
+  ledger.append({ id: 'receipt', firstTokenMs: 0 });
+  assert.equal(read().performance.firstTokenCalls, 1, 'late timing still invalidates derived reads');
+  assert.notEqual(ledger.groupCache, caches[0]);
+});
+
+test('event cache accounting remains conservative for rollbacks, triggers and external writers', t => {
+  const directory = mkdtempSync(join(tmpdir(), 'omd-event-cache-writers-')), now = 1792190400000;
+  const ledger = new MonitorLedger(directory, { now: () => now });
+  const writer = new DatabaseSync(join(directory, 'monitor-v1/usage.sqlite'));
+  t.after(() => { writer.close(); ledger.close(); rmSync(directory, { recursive: true, force: true }); });
+  ledger.append({ id: 'receipt', sessionId: 'fixture', kind: 'main', at: now - 1, source: 'native', usage: { outputTokens: 5 } });
+  const query = monitorQuery({ range: 'all' }, now), read = () => ledger.query([], new Set(), query);
+  read(); const initial = ledger.groupCache;
+  ledger.db.exec('BEGIN'); ledger.appendEvent({ id: 'rolled-back', kind: 'prepare', at: now - 1 }); ledger.db.exec('ROLLBACK');
+  assert.equal(read().totals.outputTokens, 5); assert.equal(ledger.groupCache, initial);
+  ledger.db.exec("CREATE TRIGGER event_receipt AFTER INSERT ON events BEGIN UPDATE calls SET outputTokens=outputTokens+1 WHERE id='receipt'; END");
+  ledger.appendEvent({ id: 'triggered', kind: 'prepare', at: now - 1 });
+  assert.equal(read().totals.outputTokens, 6, 'only the direct event write is excluded');
+  ledger.db.exec('DROP TRIGGER event_receipt');
+  ledger.db.exec("CREATE TRIGGER event_failure BEFORE INSERT ON events BEGIN SELECT RAISE(ABORT,'event failure'); END");
+  assert.equal(ledger.appendEvent({ id: 'failed', kind: 'prepare' }), false);
+  ledger.db.exec('DROP TRIGGER event_failure');
+  ledger.appendEvent({ id: 'after-failure', kind: 'prepare', at: now - 1 });
+  ledger.db.prepare('UPDATE calls SET outputTokens=7 WHERE id=?').run('receipt');
+  assert.equal(read().totals.outputTokens, 7);
+  writer.prepare('UPDATE calls SET outputTokens=8 WHERE id=?').run('receipt');
+  assert.equal(read().totals.outputTokens, 8, 'external receipt updates still invalidate caches');
+  writer.prepare('INSERT INTO call_timings VALUES(?,?)').run('receipt', 0);
+  assert.equal(read().performance.firstTokenCalls, 1);
+});

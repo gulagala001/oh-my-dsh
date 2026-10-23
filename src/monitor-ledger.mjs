@@ -133,7 +133,7 @@ export function monitorEventQuery(params, now = Date.now()) {
 /** Derived metadata only; no messages, credentials or tool arguments are stored. */
 export class MonitorLedger {
   constructor(directory, { now = Date.now } = {}) {
-    this.now = now; this.error = null; this.imported = new Map(); this.closed = false;
+    this.now = now; this.error = null; this.imported = new Map(); this.closed = false; this.eventChanges = 0;
     this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.legacyCountCache = null; this.overviewCache = null; this.costCache = null;
     try {
       mkdirSync(join(directory, 'monitor-v1'), { recursive: true, mode: 0o700 });
@@ -185,9 +185,13 @@ export class MonitorLedger {
     try {
       let data = null;
       if (entry.data && typeof entry.data === 'object') { data = JSON.stringify(entry.data); if (data.length > 8000) data = null; }
-      this.insertEvent.run(text(entry.id, 512) || randomUUID(), text(entry.sessionId), text(entry.kind) || 'unknown', number(entry.at) ?? this.now(),
+      const result = this.insertEvent.run(text(entry.id, 512) || randomUUID(), text(entry.sessionId), text(entry.kind) || 'unknown', number(entry.at) ?? this.now(),
         text(entry.status, 32) || 'success', text(entry.title, 400), text(entry.detail, 2000),
         number(entry.count), Number.isFinite(entry.savedTokens) ? entry.savedTokens : null, number(entry.inputTokens), number(entry.outputTokens), data);
+      // These direct writes cannot affect receipt metrics. Like total_changes(),
+      // this counter includes rolled-back writes; ignored inserts contribute zero.
+      // Trigger side effects and writes through other paths still invalidate reads.
+      this.eventChanges += Number(result.changes);
       return true;
     } catch (error) { this.error = String(error.message); return false; }
   }
@@ -264,7 +268,7 @@ export class MonitorLedger {
     const version = this.db.prepare('SELECT total_changes() changes,(SELECT data_version FROM pragma_data_version) version,(SELECT MAX(at) FROM calls) lastAt').get();
     const effective = [...args];
     if (upperIndex !== undefined) effective[upperIndex] = Math.min(effective[upperIndex], version.lastAt ?? effective[upperIndex]);
-    return hash([version.changes, version.version, query, effective]);
+    return hash([version.changes - this.eventChanges, version.version, query, effective]);
   }
   metricRows(cacheName, sql, args, upperIndex) {
     const key = this.metricCacheKey(sql, args, upperIndex);
