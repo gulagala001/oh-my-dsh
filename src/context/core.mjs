@@ -163,13 +163,14 @@ export function recordSnapshot(session, record, index = createSurfaceIndex(sessi
 
 // Continuation considers fresh work only, never lookback, protected messages,
 // old checkpoints, or binary attachment bytes already stored by the host.
+const preparationMessage = (e, message) => ['assistant/message', 'tool/result'].includes(e.type) && !eventSource(e)
+  && message?.content.some(b => b.type !== 'reasoning' && (b.type !== 'text' || b.text?.trim())) ? message : null;
 export function preparationWorkload(session, state, events) {
   const index = createSurfaceIndex(session);
   const covered = new Set(activeRecords(state).flatMap(r => liveSpan(session, r, index)?.seqs || []));
-  const fresh = events.filter(e => !covered.has(e.seq) && (actualUser(e)
-    || (['assistant/message', 'tool/result'].includes(e.type) && !eventSource(e))));
-  return { events: fresh.length, estimatedTokens: Math.ceil(fresh.reduce((n, e) =>
-    n + contentChars(session.deriveEventMessage(e)?.content), 0) / 4) };
+  const read = summaryMessageReader(session);
+  const fresh = events.flatMap(e => index.positions.has(e.seq) && !covered.has(e.seq) && preparationMessage(e, read(e)) || []);
+  return { events: fresh.length, estimatedTokens: Math.ceil(fresh.reduce((n, m) => n + contentChars(m.content), 0) / 4) };
 }
 
 export function normalizeChoices(value, state, session, allowedIds) {
@@ -203,7 +204,7 @@ export function exposedTrace(session, { maxChars = 0, afterSeq = -1 } = {}) {
   return null;
 }
 
-function legacyPrepareCandidate(session, state, cfg, pairing) {
+function legacyPrepareCandidate(session, state, cfg, pairing, minimumEvents) {
   const nodes = session.surface.nodes;
   const events = nodes.map(seq => session.eventAt(seq));
   const reserved = new Set(activeRecords(state).flatMap(r => r.mode === 'raw' ? r.sourceSeqs : [r.carrierSeq]));
@@ -230,6 +231,7 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
     // The window is a preferred size; a tool round-trip is never split.
     let end = Math.min(run.length, cfg.digestWindow);
     while (end < run.length && (!pairing.after(session, run[end - 1].seq)
+      || preparationWorkload(session, state, run.slice(0, end)).events < minimumEvents
       || preparationWorkload(session, state, run.slice(0, end)).estimatedTokens < (cfg.prepareContinueTokens || 0))) end++;
     if (!pairing.after(session, run[end - 1].seq)) {
       while (end > 0 && !pairing.after(session, run[end - 1].seq)) end--;
@@ -240,24 +242,30 @@ function legacyPrepareCandidate(session, state, cfg, pairing) {
   for (const e of events.slice(0, stop)) {
     if (boundary(e)) {
       const found = take();
-      if (found && preparationWorkload(session, state, found).estimatedTokens >= (cfg.prepareContinueTokens || 0)) return found;
+      if (found) {
+        const work = preparationWorkload(session, state, found);
+        if (work.events >= minimumEvents && work.estimatedTokens >= (cfg.prepareContinueTokens || 0)) return found;
+      }
       run = [];
     }
     else {
       run.push(e);
       if (run.length >= cfg.digestWindow) {
         const found = take();
-        if (found && preparationWorkload(session, state, found).estimatedTokens >= (cfg.prepareContinueTokens || 0)) return found;
+        if (found) {
+          const work = preparationWorkload(session, state, found);
+          if (work.events >= minimumEvents && work.estimatedTokens >= (cfg.prepareContinueTokens || 0)) return found;
+        }
       }
     }
   }
   return take();
 }
 
-export function prepareCandidate(session, state, cfg, pairing) {
+export function prepareCandidate(session, state, cfg, pairing, { minimumEvents = 0 } = {}) {
   const index = createSurfaceIndex(session);
   if (cfg.preprocessBoundaries === true) {
-    const events = legacyPrepareCandidate(session, state, cfg, pairing);
+    const events = legacyPrepareCandidate(session, state, cfg, pairing, minimumEvents);
     if (events?.some(isTaskInjection)) Object.assign(events, { wholeWindow: true, windowSeqs: events.map(e => e.seq), retainedSeqs: [] });
     return events;
   }
@@ -269,30 +277,30 @@ export function prepareCandidate(session, state, cfg, pairing) {
     for (const seq of span.seqs) owners.set(seq, record);
   }
   const summaryRead = summaryMessageReader(session);
-  const meaningful = seq => !keep.has(seq) && !isTaskInjection(session.eventAt(seq)) && Boolean(session.deriveEventMessage(session.eventAt(seq)));
+  const meaningful = seq => !keep.has(seq) && Boolean(summaryRead(session.eventAt(seq)));
   let first = -1;
   for (let i = 0; i < stop; i++) {
     if (!meaningful(nodes[i]) || owners.has(nodes[i])) continue;
     if (pairing.before(session, nodes[i])) { first = i; break; }
   }
   if (first < 0) return null;
-  let end = first, lastSafe = -1, chars = 0, members = 0, freshChars = 0;
+  let end = first, lastSafe = -1, chars = 0, members = 0, freshChars = 0, freshEvents = 0, inputLimited = false;
   const maxChars = (cfg.prepareInputTokens || 300000) * 4;
   for (; end < stop; end++) {
     const seq = nodes[end], e = session.eventAt(seq);
-    if (!keep.has(seq) && !owners.has(seq) && (actualUser(e)
-      || (['assistant/message', 'tool/result'].includes(e.type) && !eventSource(e)))) freshChars += contentChars(session.deriveEventMessage(e)?.content);
-    if (summaryRead(e)) { chars += JSON.stringify(keep.has(seq) ? '[Protected host context retained in place.]' : materialText(summaryRead(e).content, seq)).length + 80; if (!keep.has(seq)) members++; }
+    const message = summaryRead(e), fresh = !keep.has(seq) && !owners.has(seq) && preparationMessage(e, message);
+    if (fresh) { freshChars += contentChars(fresh.content); freshEvents++; }
+    if (message) { chars += JSON.stringify(keep.has(seq) ? '[Protected host context retained in place.]' : materialText(message.content, seq)).length + 80; if (!keep.has(seq)) members++; }
     const splitRecord = [...spans.values()].some(span => span.start <= end && span.end > end);
     if (!splitRecord && pairing.after(session, seq)) {
       if (chars > maxChars) {
         if (lastSafe < first) throw Error('一个完整工具往返超过预处理输入预算；原文保留，请提高输入预算。');
-        end = lastSafe; break;
+        end = lastSafe; inputLimited = true; break;
       }
       lastSafe = end;
       // A short first window must grow with new arrivals instead of blocking
       // every later attempt below the minimum text threshold forever.
-      if (members >= cfg.digestWindow && Math.ceil(freshChars / 4) >= (cfg.prepareContinueTokens || 0)) break;
+      if (members >= cfg.digestWindow && freshEvents >= minimumEvents && Math.ceil(freshChars / 4) >= (cfg.prepareContinueTokens || 0)) break;
     }
   }
   if (end >= stop) end = lastSafe;
@@ -307,17 +315,18 @@ export function prepareCandidate(session, state, cfg, pairing) {
   if (parents.some(r => !spans.get(r.id).seqs.every(seq => selectedSet.has(seq)))) return null;
   const events = selected.map(seq => session.eventAt(seq));
   if (!events.some(e => session.deriveEventMessage(e))) return null;
-  Object.assign(events, { windowSeqs, retainedSeqs: windowSeqs.filter(seq => keep.has(seq)), parents: parents.map(r => r.id), wholeWindow: true });
+  Object.assign(events, { windowSeqs, retainedSeqs: windowSeqs.filter(seq => keep.has(seq)), parents: parents.map(r => r.id), wholeWindow: true, inputLimited });
   return events;
 }
 export function backlogView(session, state, cfg, index = createSurfaceIndex(session), spans) {
   const keep = protectedSeqs(session, state, cfg), reserved = new Set();
   for (const r of activeRecords(state)) for (const seq of (spans ? spans.get(r) : liveSpan(session, r, index))?.seqs || []) reserved.add(seq);
   const nodes = session.surface.nodes, stop = preparationStop(session, cfg);
+  const read = summaryMessageReader(session);
   let events = 0, tokens = 0, recentEvents = 0;
   for (let i = 0; i < nodes.length; i++) {
-    const seq = nodes[i], m = session.deriveEventMessage(session.eventAt(seq));
-    if (keep.has(seq) || reserved.has(seq) || !m || isTaskInjection(session.eventAt(seq))) continue;
+    const seq = nodes[i], e = session.eventAt(seq), m = preparationMessage(e, read(e));
+    if (keep.has(seq) || reserved.has(seq) || !m) continue;
     if (i >= stop) { recentEvents++; continue; }
     events++; tokens += messageTokens(m);
   }

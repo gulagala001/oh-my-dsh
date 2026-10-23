@@ -7,6 +7,10 @@ import { OptimizationCard } from '../context-evidence.jsx';
 const MODE = { raw: ['原文', 'gray'], detail: ['摘要＋资料', 'blue'], brief: ['仅摘要', 'green'] };
 const CHOICE = { keep: '保留原文', detail: '摘要＋资料', brief: '仅摘要' };
 const retryText = r => ({ 'waiting-main': '等待主会话成功后恢复', 'waiting-events': '等待新增事件后重试', manual: '重试已暂停', retrying: '等待自动重试' })[r];
+const preparationWait = deferred => !deferred ? null : deferred.reason === 'first-window-budget'
+  ? `首批有效内容 ${deferred.events}/${deferred.minimumEvents} 条 · 输入预算不足，请提高预算或手动准备`
+  : deferred.reason === 'first-window' ? `首批有效内容 ${deferred.events}/${deferred.minimumEvents} 条 · 等待积累`
+    : `未达到最低文本量：${deferred.events} 条、≈${k(deferred.estimatedTokens)}`;
 
 /** Pipeline lights shared by the overview, this section and the dock popover. */
 export function pipelineSteps(c) {
@@ -18,11 +22,12 @@ export function pipelineSteps(c) {
   const adaptive = c.compressionMode === 'adaptive', a = c.adaptive || {};
   const prepareError = c.failures?.prepare, coordError = c.failures?.coordinate;
   const cacheWait = c.memoryCache?.enabled && c.memoryCache.waitingReason;
+  const materialWait = preparationWait(c.prepareDeferred);
   const first = adaptive
     ? { key: 'check', title: '主动检查', running: a.running, tone: a.running ? 'blue' : a.error ? 'red' : 'green',
       text: a.running ? '正在判断' : a.error ? `失败：${a.error}` : a.waitingReason || (a.lastDecision === 'skip' ? `保留 · ${a.reason || ''}` : a.lastDecision === 'compress' ? '已准备替换' : '等待新内容') }
-    : { key: 'prepare', title: '预处理', running: c.preparing, tone: c.preparing ? 'blue' : prepareError ? 'red' : cacheWait ? 'gray' : 'green',
-      text: c.preparing ? '正在生成摘要' : prepareError ? `${retryText(c.retry?.prepare) || '失败'}：${prepareError.message}` : cacheWait || `待处理 ${c.backlog?.events ?? 0} 条 · ≈${k(c.backlog?.estimatedTokens)}` };
+    : { key: 'prepare', title: '预处理', running: c.preparing, tone: c.preparing ? 'blue' : prepareError ? 'red' : cacheWait || materialWait ? 'gray' : 'green',
+      text: c.preparing ? '正在生成摘要' : prepareError ? `${retryText(c.retry?.prepare) || '失败'}：${prepareError.message}` : cacheWait || materialWait || `待处理 ${c.backlog?.events ?? 0} 条 · ≈${k(c.backlog?.estimatedTokens)}` };
   const second = adaptive
     ? { key: 'plan', title: '替换方案', tone: c.pending ? 'green' : 'gray', text: c.pending ? '结果已准备' : a.lastDecision === 'stale' ? '结果已过期' : '等待整理结果' }
     : { key: 'hub', title: '中枢', running: c.coordinating, tone: c.coordinating ? 'blue' : coordError ? 'red' : c.pending ? 'green' : 'gray',
@@ -109,7 +114,7 @@ export function ContextSection({ sessionId, visible, go, params }) {
           <Button kind="primary" icon="check" busy={action.busy === '/compact'} disabled={locked}
             onClick={() => s('/compact', {}, r => r.queued ? '已排队，下一次请求边界应用' : r.changed ? '替换已应用，原文仍在日志中' : '没有可应用的结果')}>应用</Button>
         </div> : pending?.error ? <Alert tone="warn">已准备的方案暂不可用：{pending.error}</Alert> : null}
-        {c.prepareDeferred && <p className="omc-hint">未达到预处理最低文本量：剩余 {c.prepareDeferred.events} 条、≈{k(c.prepareDeferred.estimatedTokens)}。</p>}
+        {c.prepareDeferred && <p className="omc-hint">{preparationWait(c.prepareDeferred)}。</p>}
         {c.manualQueued > 0 && <p className="omc-hint">{c.manualQueued} 项压缩等待请求边界。</p>}
       </Card>
     </div>

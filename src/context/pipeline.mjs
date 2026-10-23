@@ -180,7 +180,7 @@ export class ContextPipeline {
     }
     this.store.touch(s); this.arm(agent);
     if (this.mode(session) === 'adaptive') { void this.adaptive.check(agent); return; }
-    if (s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
+    if (!s.records.length || s.eventsSincePrepare >= this.config().digestEvery) void this.prepare(agent, false);
   }
   arm(agent, delay = this.config().flushIdleMs, kind = 'idle', since = Date.now(), options = {}) {
     const id = agent.session.id, key = id + ':' + kind;
@@ -205,7 +205,7 @@ export class ContextPipeline {
       if (kind === 'idle') this.idleSince.delete(id);
       const work = ['prepare', 'coordinate'].includes(kind) && this.state(agent.session).failures[kind]?.mainSuccess ? this.resumeMainSuccess(agent, kind)
         : kind === 'coordinate' ? this.coordinate(agent, forceReview, { retry: true })
-        : kind === 'prepare' ? this.prepare(agent, true, { retry: true }) : this.flushIdle(agent);
+        : kind === 'prepare' ? this.prepare(agent, Boolean(this.state(agent.session).failures.prepare?.forced), { retry: true }) : this.flushIdle(agent);
       void work.catch(e => this.reportError(agent, kind, e));
     }, kind === 'idle' ? Math.max(1, since + delay - Date.now()) : delay);
     timer.unref?.(); this.timers.set(key, timer);
@@ -292,7 +292,7 @@ export class ContextPipeline {
     clearTimeout(this.timers.get(key)); this.timers.delete(key); this.reviewTimers.delete(key);
     if (kind === 'coordinate') s.review.needed = true;
     this.store.save(s);
-    await this[kind](agent, true, { retry: true, mainSuccess: success });
+    await this[kind](agent, kind !== 'prepare' || Boolean(failure.forced), { retry: true, mainSuccess: success });
   }
   admitMainSuccess(agent, kind, success, controller) {
     if (!success) return;
@@ -344,7 +344,7 @@ export class ContextPipeline {
       s.failures.prepare.count = this.config().backgroundMaxRetries;
       s.failures.prepare.newEvents = 0; this.store.save(s);
     }
-    if (!force && !recovering && (s.eventsSincePrepare || 0) < this.config().digestEvery) return;
+    if (s.records.length && !force && !recovering && (s.eventsSincePrepare || 0) < this.config().digestEvery) return;
     clearTimeout(this.timers.get(key)); this.timers.delete(key);
     const controller = new AbortController(); this.controllers.set(key, controller);
     let providerFailure = false, validationFailure = false;
@@ -353,15 +353,17 @@ export class ContextPipeline {
       // Only recovery from a recorded failure receives a catch-up batch.
       const batchLimit = recovering ? this.config().prepareBatchWindows : 1;
       do {
-        const cfg = this.config(), events = prepareCandidate(session, s, cfg, this.adapter.pairing);
-        if (!events) { this.cachedPreparation.clearWaiting(session); break; }
-        const workload = preparationWorkload(session, s, events);
-        if (workload.estimatedTokens < cfg.prepareContinueTokens) {
+        const cfg = this.config(), minimumEvents = !force && !handoff && !s.records.length ? cfg.digestWindow : 0;
+        const events = prepareCandidate(session, s, cfg, this.adapter.pairing, { minimumEvents });
+        const workload = preparationWorkload(session, s, events || []);
+        if (workload.events < minimumEvents || events && workload.estimatedTokens < cfg.prepareContinueTokens) {
           this.cachedPreparation.clearWaiting(session);
-          s.prepareDeferred = { ...workload, reason: 'below-minimum', at: Date.now() };
-          s.prepareBacklog = backlogView(session, s, cfg); this.store.save(s); break;
+          s.prepareDeferred = { ...workload, minimumEvents, inputBudget: cfg.prepareInputTokens, reason: workload.events < minimumEvents
+            ? events?.inputLimited ? 'first-window-budget' : 'first-window' : 'below-minimum', at: Date.now() };
+          s.prepareBacklog = backlogView(session, s, cfg); this.store.touch(s); break;
         }
         delete s.prepareDeferred;
+        if (!events) { this.cachedPreparation.clearWaiting(session); this.store.touch(s); break; }
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
         if (s.failures.prepare) inputs.previous_rejection = s.failures.prepare.message;
@@ -409,6 +411,7 @@ export class ContextPipeline {
     })().catch(e => {
       if (!controller.signal.aborted) {
         this.reportError(agent, 'prepare', e, providerFailure, validationFailure);
+        s.failures.prepare.forced = force;
         const delay = Math.min(60000, 1000 * 2 ** Math.min(6, s.failures.prepare?.count || 1));
         s.prepareRetryAt = Date.now() + delay; this.store.save(s);
         if (s.failures.prepare.count <= this.config().backgroundMaxRetries) this.arm(agent, delay, 'prepare');
@@ -777,6 +780,14 @@ export class ContextPipeline {
     for (const id of [...this.cachedPreparation.waiting.keys()]) {
       const agent = this.agents.get(id);
       if (agent) this.resumeCachedPreparation(agent);
+    }
+    // Re-evaluate material already waiting on a setting the user has relaxed.
+    // This does not wake sessions without deferred work or bypass their cadence.
+    if (cfg.contextEnabled) for (const agent of this.agents.values()) {
+      const s = this.state(agent.session), deferred = s.prepareDeferred;
+      if (!deferred || this.mode(agent.session) !== 'pipeline') continue;
+      const enough = deferred.events >= (s.records.length ? 0 : cfg.digestWindow) && deferred.estimatedTokens >= cfg.prepareContinueTokens;
+      if (enough || deferred.reason === 'first-window-budget' && cfg.prepareInputTokens > deferred.inputBudget) void this.prepare(agent, false);
     }
     this.adaptive.reconfigure();
   }

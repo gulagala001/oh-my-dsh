@@ -331,3 +331,21 @@ for (const blockedBy of ['snapshot', 'budget']) test('a deferred manual adaptive
   assert.equal(f.state.adaptive.lastDecision, 'skip');
   assert.equal(f.pipeline.adaptive.forced.size, 0);
 });
+
+test('automatic cached preparation waits for a full first factual window and excludes PTC task wrappers', async t => {
+  const f = await fixture(t);
+  f.take(); await f.pipeline.prepare(f.agent);
+  assert.equal(f.calls.length, 0);
+  assert.equal(f.state.prepareDeferred.events, 2);
+  const control = f.session.append('assistant/message', { turn: 1, step: 2, message: { id: 'ptc-control', role: 'assistant', source: { kind: 'model' },
+    content: [{ type: 'tool-call', id: 'ptc-todo', name: 'run_code', arguments: JSON.stringify({ code: 'console.log(await tools.todo_write({op:"list"}));' }) }] } }, { surfaceOp: 'append' });
+  const result = f.session.append('tool/result', { turn: 1, step: 2, message: { id: 'ptc-control-result', role: 'tool', toolCallId: 'ptc-todo',
+    content: [{ type: 'text', text: 'Historical task snapshot' }] } }, { surfaceOp: 'append' });
+  for (let i = 0; i < 23; i++) exchange(f.session, 'New measured result. '.repeat(10));
+  const main = f.take(); await f.pipeline.prepare(f.agent);
+  assert.equal(f.calls.length, 1);
+  const payload = JSON.parse(f.calls[0].messages.at(-1).content[0].text.split('\n\n').at(-1));
+  assert.equal(payload.summary_scope.event_seqs.length, 48);
+  assert.ok(!payload.segment.some(entry => [control.seq, result.seq].includes(entry.seq)));
+  assert.deepEqual(f.calls[0].messages.slice(0, -1), main.messages);
+});

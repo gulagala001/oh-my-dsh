@@ -153,7 +153,7 @@ function Frequency({ config: c, commit }) {
   const [custom, setCustom] = useState(false);
   const value = custom ? 'custom' : contextFrequencyOf(c);
   const number = (key, label, min = 1, scale = 1) => <NumberField label={label} value={c[key]} min={min} scale={scale} onCommit={v => commit({ [key]: v })}/>;
-  return <Row title="处理频率" hint={`${frequencyHints[value]} 当前：预处理每 ${c.digestEvery} 条新事件，中枢每 ${c.coordinatorEvery} 段新摘要，替换间隔 ${c.surgeryCooldownSteps} 步以上。`}
+  return <Row title="处理频率" hint={`${frequencyHints[value]} 当前：首批至少 ${c.digestWindow} 条可摘要的有效事件，后续每 ${c.digestEvery} 条新事件触发；中枢每 ${c.coordinatorEvery} 段新摘要，替换间隔 ${c.surgeryCooldownSteps} 步以上。`}
     extra={value === 'custom' && <Fields>
       {number('digestEvery', '预处理频率 · 新事件数')}{number('digestWindow', '目标分段窗口 · 事件数')}
       {number('coordinatorEvery', '中枢频率 · 新摘要数')}{number('coordinatorMinGapMs', '中枢最短间隔 · 秒', 0, 1000)}
