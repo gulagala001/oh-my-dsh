@@ -23,7 +23,7 @@ core.push('test/image-budget.test.mjs');
 core.push('test/context-first-window.test.mjs');
 core.push('test/host-component-overlay.test.mjs');
 core.push('test/ultra-mode.test.mjs', 'test/conversation-input-owner.test.mjs', 'test/model-label-contract.test.mjs');
-core.push('test/overview-native-style.test.mjs');
+core.push('test/overview-native-style.test.mjs', 'test/session-overview.test.mjs', 'test/session-overview-client.test.mjs');
 core.push('test/web-chat-page-scripts.test.mjs');
 core.push('test/context-optimization.test.mjs', 'test/bc-compatibility.test.mjs',
   'test/personality-files-session.test.mjs', 'test/projectless-disposal.test.mjs', 'test/projectless-cancellation.test.mjs');

@@ -1,12 +1,9 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import { whalePath } from './brand.mjs';
-import { headerWorkflows, workflowChildLabels } from './workflow-header.mjs';
-import { collectAgents, collectOutputs, collectSources, childAddress, whaleColor, projection, AGENTS_KIND, JOBS_KIND, SOURCES_KIND, OUTPUTS_KIND } from './session-overview.mjs';
+import { collectAgents, childAddress, whaleColor, projection, AGENTS_KIND, JOBS_KIND, SOURCES_KIND, OUTPUTS_KIND } from './session-overview.mjs';
 import { createTeamOverview, createJobsOverview, createWorkflowOverview } from '../../lib/host/overview-native.factory.mjs';
-import { liveWorkflowData, workflowJobs } from './workflow-status.mjs';
-
-const empty = { subscribe: () => () => {}, getSnapshot: () => undefined };
 const useStore = store => useSyncExternalStore(useCallback(fn => store.subscribe(fn), [store]), useCallback(() => store.getSnapshot(), [store]));
 const teamNative = createTeamOverview(require), jobsNative = createJobsOverview(require), workflowNative = createWorkflowOverview(require);
 function Whale({ id }) { return <svg viewBox="0 0 24 18" width="20" height="20" style={{ flexShrink: 0, color: whaleColor(id) }} aria-hidden="true"><path d={whalePath} fill="currentColor"/></svg>; }
@@ -80,34 +77,25 @@ export function applySessionOverview(ctx, openCU) {
     function Header({ Original, ...props }) {
       const { sessionId } = props;
       const sessions = props.useSessions(value => value), statuses = props.useSessionStatus(value => value);
-      const chat = props.useChat?.(value => value);
-      const events = useStore(scope.sessions.binding(sessionId)?.eventSource ?? empty);
       const jobsState = useStore(scope.jobs.state);
       const durable = projection(sessions, sessionId).omdOverview;
-      const workflows = useMemo(() => [...new Map([...(durable?.workflows ?? []), ...headerWorkflows(chat)].map(node => [node.id, node])).values()].sort((a, b) => b.anchorSeq - a.anchorSeq), [chat, durable]);
-      const labels = useMemo(() => workflowChildLabels(events?.entries ?? []), [events]);
-      const runs = useMemo(() => workflowJobs(events?.entries ?? []), [events]);
-      const agents = useMemo(() => collectAgents(sessionId, sessions, statuses, workflows, labels), [sessionId, sessions, statuses, workflows, labels]);
-      const seen = useRef(new Map());
+      const agents = useMemo(() => collectAgents(sessionId, sessions, statuses), [sessionId, sessions, statuses]);
+      const refreshProjection = useCallback(id => {
+        void scope.sessions.refreshProjections(id).catch(error => scope.conversation.input.for(scope.sessions.scope(sessionId)).notify('error', error.message));
+      }, [sessionId]);
       useEffect(() => scope.jobs.watchRows(sessionId), [sessionId]);
       useEffect(() => {
-        const keys = new Set(agents.parents);
-        for (const id of keys) {
-          const summary = sessions.byId?.[id];
-          const revision = `${summary?.updatedAt ?? ''}:${summary?.running ?? ''}`;
-          if (seen.current.get(id) === revision) continue;
-          seen.current.set(id, revision);
-          void scope.sessions.refreshProjections(id).catch(() => {});
-        }
-        for (const id of seen.current.keys()) if (!keys.has(id)) seen.current.delete(id);
-      }, [agents.parents, sessions.byId]);
+        // The native reader owns in-flight deduplication, failure state and
+        // reconnect repair. Failed reads need an explicit retry, not a shadow
+        // revision marker or an unbounded render-driven retry loop.
+        for (const issue of agents.projectionIssues) if (issue.state === 'idle') refreshProjection(issue.id);
+      }, [agents.projectionIssues, refreshProjection]);
       const data = useMemo(() => {
         const rows = agents.rows.map(row => ({ ...row, rootId: sessionId }));
         const allJobs = jobsState?.rows?.[sessionId] ?? [];
         return { ...agents, rows, active: rows.filter(row => ['running', 'provisioning'].includes(row.status)),
-          context: props, workflows: agents.workflows.map(node => node.ownerId === sessionId ? { ...node, data: liveWorkflowData(node, runs, allJobs, sessionId) } : node),
-          outputs: [...new Map([...(durable?.outputs ?? []), ...collectOutputs(chat)].map(item => [item.id, item])).values()],
-          sources: [...new Map([...(durable?.sources ?? []), ...collectSources(events?.entries ?? [])].map(item => [item.id, item])).values()],
+          context: props, ready: Boolean(durable), refreshProjection,
+          outputs: durable?.outputs ?? [], sources: durable?.sources ?? [],
           allJobs, jobs: allJobs.filter(job => ['bash', 'pwsh'].includes(job.kind) && ['running', 'stopping'].includes(job.status)), whalePath,
           openAgent, openPage: section => openPage(sessionId, section), openJob: id => openPage(sessionId, 'jobs', { jobId: id }),
           openMainAgent: row => scope.uiWorkspace.openSession({ parentSessionId: row.parentId, childSessionId: row.id, mode: row.mode }),
@@ -119,9 +107,9 @@ export function applySessionOverview(ctx, openCU) {
             return open ? open(row.url) : window.open(row.url, '_blank', 'noopener,noreferrer');
           },
         };
-      }, [agents, jobsState, sessionId, chat, events, workflows, durable, runs]);
+      }, [agents, jobsState, sessionId, durable, refreshProjection]);
       useLayoutEffect(() => { states.set(sessionId, data); notify(); }, [sessionId, data]);
-      useEffect(() => () => { states.delete(sessionId); seen.current.clear(); notify(); }, [sessionId]);
+      useEffect(() => () => { states.delete(sessionId); notify(); }, [sessionId]);
       return <Original {...props} overview={data}/>;
     }
     scope.slots.inject('conversation.session.header.utilities', () => {
@@ -137,7 +125,10 @@ export function applySessionOverview(ctx, openCU) {
       const slots = entriesFor(scope.slots, 'conversation.session.header.actions', entry => ['subagent-catalog', 'agent-team', 'job-list'].includes(entry.options.id));
       return decorateSlotComponent(slots, 'conversation.session.header.actions', () => true, original => {
         const Original = original.component;
-        return function NativeEntry(props) { const overview = useOverview(props.sessionId); return overview ? null : <Original {...props}/>; };
+        return function NativeEntry(props) {
+          const overview = useOverview(props.sessionId);
+          return overview?.ready && !overview.projectionIssues.length ? null : <Original {...props}/>;
+        };
       });
     });
     function JobsPage({ sessionId, useTabInfo }) {
@@ -189,7 +180,16 @@ export function applySessionOverview(ctx, openCU) {
           },
         }) });
       }
-      return <div style={{ height: '100%', overflow: 'auto', paddingBlock: 12 }}><Overview sessionId={props.sessionId} variant={props.variant} overview={data} panels={panels}/></div>;
+      const issues = data.projectionIssues.filter(issue => props.variant === 'agents' || issue.id === props.sessionId);
+      return <div style={{ height: '100%', overflow: 'auto', paddingBlock: 12 }}>
+        {issues.map(issue => <div key={issue.id} className={jobsNative.styles.notice} role={issue.state === 'error' ? 'alert' : 'status'}>
+          {data.rows.find(row => row.id === issue.id)?.label || '会话总览'}：{issue.state === 'error' ? issue.error || '读取失败'
+            : issue.state === 'migration-required' ? '请先打开此会话完成历史迁移。'
+              : issue.state === 'ready' ? '当前宿主未提供总览，请重新启用插件后刷新。' : '正在读取…'}
+          {['error', 'migration-required'].includes(issue.state) && <Button size="sm" onClick={() => data.refreshProjection(issue.id)}>重试读取</Button>}
+        </div>)}
+        {data.ready && <Overview sessionId={props.sessionId} variant={props.variant} overview={data} panels={panels}/>}
+      </div>;
     }
     for (const [kind, title, variant] of [[AGENTS_KIND, '子智能体', 'agents'], [JOBS_KIND, '后台进程', 'jobs'], [SOURCES_KIND, '来源', 'sources'], [OUTPUTS_KIND, '输出内容', 'outputs']]) {
       const id = `oh-my-dsh/${kind}`;

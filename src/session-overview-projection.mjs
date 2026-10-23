@@ -64,8 +64,10 @@ export function foldOverview(state, event) {
     if (index < 0) return state;
     const workflows = [...state.workflows], old = workflows[index], value = { ...old.data };
     if (event.type === 'tool-workflow/agent-start') {
-      const key = data.phase ?? '';
-      const phase = old.data.phases.find(phase => phase.key === key) ?? { key, phase: data.phase ?? null, members: [] };
+      // Match the native panel's identity: absent and explicitly empty are
+      // distinct phases, including when a saved projection is read cold.
+      const name = data.phase ?? null, key = name === null ? 'missing' : `value:${name.length}:${name}`;
+      const phase = old.data.phases.find(phase => phase.key === key) ?? { key, phase: name, members: [] };
       const next = { ...phase, members: [...phase.members, { seq: data.seq, childId: data.childId, label: data.label, status: 'running' }] };
       value.phases = old.data.phases.some(phase => phase.key === key) ? old.data.phases.map(phase => phase.key === key ? next : phase) : [...old.data.phases, next];
     } else if (event.type === 'tool-workflow/agent-end') {
@@ -82,7 +84,7 @@ export function foldOverview(state, event) {
 export function installOverviewProjection(ctx) {
   const view = z.object({ sources: z.array(z.any()), outputs: z.array(z.any()), workflows: z.array(z.any()), activity: z.string().optional(), outcome: z.string().nullable().optional() });
   const schema = view.extend({ inheritedEventCount: z.number(), turn: z.number().optional(), calls: z.record(z.string(), z.string()) });
-  ctx.sessionProjections.register({ key: 'omdOverview', stateVersion: 1, stateSchema: schema,
+  ctx.sessionProjections.register({ key: 'omdOverview', stateVersion: 2, stateSchema: schema,
     init: (_header, inheritedEventCount) => ({ inheritedEventCount, sources: [], outputs: [], workflows: [], calls: {} }), apply: foldOverview,
     wire: { viewSchema: view, view: ({ sources, outputs, workflows, activity, outcome }) => ({ sources, outputs, workflows, ...(activity ? { activity } : {}), ...(outcome !== undefined ? { outcome } : {}) }) },
   });
