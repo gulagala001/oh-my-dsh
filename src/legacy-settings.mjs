@@ -72,11 +72,11 @@ export async function legacySettings(ctx, namespace, schema, aliases = []) {
   for (const [key, field] of Object.entries(legacy?.[namespace] ?? {})) {
     fields[key] = field; origins[key] = namespace;
   }
-  const ownership = rows => ({
-    override: rows.find(row => row.entry.options.id === namespace)?.override ?? {},
-    user: ctx.get('settings')?.describe().find(row => row.ns === namespace)?.user ?? {},
-  });
-  const unowned = (key, rows, latest) => !Object.hasOwn(latest.override, key) && !Object.hasOwn(latest.user, key)
+  // Native SettingsForms.user projects these same profile overrides. Reading
+  // describe() again rebuilds every plugin form and rereads the profile, but
+  // cannot add another owned field. Keep one fresh ownership snapshot per read.
+  const ownership = rows => rows.find(row => row.entry.options.id === namespace)?.override ?? {};
+  const unowned = (key, rows, latest) => !Object.hasOwn(latest, key)
     && (origins[key] === namespace || !aliasActive(rows, origins[key]));
   const latest = ownership(entries), value = {};
   for (const [key, field] of Object.entries(schema.dict)) {
@@ -84,8 +84,6 @@ export async function legacySettings(ctx, namespace, schema, aliases = []) {
     const parsed = field(fields[key]);
     value[key] = parsed && typeof parsed.get === 'function' ? parsed.get() : parsed;
   }
-  // describe() emits native ownership notifications synchronously; a listener
-  // may unload this owner before the initial fallback is returned.
   checkActive();
   const patchFor = rows => {
     const latest = ownership(rows);
@@ -93,7 +91,7 @@ export async function legacySettings(ctx, namespace, schema, aliases = []) {
   };
   return { value, current() {
     // A delayed import is a fallback, never an override of a saved live edit.
-    if (!active()) return {};
+    if (!active() || !Object.keys(value).length) return {};
     const rows = ctx.get('configEditor')?.configuration() ?? [];
     const initializing = owner.state === 1 && target?.fiber === owner && target.entry.fiber === owner && target.entry.options.name === target.name && !target.entry.disabled;
     if (!initializing && !targetAvailable(rows)) return {};
