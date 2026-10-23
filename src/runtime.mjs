@@ -353,10 +353,11 @@ export async function apply(ctx, config) {
         if (await handleMonitorApi({ hub, ctx, req, res, url, send })) return;
         if (url.pathname === '/oh-my-dsh/api/state' && req.method === 'GET' && url.searchParams.get('view') === 'summary') {
           if (id) validateSessionId(id);
+          const query = monitorQuery({ session: id || '', range: url.searchParams.get('range') || 'session' });
+          const archives = await withRequestSignal(req, res, signal => hub.store.readMonitorSnapshot(signal));
           const agent = id ? ctx.agents.get(id) : undefined;
           const session = agent?.session ?? (id ? ctx.sessions.get(id) : undefined);
-          const query = monitorQuery({ session: id || '', range: url.searchParams.get('range') || 'session' });
-          const { ids, selected: all, metrics: legacyMetrics, actions } = monitorSelection(hub.store.monitorStates(), id, query.range);
+          const { ids, selected: all, metrics: legacyMetrics, actions } = monitorSelection(archives.states, id, query.range);
           if (id && !session && !all.some(state => state.id === id) && !hub.monitor.hasSession(id)
             && !await coldNativeMonitorTarget(ctx, id, req, res)) {
             send(res, 404, { error: '会话不存在' }); return;

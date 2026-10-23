@@ -5,6 +5,7 @@ import { monitorSelection, monitorPerformance } from './monitoring.mjs';
 import { sourceName } from './message-source.mjs';
 import { validateSessionId } from './hub-store.mjs';
 import { coldNativeMonitorTarget } from './monitor-session.mjs';
+import { withRequestSignal } from './http.mjs';
 
 export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
   if (url.pathname === '/oh-my-dsh/api/monitor/prices') {
@@ -23,11 +24,14 @@ export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
     const id = url.searchParams.get('session');
     if (id) validateSessionId(id);
     const query = monitorEventQuery(url.searchParams);
-    const selection = monitorSelection(hub.store.monitorStates(), id, query.range);
-    const ids = new Set(selection.selected.map(state => state.id));
-    if (id) ids.add(id);
-    res.setHeader('Cache-Control', 'no-store');
-    send(res, 200, hub.monitor.events(ids, query));
+    await withRequestSignal(req, res, async signal => {
+      const archives = await hub.store.readMonitorSnapshot(signal);
+      const selection = monitorSelection(archives.states, id, query.range);
+      const ids = new Set(selection.selected.map(state => state.id));
+      if (id) ids.add(id);
+      res.setHeader('Cache-Control', 'no-store');
+      send(res, 200, hub.monitor.events(ids, query));
+    });
     return true;
   }
   if (url.pathname === '/oh-my-dsh/api/monitor/live') {
@@ -59,13 +63,20 @@ export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
   }
   res.setHeader('Cache-Control', 'no-store');
   if (!['context', 'usage'].includes(url.searchParams.get('view'))) await hub.pricing?.loaded();
-  send(res, 200, monitorSnapshot({ hub, ctx, params: url.searchParams, id, session, agent, stored }));
+  await withRequestSignal(req, res, async signal => {
+    const archives = url.searchParams.get('view') === 'context' ? undefined : await hub.store.readMonitorSnapshot(signal);
+    const currentAgent = id ? ctx.agents.get(id) : undefined;
+    const currentSession = currentAgent?.session ?? (id ? ctx.sessions.get(id) : undefined);
+    const currentStored = archives?.states.find(state => state.id === id) ?? stored;
+    send(res, 200, monitorSnapshot({ hub, ctx, params: url.searchParams, id, session: currentSession,
+      agent: currentAgent, stored: currentStored, archives }));
+  });
   return true;
 }
 
 // Read-only projections. Optional measurements must never prevent call history
-// from being read, and the API never starts a model or loads message bodies.
-export function monitorSnapshot({ hub, ctx, params, id, session, agent, stored }) {
+// from being read, and the API never starts a model or activates a Session.
+export function monitorSnapshot({ hub, ctx, params, id, session, agent, stored, archives }) {
   const query = monitorQuery(params);
   const view = params instanceof URLSearchParams ? params.get('view') : params?.view;
   if (view === 'context') {
@@ -73,13 +84,13 @@ export function monitorSnapshot({ hub, ctx, params, id, session, agent, stored }
     return { generatedAt: Date.now(), sessionId: id, ...readings, coverage: { message: warnings.join(' ') } };
   }
   const callsOnly = view === 'calls';
-  const states = hub.store.monitorStates();
+  const states = archives?.states ?? hub.store.monitorStates();
+  const unreadable = (archives?.errors ?? hub.store.monitorErrors).size;
   const selection = monitorSelection(states, id, query.range);
   const ids = new Set(selection.selected.map(state => state.id));
   if (id) ids.add(id);
   if (view === 'usage') {
     const data = hub.monitor.query(selection.selected, ids, query, undefined, { usageOnly: true });
-    const unreadable = hub.store.monitorErrors.size;
     return { ...data, sessionId: id, coverage: { partial: Boolean(unreadable || hub.monitor.error),
       message: [unreadable ? `${unreadable} 份历史档案无法读取，结果不完整；原文件已保留。` : '', hub.monitor.error ? '部分监控记录写入失败；原生执行不受影响。' : ''].filter(Boolean).join(' ') } };
   }
@@ -93,7 +104,6 @@ export function monitorSnapshot({ hub, ctx, params, id, session, agent, stored }
     return { ...call, price, cost: monitorCallCost(call, prices, price) };
   });
   if (callsOnly) {
-    const unreadable = hub.store.monitorErrors.size;
     return { ...data, sessionId: id, coverage: { ...data.coverage, partial: data.coverage.partial || Boolean(unreadable),
       message: [data.coverage.message, unreadable ? `${unreadable} 份历史档案无法读取，结果不完整；原文件已保留。` : ''].filter(Boolean).join(' ') } };
   }
@@ -128,7 +138,6 @@ export function monitorSnapshot({ hub, ctx, params, id, session, agent, stored }
     return { sampledAt: Date.now(), scope: '宿主进程', rssBytes: memory.rss,
       heapUsedBytes: memory.heapUsed, heapTotalBytes: memory.heapTotal, uptimeSeconds: process.uptime() };
   });
-  const unreadable = hub.store.monitorErrors.size;
   if (unreadable) warnings.push(`${unreadable} 份历史档案无法读取，结果不完整；原文件已保留。`);
   return { ...data, sessionId: id, actions: selection.actions,
     actionsScope: '当前会话范围的累计计数，不随时间筛选变化',
