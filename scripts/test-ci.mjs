@@ -23,7 +23,7 @@ core.push('test/overview-native-style.test.mjs');
 core.push('test/web-chat-page-scripts.test.mjs');
 core.push('test/context-optimization.test.mjs', 'test/bc-compatibility.test.mjs',
   'test/personality-files-session.test.mjs', 'test/projectless-disposal.test.mjs', 'test/projectless-cancellation.test.mjs');
-core.push('test/result-reduction-memo.test.mjs', 'test/legacy-identity.test.mjs');
+core.push('test/result-reduction-memo.test.mjs', 'test/legacy-identity.test.mjs', 'test/legacy-settings.test.mjs');
 core.push('test/evidence-lifecycle.test.mjs');
 core.push('test/client-injection.test.mjs');
 core.push('test/glyph-rendering.test.mjs');
