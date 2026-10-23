@@ -2,6 +2,30 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.2.omd.0.99.3",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 0.99.3 · DSH 0.2.1-rc.2",
+      "notes": [
+        "问题修复：人格多窗口保存拒绝过期配置，保留冲突草稿并关闭停用实例写权限。",
+        "问题修复：工作流收尾失败阻止继续派发，保留停止失败恢复锁并传回磁盘错误。",
+        "其他变更：同步六项内置组件版本、分发清单和来源文档。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.3.md"
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.99.3",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 0.99.3 · DSH 0.2.1-rc.1",
+      "notes": [
+        "问题修复：人格多窗口保存拒绝过期配置，保留冲突草稿并关闭停用实例写权限。",
+        "问题修复：工作流收尾失败阻止继续派发，保留停止失败恢复锁并传回磁盘错误。",
+        "其他变更：同步六项内置组件版本、分发清单和来源文档。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.3.md"
+    },
+    {
       "version": "0.2.1-rc.2.omd.0.99.2",
       "severity": "normal",
       "unpublished": false,

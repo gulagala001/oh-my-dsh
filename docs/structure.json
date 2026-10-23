@@ -68,6 +68,20 @@
       "site": true
     },
     {
+      "path": "docs/components.md",
+      "role": "sources",
+      "language": "zh",
+      "translation": "docs/components_EN.md",
+      "site": true
+    },
+    {
+      "path": "docs/components_EN.md",
+      "role": "sources",
+      "language": "en",
+      "translation": "docs/components.md",
+      "site": true
+    },
+    {
       "path": "docs/computer-use.md",
       "role": "guide",
       "language": "zh",
@@ -218,6 +232,18 @@
       "site": true
     },
     {
+      "path": "docs/release-0.99.2.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
+    },
+    {
+      "path": "docs/release-0.99.3.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
+    },
+    {
       "path": "docs/releases.md",
       "role": "release",
       "language": "zh",
@@ -318,26 +344,6 @@
       "role": "development",
       "language": "zh",
       "site": false
-    },
-    {
-      "path": "docs/components.md",
-      "role": "sources",
-      "language": "zh",
-      "translation": "docs/components_EN.md",
-      "site": true
-    },
-    {
-      "path": "docs/components_EN.md",
-      "role": "sources",
-      "language": "en",
-      "translation": "docs/components.md",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.99.2.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
     }
   ]
 }

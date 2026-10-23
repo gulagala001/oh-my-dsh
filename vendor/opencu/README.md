@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.0.7-dsh.0.2.1-rc.2"><img alt="OpenCU 2.0.7" src="https://img.shields.io/badge/release-OpenCU%202.0.7-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.0.8-dsh.0.2.1-rc.2"><img alt="OpenCU 2.0.8" src="https://img.shields.io/badge/release-OpenCU%202.0.8-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub 累计下载量" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>
@@ -31,10 +31,10 @@
 打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.0.7-dsh.0.2.1-rc.2/opencu-2.0.7-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/opencu-2.0.8-dsh.0.2.1-rc.2.tgz
 ```
 
-等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.0.7-dsh.0.2.1-rc.2/SHA256SUMS).
+等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/SHA256SUMS).
 
 ### 2. 先试这一件事
 
@@ -53,6 +53,8 @@ OpenCU 通过 DSH 原生工具调用操作真实浏览器和桌面应用。页�
 - **浏览器**：发现标签页、读取内容、导航、填写表单、处理文件选择和下载。
 - **桌面应用**：通过系统无障碍接口和输入路由观察与操作，按后端报告实际可用能力。
 - **协作反馈**：网页、图片与文字批注保留位置和上下文；保存批注与提交到对话是两个动作。
+
+<a id="后台操作"></a>
 
 ## 选择适合的浏览器路径
 
@@ -111,3 +113,5 @@ macOS 使用 Accessibility 与定向输入；Windows 使用 UI Automation；Linu
 反馈时请提供完整 DSH／插件版本、实际入口、最小复现步骤，以及预期和实际表现；日志与截图先移除私人数据。
 
 <p align="center"><a href="#readme-top">返回顶部</a> · <a href="https://github.com/gulagala001/opencu/releases">版本与下载</a> · <a href="https://github.com/gulagala001/opencu/issues">反馈</a></p>
+
+[文档结构与贡献](docs/documentation.md)

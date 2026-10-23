@@ -10,12 +10,12 @@
 In the instance you use, open **Plugins → + Add plugin** and paste the pinned release URL:
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.1-dsh.0.2.1-rc.2/dsh-extensions-0.1.1-dsh.0.2.1-rc.2.tgz
 ```
 
 After active tasks finish, enable the plugin or restart as the host asks. The existing profile, DSH_HOME, model settings and conversations are kept.
 
-You can check the download against [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/SHA256SUMS) from the same release.
+You can check the download against [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.1-dsh.0.2.1-rc.2/SHA256SUMS) from the same release.
 
 ### First check
 
@@ -27,7 +27,7 @@ The **Plugins** page shows five tabs at the top: Skills, MCP, Instructions, Comm
 Use the CLI of the same DSH instance and replace `web` with your profile.
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.1-dsh.0.2.1-rc.2/dsh-extensions-0.1.1-dsh.0.2.1-rc.2.tgz"
 ```
 
 </details>
@@ -63,4 +63,4 @@ pnpm build
 npm pack
 ```
 
-Add the generated `dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz` through **Plugins → Add plugin** using its local absolute path.
+Add the generated `dsh-extensions-0.1.1-dsh.0.2.1-rc.2.tgz` through **Plugins → Add plugin** using its local absolute path.

@@ -10,12 +10,12 @@
 在实际使用的实例打开 **插件 → ＋ 添加插件**，粘贴固定发行地址：
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.1-dsh.0.2.1-rc.2/dsh-extensions-0.1.1-dsh.0.2.1-rc.2.tgz
 ```
 
 等当前任务结束后按宿主提示启用或重启，沿用原 profile、DSH_HOME、模型配置和会话。
 
-下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/SHA256SUMS)。
+下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.1-dsh.0.2.1-rc.2/SHA256SUMS)。
 
 ### 首次成功检查
 
@@ -27,7 +27,7 @@ https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1
 使用同一 DSH 实例对应的 CLI，将 `web` 换成实际 profile。
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.0-dsh.0.2.1-rc.2/dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.1-dsh.0.2.1-rc.2/dsh-extensions-0.1.1-dsh.0.2.1-rc.2.tgz"
 ```
 
 </details>
@@ -63,4 +63,4 @@ pnpm build
 npm pack
 ```
 
-在 **插件 → 添加插件** 中输入生成的 `dsh-extensions-0.1.0-dsh.0.2.1-rc.2.tgz` 的本地绝对路径。
+在 **插件 → 添加插件** 中输入生成的 `dsh-extensions-0.1.1-dsh.0.2.1-rc.2.tgz` 的本地绝对路径。

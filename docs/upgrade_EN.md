@@ -10,7 +10,7 @@
 
 Check the actual DSH version, desktop/Web mode, data directory (DSH_HOME), and profile. Desktop uses desktop; Web uses the profile in its original launch command. A different CLI on PATH may belong to a different installation.
 
-DSH **0.2.1-rc.2** uses OMD **0.99.2**; DSH **0.2.1-rc.1** also uses OMD **0.99.2**. Select the matching package from [downloads](releases.md); DSH 0.2.0-rc.2 is a different host. Keep a newer or customized installation unchanged until a matching upgrade is available.
+DSH **0.2.1-rc.2** uses OMD **0.99.3**; DSH **0.2.1-rc.1** also uses OMD **0.99.3**. Select the matching package from [downloads](releases.md); DSH 0.2.0-rc.2 is a different host. Keep a newer or customized installation unchanged until a matching upgrade is available.
 
 ## 2. Stop and Back Up
 
@@ -67,7 +67,7 @@ To return to an earlier version, follow [Roll Back](#roll-back) with the complet
 
 ### Independent plugins and data migration
 
-Version 0.99.2 composes Workflow, Rewind, Persona, Extensions and Workbench capabilities. Existing OMD users upgrade the full package without duplicate installations; separately installed products remain managed by the native plugin page. Match each independent package to its own complete host version.
+Version 0.99.3 composes Workflow, Rewind, Persona, Extensions and Workbench capabilities. Existing OMD users upgrade the full package without duplicate installations; separately installed products remain managed by the native plugin page. Match each independent package to its own complete host version.
 
 Persona imports existing global and session choices on first use, retaining conflicting preset content. Subsequent data is scoped by profile under `DSH_HOME/dsh-persona-plugin/`. Backups also include rewind backups, Workflow budgets and project scripts, website imports and local appearance data. Keep native session exports together with their original-result archives, restoring sessions before importing the archives. [Data locations](architecture_EN.md#data-retains-its-owner)
 

@@ -2,7 +2,7 @@
 
 [简体中文](showcase.md) · [Project overview](../README_EN.md)
 
-## 0.99.2: try the new capabilities
+## 0.99.3: try the new capabilities
 
 | Start here | What you can do |
 | --- | --- |

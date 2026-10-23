@@ -1,16 +1,16 @@
 # Plugin Architecture and Installation Choices
 
-[简体中文](architecture.md) · [Documentation](README_EN.md) · [Plugin compatibility](plugin-compatibility_EN.md) · [0.99.2 release notes](release-0.99.2.md#en-0992)
+[简体中文](architecture.md) · [Documentation](README_EN.md) · [Plugin compatibility](plugin-compatibility_EN.md) · [0.99.3 release notes](release-0.99.3.md#en-0993)
 
 OMD organizes these features through dedicated plugin entry points. Workflow, turn rewind, personalities, extension management and the web workbench have their own plugin entry points. Theme management and Glyph also have independent product forms. OMD provides a composed workspace, while each independent product has its own purpose, host requirements and releases.
 
-This page describes the OMD 0.99.2 plugin structure and formal releases. Glyph is included in the theme plugin.
+This page describes the OMD 0.99.3 plugin structure and formal releases. Glyph is included in the theme plugin.
 
 ## Products you can choose independently
 
 | Product | Capabilities | Use within OMD | Independent distribution |
 | --- | --- | --- | --- |
-| **OpenCU** | Browser/native app actions, observation, annotations, monitoring and sources | Included, retaining coordinated standalone and embedded entry points | [2.0.7](https://github.com/gulagala001/opencu/releases/tag/v2.0.7-dsh.0.2.1-rc.2), with separate rc.1/rc.2 packages |
+| **OpenCU** | Browser/native app actions, observation, annotations, monitoring and sources | Included, retaining coordinated standalone and embedded entry points | [2.0.8](https://github.com/gulagala001/opencu/releases/tag/v2.0.8-dsh.0.2.1-rc.2), with separate rc.1/rc.2 packages |
 | **DSH Workflow** · `dsh-workflow-plus` | Scripts, subagents, phases, background execution, budgets and resumption | Provides the Workflow path in Ultra and workflow tools; native teams remain DSH-owned | [0.1.2 for DSH rc.2](https://github.com/gulagala001/dsh-workflow/releases/tag/v0.1.2-dsh.0.2.1-rc.2) |
 | **DSH Rewind** · `@gulagala001/dsh-undo-plugin` | Turn rollback, checkpointed file restoration, undo and draft recovery | Included through message actions, double Escape, `/rewind` and `/undo` | [0.1.1 for DSH rc.2](https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
 | **DeepSeek Workbench** · `dsh-deepseek-workbench` | Web chat, temporary website side chats, the API platform and history import | Controlled under **Oh My DSH → Features**, with web-chat and account entries | [0.1.1 for DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |

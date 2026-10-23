@@ -1,16 +1,16 @@
 # 插件架构与安装方式
 
-[English](architecture_EN.md) · [文档目录](README.md) · [插件共用](plugin-compatibility.md) · [0.99.2 更新说明](release-0.99.2.md#zh-0992)
+[English](architecture_EN.md) · [文档目录](README.md) · [插件共用](plugin-compatibility.md) · [0.99.3 更新说明](release-0.99.3.md#zh-0993)
 
 OMD 的功能与插件边界如下：工作流、回合撤回、人格、扩展管理与网页工作台都有各自的插件入口；主题管理和 Glyph 也有独立产品形态。OMD 继续提供组合好的工作台，独立插件则按自己的定位、宿主范围和版本发行。
 
-本页介绍 OMD 0.99.2 的插件结构与对应正式发行。Glyph 随主题插件提供。
+本页介绍 OMD 0.99.3 的插件结构与对应正式发行。Glyph 随主题插件提供。
 
 ## 哪些能力可以独立选择
 
 | 产品 | 负责的能力 | 在 OMD 中怎样使用 | 独立分发状态 |
 | --- | --- | --- | --- |
-| **OpenCU** | 浏览器与原生应用操作、观察、批注、监看和来源 | 已内置，沿用独立插件与内置方共用的入口 | [2.0.7](https://github.com/gulagala001/opencu/releases/tag/v2.0.7-dsh.0.2.1-rc.2)，分别有 rc.1／rc.2 包 |
+| **OpenCU** | 浏览器与原生应用操作、观察、批注、监看和来源 | 已内置，沿用独立插件与内置方共用的入口 | [2.0.8](https://github.com/gulagala001/opencu/releases/tag/v2.0.8-dsh.0.2.1-rc.2)，分别有 rc.1／rc.2 包 |
 | **DSH Workflow** · `dsh-workflow-plus` | 工作流脚本、子代理、阶段面板、后台执行、预算与续跑 | Ultra 的 Workflow 路径及工作流工具使用该能力；原生团队仍由 DSH 提供 | [0.1.2，DSH rc.2](https://github.com/gulagala001/dsh-workflow/releases/tag/v0.1.2-dsh.0.2.1-rc.2) |
 | **DSH Rewind** · `@gulagala001/dsh-undo-plugin` | 回合撤回、已有检查点的文件恢复、撤销撤回与草稿回填 | 已内置，通过消息按钮、双击 Esc、`/rewind` 与 `/undo` 使用 | [0.1.1，DSH rc.2](https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
 | **DeepSeek Workbench** · `dsh-deepseek-workbench` | 网页聊天、临时网页侧栏、开放平台及历史导入 | 在 **Oh My DSH → 功能** 中开关，保留网页聊天与账号入口 | [0.1.1，DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |

@@ -2,7 +2,7 @@
 
 OpenCU 是 DSH 插件：新控制核心、浏览器／原生／扩展后端配合真实 REA 前端组件。AI 像使用其他工具一样调用电脑；页面、活动和监看自然呈现，没有单独的 CU 控制台。
 
-当前源码默认适配 DSH `0.2.1-rc.2`，当前发行版本为 `2.0.6-dsh.0.2.1-rc.2`；`0.2.1-rc.1` 使用独立 SDK 构建入口。只支持这两个宿主。
+当前源码默认适配 DSH `0.2.1-rc.2`，当前发行版本为 `2.0.8-dsh.0.2.1-rc.2`；`0.2.1-rc.1` 使用独立 SDK 构建入口。只支持这两个宿主。
 
 ## 加载
 
@@ -129,3 +129,5 @@ OPENCU_DSH_SMOKE=1 node --test test/dsh.test.mjs
 ```
 
 该检查通过真实 DSH profile launcher、ToolRuntime 和 LocalAttachmentStore 调用插件；不连接预先启动的 OpenCU 服务，不修改当前工作 DSH。本仓库不执行公开发布或日常部署。
+
+隔离发行目录通过 `OPENCU_SOURCE_ROOT` 指向真实源码目录；文档检查从该目录读取 Git 清单，并核对当前构建目录的文档内容。

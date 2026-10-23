@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-persona-plugin",
-  "version": "0.1.0-dsh.0.2.1-rc.2",
+  "version": "0.1.1-dsh.0.2.1-rc.2",
   "description": "Create, import and manage AI personalities with global and per-conversation choices in DeepSeek Harness.",
   "type": "module",
   "license": "MIT",

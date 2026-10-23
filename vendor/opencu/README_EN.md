@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.0.7-dsh.0.2.1-rc.2"><img alt="OpenCU 2.0.7" src="https://img.shields.io/badge/release-OpenCU%202.0.7-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.0.8-dsh.0.2.1-rc.2"><img alt="OpenCU 2.0.8" src="https://img.shields.io/badge/release-OpenCU%202.0.8-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>
@@ -31,10 +31,10 @@ The full in-app browser, sidebar annotations and native monitoring require match
 Open **Plugins → Add plugin** in the DSH instance you use, then paste:
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.0.7-dsh.0.2.1-rc.2/opencu-2.0.7-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/opencu-2.0.8-dsh.0.2.1-rc.2.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.0.7-dsh.0.2.1-rc.2/SHA256SUMS).
+Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.0.8-dsh.0.2.1-rc.2/SHA256SUMS).
 
 ### 2. Try this first
 
@@ -111,3 +111,5 @@ The frontend uses components sourced through REA and thin adapters. Rights and s
 For a bug report, include the full DSH and plugin versions, the entry point, minimal reproduction steps, and expected versus actual behavior. Remove private data before sharing logs or screenshots.
 
 <p align="center"><a href="#readme-top">Back to top</a> · <a href="https://github.com/gulagala001/opencu/releases">Versions and downloads</a> · <a href="https://github.com/gulagala001/opencu/issues">Feedback</a></p>
+
+[Documentation structure and contributing](docs/documentation.md)

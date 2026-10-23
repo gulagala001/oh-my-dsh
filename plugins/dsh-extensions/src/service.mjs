@@ -6,7 +6,7 @@ import { Instructions } from './instructions.mjs';
 import { Commands } from './commands.mjs';
 import { Hooks } from './hooks.mjs';
 
-export const VERSION = '0.1.0-dsh.0.2.1-rc.2';
+export const VERSION = '0.1.1-dsh.0.2.1-rc.2';
 export const API = '/dsh-extensions/api';
 const MAX_BODY = 1024 * 1024 + 65536;
 

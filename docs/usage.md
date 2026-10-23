@@ -2,7 +2,7 @@
 
 [English](usage_EN.md) · [文档目录](README.md) · [首次使用](getting-started.md) · [排障](troubleshooting.md) · [开发入口](development.md)
 
-> 当前源码为 **OMD `0.2.1-rc.2.omd.0.99.2` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.7`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
+> 当前源码为 **OMD `0.2.1-rc.2.omd.0.99.3` / DSH `0.2.1-rc.2`**，默认内置 OpenCU `2.0.8`。安装先看[版本配对](install.md)，旧 0.10 用户使用对应固定 tag 文档。
 
 OMD 继续使用 DSH 的模型、项目、会话、原生工具、文件、技能与内容标签。包 ID 与 preset 均为 `oh-my-dsh`；早期版本的设置、会话和数据目录在升级后自动迁移，见[升级说明](upgrade.md#package-name)。
 
@@ -171,7 +171,7 @@ Glyph 等五套主题与 DSH 原生外观可选，29 套配色、背景独立，
 
 ## Computer Use
 
-OpenCU `2.0.7` 已默认内置。提供真实浏览器与原生目标发现、观察、后台优先输入、监看和批注。完整 UI 依赖匹配 Host／Client／preload 适配，不是 stock DSH 仅安装插件即可自动获得。[使用指南](computer-use.md) · [接入边界](plugin-compatibility.md#opencu)。
+OpenCU `2.0.8` 已默认内置。提供真实浏览器与原生目标发现、观察、后台优先输入、监看和批注。完整 UI 依赖匹配 Host／Client／preload 适配，不是 stock DSH 仅安装插件即可自动获得。[使用指南](computer-use.md) · [接入边界](plugin-compatibility.md#opencu)。
 
 ### 开始使用
 

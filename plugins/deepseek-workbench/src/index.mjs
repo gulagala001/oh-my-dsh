@@ -7,7 +7,7 @@ import { saveAccountProbe } from './account-probe.mjs';
 
 export const name = 'deepseek-workbench';
 export const inject = ['agents', 'sessions', 'llm', 'webServer', 'connection'];
-export const VERSION = '0.1.1-dsh.0.2.1-rc.2';
+export const VERSION = '0.1.2-dsh.0.2.1-rc.2';
 
 function send(res, status, value) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });

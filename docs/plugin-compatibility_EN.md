@@ -6,7 +6,7 @@ OMD retains native DSH tools, skills, sessions and third-party entries. **Use pl
 
 ## Match the artifacts
 
-Current source targets DSH `0.2.1-rc.2`: OMD `0.99.2` and standalone/bundled OpenCU `2.0.7`. DSH `0.2.1-rc.1` has a separate build; these two complete host versions are currently supported. Independent projects such as IUI and OMAA need their own matching builds; relabeling the same frontend is not adaptation.
+Current source targets DSH `0.2.1-rc.2`: OMD `0.99.3` and standalone/bundled OpenCU `2.0.8`. DSH `0.2.1-rc.1` has a separate build; these two complete host versions are currently supported. Independent projects such as IUI and OMAA need their own matching builds; relabeling the same frontend is not adaptation.
 
 Do not replace current work with old packages, older HEAD or version exemptions. Back up actual data and retain explicit settings, accounts and third-party provenance.
 

@@ -11,12 +11,12 @@ Embedded web chat requires DSH Desktop. Persistent login, website downloads and 
 Open **Plugins → Add plugin** in the instance you actually use and paste this fixed release address:
 
 ```text
-https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.1-dsh.0.2.1-rc.2/dsh-deepseek-workbench-0.1.1-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.2-dsh.0.2.1-rc.2/dsh-deepseek-workbench-0.1.2-dsh.0.2.1-rc.2.tgz
 ```
 
 Finish active tasks, follow the host’s activation/restart prompt, and keep your existing profile, DSH_HOME, model configuration and conversations.
 
-Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.1-dsh.0.2.1-rc.2/SHA256SUMS).
+Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.2-dsh.0.2.1-rc.2/SHA256SUMS).
 
 ### First success check
 
@@ -30,7 +30,7 @@ You can browse web history. “Continue in DSH” creates a native conversation;
 Use the CLI belonging to the same DSH instance; replace `web` with its actual profile.
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.1-dsh.0.2.1-rc.2/dsh-deepseek-workbench-0.1.1-dsh.0.2.1-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.2-dsh.0.2.1-rc.2/dsh-deepseek-workbench-0.1.2-dsh.0.2.1-rc.2.tgz"
 ```
 
 </details>
