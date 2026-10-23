@@ -5,7 +5,7 @@ import { join } from 'node:path';
 
 export const FORMAT = 'omd-plugin-preflight/v1';
 export const LIMITS = Object.freeze({ preparationMs: 120000, runtimeMs: 45000, decisionMs: 300000,
-  logBytes: 16384, files: 16000, packageBytes: 512 * 1024 * 1024, memoryMiB: 1536, temporaryMiB: 1024 });
+  logBytes: 16384, files: 16000, packageBytes: 512 * 1024 * 1024, memoryMiB: 2048, temporaryMiB: 1024 });
 export const problem = (code, message) => Object.assign(new Error(message), { code });
 
 // Diagnostics cross from arbitrary package output into the user-visible UI.

@@ -1,7 +1,7 @@
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, mkdtemp, readFile, writeFile, readdir, lstat, stat, rm, rename } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { mkdir, mkdtemp, readFile, writeFile, readdir, lstat, stat, rm, rename, cp, symlink } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -58,17 +58,29 @@ export async function packageEnvironment(inherited = process.env, home = homedir
   return env;
 }
 
-// A hoisted installed package has no node_modules of its own. Preserve its
-// nearest dependency directory when copying it out of the native profile.
-export async function dependencyDirectory(source, fallback) {
+// Hoisted installs may retain only conflicting versions in a package's own
+// node_modules. Mirror every ancestor lookup in order, including the shared
+// profile dependencies, without copying or merging those dependency trees.
+export async function copyCandidate(source, root, fallback) {
+  const directories = [];
   for (let current = source;; current = dirname(current)) {
     const directory = join(current, 'node_modules');
-    if (await stat(directory).then(value => value.isDirectory(), error => {
+    if (basename(current) !== 'node_modules' && await stat(directory).then(value => value.isDirectory(), error => {
       if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return false;
       throw error;
-    })) return directory;
-    if (dirname(current) === current) return fallback;
+    })) directories.push(directory);
+    if (dirname(current) === current) break;
   }
+  if (!directories.length) directories.push(fallback);
+  const snapshot = join(root, 'candidate', ...Array(directories.length - 1).fill('scope'));
+  await cp(source, snapshot, { recursive: true, dereference: false, verbatimSymlinks: true,
+    filter: path => !['node_modules', '.git', '.local'].includes(basename(path)) });
+  let parent = snapshot;
+  for (const directory of directories) {
+    await symlink(directory, join(parent, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+    parent = dirname(parent);
+  }
+  return snapshot;
 }
 
 export async function stopTree(child, observed = new Map(), directory) {
