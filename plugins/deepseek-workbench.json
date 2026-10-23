@@ -25,6 +25,7 @@
     "docs/structure.json": "dedd144431f77b9919a1d8dd1a65c7d09fefa266302f136518def7577a84e935",
     "docs/usage.md": "37f476debe00d1cfebd53d128ad9037da216ff59ce8e81d8d545adc52e98ce64",
     "docs/usage_EN.md": "1831e2268d78fb85888f87470908eb1a8ce8ed7b67b5f0b7c4ac83003e15d8db",
+    "lib/client.js": "7f202692e4c110111d50c6ddb8e19463e5eab422f1096d8cbf85ea778092cf3a",
     "package.json": "948126a7262c8ebe12882dee57ed73b5a88b23e0b50660337e51cc131d86e005",
     "scripts/build.mjs": "70869d27e396cda01e08625aff9bd24fd856326c8f15cb987276422062fd54cb",
     "scripts/check-docs.mjs": "221543f62b4c35a78d714fa29aadd3eeeaec8ed2546d12637b059b35bc53e33f",
