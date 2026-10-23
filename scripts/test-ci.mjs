@@ -7,7 +7,7 @@ const core = [
   'start', 'monitor-partial', 'monitor-read-cache', 'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget', 'task-budget-persistence',
   'file-upload-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update',
   'context-store-cache', 'context-coordinate-release',
-  'model-reply', 'temporary-chat',
+  'model-reply', 'temporary-chat', 'prompt-optimizer-drafts',
   'dream-source-lifecycle', 'dream-job-control',
   'context-controls', 'settings-state',
   'task-ledger-authority', 'task-verification', 'plugin-operation-state',

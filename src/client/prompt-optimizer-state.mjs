@@ -114,8 +114,15 @@ export class DraftOptimizer {
     // Admission can settle after the composer switches to another session.
     // Keep this subscription with the session controller, not its visible view.
     this.unsubmit = shell.onSubmission?.(event => this.submission(event));
+    let previousDraft = shell.state.getSnapshot().draft;
     this.unwatch = shell.state.subscribe(() => {
-      if (!this.writing && !shell.state.getSnapshot().draft && (this.history.length || this.state.candidate || this.state.instruction)) { this.history = []; this.cursor = -1; this.publish({ candidate: null, instruction: '' }); }
+      const draft = shell.state.getSnapshot().draft, cleared = previousDraft && !draft;
+      previousDraft = draft;
+      // An empty composer can still own a running request or its candidate.
+      // Only a new, idle clear discards versions; attachment/queue updates do not.
+      if (!this.writing && !this.pending && cleared && (this.history.length || this.state.candidate || this.state.instruction)) {
+        this.history = []; this.cursor = -1; this.publish({ candidate: null, instruction: '' });
+      }
     });
   }
   publish(patch = {}) {
@@ -123,26 +130,33 @@ export class DraftOptimizer {
       recoveries: [...this.recoveries].map(([id, value]) => ({ id, draft: value.history[0].draft })) };
     this.listeners.forEach(fn => fn());
   }
+  // Navigation, admission and recovery transfer the same complete editing
+  // record. A candidate belongs to these versions, never to a different draft.
+  captureVersions(snapshot = captureDraft(this.shell)) {
+    return { snapshot, history: [...this.history], cursor: this.cursor,
+      instruction: this.state.instruction, candidate: this.state.candidate };
+  }
+  restoreVersions(saved) {
+    this.history = [...saved.history]; this.cursor = saved.cursor;
+    this.state = { ...this.state, instruction: saved.instruction, candidate: saved.candidate };
+  }
   // Transfer data only. Requests, shell listeners and send attempts belong to
   // their original scope and must never restart merely because a view returns.
   navigationState({ deactivate = true } = {}) {
     if (deactivate) this.deactivate();
     if (!this.history.length && !this.recoveries.size && !this.state.candidate && !this.state.instruction) return null;
-    return structuredClone({ snapshot: captureDraft(this.shell), history: this.history, cursor: this.cursor,
-      recoveries: [...this.recoveries], recoverySeq: this.recoverySeq, candidate: this.state.candidate,
-      instruction: this.state.instruction, error: this.state.error, message: this.state.message });
+    return structuredClone({ current: this.captureVersions(), recoveries: [...this.recoveries], recoverySeq: this.recoverySeq,
+      error: this.state.error, message: this.state.message });
   }
   restoreNavigation(saved) {
     if (!saved || this.disposed) return;
     this.recoveries = new Map(saved.recoveries); this.recoverySeq = saved.recoverySeq;
     const current = captureDraft(this.shell);
-    if (sameNavigationDraft(current, saved.snapshot)) {
-      this.history = saved.history; this.cursor = saved.cursor;
-      this.publish({ candidate: saved.candidate, instruction: saved.instruction, error: saved.error, message: saved.message });
+    if (sameNavigationDraft(current, saved.current.snapshot)) {
+      this.restoreVersions(saved.current);
+      this.publish({ error: saved.error, message: saved.message });
     } else {
-      if (saved.history.length) this.recoveries.set('draft-' + ++this.recoverySeq, {
-        snapshot: saved.snapshot, history: saved.history, cursor: saved.cursor, instruction: saved.instruction,
-      });
+      if (saved.current.history.length) this.recoveries.set('draft-' + ++this.recoverySeq, saved.current);
       this.publish({ message: this.recoveries.size ? '切换前的版本已保留，当前草稿保持不变。' : '' });
     }
   }
@@ -177,7 +191,7 @@ export class DraftOptimizer {
       if (this.history.length) {
         const snapshot = captureDraft(this.shell);
         this.remember(snapshot);
-        this.sends.set(event.id, { snapshot, history: this.history, cursor: this.cursor, instruction: this.state.instruction });
+        this.sends.set(event.id, this.captureVersions(snapshot));
       }
       this.history = []; this.cursor = -1; this.publish({ candidate: null, instruction: '', error: '', message: '' });
       return;
@@ -186,8 +200,7 @@ export class DraftOptimizer {
     this.sends.delete(event.id);
     if (!saved || event.kind !== 'error') return;
     if (event.restored && sameDraft(captureDraft(this.shell), saved.snapshot) && !this.history.length) {
-      this.history = saved.history; this.cursor = saved.cursor;
-      this.state = { ...this.state, instruction: saved.instruction };
+      this.restoreVersions(saved);
     } else {
       // A newer draft or several failed sends may now occupy the editor. Keep
       // their versions separate until the user chooses to inspect them.
@@ -199,14 +212,16 @@ export class DraftOptimizer {
     const saved = this.recoveries.get(id);
     if (!saved || this.pending || this.locked?.()) return;
     const current = captureDraft(this.shell);
-    if (this.history.length) this.recoveries.set('draft-' + ++this.recoverySeq, { history: this.history, cursor: this.cursor, snapshot: current, instruction: this.state.instruction });
-    this.history = saved.history; this.cursor = saved.cursor;
-    this.remember(current); this.recoveries.delete(id);
-    this.publish({ error: '', candidate: null, instruction: saved.instruction ?? '', message: '已载入保留版本，当前草稿保持不变。' });
+    if (this.history.length) this.recoveries.set('draft-' + ++this.recoverySeq, this.captureVersions(current));
+    this.restoreVersions(saved);
+    this.remember(current, { branch: false }); this.recoveries.delete(id);
+    this.publish({ error: '', message: '已载入保留版本，当前草稿保持不变。' });
   }
-  remember(snapshot) {
+  remember(snapshot, { branch = true } = {}) {
     if (!this.history.length || !sameDraft(this.history[this.cursor], snapshot)) {
-      this.history = this.history.slice(0, this.cursor + 1); this.history.push(snapshot); this.cursor = this.history.length - 1;
+      // Viewing retained versions is not a new edit from an earlier version.
+      this.history = branch ? this.history.slice(0, this.cursor + 1) : [...this.history];
+      this.history.push(snapshot); this.cursor = this.history.length - 1;
     }
     if (this.history.length > 20) { this.history = [this.history[0], ...this.history.slice(-19)]; this.cursor = this.history.length - 1; }
   }
