@@ -4,7 +4,7 @@ export function workflowJobs(entries) {
   const calls = new Map(), runs = new Map();
   for (const entry of entries) {
     const event = entry.event ?? entry, data = event.data;
-    if (event.type === 'tool/call') calls.set(event.seq, data);
+    if (event.type === 'tool/call' && data.name === 'workflow') calls.set(event.seq, data);
     else if (event.type === 'tool-workflow/run-start') runs.set(data.runId, { seq: event.seq });
     else if (event.type === 'tool-workflow/run-end') {
       const run = runs.get(data.runId);
@@ -12,16 +12,19 @@ export function workflowJobs(entries) {
     } else if (event.type === 'tool/result' && !data.message?.isError) {
       const message = data.message;
       if (message?.role !== 'tool' || message.source?.kind !== 'tool') continue;
+      // Establish ownership before touching potentially large unrelated tool
+      // bodies. A matching receipt still needs a run started after its call.
+      const ownedCalls = event.sourceEventSeqs?.filter(seq => {
+        const call = calls.get(seq);
+        return call && call.callId === message.toolCallId && call.callId === message.source.callId;
+      });
+      if (!ownedCalls?.length) continue;
       const text = (message.content ?? []).filter(block => block.type === 'text').map(block => block.text).join('\n');
       const jobId = /^workflow "[\s\S]*?" started in the background as job ([^.\s]+)\./.exec(text)?.[1];
       const runId = /\nRun ID: ([^\r\n]+)(?:\r?\n|$)/.exec(text)?.[1];
       const run = runs.get(runId);
       if (!jobId || !run || run.seq >= event.seq) continue;
-      const owned = event.sourceEventSeqs?.some(seq => {
-        const call = calls.get(seq);
-        return seq < run.seq && call?.name === 'workflow' && call.callId === message.toolCallId
-          && call.callId === message.source.callId;
-      });
+      const owned = ownedCalls.some(seq => seq < run.seq);
       if (owned) run.jobId = jobId;
     }
   }

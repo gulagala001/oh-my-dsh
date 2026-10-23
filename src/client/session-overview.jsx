@@ -86,6 +86,7 @@ export function applySessionOverview(ctx, openCU) {
       const durable = projection(sessions, sessionId).omdOverview;
       const workflows = useMemo(() => [...new Map([...(durable?.workflows ?? []), ...headerWorkflows(chat)].map(node => [node.id, node])).values()].sort((a, b) => b.anchorSeq - a.anchorSeq), [chat, durable]);
       const labels = useMemo(() => workflowChildLabels(events?.entries ?? []), [events]);
+      const runs = useMemo(() => workflowJobs(events?.entries ?? []), [events]);
       const agents = useMemo(() => collectAgents(sessionId, sessions, statuses, workflows, labels), [sessionId, sessions, statuses, workflows, labels]);
       const seen = useRef(new Map());
       useEffect(() => scope.jobs.watchRows(sessionId), [sessionId]);
@@ -103,7 +104,6 @@ export function applySessionOverview(ctx, openCU) {
       const data = useMemo(() => {
         const rows = agents.rows.map(row => ({ ...row, rootId: sessionId }));
         const allJobs = jobsState?.rows?.[sessionId] ?? [];
-        const runs = workflowJobs(events?.entries ?? []);
         return { ...agents, rows, active: rows.filter(row => ['running', 'provisioning'].includes(row.status)),
           context: props, workflows: agents.workflows.map(node => node.ownerId === sessionId ? { ...node, data: liveWorkflowData(node, runs, allJobs, sessionId) } : node),
           outputs: [...new Map([...(durable?.outputs ?? []), ...collectOutputs(chat)].map(item => [item.id, item])).values()],
@@ -119,7 +119,7 @@ export function applySessionOverview(ctx, openCU) {
             return open ? open(row.url) : window.open(row.url, '_blank', 'noopener,noreferrer');
           },
         };
-      }, [agents, jobsState, sessionId, chat, events, workflows, durable]);
+      }, [agents, jobsState, sessionId, chat, events, workflows, durable, runs]);
       useLayoutEffect(() => { states.set(sessionId, data); notify(); }, [sessionId, data]);
       useEffect(() => () => { states.delete(sessionId); seen.current.clear(); notify(); }, [sessionId]);
       return <Original {...props} overview={data}/>;
