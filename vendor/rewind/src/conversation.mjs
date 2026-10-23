@@ -25,8 +25,10 @@ export function userTarget(session,seq,ranges=[]) {
 }
 /** Native append-only surface rewrite. No host log, session id, or agent turn counter is replaced. */
 export function prepareReplay(session,context,projections=[],activeTurn=false) {
+  let atSeq;
   if(!Array.isArray(context)){
     if(!Number.isSafeInteger(context?.atSeq)||context.atSeq<0||context.atSeq>session.seq)throw Error('恢复历史引用无效');
+    atSeq=context.atSeq;
     context=beforeMessage(session,context.atSeq,projections);
   }
   const clone=Session.fromRestore(session.id,eventsOf(session),session.header,session.inheritedEventCount,'shared-frozen',projections);
@@ -58,6 +60,14 @@ export function prepareReplay(session,context,projections=[],activeTurn=false) {
     const data=structuredClone(item.data);if(item.type!=='user/message'){data.turn=turn;data.step=step;}
     clone.append(item.type,data,{surfaceOp:'append',...(item.type==='assistant/message'?{}:{sourceEventSeqs:[item.source]})});
     if(item.type==='assistant/message')for(const block of data.message.content)if(block.type==='tool-call')clone.append('tool/call',{turn,step,callId:block.id,name:block.name,arguments:block.arguments});
+  }
+  // Surface replay cannot restore non-message projections. Use the same native
+  // cutoff for the full task record, including extension-owned evidence. Undo
+  // and failure recovery already use this path; no second task store is needed.
+  // Legacy message-only backups have no proven task cutoff: leave those alone.
+  if(atSeq!==undefined){
+    const task=history.findLast(e=>e.type==='todo/write'&&e.seq<atSeq);
+    if(task||history.some(e=>e.type==='todo/write'))clone.append('todo/write',structuredClone(task?.data??{todos:[]}));
   }
   clone.append('step/end',{turn,step});
   const prepared=eventsOf(clone).slice(start);

@@ -32,13 +32,25 @@ os.execv(sys.executable, [sys.executable, path])`
 
 // ---------- transcript（单编号 [n]，取自会话全量日志、不受手术影响） ----------
 
-/** 会话里的用户原话清单：[{ n, seq, text }]（[n] 编号 = 本清单序，最新在后；插件注入不算） */
+// Native source references distinguish restored copies from new human input.
+// Equal text alone is not identity: two genuine submissions remain distinct.
+const isUserInput = (session, event) => event.type === 'user/message' && event.data?.source?.kind === 'user'
+  && !event.sourceEventSeqs?.some(seq => {
+    const source = session.eventAt(seq)
+    return source?.type === 'user/message' && source.data?.source?.kind === 'user'
+  })
+
+/** 用户原话清单；保留历史编号（恢复副本留空号），不让已有节选的 msg 指向其他消息。 */
 function userMessages(session) {
   const items = []
+  let n = 0
   for (const e of session?.snapshotEvents() ?? []) {
     if (e.type !== 'user/message' || e.data?.source?.kind !== 'user') continue
     const text = (Array.isArray(e.data.content) ? e.data.content : []).filter(b => b?.type === 'text').map(b => b.text ?? '').join('\n')
-    if (text.trim()) items.push({ n: items.length + 1, seq: e.seq, text })
+    if (text.trim()) {
+      n++
+      if (isUserInput(session, e)) items.push({ n, seq: e.seq, text })
+    }
   }
   return items
 }
@@ -188,7 +200,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     const events = session.snapshotEvents()
     const start = events.findLast(e => e.type === 'turn/start')
     // Positional context rewrites can restore an old user message with a new seq.
-    const input = events.findLast(e => e.type === 'user/message' && e.surfaceOp === 'append' && e.data?.source?.kind === 'user')
+    const input = events.findLast(e => e.surfaceOp === 'append' && isUserInput(session, e))
     const scope = { turn: turn ?? start?.data.turn, start: start?.seq ?? -1, input: input?.seq ?? -1 }
     let control = turnControls.get(session)
     if (!control || Object.keys(scope).some(key => control[key] !== scope[key])) {
@@ -288,7 +300,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       let m, loc
       if (args.msg !== undefined && args.msg !== null) {
         m = msgs.find(x => x.n === args.msg)
-        if (!m) return err(`Rejected: no user message [${args.msg}] — op:transcript lists ${msgs.length}.`)
+        if (!m) return err(`Rejected: no original user message [${args.msg}] — use op:transcript for available message numbers.`)
       } else {
         const hits = []
         let multi

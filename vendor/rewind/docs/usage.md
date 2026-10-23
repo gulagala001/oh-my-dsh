@@ -8,6 +8,8 @@ Click the arrow beside Copy on a user message. Confirmation shows the working di
 
 The selected message and later conversation are withdrawn in place. Text, images and files return to the composer. Undo restores the previous conversation, files and composer draft. A draft edited while restoration is running is kept; refill the withdrawn content when ready. Unsent browser attachments follow the host's normal draft lifecycle.
 
+The native task list follows the same history cutoff, including completion flags, excerpts and evidence stored in its task record. Rewinding before the first task clears the current list; undo and interrupted recovery restore the corresponding full record. Evidence is restored as history, not rerun. Older message-only undo backups without a recorded event cutoff leave the current task list unchanged.
+
 After sending new messages, rewind those messages before undoing an earlier withdrawal. Avoid running multiple history-changing rewind plugins together.
 
 ## Shortcuts and commands
