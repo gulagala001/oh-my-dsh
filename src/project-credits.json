@@ -157,8 +157,8 @@
       "source": "src/client/skins/runtime.mjs",
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
-      "version": "SHA256:4ed8fbb028b05c579a4700d52d7290ca3ae7c697fb9204504de563d79949d0bb",
-      "sourceSha256": "4ed8fbb028b05c579a4700d52d7290ca3ae7c697fb9204504de563d79949d0bb",
+      "version": "SHA256:488c7edba1648a1eae208f09bf5bb419aefbe9bc1d2511b9bc04168538cf8042",
+      "sourceSha256": "488c7edba1648a1eae208f09bf5bb419aefbe9bc1d2511b9bc04168538cf8042",
       "group": "products"
     },
     {

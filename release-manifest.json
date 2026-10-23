@@ -2,6 +2,30 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.2.omd.0.99.2",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 0.99.2 · DSH 0.2.1-rc.2",
+      "notes": [
+        "问题修复：恢复 Glyph 鲸鱼与主题品牌入口，修正 Logo、切换和共装恢复。",
+        "问题修复：修复上下文预处理、真实文件路径、浏览器清理、迁移附件、回退与扩展配置生命周期。",
+        "体验优化：显示实际预处理进度，更新来源设置和组件文档。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.2.md"
+    },
+    {
+      "version": "0.2.1-rc.1.omd.0.99.2",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 0.99.2 · DSH 0.2.1-rc.1",
+      "notes": [
+        "问题修复：恢复 Glyph 鲸鱼与主题品牌入口，修正 Logo、切换和共装恢复。",
+        "问题修复：修复上下文预处理、真实文件路径、浏览器清理、迁移附件、回退与扩展配置生命周期。",
+        "体验优化：显示实际预处理进度，更新来源设置和组件文档。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.2.md"
+    },
+    {
       "version": "0.2.1-rc.2.omd.0.99.1",
       "severity": "normal",
       "unpublished": false,

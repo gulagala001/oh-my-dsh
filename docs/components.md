@@ -75,7 +75,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 主题、配色、背景、字体和外观管理 独立产品；OMD 与它共用外观源码。
 
-- 固定来源／版本: [SHA256:4ed8fbb028b05c579a4700d52d7290ca3ae7c697fb9204504de563d79949d0bb](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
+- 固定来源／版本: [SHA256:488c7edba1648a1eae208f09bf5bb419aefbe9bc1d2511b9bc04168538cf8042](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
 
 ### Glyph

@@ -332,6 +332,12 @@
       "language": "en",
       "translation": "docs/components.md",
       "site": true
+    },
+    {
+      "path": "docs/release-0.99.2.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
     }
   ]
 }

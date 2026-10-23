@@ -1,10 +1,10 @@
 # 插件架构与安装方式
 
-[English](architecture_EN.md) · [文档目录](README.md) · [插件共用](plugin-compatibility.md) · [0.99.1 更新说明](release-0.99.1.md#zh-0991)
+[English](architecture_EN.md) · [文档目录](README.md) · [插件共用](plugin-compatibility.md) · [0.99.2 更新说明](release-0.99.2.md#zh-0992)
 
-OMD 0.99.1 同时整理了功能和插件边界：工作流、回合撤回、人格、扩展管理与网页工作台都有各自的插件入口；主题管理和 Glyph 也有独立产品形态。OMD 继续提供组合好的工作台，独立插件则按自己的定位、宿主范围和版本发行。
+OMD 的功能与插件边界如下：工作流、回合撤回、人格、扩展管理与网页工作台都有各自的插件入口；主题管理和 Glyph 也有独立产品形态。OMD 继续提供组合好的工作台，独立插件则按自己的定位、宿主范围和版本发行。
 
-本页介绍 OMD 0.99.1 的插件结构与对应正式发行。Glyph 随主题插件提供。
+本页介绍 OMD 0.99.2 的插件结构与对应正式发行。Glyph 随主题插件提供。
 
 ## 哪些能力可以独立选择
 
@@ -16,9 +16,9 @@ OMD 0.99.1 同时整理了功能和插件边界：工作流、回合撤回、人
 | **DeepSeek Workbench** · `dsh-deepseek-workbench` | 网页聊天、临时网页侧栏、开放平台及历史导入 | 在 **Oh My DSH → 功能** 中开关，保留网页聊天与账号入口 | [0.1.1，DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
 | **Extensions** · `dsh-extensions` | Skill、MCP、指令文件、自定义命令和 Hooks | 默认内置启用，入口在插件页 | [0.1.0](https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
 | **Persona** · `@gulagala001/dsh-persona-plugin` | 人格预设、四个表达模块、文件交换及会话人设 | 在 OMD 设置中编辑，在主会话权限菜单选择 | [0.1.0](https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
-| **dsh-theme-plugin** | 外观设置、主题管理、主题市场与安装预检 | 可另行选择主题管理产品；OMD 本身保留内置外观选择 | [0.2.1，DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.1-dsh.0.2.1-rc.2) |
+| **dsh-theme-plugin** | 外观设置、主题管理、主题市场与安装预检 | 可另行选择主题管理产品；OMD 本身保留内置外观选择 | [0.2.2，DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.2-dsh.0.2.1-rc.2) |
 | **DSH BTW** · `@gulagala001/dsh-btw` | 原生弹窗旁聊、历史、追问与独立取消 | 已内置，使用 `/btw`，主任务继续运行 | [0.1.2，DSH rc.2](https://github.com/gulagala001/dsh-btw/releases/tag/v0.1.2-dsh.0.2.1-rc.2) |
-| **Glyph** · `dsh-glyph-theme` | 字符鲸鱼、字符控件、波纹与思考强度动效 | OMD 外观中的可选主题，新外观配置默认采用 Glyph | 随 Theme 0.2.1 提供，本次无独立发行 |
+| **Glyph** · `dsh-glyph-theme` | 字符鲸鱼、字符控件、波纹与思考强度动效 | OMD 外观中的可选主题，新外观配置默认采用 Glyph | 随 Theme 0.2.2 提供，本次无独立发行 |
 
 独立包按自己的版本更新。一个独立产品已经发布，不代表其旧固定包包含 OMD 当前源码的全部后续修复；请核对该产品的固定 Release 与完整宿主版本。
 

@@ -69,6 +69,7 @@ Roles: home · index · guide · development · sources · release · redirect. 
 | [docs/README.md](README.md) | index | zh | — |
 | [docs/release-0.99.0.md](release-0.99.0.md) | release | bilingual | — |
 | [docs/release-0.99.1.md](release-0.99.1.md) | release | bilingual | — |
+| [docs/release-0.99.2.md](release-0.99.2.md) | release | bilingual | — |
 | [docs/releases.md](releases.md) | release | zh | — |
 | [docs/runtime-state-background.md](runtime-state-background.md) | guide | zh | — |
 | [docs/showcase_EN.md](showcase_EN.md) | guide | zh | — |
