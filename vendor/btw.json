@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "@gulagala001/dsh-btw",
-  "version": "0.1.2-dsh.0.2.1-rc.2",
-  "host": "0.2.1-rc.2",
+  "version": "0.1.2-dsh.0.2.1-rc.1",
+  "host": "0.2.1-rc.1",
   "source": "../dsh-btw-plugin",
   "sourceCommit": "4c52e6059337100ade2935e8010914bca4fbe6a4",
   "files": {
@@ -19,7 +19,7 @@
     "docs/releases/v0.1.1-dsh.0.2.1-rc.2.md": "4676f8130c2c98300dd34abd156d0c260767cfea33af437a2b24f5ee334b7a7c",
     "docs/releases/v0.1.2-dsh.0.2.1-rc.2.md": "ad8218148bd41c0b908fbe4202f229b970ac8764bb58a797e49f1148758b339b",
     "lib/client.js": "d364324e55b6a2afa07eb8a9df6046c2269799e80ba5d309302b02e7c3303a25",
-    "package.json": "695ddf1af15830044e76129cb88d52a2b84283bcef2c30ccc5cb5340e472f951",
+    "package.json": "a33c4872530b1e6794719c8eef273fc5a04542b73acefacc21c2ba3dc9e65720",
     "scripts/build.mjs": "de04461003ace8245fcab71a0e14bd95ac3fa114ab00887702c16e509a71ba26",
     "scripts/check-public-files.mjs": "ba03d52015a17b5f670128d5595e3341511bb5894f24418609022eb314339cdd",
     "src/client/entry.mjs": "241582a790f4c9eae090a102776495e3c94f5ec5c6df8f26a05620eb29ca367a",
