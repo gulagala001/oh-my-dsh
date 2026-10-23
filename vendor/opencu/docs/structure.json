@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "documents": [
+    {
+      "path": "CHANGELOG.md",
+      "role": "release",
+      "language": "bilingual"
+    },
+    {
+      "path": "DEVELOPMENT.md",
+      "role": "development",
+      "language": "zh"
+    },
+    {
+      "path": "README.md",
+      "role": "home",
+      "language": "zh"
+    },
+    {
+      "path": "README_EN.md",
+      "role": "home",
+      "language": "zh"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "role": "sources",
+      "language": "en"
+    },
+    {
+      "path": "docs/documentation.md",
+      "role": "development",
+      "language": "bilingual"
+    },
+    {
+      "path": "docs/install.md",
+      "role": "guide",
+      "language": "zh"
+    },
+    {
+      "path": "docs/install_EN.md",
+      "role": "guide",
+      "language": "zh"
+    },
+    {
+      "path": "docs/releases.md",
+      "role": "release",
+      "language": "bilingual"
+    },
+    {
+      "path": "docs/visuals.md",
+      "role": "guide",
+      "language": "zh"
+    },
+    {
+      "path": "extension/README.md",
+      "role": "guide",
+      "language": "zh"
+    },
+    {
+      "path": "native/README.md",
+      "role": "development",
+      "language": "zh"
+    }
+  ]
+}

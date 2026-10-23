@@ -54,6 +54,8 @@ OpenCU 通过 DSH 原生工具调用操作真实浏览器和桌面应用。页�
 - **桌面应用**：通过系统无障碍接口和输入路由观察与操作，按后端报告实际可用能力。
 - **协作反馈**：网页、图片与文字批注保留位置和上下文；保存批注与提交到对话是两个动作。
 
+<a id="后台操作"></a>
+
 ## 选择适合的浏览器路径
 
 | 路径 | 条件 |
@@ -111,3 +113,5 @@ macOS 使用 Accessibility 与定向输入；Windows 使用 UI Automation；Linu
 反馈时请提供完整 DSH／插件版本、实际入口、最小复现步骤，以及预期和实际表现；日志与截图先移除私人数据。
 
 <p align="center"><a href="#readme-top">返回顶部</a> · <a href="https://github.com/gulagala001/opencu/releases">版本与下载</a> · <a href="https://github.com/gulagala001/opencu/issues">反馈</a></p>
+
+[文档结构与贡献](docs/documentation.md)

@@ -111,3 +111,5 @@ The frontend uses components sourced through REA and thin adapters. Rights and s
 For a bug report, include the full DSH and plugin versions, the entry point, minimal reproduction steps, and expected versus actual behavior. Remove private data before sharing logs or screenshots.
 
 <p align="center"><a href="#readme-top">Back to top</a> · <a href="https://github.com/gulagala001/opencu/releases">Versions and downloads</a> · <a href="https://github.com/gulagala001/opencu/issues">Feedback</a></p>
+
+[Documentation structure and contributing](docs/documentation.md)

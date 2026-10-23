@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "package": "@gulagala001/dsh-undo-plugin",
-  "version": "0.1.1-dsh.0.2.1-rc.2",
-  "host": "0.2.1-rc.2",
+  "version": "0.1.1-dsh.0.2.1-rc.1",
+  "host": "0.2.1-rc.1",
   "source": "../rewind",
   "files": {
     "CHANGELOG.md": "b70725905c2829639643c288702b01b762d51e2242449d027b6fcf6c2a7fd192",
@@ -23,7 +23,7 @@
     "docs/usage.zh.md": "ebb7151ca123c1f7f6ef1a06bbd68ea96c5c2245a9ca91338232415f014761a2",
     "lib/client.js": "72f04c5336dd925db6418e5a61a8777b92cfefcee7e314eac0b59acaeea0adcd",
     "lib/format.mjs": "3aa1d9ed73952e88165cabaf70a0964bfb3899cee7898876309d948a52e0bd6c",
-    "package.json": "1c207c27c685e45edbe754de7d861f4cdcd6a3e91e3508280df87431530979fb",
+    "package.json": "d17be474770b40640a10c26571b24da1eb05d7264c08393930b5ea5493a52cbc",
     "scripts/build.mjs": "ff4380ad4643c8527e4c824d0053e3744012a396f3ce9fbdaa824528f06c239e",
     "scripts/check-docs.mjs": "221543f62b4c35a78d714fa29aadd3eeeaec8ed2546d12637b059b35bc53e33f",
     "scripts/check-package.mjs": "96c9c1d12d7e20de991729a06fec521243f13817ee995cb7b180ca7ff075ab65",
