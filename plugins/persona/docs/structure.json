@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "documents": [
+    {
+      "path": "CHANGELOG.md",
+      "role": "release",
+      "language": "bilingual"
+    },
+    {
+      "path": "README.md",
+      "role": "home",
+      "language": "zh"
+    },
+    {
+      "path": "README_EN.md",
+      "role": "home",
+      "language": "zh"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "role": "sources",
+      "language": "en"
+    },
+    {
+      "path": "docs/documentation.md",
+      "role": "development",
+      "language": "bilingual"
+    },
+    {
+      "path": "docs/personality-format.md",
+      "role": "guide",
+      "language": "zh"
+    },
+    {
+      "path": "docs/releases.md",
+      "role": "release",
+      "language": "bilingual"
+    }
+  ]
+}

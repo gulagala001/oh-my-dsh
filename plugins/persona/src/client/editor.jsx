@@ -44,11 +44,17 @@ export function Personality({ config, commit }) {
   const fileInput = useRef(null), lock = useRef(false);
   const options = personalityOptions(config);
   const managerOptions = options.filter(option => option.value !== 'off');
+  for (const [id, draft] of Object.entries(drafts)) {
+    if (id !== NEW && !managerOptions.some(option => option.value === id))
+      managerOptions.push({ value: id, label: draft.name + '（已删除，草稿保留）' });
+  }
   if (managed === NEW || own(drafts, NEW)) managerOptions.push({ value: NEW, label: '未保存的新预设' });
   const effectiveId = managerOptions.some(option => option.value === managed) ? managed : 'custom';
-  const source = effectiveId === NEW ? { name: '', description: '', modules: { identity: '' } } : personalityProfile(config, effectiveId);
+  const missing = effectiveId !== NEW && !options.some(option => option.value === effectiveId);
+  const source = effectiveId === NEW ? { name: '', description: '', modules: { identity: '' } }
+    : missing ? drafts[effectiveId] : personalityProfile(config, effectiveId);
   const draft = drafts[effectiveId] ?? asDraft(source);
-  const builtin = own(PERSONALITY_PRESETS, effectiveId), saved = effectiveId.startsWith('user:');
+  const builtin = own(PERSONALITY_PRESETS, effectiveId), saved = !missing && effectiveId.startsWith('user:');
   const dirty = own(drafts, effectiveId);
   const update = patch => {
     setDrafts(current => ({ ...current, [effectiveId]: { ...draft, ...patch } }));
@@ -66,7 +72,7 @@ export function Personality({ config, commit }) {
     finally { lock.current = false; setBusy(false); }
   };
   const persist = async patch => {
-    if (await commit(patch) === false) throw Error('保存失败，编辑内容已保留，请重试');
+    if (await commit(patch, config) === false) throw Error('保存失败，请核对最新设置后重试；编辑内容已保留');
   };
   const save = () => run(async () => {
     const id = effectiveId;
@@ -155,6 +161,7 @@ export function Personality({ config, commit }) {
         </div>
         <p className="dsp-set-personality-hint">仅调整身份、语言风格、沟通与回答呈现。可复制创作提示词交给 AI，生成 JSON 文件后导入。</p>
         {builtin && <p className="dsp-set-personality-hint">内置预设只读，复制为新人设后可修改。</p>}
+        {missing && <p className="dsp-set-personality-hint">该预设已在另一处删除，编辑内容仍在；可保存为新预设。</p>}
         <div className="dsp-set-fields">
           <label className="dsp-set-field"><span>预设名称</span><Input aria-label="预设名称" value={draft.name} maxLength={80} readOnly={builtin || effectiveId === 'custom'} disabled={busy}
             placeholder="为这份人设起个名字" onChange={event => update({ name: event.target.value })}/></label>

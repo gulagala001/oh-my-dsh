@@ -2,7 +2,6 @@ import { catalogPage } from './catalog.mjs';
 import { sendAttachment, withRequestSignal } from '../http.mjs';
 import { compactionMessage } from './commands.mjs';
 import { Config, contextConfig } from '../config.mjs';
-import { normalizePersonalityPatch } from '../cc-adaptation/personality.mjs';
 import { actualUser } from './core.mjs';
 import { handlePersonalityApi } from '../personality-session.mjs';
 import { CONFIG_KEYS as PERSONA_KEYS } from '../../plugins/persona/src/store.mjs';
@@ -175,13 +174,13 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     delete patch.dataDir;
     const unknown = Object.keys(patch).filter(key => !Object.hasOwn(Config.dict, key));
     if (unknown.length) throw new Error('未知或已退役的设置：' + unknown.join(', '));
+    // Persona owns its library and checks the editor's read revision. Retire
+    // the old unguarded write path before changing any unrelated OMD setting.
+    if (Object.keys(patch).some(key => PERSONA_KEYS.includes(key)))
+      throw new Error('请通过人格设置保存；旧设置入口不再写入人格数据');
     contextConfig({ ...hub.config(), ...patch });
-    patch = normalizePersonalityPatch(hub.config(), patch);
     if (patch.memoryScope !== undefined && !['session', 'project', 'global'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆；全局模式使用 global');
-    const personaPatch = Object.fromEntries(Object.entries(patch).filter(([key]) => PERSONA_KEYS.includes(key)));
-    if (hub.persona) patch = Object.fromEntries(Object.entries(patch).filter(([key]) => !PERSONA_KEYS.includes(key)));
     if (Object.keys(patch).length) await ctx.settings.update('oh-my-dsh', patch);
-    if (hub.persona && Object.keys(personaPatch).length) hub.persona.update(personaPatch);
     hub.context.cachedPreparation.configure();
     send(res, 200, hub.config()); return true;
   }

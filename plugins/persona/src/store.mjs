@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { normalizePersonalityPatch, personalityPatch, personalityPreset, personalityProfile, savedPersonalityPresets, importPersonalityFile } from './shared/personality.mjs';
 
 export const CONFIG_KEYS = ['identityPrompt', 'identityPreset', 'identitySavedPresets', 'identityCustomPrompt', 'identityCustomModules', 'identityCustomDescription', 'sessionPersonalityEnabled'];
@@ -21,6 +21,7 @@ const read = (path, fallback) => {
 const pick = config => Object.fromEntries(CONFIG_KEYS.filter(key => Object.hasOwn(config, key)).map(key => [key, config[key]]));
 
 export class PersonaStore {
+  #closed = false;
   constructor(directory) {
     this.dir = resolve(directory); this.file = join(this.dir, 'state.json');
     const saved = read(this.file, null);
@@ -35,15 +36,20 @@ export class PersonaStore {
     this.persisted = saved !== null;
   }
   commit(next) {
+    if (this.#closed) throw Object.assign(Error('人格插件已停用，请重新打开设置'), { statusCode: 503 });
     mkdirSync(this.dir, { recursive: true });
     const temporary = this.file + '.' + randomUUID() + '.tmp';
     writeFileSync(temporary, JSON.stringify(next) + '\n', { mode: 0o600 });
     renameSync(temporary, this.file);
     this.data = next; this.persisted = true;
   }
+  close() { this.#closed = true; }
   config() { return structuredClone(this.data.config); }
-  update(patch) {
+  revision() { return '"' + createHash('sha256').update(JSON.stringify(this.data.config)).digest('hex') + '"'; }
+  update(patch, expectedRevision) {
     if (!object(patch) || Object.keys(patch).some(key => !CONFIG_KEYS.includes(key))) throw Error('未知人格设置');
+    if (expectedRevision !== undefined && expectedRevision !== this.revision())
+      throw Object.assign(Error('人格设置已在另一处更改，请核对最新设置后重试；编辑草稿已保留'), { statusCode: 409 });
     const config = validateConfig({ ...this.data.config, ...normalizePersonalityPatch(this.data.config, patch) });
     this.commit({ ...this.data, config });
     return this.config();

@@ -10,7 +10,7 @@
 ## 开发
 
 - 优先使用宿主公共 SDK 和扩展点，不手改 SDK、生成文件或 `vendor/opencu/` 发行快照。
-- OpenCU、Workflow、Rewind 与 BTW 在各自独立仓库维护；通过对应 `scripts/sync-*.mjs` 同步完整快照和来源清单，不直接手改 vendor 文件。前端／宿主构建只针对受影响部分执行。
+- OpenCU、Workflow、Rewind、Persona 与 BTW 在各自独立仓库维护；通过对应 `scripts/sync-*.mjs` 同步完整快照和来源清单，不直接手改 vendor 或 `plugins/persona` 文件。同步包含公开文档、文档清单和检查脚本的输入，按独立包的实际分发清单维护。前端／宿主构建只针对受影响部分执行。
 - 组件及价格同步命令会自动重新生成设置页与公开来源清单。手工修改其他来源输入后运行 `npm run credits:write`，并用 `npm run docs:check` 检查一致性。
 - 测试使用隔离数据目录与受控模型；个人配置、会话、密钥和原始用户报告不进入提交或安装包。
 - 专注实现，尽量少做测试；按需做最小构建／启动检查，仅为具体问题或用户明确要求做定点验证（含 CU）。兼容调查按需查[插件兼容性](docs/plugin-compatibility.md)。

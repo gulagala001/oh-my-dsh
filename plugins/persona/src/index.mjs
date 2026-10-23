@@ -39,7 +39,7 @@ export function acquirePersona(ctx, { legacy } = {}) {
     const profileKey = createHash('sha256').update(profile?.dir || 'default').digest('hex').slice(0, 16);
     const store = new PersonaStore(join(home, 'dsh-persona-plugin', profileKey));
     if (legacy) store.migrateLegacy(legacy.config(), legacy.store.dir);
-    const service = { store, config: () => store.config(), update: patch => store.update(patch),
+    const service = { store, config: () => store.config(), update: (patch, revision) => store.update(patch, revision),
       forSession: session => sessionPersonality(service, session), promptFor: session => renderPersonality(service.forSession(session).modules) };
     entry = { service, leases: new Set() }; roots.set(root, entry);
     entry.unprovide = root.provide('dshPersona', service);
@@ -50,9 +50,21 @@ export function acquirePersona(ctx, { legacy } = {}) {
       try {
         const url = new URL(req.url, 'http://localhost');
         if (url.pathname === API + '/settings') {
-          if (req.method === 'GET') send(res, 200, service.config());
-          else if (req.method === 'POST') send(res, 200, service.update(await readBody(req)));
-          else send(res, 405, { error: '仅支持 GET 或 POST' });
+          try {
+            if (req.method === 'POST') {
+              const patch = await readBody(req);
+              const revision = req.headers['if-match'];
+              if (typeof revision !== 'string' || !revision)
+                throw Object.assign(Error('请重新读取人格设置后保存'), { statusCode: 428 });
+              // Compare and persist synchronously, after the complete body is read.
+              service.update(patch, revision);
+            } else if (req.method !== 'GET') { send(res, 405, { error: '仅支持 GET 或 POST' }); return; }
+            res.setHeader('ETag', store.revision());
+            send(res, 200, service.config());
+          } catch (error) {
+            res.setHeader('ETag', store.revision());
+            send(res, error.statusCode ?? 400, { error: error.message, config: service.config() });
+          }
           return;
         }
         if (url.pathname === API + '/session') {
@@ -61,7 +73,7 @@ export function acquirePersona(ctx, { legacy } = {}) {
           return;
         }
         send(res, 404, { error: '接口不存在' });
-      } catch (error) { send(res, 400, { error: error.message }); }
+      } catch (error) { send(res, error.statusCode ?? 400, { error: error.message }); }
     } })));
   }
   if (legacy) entry.service.store.migrateLegacy(legacy.config(), legacy.store.dir);
@@ -71,6 +83,7 @@ export function acquirePersona(ctx, { legacy } = {}) {
     entry.leases.delete(lease);
     if (entry.leases.size) return;
     entry.retiring = true;
+    entry.service.store.close();
     try { await entry.api.dispose(); }
     finally { roots.delete(root); entry.offPrompt(); entry.unprovide(); }
   });

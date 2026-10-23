@@ -77,6 +77,8 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 
 修改组件或价格来源的 `scripts/sync-*.mjs` 在同步完成后调用同一个来源清单生成器，更新设置页与公开来源文档；其他手工修改来源清单输入后运行 `npm run credits:write`。`npm run docs:check` 检查生成内容是否一致。
 
+Persona 在独立仓库维护，`node scripts/sync-persona.mjs` 按实际 npm 分发清单同步至 `plugins/persona/`，包含公开文档与检查输入。人格设置写入仅使用 `/api/dsh-persona/settings`：GET 返回配置和 `ETag`，POST 通过 `If-Match` 提交读取时的标记；冲突返回 409 和当前配置，缺少标记返回 428。旧 OMD `/settings` 不再接受人格字段，已有配置字段仍用于迁移和读取。
+
 `pnpm build` 构建前端，并从 `presets/oh-my-dsh/agent.cordis.yml` 生成普通与 OMD-PTC 预设；修改源配置，不手改生成文件。
 
 临时聊天以服务端内存中的完整回合为历史来源，原生消息及模型重放信息原样用于下一次请求。每个标签页的请求编号递增；`done` 回执确认提交，`stop` 只取消对应请求、阻止该编号迟到执行，并等待真实调用清理。断线时核对该次回合，未确认前保留草稿并暂停发送，恢复操作不重新调用模型。前端状态由标签页记录持有，组件只订阅视图；关闭后清空历史，移除标签页后停止保活。

@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-persona-plugin
+      name: '@gulagala001/dsh-persona-plugin'

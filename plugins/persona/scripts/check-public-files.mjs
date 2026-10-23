@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url)).replace(/\/$/, '');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
-const allowed = /^(?:\.gitignore|\.github\/workflows\/ci\.yml|package(?:-lock)?\.json|cordis\.patch\.yml|README(?:_EN)?\.md|CHANGELOG\.md|LICENSE|THIRD_PARTY_NOTICES\.md|src\/(?:[\w-]+\/)*[\w.-]+|lib\/(?:[\w-]+\/)*[\w.-]+|scripts\/(?:build|build-permission-native|check-public-files)\.mjs|test\/persona\.test\.mjs|docs\/(?:personality-format|releases)\.md|docs\/images\/persona\.png)$/;
+const allowed = /^(?:docs\/(?:documentation\.md|structure\.json)|scripts\/(?:check-docs|check-release-assets)\.mjs|\.gitignore|\.github\/workflows\/(?:ci|documentation-structure|release-assets)\.yml|package(?:-lock)?\.json|cordis\.patch\.yml|README(?:_EN)?\.md|CHANGELOG\.md|LICENSE|THIRD_PARTY_NOTICES\.md|src\/(?:[\w-]+\/)*[\w.-]+|lib\/(?:[\w-]+\/)*[\w.-]+|scripts\/(?:build|build-permission-native|check-public-files)\.mjs|test\/persona\.test\.mjs|docs\/(?:personality-format|releases)\.md|docs\/images\/persona\.png)$/;
 
 const forbidden = path => /(?:^|\/)(?:AGENTS|CLAUDE|AI_README|PLAN|REFERENCE|COMPONENT-ALLOCATION|.*HANDOFF.*|PROMPT_(?:MAINTENANCE|CHANGES))\.md$/i.test(path)
   || /(?:^|\/)[^/]*(?:raw[-_ ](?:research|review|audit)|prompt[-_ ]maintenance|agent[-_ ](?:allocation|handoff)|session[-_ ](?:transcript|archive))[^/]*$/i.test(path)

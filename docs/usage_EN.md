@@ -146,6 +146,8 @@ Oh My DSH settings use one page, with third-party features on a separate subpage
 
 **Personality preset** selects the global default. The collapsed **Advanced** section manages multiple personalities: create, copy, rename, update, delete, import and export. The editing selection is independent of the global selection, so saving an edit does not switch the global personality. Deleting the selected global preset preserves all its modules in Custom. Copy built-in presets to edit them.
 
+When multiple windows edit personalities, a stale save stops and displays the current settings while keeping the local draft for review and an explicit retry. If another editor deleted that preset, its draft can be saved as a new preset.
+
 Each personality has four modules: **Identity, Language style, Communication, and Answer presentation**. The latter three can inherit defaults; an explicitly empty override adds no preference for that module. Personality preferences do not replace the actual environment, permissions, tool protocols, task controls or memory processing rules.
 
 Use **Copy creation prompt**, give it to an AI with your character idea, and ask for a JSON file following the included format. **Import personality file** creates and selects a new preset; duplicate names are renamed automatically, existing presets are never overwritten, and invalid files show an error. **Export personality file** saves the current editor content for backup, sharing or further AI editing.

@@ -34,7 +34,10 @@
     "build": "node scripts/build.mjs",
     "test": "node --test test/*.test.mjs",
     "check:public": "node scripts/check-public-files.mjs",
-    "prepack": "npm run build && npm run check:public"
+    "prepack": "node scripts/check-docs.mjs && npm run build && npm run check:public",
+    "docs:check": "node scripts/check-docs.mjs",
+    "docs:write": "node scripts/check-docs.mjs --write",
+    "release:check": "node scripts/check-release-assets.mjs"
   },
   "files": [
     "src",
@@ -48,7 +51,9 @@
     "scripts/build.mjs",
     "scripts/build-permission-native.mjs",
     "scripts/check-public-files.mjs",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "scripts/check-docs.mjs",
+    "scripts/check-release-assets.mjs"
   ],
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.5"
