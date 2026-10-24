@@ -75,12 +75,12 @@ export function runDOMLocator(request = {}, selectOptions = selectOptionsDOM) {
   if (request.operation === 'domSnapshot') {
     const maxNodes = options.maxNodes ?? 500, maxChars = options.maxChars ?? 60000;
     if (!Number.isInteger(maxNodes) || maxNodes < 1 || maxNodes > 5000 || !Number.isInteger(maxChars) || maxChars < 100 || maxChars > 200000) unsupported('domSnapshot maxNodes must be 1–5000 and maxChars 100–200000');
-    const lines = [`Document ${JSON.stringify(document.title)} ${location.href}`];
+    const lines = [`Document ${JSON.stringify(document.title)} ${location.href}`], frames = [];
     let characters = lines[0].length, count = 0, truncated = false;
     for (const element of descendants(document)) {
       if (element.closest('script,style,template,noscript') || !visible(element)) continue;
       const semanticRole = role(element), leafText = !element.children.length ? normalize(text(element)) : '';
-      if (!semanticRole && !leafText && !element.isContentEditable && !element.matches('input,iframe')) continue;
+      if (!semanticRole && !leafText && !element.isContentEditable && !element.matches('input,iframe,frame')) continue;
       let depth = 0; for (let ancestor = parent(element); ancestor && depth < 12; ancestor = parent(ancestor)) depth++;
       const states = [];
       if (disabled(element)) states.push('disabled');
@@ -92,58 +92,82 @@ export function runDOMLocator(request = {}, selectOptions = selectOptionsDOM) {
       if (element.matches('input,textarea,select') && element.type !== 'password') states.push(`value=${JSON.stringify(String(element.value ?? '').slice(0,1000))}`);
       if (element.type === 'password') states.push('value=[redacted]');
       if (element.tagName === 'A' && element.hasAttribute('href')) states.push(`href=${JSON.stringify(element.getAttribute('href'))}`);
-      if (element.tagName === 'IFRAME') states.push('frame contents omitted; use frameLocator(css).domSnapshot() to inspect');
       const line = `${'  '.repeat(Math.max(0,depth - 1))}${semanticRole || element.tagName.toLowerCase()} ${JSON.stringify(normalize(name(element) || leafText).slice(0,1000))}${states.length ? ` [${states.join(', ')}]` : ''}`;
       if (count >= maxNodes || characters + line.length + 1 > maxChars) { truncated = true; break; }
+      if (element.matches('iframe,frame')) frames.push({element,line:lines.length,depth:Math.max(0,depth-1)});
       lines.push(line); count++; characters += line.length + 1;
     }
+    if (request.snapshotDetails) return {lines,frames,truncated};
     if (truncated) lines.push(`[truncated: maxNodes=${maxNodes}, maxChars=${maxChars}]`);
     return lines.join('\n');
   }
-  if (!Array.isArray(request.locator) || request.locator.length > 100) unsupported('locator must be an array with at most 100 steps');
-  let current = [document];
-  for (const step of request.locator) {
-    if (!step || typeof step !== 'object' || Array.isArray(step)) unsupported('Invalid locator step');
-    const permitted = {role:['kind','value','name','exact'],text:['kind','value','exact'],label:['kind','value','exact'],placeholder:['kind','value','exact'],testId:['kind','value'],css:['kind','value'],nth:['kind','index'],filter:['kind','hasText','hasNotText','visible']}[step.kind];
-    if (!permitted || Object.keys(step).some(key => !permitted.includes(key))) unsupported(`Unsupported locator step or option: ${step.kind}`);
-    if (step.exact !== undefined && typeof step.exact !== 'boolean') unsupported('exact must be a boolean');
-    if (step.kind === 'nth') {
-      if (!Number.isInteger(step.index)) unsupported('nth requires an integer index');
-      const index = step.index < 0 ? current.length + step.index : step.index;
-      current = current[index] ? [current[index]] : []; continue;
+  let steps = 0;
+  const validate = chain => {
+    if (!Array.isArray(chain)) unsupported('locator must be an array with at most 100 steps');
+    for (const step of chain) {
+      if (++steps > 100) unsupported('locator must contain at most 100 steps including composite locators');
+      if (!step || typeof step !== 'object' || Array.isArray(step)) unsupported('Invalid locator step');
+      const permitted = {role:['kind','value','name','exact'],text:['kind','value','exact'],label:['kind','value','exact'],placeholder:['kind','value','exact'],testId:['kind','value'],css:['kind','value'],nth:['kind','index'],filter:['kind','has','hasNot','hasText','hasNotText','visible'],and:['kind','locator'],or:['kind','locator']}[step.kind];
+      if (!permitted || Object.keys(step).some(key => !permitted.includes(key))) unsupported(`Unsupported locator step or option: ${step.kind}`);
+      if (step.exact !== undefined && typeof step.exact !== 'boolean') unsupported('exact must be a boolean');
+      if (step.kind === 'and' || step.kind === 'or') validate(step.locator);
+      for (const key of ['has','hasNot']) if (step[key] !== undefined) validate(step[key]);
     }
-    if (step.kind === 'filter') {
-      if (step.hasText !== undefined) matcher(step.hasText, 'hasText');
-      if (step.hasNotText !== undefined) matcher(step.hasNotText, 'hasNotText');
-      if (step.visible !== undefined && typeof step.visible !== 'boolean') unsupported('visible must be a boolean');
-      current = current.filter(element => element.nodeType === 1 && (step.hasText === undefined || matches(text(element), step.hasText)) && (step.hasNotText === undefined || !matches(text(element), step.hasNotText)) && (step.visible === undefined || visible(element) === step.visible)); continue;
-    }
-    const value = ['role','css'].includes(step.kind) ? string(step.value, step.kind) : (matcher(step.value, step.kind), step.value);
-    if (step.name !== undefined) matcher(step.name, 'role name');
-    const found = [];
-    for (const root of current) {
-      const candidates = descendants(root);
-      let cssMatches;
-      if (step.kind === 'css') {
-        if (/>>|:has-text\(|:text(?:-is|-matches)?\(|:visible\b/u.test(value)) unsupported('Use standard CSS selectors; Playwright selector extensions and frame selectors are unsupported');
-        try { cssMatches = new Set([root, ...candidates.filter(element => element.shadowRoot).map(element => element.shadowRoot)].flatMap(scope => [...scope.querySelectorAll(value)])); } catch { unsupported('Invalid or unsupported CSS selector'); }
+  };
+  validate(request.locator);
+  const resolve = (chain, scope) => {
+    let current = [scope];
+    for (const step of chain) {
+      if (step.kind === 'and' || step.kind === 'or') {
+        const other = new Set(resolve(step.locator,scope));
+        if (step.kind === 'and') current = current.filter(element => other.has(element));
+        else {
+          const found = new Set([...current,...other]);
+          current = [scope,...descendants(scope)].filter(element => found.has(element));
+        }
+        continue;
       }
-      for (const element of candidates) {
-        let matched = false;
-        if (step.kind === 'css') matched = cssMatches.has(element);
-        else if (step.kind === 'role') matched = role(element) === value && !hidden(element) && !element.closest('[aria-hidden="true"]') && (step.name === undefined || matches(name(element), step.name, step.exact));
-        else if (step.kind === 'text') matched = !element.matches('script,style,noscript') && matches(text(element), value, step.exact) && ![...element.children].some(child => matches(text(child), value, step.exact));
-        else if (step.kind === 'label') matched = !!label(element) && matches(label(element), value, step.exact);
-        else if (step.kind === 'placeholder') matched = element.hasAttribute('placeholder') && matches(element.getAttribute('placeholder'), value, step.exact);
-        else if (step.kind === 'testId') matched = element.hasAttribute('data-testid') && matches(element.getAttribute('data-testid'), value, true);
-        if (matched) found.push(element);
+      if (step.kind === 'nth') {
+        if (!Number.isInteger(step.index)) unsupported('nth requires an integer index');
+        const index = step.index < 0 ? current.length + step.index : step.index;
+        current = current[index] ? [current[index]] : []; continue;
       }
+      if (step.kind === 'filter') {
+        if (step.hasText !== undefined) matcher(step.hasText, 'hasText');
+        if (step.hasNotText !== undefined) matcher(step.hasNotText, 'hasNotText');
+        if (step.visible !== undefined && typeof step.visible !== 'boolean') unsupported('visible must be a boolean');
+        current = current.filter(element => element.nodeType === 1 && (step.hasText === undefined || matches(text(element), step.hasText)) && (step.hasNotText === undefined || !matches(text(element), step.hasNotText)) && (step.visible === undefined || visible(element) === step.visible) &&
+          (step.has === undefined || resolve(step.has,element).length > 0) && (step.hasNot === undefined || resolve(step.hasNot,element).length === 0)); continue;
+      }
+      const value = ['role','css'].includes(step.kind) ? string(step.value, step.kind) : (matcher(step.value, step.kind), step.value);
+      if (step.name !== undefined) matcher(step.name, 'role name');
+      const found = [];
+      for (const root of current) {
+        const candidates = descendants(root);
+        let cssMatches;
+        if (step.kind === 'css') {
+          if (/>>|:has-text\(|:text(?:-is|-matches)?\(|:visible\b/u.test(value)) unsupported('Use standard CSS selectors; Playwright selector extensions and frame selectors are unsupported');
+          try { cssMatches = new Set([root, ...candidates.filter(element => element.shadowRoot).map(element => element.shadowRoot)].flatMap(scope => [...scope.querySelectorAll(value)])); } catch { unsupported('Invalid or unsupported CSS selector'); }
+        }
+        for (const element of candidates) {
+          let matched = false;
+          if (step.kind === 'css') matched = cssMatches.has(element);
+          else if (step.kind === 'role') matched = role(element) === value && !hidden(element) && !element.closest('[aria-hidden="true"]') && (step.name === undefined || matches(name(element), step.name, step.exact));
+          else if (step.kind === 'text') matched = !element.matches('script,style,noscript') && matches(text(element), value, step.exact) && ![...element.children].some(child => matches(text(child), value, step.exact));
+          else if (step.kind === 'label') matched = !!label(element) && matches(label(element), value, step.exact);
+          else if (step.kind === 'placeholder') matched = element.hasAttribute('placeholder') && matches(element.getAttribute('placeholder'), value, step.exact);
+          else if (step.kind === 'testId') matched = element.hasAttribute('data-testid') && matches(element.getAttribute('data-testid'), value, true);
+          if (matched) found.push(element);
+        }
+      }
+      current = [...new Set(found)];
     }
-    current = [...new Set(found)];
-  }
+    return current;
+  };
+  const current = resolve(request.locator,document);
   const method = request.method;
-  if (!['count','innerText','textContent','allTextContents','isVisible','isEnabled','getAttribute','click','dblclick','fill','press','check','uncheck','setChecked','selectOption','waitFor','resolveFrame'].includes(method)) unsupported(`Unsupported locator method: ${method}`);
-  const supportedArgs = {waitFor:['state'],getAttribute:['name'],click:['button'],dblclick:['button'],fill:['value'],press:['key'],setChecked:['checked'],selectOption:['value']}[method] ?? [];
+  if (!['count','innerText','textContent','allTextContents','isVisible','isEnabled','getAttribute','click','dblclick','fill','type','pressSequentially','press','check','uncheck','setChecked','selectOption','waitFor','resolveFrame'].includes(method)) unsupported(`Unsupported locator method: ${method}`);
+  const supportedArgs = {waitFor:['state'],getAttribute:['name'],click:['button'],dblclick:['button'],fill:['value'],type:['value'],pressSequentially:['value'],press:['key'],setChecked:['checked'],selectOption:['value']}[method] ?? [];
   if (Object.keys(options).some(key => !supportedArgs.includes(key))) unsupported(`Unsupported ${method} option; supported options: ${supportedArgs.join(', ') || 'none'}`);
   if (options.button !== undefined && !['left','middle','right'].includes(options.button)) unsupported('click button must be left, middle, or right');
   if (method === 'waitFor') {
@@ -181,6 +205,7 @@ export function runDOMLocator(request = {}, selectOptions = selectOptionsDOM) {
       if (!probe.value || !Number.isFinite(probe.valueAsNumber)) unsupported('fill requires a valid finite number for a number input');
     }
   }
+  if (['type','pressSequentially'].includes(method) && (typeof options.value !== 'string' || options.value.length > 100000 || !(element.matches('textarea') || element.tagName === 'INPUT' && ['text','email','password','search','tel','url','number'].includes(element.type) || element.isContentEditable))) unsupported(`${method} requires text (at most 100000 characters) and an editable element`);
   if (method === 'press' && !string(options.key, 'press key')) unsupported('press requires a non-empty key');
   if (['check','uncheck','setChecked'].includes(method)) {
     if (!element.matches('input[type=checkbox],input[type=radio]')) unsupported('check/uncheck/setChecked currently require an HTML checkbox or radio input');
@@ -190,7 +215,7 @@ export function runDOMLocator(request = {}, selectOptions = selectOptionsDOM) {
   if (method === 'selectOption') {
     selectOptions(element, options.value);
   }
-  if (method === 'fill' && (element.readOnly || element.getAttribute('aria-readonly') === 'true')) fail('LOCATOR_NOT_ACTIONABLE', 'Locator element is readonly');
+  if (['fill','type','pressSequentially'].includes(method) && (element.readOnly || element.getAttribute('aria-readonly') === 'true')) fail('LOCATOR_NOT_ACTIONABLE', 'Locator element is readonly');
   if (['click','dblclick','check','uncheck','setChecked','selectOption'].includes(method)) {
     element.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
     const after = element.getBoundingClientRect();

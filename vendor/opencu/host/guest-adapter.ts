@@ -128,7 +128,7 @@ export class OpenCUGuests {
   download(lease: OpenCUGuestLease | undefined, item: DownloadItem): boolean {
     if (!lease?.openCU || !lease.guest) return false
     const current = this.owned(lease.owner, lease, true)
-    return captureOpenCUDownload(current.openCU, item)
+    return captureOpenCUDownload(current.openCU, item, current.guest!.id)
   }
   allowsExtension(value: Session, url: URL): boolean {
     return value === this.browserSession && url.protocol === 'chrome-extension:' && url.username === '' && url.password === ''

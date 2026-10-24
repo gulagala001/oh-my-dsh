@@ -5,6 +5,30 @@ export async function hitTestViewport(send, point) {
   return send('DOM.getNodeForLocation', {x:Math.floor(point.x+viewport.pageX),y:Math.floor(point.y+viewport.pageY),includeUserAgentShadowDOM:false});
 }
 
+/** Enumerate real owners in one exact document; Page.getFrameTree omits OOPIFs. */
+export async function readCDPFrameOwners(route, check = () => {}) {
+  check();
+  const reply = await route.send('Runtime.evaluate',{contextId:route.contextId,expression:'document'});
+  const stale = message => Object.assign(new Error(message),{code:'STALE_OBSERVATION',details:{inputDispatched:false}});
+  if (reply.exceptionDetails || !reply.result?.objectId) throw stale('An observed frame document is no longer available');
+  const objectId = reply.result.objectId;
+  try {
+    const {node} = await route.send('DOM.describeNode',{objectId,depth:-1,pierce:true});
+    check();
+    const owners = [], pending = [node];
+    while (pending.length) {
+      const node = pending.pop(), frameId = node.frameId ?? node.contentDocument?.frameId;
+      if (frameId && frameId !== route.frameId || /^(?:IFRAME|FRAME)$/u.test(node.nodeName)) {
+        owners.push({backendNodeId:node.backendNodeId,frameId});
+        continue;
+      }
+      const children = [...node.children ?? [],...node.shadowRoots ?? []];
+      for (let index = children.length-1; index >= 0; index--) pending.push(children[index]);
+    }
+    return owners;
+  } finally {await route.send('Runtime.releaseObject',{objectId}).catch(()=>{});}
+}
+
 /** Scope a live route to one action without storing that action's fence in IDs. */
 export function withCDPFrameGuard(router, wrapSend = send => send, guard = work => work()) {
   if (!router) return router;

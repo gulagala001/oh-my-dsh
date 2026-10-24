@@ -152,12 +152,13 @@ export function createPluginRuntime(options = {}) {
     const { path, base64: ignored, data, dataUrl, ...metadata } = screenshot;
     return { ...result, observation: { ...result.observation, screenshot: { ...metadata, image } }, image };
   }
-  async function deliveries(runtime, attachments, signal, { emit = true } = {}) {
+  async function deliveries(runtime, attachments, signal, { emit = true, id } = {}) {
     const result = await runtime.deliveries();
     if (result.ok === false) return result;
     const records = [];
     try {
       for (const item of [...result.deliveries, ...await sidebarDownloads.list({ maxResults: 1000 })]) {
+        if (id !== undefined && item.id !== id) continue;
         signal?.throwIfAborted();
         const { path, filename, file: ignoredFile, deliverable: ignoredDeliverable, fileExists: ignoredExists, fileError: retainedError, ...metadata } = item;
         let file, fileExists = false, fileError = item.fileExists === false ? retainedError : undefined, source;

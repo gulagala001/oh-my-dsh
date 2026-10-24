@@ -384,7 +384,7 @@ export async function createController({dataDir, browser, native} = {}) {
       // A clean shutdown receipt survives another restart, but never a new
       // dispatch. Persist invalidation first so a crash cannot reuse the receipt.
       const acknowledgedBefore = target.releaseAcknowledged;
-      const reading = ['getDialog','getDOM','domSnapshot','hitTest','siteTools','cursor'].includes(request.action);
+      const reading = ['getDialog','getDOM','domSnapshot','navigationState','hitTest','siteTools','cursor'].includes(request.action);
       let result;
       const recovery = dialogAction && aborter.signal.aborted ? new AbortController() : null;
       if (recovery) recoveryOperations.add(recovery);
@@ -411,6 +411,10 @@ export async function createController({dataDir, browser, native} = {}) {
           if (replaced) forgetTarget(target.id);
           selected.set(current.id, {...current, verified: true, cold: false});
           activeTargetId = current.id;
+          // Consumers replace their binding metadata from this receipt. Return
+          // the verified, normalized descriptor, including freshly derived
+          // control routes, rather than the backend's undecorated target.
+          result = {...result,target:json(current)};
         }
         if (result?.closedTargetId) forgetTarget(result.closedTargetId);
         if (inputReleased(result?.release)) {

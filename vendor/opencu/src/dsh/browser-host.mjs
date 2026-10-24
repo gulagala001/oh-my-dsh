@@ -116,7 +116,7 @@ export function createBrowserHost() {
       signal?.throwIfAborted();
       const client = clientFor(target);
       const previous = bindings.get(target.id);
-      const reading = ['getDialog', 'getDOM', 'domSnapshot', 'hitTest', 'siteTools', 'cursor'].includes(action.action);
+      const reading = ['getDialog', 'getDOM', 'domSnapshot', 'navigationState', 'hitTest', 'siteTools', 'cursor'].includes(action.action);
       if (!reading && previous && previous.client !== client) fail('RECOVERY_REQUIRED', 'The sidebar reconnected; resume the original target before input', {inputDispatched: false});
       // Keep the connection that owns selection and unresolved input even after
       // it disappears from inventory. A replacement connection is not a receipt.

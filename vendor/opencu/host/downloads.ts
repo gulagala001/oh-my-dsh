@@ -8,6 +8,7 @@ interface DownloadRecord {
   id: string
   filename: string
   url: string
+  sourceWebContentsId?: number
   startedAtMs: number
   updatedAtMs: number
   status: 'started' | 'in_progress' | 'paused' | 'complete' | 'failed' | 'canceled'
@@ -28,6 +29,10 @@ interface DownloadLease {
   promptForDownload?: boolean
 }
 const records = new Map<string, { owner: WebContents; path: string; item: DownloadItem; value: DownloadRecord }>()
+/** A pre-action cursor from the actual DownloadItem owner, before UI history sync. */
+export function openCUDownloadIds(sourceWebContentsId: number): string[] {
+  return [...records.values()].filter(record => record.value.sourceWebContentsId === sourceWebContentsId).map(record => record.value.id)
+}
 function safeName(value: string): string {
   const name = basename(value.replaceAll('\\', '/')).replace(/[<>:"|?*\u0000-\u001f]/g, '_').replace(/[. ]+$/g, '') || 'download'
   const extension = extname(name), suffix = Buffer.byteLength(extension) <= 180 ? extension : ''
@@ -84,12 +89,13 @@ export async function openCUDownloadOperation(lease: DownloadLease, operation: u
 }
 
 /** Persist bytes without a save dialog; REA owns progress and subsequent file actions. */
-export function captureOpenCUDownload(lease: DownloadLease, item: DownloadItem): boolean {
+export function captureOpenCUDownload(lease: DownloadLease, item: DownloadItem, sourceWebContentsId?: number): boolean {
   if (!lease.downloadDirectory) return false
   const id = randomUUID(), filename = safeName(item.getFilename()), directory = join(lease.downloadDirectory, id)
   mkdirSync(directory, { mode: 0o700 })
   const path = join(directory, filename)
   const value: DownloadRecord = { id, filename, url: item.getURL(), startedAtMs: Date.now(), updatedAtMs: Date.now(), status: 'started',
+    ...(sourceWebContentsId === undefined ? {} : {sourceWebContentsId}),
     receivedBytes: 0, totalBytes: item.getTotalBytes(), canPause: true, canResume: false, canCancel: true, fileExists: false }
   const record = { owner: lease.owner, path, item, value }
   const persist = () => {
