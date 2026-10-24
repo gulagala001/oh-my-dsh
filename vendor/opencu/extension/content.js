@@ -1,6 +1,7 @@
-(() => {
+export function installDocumentRuntime({trackActivity = true} = {}) {
   if (globalThis.__opencuDocument) return;
-  const documentId = crypto.randomUUID();
+  const randomId = () => [...crypto.getRandomValues(new Uint8Array(16))].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+  const documentId = randomId();
   let revision = 0, activitySequence = 0, userActivity, textInput;
   const expected = [];
   const cancelTextInput = () => {
@@ -43,6 +44,10 @@
     // Native steppers may pair text beforeinput with a plain input Event.
     return {targets:changesValue ? [control] : [],inputTypes:[...inputTypes,...(type !== 'range' && navigation ? ['insertText'] : []),null]};
   };
+  const checkable = target => {
+    const control = target?.closest?.('label')?.control ?? target;
+    return control?.tagName === 'INPUT' && ['checkbox','radio'].includes(control.type) ? control : null;
+  };
 
   const automated = event => {
     const now = performance.now();
@@ -84,13 +89,16 @@
         if ([' ','Enter'].includes(event.key)) expected.push({type:'click',target:editor,expires:input.expires});
       } else if (editor && input.inputTypes?.length) expected.push({type:'input',target:editor,markerId:input.markerId,keyboardInput:true,
         inputTypes:input.inputTypes,expires:input.expires});
+    } else if (event.type === 'pointerdown' && event.button === 0) {
+      const control = checkable(target);
+      if (control) expected.push({type:'click',target:control,markerId:input.markerId,expires:input.expires});
     } else if (event.type === 'click') {
       const marker = {type:'input',target,expires:input.expires};expected.push(marker);
       setTimeout(() => {const index=expected.indexOf(marker);if(index!==-1)expected.splice(index,1);},0);
     }
     return true;
   };
-  for (const type of ['pointerdown', 'keydown', 'beforeinput', 'input', 'wheel', 'click']) addEventListener(type, event => {
+  if (trackActivity) for (const type of ['pointerdown', 'keydown', 'beforeinput', 'input', 'wheel', 'click']) addEventListener(type, event => {
     if (!event.isTrusted || automated(event)) return;
     userActivity = { documentId, sequence: ++activitySequence, kind: type, at: new Date().toISOString() };
   }, true);
@@ -112,12 +120,12 @@
     switch (method) {
       case 'identity': return { documentId, url: location.href, title: document.title, geometry: geometry(), userActivity };
       case 'expectInput': {
-        const markerId = crypto.randomUUID();
-        for (const event of input.events ?? []) expected.push({ ...event, markerId, expires: input.pending ? Infinity : performance.now() + 500 });
+        const markerId = randomId();
+        for (const event of input.events ?? []) expected.push({ ...event, ...(input.targetActive ? {target:textInputTarget()} : {}), markerId, expires: input.pending ? Infinity : performance.now() + 500 });
         return { expected: true, markerId, documentId };
       }
       case 'expectTextInput': {
-        const target = textInputTarget(), markerId = crypto.randomUUID();
+        const target = textInputTarget(), markerId = randomId();
         if (target && typeof input.text === 'string') expected.push({type:'beforeinput',inputType:'insertText',data:input.text,target,textInput:true,markerId,expires:performance.now()+500});
         return {expected:true,markerId,documentId};
       }
@@ -135,4 +143,4 @@
       default: throw Object.assign(new Error('Unknown content operation.'), { code: 'UNSUPPORTED_OPERATION' });
     }
   } };
-})();
+}

@@ -52,6 +52,7 @@ export async function buildExtensionZip(root = installedRoot, signal) {
     if (name === 'manifest.json') {
       const manifest = JSON.parse(data);
       if (manifest.manifest_version !== 3 || manifest.version !== distribution.extensionVersion || typeof manifest.key !== 'string' || sha(manifest.key) !== distribution.manifestKeySha256) fail();
+      if (!/^\d+(?:\.\d+){0,3}$/.test(manifest.minimum_chrome_version ?? '') || Number(manifest.minimum_chrome_version.split('.')[0]) < 125) fail();
     }
     const filename = Buffer.from(name), crc = crc32(data);
     const header = Buffer.alloc(30); header.writeUInt32LE(0x04034b50); header.writeUInt16LE(20, 4); header.writeUInt16LE(0x800, 6); header.writeUInt16LE(33, 12);

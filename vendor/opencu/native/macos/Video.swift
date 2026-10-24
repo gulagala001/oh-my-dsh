@@ -14,6 +14,7 @@ final class WindowVideo: NSObject, SCStreamOutput, SCStreamDelegate {
     private var stream: SCStream?
     private var idle: Timer?
     private(set) var closed = false
+    private(set) var windowID: Int?
 
     func start(windowID: Int, checkpoint: () throws -> Void = {}) throws {
         try checkpoint()
@@ -43,6 +44,7 @@ final class WindowVideo: NSObject, SCStreamOutput, SCStreamDelegate {
         try checkpoint()
         if let error = lookupError { close(); throw NativeFailure("VIDEO_CAPTURE_FAILED", error.localizedDescription) }
         if !completed { close(); throw NativeFailure("VIDEO_CAPTURE_TIMEOUT", "The native video stream did not start.") }
+        self.windowID = windowID
     }
 
     func frame(checkpoint: () throws -> Void = {}) throws -> [String: Any] {
@@ -94,17 +96,29 @@ final class VideoStore {
     func preview(_ target: [String: Any], checkpoint: () throws -> Void = {}) throws -> [String: Any] {
         try checkpoint()
         guard CGPreflightScreenCaptureAccess() else { throw NativeFailure("SCREEN_CAPTURE_PERMISSION_REQUIRED", "Screen Recording permission is required for native video monitoring.") }
-        guard let id = target["id"] as? String, let windowID = target["windowId"] as? Int else {
+        guard let id = target["id"] as? String, target["windowId"] is Int else {
             throw NativeFailure("WINDOW_REQUIRED", "Choose a specific application window for video monitoring.")
         }
+        let targets = TargetStore(), surface = try targets.captureSurface(target)
+        guard let windowID = surface.window?.id else { throw NativeFailure("WINDOW_REQUIRED", "The active target has no uniquely mapped capture window.") }
         streams = streams.filter { !$0.value.closed }
+        if let previous = streams[id], previous.windowID != windowID { previous.close(); streams.removeValue(forKey: id) }
         if streams[id] == nil {
             let video = WindowVideo()
             do { try video.start(windowID: windowID, checkpoint: checkpoint) }
             catch { video.close(); throw error }
             streams[id] = video
         }
-        do { return try streams[id]!.frame(checkpoint: checkpoint) }
+        do {
+            var frame = try streams[id]!.frame(checkpoint: checkpoint)
+            let live = try targets.captureSurface(target)
+            guard sameCaptureRoot(surface.root, live.root), live.window?.id == windowID else {
+                throw NativeFailure("STALE_OBSERVATION", "The active dialog changed during preview capture. Refresh this same target.")
+            }
+            frame["modalDetection"] = surface.modalDetection
+            frame["capturedWindowId"] = windowID
+            return frame
+        }
         catch { streams.removeValue(forKey: id)?.close(); throw error }
     }
     func stop(_ id: String) { streams.removeValue(forKey: id)?.close() }

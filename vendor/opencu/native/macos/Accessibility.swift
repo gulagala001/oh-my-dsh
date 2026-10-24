@@ -8,6 +8,53 @@ struct ElementRecord {
     let generation: Int
 }
 
+// A normal click chooses one semantic action before dispatch. AppKit menus can
+// publish both Press and Pick, but only Pick commits the selected item.
+func accessibilityClickTarget<Node>(_ element: Node, role: (Node) -> String,
+    parent: (Node) -> Node?, enabled: (Node) -> Bool, actions: (Node) throws -> [String]) throws -> (element: Node, action: String)? {
+    var node = element
+    for _ in 0..<80 {
+        let kind = role(node)
+        if ["AXRow", "AXWindow", "AXApplication", "AXMenu", "AXMenuBar"].contains(kind) { return nil }
+        if ["AXButton", "AXCheckBox", "AXRadioButton", "AXPopUpButton", "AXMenuButton", "AXLink", "AXMenuItem"].contains(kind) {
+            guard enabled(node) else { throw NativeFailure("ELEMENT_DISABLED", "The selected control is disabled; no input was sent.") }
+            let available = try actions(node)
+            if kind == "AXMenuItem", available.contains("AXPick") { return (node, "AXPick") }
+            if available.contains("AXPress") { return (node, "AXPress") }
+            if kind == "AXMenuItem" {
+                throw NativeFailure("UNSUPPORTED_ACTION", "The selected menu item supports neither AXPick nor AXPress; no input was sent.")
+            }
+            return nil
+        }
+        guard let next = parent(node) else { return nil }
+        node = next
+    }
+    return nil
+}
+
+func accessibilityVisibleBounds<Node>(_ element: Node, bounds: (Node) -> CGRect?, parent: (Node) -> Node?,
+    clips: (Node) -> Bool, hidden: (Node) -> Bool) throws -> CGRect {
+    guard var visible = bounds(element), !visible.isNull, !visible.isInfinite, visible.width > 0, visible.height > 0 else {
+        throw NativeFailure("ELEMENT_NOT_VISIBLE", "AX element has no usable screen bounds.")
+    }
+    var node = element
+    for _ in 0..<80 {
+        if hidden(node) { throw NativeFailure("ELEMENT_NOT_VISIBLE", "AX element or its ancestor is hidden; no pointer input was sent.") }
+        if clips(node) {
+            guard let clip = bounds(node), !clip.isNull, !clip.isInfinite, clip.width > 0, clip.height > 0 else {
+                throw NativeFailure("ELEMENT_NOT_VISIBLE", "A required scroll/window clipping region is unavailable; no pointer input was sent.")
+            }
+            visible = visible.intersection(clip)
+        }
+        guard !visible.isNull, visible.width > 0, visible.height > 0 else {
+            throw NativeFailure("ELEMENT_NOT_VISIBLE", "AX element is outside its visible scroll/window region; no pointer input was sent.")
+        }
+        guard let next = parent(node) else { return visible }
+        node = next
+    }
+    throw NativeFailure("ELEMENT_NOT_VISIBLE", "The element's visible ancestor hierarchy exceeds the supported traversal bound; no pointer input was sent.")
+}
+
 private func accessibilityTextValues(title: String?, description: String?, help: String?) -> [String: String] {
     func nonempty(_ value: String?) -> String? {
         guard let value = value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
@@ -29,18 +76,20 @@ final class AccessibilityStore {
     var elements: [Int: ElementRecord] = [:]
     var nextID = 1
     var generation = 0
+    private(set) var observationRoot: AXUIElement?
     private let identityScope: String
     init(copying previous: AccessibilityStore? = nil) {
         identityScope = previous?.identityScope ?? UUID().uuidString
         if let previous = previous {
             elements = previous.elements; nextID = previous.nextID; generation = previous.generation
+            observationRoot = previous.observationRoot
         }
     }
 
     func observe(_ target: [String: Any], targets: TargetStore, options: [String: Any], checkpoint: () throws -> Void = {}) throws -> [String: Any] {
         try checkpoint()
         try requireAX()
-        let root = target["windowId"] == nil ? AXUIElementCreateApplication(pid_t(target["pid"] as? Int ?? 0)) : try targets.axWindow(target)
+        let root = try targets.observationRoot(target)
         let id = target["id"] as? String ?? ""
         generation += 1
         let previous = Dictionary(grouping: elements.filter { $0.value.targetId == id }, by: { CFHash($0.value.element) })
@@ -99,6 +148,7 @@ final class AccessibilityStore {
         }
         try visit(root, depth: 0, parentID: nil)
         try checkpoint()
+        observationRoot = root
         return ["text": lines.joined(separator: "\n"), "nodes": nodes, "generation": current, "truncated": truncated,
                 "stableIds": true, "identityScope": identityScope + ":" + id,
                 "numericIds": "stable while the same element remains in this target; removed elements and helper restart invalidate IDs"]
@@ -136,18 +186,19 @@ final class AccessibilityStore {
         return result
     }
 
-    func setValue(_ id: Int, target: [String: Any], targets: TargetStore, value: Any) throws {
+    func setValue(_ id: Int, target: [String: Any], targets: TargetStore, value: Any, check: () throws -> Void, willDispatch: () -> Void) throws {
         try requireAX()
         let element = try currentElement(id, target: target, targets: targets)
         var settable = DarwinBoolean(false)
         try checkedAX(AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable), "check value is settable")
         guard settable.boolValue else { throw NativeFailure("AX_VALUE_NOT_SETTABLE", "The selected element does not support AX value assignment.") }
+        guard (attribute(element, kAXEnabledAttribute) as? NSNumber)?.boolValue != false else { throw NativeFailure("ELEMENT_DISABLED", "The selected control is disabled; no input was sent.") }
+        try check(); try targets.requireInteraction(element, target: target); willDispatch()
         try checkedAX(AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, value as CFTypeRef), "set value")
     }
 
-    func press(_ id: Int, target: [String: Any], targets: TargetStore) throws {
-        try requireAX()
-        try checkedAX(AXUIElementPerformAction(try currentElement(id, target: target, targets: targets), kAXPressAction as CFString), "press element")
+    func press(_ id: Int, target: [String: Any], targets: TargetStore, check: () throws -> Void, willDispatch: () -> Void) throws {
+        try performSecondaryAction(id, target: target, targets: targets, name: "AXPress", check: check, willDispatch: willDispatch)
     }
 
     private func selectedRange(_ element: AXUIElement) -> CFRange? {
@@ -191,6 +242,7 @@ final class AccessibilityStore {
             guard Int(pid) == target["pid"] as? Int else { throw NativeFailure("TARGET_IDENTITY_CHANGED", "Focused editor belongs to a different application.") }
         }
         try verifyWindow(element, target: target, targets: targets)
+        try targets.requireInteraction(element, target: target)
         return element
     }
 
@@ -238,7 +290,7 @@ final class AccessibilityStore {
         }
         try textAvailable(live)
         try writable(live, kAXSelectedTextRangeAttribute)
-        try check(); willDispatch()
+        try check(); try targets.requireInteraction(live, target: target); willDispatch()
         try checkedAX(AXUIElementSetAttributeValue(live, kAXSelectedTextRangeAttribute as CFString, selected), "select text range")
     }
 
@@ -263,7 +315,7 @@ final class AccessibilityStore {
         }
         try textAvailable(live, editing: true)
         try writable(live, kAXSelectedTextAttribute)
-        try check(); willDispatch()
+        try check(); try targets.requireInteraction(live, target: target); willDispatch()
         // The application's selected-text setter owns replacement and undo.
         // Never rewrite AXValue, focus a window, or modify the system clipboard.
         try checkedAX(AXUIElementSetAttributeValue(live, kAXSelectedTextAttribute as CFString, text as CFString), "insert selected text")
@@ -292,7 +344,7 @@ final class AccessibilityStore {
         try checkedAX(AXUIElementCopyActionNames(live, &liveNames), "verify current element actions")
         guard (attribute(live, kAXEnabledAttribute) as? NSNumber)?.boolValue != false else { throw NativeFailure("ELEMENT_DISABLED", "The selected control became disabled; no input was sent.") }
         guard (liveNames as? [String] ?? []).contains(action) else { throw NativeFailure("UNSUPPORTED_ACTION", "The requested accessibility action is no longer available; no input was sent.") }
-        try check(); willDispatch()
+        try check(); try targets.requireInteraction(live, target: target); willDispatch()
         try checkedAX(AXUIElementPerformAction(live, action as CFString), "perform \(action)")
     }
 
@@ -308,30 +360,29 @@ final class AccessibilityStore {
         throw NativeFailure("TARGET_IDENTITY_CHANGED", "The selected element is outside the target window.")
     }
 
-    func pressable(_ id: Int, target: [String: Any], targets: TargetStore) throws -> AXUIElement? {
+    func clickTarget(_ id: Int, target: [String: Any], targets: TargetStore) throws -> (element: AXUIElement, action: String)? {
         try requireAX()
-        let element = try get(id, target: target)
-        try verifyWindow(element, target: target, targets: targets)
-        var node = element
-        for _ in 0..<80 {
-            let role = axString(node, kAXRoleAttribute) ?? ""
-            if [kAXRowRole, kAXWindowRole, kAXApplicationRole].contains(role) { return nil }
-            if [kAXButtonRole, kAXCheckBoxRole, kAXRadioButtonRole, kAXPopUpButtonRole, kAXMenuButtonRole, "AXLink"].contains(role) {
-                guard (attribute(node, kAXEnabledAttribute) as? NSNumber)?.boolValue != false else {
-                    throw NativeFailure("ELEMENT_DISABLED", "The selected control is disabled; no input was sent.")
-                }
+        let element = try currentElement(id, target: target, targets: targets)
+        return try accessibilityClickTarget(element, role: { axString($0, kAXRoleAttribute) ?? "" }, parent: { targets.axElement($0, kAXParentAttribute) },
+            enabled: { (attribute($0, kAXEnabledAttribute) as? NSNumber)?.boolValue != false }, actions: { node in
                 var actions: CFArray?
                 try checkedAX(AXUIElementCopyActionNames(node, &actions), "read element actions")
-                return (actions as? [String] ?? []).contains(kAXPressAction) ? node : nil
-            }
-            guard let parent = attribute(node, kAXParentAttribute), CFGetTypeID(parent) == AXUIElementGetTypeID() else { return nil }
-            node = unsafeBitCast(parent, to: AXUIElement.self)
+                return actions as? [String] ?? []
+            })
+    }
+
+    func click(_ id: Int, resolved: (element: AXUIElement, action: String), target: [String: Any], targets: TargetStore,
+        check: () throws -> Void, willDispatch: () -> Void) throws {
+        try check()
+        guard let live = try clickTarget(id, target: target, targets: targets), CFEqual(live.element, resolved.element), live.action == resolved.action else {
+            throw NativeFailure("STALE_ELEMENT", "The selected click control or its action changed; observe again. No input was sent.")
         }
-        return nil
+        try check(); try targets.requireInteraction(live.element, target: target); willDispatch()
+        try checkedAX(AXUIElementPerformAction(live.element, live.action as CFString), "click control using \(live.action)")
     }
 
     func selectableRow(_ id: Int, target: [String: Any], targets: TargetStore) throws -> AXUIElement? {
-        let element = try get(id, target: target)
+        let element = try currentElement(id, target: target, targets: targets)
         guard [kAXRowRole, kAXCellRole, kAXStaticTextRole].contains(axString(element, kAXRoleAttribute) ?? "") else { return nil }
         let window = try targets.axWindow(target)
         var node = element, row: AXUIElement?
@@ -352,9 +403,10 @@ final class AccessibilityStore {
 
     func center(_ id: Int, target: [String: Any], targets: TargetStore) throws -> CGPoint {
         try requireAX()
-        guard let bounds = axRect(try currentElement(id, target: target, targets: targets)), bounds.width > 0, bounds.height > 0 else {
-            throw NativeFailure("ELEMENT_NOT_VISIBLE", "AX element has no usable screen bounds.")
-        }
+        let element = try currentElement(id, target: target, targets: targets)
+        let bounds = try accessibilityVisibleBounds(element, bounds: axRect, parent: { targets.axElement($0, kAXParentAttribute) },
+            clips: { [kAXScrollAreaRole, kAXWindowRole, kAXSheetRole, "AXClipView"].contains(axString($0, kAXRoleAttribute) ?? "") },
+            hidden: { (attribute($0, "AXHidden") as? NSNumber)?.boolValue == true })
         return CGPoint(x: bounds.midX, y: bounds.midY)
     }
 }

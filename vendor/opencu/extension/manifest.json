@@ -4,7 +4,7 @@
   "name": "OpenCU Local Browser Connector",
   "description": "One-click local DSH pairing, on-demand approval and persistent reconnection for Chrome / Edge.",
   "version": "0.2.0",
-  "minimum_chrome_version": "118",
+  "minimum_chrome_version": "125",
   "permissions": ["storage", "tabs", "scripting", "debugger", "webNavigation", "downloads", "alarms"],
   "host_permissions": ["http://127.0.0.1/*", "http://*/*", "https://*/*"],
   "background": { "service_worker": "background.js", "type": "module" },

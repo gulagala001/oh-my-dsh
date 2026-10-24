@@ -60,6 +60,7 @@ final class InputStore {
     private(set) var dispatchSequence: UInt64 = 0
     var activePID: pid_t?
     var activeWindow: AXUIElement?
+    var interactionTarget: [String: Any]?
     var moved: ((CGPoint, Bool) throws -> Void)?
     var pointerSettled: ((CGPoint) -> Void)?
     var released: (() -> Void)?
@@ -87,13 +88,16 @@ final class InputStore {
 
     private func post(_ event: CGEvent, keyboard: Bool = false, releasing: Bool = false) throws {
         var event = event
+        if !releasing, let target = destination ?? interactionTarget {
+            try targets.requireEventInteraction(target, point: keyboard ? nil : event.location, keyboard: keyboard, windowBound: destination != nil)
+        }
         if let target = destination {
             let current = try targets.validated(target)
             let pid = pid_t(target["pid"] as? Int ?? 0)
             guard pid > 0, let windowId = target["windowId"] as? Int else { throw NativeFailure("TARGET_IDENTITY_REQUIRED", "Targeted input requires a live window and process.") }
             if keyboard && !releasing {
                 let window = try targets.axWindow(target), root = AXUIElementCreateApplication(pid)
-                guard let focused = attribute(root, kAXFocusedWindowAttribute), CFEqual(focused, window) else {
+                guard let focused = targets.axElement(root, kAXFocusedWindowAttribute), targets.contains(window, focused) else {
                     throw NativeFailure("BACKGROUND_KEYBOARD_UNAVAILABLE", "The selected window is not this application's keyboard window. Use an AX element action, or explicitly request foreground input; no window was activated.")
                 }
             }
@@ -181,7 +185,7 @@ final class InputStore {
         }
         if let window = activeWindow, let pid = activePID {
             let root = AXUIElementCreateApplication(pid)
-            guard let focused = attribute(root, kAXFocusedWindowAttribute), CFEqual(focused, window) else {
+            guard let focused = targets.axElement(root, kAXFocusedWindowAttribute), targets.contains(window, focused) else {
                 throw NativeFailure("TARGET_WINDOW_NOT_ACTIVE", "Focused window changed during native input; action stopped.")
             }
         }
@@ -299,6 +303,7 @@ final class InputStore {
 
     func move(_ point: CGPoint) throws {
         try check(); try requireInput()
+        if let target = destination ?? interactionTarget { try targets.requireEventInteraction(target, point: point, keyboard: false, windowBound: destination != nil) }
         let heldButton = buttons.sorted().first
         let type: CGEventType = heldButton == 0 ? .leftMouseDragged : heldButton == 1 ? .rightMouseDragged : heldButton == 2 ? .otherMouseDragged : .mouseMoved
         guard let event = CGEvent(mouseEventSource: eventSource, mouseType: type, mouseCursorPosition: point,

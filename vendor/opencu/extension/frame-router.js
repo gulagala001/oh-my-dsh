@@ -38,7 +38,7 @@ export function withCDPFrameGuard(router, wrapSend = send => send, guard = work 
     if (!source) return source;
     if (originals.has(source)) return source;
     if (routes.has(source)) return routes.get(source);
-    const scoped = {...source,send:wrapSend(source.send),owners:[]};
+    const scoped = {...source,send:wrapSend(source.send,source),owners:[]};
     routes.set(source,scoped); originals.set(scoped,source);
     scoped.owners = (source.owners ?? []).map(owner=>({...owner,parent:route(owner.parent)}));
     return scoped;
@@ -53,14 +53,17 @@ export function withCDPFrameGuard(router, wrapSend = send => send, guard = work 
     point:entry=>guard(()=>router.point(element(entry))),
     checkPoint:(entry,point)=>guard(()=>router.checkPoint(element(entry),point)),
     focus:entry=>guard(()=>router.focus(element(entry))),
+    focused:()=>guard(async()=>route(await router.focused())),
+    atPoint:point=>guard(async()=>{const hit=await router.atPoint(point);return {...hit,route:route(hit.route)};}),
     close:()=>router.close(),
   };
 }
 
 /** CDP sessions for real frame documents, including out-of-process iframes. */
-export function createCDPFrameRouter(sendRoot, subscribe) {
-  const sessions = new Map(), pending = new Map();
-  let sequence = 0, closed = false;
+export function createCDPFrameRouter(sendRoot, subscribe, {sendSession,prepareRoute,discardRoute} = {}) {
+  const sessions = new Map(), pending = new Map(), knownRoutes = new Map();
+  let sequence = 0, closed = false, initializing;
+  const autoAttach = enabled => ({autoAttach:enabled,waitForDebuggerOnStart:false,flatten:true,...(enabled ? {filter:[{type:'iframe',exclude:false}]} : {})});
   const failure = (message, code = 'STALE_ELEMENT') => Object.assign(new Error(message), {code, details:{inputDispatched:false}});
   const errorInfo = error => ({message:error.message ?? String(error),...(error.code === undefined ? {} : {code:error.code}),...(error.details === undefined ? {} : {details:error.details})});
   const routeError = (source, method, frameId, sessionId) => {
@@ -89,7 +92,19 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
     if (reply.exceptionDetails) throw failure(reply.exceptionDetails.exception?.description ?? reply.exceptionDetails.text);
     return reply.result.value;
   };
-  const listen = (method, params) => {
+  const discard = matches => {
+    for(const[frameId,route]of knownRoutes)if(matches(route)){knownRoutes.delete(frameId);discardRoute?.(route);}
+  };
+  const listen = (method, params, parentSessionId) => {
+    if (sendSession && method === 'Target.attachedToTarget' && params.targetInfo?.type === 'iframe') {
+      const session = {id:params.sessionId,valid:true,parentSessionId};
+      session.send = (method, args = {}) => closed || !session.valid
+        ? Promise.reject(failure('Frame CDP session is detached','FRAME_DETACHED')) : sendSession(session.id,method,args);
+      sessions.set(params.targetInfo.targetId,session);
+      // Auto-attach is not recursive. Each OOPIF owns its own descendant targets.
+      session.ready = session.send('Page.enable').then(()=>session.send('Target.setAutoAttach',autoAttach(true)));
+      session.ready.catch(()=>{});
+    }
     if (method === 'Target.receivedMessageFromTarget') {
       let reply; try { reply = JSON.parse(params.message); } catch { return; }
       if (reply.id) {
@@ -104,8 +119,17 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
       }
     }
     if (method === 'Target.detachedFromTarget') {
-      for (const session of sessions.values()) if (session.id === params.sessionId) session.valid = false;
+      for (const[frameId,session]of sessions) if (session.id === params.sessionId) {session.valid = false;sessions.delete(frameId);}
+      discard(route=>route.sessionId===params.sessionId||route.owners.some(owner=>owner.parent.sessionId===params.sessionId||owner.childSessionId===params.sessionId));
       for (const [key, task] of pending) if (key.startsWith(`${params.sessionId}:`)) { pending.delete(key); clearTimeout(task.timer); task.reject(failure('Frame target detached', 'FRAME_DETACHED')); }
+    }
+    if(method==='Page.frameNavigated'){
+      const source=parentSessionId??'',frameId=params.frame?.id;
+      discard(route=>route.frameId===frameId&&route.sessionId===source||route.owners.some(owner=>owner.parent.frameId===frameId&&owner.parent.sessionId===source));
+    }
+    if(method==='Page.frameDetached'){
+      const source=parentSessionId??'';
+      discard(route=>route.frameId===params.frameId&&route.sessionId===source||route.owners.some(owner=>owner.frameId===params.frameId&&owner.childSessionId===source));
     }
   };
   const unsubscribe = subscribe(listen);
@@ -130,7 +154,10 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
     try {
       token = unwrap(await send('Runtime.evaluate', {contextId:executionContextId,returnByValue:true,expression:`globalThis.__opencuFrameDocument ??= ${JSON.stringify(globalThis.crypto.randomUUID())}`}));
     } catch (error) { throw routeError(error,'Runtime.evaluate',frameId,sessionId); }
-    return {send,frameId,sessionId,sessionFrameId,contextId:executionContextId,documentId:token,owners};
+    const route = {send,frameId,sessionId,sessionFrameId,contextId:executionContextId,documentId:token,owners};
+    await prepareRoute?.(route);
+    knownRoutes.set(frameId,route);
+    return route;
   };
   const validateDocument = async route => {
     if (closed) throw failure('Frame router is closed', 'FRAME_DETACHED');
@@ -149,16 +176,28 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
     const token = unwrap(reply);
     if (token !== route.documentId) throw failure('Frame document changed', 'FRAME_DETACHED');
   };
-  const validate = async route => {
+  const validate = async route => {try {
     for (const owner of route.owners) {
       await validateDocument(owner.parent);
-      const {node} = await owner.parent.send('DOM.describeNode', {backendNodeId:owner.backendNodeId});
+      let node;
+      try {({node}=await owner.parent.send('DOM.describeNode', {backendNodeId:owner.backendNodeId}));}
+      catch(error){
+        const protocol=error.code===undefined||typeof error.code==='number'||error.details?.cdpError;
+        if(protocol&&/Could not find node with given id|No node with (?:the )?(?:given|specified) id|Node.*(?:not found|no longer exists)/iu.test(error.message))throw failure('Frame element was removed or replaced','FRAME_DETACHED');
+        throw error;
+      }
       if ((node.frameId ?? node.contentDocument?.frameId) !== owner.frameId) throw failure('Frame element was removed or replaced', 'FRAME_DETACHED');
     }
     await validateDocument(route);
-  };
+  }catch(error){
+    if(error.code==='FRAME_DETACHED')discard(item=>item===route||item.owners.some(owner=>owner.parent.frameId===route.frameId&&owner.parent.documentId===route.documentId));
+    throw error;
+  }};
   const main = async () => {
     if (closed) throw failure('Frame router is closed', 'FRAME_DETACHED');
+    // chrome.debugger restricts Target.attachToTarget and nested protocol messages.
+    // Its flat session transport receives existing children before this ACK.
+    if (sendSession) await (initializing ??= sendRoot('Target.setAutoAttach',autoAttach(true)));
     const {frameTree} = await sendRoot('Page.getFrameTree');
     return makeRoute(sendRoot,frameTree.frame.id,'',frameTree.frame.id,[]);
   };
@@ -173,6 +212,11 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
     } catch (sameProcessError) {
       if (!canAttachFrame(sameProcessError)) throw sameProcessError;
       let session = sessions.get(frameId);
+      if (sendSession) {
+        if (!session?.valid) throw fallbackError(sameProcessError,failure('Related frame debugger session is unavailable','FRAME_DETACHED'),'Target.setAutoAttach',frameId,parent.sessionId);
+        try {await session.ready;}
+        catch (error) {throw fallbackError(sameProcessError,error,'Target.setAutoAttach',frameId,session.id);}
+      }
       if (!session?.valid) {
         let attached;
         try {
@@ -269,13 +313,72 @@ export function createCDPFrameRouter(sendRoot, subscribe) {
     if (Math.abs(current.x-point.x) > 0.5 || Math.abs(current.y-point.y) > 0.5) throw failure('Element moved before pointer input', 'LOCATOR_NOT_STABLE');
   };
   const focus = async entry => {await validate(entry.route); await entry.route.send('DOM.focus',{backendNodeId:entry.backendNodeId}); await validate(entry.route);};
+  const focused = async () => {
+    let route = await main();
+    for (let depth=0;depth<32;depth++) {
+      await validate(route);
+      const reply = await route.send('Runtime.evaluate',{contextId:route.contextId,expression:'(()=>{let e=document.activeElement;while(e?.shadowRoot?.activeElement)e=e.shadowRoot.activeElement;return e;})()'});
+      const objectId = reply.result?.objectId;
+      if (!objectId) return route;
+      let node;
+      try {({node}=await route.send('DOM.describeNode',{objectId}));}
+      finally {await route.send('Runtime.releaseObject',{objectId}).catch(()=>{});}
+      const frameId=node.frameId??node.contentDocument?.frameId;
+      if (!frameId || frameId===route.frameId) return route;
+      route=await child(route,node.backendNodeId,frameId);
+    }
+    throw failure('Focused frame nesting exceeds the supported depth','FRAME_DETACHED');
+  };
+  const atPoint = async point => {
+    const root=await main();let route=root,local={...point};
+    const find=async(frameId,parent=root,depth=0,budget={count:0})=>{
+      if(parent.frameId===frameId)return parent;
+      if(depth>=32||++budget.count>500)throw failure('Frame topology exceeds the supported input lookup limit','FRAME_DETACHED');
+      for(const owner of await readCDPFrameOwners(parent)){
+        const current=await child(parent,owner.backendNodeId,owner.frameId);
+        const found=await find(frameId,current,depth+1,budget);if(found)return found;
+      }
+    };
+    for(let depth=0;depth<32;depth++){
+      await validate(route);
+      const hit=await hitTestViewport(route.send,local),frameId=hit.frameId??route.frameId;
+      const ownerRoute=frameId===route.frameId?route:knownRoutes.get(frameId)??await find(frameId);
+      if(!ownerRoute||ownerRoute.sessionId!==route.sessionId)throw failure('Pointer frame route changed; observe again','FRAME_DETACHED');
+      await validate(ownerRoute);
+      const {node}=await ownerRoute.send('DOM.describeNode',{backendNodeId:hit.backendNodeId});
+      const childId=node.frameId??node.contentDocument?.frameId;
+      if(!childId||childId===ownerRoute.frameId)return {...hit,route:ownerRoute};
+      const {model}=await ownerRoute.send('DOM.getBoxModel',{backendNodeId:hit.backendNodeId}),q=model.content;
+      let u=.5,v=.5;
+      for(let iteration=0;iteration<12;iteration++){
+        const x=(1-u)*(1-v)*q[0]+u*(1-v)*q[2]+u*v*q[4]+(1-u)*v*q[6]-local.x;
+        const y=(1-u)*(1-v)*q[1]+u*(1-v)*q[3]+u*v*q[5]+(1-u)*v*q[7]-local.y;
+        const xu=(1-v)*(q[2]-q[0])+v*(q[4]-q[6]),xv=(1-u)*(q[6]-q[0])+u*(q[4]-q[2]);
+        const yu=(1-v)*(q[3]-q[1])+v*(q[5]-q[7]),yv=(1-u)*(q[7]-q[1])+u*(q[5]-q[3]),det=xu*yv-xv*yu;
+        if(Math.abs(det)<1e-8)throw failure('Pointer frame has no invertible visible box','LOCATOR_NOT_ACTIONABLE');
+        u-=(x*yv-y*xv)/det;v-=(y*xu-x*yu)/det;
+        if(Math.abs(x)+Math.abs(y)<.01)break;
+      }
+      // An iframe border belongs to its owner document, not its child viewport.
+      if(u<0||u>1||v<0||v>1)return {...hit,route:ownerRoute};
+      const next=await child(ownerRoute,hit.backendNodeId,childId);
+      if(next.sessionId!==ownerRoute.sessionId){
+        const viewport=unwrap(await next.send('Runtime.evaluate',{contextId:next.contextId,expression:'({width:innerWidth,height:innerHeight})',returnByValue:true}));
+        local={x:Math.round(u*viewport.width*1e8)/1e8,y:Math.round(v*viewport.height*1e8)/1e8};
+      }
+      route=next;
+    }
+    throw failure('Pointer frame nesting exceeds the supported depth','FRAME_DETACHED');
+  };
   const close = async () => {
     if (closed) return; closed = true; unsubscribe?.();
     for (const task of pending.values()) {clearTimeout(task.timer); task.reject(failure('Frame router closed', 'FRAME_DETACHED'));} pending.clear();
-    const results = await Promise.allSettled([...sessions.values()].filter(session=>session.valid).map(session=>sendRoot('Target.detachFromTarget',{sessionId:session.id})));
-    sessions.clear();
+    const results = await Promise.allSettled(sendSession
+      ? initializing ? [sendRoot('Target.setAutoAttach',autoAttach(false))] : []
+      : [...sessions.values()].filter(session=>session.valid).map(session=>sendRoot('Target.detachFromTarget',{sessionId:session.id})));
+    sessions.clear();knownRoutes.clear();
     const rejected = results.filter(result=>result.status==='rejected');
-    if (rejected.length) throw new AggregateError(rejected.map(result=>result.reason),'Frame sessions could not be detached');
+    if (rejected.length) throw Object.assign(new AggregateError(rejected.map(result=>result.reason),'Frame sessions could not be detached'),{details:{errors:rejected.map(result=>errorInfo(result.reason))}});
   };
-  return {main,child,validate,remoteElement,point,checkPoint,focus,close};
+  return {main,child,validate,remoteElement,point,checkPoint,focus,focused,atPoint,close};
 }

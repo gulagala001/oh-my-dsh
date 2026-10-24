@@ -11,7 +11,7 @@
     "@deepseek-ai/dsh-scope": "0.2.1-rc.3",
     "@deepseek-ai/schemastery": "3.18.5"
   },
-  "sourceCommit": "b3b56b2b4a6e9785b2c38e52e8412e8b1491e099",
+  "sourceCommit": "ee9dc9158913498dfef13a2f3a7bbf604e8ee535",
   "buildInputs": {
     "sourcePackageManager": "npm",
     "rootNpmLockSha256": "ca1a5743d409439da1a194c2f5392a71eded9dc215f3a4b847ddb91fc5c8b55d",

@@ -150,7 +150,9 @@ OPENCU_DSH_SMOKE=1 node --test test/dsh.test.mjs
 node scripts/cu-direct.mjs --data-dir /absolute/isolated/cu/data --output-dir /absolute/isolated/cu/output --metrics-output /absolute/isolated/cu/calls.jsonl
 ```
 
-标准输入每行一个 JSON，例如 `{"id":"inventory","code":"await cua.getState()","title":"Inspect targets"}`；后续行复用同一 REPL。`method` 可取 `run`（默认）、`request`、`reset`、`readImage`、`close`。脚本也导出 `createDirectSession(options)`，返回 `pid` 与同名异步方法；`run` 保留生产结果并附 `timing.totalMs`。缺少浏览器构建资产时提前返回 `BUILD_REQUIRED`；指标写入失败单独报告 `metricsError`，成功输入不会因此变成执行失败。正常结束必须调用 `close()`，取消或失败后应先观察状态，再决定是否继续。
+标准输入每行一个 JSON，例如 `{"id":"inventory","code":"await cua.getState()","title":"Inspect targets"}`；后续行复用同一 REPL。`method` 可取 `run`（默认）、`request`、`reset`、`readImage`、`close`。普通操作按输入顺序执行；`reset`／`close` 可取消正在运行和仍在排队的操作。脚本也导出 `createDirectSession(options)`，返回 `pid` 与同名异步方法；`run` 保留生产结果并附 `timing.totalMs`。缺少已启用浏览器或 macOS 原生后端所需的客户端构建资产时提前返回 `BUILD_REQUIRED`；指标写入失败单独报告 `metricsError`，成功输入不会因此变成执行失败。正常结束必须调用 `close()`，取消或失败后应先观察状态，再决定是否继续。
+
+原生应用可通过 `--config '{"browserEnabled":false,"nativeEnabled":true}'` 启用，仍需已有的原生辅助程序和系统权限。等待应用许可时，外部调用方用 `request('appApprovals/pending')` 查询当前会话的请求，核对应用名称和目标后，再显式调用 `request('appApprovals/respond', {requestId, action: 'accept', persist: 'session'})`；永久允许使用 `persist: 'always'`，拒绝使用 `action: 'decline'`。这两个接口在 stdio 中也可越过正在等待的 `run`，例如 `{"id":"pending","method":"request","endpoint":"appApprovals/pending"}`，再发送 `{"id":"decision","method":"request","endpoint":"appApprovals/respond","args":{"requestId":"查询返回的 id","action":"accept","persist":"session"}}`。入口自动限定当前会话，调用方可省略 `conversationId`，显式传入其他会话会被拒绝；不会自动批准，reset／close／取消后的旧请求不能再批准。其他 `request`（包括 `act`）继续排队。
 
 `scripts/cu-metrics.mjs` 可独立采样指定进程树：`node scripts/cu-metrics.mjs sample --root PID --output /absolute/isolated/cu/process.jsonl --summary /absolute/isolated/cu/summary.json --interval 500 --duration 30000`。记录 RSS、进程数、系统平滑 CPU、连续快照间实际观察到的 CPU 时间差、阶段与采样错误；调用记录只保留固定标签、耗时、字节数和状态，不保存代码、标题或正文。RSS 可能重复计入共享页；CPU 差值会遗漏新生、退出及采样间短命进程，不能据此比较不同宿主的 CU 独占开销。汇总的峰值、计数和总和精确，中位数在超过 1,024 个值后由固定容量样本估算；原始采样仍写入 JSONL。SIGINT／SIGTERM 只停止采样器并刷新汇总，不终止测量目标。
 

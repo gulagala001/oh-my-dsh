@@ -102,7 +102,7 @@ final class NativeService {
                 }
                 try checkpoint()
                 if format != "ax" {
-                    do { result["screenshot"] = try capture.capture(target, targets: targets, options: options, checkpoint: checkpoint) }
+                    do { result["screenshot"] = try capture.capture(target, targets: targets, options: options, expectedRoot: result["ax"] == nil ? nil : ax.observationRoot, checkpoint: checkpoint) }
                     catch let failure as NativeFailure { if failure.code == "CONTROL_STOPPED" { throw failure }; failures.append(failure.json) }
                 }
                 if result["ax"] == nil && result["screenshot"] == nil {
@@ -123,9 +123,10 @@ final class NativeService {
             let inputStart = input.dispatchSequence
             input.actionEpoch = params["_controlEpoch"] as? Int ?? input.cancellation.current()
             input.activePID = nil; input.activeWindow = nil
-            defer { input.activePID = nil; input.activeWindow = nil }
+            defer { input.activePID = nil; input.activeWindow = nil; input.interactionTarget = nil }
             do {
                 let target = try targets.validated(params["target"] as? [String: Any] ?? [:])
+                input.interactionTarget = target
                 return try act(target, action)
             }
             catch let failure as NativeFailure {
@@ -154,7 +155,7 @@ final class NativeService {
 
     func point(_ action: [String: Any], _ target: [String: Any]) throws -> CGPoint {
         if let elementID = action["elementId"] as? Int { return try ax.center(elementID, target: target, targets: targets) }
-        return try capture.point(action, target: target)
+        return try capture.point(action, target: target, targets: targets)
     }
 
     func mouseButton(_ action: [String: Any]) throws -> Int {
@@ -180,7 +181,7 @@ final class NativeService {
         if type == "activate" { return ["focused": true, "target": try targets.focus(target)] }
         if type == "hit_test" {
             try requireAX()
-            return ["element": try ax.hitTest(capture.point(action, target: target), target: target, targets: targets)]
+            return ["element": try ax.hitTest(capture.point(action, target: target, targets: targets), target: target, targets: targets)]
         }
         guard ["set_value", "ax_press", "select_text", "paste", "perform_secondary_action", "move", "click", "double_click", "right_click", "mouse_down", "mouse_up", "drag", "scroll", "key_down", "key_up", "press_key", "type_text"].contains(type) else {
             throw NativeFailure("UNSUPPORTED_ACTION", "Unsupported native action: \(type).")
@@ -190,22 +191,23 @@ final class NativeService {
         let click = ["click","double_click","right_click"].contains(type) ? try ClickOptions(action, type: type) : nil
         let keyDuration = type == "press_key" ? try pressDuration(action) : 0
         if let click = click { try input.checkClick(click, button: type == "right_click" ? 1 : mouseButton(action)) }
-        var rowSelection: AXUIElement?, pressElement: AXUIElement?
+        var rowSelection: AXUIElement?, clickTarget: (element: AXUIElement, action: String)?, clickID: Int?
         if mode == "background", type == "click", try mouseButton(action) == 0,
             click?.transactional != true, click?.count == 1, input.keys.isEmpty, input.buttons.isEmpty {
             let id: Int?
             if let selected = action["elementId"] as? Int { id = selected }
             else if AXIsProcessTrusted() {
-                let at = try capture.point(action, target: target)
+                let at = try capture.point(action, target: target, targets: targets)
                 do { id = try ax.hitTest(at, target: target, targets: targets)["elementId"] as? Int }
                 catch let failure as NativeFailure where ["ELEMENT_NOT_FOUND", "AX_OPERATION_FAILED", "WINDOW_AX_MAPPING_FAILED"].contains(failure.code) { id = nil }
             } else { id = nil }
             if let id = id {
-                pressElement = try ax.pressable(id, target: target, targets: targets)
-                if pressElement == nil { rowSelection = try ax.selectableRow(id, target: target, targets: targets) }
+                clickID = id
+                clickTarget = try ax.clickTarget(id, target: target, targets: targets)
+                if clickTarget == nil { rowSelection = try ax.selectableRow(id, target: target, targets: targets) }
             }
         }
-        let semantic = ["set_value", "ax_press", "select_text", "paste", "perform_secondary_action"].contains(type) || rowSelection != nil || pressElement != nil
+        let semantic = ["set_value", "ax_press", "select_text", "paste", "perform_secondary_action"].contains(type) || rowSelection != nil || clickTarget != nil
         if !semantic {
             try input.route(to: mode == "background" ? target : nil)
             let application = try targets.app(target)
@@ -215,7 +217,7 @@ final class NativeService {
                 if target["windowId"] != nil {
                     let window = try targets.axWindow(target)
                     let root = AXUIElementCreateApplication(application.processIdentifier)
-                    guard let focused = attribute(root, kAXFocusedWindowAttribute), CFEqual(focused, window) else {
+                    guard let focused = targets.axElement(root, kAXFocusedWindowAttribute), targets.contains(window, focused) else {
                         throw NativeFailure("TARGET_WINDOW_NOT_ACTIVE", "Explicit foreground input requires focusing the selected window first.")
                     }
                     input.activeWindow = window
@@ -251,23 +253,27 @@ final class NativeService {
                 try ax.performSecondaryAction(id, target: target, targets: targets, name: name, check: input.check, willDispatch: willDispatch)
             }
         case "set_value":
-            guard let id = action["elementId"] as? Int, let value = action["value"], value is String || value is NSNumber else { throw NativeFailure("INVALID_ACTION", "AX set_value requires numeric elementId and string/number value.") }
-            try ax.setValue(id, target: target, targets: targets, value: value)
+            try input.semanticAction { willDispatch in
+                guard let id = action["elementId"] as? Int, let value = action["value"], value is String || value is NSNumber else { throw NativeFailure("INVALID_ACTION", "AX set_value requires numeric elementId and string/number value.") }
+                try ax.setValue(id, target: target, targets: targets, value: value, check: input.check, willDispatch: willDispatch)
+            }
         case "ax_press":
-            guard let id = action["elementId"] as? Int else { throw NativeFailure("INVALID_ACTION", "ax_press requires numeric elementId.") }
-            try ax.press(id, target: target, targets: targets)
+            try input.semanticAction { willDispatch in
+                guard let id = action["elementId"] as? Int else { throw NativeFailure("INVALID_ACTION", "ax_press requires numeric elementId.") }
+                try ax.press(id, target: target, targets: targets, check: input.check, willDispatch: willDispatch)
+            }
         case "move": try input.move(point(action, target))
         case "click", "double_click", "right_click", "mouse_down", "mouse_up":
-            if let element = pressElement {
+            if let resolved = clickTarget, let id = clickID {
                 try input.semanticAction { willDispatch in
-                    try input.check(); willDispatch()
-                    try checkedAX(AXUIElementPerformAction(element, kAXPressAction as CFString), "press control")
+                    try ax.click(id, resolved: resolved, target: target, targets: targets, check: input.check, willDispatch: willDispatch)
                 }
                 break
             }
             if let row = rowSelection {
                 try input.semanticAction { willDispatch in
-                    try input.check(); willDispatch()
+                    try input.check(); try ax.verifyWindow(row, target: target, targets: targets)
+                    try targets.requireInteraction(row, target: target); willDispatch()
                     try checkedAX(AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue), "select row")
                 }
                 break

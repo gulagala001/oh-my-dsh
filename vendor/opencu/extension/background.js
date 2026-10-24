@@ -5,6 +5,7 @@ import { extensionKeySpec as keySpec, keyEventParameters, sequentialTextKey, che
 import { clickParameters, checkClickHeld, holdClick } from './click-options.js';
 import { pressParameters, checkPressHeld } from './key-options.js';
 import {filePaths} from './file-input.js';
+import {installDocumentRuntime} from './content.js';
 const PATH = '/opencu-extension/v1';
 const attached = new Map(), observations = new Map(), documents = new Map(), releasing = new Set();
 let connection, connecting = false, reconnectDisabled = false, running = false, controlEpoch = 0, commandChain = Promise.resolve(), downloadChain = Promise.resolve(), status = { connected: false };
@@ -84,7 +85,10 @@ async function content(tabId, method, input = {}, expectedDocumentId, read = dir
     func: () => Boolean(globalThis.__opencuDocument && globalThis.__opencuCursor) }));
   if (probe.length !== 1 || probe[0].frameId !== 0) fail('STALE_DOCUMENT', 'Main document changed during initialization.');
   const currentTarget = { tabId, documentIds: [probe[0].documentId] };
-  if (!probe[0].result) await read(() => chrome.scripting.executeScript({ target: currentTarget, files: ['page-cursor.js', 'content.js'], world: 'ISOLATED', injectImmediately: true }));
+  if (!probe[0].result) {
+    await read(() => chrome.scripting.executeScript({ target: currentTarget, files: ['page-cursor.js'], world: 'ISOLATED', injectImmediately: true }));
+    await read(() => chrome.scripting.executeScript({ target: currentTarget, func: installDocumentRuntime, args:[{trackActivity:false}], world: 'ISOLATED', injectImmediately: true }));
+  }
   const result = await read(() => chrome.scripting.executeScript({ target: currentTarget,
     world: 'ISOLATED', injectImmediately: true, func: async (method, input) => {
       try { return { ok: true, result: await globalThis.__opencuDocument.run(method, input) }; }
@@ -117,9 +121,9 @@ async function verify(identity, selected = false, read = directRead) {
   if (selected && (!attached.has(identity.tabId) || attached.get(identity.tabId).released)) fail('NOT_SELECTED', 'Select this tab before observing or acting.');
   return { verified: true, identity, ...current };
 }
-const cdp = (tabId, method, params = {}) => {
+const cdp = (tabId, method, params = {}, sessionId) => {
   if (method.startsWith('Input.') || method === 'DOM.setFileInputFiles') {const state = attached.get(tabId); if (state) state.inputSequence = (state.inputSequence ?? 0) + 1;}
-  return chrome.debugger.sendCommand({tabId}, method, params);
+  return chrome.debugger.sendCommand({tabId,...(sessionId ? {sessionId} : {})}, method, params);
 };
 async function attach(identity, read = directRead) {
   await verify(identity, false, read);
@@ -137,9 +141,18 @@ async function attach(identity, read = directRead) {
   const state = { keys: new Map(), buttons: new Set(), x: 0, y: 0 };
   attached.set(identity.tabId, state);
   state.frameRouter = createCDPFrameRouter((method, params) => cdp(identity.tabId, method, params), listener => {
-    const receive = (source, method, params) => {if (source.tabId === identity.tabId && !source.sessionId) listener(method, params);};
+    const receive = (source, method, params) => {if (source.tabId === identity.tabId) listener(method, params, source.sessionId);};
     chrome.debugger.onEvent.addListener(receive); return () => chrome.debugger.onEvent.removeListener(receive);
-  });
+  }, {sendSession:(sessionId,method,params)=>cdp(identity.tabId,method,params,sessionId),prepareRoute:async route=>{
+    const previous=state.frameRoutes?.get(route.frameId);
+    if(previous?.contextId!==route.contextId||previous.documentId!==route.documentId){
+      const result=await route.send('Runtime.evaluate',{contextId:route.contextId,expression:`(${installDocumentRuntime.toString()})()`,returnByValue:true});
+      if(result.exceptionDetails)fail('FRAME_ACTIVITY_UNAVAILABLE',result.exceptionDetails.exception?.description??result.exceptionDetails.text);
+    }
+    (state.frameRoutes??=new Map()).set(route.frameId,route);
+  },discardRoute:route=>{
+    if(state.frameRoutes?.get(route.frameId)===route){state.frameRoutes.delete(route.frameId);state.activitySeen?.delete(route.frameId);}
+  }});
   try {
     read.check?.();
     await saveAttached();
@@ -157,6 +170,50 @@ async function saveAttached() {
     keys: [...state.keys.values()], buttons: [...state.buttons], x: state.x, y: state.y })) });
 }
 
+async function frameContent(tabId, route, method, input = {}, backendNodeId) {
+  if (!route) return content(tabId,method,input);
+  const router=attached.get(tabId)?.frameRouter;
+  if (!router) fail('NOT_SELECTED','Select this tab before using frame input.');
+  await router.validate(route);
+  let reply,objectId;
+  try {
+    if(backendNodeId!==undefined){
+      objectId=await router.remoteElement(route,backendNodeId);
+      reply=await route.send('Runtime.callFunctionOn',{objectId,functionDeclaration:'function(method,input){for(const event of input.events??[])event.target=this.nodeType===3?this.parentElement:this;return globalThis.__opencuDocument.run(method,input);}',arguments:[{value:method},{value:input}],returnByValue:true});
+    }else reply=await route.send('Runtime.evaluate',{contextId:route.contextId,expression:`globalThis.__opencuDocument.run(${JSON.stringify(method)},${JSON.stringify(input)})`,returnByValue:true});
+    if(reply.exceptionDetails)fail('FRAME_ACTIVITY_UNAVAILABLE',reply.exceptionDetails.exception?.description??reply.exceptionDetails.text);
+    return {...reply.result.value,frameRoute:route};
+  }finally{if(objectId)await route.send('Runtime.releaseObject',{objectId}).catch(()=>{});}
+}
+async function inputMarker(tabId,method,input={},route,backendNodeId){
+  route??=await attached.get(tabId)?.frameRouter?.focused();
+  return frameContent(tabId,route,method,input,backendNodeId);
+}
+const finishMarker=(tabId,marker,dispatched=false)=>frameContent(tabId,marker.frameRoute,'finishInput',{markerId:marker.markerId,documentId:marker.documentId,dispatched});
+async function frameActivity(tabId,documentId,read=directRead){
+  const state=attached.get(tabId);
+  if(!state?.frameRoutes)return;
+  state.activitySeen??=new Map();
+  for(const[frameId,route]of state.frameRoutes){
+    let current;
+    try{current=(await read(()=>frameContent(tabId,route,'identity'))).userActivity;}
+    catch(error){
+      read.check?.();
+      if(error.code!=='FRAME_DETACHED')throw error;
+      if(state.frameRoutes.get(frameId)===route){state.frameRoutes.delete(frameId);state.activitySeen.delete(frameId);}
+      continue;
+    }
+    if(!current)continue;
+    const seen=state.activitySeen.get(frameId),previous=seen?.documentId===current.documentId?seen.sequence:0;
+    if(current.sequence<=previous)continue;
+    state.activitySeen.set(frameId,{documentId:current.documentId,sequence:current.sequence});
+    state.activitySequence=(state.activitySequence??0)+current.sequence-previous;
+    const latest=!state.userActivity||current.at>=state.userActivity.at;
+    state.userActivity={...(latest?{...current,frameId,frameDocumentId:current.documentId}:state.userActivity),documentId,sequence:state.activitySequence};
+  }
+  return state.userActivity;
+}
+
 const modifiers = state => [...state.keys.keys()].reduce((n, key) => n | ({ Alt: 1, Control: 2, Meta: 4, Shift: 8 }[key] || 0), 0);
 async function keyEvent(tabId, spec, down, epoch, beforeDispatch, keyboardEditable = false) {
   checkControl(epoch);
@@ -168,7 +225,7 @@ async function keyEvent(tabId, spec, down, epoch, beforeDispatch, keyboardEditab
   try {
     if (down) {
       const inputTypes = keyboardInputTypes(spec.code,modifiers(state),/Mac/u.test(navigator.platform));
-      marker = await content(tabId,'expectInput',{events:[{type:'keydown',key:event.key,...(inputTypes.length ? {inputTypes} : {})}]});
+      marker = await inputMarker(tabId,'expectInput',{targetActive:true,events:[{type:'keydown',key:event.key,...(inputTypes.length ? {inputTypes} : {})}]});
     }
     checkControl(epoch);
     if (down && beforeDispatch) {await beforeDispatch();checkControl(epoch);}
@@ -177,7 +234,7 @@ async function keyEvent(tabId, spec, down, epoch, beforeDispatch, keyboardEditab
   } catch (error) {failure=error;throw error;}
   finally {
     if (marker && failure?.code !== 'JS_DIALOG_OPEN') try {
-      await content(tabId,'finishInput',{markerId:marker.markerId,documentId:marker.documentId,dispatched:false},marker.browserDocumentId);
+      await finishMarker(tabId,marker);
     } catch (error) {
       if (!failure) throw error;
       failure.details = {...failure.details,inputMarkerError:errorJSON(error)};
@@ -193,16 +250,21 @@ async function mouse(tabId, type, point, button = 'none', count = 0, extra = {},
   checkControl(epoch);
   let marker, submitted = false, failure;
   try {
-    if (type === 'mousePressed' || type === 'mouseWheel') marker = await content(tabId, 'expectInput', { pending: type === 'mouseWheel',
-      events: [{ type: type === 'mousePressed' ? 'pointerdown' : 'wheel', ...point, ...(type === 'mouseWheel' ? { deltaX: extra.deltaX ?? 0, deltaY: extra.deltaY ?? 0 } : {}) }] });
+    if (type === 'mousePressed' || type === 'mouseWheel') {
+      const hit=await state.frameRouter?.atPoint(point);
+      marker = await inputMarker(tabId, 'expectInput', { pending: type === 'mouseWheel',
+        events: [{ type: type === 'mousePressed' ? 'pointerdown' : 'wheel', ...(hit?{}:point), ...(type === 'mouseWheel' ? { deltaX: extra.deltaX ?? 0, deltaY: extra.deltaY ?? 0 } : {}) }] },hit?.route,hit?.backendNodeId);
+    }
     checkControl(epoch);
     if (type === 'mousePressed' && beforeDispatch) { await beforeDispatch(); checkControl(epoch); }
     submitted = true;
     await cdp(tabId, 'Input.dispatchMouseEvent', { type, x: point.x, y: point.y, button, buttons: buttonMask(state), clickCount: count, modifiers: modifiers(state), ...extra });
+    if(type==='mousePressed'&&marker)(state.pointerMarkers??=new Map()).set(button,marker);
     if (type === 'mouseReleased') { state.buttons.delete(button); await saveAttached(); }
   } catch (error) { failure = error; throw error; }
   finally {
-    if (type === 'mouseWheel' && marker) try { await content(tabId, 'finishInput', { markerId: marker.markerId, documentId: marker.documentId, dispatched: submitted }, marker.browserDocumentId); }
+    const completed=type==='mouseReleased'?state.pointerMarkers?.get(button):type==='mouseWheel'||!submitted?marker:undefined;
+    if(completed)try { await finishMarker(tabId,completed,type==='mouseWheel'&&submitted);if(type==='mouseReleased')state.pointerMarkers.delete(button); }
     catch (error) {
       if (!failure) { error.details = { ...error.details, inputDispatched: submitted }; throw error; }
       failure.details = { ...failure.details, inputMarkerError: errorJSON(error) };
@@ -220,6 +282,8 @@ async function releaseTab(tabId) {
     // Preserve modifiers while a mouse-up remains unacknowledged for retry.
     if (!state.buttons.size) for (const key of [...state.keys.values()].reverse()) try { await keyEvent(tabId, key, false); } catch (error) { errors.push(errorJSON(error)); }
     try { await content(tabId, 'release'); } catch (error) { if (allowed((await chrome.tabs.get(tabId).catch(() => ({}))).url)) errors.push(errorJSON(error)); }
+    for(const[frameId,route]of state.frameRoutes??[])try{await frameContent(tabId,route,'release');}
+    catch(error){if(error.code!=='FRAME_DETACHED')errors.push(errorJSON(error));else state.frameRoutes.delete(frameId);}
     if (!errors.length) try { await cdp(tabId, 'Emulation.setFocusEmulationEnabled', { enabled: false }); } catch (error) { errors.push(errorJSON(error)); }
     if (!errors.length) {
       releasing.add(tabId);
@@ -263,7 +327,8 @@ async function observe(identity, options = {}, token = controlToken(identity.tab
     read.check();
     await read(commit);
     if (screenshot) observations.set(identity.tabId, screenshot);
-    return { identity, ...dom, ...accessibility, ...(screenshot ? { screenshot } : {}) };
+    const userActivity=await frameActivity(identity.tabId,identity.documentId,read);
+    return { identity, ...dom, ...accessibility, userActivity, ...(screenshot ? { screenshot } : {}) };
   });
 }
 async function preview(identity, token = controlToken(identity.tabId)) {
@@ -323,17 +388,17 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   };
   let textInputFence, textInputGuard;
   const checkInput = () => {checkControl(epoch);textInputFence?.();};
-  const send = async (method, params, transport = (method,params) => cdp(tabId,method,params)) => {
+  const send = async (method, params, transport = (method,params) => cdp(tabId,method,params), route) => {
     if (method === 'Runtime.releaseObject') return transport(method,params);
     checkInput();
-    if (method === 'DOM.setFileInputFiles') {
-      await content(tabId, 'expectInput', { events: [{ type: 'input' }] }, current.browserDocumentId);
-      checkInput();
-    }
     let marker, failure;
     try {
+      if(method==='DOM.setFileInputFiles'){
+        marker=await inputMarker(tabId,'expectInput',{events:[{type:'input'}]},route,params.backendNodeId);
+        checkInput();
+      }
       if (method === 'Input.insertText') {
-        marker = await content(tabId, 'expectTextInput', {text:params.text}, current.browserDocumentId);
+        marker = await inputMarker(tabId, 'expectTextInput', {text:params.text});
         checkInput();
         if (action.elementId != null) await verifyInputElement();
         checkInput();
@@ -354,7 +419,7 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       let clear = !!marker?.markerId;
       try {checkInput();} catch {clear=false;}
       if (clear) try {
-        const cleanup=()=>content(tabId,'finishInput',{markerId:marker.markerId,documentId:marker.documentId,dispatched:false},marker.browserDocumentId);
+        const cleanup=()=>finishMarker(tabId,marker);
         await (textInputGuard?textInputGuard(cleanup):cleanup());
       }
       catch (error) {if(!failure)throw error;failure.details={...failure.details,inputMarkerError:errorJSON(error)};}
@@ -364,7 +429,7 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   const pointer = (type, point, button = 'none', count = 0, extra = {}) => mouse(tabId, type, point, button, count, extra, epoch,
     action.elementId != null ? () => element('checkPoint', {...action,...point}) : undefined);
   const step = async work => { checkControl(epoch); const result = await work(); checkControl(epoch); return result; };
-  const elementOptions = {check:checkInput,wrapSend:transport=>(method,params)=>send(method,params,transport),guard:work=>textInputGuard ? textInputGuard(work) : step(work)};
+  const elementOptions = {check:checkInput,wrapSend:(transport,route)=>(method,params)=>send(method,params,transport,route),guard:work=>textInputGuard ? textInputGuard(work) : step(work)};
   const element = (operation, args = action) => elementOperation(tabId, send, operation, args, attached.get(tabId)?.frameRouter,elementOptions);
   const invalidate = () => observations.delete(tabId);
   switch (action.type) {
@@ -436,8 +501,6 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       await send('Input.insertText', { text: String(action.text ?? action.value ?? '') }); return done({ filled: true });
     }
     case 'selectOption': {
-      await content(tabId, 'expectInput', {events:[{type:'input'}]}, current.browserDocumentId);
-      checkControl(epoch);
       try {
         const result = await element('selectOption');
         invalidate(); return done(result);

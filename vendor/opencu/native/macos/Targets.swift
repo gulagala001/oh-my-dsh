@@ -9,8 +9,195 @@ struct WindowRecord {
     let bounds: CGRect
 }
 
+struct NativeCaptureSurface {
+    let root: AXUIElement?
+    let window: WindowRecord?
+    var modalDetection: String { root == nil ? "unavailable" : "accessibility" }
+}
+
+func accessibilityCaptureSurface<Surface>(accessibilityAvailable: Bool, cgOnly: () throws -> Surface, accessibility: () throws -> Surface) throws -> Surface {
+    // Lack of AX permission does not revoke independent read-only CG capture.
+    // A failed read with permission granted must never take this fallback.
+    try accessibilityAvailable ? accessibility() : cgOnly()
+}
+
+func sameCaptureRoot(_ left: AXUIElement?, _ right: AXUIElement?) -> Bool {
+    if let left = left, let right = right { return CFEqual(left, right) }
+    return left == nil && right == nil
+}
+
+func accessibilityCaptureWindow(_ bounds: CGRect, pid: pid_t, candidates: [WindowRecord]) throws -> WindowRecord {
+    let matches = candidates.filter { candidate in
+        candidate.pid == pid && abs(candidate.bounds.minX - bounds.minX) < 2 && abs(candidate.bounds.minY - bounds.minY) < 2 &&
+            abs(candidate.bounds.width - bounds.width) < 2 && abs(candidate.bounds.height - bounds.height) < 2
+    }
+    guard !bounds.isNull, !bounds.isInfinite, bounds.width > 0, bounds.height > 0, matches.count == 1 else {
+        throw NativeFailure("MODAL_CAPTURE_UNAVAILABLE", "Could not uniquely map the active dialog to its application's capture window; no other window or display was captured.", ["matches": matches.count])
+    }
+    return matches[0]
+}
+
+func accessibilityContains<Node>(_ root: Node, _ element: Node, parent: (Node) -> Node?, equal: (Node, Node) -> Bool) -> Bool {
+    var node = element
+    for _ in 0..<80 {
+        if equal(root, node) { return true }
+        guard let next = parent(node) else { return false }
+        node = next
+    }
+    return false
+}
+
+func accessibilityActiveSheet<Node>(_ window: Node, children: (Node) throws -> [Node], isSheet: (Node) throws -> Bool,
+    contains: (Node, Node) -> Bool, focused: Node?) throws -> Node? {
+    var root = window, result: Node?
+    for _ in 0..<80 {
+        let sheets = try children(root).filter(isSheet)
+        if sheets.isEmpty { return result }
+        let active = focused.map { focus in sheets.filter { contains($0, focus) } } ?? []
+        guard let next = active.count == 1 ? active.first : sheets.count == 1 ? sheets.first : nil else {
+            throw NativeFailure("MODAL_STATE_UNAVAILABLE", "Multiple attached sheets are exposed without a unique active sheet; no input was sent.", ["inputDispatched": false, "retryable": false])
+        }
+        result = next; root = next
+    }
+    throw NativeFailure("MODAL_STATE_UNAVAILABLE", "The active sheet hierarchy exceeds the supported traversal bound; no input was sent.", ["inputDispatched": false, "retryable": false])
+}
+
 final class TargetStore {
     private var icons: [String: String] = [:]
+
+    func axElement(_ element: AXUIElement, _ name: String) -> AXUIElement? {
+        guard let value = attribute(element, name), CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return unsafeBitCast(value, to: AXUIElement.self)
+    }
+
+    func contains(_ root: AXUIElement, _ element: AXUIElement) -> Bool {
+        accessibilityContains(root, element, parent: { axElement($0, kAXParentAttribute) }, equal: { CFEqual($0, $1) })
+    }
+
+    private func modalAttribute(_ element: AXUIElement, _ name: String, optional: Bool = false) throws -> CFTypeRef? {
+        var value: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(element, name as CFString, &value)
+        if optional && [.noValue, .attributeUnsupported].contains(result) { return nil }
+        guard result == .success, value != nil else {
+            throw NativeFailure("MODAL_STATE_UNAVAILABLE", "Could not verify the current modal boundary; no input was sent.",
+                ["inputDispatched": false, "retryable": false, "attribute": name, "axError": result.rawValue])
+        }
+        return value
+    }
+
+    private func modalElements(_ element: AXUIElement, _ name: String) throws -> [AXUIElement] {
+        guard let elements = try modalAttribute(element, name) as? [AXUIElement] else {
+            throw NativeFailure("MODAL_STATE_UNAVAILABLE", "The modal hierarchy is not a valid AX element list; no input was sent.", ["inputDispatched": false, "retryable": false, "attribute": name])
+        }
+        return elements
+    }
+
+    private func modalRole(_ element: AXUIElement) throws -> String {
+        guard let role = try modalAttribute(element, kAXRoleAttribute) as? String else {
+            throw NativeFailure("MODAL_STATE_UNAVAILABLE", "The modal hierarchy has an invalid role; no input was sent.", ["inputDispatched": false, "retryable": false])
+        }
+        return role
+    }
+
+    private func owningWindow(_ element: AXUIElement) throws -> AXUIElement? {
+        if let value = try modalAttribute(element, kAXWindowAttribute, optional: true), CFGetTypeID(value) == AXUIElementGetTypeID() { return unsafeBitCast(value, to: AXUIElement.self) }
+        var node = element
+        for _ in 0..<80 {
+            if try modalRole(node) == kAXWindowRole { return node }
+            guard let value = try modalAttribute(node, kAXParentAttribute, optional: true), CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+            node = unsafeBitCast(value, to: AXUIElement.self)
+        }
+        return nil
+    }
+
+    private func modalBlocked() -> NativeFailure {
+        NativeFailure("MODAL_BLOCKED", "An active sheet or modal dialog blocks this control/input. Observe and handle the dialog in its owning target first; no input was sent.", ["inputDispatched": false, "retryable": false])
+    }
+
+    // Sheets block only their owner window. A standalone AXModal window is
+    // application-modal; never reinterpret it as part of a different target.
+    func modalRoot(_ target: [String: Any], window: AXUIElement?) throws -> AXUIElement? {
+        try requireAX()
+        let appRoot = AXUIElementCreateApplication(pid_t(target["pid"] as? Int ?? 0))
+        let focused = axElement(appRoot, kAXFocusedUIElementAttribute) ?? axElement(appRoot, kAXFocusedWindowAttribute)
+        let modals = try modalElements(appRoot, kAXWindowsAttribute).filter { candidate in
+            guard try modalRole(candidate) == kAXWindowRole else { return false }
+            guard let modal = try modalAttribute(candidate, kAXModalAttribute) as? NSNumber else {
+                throw NativeFailure("MODAL_STATE_UNAVAILABLE", "A window's AXModal flag is unavailable; no input was sent.", ["inputDispatched": false, "retryable": false])
+            }
+            guard modal.boolValue else { return false }
+            // AXWindow on a sheet is its document owner, not the sheet itself.
+            if let owner = try modalAttribute(candidate, kAXWindowAttribute, optional: true), CFGetTypeID(owner) == AXUIElementGetTypeID(), !CFEqual(owner, candidate) { return false }
+            return true
+        }
+        let appModal: AXUIElement?
+        if modals.count > 1 {
+            let active = focused.map { focus in modals.filter { contains($0, focus) } } ?? []
+            guard active.count == 1 else { throw NativeFailure("MODAL_STATE_UNAVAILABLE", "The application's active modal window is ambiguous; no input was sent.", ["inputDispatched": false, "retryable": false]) }
+            appModal = active[0]
+        } else { appModal = modals.first }
+        if let modal = appModal, let window = window, !contains(modal, window) { throw modalBlocked() }
+        guard let scope = appModal ?? window else { return nil }
+        return try accessibilityActiveSheet(scope, children: { try modalElements($0, kAXChildrenAttribute) },
+            isSheet: { try modalRole($0) == kAXSheetRole }, contains: contains, focused: focused) ?? appModal
+    }
+
+    func observationRoot(_ target: [String: Any]) throws -> AXUIElement {
+        let appRoot = AXUIElementCreateApplication(pid_t(target["pid"] as? Int ?? 0))
+        let window = try axWindow(target)
+        if let modal = try modalRoot(target, window: axString(window, kAXRoleAttribute) == kAXApplicationRole ? nil : window) { return modal }
+        return target["windowId"] == nil ? appRoot : window
+    }
+
+    func captureSurface(_ target: [String: Any]) throws -> NativeCaptureSurface {
+        let current = try validated(target)
+        return try accessibilityCaptureSurface(accessibilityAvailable: AXIsProcessTrusted(), cgOnly: {
+            if let id = current["windowId"] as? Int {
+                guard let selected = window(id), Int(selected.pid) == current["pid"] as? Int else {
+                    throw NativeFailure("TARGET_IDENTITY_CHANGED", "The selected capture window no longer exists.")
+                }
+                return NativeCaptureSurface(root: nil, window: selected)
+            }
+            return NativeCaptureSurface(root: nil, window: nil)
+        }, accessibility: {
+            let root = try observationRoot(current), role = try modalRole(root)
+            if role == kAXApplicationRole { return NativeCaptureSurface(root: root, window: nil) }
+            if role == kAXWindowRole, let id = current["windowId"] as? Int,
+               let selected = window(id), Int(selected.pid) == current["pid"] as? Int {
+                return NativeCaptureSurface(root: root, window: selected)
+            }
+            guard let bounds = axRect(root) else {
+                throw NativeFailure("MODAL_CAPTURE_UNAVAILABLE", "The active dialog has no verifiable capture bounds; no other window or display was captured.")
+            }
+            return NativeCaptureSurface(root: root, window: try accessibilityCaptureWindow(bounds, pid: pid_t(current["pid"] as? Int ?? 0), candidates: windows()))
+        })
+    }
+
+    func requireInteraction(_ element: AXUIElement, target: [String: Any]) throws {
+        let window = try target["windowId"] != nil ? axWindow(target) : owningWindow(element) ?? axElement(AXUIElementCreateApplication(pid_t(target["pid"] as? Int ?? 0)), kAXFocusedWindowAttribute)
+        if let modal = try modalRoot(target, window: window), !contains(modal, element) { throw modalBlocked() }
+    }
+
+    func requireEventInteraction(_ target: [String: Any], point: CGPoint?, keyboard: Bool, windowBound: Bool = false) throws {
+        try requireAX()
+        let appRoot = AXUIElementCreateApplication(pid_t(target["pid"] as? Int ?? 0))
+        var hit: AXUIElement?
+        if let point = point { _ = AXUIElementCopyElementAtPosition(appRoot, Float(point.x), Float(point.y), &hit) }
+        let focus = axElement(appRoot, kAXFocusedUIElementAttribute) ?? axElement(appRoot, kAXFocusedWindowAttribute)
+        let window = try target["windowId"] != nil ? axWindow(target) : (keyboard ? focus : hit).flatMap(owningWindow) ?? axElement(appRoot, kAXFocusedWindowAttribute)
+        guard let modal = try modalRoot(target, window: window) else { return }
+        if keyboard {
+            guard let focus = focus, contains(modal, focus) else { throw modalBlocked() }
+        } else {
+            guard let point = point, let bounds = axRect(modal), bounds.contains(point), let hit = hit, contains(modal, hit) else { throw modalBlocked() }
+            if windowBound, let window = window, !CFEqual(modal, window) {
+                // The durable pointer route belongs to the selected CG window.
+                // Never post into its blocked content or silently move held input
+                // to a sheet's separate window. AX buttons remain available.
+                throw NativeFailure("MODAL_POINTER_UNAVAILABLE", "The active sheet has a separate pointer window. Use its observed AX controls, or explicitly focus and use foreground input; no pointer input was sent.", ["inputDispatched": false, "retryable": false])
+            }
+        }
+    }
 
     func icon(_ app: NSRunningApplication) -> String? {
         guard let path = app.bundleURL?.path else { return nil }
@@ -219,7 +406,7 @@ final class TargetStore {
         guard running.isActive else { throw NativeFailure("ACTIVATION_FAILED", "The selected application did not become active.") }
         if selected["windowId"] != nil {
             let window = try axWindow(selected), root = AXUIElementCreateApplication(running.processIdentifier)
-            guard let focused = attribute(root, kAXFocusedWindowAttribute), CFEqual(focused, window) else {
+            guard let focused = axElement(root, kAXFocusedWindowAttribute), contains(window, focused) else {
                 throw NativeFailure("TARGET_WINDOW_NOT_ACTIVE", "macOS did not focus the selected window; no input was posted.")
             }
         }

@@ -1,6 +1,6 @@
 # OpenCU Chrome / Edge 本地连接扩展
 
-从零实现的 Manifest V3 unpacked 扩展和无依赖 Node ESM HTTP 桥。不会安装 Chrome、触碰已有 extension/profile 或更新当前 DSH。Chrome / Chromium 最低 118；Edge 使用同一 Chromium 扩展 API。
+从零实现的 Manifest V3 unpacked 扩展和无依赖 Node ESM HTTP 桥。不会安装 Chrome、触碰已有 extension/profile 或更新当前 DSH。Chrome / Chromium 最低 125，使用该版本起提供的 debugger 子会话；Edge 使用同一 Chromium 扩展 API。
 
 ## 安装与授权
 
@@ -43,7 +43,7 @@ await extension.close();
 - `listTargets()` → JSON Target[]。`backend:'extension', kind:'tab'`，browserId 与 owned Playwright backend 分离。
 - `select(id | Target | {url/title/browserId/kind, expected?})` → Target，要求当前身份并附加 debugger；已由 DevTools / Playwright attach 的 tab 返回 `TARGET_BUSY`，不抢占、不 detach 他人 client。首次附加后的保存／初始化失败会清理自有连接；清理失败保留原错误和释放入口，未初始化连接不能冒充可用。
 - `verify(Target)` → `{valid, target?, reason?, error?}`，支持核心冷恢复核验。
-- `observe(Target, {format:'ax'|'screenshot'|'both', screenshot?, ax:'native'?, includeBase64?})` → JSON；DOM AX approximation + 数字 elementId、可选官方 native AX、viewport screenshot。截图默认写 `dataDir/observations/<uuid>.png`；includeBase64 才返回 base64，避免预览拿到无意义的大 JSON。
+- `observe(Target, {format:'ax'|'screenshot'|'both', screenshot?, includeBase64?})` → JSON；真实 Chromium AX、含框架及文档身份的稳定 elementId、viewport screenshot。截图默认写 `dataDir/observations/<uuid>.png`；includeBase64 才返回 base64，避免预览拿到无意义的大 JSON。
 - `act(Target, request)` → JSON；接受核心 camelCase action / `type` aliases：navigate/back/forward/reload/newTab/closeTab/activate/click/doubleClick/rightClick/move/mouseDown/mouseUp/scroll/drag/type/fill/press/keyDown/keyUp/set_value/cursor。导航返回新 occurrence `target`，关闭返回 `closedTargetId`。AbortSignal 只在桥内使用、不发送到扩展。
 - `release({targets})` / `release(Target)` / `release()` → `{released, failures?}`，释放 held key/button、移除产品指针、detach 自己的 debugger；失败保留状态并允许重试；服务端释放超时或负回执不会丢弃原会话，阻止新控制并保留释放／断开重试通道，完整释放确认后恢复。输入释放未确认时保留自己持有的 debugger，避免切断后续 keyUp／mouseReleased 重试通道。最终释放记录保存失败时保留待保存状态，重试只补存日志，不重发键鼠或分离后来接入的客户端；保存成功后 observe/act 核验当前 document 并重新 attach。
 - `newTab(browserId, url)` → 发现结果，普通 HTTP(S) only；随后从 listTargets/select 获取可控制 Target。
@@ -77,11 +77,13 @@ await extension.act(tab, {
 
 点击/Unicode type/fill/key/scroll/drag 使用官方 `chrome.debugger` CDP Input。fill 先选择真实控件文本，再用 Input.insertText 替换。macOS 的组合键同时携带原生编辑命令，Cmd+A、Shift 导航及词／行删除作用于真实编辑器，网页仍可 preventDefault；自动标记使用实际键值。滚轮标记按坐标与增量一次匹配，在提交结算后开始有效期，提交前取消会移除标记。`press` 支持单独 `+` 和 `Control++` 等加号组合，临时组合只释放本次新增的按键，保留此前显式持有的修饰键。`set_value` 使用 native DOM setter 与 **untrusted** input/change 事件，返回 `inputMode:'synthetic-dom'`；自定义网站可能忽略，不应把此操作当作 OS 输入成功。DOM 内容脚本不使用 `.click()` 冒充真实点击。cursor 是 pointer-events:none、aria-hidden 的产品指针，不截获用户点击；释放移除。
 
+同源与跨源子框架各自在隔离世界监测输入，按真实焦点或指针命中的 frame／控件标记本次输入；实际人工活动聚合到所选标签，保留来源框架和文档身份。键盘编辑继续核对实际按键、编辑目标和 inputType，点击 checkbox／radio 的默认变更只归属本次点击的控件。跨进程框架使用 debugger flat sessions 并递归附加子框架，释放时关闭自有附加并分离根 debugger；子框架导航后须重新观察，旧元素不会用于新文档。
+
 ## 明确限制
 
-- DOM 数字元素覆盖主文档和 open shadow roots；closed shadow / cross-origin iframe 通过新截图坐标操作，非完整 native AX-to-element 定位。native AX 返回 CDP node/backendDOMNodeId，仅观察用。
-- viewport 截图，不支持 fullPage 或 pinch-zoom screenshot 操作；不提供 Playwright locator/evaluate 能力，不改 Playwright 全局设置。
-- 下载 API 没有可靠 tabId，仅连接授权期间 browser-wide 事件；不自动读取本机任意路径、不替换文件 provider、不处理 upload/dialog/clipboard。Chrome downloads 中的 filename 是实际路径；跨设备交付需主服务后续授权文件桥。
+- 元素与定位器覆盖 Chromium 实际公开的同源、跨源／跨进程嵌套框架和开放 shadow DOM；受浏览器权限、不透明 sandbox 或不可访问内容限制时明确拒绝，不绕过限制。
+- viewport 截图，不支持 fullPage 或 pinch-zoom screenshot 操作；定位器按当前文档解析，不改 Playwright 全局设置，也不开放任意页面 JavaScript 执行。
+- 下载 API 没有可靠 tabId，仅连接授权期间 browser-wide 事件；不自动读取本机任意路径、不替换文件 provider。文件上传提供直接 upload，不提供 chooser 事件；剪贴板隔离接口限自有无头 Chromium，不接系统剪贴板。Chrome downloads 中的 filename 是实际路径；跨设备交付需主服务后续授权文件桥。
 - token 持有者与本机 extension Origin 视为授权客户端；协议不能保护本机恶意进程冒充 Origin。外部网站无法借 token URL/CORS/extension message 任意接入。
 - 断连／命令超时不伪称 release 已成功；已配对身份可自动重建传输，但未知结果不重放输入，原目标需要重新发现。主动断开、debugger 提示取消或释放失败仍暂停控制。停止中已发往 Chrome 的动作不能撤销。
 
