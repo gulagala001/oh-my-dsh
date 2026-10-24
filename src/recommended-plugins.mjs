@@ -170,10 +170,11 @@ export class RecommendedPluginManager {
       version = plugin.review?.version ?? await this.latest(plugin, this.abort.signal);
       parseVersion(version);
       this.records.set(plugin.id, { ...this.records.get(plugin.id), latestVersion: version, checkedAt: this.now() });
-      // Decide before fetching an archive, then recheck after any download so
-      // concurrent host changes or opt-out cannot be overwritten by stale state.
+      // The same admission rule applies before preparation and immediately
+      // before mutation, including time spent queued or awaiting a decision.
       const installable = current => {
         this.abort.signal.throwIfAborted();
+        if (plugin.hostBuilds && this.hostVersion !== operationHost) throw Error('宿主版本在准备安装期间改变，请重新更新以选择对应核验构建');
         if (this.unavailable(entry)) throw Error(this.unavailable(entry));
         if (automatic && (!plugin.review?.version || plugin.review.source || !this.getConfig().recommendedPluginsAutoUpdate || this.isRunning() || !current?.installed || !current.enabled)) return false;
         if (action === 'install' && current?.installed) throw Error('插件已经安装，请使用更新');
@@ -197,21 +198,27 @@ export class RecommendedPluginManager {
         }
         return true;
       };
-      bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
-      if (!installable(bundle)) return;
+      const refreshCandidate = async () => {
+        if (this.getHostVersion) await this.refreshHost();
+        bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
+        return installable(bundle);
+      };
+      if (!await refreshCandidate()) return;
       let spec = pluginInstallSpec(plugin, version);
       if (plugin.review?.sha256) {
         spec = await this.preparePackage(spec, plugin.review.sha256, this.packageDirectory, this.abort.signal);
-        if (this.getHostVersion) await this.refreshHost();
-        if (plugin.hostBuilds && this.hostVersion !== operationHost) throw Error('宿主版本在下载安装包期间改变，请重新更新以选择对应核验构建');
-        bundle = (await this.manager.listBundles()).find(item => item.name === plugin.packageName);
-        if (!installable(bundle)) return;
+        if (!await refreshCandidate()) return;
         // Naming the archive lets the host identify unchanged dependencies on
         // activation retries and explicit source-snapshot reinstallation.
         spec = `${plugin.packageName}@${spec}`;
       }
-      const enabled = action === 'install' ? true : bundle.enabled;
-      result = await withPluginPreflight(this.manager, spec, { enabled, requestId: this.current.requestId }, async () => {
+      const options = { enabled: action === 'install' ? true : bundle.enabled, requestId: this.current.requestId };
+      const preparedVersion = bundle?.version;
+      const skipped = { application: 'cancelled', changed: false, stage: 'install', target: spec };
+      result = await withPluginPreflight(this.manager, spec, options, async () => {
+        if (!await refreshCandidate()) return skipped;
+        if (action === 'update' && (bundle.version !== preparedVersion || bundle.enabled !== options.enabled))
+          throw Error('插件安装版本或启用状态在预检期间改变，请重新操作以保留当前选择');
         if (action === 'update') {
           // Retire the old bundle only after the candidate passed preflight.
           // A running bundle without HMR stays until the required restart.
@@ -219,8 +226,10 @@ export class RecommendedPluginManager {
           if (removed.error?.code !== 'stop-profile' && !['applied', 'restart-required'].includes(removed.application)) return removed;
         }
         this.abort.signal.throwIfAborted();
-        return this.manager.installBundle(spec, { enabled, requestId: this.current.requestId });
+        return this.manager.installBundle(spec, options);
       });
+      // An intentional skip must not hide a missing native acknowledgement.
+      if (result === skipped) return;
     }
     this.finish(plugin, action, result, version);
   }

@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { symbols } from '@deepseek-ai/cordis';
 import { readJsonBody } from './http.mjs';
 import { compareVersions, parseVersion, updateHostRequirement } from './version.mjs';
 import { requirePluginChange } from './plugin-operation.mjs';
+import { withPluginPreflight } from './plugin-preflight/service.mjs';
 
 const PACKAGE = 'oh-my-dsh';
 const failure = (message, statusCode = 409) => Object.assign(new Error(message), { statusCode });
@@ -75,20 +77,31 @@ export class VersionUpdater {
     if (this.job && requestId === this.requestId && ['installing', 'applying'].includes(phase)) this.state.phase = phase;
   }
   async run(version) {
-    const release = await this.versions.check(true);
-    if (release.error || release.stale) throw failure('未能确认最新发布信息，请重新检查更新后再试。');
-    const publication = unpublishedReason(release, version, this.includeUnpublished);
-    if (publication) throw failure(publication);
-    const requirement = hostReason(release.currentVersion, version, release.hostVersion);
-    if (requirement) throw failure(requirement);
-    if (release.status !== 'update' || release.latestVersion !== version) throw failure('发布版本已变化，请重新检查更新。');
-    const { manager, bundle, reason } = await this.inventory();
-    if (reason) throw failure(reason);
-    if (bundle.version && compareVersions(bundle.version, release.currentVersion) !== 0) throw failure('已安装的版本与运行版本不同，请先重启 DSH。');
-    if (this.closed) throw failure('更新服务已停止。');
-    if (this.isRunning()) throw failure('有任务正在运行，请等任务结束后更新。');
+    const admit = async checkedRelease => {
+      const inventory = await this.inventory();
+      const release = checkedRelease ?? this.versions.snapshot();
+      if (release.error || release.stale) throw failure('未能确认最新发布信息，请重新检查更新后再试。');
+      const publication = unpublishedReason(release, version, this.includeUnpublished);
+      if (publication) throw failure(publication);
+      const requirement = hostReason(release.currentVersion, version, release.hostVersion);
+      if (requirement) throw failure(requirement);
+      if (release.status !== 'update' || release.latestVersion !== version) throw failure('发布版本已变化，请重新检查更新。');
+      if (inventory.reason) throw failure(inventory.reason);
+      if (inventory.bundle.version && compareVersions(inventory.bundle.version, release.currentVersion) !== 0) throw failure('已安装的版本与运行版本不同，请先重启 DSH。');
+      if (this.closed) throw failure('更新服务已停止。');
+      if (this.isRunning()) throw failure('有任务正在运行，请等任务结束后更新。');
+      return inventory;
+    };
+    const { manager, bundle } = await admit(await this.versions.check(true));
+    const options = { enabled: bundle.enabled, requestId: this.requestId }, spec = versionInstallSpec(version);
     this.state.phase = 'installing';
-    const result = await manager.installBundle(versionInstallSpec(version), { enabled: bundle.enabled, requestId: this.requestId });
+    const result = await withPluginPreflight(manager, spec, options, async () => {
+      const current = await admit();
+      // Traced Cordis proxies may differ while still referring to one service.
+      if ((current.manager[symbols.original] ?? current.manager) !== (manager[symbols.original] ?? manager)
+        || current.bundle.enabled !== options.enabled) throw failure('插件管理或启用状态在预检期间改变，请重新检查更新。');
+      return manager.installBundle(spec, options);
+    });
     requirePluginChange(result);
     if (result.bundle !== PACKAGE) throw Error('未能确认更新结果，请到 DSH 的“插件”页面检查。');
     const installed = (await manager.listBundles()).find(row => row.name === PACKAGE);

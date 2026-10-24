@@ -45,3 +45,12 @@ test('an actionable native package diagnostic is shared by self-update and featu
   assert.equal(feature.records.get('addon').error, f.service.snapshot().error);
   feature.close(); f.service.close();
 });
+
+test('a missing native install acknowledgement is not treated as a skipped update', async t => {
+  const feature = new RecommendedPluginManager({ manager: { listBundles: async () => [], installBundle: async () => null },
+    catalog: [{ id: 'addon', packageName: 'addon' }], latest: async () => '1.0.0',
+    getConfig: () => ({}), saveConfig() {} });
+  t.after(() => feature.close());
+  await feature.start('addon', 'install');
+  assert.match(feature.records.get('addon').error, /未能确认插件操作结果/);
+});

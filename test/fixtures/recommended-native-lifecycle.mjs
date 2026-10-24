@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { RecommendedPluginManager } from '../../src/recommended-plugins.mjs';
+import { PluginPreflight, withPluginPreflight } from '../../src/plugin-preflight/service.mjs';
 import { writeAddon } from './recommended-native-package-manager.mjs';
 
 // Resolve through the direct, locked DSH development dependency, including with pnpm isolation.
@@ -114,6 +115,64 @@ function assertActive(f, version) {
   assert.equal(f.packageVersion(), `${version}.0.0`);
   assert.equal(f.ctx.get('nativeSibling'), f.sibling);
 }
+
+async function preflightFixture(t) {
+  const f = await fixture(t), entered = Promise.withResolvers(), release = Promise.withResolvers();
+  const preflight = new PluginPreflight({ manager: f.manager, profile: { dir: f.dir }, directory: join(f.root, 'preflight'),
+    cli: '/unused', hostVersion: '0.2.1-rc.2', getEnabled: () => true,
+    async probe() { entered.resolve(); await release.promise; return { ok: true }; },
+  }).bind();
+  t.after(async () => { release.resolve(); await preflight.close(); });
+  return { ...f, entered, release, preflight };
+}
+
+test('native automatic update retains the active bundle after opt-out during preflight', options, async t => {
+  const f = await preflightFixture(t); let automatic = true;
+  f.service.getConfig = () => ({ recommendedPluginsAutoUpdate: automatic });
+  const pending = f.service.start('addon', 'update', true); await f.entered.promise;
+  automatic = false; f.release.resolve(); await pending;
+  assertActive(f, 1);
+  assert.deepEqual(f.commands(), []);
+  assert.equal((await f.view()).error, '');
+});
+
+test('native disablement survives a continued preflight warning and a fresh update keeps it disabled', options, async t => {
+  const f = await preflightFixture(t), decision = Promise.withResolvers();
+  f.preflight.subscribe(value => { if (value.phase === 'decision') decision.resolve(value); });
+  const pending = f.service.start('addon', 'update'); await f.entered.promise;
+  assert.equal((await f.manager.setBundleEnabled('addon', false)).application, 'applied');
+  f.release.resolve(); const view = await decision.promise;
+  assert.equal(view.failure.code, 'environment-changed');
+  f.preflight.decide(view.id, 'continue'); await pending;
+  assert.deepEqual(f.commands(), []);
+  assert.equal(f.ctx.get('nativeVersion'), undefined);
+  assert.equal((await f.view()).version, '1.0.0');
+  assert.match((await f.view()).error, /启用状态/);
+  await f.service.start('addon', 'update');
+  assert.deepEqual(f.commands(), ['remove', 'add']);
+  assert.equal((await f.view()).version, '2.0.0');
+  assert.equal((await f.view()).enabled, false);
+  assert.equal(f.ctx.get('nativeVersion'), undefined);
+  assert.equal(f.ctx.get('nativeSibling'), f.sibling);
+});
+
+test('native queued update preserves a disablement completed before its probe starts', options, async t => {
+  const f = await preflightFixture(t), applying = Promise.withResolvers(), finish = Promise.withResolvers();
+  t.after(() => finish.resolve());
+  const blocker = withPluginPreflight(f.manager, 'unrelated', {}, async () => {
+    applying.resolve(); await finish.promise; return { application: 'applied' };
+  });
+  await f.entered.promise; f.release.resolve(); await applying.promise;
+  const pending = f.service.start('addon', 'update');
+  while (!f.preflight.queue.length) await new Promise(setImmediate);
+  await f.manager.setBundleEnabled('addon', false);
+  finish.resolve(); await blocker; await pending;
+  assert.deepEqual(f.commands(), []);
+  assert.equal((await f.view()).version, '1.0.0');
+  assert.equal((await f.view()).enabled, false);
+  assert.equal(f.ctx.get('nativeVersion'), undefined);
+  assert.equal(f.ctx.get('nativeSibling'), f.sibling);
+});
 
 test('native feature switch installs once, then disables and re-enables without package removal', options, async t => {
   const f = await fixture(t, { enabled: false });
