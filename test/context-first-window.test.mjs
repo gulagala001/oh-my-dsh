@@ -185,3 +185,50 @@ test('nested control results cannot leave empty wrappers that count as factual w
   assert.equal(summaryMessageReader(s)(result), null);
   assert.equal(preparationWorkload(s, { records: [] }, [result]).events, 0);
 });
+
+test('summary reads classify only requested immutable programs, including results read before calls', () => {
+  const s = Session.create('lazy-programs');
+  const old = tool(s, 'run_code', { code: 'console.log(await tools.recall({id:"old"}));' }, 'Old reference');
+  const current = tool(s, 'run_code', { code: 'console.log(await tools.read({path:"current"}));' }, 'Current file');
+  const args = new Set([old, current].map(([e]) => e.data.message.content[0].arguments));
+  const parse = JSON.parse, parsed = [];
+  JSON.parse = (text, ...rest) => { if (args.has(text)) parsed.push(text); return parse(text, ...rest); };
+  try {
+    const read = summaryMessageReader(s);
+    assert.equal(parsed.length, 0, 'Constructing a reader does not parse unread historical programs');
+    assert.ok(read(current[1])); assert.ok(read(current[0]));
+    assert.deepEqual(parsed, [current[0].data.message.content[0].arguments]);
+    assert.equal(read(old[1]), null); assert.equal(read(old[0]), null);
+    assert.equal(parsed.length, 2);
+    const second = summaryMessageReader(s);
+    assert.equal(second(old[1]), null); assert.ok(second(current[1]));
+    assert.equal(parsed.length, 2, 'Known immutable syntax remains shared across readers');
+  } finally { JSON.parse = parse; }
+});
+
+test('lazy lookup preserves nested and duplicate-id reference exclusion without dropping independent blocks', () => {
+  const call = (id, code) => Object.freeze({ type: 'tool-call', id, name: 'run_code', arguments: JSON.stringify({ code }) });
+  const events = [
+    { data: { message: { role: 'assistant', content: [call('same', 'console.log(await tools.read({}));')] } } },
+    { data: { message: { role: 'assistant', content: [{ type: 'tool-result', toolCallId: 'wrapper', content: [call('same', 'console.log(await tools.recall({}));')] }] } } },
+    { data: { message: { role: 'assistant', content: [{ type: 'tool-result', toolCallId: 'same', content: [{ type: 'text', text: 'Reference' }] }, { type: 'text', text: 'Independent fact' }] } } },
+  ];
+  const read = summaryMessageReader({ snapshotEvents: () => events, deriveEventMessage: e => e.data.message });
+  assert.deepEqual(read(events[2]).content, [{ type: 'text', text: 'Independent fact' }]);
+  assert.equal(read(events[0]), null); assert.equal(read(events[1]), null);
+});
+
+test('mutable programs and frozen accessors retain eager classification at reader creation', () => {
+  for (const accessor of [false, true]) {
+    let args = JSON.stringify({ code: 'console.log(await tools.recall({}));' });
+    const block = accessor ? Object.freeze({ type: 'tool-call', id: 'legacy', name: 'run_code', get arguments() { return args; } })
+      : { type: 'tool-call', id: 'legacy', name: 'run_code', arguments: args };
+    const event = { data: { message: { role: 'assistant', content: [block] } } };
+    const s = { snapshotEvents: () => [event], deriveEventMessage: e => e.data.message };
+    const read = summaryMessageReader(s);
+    args = JSON.stringify({ code: 'console.log(await tools.read({}));' });
+    if (!accessor) block.arguments = args;
+    assert.equal(read(event), null, 'Existing reader retains its original classification');
+    assert.ok(summaryMessageReader(s)(event), 'A fresh reader sees changed legacy arguments');
+  }
+});

@@ -112,16 +112,22 @@ function referenceProgram(args) {
 // Task tool calls/results are also excluded, not just the rendered task snapshot.
 // Other blocks in a mixed message, including independent tool results, survive.
 export function summaryMessageReader(session) {
-  const taskCalls = new Set();
+  const taskCalls = new Set(), programs = new Map();
   const register = blocks => { for (const b of blocks || []) {
     if (b.type === 'tool-call') {
       let referenceOnly = referenceTools.has(b.name);
       if (b.name === 'run_code') {
         // Native events are immutable. Reuse syntax classification only for
         // immutable calls; mutable fixtures/imports are evaluated afresh.
-        if (Object.isFrozen(b) && typeof b.arguments === 'string') {
-          if (!referencePrograms.has(b)) referencePrograms.set(b, referenceProgram(b.arguments));
-          referenceOnly = referencePrograms.get(b);
+        if (Object.isFrozen(b) && typeof Object.getOwnPropertyDescriptor(b, 'arguments')?.value === 'string') {
+          if (referencePrograms.has(b)) referenceOnly = referencePrograms.get(b);
+          else {
+            // Index the whole log, but parse only calls whose message/result
+            // is actually read. Old, replaced history need not be parsed to
+            // prepare the current surface. Keep every call for duplicate ids.
+            if (!programs.has(b.id)) programs.set(b.id, []);
+            programs.get(b.id).push(b);
+          }
         } else referenceOnly = referenceProgram(b.arguments);
       }
       if (referenceOnly) taskCalls.add(b.id);
@@ -129,10 +135,21 @@ export function summaryMessageReader(session) {
     if (b.type === 'tool-result') register(b.content);
   } };
   for (const e of session.snapshotEvents()) register(messageOf(e)?.content);
+  const reference = id => {
+    if (taskCalls.has(id)) return true;
+    const pending = programs.get(id);
+    if (!pending) return false;
+    for (const block of pending) {
+      if (!referencePrograms.has(block)) referencePrograms.set(block, referenceProgram(block.arguments));
+      if (referencePrograms.get(block)) { taskCalls.add(id); break; }
+    }
+    programs.delete(id);
+    return taskCalls.has(id);
+  };
   const filter = blocks => (blocks || []).flatMap(b => {
-    if (b.type === 'tool-call' && taskCalls.has(b.id)) return [];
+    if (b.type === 'tool-call' && reference(b.id)) return [];
     if (b.type === 'tool-result') {
-      if (taskCalls.has(b.toolCallId)) return [];
+      if (reference(b.toolCallId)) return [];
       const content = filter(b.content);
       return b.content?.length && !content.length ? [] : [{ ...b, content }];
     }
@@ -142,7 +159,7 @@ export function summaryMessageReader(session) {
     if (controlSources.has(sourceName(messageOf(e)?.source))) return null;
     const m = withoutTodo(session.deriveEventMessage(e));
     if (!m) return null;
-    if (m.role === 'tool' && taskCalls.has(m.toolCallId)) return null;
+    if (m.role === 'tool' && reference(m.toolCallId)) return null;
     const content = filter(m.content);
     // Keep standalone historical analysis for reference, but not analysis
     // attached exclusively to control calls that were just removed.
