@@ -18,6 +18,8 @@ import { openCUDialogs, type DialogFence } from './opencu-dialogs.ts'
 type RemoteResult = { result: { value?: unknown }; exceptionDetails?: { text: string; exception?: { description?: string } } }
 interface ObservationState {
   elements: Map<string, FrameElement>
+  elementIds: Map<string, string>
+  nodeIds: Map<string, string>
   frameRouter?: CDPFrameRouter
   pending: Promise<unknown>
   cancellation: AbortController
@@ -39,6 +41,10 @@ interface ObservationState {
   rendererExited?: boolean
 }
 const states = new WeakMap<WebContents, ObservationState>()
+// Short public handles never expose frame/document routing keys or collide with
+// another guest in this host process. Navigation drops aliases without reusing IDs.
+let nextElementId = 0
+const newElementId = (): string => String(++nextElementId)
 const operations = new AsyncLocalStorage<{ fence: DialogFence; inputDispatched: boolean; operation: string; signal: AbortSignal; guard<T>(work: () => Promise<T>): Promise<T> }>()
 function dispatchesInput(method: string, params: Record<string, unknown>, operation?: string): boolean {
   if (method === 'Target.sendMessageToTarget' && typeof params.message === 'string') {
@@ -89,7 +95,8 @@ export function resolveOpenCUNavigation(input: unknown, allowedNavigation: (url:
 export function openCUAutomation(guest: WebContents, operation: unknown, input: unknown, allowedNavigation: (url: string) => boolean): Promise<unknown> {
   if (typeof operation !== 'string' || !['getDialog', 'handleDialog', 'pageState', 'navigationState', 'inputMarker', 'observe', 'locator', 'domSnapshot', 'checked', 'point', 'verifyElement', 'focus', 'selectAll', 'selectOption', 'selectText', 'paste', 'describe', 'patch', 'hitTest', 'upload', 'navigationSnapshot', 'restoreNavigation', 'siteTools', 'invokeSiteTool', 'cancelSiteTool', 'cancelUpload', 'capture', 'readPageImage', 'input', 'insertText', 'releaseInput'].includes(operation)) throw new Error('Unsupported guest automation operation')
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid guest automation arguments')
-  const args = input as Record<string, unknown>
+  const args = { ...input as Record<string, unknown> }
+  if (typeof args.elementId === 'number' && Number.isSafeInteger(args.elementId) && args.elementId >= 0) args.elementId = String(args.elementId)
   const dialogs = openCUDialogs(guest)
   // These operations must bypass the page's serialized/focus/DOM command queue.
   if (operation === 'getDialog') return Promise.resolve(dialogs.get())
@@ -114,11 +121,11 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   }
   let state = states.get(guest)
   if (!state) {
-    state = { elements: new Map(), pending: Promise.resolve(), cancellation: new AbortController(), debuggerUsers: 0, ownsDebugger: false, uploadGeneration: 0, documentGeneration: 0, identityScope: randomUUID(),
+    state = { elements: new Map(), elementIds: new Map(), nodeIds: new Map(), pending: Promise.resolve(), cancellation: new AbortController(), debuggerUsers: 0, ownsDebugger: false, uploadGeneration: 0, documentGeneration: 0, identityScope: randomUUID(),
       inputKeys: new Map(), inputButtons: new Set(), releasingInputs: new Map(), inputPosition: { x: 0, y: 0 } }
     states.set(guest, state)
     const tracked = state
-    const invalidate = (): void => { tracked.documentGeneration++; tracked.identityScope = randomUUID(); tracked.elements.clear(); delete tracked.observationId; delete tracked.deferredAX }
+    const invalidate = (): void => { tracked.documentGeneration++; tracked.identityScope = randomUUID(); tracked.elements.clear(); tracked.elementIds.clear(); tracked.nodeIds.clear(); delete tracked.observationId; delete tracked.deferredAX }
     guest.on('render-process-gone', () => {
       invalidate(); tracked.rendererExited = true; tracked.uploadGeneration++
       tracked.inputKeys.clear(); tracked.inputButtons.clear(); tracked.releasingInputs.clear(); tracked.inputActive = false
@@ -134,7 +141,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   if (operation === 'releaseInput') {
     current.cancellation.abort(Object.assign(new Error('Browser operation interrupted by input release'), { code: 'CONTROL_STOPPED' }))
     current.cancellation = new AbortController()
-    current.elements.clear(); delete current.observationId; delete current.deferredAX
+    current.elements.clear(); current.elementIds.clear(); current.nodeIds.clear(); delete current.observationId; delete current.deferredAX
     delete current.capture
   }
   const signal = current.cancellation.signal
@@ -260,16 +267,21 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       // Locator-created entries already have their own live frame validation.
       if (current.deferredAX && typeof args.elementId === 'string' && !current.elements.has(args.elementId)) {
         if (args.observationId !== undefined && args.observationId !== current.observationId) throw Object.assign(new Error('STALE_ELEMENT: element observation has expired'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+        if (![...current.elementIds.values()].includes(args.elementId)) throw Object.assign(new Error('STALE_ELEMENT: use an ID from the preceding AX observation'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
         const live = (): void => {
           signal.throwIfAborted()
           if (guest.isDestroyed() || documentGeneration !== current.documentGeneration) throw Object.assign(new Error('STALE_ELEMENT: document changed while resolving screenshot elements'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
         }
         const captured = await captureAXTree(send, frameRouter(), live)
-        const elements = new Map(current.elements)
-        for (const {node, route, key} of captured.nodes) if (node.backendDOMNodeId) elements.set(`${current.identityScope}:${key}`, {backendNodeId:node.backendDOMNodeId, ...(route ? {route} : {})})
         await captured.validate()
         live()
+        const elements = new Map<string, FrameElement>(), elementIds = new Map<string, string>()
+        for (const {node, route, key} of captured.nodes) if (node.backendDOMNodeId) {
+          const id = current.elementIds.get(key) ?? newElementId()
+          elementIds.set(key, id); elements.set(id, {backendNodeId:node.backendDOMNodeId, ...(route ? {route} : {})})
+        }
         current.elements = elements
+        current.elementIds = elementIds
         delete current.deferredAX
       }
       if (operation === 'verifyElement') return await verifyElement()
@@ -390,8 +402,8 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         return { released: true }
       }
       if (operation === 'readPageImage') return await readPageImage(guest, send, args)
-      if (operation === 'siteTools') return await inspectSiteTools(guest, send)
-      if (siteInvocation) return await invokeSiteTool(guest, send, args, siteInvocation.controller.signal)
+      if (operation === 'siteTools') return await inspectSiteTools(guest, send, frameRouter())
+      if (siteInvocation) return await invokeSiteTool(guest, send, args, siteInvocation.controller.signal, frameRouter())
       if (operation === 'capture') {
         let timer: ReturnType<typeof setTimeout> | undefined
         const screenshot: { data: string } = await Promise.race([
@@ -415,7 +427,9 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         const result = await runCDPLocator(send, { ...args, operation }, (backendNodeId, route) => {
           signal.throwIfAborted()
           if (generation !== current.documentGeneration) throw new Error('STALE_ELEMENT: document changed while resolving locator')
-          const elementId = `${current.identityScope}:${axElementKey(backendNodeId,route)}`
+          const key = axElementKey(backendNodeId,route)
+          const elementId = current.elementIds.get(key) ?? newElementId()
+          current.elementIds.set(key, elementId)
           current.elements.set(elementId, {backendNodeId,route})
           return elementId
         }, router)
@@ -440,17 +454,25 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           return { ...details, observationId, coordinateSpace: 'viewport-css-pixels' }
         }
         const captured = await captureAXTree(send, frameRouter(), live)
-        const elements = new Map<string, FrameElement>()
-        const nodes = captured.nodes.map(({node,route,key}) => {
-          const elementId = node.backendDOMNodeId ? `${current.identityScope}:${key}` : undefined
-          if (elementId && node.backendDOMNodeId) elements.set(elementId, {backendNodeId:node.backendDOMNodeId,...(route ? {route} : {})})
-          return { ...(elementId ? { elementId } : {}), nodeId: node.nodeId, role: node.role?.value ?? '', name: node.name?.value ?? '',
-            ...(node.value ? { value: node.value.value } : {}), children: node.childIds ?? [],
-            properties: Object.fromEntries((node.properties ?? []).map(item => [item.name, item.value.value ?? item.value.relatedNodes?.map(related => related.text ?? related.idref) ?? null])) }
-        })
         await captured.validate()
         live()
+        const elements = new Map<string, FrameElement>()
+        const elementIds = new Map<string, string>(), nodeIds = new Map<string, string>()
+        for (const {node, key} of captured.nodes) {
+          const id = (node.backendDOMNodeId ? current.elementIds.get(key) : current.nodeIds.get(node.nodeId)) ?? newElementId()
+          nodeIds.set(node.nodeId, id)
+          if (node.backendDOMNodeId) elementIds.set(key, id)
+        }
+        const nodes = captured.nodes.map(({node,route,key}) => {
+          const elementId = node.backendDOMNodeId ? elementIds.get(key) : undefined
+          if (elementId && node.backendDOMNodeId) elements.set(elementId, {backendNodeId:node.backendDOMNodeId,...(route ? {route} : {})})
+          return { ...(elementId ? { elementId } : {}), nodeId: nodeIds.get(node.nodeId)!, role: node.role?.value ?? '', name: node.name?.value ?? '',
+            ...(node.value ? { value: node.value.value } : {}), children: (node.childIds ?? []).flatMap(id => nodeIds.has(id) ? [nodeIds.get(id)!] : []),
+            properties: Object.fromEntries((node.properties ?? []).map(item => [item.name, item.value.value ?? item.value.relatedNodes?.map(related => related.text ?? related.idref) ?? null])) }
+        })
         current.elements = elements
+        current.elementIds = elementIds
+        current.nodeIds = nodeIds
         current.observationId = observationId
         delete current.deferredAX
         return { ...details, observationId, coordinateSpace: 'viewport-css-pixels', ax: { source: 'chromium-accessibility-tree', nodes, stableIds: true, identityScope: current.identityScope },
@@ -470,7 +492,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         const hit = await hitTestViewport(send, { x: args.x, y: args.y })
         live()
         backendNodeId = hit.backendNodeId
-        elementId = `${randomUUID()}:hit`
+        elementId = newElementId()
         entry = {backendNodeId}
         current.elements.set(elementId, entry)
       } else {entry = elementId ? current.elements.get(elementId) : undefined; backendNodeId = entry?.backendNodeId}

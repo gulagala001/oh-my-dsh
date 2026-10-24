@@ -83,7 +83,7 @@ AX 默认返回紧凑语义文本，保留元素身份、层级、值、状态�
 
 独立浏览器在 `capabilities.actions()` 包含 `fileChooserEvents` 时支持 `playwright.waitForEvent('filechooser',{timeoutMs})`：同一 cell 内先订阅，再点击实际文件输入或触发按钮，最后 await；返回句柄提供 `isMultiple()` 与 `setFiles(absolutePathOrPaths,{timeoutMs})`。选择器按目标、框架和文档身份绑定，导航、控件移除、取消或消费后的旧句柄被拒绝，动作不会自动重放；单文件控件拒绝多个文件，禁用控件及禁用 fieldset 子控件拒绝输入。内置与扩展浏览器仍使用最新观察中的 `tab.upload(elementId,absolutePaths)`，尚不提供选择器事件等待。两种上传入口都接受 `[]` 作为明确的清空操作：核实文件选择确已清空，但不合成 `input/change`，因此依赖这些事件维护的网页上传队列可能仍需网页自身的取消／重置操作。
 
-浏览器可选接口由 `await capabilities.list()` 返回 `{id,description}`，再用 `await capabilities.get(id)` 获取已公布接口；控制功能字符串迁至 `capabilities.actions()`，原目标描述中的 capabilities 字段与 `control()` 保留。WebMCP 仅在内置宿主真实原生发现可用时公布，空工具集合有效。每个用户回合先 `fetchTools()`，读取 `description()` 后按明确名称 `call(name,input)`；集合可在同文档的多个 JavaScript cell 复用，新发现、导航或过期注册会使旧集合失效。重名跨框架工具须用原有注册 ID 接口明确选择，不猜测、不重放不确定调用。
+浏览器可选接口由 `await capabilities.list()` 返回 `{id,description}`，再用 `await capabilities.get(id)` 获取已公布接口；控制功能字符串迁至 `capabilities.actions()`，原目标描述中的 capabilities 字段与 `control()` 保留。WebMCP 仅在内置宿主真实原生发现可用时公布，空工具集合有效。每个用户回合先 `fetchTools()`，读取 `description()` 后按明确名称 `call(name,input)`；集合可在同文档的多个 JavaScript cell 复用，新发现、导航或过期注册会使旧集合失效。重名跨框架工具在集合描述中提供唯一调用名，`nativeName` 保留站点原名，并带来源、框架和注册 ID；按所需注册的明确调用名选择。执行中导航／关闭返回 `SITE_TOOL_CONTEXT_CHANGED`，重新观察并获取工具，不推定成功或重放。CDP 确认取消不代表撤销副作用或停止站点已启动的任意异步工作：站点或宿主可能不提供或不遵守 `AbortSignal`；取消后须观察实际结果。
 
 `tab.clipboard.read/readText/write/writeText` 使用 OpenCU 自有无头 Chromium 进程的原生剪贴板，供安全文档上的页面复制与键盘粘贴共用；`control().clipboard` 说明该目标支持情况。条目支持原生 MIME 格式、text 或 base64，写入限一个条目与 16 MiB，HTML 清洗和图片支持由实际 Chromium 决定。API 仅临时授予当前私有 context/origin 权限并在完成或取消后还原，网页自身的 Clipboard API 仍受原生权限约束。内置、扩展、有头及外部 CDP 浏览器明确不支持该隔离接口，不读写用户系统剪贴板。它与 `paste(id,text,{format})` 的直接文本插入语义分别说明；输入开始后的取消不等于写入未发生，应观察或读取后再决定下一步。
 

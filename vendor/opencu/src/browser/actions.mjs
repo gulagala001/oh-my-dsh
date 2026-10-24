@@ -389,7 +389,6 @@ export async function actOnPage(record, request, options) {
 
 export async function releasePage(record, timeoutMs, {dismissDialogs = true, persistInputs} = {}) {
   if (record.page.isClosed() || record.crashed) {
-    record.keys.clear(); record.buttons.clear();
     // Closing a page does not revoke its origin's browser-context permission.
     // Its own session may be gone; the backend retains a browser-level sender.
     let timer;
@@ -397,6 +396,10 @@ export async function releasePage(record, timeoutMs, {dismissDialogs = true, per
       await Promise.race([(async () => {
         await Promise.allSettled([...record.pending]);
         await restoreClipboardPermissions(record);
+        // Late work may have journaled another intent after the lifecycle
+        // event. A confirmed closed/crashed page cannot retain page input.
+        record.keys.clear(); record.buttons.clear(); record.focusEmulated = false;
+        await persistInputs?.();
       })(),new Promise((_,reject) => {timer=setTimeout(() => reject(new Error('Clipboard permission release is still in flight')),timeoutMs);})]);
       return [];
     } catch (error) {return [{targetId:record.id,code:error.code,error:error.message}];}
@@ -459,8 +462,10 @@ export async function releasePage(record, timeoutMs, {dismissDialogs = true, per
       catch (error) { guard?.check(); failures.push({targetId: record.id, error: error.message}); }
     }
     failures.push(...(dialogRelease?.failures ?? []).map(error=>({targetId:record.id,error})));
+    if (record.page.isClosed() || record.crashed) return releasePage(record, Math.max(1,deadline-Date.now()), {dismissDialogs,persistInputs});
     return failures;
   } catch (error) {
+    if (record.page.isClosed() || record.crashed) return releasePage(record, Math.max(1,deadline-Date.now()), {dismissDialogs,persistInputs});
     const dialog = guard?.dialog ?? record.dialogs?.read();
     return [{targetId:record.id,error:error.message,...(dialog ? {dialog} : {})}];
   } finally { clearTimeout(timer); guard?.finish(); dialogRelease?.finish(); }

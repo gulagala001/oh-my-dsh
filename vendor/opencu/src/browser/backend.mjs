@@ -26,7 +26,12 @@ export async function createBrowserBackend(options = {}) {
   const deliveryStore = await createDeliveryStore(dataDir);
   const inputState = await createInputState(dataDir, browserId);
   const records = new Map();
+  // Duplicate cleanup may arrive after the action's closure receipt. Retain
+  // only recent exact occurrences; an evicted receipt must fail closed.
+  const retired = new Map();
+  const retirementLimit = 128;
   const recordReleases = new WeakMap();
+  const closedReleases = new Set();
   const pages = new Map();
   const downloads = new WeakMap();
   let browser;
@@ -162,8 +167,10 @@ export async function createBrowserBackend(options = {}) {
         catch (error) {chooserFailure = {targetId:record.id,error:error.message};}
         const failures = await releasePage(record, releaseTimeoutMs, {dismissDialogs, persistInputs: inputState.persist});
         if (!chooserFailure && !failures.length && record.page.isClosed()) {
-          records.delete(record.id); pages.delete(record.page);
           await inputState.forget(record);
+          retired.set(record.id, record.identity);
+          if (retired.size > retirementLimit) retired.delete(retired.keys().next().value);
+          records.delete(record.id); pages.delete(record.page);
         }
         return chooserFailure ? [...failures,chooserFailure] : failures;
       })().finally(() => { recordReleases.delete(record); });
@@ -171,10 +178,21 @@ export async function createBrowserBackend(options = {}) {
     }
     return work;
   }
+  function releaseClosedRecord(record) {
+    let work;
+    const settled = failures => {
+      releaseFailures = [...releaseFailures.filter(failure => failure.targetId !== record.id), ...failures];
+      if (failures.length) backgroundErrors.push(`Closed browser target release remains pending: ${record.id}`);
+    };
+    work = releaseRecord(record, {dismissDialogs:false}).then(settled, error => settled([{targetId:record.id,error:error.message}]))
+      .finally(() => { closedReleases.delete(work); });
+    closedReleases.add(work);
+  }
   async function releaseTarget(target, {dismissDialogs = false} = {}) {
     await initialize();
     const record = records.get(target.id);
     if (!record || !sameIdentity(record.identity,target.identity)) {
+      if (!record && retired.has(target.id) && sameIdentity(retired.get(target.id), target.identity)) return {released:true,retired:true};
       if (!record && target.cold && target.releaseAcknowledged === true) return {released:true,retired:true};
       fail('TARGET_IDENTITY_CHANGED','Release requires the original browser occurrence');
     }
@@ -203,6 +221,8 @@ export async function createBrowserBackend(options = {}) {
         else if (connected) await browser?.close();
         rootClosed = true;
       }
+      await Promise.all([...closedReleases]);
+      if (releaseFailures.length) fail('RELEASE_FAILED', 'Closed browser targets still require release', releaseFailures);
       for (const record of records.values()) await inputState.forget(record);
       for (const remove of listeners) remove();
       records.clear(); pages.clear();
@@ -272,10 +292,10 @@ export async function createBrowserBackend(options = {}) {
         void record.fileChoosers.dispose().catch(error => backgroundErrors.push(error.message));
         for (const remove of attempt.removers) remove();
         pages.delete(page);
-        if (!record.clipboardPermissionRestores?.size) {
-          records.delete(id);
-          void inputState.forget(record).catch(error => backgroundErrors.push(error.message));
-        }
+        // Keep the original occurrence until its in-flight input and context
+        // permission cleanup settle. Automatic cleanup and an in-flight action
+        // share that release; a close event is not an input acknowledgement.
+        releaseClosedRecord(record);
       }));
       return record;
     })().catch(async error => {
@@ -354,11 +374,15 @@ export async function createBrowserBackend(options = {}) {
       return {valid: true, target: await descriptor(record, targetInfo)};
     } catch (error) { return {valid: false, reason: error.message}; }
   }
-  function release({internal = false, dismissDialogs = true} = {}) {
+  function release({internal = false, dismissDialogs = true, targets} = {}) {
     return releasing ??= (async () => {
       if (retiring) await retireInitialization();
       if (inputState.hasPending() && !context) await initialize(internal || closing);
-      const failures = [], releasedTargetIds = [], retiredTargetIds = [];
+      const acknowledgedRetirements = (targets ?? []).filter(target => retired.has(target.id) && sameIdentity(retired.get(target.id), target.identity)).map(target => target.id);
+      // A controller supplies its complete selected snapshot. Omitted closed
+      // targets have already consumed their receipt and need no stored history.
+      if (targets) for (const id of retired.keys()) if (!acknowledgedRetirements.includes(id)) retired.delete(id);
+      const failures = [], releasedTargetIds = [...acknowledgedRetirements], retiredTargetIds = [...acknowledgedRetirements];
       if (!retiring && inputState.hasPending() && context) {
         try { await registerPages(context.pages(), internal || closing); }
         catch (error) { failures.push({error: error.message}); }
@@ -486,6 +510,13 @@ export async function createBrowserBackend(options = {}) {
       const heldKeys = new Set(record.keys), heldButtons = new Set(record.buttons);
       checkSignal(request.signal);
       const guard = record.dialogs.begin();
+      const closedResult = async result => {
+        checkSignal(request.signal);
+        const release = await releaseTarget(target, {dismissDialogs:false});
+        if (!release.released || release.retired !== true) fail('RELEASE_FAILED', 'The closed tab still requires input release', release);
+        checkSignal(request.signal);
+        return {...result,action:request.action,closedTargetId:record.id,inputDispatched:true,effectVerified:false,release};
+      };
       try {
         if (request.action === 'newTab') return await newTab(request, record);
         if (request.action === 'closeTab') {
@@ -510,9 +541,14 @@ export async function createBrowserBackend(options = {}) {
           checkSignal(request.signal);
         }
         await inputState.persist();
+        if (record.page.isClosed() && !record.crashed && (record.inputDispatchSequence ?? 0) !== inputSequence) return await closedResult(result);
         return {...result, target: await descriptor(record),...(!record.keys.size && !record.buttons.size ? {release:{released:true}} : {})};
       } catch (error) {
         error.details = {...error.details, inputDispatched: error.details?.inputDispatched === true || (record.inputDispatchSequence ?? 0) !== inputSequence};
+        // Site handlers may destroy their page during mouse-up/key-up. This
+        // exact Page proves closure, unlike a crash or an unverifiable identity.
+        // Preserve cancellation and never turn an uncertain crash into success.
+        if (record.page.isClosed() && !record.crashed && error.details.inputDispatched && !request.signal?.aborted) return await closedResult();
         const dialog = guard.dialog ?? record.dialogs.read();
         if (dialog) {
           if (error.details.inputDispatched) return {action:request.action,pendingDialog:dialog,inputDispatched:true,effectVerified:false,target:await descriptor(record)};
@@ -561,10 +597,12 @@ export async function createBrowserBackend(options = {}) {
           else if (connected) await browser?.close();
           rootClosed = true;
         }
+        await Promise.all([...closedReleases]);
+        if (releaseFailures.length) fail('RELEASE_FAILED', 'Closed browser targets still require release', releaseFailures);
         for (const remove of listeners) remove();
         closed = true;
       })().finally(() => { closingWork = undefined; });
     },
-    getDiagnostics() { return {backgroundErrors: [...backgroundErrors]}; },
+    getDiagnostics() { return {backgroundErrors: [...backgroundErrors], trackedTargets:records.size, retainedRetirements:retired.size, pendingClosedReleases:closedReleases.size}; },
   };
 }

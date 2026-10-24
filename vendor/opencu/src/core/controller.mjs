@@ -396,7 +396,9 @@ export async function createController({dataDir, browser, native} = {}) {
         if (!reading && target.releaseAcknowledged) { target.releaseAcknowledged = false; await persist(); checkOperation(operationEpoch); }
         result = await backend.act(json(target), {...request, signal});
         if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
-        if (result?.closedTargetId && (request.action !== 'closeTab' || result.closedTargetId !== target.id))
+        const selfClosed = target.backend === 'browser' && result?.inputDispatched === true &&
+          inputReleased(result.release) && result.release.retired === true && !result.target;
+        if (result?.closedTargetId && (result.closedTargetId !== target.id || request.action !== 'closeTab' && !selfClosed))
           fail('TARGET_IDENTITY_CHANGED', 'Action closed an unrelated target');
         if (result?.target) {
           const current = assertTarget(result.target, target.backend);
