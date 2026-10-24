@@ -44,7 +44,12 @@ export function bindLiveLoaderEntries(loader) {
   loader = untrace(loader);
   const original = loader.entries, descriptor = Object.getOwnPropertyDescriptor(loader, 'entries');
   const originalAwait = loader.await, awaitDescriptor = Object.getOwnPropertyDescriptor(loader, 'await');
-  const removing = new WeakMap(), retiringEntries = new WeakMap(), groups = new Map(), tasks = new Set();
+  const removing = new WeakMap(), retiringEntries = new WeakMap(), groups = new WeakMap(), tasks = new Set();
+  // A host-lived compatibility layer must not retain every disposed preset or
+  // plugin group. Keep restoration available for live groups without owning
+  // their lifetime; collection only removes the corresponding weak handle.
+  const groupRefs = new Set(), collectedGroups = new FinalizationRegistry(ref => groupRefs.delete(ref));
+  let active = true;
   function retire(entry) {
     if (!entry) return () => {};
     let state = retiringEntries.get(entry);
@@ -81,7 +86,7 @@ export function bindLiveLoaderEntries(loader) {
   }
   function watch(group) {
     group = untrace(group);
-    if (!group || groups.has(group) || typeof group.remove !== 'function') return;
+    if (!active || !group || groups.has(group) || typeof group.remove !== 'function') return;
     const originalRemove = group.remove, own = Object.getOwnPropertyDescriptor(group, 'remove');
     function remove(id, ...args) {
       const entry = untrace(this.tree?.store?.[id]);
@@ -97,20 +102,26 @@ export function bindLiveLoaderEntries(loader) {
         for (const value of retiring) { const n = removing.get(value) - 1; if (n) removing.set(value, n); else removing.delete(value); }
       };
       const disposalStarted = () => fiber && (fiber.uid === null || fiber.state === UNLOADING);
+      const finishDisposal = async () => {
+        await fiber?.dispose?.();
+        // Cordis may return before an already-started disposal finishes.
+        // Keep retirement guards and loader.await() tied to its real work.
+        while (fiber?.inertia) await fiber.inertia;
+      };
       const track = promise => { task = promise; tasks.add(task); task.then(cleanup, cleanup); };
       try {
         track(Promise.resolve(originalRemove.call(this, id, ...args)).then(
-          () => fiber?.dispose?.(),
+          finishDisposal,
           async error => {
             // A foreign partial-dispose listener can reject after native Loader
             // has already started tearing down a group. Its children still need
             // protection until the existing disposal completes.
-            if (disposalStarted()) await fiber.dispose();
+            if (disposalStarted()) await finishDisposal();
             throw error;
           },
         ));
       } catch (error) {
-        if (disposalStarted()) track(Promise.resolve().then(() => fiber.dispose()));
+        if (disposalStarted()) track(Promise.resolve().then(finishDisposal));
         else cleanup();
         throw error;
       }
@@ -166,6 +177,8 @@ export function bindLiveLoaderEntries(loader) {
       if (isDeepStrictEqual(Object.getOwnPropertyDescriptor(group, 'remove'), removeOwned)) { if (own) Object.defineProperty(group, 'remove', own); else delete group.remove; }
       if (serialized && isDeepStrictEqual(Object.getOwnPropertyDescriptor(group, 'update'), updateOwned)) { if (updateOwn) Object.defineProperty(group, 'update', updateOwn); else delete group.update; }
     });
+    const ref = new WeakRef(group);
+    groupRefs.add(ref); collectedGroups.register(group, ref, ref);
   }
   function* entries(...args) {
     for (const entry of original.apply(this, args)) {
@@ -187,7 +200,14 @@ export function bindLiveLoaderEntries(loader) {
   if (typeof originalAwait === 'function') Object.defineProperty(loader, 'await', { configurable: true, writable: true, value: settled });
   const awaitOwned = Object.getOwnPropertyDescriptor(loader, 'await');
   return () => {
-    for (const restore of [...groups.values()].reverse()) restore(); groups.clear();
+    if (!active) return;
+    active = false;
+    for (const ref of [...groupRefs].reverse()) {
+      const group = ref.deref();
+      if (group) groups.get(group)?.();
+      collectedGroups.unregister(ref);
+    }
+    groupRefs.clear();
     if (isDeepStrictEqual(Object.getOwnPropertyDescriptor(loader, 'entries'), entriesOwned)) { if (descriptor) Object.defineProperty(loader, 'entries', descriptor); else delete loader.entries; }
     if (typeof originalAwait === 'function' && isDeepStrictEqual(Object.getOwnPropertyDescriptor(loader, 'await'), awaitOwned)) { if (awaitDescriptor) Object.defineProperty(loader, 'await', awaitDescriptor); else delete loader.await; }
   };
