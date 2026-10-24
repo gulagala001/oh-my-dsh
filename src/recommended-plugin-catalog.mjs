@@ -60,7 +60,7 @@ export const recommendedPlugins = [
     description: '选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。',
     category: '智能体', url: 'https://github.com/gulagala001/oh-my-agents-above-all', githubRelease: 'gulagala001/oh-my-agents-above-all',
     hostBuilds: {
-      '0.2.1-rc.3': { version: '0.2.1-rc.3.omaa.0.17.1', releaseTag: 'v0.2.1-rc.3.omaa.0.17.1', asset: 'oh-my-agents-above-all-0.2.1-rc.3.omaa.0.17.1.tgz', sha256: '38eb1d5b44cf35149d4227372c0c65650b082f026bc56fdba5c41f762c658dd0', dsh: '0.2.1-rc.3', allowPrerelease: false },
+      '0.2.1-rc.3': { version: '0.2.1-rc.3.omaa.0.17.2', releaseTag: 'v0.2.1-rc.3.omaa.0.17.2', asset: 'oh-my-agents-above-all-0.2.1-rc.3.omaa.0.17.2.tgz', sha256: 'd703d030562668994100f36c76ba26de965028658b4226f3abfc1eea5542d5af', dsh: '0.2.1-rc.3', allowPrerelease: false },
       '0.2.1-rc.2': { version: '0.2.1-rc.2.omaa.0.17.0', releaseTag: 'v0.2.1-rc.2.omaa.0.17.0', asset: 'oh-my-agents-above-all-0.2.1-rc.2.omaa.0.17.0.tgz', sha256: '4ecd4e4d0f7928729bf5074ea2e576d4e7bc655121add66147006a458143d7d4', dsh: '0.2.1-rc.2', allowPrerelease: false },
       '0.2.1-rc.1': { version: '0.2.1-rc.1.omaa.0.16.5', releaseTag: 'v0.2.1-rc.1.omaa.0.16.5', asset: 'oh-my-agents-above-all-0.2.1-rc.1.omaa.0.16.5.tgz', sha256: 'e67576fda249ee29f4e521abaf110cdeefed3d386010239a3c53b74724bf5d9d', dsh: '0.2.1-rc.1', allowPrerelease: false },
     },

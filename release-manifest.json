@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.0.100.2",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 0.100.2 · DSH 0.2.1-rc.3",
+      "notes": [
+        "修复检查更新误报已启用插件未启用的问题，更新检查不再依赖是否开启代理预设。",
+        "修复 rc.3 固定发行识别和更新附件校验，保留精确宿主、配对版本与禁止降级保护。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.100.2.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.0.100.1",
       "severity": "normal",
       "unpublished": false,
