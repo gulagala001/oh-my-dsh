@@ -22,22 +22,23 @@ export function SkillsPage() {
     if (done) await list.reload({ quiet: true });
     return done;
   };
-  const toggle = (skill, next) => write({ action: 'invocation', path: skill.path, model: next.model, user: next.user }, t('saved'));
-  const current = open && skills.find(skill => skill.path === open);
+  const toggle = (skill, next) => write({ action: 'invocation', path: skill.path, ...next }, t('saved'));
+  const current = open && skills.find(skill => skill.key === open);
   const menu = skill => [skill.editable && { id: 'edit', label: t('edit'), run: () => openEditor(skill) },
     ...folderActions(t, opener, skill.directory, task => action.run(task)),
     skill.editable && { id: 'delete', label: t('delete'), run: () => setRemoving(skill) }];
   const openEditor = async skill => {
-    const file = await action.run(() => api(query('/skills/file', { scope, path: skill.path })));
-    if (file) setEditor({ mode: 'edit', path: skill.path, name: skill.name, content: file.content });
+    const file = await action.run(() => api(query('/skills/file', { scope, key: skill.key })));
+    if (file) setEditor({ mode: 'edit', scope, path: skill.path, name: skill.name, content: file.content });
   };
-  const location = { location: scope === 'global' ? 'user' : 'project' };
+  const locations = ['project', 'user'].filter(location => list.data?.roots?.[location]).map(value => ({ value, label: t(`location.${value}`) }));
+  const location = { scope, locations, location: locations[0]?.value };
   const header = { start: <><ScopePicker scope={scope} scopes={scopes}/><Search value={search} onChange={setSearch}/></>,
     end: <><RefreshButton busy={list.loading} onClick={() => list.reload()}/>
-      <Button variant="outline" size="sm" onClick={() => setEditor({ mode: 'import', source: '', ...location })}>{t('import')}</Button>
-      <Button variant="primary" size="sm" icon={<IconPlusOutlineRegular size={13}/>} onClick={() => setEditor({ mode: 'create', name: '', description: '', body: '', ...location })}>{t('skills.new')}</Button></> };
+      <Button variant="outline" size="sm" disabled={!locations.length} onClick={() => setEditor({ mode: 'import', source: '', ...location })}>{t('import')}</Button>
+      <Button variant="primary" size="sm" disabled={!locations.length} icon={<IconPlusOutlineRegular size={13}/>} onClick={() => setEditor({ mode: 'create', name: '', description: '', body: '', ...location })}>{t('skills.new')}</Button></> };
   const dialogs = <>
-    {editor && <SkillEditor editor={editor} scope={scope} onClose={() => setEditor(null)} onSaved={async path => { setEditor(null); await list.reload({ quiet: true }); if (path) setOpen(path); }}/>}
+    {editor && <SkillEditor editor={editor} onClose={() => setEditor(null)} onSaved={async path => { setEditor(null); const data = await list.reload({ quiet: true }); if (path) setOpen(data?.skills.find(skill => skill.path === path)?.key); }}/>}
     <Confirm open={!!removing} title={t('skills.delete.title')} description={removing ? t('skills.delete.desc', { name: removing.name, path: removing.bundle ? removing.directory : removing.path }) : ''}
       busy={action.busy} error={action.error} onCancel={() => { setRemoving(null); action.clear(); }}
       onConfirm={async () => { if (await write({ action: 'delete', path: removing.path }, t('deleted'))) { setRemoving(null); setOpen(null); } }}/>
@@ -50,11 +51,11 @@ export function SkillsPage() {
       <Facts rows={[[t('skills.description'), current.description], current.whenToUse && [t('skills.whenToUse'), current.whenToUse],
         [t('skills.provider'), current.provider], current.path && [t('path'), <code>{current.path}</code>]]}/>
       <div className="dshx-switches">
-        <SwitchRow label={t('skills.model')} hint={t('skills.model.hint')} checked={current.model} disabled={!current.editable || action.busy} onChange={value => toggle(current, { model: value, user: current.user })}/>
-        <SwitchRow label={t('skills.user')} hint={t('skills.user.hint')} checked={current.user} disabled={!current.editable || action.busy} onChange={value => toggle(current, { model: current.model, user: value })}/>
+        <SwitchRow label={t('skills.model')} hint={t('skills.model.hint')} checked={current.model} disabled={!current.editable || action.busy} onChange={value => toggle(current, { model: value })}/>
+        <SwitchRow label={t('skills.user')} hint={t('skills.user.hint')} checked={current.user} disabled={!current.editable || action.busy} onChange={value => toggle(current, { user: value })}/>
         {!current.editable && <p className="dshx-hint">{t('skills.readOnly')}</p>}
       </div>
-      <SkillContent scope={scope} path={current.path}/>
+      <SkillContent scope={scope} skillKey={current.key} snapshot={list.data}/>
     </Detail>{dialogs}</>;
   return <Page {...header} intro={t('skills.intro')} status={<Status error={list.error ?? action.error} notice={action.notice} onRetry={list.error ? () => list.reload() : undefined}/>}>
     {list.loading && !list.data ? <p className="dshx-muted">{t('loading')}</p>
@@ -63,9 +64,9 @@ export function SkillsPage() {
       : groups.map(([key, items]) => <Group key={key} title={t(`skills.group.${key}`)} count={items.length}>
         {items.map(skill => {
           const enabled = skill.model || skill.user;
-          return <Row key={skill.path ?? skill.name} icon={<IconSkillOutlineRegular size={20}/>} title={skill.name} muted={!enabled}
+          return <Row key={skill.key} icon={<IconSkillOutlineRegular size={20}/>} title={skill.name} muted={!enabled}
             tags={<>{!enabled && <Tag tone="quiet">{t('skills.stopped')}</Tag>}{key !== 'bundled' && key !== 'runtime' && <Tag tone="quiet">{t(`source.${skill.source}`)}</Tag>}</>}
-            description={skill.description} onOpen={() => setOpen(skill.path)}
+            description={skill.description} onOpen={() => setOpen(skill.key)}
             end={<><Switch label={t('toggle', { name: skill.name })} checked={enabled} disabled={!skill.editable || action.busy} title={skill.editable ? undefined : t('skills.readOnly')}
               onChange={value => toggle(skill, { model: value, user: value })}/><ActionsMenu actions={menu(skill)}/></>}/>;
         })}
@@ -78,22 +79,22 @@ function SwitchRow({ label, hint, checked, disabled, onChange }) {
   return <div className="dshx-switch-row"><div><strong>{label}</strong><small>{hint}</small></div><Switch label={label} checked={checked} disabled={disabled} onChange={onChange}/></div>;
 }
 
-function SkillContent({ scope, path }) {
+function SkillContent({ scope, skillKey, snapshot }) {
   const t = useT();
-  const file = useResource(() => api(query('/skills/file', { scope, path })), [scope, path]);
+  const file = useResource(() => api(query('/skills/file', { scope, key: skillKey })), [scope, skillKey, snapshot]);
   if (file.error) return <Status error={file.error}/>;
   return <section className="dshx-section"><h3 className="dshx-group-title">{t('content')}</h3><pre className="dshx-code">{file.data?.content ?? t('loading')}</pre></section>;
 }
 
-function SkillEditor({ editor, scope, onClose, onSaved }) {
+function SkillEditor({ editor, onClose, onSaved }) {
   const t = useT(), action = useAction(), [draft, setDraft] = useState(editor);
   const set = key => event => setDraft(current => ({ ...current, [key]: event.target.value }));
-  const locations = scope === 'global' ? null : [{ value: 'project', label: t('location.project') }, { value: 'user', label: t('location.user') }];
+  const locations = draft.locations;
   const save = async () => {
     const input = draft.mode === 'edit' ? { action: 'save', path: draft.path, content: draft.content }
       : draft.mode === 'import' ? { action: 'import', location: draft.location, source: draft.source }
       : { action: 'create', location: draft.location, name: draft.name.trim(), description: draft.description, body: draft.body };
-    const result = await action.run(() => api('/skills', { scope, ...input }));
+    const result = await action.run(() => api('/skills', { scope: draft.scope, ...input }));
     if (result) onSaved(result.path ?? draft.path);
   };
   const title = draft.mode === 'edit' ? t('skills.edit.title', { name: draft.name }) : draft.mode === 'import' ? t('skills.import') : t('skills.new');

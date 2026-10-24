@@ -7,11 +7,15 @@ Every page is a tab at the top of the **Plugins** page in the left sidebar: Skil
 ## Skills
 
 - Skills are grouped by source: project (`.dsh/skills`, `.agents/skills`), personal (`~/.dsh/skills`, `~/.agents/skills`), custom folders, bundled and plugin-provided.
+- DSH's native providers own discovery and frontmatter rules, including configured personal/custom directories and disabled default roots. Global shows the host and current default preset; a workspace also includes skills from its own open conversations, without borrowing another project's conversation. Default-preset files remain manageable before any conversation exists.
+- Same-name files remain individually manageable; DSH determines invocation precedence. Plugin skills without local files open through their provider and stay read-only. Incomplete discovery reports an error and can be retried with Refresh.
 - The row switch controls both "Model can invoke" and "You can invoke"; the detail view sets them separately. They are written to the `disable-model-invocation` and `user-invocable` frontmatter in `SKILL.md`.
 - **New skill** takes a name, description and instructions and creates `<folder>/<name>/SKILL.md`. Names use lowercase letters, digits and hyphens.
 - **Import** copies a folder containing `SKILL.md` (skipping `.git` and `node_modules`).
 - **Edit** changes the whole `SKILL.md`; `name` and `description` in the frontmatter are checked before saving.
-- Deleting removes the whole skill folder. Bundled and plugin-provided skills are read-only.
+- Saves and imports validate candidate files through the actual provider, including invocation fields, before replacing existing content. Imports appear only after copying finishes; failures clean up staging so you can correct the source and try again. Writes are ordered within one host, and unloading prevents unpublished candidates from committing and waits for cleanup.
+- Creation and import require one unambiguous native personal/project directory; their buttons are unavailable when none is configured or several destinations conflict. Each individual invocation switch changes only its own field.
+- Deleting a directory bundle removes that folder; a flat Markdown skill removes only its file, and a linked folder removes only the link. Skill roots are protected. Bundled and plugin-provided skills are read-only.
 
 ## MCP
 

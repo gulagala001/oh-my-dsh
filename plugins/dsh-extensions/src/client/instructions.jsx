@@ -34,7 +34,7 @@ export function InstructionsPage() {
         <ActionsMenu actions={menu(current).slice(1)}/></>}>
       <Status error={action.error} notice={action.notice}/>
       <Facts rows={[[t('path'), <code>{current.path}</code>], current.exists && [t('instructions.size'), `${formatSize(current.size)} · ${when(current.modifiedAt)}`]]}/>
-      {current.exists && !current.tooLarge && <InstructionContent scope={scope} path={current.path}/>}
+      {current.exists && !current.tooLarge && <InstructionContent scope={scope} path={current.path} snapshot={list.data}/>}
     </Detail>{dialogs}</>;
   const groups = [['user', files.filter(file => file.group === 'user')], ['project', files.filter(file => file.group === 'project')]].filter(([, items]) => items.length);
   return <Page start={<ScopePicker scope={scope} scopes={scopes}/>} end={<RefreshButton busy={list.loading} onClick={() => list.reload()}/>}
@@ -52,9 +52,9 @@ export function InstructionsPage() {
   </Page>;
 }
 
-function InstructionContent({ scope, path }) {
+function InstructionContent({ scope, path, snapshot }) {
   const t = useT();
-  const file = useResource(() => api(query('/instructions/file', { scope, path })), [scope, path]);
+  const file = useResource(() => api(query('/instructions/file', { scope, path })), [scope, path, snapshot]);
   if (file.error) return <Status error={file.error}/>;
   return <section className="dshx-section"><h3 className="dshx-group-title">{t('content')}</h3><pre className="dshx-code">{file.data ? file.data.content || ' ' : t('loading')}</pre></section>;
 }

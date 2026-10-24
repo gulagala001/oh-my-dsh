@@ -26,7 +26,7 @@ export class Extensions extends Service {
     super(ctx, 'dshExtensions');
     this.enabled = true;
     this.homes = homes();
-    this.skills = new Skills(ctx, this.homes);
+    this.skills = new Skills(ctx);
     this.mcp = new Mcp(ctx, this.homes);
     this.instructions = new Instructions(ctx, this.homes);
     this.commands = new Commands(ctx, this.homes);
@@ -74,7 +74,7 @@ export class Extensions extends Service {
     switch (route) {
       case '/state': return { version: VERSION, scopes: this.scopes(), homes: this.homes };
       case '/skills': return this.skills.list(scope());
-      case '/skills/file': return this.skills.read(scope(), query.get('path'));
+      case '/skills/file': return this.skills.read(scope(), query.get('key') ?? query.get('path'));
       case '/mcp': return this.mcp.list();
       case '/mcp/server': return this.mcp.server(query.get('name'));
       case '/instructions': return this.instructions.list(scope());
@@ -91,11 +91,11 @@ export class Extensions extends Service {
     const scope = () => this.scope(input.scope);
     const done = (value = {}) => ({ ok: true, ...value });
     switch (`${route}#${input.action}`) {
-      case '/skills#create': { const path = await this.skills.create(scope(), input); await this.skills.refresh(); return done({ path }); }
-      case '/skills#import': { const path = await this.skills.import(scope(), input); await this.skills.refresh(); return done({ path }); }
-      case '/skills#save': await this.skills.save(scope(), input.path, input.content); await this.skills.refresh(); return done();
-      case '/skills#invocation': await this.skills.invocation(scope(), input.path, input); await this.skills.refresh(); return done();
-      case '/skills#delete': await this.skills.remove(scope(), input.path); await this.skills.refresh(); return done();
+      case '/skills#create': return done({ path: await this.skills.create(scope(), input) });
+      case '/skills#import': return done({ path: await this.skills.import(scope(), input) });
+      case '/skills#save': await this.skills.save(scope(), input.path, input.content); return done();
+      case '/skills#invocation': await this.skills.invocation(scope(), input.path, input); return done();
+      case '/skills#delete': await this.skills.remove(scope(), input.path); return done();
       case '/mcp#save': await this.mcp.save(input); return done();
       case '/mcp#delete': await this.mcp.remove(input.name); return done();
       case '/mcp#enable': await this.mcp.setEnabled(input.name, input.enabled === true); return done();

@@ -14,10 +14,10 @@
     "docs/install.md": "3ea7c506a612a2967275fa8b52312326eee7686920d13379edf3dda43090ad53",
     "docs/releases.md": "7129aa849ea72b149c4c154ce262942203e2ffd2d8e393bfc26b92e6ea296b9b",
     "docs/structure.json": "4f0beccdb9e3c51b8446d576eb3edd64aa40f4bb9a419803586abc6c90b79570",
-    "docs/usage_EN.md": "4190a633f4441bb360cb2fdc61a8683b05c5ed53b73757299134f06460fbec21",
-    "docs/usage.md": "0bd41a826fbbd6c2c220419e9a91ebb8800b63a27141e166fde8c14306f1f555",
+    "docs/usage_EN.md": "6bf3a0f1502ee1906626ff65fff8411b726d53ba46df03e9f518389a6ebfcb6f",
+    "docs/usage.md": "581009383ccc6516153a7fee5e60cbb7f449597449febbe099ce9f0647baf300",
     "icon.svg": "a3999671cdb4b5341f12d5a20b22decb6420a8c30dbfa8a351c7f1f7762dee2f",
-    "lib/client.js": "5cdac995bce472d6af9b2149c441a194cd28245b8d044d846fe64ebd80fa24e2",
+    "lib/client.js": "5261b11dc5f78aad853330a28ca88f5c80b2638c632e65248bff5df827e19a49",
     "locale/en.json": "30a3c56e4a463aa3b160a77aad29d51dbf40145f48fab431ecad6caadfcaa35c",
     "locale/zh.json": "62cf42bc5a85bba9a70129f2dc858cded1da4e7c5b1df535fa78d5b167162664",
     "package.json": "405f45e4bbc80b57f59ff2074f8be4c1af31fcceb0fe8b51f8e173cef82aa441",
@@ -30,10 +30,10 @@
     "src/client/commands.jsx": "fffa615f91a548eb9c870948d1f61c4ae9976601442991acb088c2713566a8ce",
     "src/client/hooks.jsx": "2a0e5d3bac09b6ca9f6b933d60ba45ddaca47db6d8d45c72063f8e9f44e549ba",
     "src/client/index.jsx": "4f98d3735c95d41f61ca2abc7f7e3df39cb9ea95db8b6411161c3027013eb189",
-    "src/client/instructions.jsx": "dbcf491355d3874ce4f97e0a87b0eaec0ab5221220a20e69dbb4246c3e0e6629",
-    "src/client/locale.mjs": "3ce19b70d2b929b5c1efdaac3da9006f77eece29541faa8bc71bdac34798a265",
+    "src/client/instructions.jsx": "02d367ec19cc63380f24409bbdf5d35e06ec762a51a859d80cfc60a02f1250fd",
+    "src/client/locale.mjs": "6d47765cd1cb8a4009d37fbb29a28c1ca645155156f5a0a8ae800fdedb6de820",
     "src/client/mcp.jsx": "b89e9f6bb9f5bde44e21ad9c28ce335ed5421815c9486f6fb67b365f39fb55a5",
-    "src/client/skills.jsx": "01accf9cb8a4bccf0c813d83804154441ddfe814c501c0ca1f369c3eea63b0b8",
+    "src/client/skills.jsx": "5fcaf881e2e0f98cda18094c2cc872dfa58f89f21d80d51e75fc9abd0afe06ae",
     "src/client/style.css": "88694e8bb051b5e2c81470b895fdd03207e18f024c43b86b56c36ad625ed0fdb",
     "src/client/ui.jsx": "ed5f7ccdb346aedc42717c526b601a6754bec44295c671da1cacc457e948a4b7",
     "src/commands.mjs": "b46c76e1c1ed9483364f5463a16b52826e3be68dff1de485173de34b4d91cd11",
@@ -43,7 +43,7 @@
     "src/index.mjs": "7b7ff6f64e0965b6c1931647b2930cc40367aef952b3f600de5bd07abc7408ba",
     "src/instructions.mjs": "860be7617e51695e2534de0833a0149a75f22a11372307963177f8c28915f741",
     "src/mcp.mjs": "aff7e2fe6f0ccbc6a6036286bd770fc6b4d18e15aafb4977b17597f9e32d8fa2",
-    "src/service.mjs": "ee981418761b65032b1c5eb3e12ddd39114420b713f4900af7e88f3a782297f0",
-    "src/skills.mjs": "8ff692b97f9693a1cba85a7eaa9e5bd92fb48cb55a5f3ae29e5475957f0ceeac"
+    "src/service.mjs": "1e763513b5ac6f4fa5eef82448c6cd204fb3fa73b002e37c0b3df15082ddda6c",
+    "src/skills.mjs": "72aecd73cfdc01d92c165f0f4b61cb92324d355f501f91c68080965b49fa1e8b"
   }
 }
