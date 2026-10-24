@@ -83,7 +83,9 @@ export function recoverableActionError(error, action) {
   const uploadFile = ['upload','fileChooserSetFiles'].includes(action) && ['ENOENT', 'ENOTDIR', 'EISDIR', 'EACCES'].includes(error?.code);
   const siteToolResponded = action === 'invokeSiteTool' && ['SITE_TOOL_ERROR','SITE_TOOL_CANCELLED'].includes(error?.code)
     && error.details?.siteToolResponded === true && error.details.inputDispatched === true;
-  return (siteToolResponded || error?.details?.inputDispatched === false && (recoverableActionErrors.has(error.code) || uploadFile))
+  const navigationTimedOut = ['navigate','back','forward','reload'].includes(action) && error?.code === 'NAVIGATION_TIMEOUT'
+    && error.details?.navigationSettled === true && error.details.inputDispatched === true && inputReleased(error.details.release);
+  return (navigationTimedOut || siteToolResponded || error?.details?.inputDispatched === false && (recoverableActionErrors.has(error.code) || uploadFile))
     && (error.details.release === undefined || inputReleased(error.details.release));
 }
 

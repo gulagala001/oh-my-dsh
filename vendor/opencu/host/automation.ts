@@ -39,6 +39,7 @@ interface ObservationState {
   inputPosition: { x: number; y: number }
   uploadGeneration: number
   documentGeneration: number
+  navigationGeneration: number
   identityScope: string
   observationId?: string
   deferredAX?: boolean
@@ -167,7 +168,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   }
   let state = states.get(guest)
   if (!state) {
-    state = { elements: new Map(), elementIds: new Map(), nodeIds: new Map(), monitorRoutes: new Map(), monitorScripts: new Map(), monitorEvents: [], monitorBootstraps: new Set(), pending: Promise.resolve(), cancellation: new AbortController(), debuggerUsers: 0, ownsDebugger: false, uploadGeneration: 0, documentGeneration: 0, identityScope: randomUUID(),
+    state = { elements: new Map(), elementIds: new Map(), nodeIds: new Map(), monitorRoutes: new Map(), monitorScripts: new Map(), monitorEvents: [], monitorBootstraps: new Set(), pending: Promise.resolve(), cancellation: new AbortController(), debuggerUsers: 0, ownsDebugger: false, uploadGeneration: 0, documentGeneration: 0, navigationGeneration: 0, identityScope: randomUUID(),
       inputKeys: new Map(), inputButtons: new Set(), releasingInputs: new Map(), inputPosition: { x: 0, y: 0 } }
     states.set(guest, state)
     const tracked = state
@@ -180,8 +181,8 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       void router?.close().catch(() => {}) // The exited process already owns no frame sessions.
     })
     guest.on('dom-ready', () => { tracked.rendererExited = false })
-    guest.on('did-navigate', () => { tracked.rendererExited = false; invalidate() })
-    guest.on('did-navigate-in-page', invalidate)
+    guest.on('did-navigate', () => { tracked.rendererExited = false; tracked.navigationGeneration++; invalidate() })
+    guest.on('did-navigate-in-page', (_event, _url, isMainFrame) => { if (isMainFrame !== false) tracked.navigationGeneration++ })
   }
   const current = state, uploadGeneration = state.uploadGeneration, documentGeneration = state.documentGeneration
   if (operation === 'releaseInput' && current.release) return current.release
@@ -408,13 +409,13 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         catch (error) {
           signal.throwIfAborted()
           if (current.documentGeneration !== documentGeneration || /Cannot find context|Execution context was destroyed|Inspected target navigated/u.test((error as Error).message))
-            return {url:guest.getURL(),documentId:String(current.documentGeneration),readyState:'loading',webContentsId:guest.id,...cursor()}
+            return {url:guest.getURL(),documentId:String(current.documentGeneration),navigationId:String(current.navigationGeneration),readyState:'loading',webContentsId:guest.id,...cursor()}
           throw error
         }
-        if (current.documentGeneration !== documentGeneration) return {url:guest.getURL(),documentId:String(current.documentGeneration),readyState:'loading',webContentsId:guest.id,...cursor()}
+        if (current.documentGeneration !== documentGeneration) return {url:guest.getURL(),documentId:String(current.documentGeneration),navigationId:String(current.navigationGeneration),readyState:'loading',webContentsId:guest.id,...cursor()}
         if (!result || typeof result !== 'object' || !('url' in result) || typeof result.url !== 'string'
           || !('readyState' in result) || typeof result.readyState !== 'string') throw new Error('Invalid browser navigation state')
-        return {url:result.url,readyState:result.readyState,documentId:String(current.documentGeneration),webContentsId:guest.id,...cursor()}
+        return {url:result.url,readyState:result.readyState,documentId:String(current.documentGeneration),navigationId:String(current.navigationGeneration),webContentsId:guest.id,...cursor()}
       }
       if (operation === 'pageState') return value(await send('Runtime.evaluate', { expression:
         '({ documentId: globalThis.__opencuDocument?.id, url: location.href, width: innerWidth, height: innerHeight, scrollX, scrollY, focused: document.hasFocus() })', returnByValue: true }))

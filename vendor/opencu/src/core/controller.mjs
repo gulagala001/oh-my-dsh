@@ -380,7 +380,7 @@ export async function createController({dataDir, browser, native} = {}) {
       const {target, backend} = targetFor(request.targetId, request.targetIdentity);
       if (!dialogAction) controlAllowed(target);
       if (target.cold || !dialogAction && !target.verified) fail('RECOVERY_REQUIRED', 'Resume this target before acting');
-      if (!dialogAction && target.needsObservation) fail('OBSERVATION_REQUIRED', 'The view changed during input. Observe this same target before continuing; do not replay uncertain input.', {inputDispatched: false, observationRequired: true});
+      if (!dialogAction && request.action !== 'navigationState' && target.needsObservation) fail('OBSERVATION_REQUIRED', 'The view changed during input. Observe this same target before continuing; do not replay uncertain input.', {inputDispatched: false, observationRequired: true});
       // A clean shutdown receipt survives another restart, but never a new
       // dispatch. Persist invalidation first so a crash cannot reuse the receipt.
       const acknowledgedBefore = target.releaseAcknowledged;
@@ -412,13 +412,16 @@ export async function createController({dataDir, browser, native} = {}) {
           if (current.id !== target.id) await verify(current, backend, false, operationEpoch, signal);
           if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
           if (replaced) forgetTarget(target.id);
-          selected.set(current.id, {...current, verified: true, cold: false});
+          selected.set(current.id, {...current, verified: true, cold: false,
+            ...(previous?.needsObservation ? {needsObservation:true} : {})});
           activeTargetId = current.id;
           // Consumers replace their binding metadata from this receipt. Return
           // the verified, normalized descriptor, including freshly derived
           // control routes, rather than the backend's undecorated target.
           result = {...result,target:json(current)};
         }
+        if (result?.observationRequired === true && selected.has(result?.target?.id ?? target.id))
+          selected.get(result?.target?.id ?? target.id).needsObservation = true;
         if (result?.closedTargetId) forgetTarget(result.closedTargetId);
         if (inputReleased(result?.release)) {
           const current = selected.get(result?.target?.id ?? target.id);

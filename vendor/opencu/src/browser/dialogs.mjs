@@ -6,7 +6,7 @@ const stale = () => fail('STALE_DIALOG', 'The dialog token no longer identifies 
 /** Dialog objects and tokens belong to one Page occurrence, never the active tab. */
 export function createPageDialogs(page, generation) {
   let current, session, release;
-  const guards = new Set(), awaitingClose = [];
+  const guards = new Set(), awaitingClose = [], pageOpenings = [], protocolOpenings = [];
   const openError = (dialog, inputDispatched = false) => Object.assign(new Error('A JavaScript dialog is open; inspect and explicitly handle its token before continuing'),
     {code:'JS_DIALOG_OPEN',details:{dialog,inputDispatched}});
   const invalidate = () => { current = undefined; };
@@ -26,17 +26,44 @@ export function createPageDialogs(page, generation) {
     release.pending.set(entry, work);
     work.then(() => { if (current === entry) invalidate(); }, error => release?.failures.push(error.message)).catch(() => {});
   };
+  const matchOpenings = () => {
+    while (pageOpenings.length && protocolOpenings.length) {
+      const entry = pageOpenings.shift(), opening = protocolOpenings.shift();
+      opening.entry = entry;
+      // Playwright's Dialog has no frame URL. Only the protocol event identifies
+      // the source of an iframe dialog; the containing page URL would be false.
+      entry.descriptor.url = opening.url;
+      if (opening.closed && current === entry) invalidate();
+    }
+  };
   const opened = dialog => {
-    const entry = {dialog,generation:generation(),descriptor:{id:randomUUID(),type:dialog.type(),message:dialog.message(),defaultPrompt:dialog.defaultValue(),url:page.url()}};
-    current = entry; awaitingClose.push(entry);
+    const entry = {dialog,generation:generation(),descriptor:{id:randomUUID(),type:dialog.type(),message:dialog.message(),defaultPrompt:dialog.defaultValue()}};
+    current = entry; pageOpenings.push(entry); matchOpenings();
+    if (current !== entry) return;
     for (const guard of guards) guard.interrupt(entry.descriptor);
     if (release) dismissForRelease(entry);
   };
+  const dialogOpening = ({url}) => {
+    const opening = {url};
+    protocolOpenings.push(opening); awaitingClose.push(opening); matchOpenings();
+  };
   const navigated = frame => { if (frame === page.mainFrame()) invalidate(); };
-  const terminated = () => { invalidate(); awaitingClose.length = 0; };
+  const terminated = () => { invalidate(); awaitingClose.length = pageOpenings.length = protocolOpenings.length = 0; };
   // Closed events are paired in order so a late close acknowledgement cannot
   // invalidate the next dialog opened by the resumed website script.
-  const dialogClosed = () => { const entry = awaitingClose.shift(); if (entry && current === entry) invalidate(); };
+  const dialogClosed = () => {
+    const opening = awaitingClose.shift();
+    if (!opening) {
+      // Page.enable can be queued behind an already open dialog. That session
+      // observes its close without its opening; retire the unpaired Page event
+      // so it cannot steal the next dialog's source or closure acknowledgement.
+      const entry = pageOpenings.shift();
+      if (entry && current === entry) invalidate();
+      return;
+    }
+    opening.closed = true;
+    if (opening.entry && current === opening.entry) invalidate();
+  };
   page.on('dialog', opened); page.on('framenavigated', navigated); page.on('close', terminated); page.on('crash', terminated);
   function begin() {
     const dialog = read();
@@ -62,7 +89,11 @@ export function createPageDialogs(page, generation) {
       try { return await guard.wait(Promise.resolve().then(() => { guard.check(); return work(); })); }
       finally { guard.finish(); }
     },
-    async attach(value) { session = value; session.on('Page.javascriptDialogClosed',dialogClosed); await session.send('Page.enable'); },
+    async attach(value) {
+      session = value;
+      session.on('Page.javascriptDialogOpening',dialogOpening); session.on('Page.javascriptDialogClosed',dialogClosed);
+      await session.send('Page.enable');
+    },
     async handle({dialogId,accept,promptText}) {
       if (typeof dialogId !== 'string' || typeof accept !== 'boolean' || promptText !== undefined && typeof promptText !== 'string') fail('INVALID_ARGUMENT','handleDialog requires dialogId, boolean accept, and optional string promptText',{inputDispatched:false});
       const entry = current;
@@ -103,6 +134,7 @@ export function createPageDialogs(page, generation) {
     dispose() {
       page.off('dialog',opened); page.off('framenavigated',navigated); page.off('close',terminated); page.off('crash',terminated);
       session?.off('Page.javascriptDialogClosed',dialogClosed);
+      session?.off('Page.javascriptDialogOpening',dialogOpening);
       terminated();
     },
   };

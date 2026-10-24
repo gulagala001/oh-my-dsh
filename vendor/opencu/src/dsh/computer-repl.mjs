@@ -115,7 +115,7 @@ export function createComputerRepl(request, report = () => {}) {
       if (result.result?.target) {
         target = structuredClone(result.result.target); api.id = target.id; api.target = structuredClone(target);
       }
-      if (target.id !== payload.targetId || ['navigate', 'back', 'forward', 'reload', 'closeTab'].includes(action)) { observations.reset(); last = undefined; navigationVersion++; }
+      if (target.id !== payload.targetId || result.result?.observationRequired === true || ['navigate', 'back', 'forward', 'reload', 'closeTab'].includes(action)) { observations.reset(); last = undefined; navigationVersion++; }
       return result;
     };
     const point = value => Array.isArray(value) ? { x: value[0], y: value[1] } : { elementId: value };
@@ -223,7 +223,7 @@ export function createComputerRepl(request, report = () => {}) {
       fileChooser: {supported:() => target.capabilities?.includes('fileChooserEvents') === true,act:(action,args) => act(action,args)},
       state: async options => {
         const value = (await act('navigationState',options)).result?.value;
-        if (!value || typeof value.url !== 'string' || typeof value.documentId !== 'string' || !['loading','interactive','complete'].includes(value.readyState))
+        if (!value || typeof value.url !== 'string' || typeof value.documentId !== 'string' || value.navigationId !== undefined && typeof value.navigationId !== 'string' || !['loading','interactive','complete'].includes(value.readyState))
           throw Object.assign(new Error('The browser returned invalid navigation state'),{code:'INVALID_NAVIGATION_STATE'});
         return value;
       },

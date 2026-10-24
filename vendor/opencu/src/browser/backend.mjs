@@ -257,7 +257,7 @@ export async function createBrowserBackend(options = {}) {
         id, page, session, dialogs: attempt.dialogs,
         sessionClipboard: ownContext && (options.launchOptions?.headless ?? options.headless ?? true) === true,
         identity: {browserId, connectionId, targetId: targetInfo.targetId, contextId: targetInfo.browserContextId ?? 'default'},
-        keys: new Set(), buttons: new Set(), pending: new Set(), elements: new Map(), nextElementId: 0, documentGeneration: 0,
+        keys: new Set(), buttons: new Set(), pending: new Set(), elements: new Map(), nextElementId: 0, documentGeneration: 0, navigationGeneration: 0,
       };
       if (record.sessionClipboard) {
         const permissionBrowser = browser;
@@ -276,7 +276,16 @@ export async function createBrowserBackend(options = {}) {
       page.setDefaultTimeout(timeoutMs);
       attempt.removers.push(
         listen(page, 'download', download => { void capture(download, id).catch(error => backgroundErrors.push(error.message)); }),
-        listen(page, 'framenavigated', frame => { if (frame === page.mainFrame()) { record.documentGeneration++; record.fileChoosers.navigated(); record.elements.clear(); record.screenshot = undefined; } }),
+        listen(session, 'Page.frameNavigated', ({frame}) => {
+          if (frame.parentId) return;
+          record.mainFrameId = frame.id;
+          record.documentGeneration++; record.navigationGeneration++;
+          record.fileChoosers.navigated(); record.elements.clear(); record.screenshot = undefined;
+        }),
+        listen(session, 'Page.navigatedWithinDocument', ({frameId}) => {
+          if (frameId !== record.mainFrameId) return;
+          record.navigationGeneration++; record.screenshot = undefined;
+        }),
         listen(page, 'crash', () => { record.fileChoosers.navigated(); record.crashed = true; record.elements.clear(); record.screenshot = undefined; record.keys.clear(); record.buttons.clear(); void inputState.persist().catch(error=>backgroundErrors.push(error.message)); }),
         listen(page, 'domcontentloaded', () => {
           if (record.cursor && !closed) void updateCursor(record, {...record.cursor, animateMovement: false}).catch(error => backgroundErrors.push(error.message));
@@ -284,6 +293,8 @@ export async function createBrowserBackend(options = {}) {
       );
       await record.dialogs.attach(session);
       await record.dialogs.guard(() => activityFor(record)).catch(error => { if (error.code !== 'JS_DIALOG_OPEN') throw error; });
+      const {frameTree} = await session.send('Page.getFrameTree');
+      record.mainFrameId ??= frameTree.frame.id;
       if (page.isClosed()) fail('TARGET_CLOSED', 'Browser tab closed during registration');
       if (retiring || closing && !internal) fail('BACKEND_CLOSING', 'Browser registration is stopping');
       inputState.adopt(record);

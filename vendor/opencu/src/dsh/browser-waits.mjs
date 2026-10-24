@@ -50,7 +50,7 @@ export function createBrowserWaits(context) {
       control.check();
       const state = await context.state();
       control.check();
-      if ((!initial || state.documentId !== initial.documentId || state.url !== initial.url) && matches(state.url) && ready(state,until)) return;
+      if ((!initial || state.documentId !== initial.documentId || state.url !== initial.url || state.navigationId !== undefined && initial.navigationId !== undefined && state.navigationId !== initial.navigationId) && matches(state.url) && ready(state,until)) return;
       await control.pause();
     }
   };

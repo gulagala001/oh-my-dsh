@@ -57,7 +57,7 @@ export async function actOnPage(record, request, options) {
   const checkScreenshot = async () => { if (screenshotInput) await verifyScreenshot(record, request, inputScreenshot); };
   const elementGeneration = ['type', 'press'].includes(request.action) && request.elementId != null ? record.documentGeneration : undefined;
   if (!['background', 'foreground'].includes(request.inputMode ?? 'background')) fail('INVALID_ARGUMENT', 'inputMode must be background or foreground');
-  const step = async work => {
+  const step = async (work, navigationAfter = false) => {
     check();
     const pending = Promise.resolve().then(() => { check(); return work(); });
     record.pending.add(pending);
@@ -70,7 +70,8 @@ export async function actOnPage(record, request, options) {
     try {
       const work = Promise.race([pending, aborted]);
       const value = await (options.actionGuard ? options.actionGuard.wait(work) : work);
-      check();
+      if (navigationAfter) { checkSignal(signal); options.actionGuard?.check(); }
+      else check();
       return value;
     } finally { signal?.removeEventListener('abort', listener); }
   };
@@ -84,6 +85,15 @@ export async function actOnPage(record, request, options) {
     };
     signal?.addEventListener('abort', stop, {once: true});
     try { return await step(() => { record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1; return work(); }); }
+    catch (error) {
+      if (error.name === 'TimeoutError' && !signal?.aborted) {
+        error.code = 'NAVIGATION_TIMEOUT';
+        error.message += '\nNavigation may still complete. Observe this same target; do not replay the trigger.';
+        // This receipt settles this RPC; it says nothing about the page load.
+        error.details = {...error.details,navigationSettled:true,effectVerified:false};
+      }
+      throw error;
+    }
     finally { signal?.removeEventListener('abort', stop); if (stopping) await stopping; }
   };
   const frameOptions = {check,guard:step,wrapSend:transport=>(method,params)=>method === 'Runtime.releaseObject' ? transport(method,params) : step(()=>{
@@ -93,7 +103,7 @@ export async function actOnPage(record, request, options) {
   })};
   const frameRouter = withCDPFrameGuard(record.frameRouter,frameOptions.wrapSend,step);
   const frameSend = frameOptions.wrapSend((method,params)=>record.session.send(method,params));
-  const input = (events, work, beforeDispatch) => step(async () => {
+  const input = (events, work, beforeDispatch, navigationAfter = false) => step(async () => {
     const scopedInput = events.length > 0;
     check();
     if (request.locatorGeneration !== undefined && request.locatorGeneration !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed before locator input');
@@ -125,7 +135,7 @@ export async function actOnPage(record, request, options) {
       if (marker) try { await options.finishInput?.(marker,dispatched); }
       catch (error) { if (!failure) throw error; failure.details = {...failure.details,inputMarkerError:error.message}; }
     }
-  });
+  }, navigationAfter);
   const insertText = (text, verify) => input([{type:'beforeinput',inputType:'insertText',data:text,textInput:true}], () => page.keyboard.insertText(text), verify);
   const keyDown = async key => {
     key = keyName(key);
@@ -185,7 +195,8 @@ export async function actOnPage(record, request, options) {
       await options.persistInputs();
       await input([{type: 'pointerdown', ...record.pointer}], () => page.mouse.down({button, clickCount: index}), checkPointer);
       await step(() => holdClick(click.durationMs, check));
-      await input([{type:'pointerup',...record.pointer}],() => page.mouse.up({button,clickCount:index}));
+      // Only the terminal unmodified release may finish in a new document.
+      await input([{type:'pointerup',...record.pointer}],() => page.mouse.up({button,clickCount:index}),undefined,!click.keys.length && index === click.count);
       record.buttons.delete(button);
     }
     for (const key of [...click.keys].reverse()) await keyUp(key);
@@ -208,7 +219,6 @@ export async function actOnPage(record, request, options) {
     await step(() => holdClick(durationMs, check));
     for (const key of [...keys].reverse()) await keyUp(key);
   };
-  const invalidate = () => { record.elements.clear(); record.screenshot = undefined; };
   switch (request.action) {
     case 'navigationState': {
       const generation = record.documentGeneration;
@@ -219,11 +229,11 @@ export async function actOnPage(record, request, options) {
       catch (error) {
         check();
         if (generation !== record.documentGeneration || /Cannot find context|Execution context was destroyed|Inspected target navigated/u.test(error.message))
-          return {action:request.action,value:{url:page.url(),documentId:String(record.documentGeneration),readyState:'loading'}};
+          return {action:request.action,value:{url:page.url(),documentId:String(record.documentGeneration),navigationId:String(record.navigationGeneration ?? 0),readyState:'loading'}};
         throw error;
       }
-      if (generation !== record.documentGeneration) return {action:request.action,value:{url:page.url(),documentId:String(record.documentGeneration),readyState:'loading'}};
-      return {action:request.action,value:{...result.result.value,documentId:String(generation)}};
+      if (generation !== record.documentGeneration) return {action:request.action,value:{url:page.url(),documentId:String(record.documentGeneration),navigationId:String(record.navigationGeneration ?? 0),readyState:'loading'}};
+      return {action:request.action,value:{...result.result.value,documentId:String(generation),navigationId:String(record.navigationGeneration ?? 0)}};
     }
     case 'domSnapshot': {
       const generation = record.documentGeneration;
@@ -248,27 +258,27 @@ export async function actOnPage(record, request, options) {
       if (Object.hasOwn(result, 'value')) return {action: request.action, value: result.value};
       const checking = ['check', 'uncheck', 'setChecked'].includes(method);
       const checked = method === 'setChecked' ? args.checked : method === 'check';
+      let performed;
       if (!checking || result.checked !== checked) {
-        await actOnPage(record, {action: checking ? 'click' : method === 'dblclick' ? 'doubleClick' : method === 'pressSequentially' ? 'type' : method,
+        performed = await actOnPage(record, {action: checking ? 'click' : method === 'dblclick' ? 'doubleClick' : method === 'pressSequentially' ? 'type' : method,
           elementId: result.elementId, locatorGeneration: generation, button: args.button, key: click?.keys.length ? click.keys.join('+') : args.key, value: args.value,
           sequential:method === 'pressSequentially', deadline:request.deadline,
           keyboardEditable:result.keyboardEditable,
           signal: request.signal, inputMode: request.inputMode}, options);
         if (checking && await step(() => callElement(record, {elementId: result.elementId}, 'checked',{},frameOptions)) !== checked) fail('LOCATOR_ACTION_FAILED', 'Click did not produce the requested checked state');
       }
-      return {action: request.action, value: null};
+      return {action: request.action, value: null,...(performed?.observationRequired ? {observationRequired:true} : {})};
     }
     case 'navigate': {
       let url;
       try { url = new URL(request.url); } catch { fail('INVALID_ARGUMENT', 'navigate requires an absolute URL'); }
       if (!['http:', 'https:', 'about:', 'file:'].includes(url.protocol)) fail('INVALID_ARGUMENT', 'Unsupported navigation protocol');
       await navigate(() => page.goto(url.href, {waitUntil: 'domcontentloaded', timeout: options.timeoutMs}));
-      invalidate();
       break;
     }
-    case 'back': await navigate(() => page.goBack({waitUntil: 'domcontentloaded', timeout: options.timeoutMs})); invalidate(); break;
-    case 'forward': await navigate(() => page.goForward({waitUntil: 'domcontentloaded', timeout: options.timeoutMs})); invalidate(); break;
-    case 'reload': await navigate(() => page.reload({waitUntil: 'domcontentloaded', timeout: options.timeoutMs})); invalidate(); break;
+    case 'back': await navigate(() => page.goBack({waitUntil: 'domcontentloaded', timeout: options.timeoutMs})); break;
+    case 'forward': await navigate(() => page.goForward({waitUntil: 'domcontentloaded', timeout: options.timeoutMs})); break;
+    case 'reload': await navigate(() => page.reload({waitUntil: 'domcontentloaded', timeout: options.timeoutMs})); break;
     case 'focus':
     case 'activate': await step(() => page.bringToFront()); break;
     case 'hitTest': return {action: request.action, element: await step(() => hitTest(record, request,frameOptions))};
@@ -413,7 +423,8 @@ export async function actOnPage(record, request, options) {
     }
     default: fail('UNSUPPORTED_ACTION', `Unsupported browser action ${request.action}`);
   }
-  return {action: request.action, inputMode: 'background', delivery: 'target-cdp', effectVerified: false};
+  return {action: request.action, inputMode: 'background', delivery: 'target-cdp', effectVerified: false,
+    ...(inputOccurrence !== undefined && inputOccurrence !== record.documentGeneration ? {observationRequired:true} : {})};
 }
 
 export async function releasePage(record, timeoutMs, {dismissDialogs = true, persistInputs} = {}) {
