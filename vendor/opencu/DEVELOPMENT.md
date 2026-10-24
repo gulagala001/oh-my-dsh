@@ -2,11 +2,11 @@
 
 OpenCU 是 DSH 插件：新控制核心、浏览器／原生／扩展后端配合真实 REA 前端组件。AI 像使用其他工具一样调用电脑；页面、活动和监看自然呈现，没有单独的 CU 控制台。
 
-当前源码默认适配 DSH `0.2.1-rc.2`，当前发行版本为 `2.0.8-dsh.0.2.1-rc.2`；`0.2.1-rc.1` 使用独立 SDK 构建入口。只支持这两个宿主。
+源码默认适配 DSH `0.2.1-rc.3`。`rc1`、`021rc2`、`021rc3` 分别使用精确匹配的 SDK、冻结依赖锁与宿主适配器；每份包只用于自己的完整宿主版本。
 
 ## 加载
 
-各宿主分别精确匹配 SDK 与框架：DSH `0.2.1-rc.1`／`0.2.1-rc.2` 均使用 Cordis `4.0.5`／Schemastery `3.18.5`。插件包根入口和 `opencu/dsh` 均为 Cordis Host 插件，依赖宿主真实 `tools` 和 `attachments` 服务。不需要另开 OpenCU 服务，也不接受外部 origin/token。由 DSH profile 加载：
+各宿主分别精确匹配 SDK 与框架：DSH `0.2.1-rc.1`／`0.2.1-rc.2`／`0.2.1-rc.3` 均使用 Cordis `4.0.5`／Schemastery `3.18.5`。插件包根入口和 `opencu/dsh` 均为 Cordis Host 插件，依赖宿主真实 `tools` 和 `attachments` 服务。不需要另开 OpenCU 服务，也不接受外部 origin/token。由 DSH profile 加载：
 
 ```yaml
 - insert:
@@ -79,7 +79,7 @@ AX 默认返回紧凑语义文本，保留元素身份、层级、值、状态�
 
 浏览器 AX 观察合并 Chromium 实际公开的同源、跨源和跨进程子框架，按框架及文档身份保存元素与层级；网页为 iframe 指定其他 ARIA 角色仍可读取其可访问内容，隐藏框架不额外公开控件。三种浏览器后端共用采集与路由，完整观察和身份复核成功后才发布新节点表。子框架导航、替换或移除后，旧元素会在输入前被拒绝，应在同一标签重新观察并使用新 ID；不能按节点数字或框架标题匹配新文档。
 
-浏览器支持 `tab.playwright` 的角色／文本／标签／placeholder／testId／CSS 定位、过滤、顺序选择、读取及常见输入，以及 `domSnapshot()`；定位器每次按当前文档解析，保留各后端的后台输入和释放路径。支持嵌套 frame（含跨源／OOPIF）、开放 shadow DOM，以及文本／名称／标签等位置的 RegExp。定位器按 timeoutMs 自动等待目标和可操作状态，提供 waitFor 的 visible／hidden／attached／detached 状态；只有确定尚未发送输入的失败才重试，已派发或结果不明的输入不会重放。frameLocator(...).domSnapshot() 可观察子 frame。定位解析保持同步，点击稳定等待由 CDP 宿主计时并复核同一元素、盒模型及可操作状态；再次滚动后等待目标及父 frame 布局稳定，光标移动后在实际按下前重新核验位置和命中，不对移动后的旧坐标盲点；无脚本 sandbox frame 不依赖页面定时器，也不放宽 sandbox／CSP 或执行网页内联脚本。内置 guest 文本输入在嵌入视图重入后恢复原目标子 frame 的焦点，避免把子 frame 中文丢到主文档；Chrome 扩展对不透明沙盒的 `Not allowed` 限制仍如实返回，不绕过。fill 支持文本、textarea、contenteditable 与 number 控件；number 接受有限数字字符串或空值清空，非法数字在派发前拒绝，保留只读／禁用保护。角色名称忽略 aria-hidden 与视觉隐藏的后代提示，保留显式 aria-labelledby 隐藏引用；原生 label 的名称不混入被标注控件自身的选项或默认正文，文本读取仍返回原正文。内置浏览器的 automation／父子表面 RPC 以结构化信封跨越 Electron IPC 和 contextBridge，在页面侧还原错误码与输入派发状态；主／子 preload 必须声明 `structuredErrors`，旧宿主明确拒绝。旧接口保留，导航增加 `goto`，输入增加 `typeText`，拖动支持起止坐标。
+浏览器支持 `tab.playwright` 的角色／文本／标签／placeholder／testId／CSS 定位、过滤、顺序选择、读取及常见输入，以及 `domSnapshot()`；定位器每次按当前文档解析，保留各后端的后台输入和释放路径。支持嵌套 frame（含跨源／OOPIF）、开放 shadow DOM，以及文本／名称／标签等位置的 RegExp。定位器按 timeoutMs 自动等待目标和可操作状态，提供 waitFor 的 visible／hidden／attached／detached 状态；只有确定尚未发送输入的失败才重试，已派发或结果不明的输入不会重放。默认 domSnapshot 按真实 frame session 递归展开可见子 frame，maxNodes／maxChars 由整份快照共享，提交前复核完整 frame owner 拓扑；显式 frameLocator(...).domSnapshot() 从所选 frame 起递归其可见子 frame，不包含根页。定位解析保持同步，点击稳定等待由 CDP 宿主计时并复核同一元素、盒模型及可操作状态；再次滚动后等待目标及父 frame 布局稳定，光标移动后在实际按下前重新核验位置和命中，不对移动后的旧坐标盲点；无脚本 sandbox frame 不依赖页面定时器，也不放宽 sandbox／CSP 或执行网页内联脚本。内置 guest 文本输入在嵌入视图重入后恢复原目标子 frame 的焦点，避免把子 frame 中文丢到主文档；Chrome 扩展对不透明沙盒的 `Not allowed` 限制仍如实返回，不绕过。fill 支持文本、textarea、contenteditable 与 number 控件；number 接受有限数字字符串或空值清空，非法数字在派发前拒绝，保留只读／禁用保护。角色名称忽略 aria-hidden 与视觉隐藏的后代提示，保留显式 aria-labelledby 隐藏引用；原生 label 的名称不混入被标注控件自身的选项或默认正文，文本读取仍返回原正文。内置浏览器的 automation／父子表面 RPC 以结构化信封跨越 Electron IPC 和 contextBridge，在页面侧还原错误码与输入派发状态；主／子 preload 必须声明 `structuredErrors`，旧宿主明确拒绝。旧接口保留，导航增加 `goto`，输入增加 `typeText`，拖动支持起止坐标。定位器还支持候选相对的 `filter({has,hasNot})`、同目标同 frame 的 `and`／`or` 和即时 `all()`；`or` 按文档顺序去重，`all()` 只固定返回的 nth 列表长度。`type(text,{timeoutMs})`／`pressSequentially(text,{timeoutMs})` 在当前选择处追加，后者对 ASCII（含标点／回车）发送真实按键，其他 Unicode 逐 code point 走真实文本插入，不提供 delay。匹配的内置宿主与独立浏览器提供 `playwright.expectNavigation(action,{timeoutMs,url,waitUntil})`、`waitForURL(url,{timeoutMs,waitUntil})`、`waitForLoadState({state,timeoutMs})`（兼容 state,options）；导航状态来自只读固定查询，按文档 occurrence、URL 和 readyState 判断新导航或已有状态，支持 commit／domcontentloaded／load，拒绝 networkidle。URL 为精确字符串或 RegExp；action 只调用一次，等待超时保留绑定，不重放已派发输入。`playwright.waitForEvent('download',{timeoutMs})` 必须在同一 cell 内先取 promise 再触发、最后 await，或用按此顺序的 Promise.all；预先排队获取持久历史及目标实际捕获的下载游标，在触发前的控制器串行槽内固定旧 ID，异步历史读取中出现的本次新 ID 不加入旧记录；排除未同步的旧 ID／开始时间及其他目标，只在新下载完成、文件校验和附件生成后返回。独立浏览器以 targetId 归属，内置宿主在真实 DownloadItem 捕获时记录来源 WebContents，读取绑定 guest 的同一 ID 后匹配；旧宿主明确拒绝，扩展仅有浏览器级归属也明确拒绝。返回 handle 的 file 为实际附件，path() 返回 null，不公开内部存储路径；全局 downloads.list 保留原历史用途。方法等待完整登记为当前 cell 的 pending 工作，超时／取消后清除轮询，不留下后续派发。capabilities.list 和 control().waits 公布实际支持及边界，新标签继续由 tabs.list 的实时清单辨认并按 ID 绑定。
 
 [模型结果投影](<src/dsh/model-output.mjs>)不改控制器或 UI 保存的原始状态：默认摘要化历史目标、观察与批注，保留实时库存、控制失败、所选目标能力和观察身份；`opencu_state({includeHistory:true})` 可读取完整历史。模型侧保留全部可操作节点的语义信息，去除重复文本；完整节点、几何和后端原始属性可通过 details:true 读取。只请求截图时不夹带 AX。截图附件仍按附件 ID 去重。旧会话内容不改写，本改动不会自动消除已进入上下文的历史冗余。
 

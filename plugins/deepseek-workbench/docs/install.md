@@ -1,8 +1,10 @@
 # DeepSeek Workbench — 安装与维护
 
+宿主构建以 `package.json` 的完整版本为准，当前源码默认 `0.2.1-rc.3`。每份构建对齐同版本 SDK、组件与依赖锁，安装入口按正式发行包的宿主版本选择。
+
 [English](install_EN.md) · [返回首页](../README.md#readme-install)
 
-**DSH 0.2.1-rc.2 · Node.js ≥22.19 · 0.1.0**
+**DSH 0.2.1-rc.3 · Node.js ≥22.19 · 0.1.0**
 
 内嵌网页聊天需要 DSH 桌面版；跨重启登录、官网下载与扩展平台页面需要匹配的桌面适配。Web 版提供外部网页入口。官网聊天账号与 API 平台授权分别管理。
 
@@ -11,12 +13,12 @@
 在实际使用的实例打开 **插件 → ＋ 添加插件**，粘贴固定发行地址：
 
 ```text
-https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.2-dsh.0.2.1-rc.2/dsh-deepseek-workbench-0.1.2-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.3-dsh.0.2.1-rc.3/dsh-deepseek-workbench-0.1.3-dsh.0.2.1-rc.3.tgz
 ```
 
 等当前任务结束后按宿主提示启用或重启，沿用原 profile、DSH_HOME、模型配置和会话。
 
-下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.2-dsh.0.2.1-rc.2/SHA256SUMS).
+下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.3-dsh.0.2.1-rc.3/SHA256SUMS).
 
 ### 首次成功检查
 
@@ -30,7 +32,7 @@ https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.2-d
 使用同一 DSH 实例对应的 CLI，将 `web` 换成实际 profile。
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.2-dsh.0.2.1-rc.2/dsh-deepseek-workbench-0.1.2-dsh.0.2.1-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.3-dsh.0.2.1-rc.3/dsh-deepseek-workbench-0.1.3-dsh.0.2.1-rc.3.tgz"
 ```
 
 </details>

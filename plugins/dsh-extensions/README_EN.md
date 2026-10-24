@@ -7,8 +7,8 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.1-dsh.0.2.1-rc.2"><img alt="0.1.1" src="https://img.shields.io/badge/release-0.1.1-0969da?style=flat-square"></a>
-  <a href="#install"><img alt="DSH 0.2.1-rc.2" src="https://img.shields.io/badge/DSH-0.2.1--rc.2-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.2-dsh.0.2.1-rc.3"><img alt="0.1.1" src="https://img.shields.io/badge/release-0.1.2-0969da?style=flat-square"></a>
+  <a href="#install"><img alt="DSH 0.2.1-rc.3" src="https://img.shields.io/badge/DSH-0.2.1--rc.3-0969da?style=flat-square"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-0969da?style=flat-square"></a>
 </p>
 
@@ -20,7 +20,7 @@ DSH already reads skills, MCP servers, AGENTS.md and similar extensions, but mos
 
 ## Get started
 
-**Requirements:** DSH **0.2.1-rc.2**, Node.js **22.19+**.
+**Requirements:** DSH **0.2.1-rc.3**, Node.js **22.19+**.
 
 ### 1. Install
 
@@ -28,10 +28,10 @@ DSH already reads skills, MCP servers, AGENTS.md and similar extensions, but mos
 In the DSH instance you use, open **Plugins → + Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.1-dsh.0.2.1-rc.2/dsh-extensions-0.1.1-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.2-dsh.0.2.1-rc.3/dsh-extensions-0.1.2-dsh.0.2.1-rc.3.tgz
 ```
 
-After active tasks finish, enable the plugin or restart the instance as the host asks. See the [installation guide](docs/install_EN.md) for other methods, upgrades and removal · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.1-dsh.0.2.1-rc.2/SHA256SUMS).
+After active tasks finish, enable the plugin or restart the instance as the host asks. See the [installation guide](docs/install_EN.md) for other methods, upgrades and removal · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.2-dsh.0.2.1-rc.3/SHA256SUMS).
 
 ### 2. Try this first
 

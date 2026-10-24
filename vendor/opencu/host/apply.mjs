@@ -260,7 +260,12 @@ if (mainSource.includes(windowQuitMarker)) {
   await patch(desktop + 'main.ts', windowQuitHooks);
 }
 await patch('apps/desktop/tsdown.config.ts', [["'preload-opencu-presentation',", "'preload-opencu-presentation', 'preload-opencu-surface',"]], "'preload-opencu-surface'");
-await patch('apps/desktop/tsdown.config.ts', [["const manifest = JSON.parse(", "await (await import('node:fs/promises')).copyFile(new URL('./src/opencu-rea-context-menu.js', import.meta.url), new URL('./lib/types/opencu-rea-context-menu.js', import.meta.url))\nconst manifest = JSON.parse("]], "copyFile(new URL('./src/opencu-rea-context-menu.js'");
+await patch('apps/desktop/tsdown.config.ts', [["const manifest = JSON.parse(", `// opencu-plain-js-build:v1
+const openCUCompilerFs = await import('node:fs/promises')
+for (const name of await openCUCompilerFs.readdir(new URL('./src/', import.meta.url))) {
+  if (/^opencu-.*\\.(?:js|mjs)$/.test(name)) await openCUCompilerFs.copyFile(new URL('./src/' + name, import.meta.url), new URL('./lib/types/' + name, import.meta.url))
+}
+const manifest = JSON.parse(`]], '// opencu-plain-js-build:v1');
 await patch('apps/desktop/scripts/electron-builder-config.mjs', [["      'lib/preload-app.cjs',", "      'lib/preload-app.cjs',\n      'lib/preload-opencu-surface.cjs',"]], "'lib/preload-opencu-surface.cjs'");
 // Input follows the current physical host; shortcut delivery still targets its DSH owner.
 await patch(desktop + 'keyboard.ts', [

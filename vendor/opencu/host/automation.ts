@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { openCUDownloadIds } from './opencu-downloads.ts'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { stat } from 'node:fs/promises'
 import { isAbsolute } from 'node:path'
@@ -85,7 +86,7 @@ export function resolveOpenCUNavigation(input: unknown, allowedNavigation: (url:
 
 /** Run fixed accessibility and DOM operations on the caller's already verified guest. */
 export function openCUAutomation(guest: WebContents, operation: unknown, input: unknown, allowedNavigation: (url: string) => boolean): Promise<unknown> {
-  if (typeof operation !== 'string' || !['getDialog', 'handleDialog', 'pageState', 'inputMarker', 'observe', 'locator', 'domSnapshot', 'checked', 'point', 'verifyElement', 'focus', 'selectAll', 'selectOption', 'selectText', 'paste', 'describe', 'patch', 'hitTest', 'upload', 'navigationSnapshot', 'restoreNavigation', 'siteTools', 'invokeSiteTool', 'cancelSiteTool', 'cancelUpload', 'capture', 'readPageImage', 'input', 'insertText', 'releaseInput'].includes(operation)) throw new Error('Unsupported guest automation operation')
+  if (typeof operation !== 'string' || !['getDialog', 'handleDialog', 'pageState', 'navigationState', 'inputMarker', 'observe', 'locator', 'domSnapshot', 'checked', 'point', 'verifyElement', 'focus', 'selectAll', 'selectOption', 'selectText', 'paste', 'describe', 'patch', 'hitTest', 'upload', 'navigationSnapshot', 'restoreNavigation', 'siteTools', 'invokeSiteTool', 'cancelSiteTool', 'cancelUpload', 'capture', 'readPageImage', 'input', 'insertText', 'releaseInput'].includes(operation)) throw new Error('Unsupported guest automation operation')
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid guest automation arguments')
   const args = input as Record<string, unknown>
   const dialogs = openCUDialogs(guest)
@@ -172,7 +173,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
     if (guest.isDestroyed()) throw new Error('The browser guest is closed')
     dialogs.assertClear()
     if (current.rendererExited || guest.isCrashed()) throw guestExited()
-    if (current.documentGeneration !== documentGeneration && operation !== 'releaseInput') throw Object.assign(new Error('STALE_ELEMENT: the queued document changed'), { code: 'STALE_ELEMENT', details: { inputDispatched: false } })
+    if (current.documentGeneration !== documentGeneration && !['releaseInput','navigationState'].includes(operation)) throw Object.assign(new Error('STALE_ELEMENT: the queued document changed'), { code: 'STALE_ELEMENT', details: { inputDispatched: false } })
     if (operation === 'verifyElement' && (!current.deferredAX || current.elements.has(String(args.elementId)))) return verifyElement()
     if (operation === 'navigationSnapshot') {
       return { entries: guest.navigationHistory.getAllEntries(), index: guest.navigationHistory.getActiveIndex() }
@@ -264,13 +265,28 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         }
         const captured = await captureAXTree(send, frameRouter(), live)
         const elements = new Map(current.elements)
-        for (const {node, route, key} of captured.nodes) if (node.backendDOMNodeId) elements.set(`${current.identityScope}:${key}`, {backendNodeId:node.backendDOMNodeId, route})
+        for (const {node, route, key} of captured.nodes) if (node.backendDOMNodeId) elements.set(`${current.identityScope}:${key}`, {backendNodeId:node.backendDOMNodeId, ...(route ? {route} : {})})
         await captured.validate()
         live()
         current.elements = elements
         delete current.deferredAX
       }
       if (operation === 'verifyElement') return await verifyElement()
+      if (operation === 'navigationState') {
+        const cursor = (): {downloadIds?: string[]} => args.downloadCursor === true ? {downloadIds:openCUDownloadIds(guest.id)} : {}
+        let result
+        try { result = value(await send('Runtime.evaluate', {expression:'({url:location.href,readyState:document.readyState})',returnByValue:true})) }
+        catch (error) {
+          signal.throwIfAborted()
+          if (current.documentGeneration !== documentGeneration || /Cannot find context|Execution context was destroyed|Inspected target navigated/u.test((error as Error).message))
+            return {url:guest.getURL(),documentId:String(current.documentGeneration),readyState:'loading',webContentsId:guest.id,...cursor()}
+          throw error
+        }
+        if (current.documentGeneration !== documentGeneration) return {url:guest.getURL(),documentId:String(current.documentGeneration),readyState:'loading',webContentsId:guest.id,...cursor()}
+        if (!result || typeof result !== 'object' || !('url' in result) || typeof result.url !== 'string'
+          || !('readyState' in result) || typeof result.readyState !== 'string') throw new Error('Invalid browser navigation state')
+        return {url:result.url,readyState:result.readyState,documentId:String(current.documentGeneration),webContentsId:guest.id,...cursor()}
+      }
       if (operation === 'pageState') return value(await send('Runtime.evaluate', { expression:
         '({ documentId: globalThis.__opencuDocument?.id, url: location.href, width: innerWidth, height: innerHeight, scrollX, scrollY, focused: document.hasFocus() })', returnByValue: true }))
       if (operation === 'inputMarker') {
@@ -293,7 +309,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         }
         const elementSend = (method:string,params:object={}):Promise<any> => context.guard(() => context.fence.guard(() => (entry?.route?.send ?? send)(method,params)))
         return await runTextEdit(elementSend,operation,args,{
-          backendNodeId:entry?.backendNodeId,contextId:entry?.route?.contextId,validate,
+          ...(entry ? {backendNodeId:entry.backendNodeId} : {}),...(entry?.route ? {contextId:entry.route.contextId} : {}),validate,
           onFocus:()=>{signal.throwIfAborted();context.inputDispatched=true;current.inputActive=true},
           beforeFocus:async()=>{
             await guest.hostWebContents?.executeJavaScript(`(() => { const view=[...document.querySelectorAll('webview')].find(item=>item.getWebContentsId()===${guest.id});if(!view)throw new Error('Browser input guest is detached');if(document.activeElement===view)view.blur();view.focus(); })()`)
@@ -333,7 +349,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           if (args.type === 'keyDown' || args.type === 'keyUp') {
             const spec = inputKey(args.keyCode), down = args.type === 'keyDown'
             if (down) current.inputKeys.set(spec.key, spec)
-            await send('Input.dispatchKeyEvent', keyEventParameters(spec, down, modifiers, process.platform === 'darwin'))
+            await send('Input.dispatchKeyEvent', keyEventParameters(spec, down, modifiers, process.platform === 'darwin', args.keyboardEditable === true))
             if (!down) current.inputKeys.delete(spec.key)
           } else {
             const types: Record<string, string> = { mouseMove: 'mouseMoved', mouseDown: 'mousePressed', mouseUp: 'mouseReleased', mouseWheel: 'mouseWheel' }
@@ -426,7 +442,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         const elements = new Map<string, FrameElement>()
         const nodes = captured.nodes.map(({node,route,key}) => {
           const elementId = node.backendDOMNodeId ? `${current.identityScope}:${key}` : undefined
-          if (elementId && node.backendDOMNodeId) elements.set(elementId, {backendNodeId:node.backendDOMNodeId,route})
+          if (elementId && node.backendDOMNodeId) elements.set(elementId, {backendNodeId:node.backendDOMNodeId,...(route ? {route} : {})})
           return { ...(elementId ? { elementId } : {}), nodeId: node.nodeId, role: node.role?.value ?? '', name: node.name?.value ?? '',
             ...(node.value ? { value: node.value.value } : {}), children: node.childIds ?? [],
             properties: Object.fromEntries((node.properties ?? []).map(item => [item.name, item.value.value ?? item.value.relatedNodes?.map(related => related.text ?? related.idref) ?? null])) }

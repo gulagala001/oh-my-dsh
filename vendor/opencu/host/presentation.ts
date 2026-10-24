@@ -190,7 +190,7 @@ export class OpenCUPresentations {
     record.hide = (immediate = false) => {
       if (window.isDestroyed()) return
       if (record.hidden && !immediate) return
-      record.transfer?.cancel(); record.transfer = undefined
+      record.transfer?.cancel(); delete record.transfer
       motion.cancel(); stopMotion(); record.hidden = true; record.generation++; record.exitGeneration++
       record.frames = []
       record.frameIds = []; record.hitRegions = []; record.contrast.pending = false; record.contrast.sequence++; record.contrast.confirmations = 0
@@ -221,7 +221,7 @@ export class OpenCUPresentations {
     owner.on('hide', follow); owner.on('minimize', follow); owner.on('restore', follow); owner.on('focus', raise)
     owner.on('always-on-top-changed', syncLevel)
     record.dispose = () => {
-      record.transfer?.cancel(); record.transfer = undefined
+      record.transfer?.cancel(); delete record.transfer
       record.generation++; stopMotion(); clearTimeout(hideTimer); clearInterval(pointerTimer); motion.cancel()
       record.frames = []
       window.webContents.removeListener('did-finish-load', record.replay)
@@ -332,7 +332,7 @@ export class OpenCUPresentations {
         return { prepared: true }
       } catch (error) {
         if (record.transfer === transfer) {
-          record.transfer = undefined; transfer.cancel()
+          delete record.transfer; transfer.cancel()
           if (payload.placement === 'pinned') record.hide(true)
           else { record.window.webContents.send('dsh-desktop:opencu-presentation-update', { transferId: null }); record.follow() }
         }
@@ -351,7 +351,7 @@ export class OpenCUPresentations {
         try { await Promise.race([flight, new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error('The monitoring handoff timed out')), 2000) })]) }
         finally { clearTimeout(timeout) }
       } else {
-        record.stopMotion(); record.transfer = undefined
+        record.stopMotion(); delete record.transfer
         if (operation === 'transfer-cancel') transfer.cancel()
         const home = operation === 'transfer-finish' ? transfer.placement === 'home' : transfer.placement === 'pinned'
         if (home) record.hide(true)
@@ -376,7 +376,8 @@ export class OpenCUPresentations {
     if (frames.length > 10) throw new Error('Too many monitoring frames')
     const displayFrames = frames.map(frame => {
       if (typeof frame.presentationID !== 'string' || [frame.width, frame.height].some(value => value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value <= 0))) throw new Error('Invalid monitoring dimensions')
-      return { presentationID: frame.presentationID, width: frame.width as number | undefined, height: frame.height as number | undefined }
+      return { presentationID: frame.presentationID, ...(typeof frame.width === 'number' ? {width:frame.width} : {}),
+        ...(typeof frame.height === 'number' ? {height:frame.height} : {}) }
     })
     if (!frames.length) { record.hide(); return { visible: false } }
     record.exitGeneration++

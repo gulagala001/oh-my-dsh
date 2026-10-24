@@ -2,7 +2,7 @@
 
 [English](install_EN.md) · [返回首页](../README.md#readme-install)
 
-**DSH 0.2.1-rc.2 · Node.js ≥22.19 · 0.1.1**
+**DSH 0.2.1-rc.3 · Node.js ≥22.19 · 0.1.1**
 
 子代理沿用宿主模型与权限，并产生正常模型用量。续跑会重新执行成功前缀之后的调用；先核对已有产物与副作用。
 
@@ -11,12 +11,12 @@
 在实际使用的实例打开 **插件 → ＋ 添加插件**，粘贴固定发行地址：
 
 ```text
-https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.4-dsh.0.2.1-rc.2/dsh-workflow-plus-0.1.4-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.5-dsh.0.2.1-rc.3/dsh-workflow-plus-0.1.5-dsh.0.2.1-rc.3.tgz
 ```
 
 等当前任务结束后按宿主提示启用或重启，沿用原 profile、DSH_HOME、模型配置和会话。
 
-下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.4-dsh.0.2.1-rc.2/SHA256SUMS).
+下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.5-dsh.0.2.1-rc.3/SHA256SUMS).
 
 ### 首次成功检查
 
@@ -34,7 +34,7 @@ https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.4-dsh.0.2.1-r
 使用同一 DSH 实例对应的 CLI，将 `web` 换成实际 profile。
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.4-dsh.0.2.1-rc.2/dsh-workflow-plus-0.1.4-dsh.0.2.1-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.5-dsh.0.2.1-rc.3/dsh-workflow-plus-0.1.5-dsh.0.2.1-rc.3.tgz"
 ```
 
 </details>

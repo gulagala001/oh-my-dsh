@@ -17,7 +17,7 @@ export const BROWSER_ACTIONS = Object.freeze([
   'navigate', 'back', 'forward', 'reload', 'newTab', 'closeTab', 'activate',
   'click', 'doubleClick', 'move', 'mouseDown', 'mouseUp', 'scroll', 'drag',
   'keyDown', 'keyUp', 'press', 'type', 'fill', 'selectText', 'paste', 'selectOption', 'upload', 'download',
-  'cursor', 'hitTest', 'getDOM', 'setText', 'locator', 'domSnapshot', 'getDialog', 'handleDialog',
+  'cursor', 'hitTest', 'getDOM', 'setText', 'locator', 'domSnapshot', 'navigationState', 'getDialog', 'handleDialog',
 ]);
 
 // Canonical helper action names. These additions use macOS AX only; other

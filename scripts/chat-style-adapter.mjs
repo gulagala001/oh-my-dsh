@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 const reviewedSource = {
-  commits: ['1600d8a1e140dcde43a1a0941940a0480712c011', '687f282e8625c6b8d11ff58211a90524be2e4317'],
+  commits: ['1600d8a1e140dcde43a1a0941940a0480712c011', '687f282e8625c6b8d11ff58211a90524be2e4317', '1f81c047fc48fa190a683e469daa699857e9afe8'],
   sha256: '5345409ad105881250939dbb478f8cb01f5a14dad94b0aa446b4280b80427f55',
 };
 const before = '.EvIC1a_column:has(>.EvIC1a_older)>[data-slot="conversation.chat.flow"]>';
@@ -41,7 +41,7 @@ export function adaptChatStyleFactory(client) {
 
 /** Shared by the host build and an isolated ui-chat factory rebuild. */
 export function buildChatStyleFactory(rawClient, source) {
-  gate(reviewedSource.commits.includes(source?.commit) && source?.sha256 === reviewedSource.sha256, 'unsupported upstream source; only the reviewed rc.1 / rc.2 factory is supported');
+  gate(reviewedSource.commits.includes(source?.commit) && source?.sha256 === reviewedSource.sha256, 'unsupported upstream source; only the reviewed rc.1 / rc.2 / rc.3 factory is supported');
   gate(createHash('sha256').update(rawClient).digest('hex') === source.sha256, 'upstream ui-chat lib SHA-256 differs from the snapshot');
   const adapted = adaptChatStyleFactory(rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''));
   const tagPattern = /(const tagId(?:\$\d+)? = )"@deepseek-ai\/dsh-client-ui-chat\//g;

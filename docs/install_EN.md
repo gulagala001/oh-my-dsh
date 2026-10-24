@@ -35,18 +35,18 @@ These instructions install the published plugin. Complete desktop computer use h
 
 ### 1. Check your DSH version
 
-Read the **complete host version** in DSH's About/version information, for example 0.2.1-rc.2. This is not the OMD version. DSH 0.2.0-rc.2 and 0.2.1-rc.2 are different hosts.
+Read the **complete host version** in DSH's About/version information, for example 0.2.1-rc.3. This is not the OMD version. DSH 0.2.0-rc.2 and 0.2.1-rc.3 are different hosts.
 
 ### 2. Copy the URL for your host
 
 
-**DSH 0.2.1-rc.2 → OMD 0.100.0:**
+**DSH 0.2.1-rc.3 → OMD 0.100.1:**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100.0/oh-my-dsh-0.2.1-rc.2.omd.0.100.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.100.1/oh-my-dsh-0.2.1-rc.3.omd.0.100.1.tgz
 ```
 
-**DSH 0.2.1-rc.1 → OMD 0.100.0:**
+**DSH 0.2.1-rc.1 → OMD 0.100.1:**
 
 ```text
 https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.100.0/oh-my-dsh-0.2.1-rc.1.omd.0.100.0.tgz
@@ -86,11 +86,11 @@ OMD's default installation configuration grants full file/command access and dis
 <details>
 <summary>Optional: terminal installation / first-time Web setup</summary>
 
-Existing Web installation: stop the service and use its original CLI. This example is for DSH 0.2.1-rc.2 with the web profile; retain any custom profile name.
+Existing Web installation: stop the service and use its original CLI. This example is for DSH 0.2.1-rc.3 with the web profile; retain any custom profile name.
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100.0/oh-my-dsh-0.2.1-rc.2.omd.0.100.0.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.100.1/oh-my-dsh-0.2.1-rc.3.omd.0.100.1.tgz
 ```
 
 Restart through the original launch method, retaining the data directory and port. For DSH 0.2.1-rc.1, use the rc.1 URL above.
@@ -98,21 +98,21 @@ Restart through the original launch method, retaining the data directory and por
 First-time Web setup requires Node.js ≥22.19; use PowerShell 7 on Windows:
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100.0/oh-my-dsh-0.2.1-rc.2.omd.0.100.0.tgz
-npx --yes @deepseek-ai/dsh@0.2.1-rc.2 --profile web
+npx --yes @deepseek-ai/dsh@0.2.1-rc.3 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.100.1/oh-my-dsh-0.2.1-rc.3.omd.0.100.1.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-rc.3 --profile web
 ```
 
 Open the full login link printed by the terminal. Data defaults to .dsh in your user directory; a new Web service defaults to port 3080. Do not use these commands to create a second environment for an existing installation.
 
-Default macOS desktop CLI example, only for an actual DSH 0.2.1-rc.2 installation:
+Default macOS desktop CLI example, only for an actual DSH 0.2.1-rc.3 installation:
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100.0/oh-my-dsh-0.2.1-rc.2.omd.0.100.0.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.100.1/oh-my-dsh-0.2.1-rc.3.omd.0.100.1.tgz
 ```
 
 On Windows desktop, the plugin dialog is the simplest route; CLI paths depend on the installation. A Web CLI does not substitute for the desktop CLI.
 
 </details>
 
-**Release scope:** the rc.2 URL installs OMD 0.100.0; rc.1 also uses OMD 0.100.0. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).
+**Release scope:** the rc.2 URL installs OMD 0.100.1; rc.1 also uses OMD 0.100.1. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).

@@ -51,16 +51,38 @@ export function keyEventKey(key, modifiers) {
   return modifiers & 8 && /^[a-z]$/iu.test(key) ? key.toUpperCase() : key;
 }
 
-export function keyEventParameters(spec, down, modifiers, isMac) {
+export function keyEventParameters(spec, down, modifiers, isMac, keyboardEditable = false) {
   if (!down) modifiers &= ~({ Alt: 1, Control: 2, Meta: 4, Shift: 8 }[spec.key] ?? 0);
   const key = keyEventKey(spec.key, modifiers);
   const text = down && !(modifiers & 7) ? key === 'Enter' ? '\r' : key.length === 1 ? key : undefined : undefined;
   const shortcut = [[8, 'Shift'], [2, 'Control'], [1, 'Alt'], [4, 'Meta']].filter(([mask]) => modifiers & mask).map(([, name]) => name).concat(spec.code).join('+');
-  const command = down && isMac ? macCommands[shortcut] : undefined;
+  const editingCommands = {Home:'moveToBeginningOfLine',End:'moveToEndOfLine','Shift+Home':'moveToBeginningOfLineAndModifySelection','Shift+End':'moveToEndOfLineAndModifySelection'};
+  const command = down && isMac ? (keyboardEditable && editingCommands[shortcut] || macCommands[shortcut]) : undefined;
   return { ...spec, key, type: down ? text ? 'keyDown' : 'rawKeyDown' : 'keyUp', modifiers,
     ...(command ? { commands: Array.isArray(command) ? command : [command] } : {}),
     ...(text ? { text, unmodifiedText: text } : {}),
   };
+}
+
+const punctuationKeys = {};
+for (const [plain, shifted, code, vk] of [
+  ['`','~','Backquote',192], ['1','!','Digit1',49], ['2','@','Digit2',50], ['3','#','Digit3',51],
+  ['4','$','Digit4',52], ['5','%','Digit5',53], ['6','^','Digit6',54], ['7','&','Digit7',55],
+  ['8','*','Digit8',56], ['9','(','Digit9',57], ['0',')','Digit0',48], ['-','_','Minus',189],
+  ['=','+','Equal',187], ['[','{','BracketLeft',219], [']','}','BracketRight',221],
+  ['\\','|','Backslash',220], [';',':','Semicolon',186], ["'",'"','Quote',222],
+  [',','<','Comma',188], ['.','>','Period',190], ['/','?','Slash',191],
+]) for (const key of [plain,shifted]) punctuationKeys[key] = [code,vk];
+
+/** Match keyboard typing: physical keys for the US layout, source insertion for other code points. */
+export function sequentialTextKey(character) {
+  return character === '\n' || character === '\r' ? 'Enter' : /^[\x20-\x7e]$/u.test(character) ? character : undefined;
+}
+
+export function checkSequentialDeadline(deadline) {
+  if (deadline === undefined) return;
+  if (!Number.isSafeInteger(deadline)) throw Object.assign(new TypeError('Invalid locator typing deadline'), {code:'INVALID_ARGUMENT',details:{inputDispatched:false}});
+  if (Date.now() >= deadline) throw Object.assign(new Error('Locator pressSequentially deadline reached'), {code:'LOCATOR_TIMEOUT',details:{inputDispatched:false}});
 }
 
 // These are the event routes' actual key definitions, shared with their preflight checks.
@@ -69,7 +91,7 @@ export function guestKeySpec(value) {
   const aliases = { ctrl: 'Control', control: 'Control', alt: 'Alt', option: 'Alt', shift: 'Shift', meta: 'Meta', cmd: 'Meta', command: 'Meta', enter: 'Enter', return: 'Enter', esc: 'Escape', escape: 'Escape', tab: 'Tab', space: ' ', backspace: 'Backspace', delete: 'Delete', up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' }
   const key = aliases[value.toLowerCase()] ?? value
   const named = { Control: ['ControlLeft', 17], Alt: ['AltLeft', 18], Shift: ['ShiftLeft', 16], Meta: ['MetaLeft', 91], Enter: ['Enter', 13], Escape: ['Escape', 27], Tab: ['Tab', 9], ' ': ['Space', 32], Backspace: ['Backspace', 8], Delete: ['Delete', 46], Insert: ['Insert', 45], ArrowLeft: ['ArrowLeft', 37], ArrowUp: ['ArrowUp', 38], ArrowRight: ['ArrowRight', 39], ArrowDown: ['ArrowDown', 40], Home: ['Home', 36], End: ['End', 35], PageUp: ['PageUp', 33], PageDown: ['PageDown', 34], '+': ['Equal', 187], '=': ['Equal', 187], '-': ['Minus', 189] }
-  const spec = named[key] ?? (/^[a-z]$/i.test(key) ? [`Key${key.toUpperCase()}`, key.toUpperCase().charCodeAt(0)] : /^\d$/.test(key) ? [`Digit${key}`, key.charCodeAt(0)] : /^F([1-9]|1\d|2[0-4])$/.test(key) ? [key, 111 + Number(key.slice(1))] : undefined)
+  const spec = named[key] ?? punctuationKeys[key] ?? (/^[a-z]$/i.test(key) ? [`Key${key.toUpperCase()}`, key.toUpperCase().charCodeAt(0)] : /^\d$/.test(key) ? [`Digit${key}`, key.charCodeAt(0)] : /^F([1-9]|1\d|2[0-4])$/.test(key) ? [key, 111 + Number(key.slice(1))] : undefined)
   if (!spec) throw Object.assign(new Error('Use a supported named key; insertText handles Unicode'), { code:'UNSUPPORTED_KEY', details:{inputDispatched:false,retryable:false} })
   return { key, code: spec[0], windowsVirtualKeyCode: spec[1] }
 }
@@ -85,7 +107,7 @@ export function extensionKeySpec(value) {
     ArrowLeft: ['ArrowLeft', 37], ArrowUp: ['ArrowUp', 38], ArrowRight: ['ArrowRight', 39], ArrowDown: ['ArrowDown', 40],
     Home: ['Home', 36], End: ['End', 35], PageUp: ['PageUp', 33], PageDown: ['PageDown', 34], '+': ['Equal', 187] };
   let code, vk;
-  if (codes[key]) [code, vk] = codes[key];
+  if (codes[key] || punctuationKeys[key]) [code, vk] = codes[key] ?? punctuationKeys[key];
   else if (/^[a-z]$/i.test(key)) { code = 'Key' + key.toUpperCase(); vk = key.toUpperCase().charCodeAt(0); }
   else if (/^\d$/.test(key)) { code = 'Digit' + key; vk = key.charCodeAt(0); }
   else if (/^F([1-9]|1[0-2])$/.test(key)) { code = key; vk = 111 + Number(key.slice(1)); }

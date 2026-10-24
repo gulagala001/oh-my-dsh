@@ -1,5 +1,7 @@
 # 架构 / Architecture
 
+宿主构建以 `package.json` 的完整版本为准，当前源码默认 `0.2.1-rc.3`。每份构建对齐同版本 SDK、组件与依赖锁，安装入口按正式发行包的宿主版本选择。
+
 [中文首页](../README.md) · [English](../README_EN.md)
 
 DSH Workflow 是通过 profile bundle 安装的工作流插件。执行引擎基于 DSH **0.2.1-rc.2** 的 Workflow、PTC 和 tool-workflow，负责脚本编排、运行记录与续跑，并接入原生子代理、会话、Jobs、权限和取消生命周期。

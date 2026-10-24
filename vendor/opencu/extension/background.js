@@ -1,7 +1,7 @@
 import { observeAccessibility, elementOperation, locatorOperation, invalidateElements } from './accessibility.js';
 import { createPairingClient } from './pairing.js';
 import { createCDPFrameRouter } from './frame-router.js';
-import { extensionKeySpec as keySpec, keyEventParameters } from './keyboard.js';
+import { extensionKeySpec as keySpec, keyEventParameters, sequentialTextKey, checkSequentialDeadline } from './keyboard.js';
 import { clickParameters, checkClickHeld, holdClick } from './click-options.js';
 import { pressParameters, checkPressHeld } from './key-options.js';
 const PATH = '/opencu-extension/v1';
@@ -157,12 +157,12 @@ async function saveAttached() {
 }
 
 const modifiers = state => [...state.keys.keys()].reduce((n, key) => n | ({ Alt: 1, Control: 2, Meta: 4, Shift: 8 }[key] || 0), 0);
-async function keyEvent(tabId, spec, down, epoch, beforeDispatch) {
+async function keyEvent(tabId, spec, down, epoch, beforeDispatch, keyboardEditable = false) {
   checkControl(epoch);
   const state = attached.get(tabId);
   if (down) { state.keys.set(spec.key, spec); await saveAttached(); }
   checkControl(epoch);
-  const event = keyEventParameters(spec, down, modifiers(state), /Mac/u.test(navigator.platform));
+  const event = keyEventParameters(spec, down, modifiers(state), /Mac/u.test(navigator.platform),keyboardEditable);
   if (down) await content(tabId, 'expectInput', { events: [{ type: 'keydown', key: event.key }, { type: 'input' }] });
   checkControl(epoch);
   if (down && beforeDispatch) { await beforeDispatch(); checkControl(epoch); }
@@ -345,7 +345,7 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       catch (error) {if(!failure)throw error;failure.details={...failure.details,inputMarkerError:errorJSON(error)};}
     }
   };
-  const inputKey = (spec, down) => keyEvent(tabId, spec, down, epoch, action.elementId != null ? verifyInputElement : undefined);
+  const inputKey = (spec, down) => keyEvent(tabId, spec, down, epoch, action.elementId != null ? verifyInputElement : undefined,action.keyboardEditable);
   const pointer = (type, point, button = 'none', count = 0, extra = {}) => mouse(tabId, type, point, button, count, extra, epoch,
     action.elementId != null ? () => element('checkPoint', {...action,...point}) : undefined);
   const step = async work => { checkControl(epoch); const result = await work(); checkControl(epoch); return result; };
@@ -393,8 +393,9 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       const checking = ['check','uncheck','setChecked'].includes(method);
       const checked = method === 'setChecked' ? args.checked : method === 'check';
       if (!checking || result.checked !== checked) {
-        const type = checking ? 'click' : ({dblclick:'double_click',press:'press_key'})[method] ?? method;
-        await act(identity, {type,elementId:result.elementId,button:args.button,key:args.key,value:args.value,inputMode:action.inputMode}, epoch);
+        const type = checking ? 'click' : ({dblclick:'double_click',press:'press_key',type:'type_text',pressSequentially:'type_text'})[method] ?? method;
+        await act(identity, {type,elementId:result.elementId,button:args.button,key:args.key,value:args.value,text:args.value,
+          sequential:method === 'pressSequentially',deadline:action.deadline,keyboardEditable:result.keyboardEditable,inputMode:action.inputMode}, epoch);
         if (checking && (await element('checked', {elementId:result.elementId})).checked !== checked) fail('LOCATOR_ACTION_FAILED', 'Click did not produce the requested checked state.');
       }
       return done({value:null});
@@ -433,8 +434,20 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
     case 'set_value': invalidate(); return done(await element('setValue'));
     case 'type_text': {
       if (typeof action.text !== 'string' || action.text.length > 100000) fail('INVALID_TEXT', 'type_text requires text (maximum 100000 characters).');
+      if (action.sequential) {
+        checkSequentialDeadline(action.deadline);
+        for (const character of action.text) {const key=sequentialTextKey(character);if (key) checkPressHeld(inputState,[key],keyboard);}
+      }
       if (action.elementId != null) await element('focus');
-      invalidate(); await send('Input.insertText', { text: action.text }); return done({ typed: true });
+      invalidate();
+      if (action.sequential) for (const character of action.text) {
+        checkSequentialDeadline(action.deadline);
+        const key=sequentialTextKey(character);
+        if (key) {await inputKey(keySpec(key),true); await inputKey(keySpec(key),false);}
+        else await send('Input.insertText',{text:character});
+      }
+      else await send('Input.insertText', { text: action.text });
+      return done({ typed: true });
     }
     case 'selectText':
     case 'paste': {

@@ -131,9 +131,12 @@ for (const [name, path] of Object.entries(modules)) {
 await mkdir(join(destination, 'llm/src'), { recursive: true });
 await cp(join(source, 'packages/llm/llm/src/error.ts'), join(destination, 'llm/src/error.ts'));
 const ui = join(destination, 'ui-conversation'); await mkdir(join(ui, 'lib'));
+// Build-directory names are source-map comments, not product inputs. Keep
+// snapshots reproducible without publishing a developer's absolute paths.
+const browserOutput = text => text.replace(/^([ \t]*\/\/#region \\0dsh-css:)[^\r\n]*?\/(packages\/[^\r\n]+)$/gm, '$1$2');
 for (const name of ['client.js', 'index.js']) {
   const text = await readFile(join(source, 'packages/client/ui-conversation/lib', name), 'utf8');
-  await writeFile(join(ui, 'lib', name), text.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''));
+  await writeFile(join(ui, 'lib', name), browserOutput(text).replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''));
 }
 const pkg = JSON.parse(await readFile(join(source, 'packages/client/ui-conversation/package.json'), 'utf8'));
 Object.assign(pkg, { name: '@oh-my-dsh/ui-conversation', version: version + '-omd.1', private: true,
@@ -149,6 +152,10 @@ const chat = join(destination, 'ui-chat');
 await retire('ui-chat'); await mkdir(chat, { recursive: true });
 for (const name of ['src', 'README.md', 'lib/client.js', 'lib/index.js']) {
   await cp(join(source, 'packages/client/ui-chat', name), join(chat, name), { recursive: true });
+}
+for (const name of ['client.js', 'index.js']) {
+  const path = join(chat, 'lib', name);
+  await writeFile(path, browserOutput(await readFile(path, 'utf8')));
 }
 await cp(join(source, 'LICENSE'), join(chat, 'LICENSE'));
 await mkdir(join(chat, 'build'));

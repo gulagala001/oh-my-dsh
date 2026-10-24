@@ -17,6 +17,7 @@ export const recommendedPlugins = [
     category: '操作工具', url: 'https://github.com/T-Auto/dsh-ops', githubRelease: 'gulagala001/oh-my-dsh',
     supportedRuntimeTargets: ['darwin-arm64', 'linux-x64', 'win32-x64'], requireReviewedVersion: true,
     hostBuilds: {
+      '0.2.1-rc.3': { version: '0.2.1-rc.3.ops.0.1.0', upstreamVersion: '0.4.1', releaseVersion: '0.2.1-rc.3.omd.0.100.1', releaseTag: 'v0.2.1-rc.3.omd.0.100.1', asset: 'dsh-ops-0.2.1-rc.3.ops.0.1.0.tgz', sha256: '67441ed60ef962eb17292c8865cca6b70f4bf293fd05f62f94fdb85c5ece711f', dsh: '0.2.1-rc.3', allowPrerelease: true },
       '0.2.1-rc.2': { version: '0.2.1-rc.2.ops.0.1.0', upstreamVersion: '0.4.1', releaseVersion: '0.2.1-rc.2.omd.0.99.0', releaseTag: 'v0.2.1-rc.2.omd.0.99.0', asset: 'dsh-ops-0.2.1-rc.2.ops.0.1.0.tgz', sha256: 'd2a13073db75f11b7262b388c786bfb8fab35e541e35938f67bc0dd90dfe04c5', dsh: '0.2.1-rc.2', allowPrerelease: true },
       '0.2.1-rc.1': { version: '0.2.1-rc.1.ops.0.1.0', upstreamVersion: '0.4.1', releaseVersion: '0.2.1-rc.1.omd.0.99.0', releaseTag: 'v0.2.1-rc.1.omd.0.99.0', asset: 'dsh-ops-0.2.1-rc.1.ops.0.1.0.tgz', sha256: '5343ead8b3816f0e070f254da5cc95a98abb173fc3440881888c16d55f8b325c', dsh: '0.2.1-rc.1', allowPrerelease: true },
     },
@@ -38,6 +39,7 @@ export const recommendedPlugins = [
     description: '在回答中使用交互图表、表单、计算器、模拟和小游戏。',
     category: '界面增强', url: 'https://github.com/gulagala001/dsh-intelligent-ui', githubRelease: 'gulagala001/dsh-intelligent-ui',
     hostBuilds: {
+      '0.2.1-rc.3': { version: '0.2.1-rc.3.iui.1.0.13', releaseTag: 'v0.2.1-rc.3.iui.1.0.13', asset: 'dsh-intelligent-ui-0.2.1-rc.3.iui.1.0.13.tgz', sha256: 'e3a0b0744bf137905ec9ae70e6300b5907ce83c4fde6234f8a1f3a56664a8362', dsh: '0.2.1-rc.3', allowPrerelease: false },
       '0.2.1-rc.2': { version: '0.2.1-rc.2.iui.1.0.12', releaseTag: 'v0.2.1-rc.2.iui.1.0.12', asset: 'dsh-intelligent-ui-0.2.1-rc.2.iui.1.0.12.tgz', sha256: '04087b3832f018e9d2ff186b029c9561f52328741a4028fbfcf79bbed37e54f6', dsh: '0.2.1-rc.2', allowPrerelease: false },
       '0.2.1-rc.1': { version: '0.2.1-rc.1.iui.1.0.12', releaseTag: 'v0.2.1-rc.1.iui.1.0.12', asset: 'dsh-intelligent-ui-0.2.1-rc.1.iui.1.0.12.tgz', sha256: 'e2cbfe4af65064003f0d0db347c2231127be4493ceff7e332146bde8c8f325c3', dsh: '0.2.1-rc.1', allowPrerelease: false },
     },
@@ -58,6 +60,7 @@ export const recommendedPlugins = [
     description: '选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。',
     category: '智能体', url: 'https://github.com/gulagala001/oh-my-agents-above-all', githubRelease: 'gulagala001/oh-my-agents-above-all',
     hostBuilds: {
+      '0.2.1-rc.3': { version: '0.2.1-rc.3.omaa.0.17.1', releaseTag: 'v0.2.1-rc.3.omaa.0.17.1', asset: 'oh-my-agents-above-all-0.2.1-rc.3.omaa.0.17.1.tgz', sha256: '38eb1d5b44cf35149d4227372c0c65650b082f026bc56fdba5c41f762c658dd0', dsh: '0.2.1-rc.3', allowPrerelease: false },
       '0.2.1-rc.2': { version: '0.2.1-rc.2.omaa.0.17.0', releaseTag: 'v0.2.1-rc.2.omaa.0.17.0', asset: 'oh-my-agents-above-all-0.2.1-rc.2.omaa.0.17.0.tgz', sha256: '4ecd4e4d0f7928729bf5074ea2e576d4e7bc655121add66147006a458143d7d4', dsh: '0.2.1-rc.2', allowPrerelease: false },
       '0.2.1-rc.1': { version: '0.2.1-rc.1.omaa.0.16.5', releaseTag: 'v0.2.1-rc.1.omaa.0.16.5', asset: 'oh-my-agents-above-all-0.2.1-rc.1.omaa.0.16.5.tgz', sha256: 'e67576fda249ee29f4e521abaf110cdeefed3d386010239a3c53b74724bf5d9d', dsh: '0.2.1-rc.1', allowPrerelease: false },
     },

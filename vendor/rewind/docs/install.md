@@ -1,8 +1,10 @@
 # DSH Rewind — 安装与维护
 
+源码构建以 `package.json` 的完整宿主版本为准，当前默认 `0.2.1-rc.3`；SDK、组件与依赖锁必须来自同一版本。
+
 [English](install_EN.md) · [返回首页](../README.md#readme-install)
 
-**DSH 0.2.1-rc.2 · Node.js ≥22.19 · 0.1.0**
+**DSH 0.2.1-rc.3 · Node.js ≥22.19 · 0.1.0**
 
 文件恢复仅覆盖实际保留的检查点。旧消息可能只能回退对话；恢复前核对外部改动。正在生成时双击 Esc 仍执行宿主停止操作。
 
@@ -11,12 +13,12 @@
 在实际使用的实例打开 **插件 → ＋ 添加插件**，粘贴固定发行地址：
 
 ```text
-https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.3-dsh.0.2.1-rc.2/gulagala001-dsh-undo-plugin-0.1.3-dsh.0.2.1-rc.2.tgz
+https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.4-dsh.0.2.1-rc.3/gulagala001-dsh-undo-plugin-0.1.4-dsh.0.2.1-rc.3.tgz
 ```
 
 等当前任务结束后按宿主提示启用或重启，沿用原 profile、DSH_HOME、模型配置和会话。
 
-下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.3-dsh.0.2.1-rc.2/SHA256SUMS).
+下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.4-dsh.0.2.1-rc.3/SHA256SUMS).
 
 ### 首次成功检查
 
@@ -30,7 +32,7 @@ https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.3-dsh.0.2.
 使用同一 DSH 实例对应的 CLI，将 `web` 换成实际 profile。
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.3-dsh.0.2.1-rc.2/gulagala001-dsh-undo-plugin-0.1.3-dsh.0.2.1-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.4-dsh.0.2.1-rc.3/gulagala001-dsh-undo-plugin-0.1.4-dsh.0.2.1-rc.3.tgz"
 ```
 
 </details>

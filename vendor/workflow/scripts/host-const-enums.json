@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "repository": "https://github.com/deepseek-ai/deepseek-harness",
-  "commit": "687f282e8625c6b8d11ff58211a90524be2e4317",
-  "tag": "dsh-v0.2.1-rc.2",
-  "version": "0.2.1-rc.2",
+  "commit": "1f81c047fc48fa190a683e469daa699857e9afe8",
+  "tag": "dsh-v0.2.1-rc.3",
+  "version": "0.2.1-rc.3",
   "typescript": "6.0.3",
-  "sdkSourcePackageSha256": "12bb41cd8212021a784b33a20c2b84372189a9505b42081d5e3869e21ff5cffc",
+  "sdkSourcePackageSha256": "10ffa7534fc85a56ef5aff7eceaca4d10afe937d22b6cca803c7971ebccab996",
   "packages": [
     {
       "name": "@deepseek-ai/cordis",

@@ -7,6 +7,7 @@ import { computerDocumentation } from './computer-docs.mjs';
 import { modelResult } from './model-output.mjs';
 import { createObservationProjector } from './observation-output.mjs';
 import { createPlaywrightAPI } from './browser-api.mjs';
+import { createBrowserWaits } from './browser-waits.mjs';
 import { replOutput, partialReplError } from './repl-output.mjs';
 import { clickParameters } from '../../extension/click-options.js';
 import { pressParameters } from '../../extension/key-options.js';
@@ -58,6 +59,15 @@ export function createComputerRepl(request, report = () => {}) {
     run.pending.add(work);
     try { const result = await work; run.signal.throwIfAborted(); activeExecution(); return result; }
     finally { pending.delete(work); run.pending.delete(work); }
+  }
+  function trackWait(work) {
+    const run = activeExecution();
+    const result = work(run.signal);
+    pending.add(result); run.pending.add(result);
+    // Register the full wait, including intervals between backend reads. A cell
+    // cannot return while a pre-subscribed wait can still emit or call a target.
+    result.finally(() => { pending.delete(result); run.pending.delete(result); }).catch(() => {});
+    return result;
   }
   function progress() { report({ outputs: [...outputs], images: [...images], deliveries: [...deliveries], documentation: [...documentationInCell].map(computerDocumentation) }); }
   function emit(value) { activeExecution(); outputs.push(replOutput(value)); progress(); }
@@ -204,6 +214,21 @@ export function createComputerRepl(request, report = () => {}) {
         },
       });
     };
+    const navigation = createBrowserWaits({
+      supported: () => target.backend === 'browser' && target.provider !== 'extension' && !String(target.browserId).startsWith('extension:'),
+      track: trackWait,
+      state: async options => {
+        const value = (await act('navigationState',options)).result?.value;
+        if (!value || typeof value.url !== 'string' || typeof value.documentId !== 'string' || !['loading','interactive','complete'].includes(value.readyState))
+          throw Object.assign(new Error('The browser returned invalid navigation state'),{code:'INVALID_NAVIGATION_STATE'});
+        return value;
+      },
+      downloads: async (emitFiles,id) => (await call('deliveries',{emit:emitFiles,...(id ? {id} : {})})).deliveries,
+      ownsDownload: (item,state) => target.provider === 'dsh'
+        ? Number.isSafeInteger(state.webContentsId) && item.sourceWebContentsId === state.webContentsId
+        : item.targetId === target.id,
+      deliver: item => {deliveries.push(item);progress();},
+    });
     return api = {
       id: target.id, target: structuredClone(target),
       capabilities: { list: () => target.capabilities ?? [], control: () => target.control },
@@ -245,7 +270,7 @@ export function createComputerRepl(request, report = () => {}) {
         listTools: async () => { const result = (await act('siteTools')).result; emit(result); return displayed(result.tools); },
         invokeTool: async (registrationId, input) => { const result = (await act('invokeSiteTool', { registrationId, input })).result; emit(result); return displayed(result); },
       },
-      ...(target.backend !== 'native' ? { getJsDialog, playwright: createPlaywrightAPI(async (action, args) => { const result = await act(action, args); return result.result?.value; }, (value, show) => { observations.reset(); if (show) emit(value); return displayed(value); }, {signal: () => activeExecution().signal})} : {}),
+      ...(target.backend !== 'native' ? { getJsDialog, playwright: createPlaywrightAPI(async (action, args) => { const result = await act(action, args); return result.result?.value; }, (value, show) => { observations.reset(); if (show) emit(value); return displayed(value); }, {signal: () => activeExecution().signal,navigation})} : {}),
       ...(['browser', 'native'].includes(target.backend) ? {selectText,paste} : {}),
       ...(target.backend === 'native' ? {performSecondaryAction} : {}),
       act: async args => act(args.action, args),

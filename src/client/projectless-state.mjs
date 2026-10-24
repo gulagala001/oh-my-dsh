@@ -145,19 +145,23 @@ export class ProjectlessDrafts {
     this.inspections.set(id, attempt); return attempt;
   }
   shell(id) { return this.ctx.get('conversation').input.for(this.ctx.sessions.binding(id).ctx); }
-  async copySettings(from, to, signal = this.lifetime.signal) {
+  async copySettings(from, to, signal = this.lifetime.signal, requestedPreset) {
     signal.throwIfAborted();
     const source = this.ctx.sessions.binding(from).session;
     const projections = source.projections;
     await copyPermissions(source, this.ctx.sessions.binding(to).session, signal);
     signal.throwIfAborted();
-    const preset = projections.faceOf('agentPreset').getSnapshot();
+    const sourcePreset = projections.faceOf('agentPreset').getSnapshot();
+    const preset = requestedPreset ?? sourcePreset;
     const model = projections.faceOf('modelSelection').getSnapshot();
     if (preset) checked(await this.ctx.remote.agentPresets.select(to, preset));
     signal.throwIfAborted();
     const selected = model?.next ?? model?.lastUsed;
     if (selected) checked(await this.ctx.remote.session.selectModel({ sessionId: to, ...selected }));
     signal.throwIfAborted();
+    // Explicit native actions (for example Create Plugin) own their preset.
+    // Carry model and permissions, but never transplant another preset's mode.
+    if (preset !== sourcePreset) return;
     if (preset?.startsWith('omaa-')) {
       const transferred = await fetch('omaa/api/session-transfer', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
@@ -300,16 +304,26 @@ export class ProjectlessDrafts {
         signal.throwIfAborted();
         // Native blank Sessions are hidden drafts. Reuse an existing directory
         // only for this unsent carrier; send() always allocates its own cwd.
-        const cwd = this.ctx.sessions.list.getSnapshot().byId[from].cwd;
-        const id = await this.ctx.sessions.create({ cwd });
+        const source = this.ctx.sessions.binding(from).session;
+        const agentPreset = options?.agentPreset ?? source.projections.faceOf('agentPreset').getSnapshot();
+        const sessions = this.ctx.sessions.list.getSnapshot();
+        const cwd = sessions.byId[from].cwd;
+        // New Session must bring back a retained unsent draft, including its
+        // settings and attachments. Never adopt another preset or an admitted
+        // first send merely because its carrier still looks blank.
+        const reusable = Object.keys(this.drafts).find(id => this.isDraft(id) && !this.isBusy(id)
+          && sessions.byId[id]?.blank === true && sessions.byId[id]?.projectionValues?.agentPreset === agentPreset);
+        const id = reusable ?? await this.ctx.sessions.create({ cwd, agentPreset });
         signal.throwIfAborted();
         targetRef = this.ctx.sessions.retain(id, { source: 'workspaceOperation', signal });
         await targetRef.ready;
         signal.throwIfAborted();
-        await this.copySettings(from, id, signal);
+        if (!reusable) await this.copySettings(from, id, signal, agentPreset);
         signal.throwIfAborted();
         this.mark(id);
-        if (options) initializeDraft(this.ctx.get('conversation'), targetRef.binding, options);
+        if (options && initializeDraft(this.ctx.get('conversation'), targetRef.binding, options) === 'blocked') {
+          throw Error('草稿正在提交，请稍后重试；现有草稿已保留');
+        }
         signal.throwIfAborted();
         this.ctx.uiWorkspace.openSession(id);
       } catch (error) { if (!signal.aborted) this.shell(from).notify('error', error.message); }

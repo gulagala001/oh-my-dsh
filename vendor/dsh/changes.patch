@@ -30,7 +30,7 @@ index 90b26c19..445c032a 100644
        },
      }, {
 diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
-index e567bd1a..9d57a00f 100644
+index 6594c958..b4d89667 100644
 --- a/packages/client/ui-conversation/src/client/apply.ts
 +++ b/packages/client/ui-conversation/src/client/apply.ts
 @@ -1,6 +1,7 @@
@@ -42,7 +42,7 @@ index e567bd1a..9d57a00f 100644
  import z from '@deepseek-ai/schemastery'
  import type { ISessions, SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
  import { IconPaperclipOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
-@@ -57,17 +58,19 @@
+@@ -58,17 +59,19 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
  
  /** Services required by the Conversation plugin. */
  export const inject = [
@@ -63,7 +63,7 @@ index e567bd1a..9d57a00f 100644
    maxConcurrentFileUploads: z.natural().min(1).default(2),
  })
  
-@@ -152,9 +155,13 @@
+@@ -153,9 +156,13 @@ function concreteConversation(ctx: Context): ConversationController {
   * Mount the Conversation core and target-neutral presentation.
   * @param ctx - Client root context.
   */
@@ -78,7 +78,7 @@ index e567bd1a..9d57a00f 100644
    // Schemastery's field default is materialized before Cordis calls apply.
    const maxConcurrentFileUploads = config.maxConcurrentFileUploads as number
    const workspaceNavigation = ctx.get('uiWorkspace') as unknown as WorkspaceNavigation
-@@ -188,7 +195,7 @@
+@@ -189,7 +196,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
    const t = ctx.locale.bind(NS)
    const conversationStore = createConversationStore()
    const submissionPolicy = new ComposerSubmissionPolicy(
@@ -87,7 +87,7 @@ index e567bd1a..9d57a00f 100644
    )
  
    ctx.effect(() => () => { submissionPolicy.dispose() })
-@@ -308,6 +315,10 @@
+@@ -314,6 +321,10 @@ export function apply(ctx: Context, config: Config = Config({})): void {
  
    // Conversation assembly and input share the Session binding lifecycle. The
    // source roster is installed before any consuming Slot entry.
@@ -98,7 +98,7 @@ index e567bd1a..9d57a00f 100644
    ctx.uiSession.provide({
      hooks: ['conversation', 'input'],
      props: ['inputActions'],
-@@ -557,12 +568,21 @@
+@@ -565,12 +576,21 @@ export function apply(ctx: Context, config: Config = Config({})): void {
      },
    }, InputBar)
  
@@ -121,7 +121,7 @@ index e567bd1a..9d57a00f 100644
      yield registerConversationRoot()
      yield registerConversationContent()
      yield registerConversationSession()
-@@ -571,11 +591,14 @@
+@@ -579,11 +599,14 @@ export function apply(ctx: Context, config: Config = Config({})): void {
      yield registerComposerBar()
    })
  
@@ -138,7 +138,7 @@ index e567bd1a..9d57a00f 100644
    ctx.plugin(queueDockEntry)
  }
 diff --git a/packages/client/ui-conversation/src/client/contract/input.ts b/packages/client/ui-conversation/src/client/contract/input.ts
-index 9b9502bf..bdfb575d 100644
+index c01ed5f9..5ef87260 100644
 --- a/packages/client/ui-conversation/src/client/contract/input.ts
 +++ b/packages/client/ui-conversation/src/client/contract/input.ts
 @@ -35,6 +35,12 @@ export interface SubmitOutcome {
@@ -196,10 +196,10 @@ index b2abf131..4a77859d 100644
      const writable = this.getWritable()
      writable.__invalid = invalid
 diff --git a/packages/client/ui-conversation/src/client/input/editor/runtime.ts b/packages/client/ui-conversation/src/client/input/editor/runtime.ts
-index 7cd85c05..30114ca5 100644
+index 31116db7..ad6bef09 100644
 --- a/packages/client/ui-conversation/src/client/input/editor/runtime.ts
 +++ b/packages/client/ui-conversation/src/client/input/editor/runtime.ts
-@@ -254,6 +254,16 @@ export class DraftEditorRuntime {
+@@ -280,6 +280,16 @@ export class DraftEditorRuntime {
     * @param tail - the character following the range before editing.
     * @returns whether the range mapped and the edit applied.
     */
@@ -217,7 +217,7 @@ index 7cd85c05..30114ca5 100644
      let applied = false
      this.applyEdit(() => {
 diff --git a/packages/client/ui-conversation/src/client/input/facade.ts b/packages/client/ui-conversation/src/client/input/facade.ts
-index a0d772da..eaae7f58 100644
+index 1965b30d..ba712057 100644
 --- a/packages/client/ui-conversation/src/client/input/facade.ts
 +++ b/packages/client/ui-conversation/src/client/input/facade.ts
 @@ -16,11 +16,11 @@ import {
@@ -280,7 +280,7 @@ index a0d772da..eaae7f58 100644
        }
        this.dispatchRun(({ type: 'draft-changed', command: this.projection.command }))
      }
-@@ -376,6 +383,19 @@ export class SessionInputShell implements SessionInput {
+@@ -383,6 +390,19 @@ export class SessionInputShell implements SessionInput {
      this.draftEditor.paste(text)
    }
  
@@ -300,7 +300,7 @@ index a0d772da..eaae7f58 100644
    /**
     * Enter adjudication + submit transaction + default sink. Effects fan out
     * from the machine; this method only feeds the event. Lock entry
-@@ -530,6 +550,12 @@ export class SessionInputShell implements SessionInput {
+@@ -537,6 +557,12 @@ export class SessionInputShell implements SessionInput {
     * @param span - pick-time span snapshot (detect coordinates).
     * @returns whether the edit applied.
     */
@@ -313,7 +313,7 @@ index a0d772da..eaae7f58 100644
    insertReference(ref: ReferenceInsert, span: TokenSpan): boolean {
      const phase = this.core.state.phase
      if (phase !== 'plain' && phase !== 'claimed') return false
-@@ -538,6 +564,26 @@ export class SessionInputShell implements SessionInput {
+@@ -545,6 +571,26 @@ export class SessionInputShell implements SessionInput {
      return this.draftEditor.insertReference(span, ref, tail)
    }
  
@@ -340,7 +340,7 @@ index a0d772da..eaae7f58 100644
    /**
     * Consume one command token after business success (scoped consume-token
     * event listener body). Span guard: revision CAS then splice; bare-token
-@@ -617,7 +663,9 @@ export class SessionInputShell implements SessionInput {
+@@ -624,7 +670,9 @@ export class SessionInputShell implements SessionInput {
      this.unsubscribeInbox?.()
      this.unregister()
      this.detachedDrafts.clear()
@@ -350,7 +350,7 @@ index a0d772da..eaae7f58 100644
      this.attachmentFlights.clear()
      return [...retained]
    }
-@@ -678,6 +726,7 @@ export class SessionInputShell implements SessionInput {
+@@ -685,6 +733,7 @@ export class SessionInputShell implements SessionInput {
  
    private run(effects: readonly InputEffect[]): void {
      for (const fx of effects) this.execute(fx)
@@ -358,7 +358,7 @@ index a0d772da..eaae7f58 100644
      this.publish()
    }
  
-@@ -739,9 +788,11 @@ export class SessionInputShell implements SessionInput {
+@@ -746,9 +795,11 @@ export class SessionInputShell implements SessionInput {
      const occurrences = this.projection.occurrences
      const record = { draft, occurrences, attachmentIds }
      this.detachedDrafts.set(attempt.seq, record)
@@ -371,7 +371,7 @@ index a0d772da..eaae7f58 100644
      }
      if (occurrences.length === 0) {
        this.settleSink(attempt, this.deps.defaultSink(draft.trim(), attachmentIds, mode, attempt.signal))
-@@ -797,6 +848,7 @@ export class SessionInputShell implements SessionInput {
+@@ -804,6 +855,7 @@ export class SessionInputShell implements SessionInput {
          }
          this.detachedDrafts.delete(attempt.seq)
          this.dispatchRun(({ type: 'sink-settled', attempt, ok: true, outcome }))
@@ -379,7 +379,7 @@ index a0d772da..eaae7f58 100644
        },
        (error: unknown) => {
          if (this.dead(attempt)) return
-@@ -805,27 +857,27 @@ export class SessionInputShell implements SessionInput {
+@@ -812,27 +864,27 @@ export class SessionInputShell implements SessionInput {
      )
    }
  
@@ -416,7 +416,7 @@ index a0d772da..eaae7f58 100644
        const base = draft.length + (draft === '' ? 0 : separator.length)
        if (draft !== '') draft += separator
        draft += record.draft
-@@ -833,24 +885,37 @@ export class SessionInputShell implements SessionInput {
+@@ -840,24 +892,37 @@ export class SessionInputShell implements SessionInput {
          occurrences.push({ ...occurrence, offset: base + occurrence.offset })
        }
      }
@@ -458,7 +458,7 @@ index a0d772da..eaae7f58 100644
    }
  
    /** Enter adjudication: poll the session controller; failure = notice + draft retained (never a silent downgrade). */
-@@ -889,11 +954,14 @@ export class SessionInputShell implements SessionInput {
+@@ -896,11 +961,14 @@ export class SessionInputShell implements SessionInput {
          // Serialization may outlive the attempt (large files, session
          // teardown); a dead attempt must not reach the Host executor.
          if (this.dead(attempt)) return undefined
@@ -473,7 +473,7 @@ index a0d772da..eaae7f58 100644
            if (outcome.kind === 'success' && attachmentIds.length > 0) {
              const submitted = new Set(attachmentIds)
              this.attachmentIds = this.attachmentIds.filter(id => !submitted.has(id))
-@@ -907,6 +975,7 @@ export class SessionInputShell implements SessionInput {
+@@ -914,6 +982,7 @@ export class SessionInputShell implements SessionInput {
          },
          (error: unknown) => {
            if (this.dead(attempt)) return
@@ -481,7 +481,7 @@ index a0d772da..eaae7f58 100644
            const message = error instanceof Error ? error.message : String(error)
            this.dispatchRun(({
              type: 'submit-settled', attempt, ok: false,
-@@ -937,7 +1006,9 @@ export class SessionInputShell implements SessionInput {
+@@ -944,7 +1013,9 @@ export class SessionInputShell implements SessionInput {
    private publish(): void {
      const next = this.compose()
      this.state.set(next)
@@ -493,7 +493,7 @@ index a0d772da..eaae7f58 100644
        this.lastPublishedDraft = draft
        this.persistDraft?.(draft)
 diff --git a/packages/client/ui-conversation/src/client/input/hub.ts b/packages/client/ui-conversation/src/client/input/hub.ts
-index fb8d8a73..52cc27fc 100644
+index 84aa9a4f..9067275b 100644
 --- a/packages/client/ui-conversation/src/client/input/hub.ts
 +++ b/packages/client/ui-conversation/src/client/input/hub.ts
 @@ -2,7 +2,7 @@
@@ -505,15 +505,15 @@ index fb8d8a73..52cc27fc 100644
   */
  import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
  import type { ModelSelectionProjection } from '@deepseek-ai/dsh-api-session-controller/types'
-@@ -24,6 +24,7 @@
+@@ -24,6 +24,7 @@ import type { ComposerKeyboard } from '../contract/draft-editor.ts'
  import type { InputSubmitMode } from '../contract/composer-submission.ts'
  import type { PopupDismissFace } from './facade.ts'
  import { SessionInputShell } from './facade.ts'
 +import type { InputDraft } from './facade.ts'
  import { reportMessageSubmission } from './submission-analytics.ts'
  import { readConversationDraft } from '../stores.ts'
-
-@@ -54,6 +55,10 @@
+ 
+@@ -54,6 +55,10 @@ interface ConversationAttachmentFace {
  /** Session-addressed input facade registry (SessionInputResolver face + composer-layer extras). */
  export class InputHub implements SessionInputResolver {
    private readonly shells = new WeakMap<SessionBinding, SessionInputShell>()
@@ -521,10 +521,10 @@ index fb8d8a73..52cc27fc 100644
 +  /** Unsent data survives navigation without holding editors, scopes, or history subscriptions. */
 +  private readonly drafts = new Map<SessionId, InputDraft>()
 +  private closed = false
-
+ 
    /**
     * @param ctx - client root context (services resolved lazily per call — boot order stays free).
-@@ -62,8 +67,33 @@
+@@ -62,7 +67,32 @@ export class InputHub implements SessionInputResolver {
    constructor(
      private readonly rootCtx: Context,
      private readonly t: TranslateNS<'conversation'>,
@@ -546,7 +546,7 @@ index fb8d8a73..52cc27fc 100644
 +      }
 +    }, 'conversation.input: inactive drafts')
 +  }
-
++
 +  /** Release an inactive draft on Session deletion or plugin teardown. */
 +  private releaseDraft(id: SessionId): void {
 +    const draft = this.drafts.get(id)
@@ -555,12 +555,11 @@ index fb8d8a73..52cc27fc 100644
 +    const conversation = this.rootCtx.get('conversation') as ConversationAttachmentFace | undefined
 +    for (const attachmentId of draft.attachmentIds) conversation?.releaseDraftAttachment(attachmentId)
 +  }
-+
+ 
    /**
     * Resolve the facade for one session-scope ctx (SessionInputResolver face).
-    * @param actx - session-scope context.
-@@ -88,12 +118,13 @@
-
+@@ -88,12 +118,13 @@ export class InputHub implements SessionInputResolver {
+ 
    /**
     * Resolve the resident shell for an already-retained, addressable Session binding.
 -   * Draft import completes before return. The Session scope owns input listeners,
@@ -575,7 +574,7 @@ index fb8d8a73..52cc27fc 100644
      const existing = this.shells.get(binding)
      if (existing !== undefined) return existing
      const { session, ctx: actx } = binding
-@@ -140,9 +171,16 @@
+@@ -143,9 +174,16 @@ export class InputHub implements SessionInputResolver {
        },
      })
      this.shells.set(binding, shell)
@@ -595,7 +594,7 @@ index fb8d8a73..52cc27fc 100644
        const offs = [
          actx.on('slash/input-begin-command', req =>
            shell.beginCommand(req.claim, req.span) ? true : undefined),
-@@ -153,21 +191,31 @@
+@@ -156,21 +194,31 @@ export class InputHub implements SessionInputResolver {
          actx.on('slash/input-insert-text', req =>
            shell.insertText(req.text, req.span, req.continue === true) ? true : undefined),
        ]
@@ -634,9 +633,9 @@ index fb8d8a73..52cc27fc 100644
 +    if (saved === undefined) shell.setDraft(readConversationDraft(binding.sessionId))
      return shell
    }
-
+ 
 diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
-index f1f70807..2a4c0cf8 100644
+index 938326df..3cdb22cf 100644
 --- a/packages/client/ui-conversation/src/client/locales.ts
 +++ b/packages/client/ui-conversation/src/client/locales.ts
 @@ -28,6 +28,7 @@ export const zh = {
@@ -647,7 +646,7 @@ index f1f70807..2a4c0cf8 100644
    'input.send.steer': '插话发送',
    'attachment.pending': '待发送附件',
    'attachment.scrollLeft': '向左滚动附件',
-@@ -408,6 +409,7 @@ export const en = {
+@@ -410,6 +411,7 @@ export const en = {
    'input.stop': 'Stop generating',
    'input.send': 'Send message',
    'input.send.queue': 'Queue message',
@@ -1714,6 +1713,7 @@ index be50e88e..3906ab93 100644
    await drain()
    return progressError === undefined ? result : {
 diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/workflow-ptc/src/host.ts
+index 7a2266e7..0108ca69 100644
 --- a/packages/workflow/workflow-ptc/src/host.ts
 +++ b/packages/workflow/workflow-ptc/src/host.ts
 @@ -1,11 +1,13 @@
@@ -1731,7 +1731,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
  import type { SubagentActivation } from '@deepseek-ai/dsh-subagent'
  import { assertObjectJsonSchema } from '@deepseek-ai/dsh-tools'
  import type { ObjectJsonSchema } from '@deepseek-ai/dsh-tools'
-@@ -16,11 +18,33 @@
+@@ -16,11 +18,33 @@ import type { WorkflowProgress } from './guest-types.ts'
  import { renderThrown } from './realm.ts'
  import type { ExecutionObserver } from './runtime.ts'
  import type { ChildStartRequest, WorkerInit } from './types.ts'
@@ -1765,7 +1765,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
  }
  
  const GUEST_URL = `data:text/javascript,${encodeURIComponent(WORKFLOW_GUEST_SOURCE)}`
-@@ -47,6 +71,16 @@
+@@ -47,6 +71,16 @@ function childRequest(value: unknown): ChildStartRequest {
    const prompt = text(request.prompt, 'prompt')
    const provider = request.provider === undefined ? undefined : text(request.provider, 'provider')
    const model = request.model === undefined ? undefined : text(request.model, 'model')
@@ -1782,7 +1782,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
    let schema: ObjectJsonSchema | undefined
    if (request.schema !== undefined) {
      const candidate = object(request.schema)
-@@ -54,10 +88,14 @@
+@@ -54,10 +88,14 @@ function childRequest(value: unknown): ChildStartRequest {
      schema = candidate
    }
    return {
@@ -1797,7 +1797,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
    }
  }
  
-@@ -110,8 +148,32 @@
+@@ -110,8 +148,32 @@ function workflowResult(value: unknown): WorkflowResult {
   * its managed process and every admitted child startup/disposal. Engine unload does not
   * invalidate the captured runtime or subagent handles.
   */
@@ -1830,7 +1830,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
    private readonly controller = new AbortController()
    private readonly children = new Map<number, ChildRecord>()
    private readonly pending = new Set<Promise<unknown>>()
-@@ -121,11 +183,19 @@
+@@ -121,11 +183,19 @@ export class PtcWorkflowRun implements WorkflowRun {
    private cancelReason: string | undefined
    private disposed: Promise<void> | undefined
    private readonly externalAbort: () => void
@@ -1851,7 +1851,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
      private readonly runtime: PtcRuntime,
      readonly id: WorkflowRunId,
      readonly meta: WorkflowMeta,
-@@ -135,7 +205,10 @@
+@@ -135,7 +205,10 @@ export class PtcWorkflowRun implements WorkflowRun {
      private readonly policy: SandboxExecutionPolicy,
      private readonly observer: ExecutionObserver,
      private readonly signal?: AbortSignal,
@@ -1862,7 +1862,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
      this.externalAbort = () => { this.cancel('workflow signal aborted') }
      if (signal?.aborted) this.externalAbort()
      else signal?.addEventListener('abort', this.externalAbort, { once: true })
-@@ -178,7 +251,20 @@
+@@ -178,7 +251,20 @@ export class PtcWorkflowRun implements WorkflowRun {
    private bindings(): Record<string, PtcBindingFunction> {
      return {
        begin: () => { this.requireActive(); return Promise.resolve(json(this.init)) },
@@ -1884,7 +1884,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
        childResult: value => this.track(this.childResult(this.child(value))),
        disposeChild: async (value) => { await this.disposeChild(this.child(value)); return null },
        progress: (value) => {
-@@ -199,25 +285,59 @@
+@@ -199,25 +285,59 @@ export class PtcWorkflowRun implements WorkflowRun {
  
    private async startChild(request: ChildStartRequest): Promise<PtcJsonValue> {
      this.requireActive()
@@ -1960,7 +1960,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
      const record: ChildRecord = { callId, run }
      this.children.set(callId, record)
      // A provider can publish after the signal fired while startup was pending.
-@@ -228,7 +348,12 @@
+@@ -228,7 +348,12 @@ export class PtcWorkflowRun implements WorkflowRun {
      return { callId, childId: run.childId }
    }
  
@@ -1974,7 +1974,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
      const signal = this.controller.signal
      signal.throwIfAborted()
      const aborted = Promise.withResolvers<never>()
-@@ -236,18 +361,44 @@
+@@ -236,18 +361,44 @@ export class PtcWorkflowRun implements WorkflowRun {
      signal.addEventListener('abort', onAbort, { once: true })
      try {
        const result = await Promise.race([record.run.result, aborted.promise])
@@ -2023,7 +2023,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
        this.ctx.logger.warn(`workflow-ptc: child dispose failed: ${renderThrown(error)}`)
      }).finally(() => {
        this.children.delete(record.callId)
-@@ -272,6 +423,16 @@
+@@ -272,6 +423,16 @@ export class PtcWorkflowRun implements WorkflowRun {
  
    private endAgent(info: WorkflowAgentEndInfo): void {
      if (!this.liveAgents.delete(info.seq)) return
@@ -2040,7 +2040,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
      this.observer.agentEnd(info)
    }
  
-@@ -287,6 +448,15 @@
+@@ -287,6 +448,15 @@ export class PtcWorkflowRun implements WorkflowRun {
        if (this.runtime.sandboxMode === undefined && this.policy.mode !== 'danger-full-access') {
          throw new Error(`workflow runtime cannot enforce the ${this.policy.mode} file policy`)
        }
@@ -2056,7 +2056,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
        const outcome = await this.runtime.run(this.runtime.resolve({
          program: this.runtime.programFormat === 'repl' ? `await (async () => {\n${PROGRAM}\n})()` : PROGRAM,
          bindings: [{ global: 'workflowHost', functions: this.bindings() }],
-@@ -300,6 +470,7 @@
+@@ -300,6 +470,7 @@ export class PtcWorkflowRun implements WorkflowRun {
        else if (outcome.error !== undefined) result = { value: null, stopReason: 'error', error: `workflow execution failed (${outcome.error.kind}): ${outcome.error.message}`, agentsStarted: this.started }
        else result = workflowResult(outcome.value)
      } catch (error: unknown) {
@@ -2064,7 +2064,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
        this.terminal = true
        result = this.cancelReason === undefined
          ? { value: null, stopReason: 'error', error: renderThrown(error), agentsStarted: this.started }
-@@ -315,6 +486,15 @@
+@@ -315,6 +486,15 @@ export class PtcWorkflowRun implements WorkflowRun {
        this.children.clear()
        for (const info of this.liveAgents.values()) this.endAgent({ ...info, outcome: 'cancelled' })
      }
@@ -2081,7 +2081,7 @@ diff --git a/packages/workflow/workflow-ptc/src/host.ts b/packages/workflow/work
    }
  }
 diff --git a/packages/workflow/workflow-ptc/src/index.ts b/packages/workflow/workflow-ptc/src/index.ts
-index 9bd42169..6482e5a0 100644
+index 9bd42169..99fa8420 100644
 --- a/packages/workflow/workflow-ptc/src/index.ts
 +++ b/packages/workflow/workflow-ptc/src/index.ts
 @@ -5,20 +5,30 @@
@@ -2256,9 +2256,10 @@ index 68bc19fb..b9dce0b5 100644
      // A throwing accessor/toString on the thrown value — rendering must be
      // total (drive()'s never-reject contract), so fall back to a fixed label.
 diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/workflow-ptc/src/runtime.ts
+index 71c153e5..7ec13ba0 100644
 --- a/packages/workflow/workflow-ptc/src/runtime.ts
 +++ b/packages/workflow/workflow-ptc/src/runtime.ts
-@@ -30,9 +30,14 @@
+@@ -30,9 +30,14 @@ export interface ExecutionObserver {
  }
  
  /** The `agent()` options the script may pass; everything else rejects loud. */
@@ -2276,7 +2277,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
  
  /** Flatten a child's final output blocks to text (the non-schema `agent()` result). */
  function outputText(blocks: ContentBlock[]): string {
-@@ -55,9 +60,6 @@
+@@ -55,9 +60,6 @@ function defaultLabel(prompt: string): string {
   */
  export class WorkflowExecution {
    /** 1-based count of `agent()` calls started (the `agentsStarted` result field). */
@@ -2286,7 +2287,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
    private currentPhase: string | undefined
    private readonly context: vm.Context
    private readonly compiled: vm.Script
-@@ -69,6 +71,8 @@
+@@ -69,6 +71,8 @@ export class WorkflowExecution {
      private readonly limits: WorkerLimits,
      private readonly observer: ExecutionObserver,
      private readonly children: ChildPort,
@@ -2295,7 +2296,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
    ) {
      // The host parses this same wrapper before publishing a run.
      try {
-@@ -81,6 +85,7 @@
+@@ -81,6 +85,7 @@ export class WorkflowExecution {
      }
  
      this.context = vm.createContext({}, { name: `workflow:${meta.name}` })
@@ -2303,7 +2304,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
  
      const globals: Record<string, unknown> = {
        agent: (prompt: unknown, opts?: unknown) => this.contain(this.agent(prompt, opts)),
-@@ -88,6 +93,12 @@
+@@ -88,6 +93,12 @@ export class WorkflowExecution {
        pipeline: (items: unknown, ...stages: unknown[]) => this.contain(this.pipeline(items, stages)),
        phase: (title: unknown) => { this.phase(title) },
        log: (message: unknown) => { this.log(message) },
@@ -2316,7 +2317,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
        // PTC has already copied these inputs through its JSON channel.
        args,
      }
-@@ -96,6 +107,20 @@
+@@ -96,6 +107,20 @@ export class WorkflowExecution {
        // a script overwriting its own hooks only sabotages itself.
        ;(this.context as Record<string, unknown>)[key] = typeof value === 'function' ? Object.freeze(value) : value
      }
@@ -2337,7 +2338,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
    }
  
    /**
-@@ -107,9 +132,9 @@
+@@ -107,9 +132,9 @@ export class WorkflowExecution {
        const scriptPromise = this.compiled.runInContext(this.context, { timeout: this.limits.syncTimeoutMs }) as Promise<unknown>
        const raw: unknown = await this.contain(Promise.resolve(scriptPromise))
        const value = raw === undefined ? null : this.materializeResult(raw)
@@ -2349,7 +2350,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      }
    }
  
-@@ -141,21 +166,21 @@
+@@ -141,21 +166,21 @@ export class WorkflowExecution {
  
    /** Acquire one concurrency slot in FIFO order. */
    private acquireSlot(): Promise<void> {
@@ -2377,7 +2378,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      if (next) next()
    }
  
-@@ -165,15 +190,15 @@
+@@ -165,15 +190,15 @@ export class WorkflowExecution {
        throw new WorkflowError('agent() requires a non-empty prompt string', 'INVALID_ARGUMENT')
      }
      const opts = this.readAgentOptions(rawOpts)
@@ -2397,7 +2398,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      const phase = opts.phase ?? this.currentPhase
  
      await this.acquireSlot()
-@@ -181,10 +206,15 @@
+@@ -181,10 +206,15 @@ export class WorkflowExecution {
        let run: ChildHandle
        try {
          run = await this.children.startAgent({
@@ -2413,7 +2414,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
          })
        } catch (error: unknown) {
          throw new WorkflowError(`agent() could not start a child: ${renderThrown(error)}`, 'AGENT_START', { cause: error })
-@@ -195,6 +225,8 @@
+@@ -195,6 +225,8 @@ export class WorkflowExecution {
          let result
          try {
            result = await run.result
@@ -2422,7 +2423,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
          } catch (error: unknown) {
            // A rejected child result is an INFRASTRUCTURE fault relayed by the
            // host — distinct from a child that failed and resolved. Pair the
-@@ -234,6 +266,9 @@
+@@ -234,6 +266,9 @@ export class WorkflowExecution {
      phase?: string
      provider?: string
      model?: string
@@ -2432,7 +2433,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      schema?: ObjectJsonSchema
    } {
      if (rawOpts === undefined) return {}
-@@ -251,16 +286,17 @@
+@@ -251,16 +286,17 @@ export class WorkflowExecution {
      const record = opts as Record<string, unknown>
      for (const key of Object.keys(record)) {
        if (SUPPORTED_AGENT_OPTIONS.has(key)) continue
@@ -2440,10 +2441,9 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
 -        throw new WorkflowError(`agent() option "${key}" is deferred and not supported by this engine (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
 -      }
 -      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
--    }
--    for (const key of ['label', 'phase', 'provider', 'model'] as const) {
 +      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: ${[...SUPPORTED_AGENT_OPTIONS].join(', ')})`, 'UNSUPPORTED_OPTION')
-+    }
+     }
+-    for (const key of ['label', 'phase', 'provider', 'model'] as const) {
 +    for (const key of ['label', 'phase', 'provider', 'model', 'effort', 'agentType'] as const) {
        if (record[key] !== undefined && typeof record[key] !== 'string') {
          throw new WorkflowError(`agent() option "${key}" must be a string`, 'INVALID_ARGUMENT')
@@ -2456,7 +2456,7 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
      let schema: ObjectJsonSchema | undefined
      if (record.schema !== undefined) {
        try {
-@@ -277,8 +313,29 @@
+@@ -277,10 +313,31 @@ export class WorkflowExecution {
        ...record.phase !== undefined ? { phase: record.phase as string } : {},
        ...record.provider !== undefined ? { provider: record.provider as string } : {},
        ...record.model !== undefined ? { model: record.model as string } : {},
@@ -2465,8 +2465,8 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
 +      ...record.agentType !== undefined ? { agentType: record.agentType as string } : {},
        ...schema !== undefined ? { schema } : {},
      }
-+  }
-+
+   }
+ 
 +  private async workflow(rawReference: unknown, rawArgs: unknown): Promise<unknown> {
 +    if (this.depth !== 0) throw new WorkflowError('workflow() nesting is limited to one level', 'INVALID_ARGUMENT')
 +    const ref = materializeFromRealm(rawReference, 'workflow reference')
@@ -2483,13 +2483,16 @@ diff --git a/packages/workflow/workflow-ptc/src/runtime.ts b/packages/workflow/w
 +    const result = await new WorkflowExecution(source.meta, source.body, input, this.limits, observer, this.children, this.shared, 1).drive()
 +    if (result.stopReason !== 'completed') throw new WorkflowError(result.error ?? 'Nested workflow failed', 'AGENT_RESULT')
 +    return result.value
-   }
- 
++  }
++
    /** The `parallel(thunks)` hook: each thunk caught → `null`; fatal errors propagate. */
+   private async parallel(rawThunks: unknown): Promise<unknown[]> {
+     if (!Array.isArray(rawThunks)) {
 diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/workflow-ptc/src/types.ts
+index c8e3e393..c136b908 100644
 --- a/packages/workflow/workflow-ptc/src/types.ts
 +++ b/packages/workflow/workflow-ptc/src/types.ts
-@@ -32,10 +32,15 @@
+@@ -32,10 +32,15 @@ export interface WorkerInit {
    args?: unknown
    /** The guest helper limits. */
    limits: WorkerLimits
@@ -2505,7 +2508,7 @@ diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/wor
    /** The child's prompt text. */
    prompt: string
    /** The structured-output schema, if the call passed one (already subset-checked). */
-@@ -44,6 +49,9 @@
+@@ -44,6 +49,9 @@ export interface ChildStartRequest {
    provider?: string
    /** The per-child model override, if the call passed one. */
    model?: string
@@ -2515,7 +2518,7 @@ diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/wor
  }
  
  /**
-@@ -58,6 +66,12 @@
+@@ -58,6 +66,12 @@ export interface ChildResult {
    structured?: unknown
    /** Why the child run ended (`'completed'` is the only value the runtime branches on). */
    stopReason: string
@@ -2528,7 +2531,7 @@ diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/wor
  }
  
  /**
-@@ -87,4 +101,5 @@
+@@ -87,4 +101,5 @@ export interface ChildPort {
     *   provider's asynchronous start fails.
     */
    startAgent(request: ChildStartRequest): Promise<ChildHandle>
@@ -2536,7 +2539,7 @@ diff --git a/packages/workflow/workflow-ptc/src/types.ts b/packages/workflow/wor
  }
 diff --git a/packages/client/ui-conversation/src/client/skeleton/background-wait.ts b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
 new file mode 100644
-index 00000000..35956926
+index 00000000..bde09500
 --- /dev/null
 +++ b/packages/client/ui-conversation/src/client/skeleton/background-wait.ts
 @@ -0,0 +1,36 @@
@@ -2801,7 +2804,7 @@ index 00000000..e5d146e7
 +}
 diff --git a/packages/workflow/workflow-ptc/src/spawn.ts b/packages/workflow/workflow-ptc/src/spawn.ts
 new file mode 100644
-index 00000000..0d0edb72
+index 00000000..53a63dc0
 --- /dev/null
 +++ b/packages/workflow/workflow-ptc/src/spawn.ts
 @@ -0,0 +1,222 @@

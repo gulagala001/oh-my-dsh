@@ -90,7 +90,7 @@ export class OpenCUCursors {
     const bounds = display.bounds
     if (location.x < bounds.x || location.y < bounds.y || location.x >= bounds.x + bounds.width || location.y >= bounds.y + bounds.height) throw new Error('The cursor lies outside the connected display')
     const record = this.records.get(sender) ?? this.create(sender), revision = ++record.revision
-    clearTimeout(record.hideTimer); record.hideTimer = undefined; record.hiding = undefined
+    clearTimeout(record.hideTimer); delete record.hideTimer; delete record.hiding
     await record.ready
     if (record.window.isDestroyed() || revision !== record.revision) return { visible: false }
     record.window.setBounds(bounds, false)

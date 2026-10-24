@@ -1,3 +1,5 @@
+import {readCDPFrameOwners} from './frame-router.js';
+
 const stale = message => Object.assign(new Error(message), {code:'STALE_OBSERVATION',details:{inputDispatched:false}});
 
 /** A backend node belongs to one real frame document, never just a CDP number. */
@@ -20,29 +22,7 @@ export async function captureAXTree(send, router, check = () => {}) {
     return {nodes:nodes.filter(node=>!node.ignored).map(node=>({node,key:axElementKey(node.backendDOMNodeId)})),validate:async()=>{check();}};
   }
   const snapshots = [], visited = new Set();
-  const readOwners = async route => {
-    check();
-    const reply = await route.send('Runtime.evaluate',{contextId:route.contextId,expression:'document'});
-    if (reply.exceptionDetails || !reply.result?.objectId) throw stale('An observed frame document is no longer available');
-    const objectId = reply.result.objectId;
-    try {
-      // Page.getFrameTree omits OOPIFs. Read actual DOM owners from this exact
-      // document instead; ARIA can also change an iframe's AX role to button.
-      const {node} = await route.send('DOM.describeNode',{objectId,depth:-1,pierce:true});
-      check();
-      const owners = [], pending = [node];
-      while (pending.length) {
-        const node = pending.pop(), frameId = node.frameId ?? node.contentDocument?.frameId;
-        if (frameId && frameId !== route.frameId || /^(?:IFRAME|FRAME)$/u.test(node.nodeName)) {
-          owners.push({backendNodeId:node.backendNodeId,frameId});
-          continue; // Another document's owners belong to its own routed read.
-        }
-        const children = [...node.children ?? [],...node.shadowRoots ?? []];
-        for (let index = children.length-1; index >= 0; index--) pending.push(children[index]);
-      }
-      return owners;
-    } finally {await route.send('Runtime.releaseObject',{objectId}).catch(()=>{});}
-  };
+  const readOwners = route => readCDPFrameOwners(route,check);
   const visit = async route => {
     check();
     if (visited.has(route.frameId)) throw stale('Frame ancestry changed during accessibility observation');

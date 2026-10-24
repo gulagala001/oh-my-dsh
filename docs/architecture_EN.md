@@ -1,10 +1,10 @@
 # Plugin Architecture and Installation Choices
 
-[简体中文](architecture.md) · [Documentation](README_EN.md) · [Plugin compatibility](plugin-compatibility_EN.md) · [0.100.0 release notes](release-0.100.0.md#en-01000)
+[简体中文](architecture.md) · [Documentation](README_EN.md) · [Plugin compatibility](plugin-compatibility_EN.md) · [0.100.0 release notes](release-0.100.1.md#en-01001)
 
 OMD organizes these features through dedicated plugin entry points. Workflow, turn rewind, personalities, extension management and the web workbench have their own plugin entry points. Theme management and Glyph also have independent product forms. OMD provides a composed workspace, while each independent product has its own purpose, host requirements and releases.
 
-This page describes the OMD 0.100.0 plugin structure and formal releases. Glyph is included in the theme plugin.
+This page describes the OMD 0.100.1 plugin structure and formal releases. Glyph is included in the theme plugin.
 
 ## Products you can choose independently
 

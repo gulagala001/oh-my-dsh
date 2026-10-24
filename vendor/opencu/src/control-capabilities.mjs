@@ -5,7 +5,10 @@ const browser = Object.freeze({ defaultInputMode: 'background', selectionActivat
 
 /** Describe routes, not a promise that every application accepts every action. */
 export function controlCapabilities(target) {
-  if (target.kind === 'tab' && ['browser', 'extension'].includes(target.backend)) return browser;
+  if (target.kind === 'tab' && ['browser', 'extension'].includes(target.backend)) return {...browser,
+    waits: target.provider === 'extension' || target.backend === 'extension'
+      ? {navigation:false,download:false,reason:'Extension identity is document scoped; download history is browser wide. Use inventory and cua.downloads.list().'}
+      : {navigation:['commit','domcontentloaded','load'],download:'New target-owned download; verified complete file attachment. path() returns null; private storage paths are not exposed.',networkidle:false}};
   if (target.backend !== 'native') return undefined;
   const platform = target.platform, window = target.windowId != null;
   const axExtensions = platform === 'darwin' && target.kind !== 'desktop' ? ['selectText', 'paste', 'performSecondaryAction'] : [];

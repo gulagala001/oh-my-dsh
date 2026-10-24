@@ -10,6 +10,7 @@ import {clickParameters, checkClickHeld, holdClick} from '../../extension/click-
 import {pressParameters, checkPressHeld} from '../../extension/key-options.js';
 import {playwrightKeyIdentity} from './playwright-keyboard.mjs';
 import {withCDPFrameGuard} from '../../extension/frame-router.js';
+import {sequentialTextKey, checkSequentialDeadline, guestKeySpec, keyEventParameters} from '../../extension/keyboard.js';
 
 export function normalizeBrowserAction(request = {}) {
   const aliases = {goto: 'navigate', new_tab: 'newTab', close_tab: 'closeTab', double_click: 'doubleClick',
@@ -117,7 +118,12 @@ export async function actOnPage(record, request, options) {
     await options.persistInputs();
     const events = [{type: 'keydown', key: key === 'Space' ? ' ' : key}];
     if (!record.keys.has('Meta') && !record.keys.has('Control') && (key.length === 1 || ['Space', 'Backspace', 'Delete', 'Enter'].includes(key))) events.push({type: 'input'});
-    await input(events, () => page.keyboard.down(key));
+    // Locator text editors normalize Home/End without changing page/body scrolling
+    // or replacing the trusted End/Home event with a different shortcut.
+    if (process.platform === 'darwin' && request.keyboardEditable && ['Home','End'].includes(key)) {
+      const modifiers = [...record.keys].reduce((bits,value) => bits | ({'modifier:Alt':1,'modifier:Control':2,'modifier:Meta':4,'modifier:Shift':8}[playwrightKeyIdentity(value)] ?? 0),0);
+      await input(events, () => record.session.send('Input.dispatchKeyEvent',keyEventParameters(guestKeySpec(key),true,modifiers,true,true)));
+    } else await input(events, () => page.keyboard.down(key));
   };
   const keyUp = async key => {
     key = keyName(key);
@@ -187,6 +193,21 @@ export async function actOnPage(record, request, options) {
   };
   const invalidate = () => { record.elements.clear(); record.screenshot = undefined; };
   switch (request.action) {
+    case 'navigationState': {
+      const generation = record.documentGeneration;
+      let result;
+      try { result = await step(() => record.session.send('Runtime.evaluate', {
+        expression:'({url:location.href,readyState:document.readyState})',returnByValue:true,
+      })); }
+      catch (error) {
+        check();
+        if (generation !== record.documentGeneration || /Cannot find context|Execution context was destroyed|Inspected target navigated/u.test(error.message))
+          return {action:request.action,value:{url:page.url(),documentId:String(record.documentGeneration),readyState:'loading'}};
+        throw error;
+      }
+      if (generation !== record.documentGeneration) return {action:request.action,value:{url:page.url(),documentId:String(record.documentGeneration),readyState:'loading'}};
+      return {action:request.action,value:{...result.result.value,documentId:String(generation)}};
+    }
     case 'domSnapshot': {
       const generation = record.documentGeneration;
       const result = await step(() => runCDPLocator(frameSend, {operation: 'domSnapshot', locator:request.locator ?? [], args: request.args ?? {}}, () => {}, frameRouter));
@@ -209,8 +230,10 @@ export async function actOnPage(record, request, options) {
       const checking = ['check', 'uncheck', 'setChecked'].includes(method);
       const checked = method === 'setChecked' ? args.checked : method === 'check';
       if (!checking || result.checked !== checked) {
-        await actOnPage(record, {action: checking ? 'click' : method === 'dblclick' ? 'doubleClick' : method,
+        await actOnPage(record, {action: checking ? 'click' : method === 'dblclick' ? 'doubleClick' : method === 'pressSequentially' ? 'type' : method,
           elementId: result.elementId, locatorGeneration: generation, button: args.button, key: args.key, value: args.value,
+          sequential:method === 'pressSequentially', deadline:request.deadline,
+          keyboardEditable:result.keyboardEditable,
           signal: request.signal, inputMode: request.inputMode}, options);
         if (checking && await step(() => callElement(record, {elementId: result.elementId}, 'checked',{},frameOptions)) !== checked) fail('LOCATOR_ACTION_FAILED', 'Click did not produce the requested checked state');
       }
@@ -284,8 +307,18 @@ export async function actOnPage(record, request, options) {
     }
     case 'type':
       if (typeof request.text !== 'string') fail('INVALID_ARGUMENT', 'type requires text');
+      if (request.sequential) {
+        checkSequentialDeadline(request.deadline);
+        for (const character of request.text) {const key=sequentialTextKey(character); if (key) checkPressHeld(record,[key],{identity:playwrightKeyIdentity});}
+      }
       if (request.elementId !== undefined) await focusKeyboardElement();
-      await insertText(request.text);
+      if (request.sequential) for (const character of request.text) {
+        checkSequentialDeadline(request.deadline);
+        const key=sequentialTextKey(character);
+        if (key) {await keyDown(key); await keyUp(key);}
+        else await insertText(character);
+      }
+      else await insertText(request.text);
       break;
     case 'fill':
       if (typeof request.value !== 'string') fail('INVALID_ARGUMENT', 'fill requires a string value');

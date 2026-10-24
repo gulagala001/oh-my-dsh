@@ -300,7 +300,7 @@ export async function createBrowserBackend(options = {}) {
     return {
       id: record.id, backend: 'browser', kind: 'tab', browserId,
       title: targetInfo.title, url: targetInfo.url, identity: record.identity,
-      capabilities: ['ax', 'screenshot', 'navigation', 'tabs', 'focus', 'mouse', 'keyboard', 'uploads', 'downloads', 'hitTest', 'getDOM', 'designTweak', 'dialogs'],
+      capabilities: ['ax', 'screenshot', 'navigation', 'navigationWaits', 'tabs', 'focus', 'mouse', 'keyboard', 'uploads', 'downloads', 'downloadEvents', 'hitTest', 'getDOM', 'designTweak', 'dialogs'],
     };
   }
   async function recordFor(target) {
@@ -469,6 +469,12 @@ export async function createBrowserBackend(options = {}) {
             const activity = await activityFor(record); guard.check();
             return guard.wait(activity.finish(marker));
           }}));
+        if (request.action === 'navigationState' && request.downloadCursor === true) {
+          // The controller still owns this read's serial slot. A subsequent
+          // trigger cannot run until this actual target cursor has been read.
+          result.value.downloadIds = (await deliveryStore.list()).filter(item => item.targetId === record.id).map(item => item.id);
+          checkSignal(request.signal);
+        }
         await inputState.persist();
         return {...result, target: await descriptor(record),...(!record.keys.size && !record.buttons.size ? {release:{released:true}} : {})};
       } catch (error) {
