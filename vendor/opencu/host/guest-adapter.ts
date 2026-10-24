@@ -2,7 +2,7 @@
 import { app, session, type DownloadItem, type Session, type WebContents } from 'electron'
 import { captureOpenCUDownload, openCUDownloadOperation } from './opencu-downloads.ts'
 import { OpenCUPermissions } from './opencu-permissions.ts'
-import { cancelOpenCUUpload, openCUAutomation, releaseOpenCUInput, resolveOpenCUNavigation } from './opencu-automation.ts'
+import { cancelOpenCUUpload, openCUAutomation, releaseOpenCUInput, resolveOpenCUNavigation, settleDestroyedOpenCUInput } from './opencu-automation.ts'
 import { cancelSiteTool } from './opencu-site-tools.ts'
 import { prepareOpenCUExtensions, attachOpenCUExtensionGuest, operateOpenCUExtensions } from './opencu-extensions.ts'
 import { operateOpenCUProfile } from './opencu-profile.ts'
@@ -31,6 +31,25 @@ export class OpenCUGuests {
   private readonly permissions = new OpenCUPermissions()
   private readonly preparedGuests = new WeakMap<WebContents, string>()
   private readonly preparingOwners = new Set<WebContents>()
+  private readonly closedGuests = new WeakMap<WebContents, Map<string, { guestId: number; guest?: WebContents; work?: Promise<object>; receipt?: object }>>()
+  private settleClosed(owner: WebContents, id: string): Promise<object> {
+    const entries = this.closedGuests.get(owner)!, entry = entries.get(id)!
+    if (entry.receipt) return Promise.resolve(entry.receipt)
+    return entry.work ??= settleDestroyedOpenCUInput(entry.guest!).then(result => {
+      entry.receipt = { ...result, closed: true, leaseId: id, webContentsId: entry.guestId }
+      delete entry.guest
+      // Bound completed duplicate receipts; failed cleanup remains owned.
+      const completed = [...entries].filter(([, value]) => value.receipt)
+      for (const [key] of completed.slice(0, Math.max(0, completed.length - 128))) entries.delete(key)
+      return entry.receipt
+    }).finally(() => { delete entry.work })
+  }
+  closedRelease(owner: WebContents, id: unknown, capability: string, operation: unknown, args: unknown): Promise<object> | undefined {
+    if (capability !== 'automation' || !['closedState', 'releaseInput'].includes(String(operation)) || typeof id !== 'string' || owner.isDestroyed()) return
+    if (!this.closedGuests.get(owner)?.has(id)) return
+    if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('Invalid guest automation arguments')
+    return this.settleClosed(owner, id)
+  }
   reserve(owner: WebContents, configure: (value: Session) => void): OpenCUGuestLease {
     if (owner.isDestroyed()) throw new Error('The OpenCU browser owner is unavailable')
     if (!this.browserSession) {
@@ -63,6 +82,7 @@ export class OpenCUGuests {
     if (capability === 'downloads') return openCUDownloadOperation(current.openCU, operation, args)
     if (capability === 'profile') return operateOpenCUProfile(this.browserSession!, operation, args)
     const guest = current.guest!
+    if (capability === 'automation' && operation === 'closedState') return Promise.resolve({ closed: false })
     if (capability === 'permissions') return this.permissions.operate(owner, guest, operation, args)
     if (capability === 'automation') return openCUAutomation(guest, operation, args, allowedNavigation)
     if (capability === 'extensions') return operateOpenCUExtensions(owner, guest, operation, args)
@@ -100,9 +120,18 @@ export class OpenCUGuests {
     this.preparedGuests.delete(guest)
     return id
   }
-  attach(lease: OpenCUGuestLease, guest: WebContents): void {
+  attach(lease: OpenCUGuestLease, guest: WebContents, id?: string): void {
     if (!lease.openCU) return
     this.owned(lease.owner, lease, true)
+    if (id) {
+      const owner = lease.owner, entries = this.closedGuests.get(owner) ?? new Map()
+      this.closedGuests.set(owner, entries)
+      const guestId = guest.id
+      guest.once('destroyed', () => {
+        entries.set(id, { guestId, guest })
+        void this.settleClosed(owner, id).catch(error => console.error('Destroyed OpenCU guest input remains pending', error))
+      })
+    }
     openCUDialogs(guest)
     guest.setBackgroundThrottling(false)
     attachOpenCUExtensionGuest(lease.owner, guest)
@@ -115,7 +144,9 @@ export class OpenCUGuests {
     if (!lease.openCU) return
     const errors: unknown[] = []
     lease.openCU.releasePreparedAttach?.()
-    if (lease.guest && !lease.guest.isDestroyed()) {
+    if (lease.guest?.isDestroyed()) {
+      try { await settleDestroyedOpenCUInput(lease.guest) } catch (error) { errors.push(error) }
+    } else if (lease.guest) {
       cancelOpenCUUpload(lease.guest)
       // Site tools share the automation queue; cancel them before draining input.
       try { await cancelSiteTool(lease.guest) } catch (error) { errors.push(error) }

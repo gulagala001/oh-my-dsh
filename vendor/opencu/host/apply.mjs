@@ -423,6 +423,11 @@ await patch(guests, [
   ['\n      try { this.openCU.release(lease) } catch (error) { errors.push(error) }\n', '\n      try { await this.openCU.release(lease) } catch (error) { errors.push(error) }\n'],
   ["          try { this.openCU.release(lease) } catch (error) { errors.push(error) }", "          void this.openCU.release(lease).catch(error => console.error('Destroyed guest input release failed', error))"],
 ], backgroundMarker);
+await patch(guests, [
+  ["    const lease = typeof id === 'string' ? this.leases.get(id as DesktopBrowserLeaseId) : undefined", "    // opencu-closed-guest-receipts:v1\n    const closed = this.openCU.closedRelease(owner, id, capability, operation, args)\n    if (closed) return closed\n    const lease = typeof id === 'string' ? this.leases.get(id as DesktopBrowserLeaseId) : undefined"],
+  ['        this.openCU.attach(lease, guest)', '        this.openCU.attach(lease, guest, id)'],
+], '// opencu-closed-guest-receipts:v1');
+for (const extension of ['js', 'd.ts']) pending.set(desktop + `opencu-input-monitor.${extension}`, await readFile(new URL(`../extension/input-monitor.${extension}`, import.meta.url), 'utf8'));
 await patch(desktop + 'main.ts', [
   ["import { OpenCUBrowserSurfaces, trackOpenCUGuestInput } from './opencu-browser-surfaces.ts'", "import { OpenCUBrowserSurfaces } from './opencu-browser-surfaces.ts'"],
   ['      const releaseInput = trackOpenCUGuestInput(guest)\n      return () => { try { releaseInput() } finally { unbind() } }', '      // CDP-held input is released by OpenCUGuests, independently of user input.\n      return unbind'],
@@ -442,6 +447,11 @@ if (!(await source(desktop + 'preload-browser.ts')).includes('"initialNavigation
   const capabilities = value.match(/capabilities: (\[[^\n]+?\])/);
   if (!capabilities) throw new Error('OpenCU desktop capability declaration is missing');
   await patch(desktop + 'preload-browser.ts', [[capabilities[0], 'capabilities: ' + JSON.stringify([...JSON.parse(capabilities[1]), 'initialNavigation'])]]);
+}
+for (const capability of ['closedGuestReceipts', 'frameInputMonitoring']) if (!(await source(desktop + 'preload-browser.ts')).includes(JSON.stringify(capability))) {
+  const value = await source(desktop + 'preload-browser.ts'), capabilities = value.match(/capabilities: (\[[^\n]+?\])/);
+  if (!capabilities) throw new Error('OpenCU desktop capability declaration is missing');
+  await patch(desktop + 'preload-browser.ts', [[capabilities[0], 'capabilities: ' + JSON.stringify([...JSON.parse(capabilities[1]), capability])]]);
 }
 // Background tab creation preserves the visible pane selection in the same layout transaction.
 for (const file of ['service.ts', 'contract/slots.ts', 'stores.ts']) {

@@ -60,10 +60,10 @@ export function withCDPFrameGuard(router, wrapSend = send => send, guard = work 
 }
 
 /** CDP sessions for real frame documents, including out-of-process iframes. */
-export function createCDPFrameRouter(sendRoot, subscribe, {sendSession,prepareRoute,discardRoute} = {}) {
+export function createCDPFrameRouter(sendRoot, subscribe, {sendSession,prepareRoute,discardRoute,prepareSession} = {}) {
   const sessions = new Map(), pending = new Map(), knownRoutes = new Map();
   let sequence = 0, closed = false, initializing;
-  const autoAttach = enabled => ({autoAttach:enabled,waitForDebuggerOnStart:false,flatten:true,...(enabled ? {filter:[{type:'iframe',exclude:false}]} : {})});
+  const autoAttach = enabled => ({autoAttach:enabled,waitForDebuggerOnStart:!!prepareSession,flatten:true,...(enabled ? {filter:[{type:'iframe',exclude:false}]} : {})});
   const failure = (message, code = 'STALE_ELEMENT') => Object.assign(new Error(message), {code, details:{inputDispatched:false}});
   const errorInfo = error => ({message:error.message ?? String(error),...(error.code === undefined ? {} : {code:error.code}),...(error.details === undefined ? {} : {details:error.details})});
   const routeError = (source, method, frameId, sessionId) => {
@@ -102,7 +102,16 @@ export function createCDPFrameRouter(sendRoot, subscribe, {sendSession,prepareRo
         ? Promise.reject(failure('Frame CDP session is detached','FRAME_DETACHED')) : sendSession(session.id,method,args);
       sessions.set(params.targetInfo.targetId,session);
       // Auto-attach is not recursive. Each OOPIF owns its own descendant targets.
-      session.ready = session.send('Page.enable').then(()=>session.send('Target.setAutoAttach',autoAttach(true)));
+      session.ready = (async()=>{
+        try {
+          await session.send('Page.enable');
+          await prepareSession?.({sessionId:session.id,send:session.send});
+          await session.send('Target.setAutoAttach',autoAttach(true));
+        } finally {
+          // A failed monitor installation must never leave a new page paused.
+          if(prepareSession)await session.send('Runtime.runIfWaitingForDebugger');
+        }
+      })();
       session.ready.catch(()=>{});
     }
     if (method === 'Target.receivedMessageFromTarget') {

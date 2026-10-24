@@ -148,6 +148,7 @@ export function createBrowserHost() {
       }
     },
     async releaseTarget(target, {dismissDialogs = false} = {}) {
+      if (retired.has(target.id) && !sameIdentity(retired.get(target.id).identity,target.identity)) fail('TARGET_IDENTITY_CHANGED','Release refers to another retired sidebar occurrence');
       let binding = bindings.get(target.id);
       if (binding && !sameIdentity(binding.target.identity,target.identity)) fail('TARGET_IDENTITY_CHANGED','Release refers to another sidebar guest');
       const present = liveClients().some(client => client.targets.some(current => current.id === target.id && sameIdentity(current.identity,target.identity)));
@@ -161,6 +162,9 @@ export function createBrowserHost() {
       binding.needsRelease = true;
       const result = await request(client, 'release', {target, dismissDialogs});
       if (inputReleased(result) && binding) binding.needsRelease = false;
+      if (inputReleased(result) && result.retired === true) {
+        retire(target);client.targets=client.targets.filter(current=>current.id!==target.id || !sameIdentity(current.identity,target.identity));
+      }
       return result;
     },
     async release({ targets = [], dismissDialogs = true } = {}) {
@@ -183,6 +187,7 @@ export function createBrowserHost() {
           const result = await backend.releaseTarget(binding.target,{dismissDialogs});
           if (!inputReleased(result)) { failures.push({targetId:binding.target.id,code:'RELEASE_FAILED',result}); return; }
           binding.needsRelease = false; releasedTargetIds.push(binding.target.id);
+          if (result.retired === true) retiredTargetIds.push(binding.target.id);
         } catch (error) { failures.push({targetId:binding.target.id,code:error.code,message:error.message}); }
       }));
       for (const binding of bindings.values()) if (binding.needsRelease) failures.push({targetId: binding.target.id,

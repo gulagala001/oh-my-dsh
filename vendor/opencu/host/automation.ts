@@ -9,9 +9,10 @@ import { readPageImage } from './opencu-page-image.ts'
 import { runCDPLocator } from './opencu-cdp-locator.js'
 import { selectOptionsFunction, selectOptionsResult } from './opencu-select-options.js'
 import { filePaths, validateFileInput, writeFileInput } from './opencu-file-input.js'
-import { guestKeySpec as inputKey, keyEventParameters } from './opencu-keyboard.js'
+import { guestKeySpec as inputKey, keyEventParameters, keyboardInputTypes } from './opencu-keyboard.js'
+import { createPageInputMonitor } from './opencu-input-monitor.js'
 import { runTextEdit, validateTextEditRequest } from './opencu-text-edit.js'
-import { createCDPFrameRouter, hitTestViewport, type CDPFrameRouter, type FrameElement } from './opencu-frame-router.js'
+import { createCDPFrameRouter, hitTestViewport, readCDPFrameOwners, type CDPFrameRouter, type FrameElement, type FrameRoute } from './opencu-frame-router.js'
 import { captureAXTree, axElementKey } from './opencu-ax-tree.js'
 import { openCUDialogs, type DialogFence } from './opencu-dialogs.ts'
 
@@ -39,12 +40,26 @@ interface ObservationState {
   observationId?: string
   deferredAX?: boolean
   rendererExited?: boolean
+  monitoringActive?: boolean
+  monitorPending?: Promise<unknown>
+  monitorError?: string
+  monitorRoutes: Map<string, FrameRoute>
+  monitorScripts: Map<string, { send: FrameRoute['send']; identifier: string }>
+  monitorOwner?: string
+  monitorEpoch?: number
+  monitorEvents: {kind: string; frameId: string; documentId: string}[]
+  monitorInitial?: Set<string>
+  monitorBootstraps: Set<Promise<unknown>>
+  retiring?: Promise<{ released: true; retired: true }>
 }
 const states = new WeakMap<WebContents, ObservationState>()
 // Short public handles never expose frame/document routing keys or collide with
 // another guest in this host process. Navigation drops aliases without reusing IDs.
 let nextElementId = 0
 const newElementId = (): string => String(++nextElementId)
+const inputMonitorSource = `(() => { if (globalThis.__opencuNativeInput) return; const events=[];
+  const monitor=(${createPageInputMonitor.toString()})(event=>{if(events.length>=256)events.shift();events.push(event)});
+  globalThis.__opencuNativeInput={monitor,events}; })()`
 const operations = new AsyncLocalStorage<{ fence: DialogFence; inputDispatched: boolean; operation: string; signal: AbortSignal; guard<T>(work: () => Promise<T>): Promise<T> }>()
 function dispatchesInput(method: string, params: Record<string, unknown>, operation?: string): boolean {
   if (method === 'Target.sendMessageToTarget' && typeof params.message === 'string') {
@@ -77,6 +92,34 @@ export async function releaseOpenCUInput(guest: WebContents): Promise<void> {
   await openCUAutomation(guest, 'releaseInput', {}, () => false)
 }
 
+/** A destroyed native occurrence cannot retain input; wait for its old work before retiring it. */
+export async function settleDestroyedOpenCUInput(guest: WebContents): Promise<{ released: true; retired: true }> {
+  if (!guest.isDestroyed()) throw Object.assign(new Error('The original browser guest is not confirmed destroyed'), { code: 'RELEASE_FAILED' })
+  const current = states.get(guest)
+  if (!current) return { released: true, retired: true }
+  if (current.retiring) return current.retiring
+  const retirement = (async (): Promise<{ released: true; retired: true }> => {
+  current.cancellation.abort(Object.assign(new Error('The original browser guest was destroyed'), { code: 'CONTROL_STOPPED' }))
+  current.uploadGeneration++; current.monitoringActive = false
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([
+      Promise.allSettled([current.pending, current.navigation, current.release, current.monitorPending, ...current.monitorBootstraps, ...current.releasingInputs.values()]),
+      new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(Object.assign(new Error('Destroyed browser input is still settling'), { code: 'RELEASE_FAILED' })), 5000) }),
+    ])
+  } finally { clearTimeout(timer) }
+  // Native destruction has already ended the child sessions; close only their local journals.
+  await current.frameRouter?.close().catch(() => undefined)
+  current.inputKeys.clear(); current.inputButtons.clear(); current.releasingInputs.clear()
+  current.elements.clear(); current.elementIds.clear(); current.nodeIds.clear(); current.monitorRoutes.clear(); current.monitorScripts.clear(); current.monitorEvents.length = 0
+  states.delete(guest)
+  return { released: true, retired: true }
+  })()
+  current.retiring = retirement
+  void retirement.catch(() => { if (current.retiring === retirement) delete current.retiring })
+  return retirement
+}
+
 /** Validate a complete native history before reserving its first navigation. */
 export function resolveOpenCUNavigation(input: unknown, allowedNavigation: (url: string) => boolean): { entries: NavigationEntry[]; index: number } {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid navigation history')
@@ -93,7 +136,7 @@ export function resolveOpenCUNavigation(input: unknown, allowedNavigation: (url:
 
 /** Run fixed accessibility and DOM operations on the caller's already verified guest. */
 export function openCUAutomation(guest: WebContents, operation: unknown, input: unknown, allowedNavigation: (url: string) => boolean): Promise<unknown> {
-  if (typeof operation !== 'string' || !['getDialog', 'handleDialog', 'pageState', 'navigationState', 'inputMarker', 'observe', 'locator', 'domSnapshot', 'checked', 'point', 'verifyElement', 'focus', 'selectAll', 'selectOption', 'selectText', 'paste', 'describe', 'patch', 'hitTest', 'upload', 'navigationSnapshot', 'restoreNavigation', 'siteTools', 'invokeSiteTool', 'cancelSiteTool', 'cancelUpload', 'capture', 'readPageImage', 'input', 'insertText', 'releaseInput'].includes(operation)) throw new Error('Unsupported guest automation operation')
+  if (typeof operation !== 'string' || !['getDialog', 'handleDialog', 'pageState', 'navigationState', 'inputMarker', 'inputMonitor', 'observe', 'locator', 'domSnapshot', 'checked', 'point', 'verifyElement', 'focus', 'selectAll', 'selectOption', 'selectText', 'paste', 'describe', 'patch', 'hitTest', 'upload', 'navigationSnapshot', 'restoreNavigation', 'siteTools', 'invokeSiteTool', 'cancelSiteTool', 'cancelUpload', 'capture', 'readPageImage', 'input', 'insertText', 'releaseInput'].includes(operation)) throw new Error('Unsupported guest automation operation')
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid guest automation arguments')
   const args = { ...input as Record<string, unknown> }
   if (typeof args.elementId === 'number' && Number.isSafeInteger(args.elementId) && args.elementId >= 0) args.elementId = String(args.elementId)
@@ -121,13 +164,14 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   }
   let state = states.get(guest)
   if (!state) {
-    state = { elements: new Map(), elementIds: new Map(), nodeIds: new Map(), pending: Promise.resolve(), cancellation: new AbortController(), debuggerUsers: 0, ownsDebugger: false, uploadGeneration: 0, documentGeneration: 0, identityScope: randomUUID(),
+    state = { elements: new Map(), elementIds: new Map(), nodeIds: new Map(), monitorRoutes: new Map(), monitorScripts: new Map(), monitorEvents: [], monitorBootstraps: new Set(), pending: Promise.resolve(), cancellation: new AbortController(), debuggerUsers: 0, ownsDebugger: false, uploadGeneration: 0, documentGeneration: 0, identityScope: randomUUID(),
       inputKeys: new Map(), inputButtons: new Set(), releasingInputs: new Map(), inputPosition: { x: 0, y: 0 } }
     states.set(guest, state)
     const tracked = state
-    const invalidate = (): void => { tracked.documentGeneration++; tracked.identityScope = randomUUID(); tracked.elements.clear(); tracked.elementIds.clear(); tracked.nodeIds.clear(); delete tracked.observationId; delete tracked.deferredAX }
+    const invalidate = (): void => { tracked.monitorEvents.length = 0; if(tracked.monitoringActive) tracked.monitorError = 'The new document has not completed frame input monitoring'; tracked.documentGeneration++; tracked.identityScope = randomUUID(); tracked.elements.clear(); tracked.elementIds.clear(); tracked.nodeIds.clear(); delete tracked.observationId; delete tracked.deferredAX }
     guest.on('render-process-gone', () => {
       invalidate(); tracked.rendererExited = true; tracked.uploadGeneration++
+      tracked.monitorRoutes.clear(); tracked.monitorScripts.clear(); tracked.monitorEvents.length = 0
       tracked.inputKeys.clear(); tracked.inputButtons.clear(); tracked.releasingInputs.clear(); tracked.inputActive = false
       const router = tracked.frameRouter; delete tracked.frameRouter
       void router?.close().catch(() => {}) // The exited process already owns no frame sessions.
@@ -161,7 +205,8 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   }
   const siteInvocation = operation === 'invokeSiteTool' ? beginSiteTool(guest, args.requestId) : undefined
   if (operation === 'capture' && current.capture) return current.capture
-  const work = (['capture', 'releaseInput'].includes(operation) ? Promise.resolve() : Promise.all([current.pending, current.navigation])).then(async () => {
+  const work = (operation === 'inputMonitor' ? current.monitorPending?.catch(() => undefined) ?? Promise.resolve()
+    : ['capture', 'releaseInput'].includes(operation) ? Promise.resolve() : Promise.all([current.pending, current.navigation])).then(async () => {
     signal.throwIfAborted()
     let removeAbort = (): void => {}
     const interrupted = new Promise<never>((_resolve, reject) => {
@@ -181,7 +226,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
     if (guest.isDestroyed()) throw new Error('The browser guest is closed')
     dialogs.assertClear()
     if (current.rendererExited || guest.isCrashed()) throw guestExited()
-    if (current.documentGeneration !== documentGeneration && !['releaseInput','navigationState'].includes(operation)) throw Object.assign(new Error('STALE_ELEMENT: the queued document changed'), { code: 'STALE_ELEMENT', details: { inputDispatched: false } })
+    if (current.documentGeneration !== documentGeneration && !['releaseInput','navigationState','inputMonitor'].includes(operation)) throw Object.assign(new Error('STALE_ELEMENT: the queued document changed'), { code: 'STALE_ELEMENT', details: { inputDispatched: false } })
     if (operation === 'verifyElement' && (!current.deferredAX || current.elements.has(String(args.elementId)))) return verifyElement()
     if (operation === 'navigationSnapshot') {
       return { entries: guest.navigationHistory.getAllEntries(), index: guest.navigationHistory.getActiveIndex() }
@@ -203,8 +248,11 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       current.ownsDebugger = true
     }
     current.debuggerUsers++
-    const send = (method: string, params: object = {}): Promise<any> => {
+    const send = (method: string, params: object = {}, sessionId?: string): Promise<any> => {
       if (current.rendererExited || guest.isCrashed()) return Promise.reject(guestExited())
+      // Resuming a freshly attached target is cleanup, even if its originating
+      // action was cancelled or opened a modal while frame setup was pending.
+      if (method === 'Runtime.runIfWaitingForDebugger') return guest.debugger.sendCommand(method, params, sessionId)
       const active = operations.getStore()
       const dispatch = () => (active?.fence ?? dialogs).guard(() => {
         const data = params as Record<string, unknown>
@@ -221,7 +269,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         if (dispatchesInput(method, data, active?.operation)) {
           if (active) active.inputDispatched = true
         }
-        try { void guest.debugger.sendCommand(method, params).then(value => { finish(); resolve(value) }, error => { finish(); reject(error) }) }
+        try { void guest.debugger.sendCommand(method, params, sessionId).then(value => { finish(); resolve(value) }, error => { finish(); reject(error) }) }
         catch (error) { finish(); reject(error) }
         })
         if (releaseId) {
@@ -238,14 +286,71 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       return active ? active.guard(dispatch) : dispatch()
     } // CDP replies vary by method; validate at their consumers below.
     const frameRouter = (): CDPFrameRouter => current.frameRouter ??= createCDPFrameRouter(send, listener => {
-      const receive = (_event: Electron.Event, method: string, params: unknown, sessionId?: string): void => {if (!sessionId) listener(method, params)}
+      const receive = (_event: Electron.Event, method: string, params: unknown, sessionId?: string): void => { operations.exit(() => listener(method, params, sessionId)) }
       guest.debugger.on('message', receive)
       return () => {guest.debugger.removeListener('message', receive)}
+    }, {
+      sendSession: (id, method, params) => send(method, params, id),
+      prepareSession: ({sessionId,send:sessionSend}) => {
+        const task = operations.exit(async () => {
+          if (!current.monitoringActive) return
+          try {
+            const script = await sessionSend('Page.addScriptToEvaluateOnNewDocument', { source: inputMonitorSource, worldName: 'opencu-frame-locators' })
+            if (!current.monitoringActive) { await sessionSend('Page.removeScriptToEvaluateOnNewDocument', {identifier:script.identifier}); return }
+            current.monitorScripts.set(sessionId, {send:sessionSend,identifier:script.identifier})
+          } catch (error) { current.monitorError = (error as Error).message; throw error }
+        })
+        current.monitorBootstraps.add(task)
+        void task.finally(() => { current.monitorBootstraps.delete(task) }).catch(() => undefined)
+        return task
+      },
     })
+    const retiredFrame = (error: unknown): boolean => ['FRAME_DETACHED', 'STALE_OBSERVATION', 'STALE_ELEMENT', 'BROWSER_GUEST_CRASHED'].includes((error as {code?:string}).code ?? '') || /Cannot find context|Execution context was destroyed|No session with given id|Session with given id not found|Session closed|Target closed|No frame with given id/iu.test((error as Error).message);
+    const monitorRoute = async (route: FrameRoute, expression: string): Promise<any> => {
+      await frameRouter().validate(route)
+      if (!current.monitorScripts.has(route.sessionId)) {
+        const script = await route.send('Page.addScriptToEvaluateOnNewDocument', { source: inputMonitorSource, worldName: 'opencu-frame-locators' })
+        current.monitorScripts.set(route.sessionId, { send: route.send, identifier: script.identifier })
+      }
+      const result = value(await route.send('Runtime.evaluate', { contextId: route.contextId, expression: `${inputMonitorSource};${expression}`, returnByValue: true }))
+      await frameRouter().validate(route)
+      current.monitorRoutes.set(`${route.frameId}:${route.documentId}`, route)
+      return result
+    }
+    const finishMarker = async (marker: { route: FrameRoute; id: string } | undefined, dispatched: boolean): Promise<void> => {
+      if (marker) await monitorRoute(marker.route, `globalThis.__opencuNativeInput.monitor.finishInput(${JSON.stringify(marker.id)},${dispatched})`)
+    }
+    const dispatchMarked = async (marker: { route: FrameRoute; id: string } | undefined, dispatch: () => Promise<unknown>): Promise<void> => {
+      let dispatched = false, failure: (Error & {details?:Record<string,unknown>}) | undefined
+      try { await dispatch(); dispatched = true }
+      catch (error) { failure = error as typeof failure; throw error }
+      finally {
+        if (!context.fence.interrupted && !dialogs.pending() && !guest.isDestroyed() && !current.rendererExited) {
+          try { await finishMarker(marker, dispatched) }
+          catch (error) { if (!failure) throw error; failure.details = {...failure.details, inputMarkerError:(error as Error).message} }
+        }
+      }
+    }
+    const markInput = async (route: FrameRoute, events: Record<string, unknown>[], node?: number, pending = false): Promise<{ route: FrameRoute; id: string } | undefined> => {
+      if (!current.monitoringActive) return
+      await monitorRoute(route, 'null')
+      if (node) {
+        const objectId = await frameRouter().remoteElement(route, node)
+        try {
+          const id = value(await route.send('Runtime.callFunctionOn', { objectId, functionDeclaration: 'function(events,pending){const target=this.nodeType===1?this:this.parentElement;return globalThis.__opencuNativeInput.monitor.expectInput(events.map(event=>({...event,target})),pending)}',
+            arguments: [{ value: events }, { value: pending }], returnByValue: true }))
+          return typeof id === 'string' ? { route, id } : undefined
+        } finally { await route.send('Runtime.releaseObject', { objectId }).catch(() => undefined) }
+      }
+      const id = await monitorRoute(route, `globalThis.__opencuNativeInput.monitor.expectInput(${JSON.stringify(events)},${pending})`)
+      return typeof id === 'string' ? { route, id } : undefined
+    }
     let releaseSend = send
     let objectId: string | undefined
     const insertMarkedText = async (text: string, verify?: () => Promise<unknown>): Promise<void> => {
-      const marker = value(await send('Runtime.evaluate', { expression: `globalThis.__opencuAnnotations?.expectTextInput?.(${JSON.stringify(text)})`, returnByValue: true }))
+      const route = current.monitoringActive ? await frameRouter().focused() : undefined
+      const marker = route ? await monitorRoute(route, `globalThis.__opencuNativeInput.monitor.expectTextInput(${JSON.stringify(text)})`)
+        : value(await send('Runtime.evaluate', { expression: `globalThis.__opencuAnnotations?.expectTextInput?.(${JSON.stringify(text)})`, returnByValue: true }))
       let failure: (Error & {details?: Record<string, unknown>}) | undefined
       try {
         await verify?.()
@@ -256,7 +361,10 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         // A modal interrupts this operation permanently. Never wait for its JS
         // context or resume the old dispatch just to clean up a page marker.
         if (marker && !context.fence.interrupted && !dialogs.pending() && !guest.isDestroyed() && !current.rendererExited && !guest.isCrashed()) {
-          try { await send('Runtime.evaluate', {expression:`globalThis.__opencuAnnotations?.finishInput(${JSON.stringify(marker)},false)`}) }
+          try {
+            if (route) await finishMarker({ route, id: marker }, false)
+            else await send('Runtime.evaluate', {expression:`globalThis.__opencuAnnotations?.finishInput(${JSON.stringify(marker)},false)`})
+          }
           catch (error) { if (!failure) throw error; failure.details = {...failure.details,inputMarkerError:(error as Error).message} }
         }
       }
@@ -302,8 +410,85 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       }
       if (operation === 'pageState') return value(await send('Runtime.evaluate', { expression:
         '({ documentId: globalThis.__opencuDocument?.id, url: location.href, width: innerWidth, height: innerHeight, scrollX, scrollY, focused: document.hasFocus() })', returnByValue: true }))
+      if (operation === 'inputMonitor') {
+        if (!['install', 'read', 'dispose'].includes(String(args.method)) || typeof args.owner !== 'string' || !args.owner || args.owner.length > 200
+          || !Number.isSafeInteger(args.epoch) || Number(args.epoch) < 0) throw new Error('Invalid frame input monitor request')
+        if (args.method !== 'install' && (args.owner !== current.monitorOwner || args.epoch !== current.monitorEpoch)) return { available: false, stale: true, events: [] }
+        if (args.method === 'read' && !current.monitoringActive) return { available: false, disabled: true, events: [] }
+        if (args.method === 'dispose') {
+          current.monitoringActive = false
+          current.monitorEvents.length = 0
+          // Remove future-document scripts first, then visit the current real
+          // topology too: a newly inserted frame may not have been polled yet.
+          await Promise.all([...current.monitorBootstraps])
+          for (const [id, script] of current.monitorScripts) {
+            try { await script.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: script.identifier }); current.monitorScripts.delete(id) }
+            catch (error) { if (!retiredFrame(error)) throw error; current.monitorScripts.delete(id) }
+          }
+          const visited = new Set<string>()
+          const disposeFrame = async (route: FrameRoute, depth: number): Promise<void> => {
+            if (depth > 32 || visited.size >= 500 || visited.has(route.frameId)) throw new Error('Input monitor frame topology exceeds the supported nesting')
+            visited.add(route.frameId)
+            value(await route.send('Runtime.evaluate', { contextId: route.contextId,
+              expression: 'globalThis.__opencuNativeInput?.monitor.dispose(); delete globalThis.__opencuNativeInput' }))
+            for (const owner of await readCDPFrameOwners(route)) if (owner.frameId && owner.backendNodeId) {
+              try { await disposeFrame(await frameRouter().child(route, owner.backendNodeId, owner.frameId), depth + 1) }
+              catch (error) { if (!retiredFrame(error)) throw error }
+            }
+          }
+          await disposeFrame(await frameRouter().main(), 0)
+          current.monitorRoutes.clear(); delete current.monitorInitial
+          if (!current.inputActive && current.frameRouter) { await current.frameRouter.close(); delete current.frameRouter }
+          return { available: false, disposed: true, events: [] }
+        }
+        if (args.method === 'install') {
+          if (args.owner === current.monitorOwner && Number(args.epoch) < (current.monitorEpoch ?? 0)) return { available: false, stale: true, events: [] }
+          if (args.owner !== current.monitorOwner || args.epoch !== current.monitorEpoch) {
+            current.monitorInitial = new Set(); current.monitorEvents.length = 0
+          }
+          current.monitorOwner = args.owner; current.monitorEpoch = Number(args.epoch)
+          current.monitoringActive = true
+        }
+        const routes = new Map<string, FrameRoute>(), visited = new Set<string>()
+        const visit = async (route: FrameRoute, depth: number): Promise<void> => {
+          if (depth > 32 || visited.size >= 500 || visited.has(route.frameId)) throw new Error('Input monitor frame topology changed or exceeds the supported nesting')
+          visited.add(route.frameId)
+          const key = `${route.frameId}:${route.documentId}`
+          const messages = await monitorRoute(route, 'globalThis.__opencuNativeInput.events.splice(0)')
+          routes.set(key, route)
+          if (current.monitorInitial && !current.monitorInitial.has(key)) current.monitorInitial.add(key)
+          else if (Array.isArray(messages)) for (const message of messages) if (message && typeof message === 'object'
+            && ['pointerdown', 'keydown', 'wheel', 'input'].includes(message.kind)) {
+              if (current.monitorEvents.length >= 1024) current.monitorEvents.shift()
+              current.monitorEvents.push({ kind: message.kind, frameId: route.frameId, documentId: route.documentId })
+            }
+          for (const owner of await readCDPFrameOwners(route)) {
+            if (owner.frameId && owner.backendNodeId) await visit(await frameRouter().child(route, owner.backendNodeId, owner.frameId), depth + 1)
+          }
+          await frameRouter().validate(route)
+        }
+        try {
+          await visit(await frameRouter().main(), 0)
+          const sessions = new Set([...routes.values()].map(route => route.sessionId))
+          for (const [id, script] of current.monitorScripts) if (!sessions.has(id)) {
+            try { await script.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: script.identifier }) }
+            catch (error) { if (!retiredFrame(error)) throw error }
+            current.monitorScripts.delete(id)
+          }
+          const events = current.monitorEvents.filter(event => routes.has(`${event.frameId}:${event.documentId}`))
+          current.monitorEvents.length = 0
+          current.monitorRoutes = routes; delete current.monitorError; delete current.monitorInitial
+          return { available: true, scope: 'all-frames', frameCount: routes.size, events }
+        } catch (error) {
+          current.monitorError = (error as Error).message
+          throw error
+        }
+      }
       if (operation === 'inputMarker') {
         if (!['expect', 'finish', 'clear'].includes(String(args.method)) || args.method === 'expect' && (!Array.isArray(args.events) || args.events.length > 64)) throw new Error('Invalid input marker operation')
+        // The native dispatcher arms only the exact live recipient immediately
+        // before input. A client's earlier focus/coordinate guess arms nothing.
+        if (current.monitoringActive) return undefined
         return value(await send('Runtime.evaluate', { expression: `(() => { const args = ${JSON.stringify(args)}; const markers = globalThis.__opencuAnnotations;
           if (args.method === 'expect') return markers?.expectInput(args.events, args.pending === true);
           if (args.method === 'finish') return markers?.finishInput(args.marker, args.dispatched === true);
@@ -361,8 +546,13 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           const modifiers = modifierNames.reduce<number>((bits, name) => bits | ({ alt: 1, control: 2, meta: 4, shift: 8 }[String(name)] ?? 0), 0)
           if (args.type === 'keyDown' || args.type === 'keyUp') {
             const spec = inputKey(args.keyCode), down = args.type === 'keyDown'
-            if (down) current.inputKeys.set(spec.key, spec)
-            await send('Input.dispatchKeyEvent', keyEventParameters(spec, down, modifiers, process.platform === 'darwin', args.keyboardEditable === true))
+            const parameters = keyEventParameters(spec, down, modifiers, process.platform === 'darwin', args.keyboardEditable === true)
+            const marker = down && current.monitoringActive ? await markInput(await frameRouter().focused(), [{type:'keydown',key:parameters.key,
+              inputTypes:keyboardInputTypes(spec.code, modifiers, process.platform === 'darwin')}]) : undefined
+            await dispatchMarked(marker, async () => {
+              if (down) current.inputKeys.set(spec.key, spec)
+              return send('Input.dispatchKeyEvent', parameters)
+            })
             if (!down) current.inputKeys.delete(spec.key)
           } else {
             const types: Record<string, string> = { mouseMove: 'mouseMoved', mouseDown: 'mousePressed', mouseUp: 'mouseReleased', mouseWheel: 'mouseWheel' }
@@ -372,9 +562,17 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
             current.inputPosition = { x: Number(args.x), y: Number(args.y) }
             if (type === 'mousePressed' && inputElement?.route) await current.frameRouter!.checkPoint(inputElement as FrameElement & {route:NonNullable<FrameElement['route']>}, current.inputPosition)
             signal.throwIfAborted()
-            if (type === 'mousePressed') current.inputButtons.add(String(args.button))
-            await send('Input.dispatchMouseEvent', { type, x: args.x, y: args.y, button: args.button ?? 'none', buttons: args.buttons ?? 0, clickCount: args.clickCount ?? 0, modifiers,
-              ...(type === 'mouseWheel' ? { deltaX: args.deltaX ?? 0, deltaY: args.deltaY ?? 0 } : {}) })
+            let marker: { route: FrameRoute; id: string } | undefined
+            if (current.monitoringActive && ['mousePressed', 'mouseWheel'].includes(type)) {
+              const hit = await frameRouter().atPoint(current.inputPosition)
+              marker = await markInput(hit.route, [{type:type === 'mousePressed' ? 'pointerdown' : 'wheel',
+                ...(type === 'mouseWheel' ? {deltaX:args.deltaX ?? 0,deltaY:args.deltaY ?? 0} : {})}], hit.backendNodeId, true)
+            }
+            await dispatchMarked(marker, async () => {
+              if (type === 'mousePressed') current.inputButtons.add(String(args.button))
+              return send('Input.dispatchMouseEvent', { type, x: args.x, y: args.y, button: args.button ?? 'none', buttons: args.buttons ?? 0, clickCount: args.clickCount ?? 0, modifiers,
+                ...(type === 'mouseWheel' ? { deltaX: args.deltaX ?? 0, deltaY: args.deltaY ?? 0 } : {}) })
+            })
             if (type === 'mouseReleased') current.inputButtons.delete(String(args.button))
           }
         }
@@ -398,7 +596,8 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         if (errors.length) throw new AggregateError(errors, 'Target CDP input release failed')
         await send('Emulation.setFocusEmulationEnabled', { enabled: false })
         current.inputActive = false
-        if (current.frameRouter) {await current.frameRouter.close(); delete current.frameRouter}
+        for (const route of current.monitorRoutes.values()) await monitorRoute(route, 'globalThis.__opencuNativeInput.monitor.clearInput()').catch(() => undefined)
+        if (!current.monitoringActive && current.frameRouter) {await current.frameRouter.close(); delete current.frameRouter}
         return { released: true }
       }
       if (operation === 'readPageImage') return await readPageImage(guest, send, args)
@@ -443,7 +642,8 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           if (guest.isDestroyed()) throw new Error('The browser guest is closed')
           if (generation !== current.documentGeneration) throw Object.assign(new Error('STALE_OBSERVATION: the document changed during observation'), { code: 'STALE_OBSERVATION' })
         }
-        const details = value(await send('Runtime.evaluate', { expression: metadata(), returnByValue: true }))
+        const rawDetails = value(await send('Runtime.evaluate', { expression: metadata(), returnByValue: true }))
+        const details = rawDetails && typeof rawDetails === 'object' ? { ...rawDetails, userActivityMonitoring: { available: current.monitoringActive === true && !current.monitorError && current.monitorRoutes.size > 0, ...(current.monitoringActive && !current.monitorError ? {scope:'all-frames',frameCount:current.monitorRoutes.size} : {error:current.monitorError ?? 'Frame input monitoring is not active'}) } } : rawDetails
         if (!details || typeof details !== 'object') throw new Error('Guest metadata is unavailable')
         live()
         const observationId = randomUUID()
@@ -531,12 +731,15 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         }
         await validateFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
         live()
-        if (files.length) await elementSend('Runtime.evaluate', { expression: "globalThis.__opencuAnnotations?.expectInput([{type:'input'}])" })
-        live()
-        await validateFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
-        live()
-        const receipt = await writeFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
-        return {action:'upload',...receipt}
+        const uploadMarker = files.length && current.monitoringActive ? await markInput(entry?.route ?? await frameRouter().main(), [{type:'input',inputTypes:[null]}], backendNodeId) : undefined
+        if (files.length && !current.monitoringActive) await elementSend('Runtime.evaluate', { expression: "globalThis.__opencuAnnotations?.expectInput([{type:'input'}])" })
+        try {
+          live()
+          await validateFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
+          live()
+          const receipt = await writeFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
+          return {action:'upload',...receipt}
+        } finally { await finishMarker(uploadMarker, false) }
       }
       const remote: { object: { objectId?: string } } = await elementSend('DOM.resolveNode', { backendNodeId, ...(entry?.route ? {executionContextId:entry.route.contextId} : {}) })
       objectId = remote.object.objectId
@@ -611,7 +814,8 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   if (siteInvocation) void work.then(() => { siteInvocation.finish() }, error => {
     siteInvocation.finish(error?.code === 'SITE_TOOL_CANCEL_FAILED' ? error : undefined)
   })
-  current.pending = work.catch(() => undefined)
+  if (operation === 'inputMonitor') current.monitorPending = work.catch(() => undefined)
+  else current.pending = work.catch(() => undefined)
   if (operation === 'releaseInput') {
     const release = work.finally(() => { if (current.release === release) delete current.release })
     current.release = release
