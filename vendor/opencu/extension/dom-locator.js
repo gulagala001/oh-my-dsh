@@ -1,7 +1,8 @@
 import {selectOptionsDOM} from './select-options.js';
+import {clickModifierKeys} from './click-options.js';
 
 /** Fixed DOM operations, serialized into the selected main document by each backend. */
-export function runDOMLocator(request = {}, selectOptions = selectOptionsDOM) {
+export function runDOMLocator(request = {}, selectOptions = selectOptionsDOM, modifierKeys = clickModifierKeys) {
   const fail = (code, message) => { throw Object.assign(new Error(message), {code, details:{inputDispatched:false}}); };
   const unsupported = message => fail('UNSUPPORTED_LOCATOR', message);
   const normalize = text => String(text ?? '').replace(/\s+/gu, ' ').trim();
@@ -167,9 +168,10 @@ export function runDOMLocator(request = {}, selectOptions = selectOptionsDOM) {
   const current = resolve(request.locator,document);
   const method = request.method;
   if (!['count','innerText','textContent','allTextContents','isVisible','isEnabled','getAttribute','click','dblclick','fill','type','pressSequentially','press','check','uncheck','setChecked','selectOption','waitFor','resolveFrame'].includes(method)) unsupported(`Unsupported locator method: ${method}`);
-  const supportedArgs = {waitFor:['state'],getAttribute:['name'],click:['button'],dblclick:['button'],fill:['value'],type:['value'],pressSequentially:['value'],press:['key'],setChecked:['checked'],selectOption:['value']}[method] ?? [];
+  const supportedArgs = {waitFor:['state'],getAttribute:['name'],click:['button','modifiers'],dblclick:['button','modifiers'],fill:['value'],type:['value'],pressSequentially:['value'],press:['key'],setChecked:['checked'],selectOption:['value']}[method] ?? [];
   if (Object.keys(options).some(key => !supportedArgs.includes(key))) unsupported(`Unsupported ${method} option; supported options: ${supportedArgs.join(', ') || 'none'}`);
   if (options.button !== undefined && !['left','middle','right'].includes(options.button)) unsupported('click button must be left, middle, or right');
+  if (['click','dblclick'].includes(method) && options.modifiers !== undefined) modifierKeys(options.modifiers, {resolve:false});
   if (method === 'waitFor') {
     const state = options.state ?? 'visible';
     if (!['attached','detached','visible','hidden'].includes(state)) unsupported('waitFor state must be attached, detached, visible, or hidden');

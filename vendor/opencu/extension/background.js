@@ -2,9 +2,11 @@ import { observeAccessibility, elementOperation, locatorOperation, invalidateEle
 import { createPairingClient } from './pairing.js';
 import { createCDPFrameRouter } from './frame-router.js';
 import { extensionKeySpec as keySpec, keyEventParameters, sequentialTextKey, checkSequentialDeadline, keyboardInputTypes } from './keyboard.js';
-import { clickParameters, checkClickHeld, holdClick } from './click-options.js';
+import { clickParameters, locatorClickParameters, checkClickHeld, holdClick } from './click-options.js';
 import { pressParameters, checkPressHeld } from './key-options.js';
+import { dragPath } from './pointer-path.js';
 import {filePaths} from './file-input.js';
+import {scrollDeltas,checkScrollGeometry} from './scroll.js';
 import {installDocumentRuntime} from './content.js';
 const PATH = '/opencu-extension/v1';
 const attached = new Map(), observations = new Map(), documents = new Map(), releasing = new Set();
@@ -248,26 +250,37 @@ async function mouse(tabId, type, point, button = 'none', count = 0, extra = {},
   state.x = point.x; state.y = point.y;
   if (type === 'mousePressed') { state.buttons.add(button); await saveAttached(); }
   checkControl(epoch);
-  let marker, submitted = false, failure;
+  let marker, captureMarker, submitted = false, failure;
   try {
-    if (type === 'mousePressed' || type === 'mouseWheel') {
+    if (epoch && ['mousePressed','mouseMoved','mouseReleased','mouseWheel'].includes(type)) {
       const hit=await state.frameRouter?.atPoint(point);
-      marker = await inputMarker(tabId, 'expectInput', { pending: type === 'mouseWheel',
-        events: [{ type: type === 'mousePressed' ? 'pointerdown' : 'wheel', ...(hit?{}:point), ...(type === 'mouseWheel' ? { deltaX: extra.deltaX ?? 0, deltaY: extra.deltaY ?? 0 } : {}) }] },hit?.route,hit?.backendNodeId);
+      const events=[{type:({mousePressed:'pointerdown',mouseMoved:'pointermove',mouseReleased:'pointerup',mouseWheel:'wheel'})[type],
+        ...(hit?{}:point),...(type==='mouseWheel'?{deltaX:extra.deltaX??0,deltaY:extra.deltaY??0}:{})}];
+      marker=await inputMarker(tabId,'expectInput',{pending:type==='mouseWheel',events},hit?.route,['mousePressed','mouseWheel'].includes(type)?hit?.backendNodeId:undefined);
+      const origin=state.pointerMarkers?.get(button) ?? [...(state.pointerMarkers?.values()??[])][0];
+      if (['mouseMoved','mouseReleased'].includes(type) && origin && (origin.frameRoute?.frameId!==hit?.route?.frameId || origin.frameRoute?.documentId!==hit?.route?.documentId)) {
+        captureMarker=await frameContent(tabId,origin.frameRoute,'expectInput',{events:events.map(({x,y,...event})=>event)});
+      }
     }
     checkControl(epoch);
-    if (type === 'mousePressed' && beforeDispatch) { await beforeDispatch(); checkControl(epoch); }
+    if ((type === 'mousePressed' || type === 'mouseWheel') && beforeDispatch) { await beforeDispatch(); checkControl(epoch); }
     submitted = true;
     await cdp(tabId, 'Input.dispatchMouseEvent', { type, x: point.x, y: point.y, button, buttons: buttonMask(state), clickCount: count, modifiers: modifiers(state), ...extra });
     if(type==='mousePressed'&&marker)(state.pointerMarkers??=new Map()).set(button,marker);
     if (type === 'mouseReleased') { state.buttons.delete(button); await saveAttached(); }
   } catch (error) { failure = error; throw error; }
   finally {
-    const completed=type==='mouseReleased'?state.pointerMarkers?.get(button):type==='mouseWheel'||!submitted?marker:undefined;
-    if(completed)try { await finishMarker(tabId,completed,type==='mouseWheel'&&submitted);if(type==='mouseReleased')state.pointerMarkers.delete(button); }
-    catch (error) {
-      if (!failure) { error.details = { ...error.details, inputDispatched: submitted }; throw error; }
-      failure.details = { ...failure.details, inputMarkerError: errorJSON(error) };
+    const completed=type==='mouseReleased'||type==='mouseMoved'||type==='mouseWheel'||!submitted ? [marker,captureMarker].filter(Boolean) : [];
+    try {
+      for (const current of completed) await finishMarker(tabId,current,type==='mouseWheel'&&submitted);
+      if (type==='mouseReleased' && epoch) {
+        const pressed=state.pointerMarkers?.get(button);
+        if(pressed)await finishMarker(tabId,pressed);
+        state.pointerMarkers?.delete(button);
+      }
+    } catch (error) {
+      if (!failure) { error.details={...error.details,inputDispatched:submitted};throw error; }
+      failure.details={...failure.details,inputMarkerError:errorJSON(error)};
     }
   }
 }
@@ -426,8 +439,12 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
     }
   };
   const inputKey = (spec, down) => keyEvent(tabId, spec, down, epoch, action.elementId != null ? verifyInputElement : undefined,action.keyboardEditable);
+  let scrollGeometry;
   const pointer = (type, point, button = 'none', count = 0, extra = {}) => mouse(tabId, type, point, button, count, extra, epoch,
-    action.elementId != null ? () => element('checkPoint', {...action,...point}) : undefined);
+    action.elementId != null ? async () => {
+      await element('checkPoint', {...action,...point});
+      if (type === 'mouseWheel' && scrollGeometry) checkScrollGeometry(scrollGeometry,await element('scrollGeometry'));
+    } : undefined);
   const step = async work => { checkControl(epoch); const result = await work(); checkControl(epoch); return result; };
   const elementOptions = {check:checkInput,wrapSend:(transport,route)=>(method,params)=>send(method,params,transport,route),guard:work=>textInputGuard ? textInputGuard(work) : step(work)};
   const element = (operation, args = action) => elementOperation(tabId, send, operation, args, attached.get(tabId)?.frameRouter,elementOptions);
@@ -466,15 +483,17 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       return done(result);
     }
     case 'locator': {
+      const args = action.args ?? {}, method = action.method;
+      const click = ['click','dblclick'].includes(method) ? locatorClickParameters(args, {mac:/Mac/u.test(navigator.platform),count:method === 'dblclick' ? 2 : 1}) : undefined;
+      if (click) checkClickHeld(inputState, click);
       const result = await locatorOperation(tabId, send, action, identity.documentId, attached.get(tabId)?.frameRouter,elementOptions);
       await step(() => verify(identity, true));
       if (Object.hasOwn(result, 'value')) return done({value:result.value});
-      const args = action.args ?? {}, method = action.method;
       const checking = ['check','uncheck','setChecked'].includes(method);
       const checked = method === 'setChecked' ? args.checked : method === 'check';
       if (!checking || result.checked !== checked) {
         const type = checking ? 'click' : ({dblclick:'double_click',press:'press_key',type:'type_text',pressSequentially:'type_text'})[method] ?? method;
-        await act(identity, {type,elementId:result.elementId,button:args.button,key:args.key,value:args.value,text:args.value,
+        await act(identity, {type,elementId:result.elementId,button:args.button,key:click?.keys.length ? click.keys.join('+') : args.key,value:args.value,text:args.value,
           sequential:method === 'pressSequentially',deadline:action.deadline,keyboardEditable:result.keyboardEditable,inputMode:action.inputMode}, epoch);
         if (checking && (await element('checked', {elementId:result.elementId})).checked !== checked) fail('LOCATOR_ACTION_FAILED', 'Click did not produce the requested checked state.');
       }
@@ -572,43 +591,41 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       return step(() => content(tabId, 'cursor', point, current.browserDocumentId));
     }
     case 'click': case 'double_click': case 'right_click': case 'move': case 'mouse_down': case 'mouse_up': case 'scroll': case 'drag': {
+      let wheel = action.type === 'scroll' ? scrollDeltas(action) : undefined;
       const held = attached.get(tabId);
-      const point = action.type === 'mouse_up' && action.x === undefined && action.elementId === undefined
+      const point = action.type === 'drag' ? undefined : action.type === 'mouse_up' && action.x === undefined && action.elementId === undefined
         ? { x: held.x, y: held.y } : await step(() => actionPoint(identity, action, current,false,elementOptions));
       const button = click?.button ?? (action.type === 'right_click' ? 'right' : action.button || 'left');
       if (!['left', 'middle', 'right'].includes(button)) fail('INVALID_BUTTON', 'Use left, middle or right mouse button.');
-      if (action.type === 'scroll' && (!Number.isFinite(action.deltaX ?? 0) || !Number.isFinite(action.deltaY ?? 0))) fail('INVALID_SCROLL', 'Finite wheel deltas are required.');
-      let path;
+      let path, intervalMs;
       if (action.type === 'drag') {
-        const samples = action.path ?? [{ x: action.fromX, y: action.fromY }, { x: action.x, y: action.y }];
-        if (!Array.isArray(samples) || samples.length < 2) fail('INVALID_ACTION', 'Drag requires at least two points.');
+        const samples = dragPath(action.path ?? [{ x: action.fromX, y: action.fromY }, { x: action.x, y: action.y }],action.durationMs);
+        if (held.buttons.has(button)) fail('INPUT_ALREADY_HELD','Drag cannot acquire an already held mouse button.');
         path = [];
-        for (const sample of samples) path.push(await step(() => actionPoint(identity, { ...action, ...sample, elementId: undefined }, current)));
+        for (const sample of samples.waypoints) path.push(await step(() => actionPoint(identity, { ...action, ...sample, elementId: undefined }, current)));
+        ({points:path,intervalMs}=dragPath(path,action.durationMs));
       }
       invalidate();
-      const showCursor = point => {
-        held.cursor = { ...point, visible: true };
+      const showCursor = (point, animateMovement = true) => {
+        held.cursor = { ...point, visible: true, animateMovement };
         return step(() => content(tabId, 'cursor', held.cursor, current.browserDocumentId));
       };
       await showCursor(path?.[0] ?? point);
+      if (action.type === 'scroll' && !wheel) {scrollGeometry = await step(() => element('scrollGeometry'));wheel = scrollDeltas(action,scrollGeometry);}
       if (action.type === 'move') await pointer('mouseMoved', point);
-      else if (action.type === 'scroll') await pointer('mouseWheel', point, 'none', 0, { deltaX: action.deltaX || 0, deltaY: action.deltaY || 0 });
+      else if (action.type === 'scroll') await pointer('mouseWheel', point, 'none', 0, wheel);
       else if (action.type === 'mouse_down') await pointer('mousePressed', point, button, 1);
       else if (action.type === 'mouse_up') await pointer('mouseReleased', point, button, 1);
       else if (path) {
         await pointer('mouseMoved', path[0]); await pointer('mousePressed', path[0], button, 1);
-        const duration = Math.min(10000, Math.max(50, action.durationMs ?? 350));
-        const segmentDuration = duration / (path.length - 1), count = Math.max(1, Math.ceil(segmentDuration / 16));
-        try {
-          for (let index = 1; index < path.length; index++) {
-            const from = path[index - 1], to = path[index];
-            await showCursor(to);
-            for (let frame = 1; frame <= count; frame++) {
-              await pointer('mouseMoved', { x: from.x + (to.x - from.x) * frame / count, y: from.y + (to.y - from.y) * frame / count }, button);
-              await step(() => delay(segmentDuration / count));
-            }
-          }
-        } finally { const state = attached.get(tabId); if (state?.buttons.has(button)) await mouse(tabId, 'mouseReleased', state, button, 1); }
+        for (const sample of path.slice(1)) {
+          await step(() => holdClick(intervalMs,() => checkControl(epoch)));
+          await showCursor(sample,false);
+          const latest=await readOperation(epoch,read=>verify(identity,true,read));
+          if (action.coordinateSpace !== 'css' && (['width','height','scrollX','scrollY','devicePixelRatio'].some(key=>latest.geometry[key]!==current.geometry[key]) || JSON.stringify(latest.geometry.visual)!==JSON.stringify(current.geometry.visual))) fail('STALE_SCREENSHOT','Viewport, scroll or zoom changed during drag; observe again.');
+          await pointer('mouseMoved',sample,button);
+        }
+        await pointer('mouseReleased',path.at(-1),button,1);
       } else {
         const count = click.count;
         await pointer('mouseMoved', point);

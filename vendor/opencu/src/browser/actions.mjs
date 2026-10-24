@@ -6,8 +6,10 @@ import {runTextEdit} from '../../extension/text-edit.js';
 import {selectOptionsFunction, selectOptionsResult} from '../../extension/select-options.js';
 import {validateFileInput,writeFileInput} from '../../extension/file-input.js';
 import {uploadFiles} from './upload-files.mjs';
-import {clickParameters, checkClickHeld, holdClick} from '../../extension/click-options.js';
+import {clickParameters, locatorClickParameters, checkClickHeld, holdClick} from '../../extension/click-options.js';
 import {pressParameters, checkPressHeld} from '../../extension/key-options.js';
+import {dragPath} from '../../extension/pointer-path.js';
+import {scrollDeltas,readElementScrollGeometry,checkScrollGeometry} from '../../extension/scroll.js';
 import {playwrightKeyIdentity} from './playwright-keyboard.mjs';
 import {actOnClipboard,restoreClipboardPermissions} from './clipboard.mjs';
 import {withCDPFrameGuard} from '../../extension/frame-router.js';
@@ -44,7 +46,10 @@ export async function actOnPage(record, request, options) {
   request = normalizeBrowserAction(request);
   const {page} = record;
   const signal = request.signal;
+  const inputOccurrence = ['click','doubleClick','move','mouseDown','scroll','drag','type','keyDown','press','paste','selectText','fill','selectOption'].includes(request.action) ? record.documentGeneration : undefined;
+  const inputRoutes=new Set();
   const check = () => { checkSignal(signal); options.actionGuard?.check();
+    if (inputOccurrence !== undefined && inputOccurrence !== record.documentGeneration) fail('STALE_ELEMENT','The document changed during input; observe again before continuing');
     if (request.action === 'fileChooserSetFiles' && request.deadline !== undefined && Date.now() >= request.deadline) fail('FILE_CHOOSER_TIMEOUT','Setting file chooser files timed out; observe before deciding another action');
   };
   const screenshotInput = request.elementId == null && ['screenshot', 'screenshot-pixels', 'physical-screenshot-pixels'].includes(request.coordinateSpace);
@@ -89,14 +94,19 @@ export async function actOnPage(record, request, options) {
   const frameRouter = withCDPFrameGuard(record.frameRouter,frameOptions.wrapSend,step);
   const frameSend = frameOptions.wrapSend((method,params)=>record.session.send(method,params));
   const input = (events, work, beforeDispatch) => step(async () => {
-    const scopedInput = events.some(event => event.textInput || event.type === 'keydown');
+    const scopedInput = events.length > 0;
     check();
     if (request.locatorGeneration !== undefined && request.locatorGeneration !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed before locator input');
     await record.session.send('Emulation.setFocusEmulationEnabled', { enabled: true });
     record.focusEmulated = true;
     check();
+    if (record.frameRouter) {
+      for(const route of inputRoutes)await frameRouter.validate(route);
+      const down=events.find(event=>event.type==='pointerdown');
+      if(down && Number.isFinite(down.x) && Number.isFinite(down.y)) inputRoutes.add((await frameRouter.atPoint(down)).route);
+    }
     const expected = await options.expectInput?.(events), marker = scopedInput ? expected : undefined;
-    let failure;
+    let failure,dispatched=false;
     try {
       check();
       if (elementGeneration !== undefined) {
@@ -106,12 +116,13 @@ export async function actOnPage(record, request, options) {
       if (request.elementId != null) {const entry = elementFor(record, request); if (entry.route) await frameRouter.validate(entry.route);}
       check();
       await beforeDispatch?.();
+      if(record.frameRouter)for(const route of inputRoutes)await frameRouter.validate(route);
       check();
       record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1;
-      return await work();
+      const result=await work();dispatched=true;return result;
     } catch (error) { failure = error; throw error; }
     finally {
-      if (marker) try { await options.finishInput?.(marker); }
+      if (marker) try { await options.finishInput?.(marker,dispatched); }
       catch (error) { if (!failure) throw error; failure.details = {...failure.details,inputMarkerError:error.message}; }
     }
   });
@@ -145,17 +156,17 @@ export async function actOnPage(record, request, options) {
   };
   const mouseUp = async button => {
     button = buttonName(button);
-    await step(() => { record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1; return page.mouse.up({button}); });
+    await input([{type:'pointerup',...record.pointer}],() => page.mouse.up({button}));
     record.buttons.delete(button);
   };
   const point = async value => {
     if (value.elementId !== undefined) return step(() => elementPoint(record, value,frameRouter,frameSend));
     return step(() => screenshotPoint(record, {...request, ...value}));
   };
-  const move = async value => {
-    const location = await point(value);
-    if (options.cursor) await step(() => options.cursor({...location, visible: true, animateMovement: true}));
-    await input([], () => page.mouse.move(location.x, location.y), checkScreenshot);
+  const move = async (value, animateMovement = true, resolved = false) => {
+    const location = resolved ? value : await point(value);
+    if (options.cursor) await step(() => options.cursor({...location, visible: true, animateMovement}));
+    await input([{type:'pointermove',...location}], () => page.mouse.move(location.x, location.y), checkScreenshot);
     record.pointer = location;
     return location;
   };
@@ -174,7 +185,7 @@ export async function actOnPage(record, request, options) {
       await options.persistInputs();
       await input([{type: 'pointerdown', ...record.pointer}], () => page.mouse.down({button, clickCount: index}), checkPointer);
       await step(() => holdClick(click.durationMs, check));
-      await step(() => { record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1; return page.mouse.up({button, clickCount: index}); });
+      await input([{type:'pointerup',...record.pointer}],() => page.mouse.up({button,clickCount:index}));
       record.buttons.delete(button);
     }
     for (const key of [...click.keys].reverse()) await keyUp(key);
@@ -221,6 +232,9 @@ export async function actOnPage(record, request, options) {
       return {action: request.action, ...result};
     }
     case 'locator': {
+      const args = request.args ?? {}, method = request.method;
+      const click = ['click','dblclick'].includes(method) ? locatorClickParameters(args, {mac:process.platform === 'darwin',count:method === 'dblclick' ? 2 : 1}) : undefined;
+      if (click) checkClickHeld(record, click);
       const generation = record.documentGeneration;
       const result = await step(() => runCDPLocator(frameSend, request, (backendNodeId, route) => {
         check();
@@ -232,12 +246,11 @@ export async function actOnPage(record, request, options) {
       }, frameRouter));
       if (generation !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed while resolving the locator');
       if (Object.hasOwn(result, 'value')) return {action: request.action, value: result.value};
-      const args = request.args ?? {}, method = request.method;
       const checking = ['check', 'uncheck', 'setChecked'].includes(method);
       const checked = method === 'setChecked' ? args.checked : method === 'check';
       if (!checking || result.checked !== checked) {
         await actOnPage(record, {action: checking ? 'click' : method === 'dblclick' ? 'doubleClick' : method === 'pressSequentially' ? 'type' : method,
-          elementId: result.elementId, locatorGeneration: generation, button: args.button, key: args.key, value: args.value,
+          elementId: result.elementId, locatorGeneration: generation, button: args.button, key: click?.keys.length ? click.keys.join('+') : args.key, value: args.value,
           sequential:method === 'pressSequentially', deadline:request.deadline,
           keyboardEditable:result.keyboardEditable,
           signal: request.signal, inputMode: request.inputMode}, options);
@@ -272,20 +285,36 @@ export async function actOnPage(record, request, options) {
     case 'doubleClick': await click(2); break;
     case 'mouseDown': if (request.x !== undefined || request.elementId !== undefined) await move(request); await mouseDown(request.button); break;
     case 'mouseUp': await mouseUp(request.button); break;
-    case 'scroll':
+    case 'scroll': {
+      let deltas = scrollDeltas(request), geometry;
       if (request.x !== undefined || request.elementId !== undefined) await move(request);
-      await input([{type: 'wheel'}], () => page.mouse.wheel(finite(request.deltaX ?? 0, 'deltaX'), finite(request.deltaY ?? 0, 'deltaY')), checkPointer);
+      const dimensions = async () => {
+        const entry = elementFor(record,request);
+        if (entry.route) await frameRouter.validate(entry.route);
+        return readElementScrollGeometry(entry.route ? frameRouter.route(entry.route).send : frameSend,{backendNodeId:entry.backendNodeId,contextId:entry.route?.contextId});
+      };
+      if (!deltas) {geometry = await step(dimensions);deltas = scrollDeltas(request,geometry);}
+      await input([{type:'wheel',...(record.pointer??{x:0,y:0}),...deltas}], () => page.mouse.wheel(deltas.deltaX,deltas.deltaY), async () => {
+        await checkPointer();
+        if (geometry) checkScrollGeometry(geometry,await dimensions());
+      });
       break;
+    }
     case 'drag': {
-      if (!Array.isArray(request.path) || request.path.length < 2) fail('INVALID_ARGUMENT', 'drag requires at least two path points');
-      const points = request.path.map(value => ({x: finite(value.x, 'x'), y: finite(value.y, 'y')}));
-      // Reject an invalid later endpoint before any pointer input. move() still
-      // resolves each point again so preflight does not replace freshness checks.
-      for (const value of points) await point(value);
-      await move(points[0]);
-      await mouseDown(request.button);
-      for (const value of points.slice(1)) await move(value);
-      await mouseUp(request.button);
+      const plan=dragPath(request.path,request.durationMs), waypoints=[];
+      const button = buttonName(request.button);
+      // Validate every explicit endpoint before acquiring input, then interpolate
+      // in CSS pixels. Each dispatch still checks the original screenshot.
+      for (const value of plan.waypoints) waypoints.push(await point(value));
+      if (record.buttons.has(button)) fail('INPUT_ALREADY_HELD','Drag cannot acquire an already held mouse button');
+      const {points,intervalMs}=dragPath(waypoints,request.durationMs);
+      await move(points[0],true,true);
+      await mouseDown(button);
+      for (const value of points.slice(1)) {
+        await step(() => holdClick(intervalMs,check));
+        await move(value,false,true);
+      }
+      await mouseUp(button);
       break;
     }
     case 'keyDown': await keyDown(request.key); break;

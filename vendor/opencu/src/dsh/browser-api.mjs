@@ -1,4 +1,5 @@
 import {validateSelectOptions} from '../../extension/select-options.js';
+import {clickModifierKeys} from '../../extension/click-options.js';
 
 /** Serializable locators; each retry resolves the current document, never replays uncertain input. */
 export function createPlaywrightAPI(invoke, display, context = {}) {
@@ -39,6 +40,7 @@ export function createPlaywrightAPI(invoke, display, context = {}) {
       const {timeoutMs = 10000, ...args} = options;
       if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0 || timeoutMs > 300000) throw new TypeError('timeoutMs must be an integer from 0 to 300000');
       if (['click', 'dblclick'].includes(method) && args.button !== undefined && !['left', 'middle', 'right'].includes(args.button)) throw new TypeError('click button must be left, middle, or right');
+      if (['click', 'dblclick'].includes(method) && args.modifiers !== undefined) args.modifiers = clickModifierKeys(args.modifiers, {resolve:false});
       if (method === 'waitFor' && args.state !== undefined && !['attached', 'detached', 'visible', 'hidden'].includes(args.state)) throw new TypeError('waitFor state must be attached, detached, visible, or hidden');
       const deadline = timeoutMs === 0 ? Infinity : Date.now() + timeoutMs;
       const immediate = ['count', 'allTextContents', 'isVisible'].includes(method);

@@ -1,8 +1,9 @@
 import { runDOMLocator } from './dom-locator.js';
 import {selectOptionsDOMSource} from './select-options.js';
 import {readCDPFrameOwners} from './frame-router.js';
+import {clickModifierKeys} from './click-options.js';
 
-export const domLocatorSource = `(request => (${runDOMLocator.toString()})(request,${selectOptionsDOMSource}))`;
+export const domLocatorSource = `(request => (${runDOMLocator.toString()})(request,${selectOptionsDOMSource},${clickModifierKeys.toString()}))`;
 const writes = new Set(['click','dblclick','fill','type','pressSequentially','press','check','uncheck','setChecked','selectOption']);
 const pointerWrites = new Set(['click','dblclick','check','uncheck','setChecked','selectOption']);
 export function locatorError(value) {

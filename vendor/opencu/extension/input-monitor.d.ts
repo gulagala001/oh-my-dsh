@@ -6,3 +6,4 @@ export interface PageInputMonitor {
   dispose(): void;
 }
 export function createPageInputMonitor(enqueue: (message: { type: string; kind: string }) => void): PageInputMonitor;
+export function inputFrameFailure(error: Error & {code?: string | number; details?: Record<string, unknown>}, options?: {documentChanged?: () => boolean; validate?: () => Promise<unknown>}): Promise<Error & {code?: string | number; details?: Record<string, unknown>}>;

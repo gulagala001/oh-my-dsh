@@ -10,10 +10,11 @@ import { runCDPLocator } from './opencu-cdp-locator.js'
 import { selectOptionsFunction, selectOptionsResult } from './opencu-select-options.js'
 import { filePaths, validateFileInput, writeFileInput } from './opencu-file-input.js'
 import { guestKeySpec as inputKey, keyEventParameters, keyboardInputTypes } from './opencu-keyboard.js'
-import { createPageInputMonitor } from './opencu-input-monitor.js'
+import { createPageInputMonitor, inputFrameFailure } from './opencu-input-monitor.js'
 import { runTextEdit, validateTextEditRequest } from './opencu-text-edit.js'
 import { createCDPFrameRouter, hitTestViewport, readCDPFrameOwners, type CDPFrameRouter, type FrameElement, type FrameRoute } from './opencu-frame-router.js'
 import { captureAXTree, axElementKey } from './opencu-ax-tree.js'
+import { readElementScrollGeometry, scrollDeltas, checkScrollGeometry, type ScrollGeometry } from './opencu-scroll.js'
 import { openCUDialogs, type DialogFence } from './opencu-dialogs.ts'
 
 type RemoteResult = { result: { value?: unknown }; exceptionDetails?: { text: string; exception?: { description?: string } } }
@@ -32,6 +33,8 @@ interface ObservationState {
   inputActive?: boolean
   inputKeys: Map<string, ReturnType<typeof inputKey>>
   inputButtons: Set<string>
+  pointerRoutes?: Map<string, FrameRoute>
+  inputOccurrence?: {id:string;routes:Map<string,FrameRoute>}
   releasingInputs: Map<string, Promise<unknown>>
   inputPosition: { x: number; y: number }
   uploadGeneration: number
@@ -110,7 +113,7 @@ export async function settleDestroyedOpenCUInput(guest: WebContents): Promise<{ 
   } finally { clearTimeout(timer) }
   // Native destruction has already ended the child sessions; close only their local journals.
   await current.frameRouter?.close().catch(() => undefined)
-  current.inputKeys.clear(); current.inputButtons.clear(); current.releasingInputs.clear()
+  current.inputKeys.clear(); current.inputButtons.clear(); current.pointerRoutes?.clear(); current.releasingInputs.clear()
   current.elements.clear(); current.elementIds.clear(); current.nodeIds.clear(); current.monitorRoutes.clear(); current.monitorScripts.clear(); current.monitorEvents.length = 0
   states.delete(guest)
   return { released: true, retired: true }
@@ -136,7 +139,7 @@ export function resolveOpenCUNavigation(input: unknown, allowedNavigation: (url:
 
 /** Run fixed accessibility and DOM operations on the caller's already verified guest. */
 export function openCUAutomation(guest: WebContents, operation: unknown, input: unknown, allowedNavigation: (url: string) => boolean): Promise<unknown> {
-  if (typeof operation !== 'string' || !['getDialog', 'handleDialog', 'pageState', 'navigationState', 'inputMarker', 'inputMonitor', 'observe', 'locator', 'domSnapshot', 'checked', 'point', 'verifyElement', 'focus', 'selectAll', 'selectOption', 'selectText', 'paste', 'describe', 'patch', 'hitTest', 'upload', 'navigationSnapshot', 'restoreNavigation', 'siteTools', 'invokeSiteTool', 'cancelSiteTool', 'cancelUpload', 'capture', 'readPageImage', 'input', 'insertText', 'releaseInput'].includes(operation)) throw new Error('Unsupported guest automation operation')
+  if (typeof operation !== 'string' || !['getDialog', 'handleDialog', 'pageState', 'navigationState', 'inputMarker', 'inputMonitor', 'observe', 'locator', 'domSnapshot', 'checked', 'point', 'scrollGeometry', 'verifyElement', 'focus', 'selectAll', 'selectOption', 'selectText', 'paste', 'describe', 'patch', 'hitTest', 'upload', 'navigationSnapshot', 'restoreNavigation', 'siteTools', 'invokeSiteTool', 'cancelSiteTool', 'cancelUpload', 'capture', 'readPageImage', 'input', 'insertText', 'releaseInput'].includes(operation)) throw new Error('Unsupported guest automation operation')
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Invalid guest automation arguments')
   const args = { ...input as Record<string, unknown> }
   if (typeof args.elementId === 'number' && Number.isSafeInteger(args.elementId) && args.elementId >= 0) args.elementId = String(args.elementId)
@@ -168,11 +171,11 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       inputKeys: new Map(), inputButtons: new Set(), releasingInputs: new Map(), inputPosition: { x: 0, y: 0 } }
     states.set(guest, state)
     const tracked = state
-    const invalidate = (): void => { tracked.monitorEvents.length = 0; if(tracked.monitoringActive) tracked.monitorError = 'The new document has not completed frame input monitoring'; tracked.documentGeneration++; tracked.identityScope = randomUUID(); tracked.elements.clear(); tracked.elementIds.clear(); tracked.nodeIds.clear(); delete tracked.observationId; delete tracked.deferredAX }
+    const invalidate = (): void => { tracked.monitorEvents.length = 0; if(tracked.monitoringActive) tracked.monitorError = 'The new document has not completed frame input monitoring'; tracked.pointerRoutes?.clear(); delete tracked.inputOccurrence; tracked.documentGeneration++; tracked.identityScope = randomUUID(); tracked.elements.clear(); tracked.elementIds.clear(); tracked.nodeIds.clear(); delete tracked.observationId; delete tracked.deferredAX }
     guest.on('render-process-gone', () => {
       invalidate(); tracked.rendererExited = true; tracked.uploadGeneration++
       tracked.monitorRoutes.clear(); tracked.monitorScripts.clear(); tracked.monitorEvents.length = 0
-      tracked.inputKeys.clear(); tracked.inputButtons.clear(); tracked.releasingInputs.clear(); tracked.inputActive = false
+      tracked.inputKeys.clear(); tracked.inputButtons.clear(); tracked.pointerRoutes?.clear(); tracked.releasingInputs.clear(); tracked.inputActive = false
       const router = tracked.frameRouter; delete tracked.frameRouter
       void router?.close().catch(() => {}) // The exited process already owns no frame sessions.
     })
@@ -198,7 +201,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
   }
   if (current.rendererExited || guest.isCrashed()) {
     if (operation === 'releaseInput') {
-      current.inputKeys.clear(); current.inputButtons.clear(); current.inputActive = false
+      current.inputKeys.clear(); current.inputButtons.clear(); current.pointerRoutes?.clear(); current.inputActive = false
       return Promise.resolve({ released: true })
     }
     return Promise.reject(guestExited())
@@ -277,7 +280,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           const forget = (): void => { if (current.releasingInputs.get(releaseId) === ack) current.releasingInputs.delete(releaseId) }
           void ack.then(() => {
             if (releasedKey) current.inputKeys.delete(releasedKey)
-            if (releasedButton) current.inputButtons.delete(releasedButton)
+            if (releasedButton) {current.inputButtons.delete(releasedButton);current.pointerRoutes?.delete(releasedButton)}
             forget()
           }, forget)
         }
@@ -306,7 +309,9 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       },
     })
     const retiredFrame = (error: unknown): boolean => ['FRAME_DETACHED', 'STALE_OBSERVATION', 'STALE_ELEMENT', 'BROWSER_GUEST_CRASHED'].includes((error as {code?:string}).code ?? '') || /Cannot find context|Execution context was destroyed|No session with given id|Session with given id not found|Session closed|Target closed|No frame with given id/iu.test((error as Error).message);
+    const frameFailure=(error:unknown,route?:FrameRoute):Promise<Error & {code?:string|number;details?:Record<string,unknown>} >=>inputFrameFailure(error as Error & {code?:string|number;details?:Record<string,unknown>},{documentChanged:()=>current.documentGeneration!==documentGeneration,validate:route?()=>frameRouter().validate(route):undefined})
     const monitorRoute = async (route: FrameRoute, expression: string): Promise<any> => {
+      try {
       await frameRouter().validate(route)
       if (!current.monitorScripts.has(route.sessionId)) {
         const script = await route.send('Page.addScriptToEvaluateOnNewDocument', { source: inputMonitorSource, worldName: 'opencu-frame-locators' })
@@ -316,6 +321,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       await frameRouter().validate(route)
       current.monitorRoutes.set(`${route.frameId}:${route.documentId}`, route)
       return result
+      }catch(error){throw await frameFailure(error,route)}
     }
     const finishMarker = async (marker: { route: FrameRoute; id: string } | undefined, dispatched: boolean): Promise<void> => {
       if (marker) await monitorRoute(marker.route, `globalThis.__opencuNativeInput.monitor.finishInput(${JSON.stringify(marker.id)},${dispatched})`)
@@ -333,6 +339,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
     }
     const markInput = async (route: FrameRoute, events: Record<string, unknown>[], node?: number, pending = false): Promise<{ route: FrameRoute; id: string } | undefined> => {
       if (!current.monitoringActive) return
+      try {
       await monitorRoute(route, 'null')
       if (node) {
         const objectId = await frameRouter().remoteElement(route, node)
@@ -344,6 +351,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       }
       const id = await monitorRoute(route, `globalThis.__opencuNativeInput.monitor.expectInput(${JSON.stringify(events)},${pending})`)
       return typeof id === 'string' ? { route, id } : undefined
+      }catch(error){throw await frameFailure(error,route)}
     }
     let releaseSend = send
     let objectId: string | undefined
@@ -519,6 +527,14 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       if (operation === 'input' || operation === 'insertText') {
         current.inputActive = true
         const generation = current.documentGeneration
+        const checkOccurrence=async():Promise<void>=>{
+          if(args.inputDocumentId!==undefined && String(current.documentGeneration)!==args.inputDocumentId || args.inputActionId!==undefined && current.documentGeneration!==generation)throw Object.assign(new Error('The document changed during input; observe again'),{code:'STALE_ELEMENT',details:{inputDispatched:false}})
+          if(typeof args.inputActionId==='string'){
+            if(current.inputOccurrence?.id!==args.inputActionId)current.inputOccurrence={id:args.inputActionId,routes:new Map()}
+            for(const route of current.inputOccurrence.routes.values())await frameRouter().validate(route)
+          }
+        }
+        await checkOccurrence()
         // Focus the embedding element, not its BrowserWindow. Chromium otherwise drops
         // keyboard/text CDP events in a nested guest even with focus emulation enabled.
         if (operation === 'insertText' || args.type === 'keyDown') {
@@ -550,6 +566,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
             const marker = down && current.monitoringActive ? await markInput(await frameRouter().focused(), [{type:'keydown',key:parameters.key,
               inputTypes:keyboardInputTypes(spec.code, modifiers, process.platform === 'darwin')}]) : undefined
             await dispatchMarked(marker, async () => {
+              await checkOccurrence()
               if (down) current.inputKeys.set(spec.key, spec)
               return send('Input.dispatchKeyEvent', parameters)
             })
@@ -557,23 +574,44 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           } else {
             const types: Record<string, string> = { mouseMove: 'mouseMoved', mouseDown: 'mousePressed', mouseUp: 'mouseReleased', mouseWheel: 'mouseWheel' }
             const type = types[String(args.type)]
+            const scrollRequest = args.scrollGeometry ? {...args,deltaX:undefined,deltaY:undefined} : args
+            let wheel = type === 'mouseWheel' ? scrollDeltas(scrollRequest) : undefined
             if (!type || !Number.isFinite(args.x) || !Number.isFinite(args.y)) throw new Error('Input requires a mouse event and finite coordinates')
             if (!['none', 'left', 'middle', 'right'].includes(String(args.button ?? 'none'))) throw new Error('Invalid mouse button')
             current.inputPosition = { x: Number(args.x), y: Number(args.y) }
             if (type === 'mousePressed' && inputElement?.route) await current.frameRouter!.checkPoint(inputElement as FrameElement & {route:NonNullable<FrameElement['route']>}, current.inputPosition)
-            signal.throwIfAborted()
-            let marker: { route: FrameRoute; id: string } | undefined
-            if (current.monitoringActive && ['mousePressed', 'mouseWheel'].includes(type)) {
-              const hit = await frameRouter().atPoint(current.inputPosition)
-              marker = await markInput(hit.route, [{type:type === 'mousePressed' ? 'pointerdown' : 'wheel',
-                ...(type === 'mouseWheel' ? {deltaX:args.deltaX ?? 0,deltaY:args.deltaY ?? 0} : {})}], hit.backendNodeId, true)
+            if (type === 'mouseWheel' && inputElement?.route) await current.frameRouter!.checkPoint(inputElement as FrameElement & {route:NonNullable<FrameElement['route']>}, current.inputPosition)
+            if (type === 'mouseWheel' && !wheel) {
+              await verifyElement()
+              const geometry = await readElementScrollGeometry(inputElement?.route?.send ?? send,{backendNodeId:inputElement!.backendNodeId,contextId:inputElement?.route?.contextId})
+              if (args.scrollGeometry) checkScrollGeometry(args.scrollGeometry as ScrollGeometry,geometry)
+              wheel = scrollDeltas(scrollRequest,geometry)
             }
-            await dispatchMarked(marker, async () => {
-              if (type === 'mousePressed') current.inputButtons.add(String(args.button))
+            signal.throwIfAborted()
+            let marker: { route: FrameRoute; id: string } | undefined, captureMarker: typeof marker, pointerRoute: FrameRoute | undefined
+            if (current.monitoringActive) {
+              const hit = await frameRouter().atPoint(current.inputPosition)
+              const event = {type:({mousePressed:'pointerdown',mouseMoved:'pointermove',mouseReleased:'pointerup',mouseWheel:'wheel'})[type],
+                ...(type === 'mouseWheel' ? wheel : {})}
+              marker = await markInput(hit.route, [event], ['mousePressed','mouseWheel'].includes(type) ? hit.backendNodeId : undefined, true)
+              pointerRoute=hit.route
+              if(type==='mousePressed' && typeof args.inputActionId==='string')current.inputOccurrence?.routes.set(`${hit.route.frameId}:${hit.route.documentId}`,hit.route)
+              const origin=current.pointerRoutes?.get(String(args.button)) ?? [...(current.pointerRoutes?.values()??[])][0]
+              if (['mouseMoved','mouseReleased'].includes(type) && origin && (origin.frameId!==hit.route.frameId || origin.documentId!==hit.route.documentId)) {
+                try {captureMarker=await markInput(origin,[event],undefined,true)}
+                catch(error){await finishMarker(marker,false);throw error}
+              }
+            }
+            await dispatchMarked(captureMarker, () => dispatchMarked(marker, async () => {
+              await checkOccurrence()
+              if (type === 'mousePressed') {
+                current.inputButtons.add(String(args.button))
+                if(pointerRoute)(current.pointerRoutes??=new Map()).set(String(args.button),pointerRoute)
+              }
               return send('Input.dispatchMouseEvent', { type, x: args.x, y: args.y, button: args.button ?? 'none', buttons: args.buttons ?? 0, clickCount: args.clickCount ?? 0, modifiers,
-                ...(type === 'mouseWheel' ? { deltaX: args.deltaX ?? 0, deltaY: args.deltaY ?? 0 } : {}) })
-            })
-            if (type === 'mouseReleased') current.inputButtons.delete(String(args.button))
+                ...(type === 'mouseWheel' ? wheel : {}) })
+            }))
+            if (type === 'mouseReleased') {current.inputButtons.delete(String(args.button));current.pointerRoutes?.delete(String(args.button))}
           }
         }
         return { dispatched: true, delivery: 'target-cdp', effectVerified: false }
@@ -583,7 +621,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         const modifiers = [...current.inputKeys.keys()].reduce((bits, name) => bits | ({ Alt: 1, Control: 2, Meta: 4, Shift: 8 }[name] ?? 0), 0)
         for (const button of [...current.inputButtons]) {
           const buttons = [...current.inputButtons].filter(name => name !== button).reduce((bits, name) => bits | ({ left: 1, right: 2, middle: 4 }[name] ?? 0), 0)
-          try { await send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...current.inputPosition, button, buttons, clickCount: 1, modifiers }); current.inputButtons.delete(button) }
+          try { await send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...current.inputPosition, button, buttons, clickCount: 1, modifiers }); current.inputButtons.delete(button);current.pointerRoutes?.delete(button) }
           catch (error) { errors.push(error) }
         }
         // Failed mouse-up keeps its modifier journal intact for the next release.
@@ -703,6 +741,13 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       }))
       releaseSend = elementSend
       if (entry?.route) await current.frameRouter!.validate(entry.route)
+      if (operation === 'scrollGeometry') {
+        const geometry = await readElementScrollGeometry(elementSend,{backendNodeId,contextId:entry?.route?.contextId})
+        live()
+        if (current.elements.get(String(args.elementId)) !== entry) throw Object.assign(new Error('The selected scroll element changed'),{code:'STALE_ELEMENT',details:{inputDispatched:false}})
+        if (entry?.route) await current.frameRouter!.validate(entry.route)
+        return geometry
+      }
       if (operation === 'point' && entry?.route) return current.frameRouter!.point(entry as FrameElement & {route:NonNullable<FrameElement['route']>})
       if (operation === 'focus' && entry?.route) {await current.frameRouter!.focus(entry as FrameElement & {route:NonNullable<FrameElement['route']>}); live(); return {focused:true}}
       if (operation === 'point') {
@@ -782,11 +827,11 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       live()
       return { ...detail, elementId }
     } catch (error) {
-      const failure = error as Error & {code?:string;details?:Record<string,unknown>}
+      const failure = await frameFailure(error)
       const code = /^(STALE_ELEMENT|STALE_OBSERVATION|FRAME_NOT_FOUND|FRAME_DETACHED):/u.exec(failure.message)?.[1]
       if (code) failure.code ??= code
       failure.details = {...failure.details,inputDispatched:context.inputDispatched || failure.details?.inputDispatched === true}
-      throw error
+      throw failure
     } finally {
       try {
         if (objectId && !signal.aborted && !context.fence.interrupted && !dialogs.pending() && !guest.isDestroyed() && !current.rendererExited && !guest.isCrashed() && guest.debugger.isAttached()) await releaseSend('Runtime.releaseObject', { objectId })

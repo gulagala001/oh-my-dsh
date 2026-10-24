@@ -174,7 +174,7 @@ export function createCDPFrameRouter(sendRoot, subscribe, {sendSession,prepareRo
     try {reply = await route.send('Runtime.evaluate', {contextId:route.contextId,returnByValue:true,expression:'globalThis.__opencuFrameDocument'});}
     catch (error) {
       const protocol = error.code === undefined || typeof error.code === 'number' || error.code === 'STALE_ELEMENT' && error.details?.cdpError;
-      if (protocol && /Cannot find (?:execution )?context with (?:(?:the )?(?:given|specified) )?id|(?:No|Missing) execution context|Execution context (?:with (?:(?:the )?(?:given|specified) )?id )?(?:was )?(?:destroyed|not found)|No session with (?:(?:the )?(?:given|specified) )?id|Session closed(?:[.:]|$)|Target (?:closed|detached)|Inspected target navigated or closed/iu.test(error.message)) {
+      if (protocol && /Cannot find (?:execution )?context with (?:(?:the )?(?:given|specified) )?id|(?:No|Missing) execution context|Execution context (?:with (?:(?:the )?(?:given|specified) )?id )?(?:was )?(?:destroyed|not found)|No session with (?:(?:the )?(?:given|specified) )?id|Session with given id not found|Session closed(?:[.:]|$)|Target (?:closed|detached)|Inspected target navigated or closed/iu.test(error.message)) {
         const detached = failure('Frame document is no longer available; observe again', 'FRAME_DETACHED');
         detached.cause = error;
         detached.details = {...error.details,inputDispatched:false};

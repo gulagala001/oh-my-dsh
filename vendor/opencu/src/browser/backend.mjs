@@ -310,7 +310,7 @@ export async function createBrowserBackend(options = {}) {
     return attempt.work;
   }
   async function activityFor(record) {
-    record.activityPromise ??= createUserActivityMonitor(record.session, {onAcquire: monitor => { record.activity = monitor; }}).then(activity => (record.activity = activity)).catch(error => { delete record.activityPromise; throw error; });
+    record.activityPromise ??= createUserActivityMonitor(record.session, {frameRouter:record.frameRouter,onAcquire: monitor => { record.activity = monitor; }}).then(activity => (record.activity = activity)).catch(error => { delete record.activityPromise; throw error; });
     return record.activityPromise;
   }
   async function newTab(request, record) {
@@ -529,10 +529,10 @@ export async function createBrowserBackend(options = {}) {
         }
         const result = await guard.wait(actOnPage(record, request, {timeoutMs, capture, persistInputs: inputState.persist, actionGuard:guard,
           cursor: cursor => updateCursor(record, cursor), expectInput: async events => { const activity = await activityFor(record); guard.check(); return activity.expect(events); },
-          finishInput: async marker => {
+          finishInput: async (marker,dispatched) => {
             if (guard.dialog || record.dialogs.read()) return;
             const activity = await activityFor(record); guard.check();
-            return guard.wait(activity.finish(marker));
+            return guard.wait(activity.finish(marker,dispatched));
           }}));
         if (request.action === 'navigationState' && request.downloadCursor === true) {
           // The controller still owns this read's serial slot. A subsequent

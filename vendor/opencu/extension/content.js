@@ -44,6 +44,21 @@ export function installDocumentRuntime({trackActivity = true} = {}) {
     // Native steppers may pair text beforeinput with a plain input Event.
     return {targets:changesValue ? [control] : [],inputTypes:[...inputTypes,...(type !== 'range' && navigation ? ['insertText'] : []),null]};
   };
+  let pointerControl, pointerEffect;
+  const pointerTarget = target => {
+    const control=target?.closest?.('label')?.control ?? target?.closest?.('select') ?? target;
+    if (control?.isConnected === false || control?.matches?.(':disabled')) return;
+    return control?.tagName === 'SELECT' || control?.tagName === 'INPUT' && ['range','number','date','datetime-local','month','time','week','color'].includes(control.type) ? control : undefined;
+  };
+  const pointerDefault = (event,target,input) => {
+    if (event.type === 'pointerdown') pointerControl=event.button === 0 ? {target:pointerTarget(target),pointerId:event.pointerId} : undefined;
+    const control=pointerControl && pointerControl.pointerId === event.pointerId ? pointerControl.target : undefined;
+    if (control && (event.type === 'pointerdown' || event.type === 'pointerup' || event.buttons & 1)) {
+      const effect=pointerEffect={target:control,id:input.id,markerId:input.markerId,input:true,change:true};
+      setTimeout(()=>{if(pointerEffect===effect)pointerEffect=undefined;},0);
+    }
+    if (event.type === 'pointerup') pointerControl=undefined;
+  };
   const checkable = target => {
     const control = target?.closest?.('label')?.control ?? target;
     return control?.tagName === 'INPUT' && ['checkbox','radio'].includes(control.type) ? control : null;
@@ -53,6 +68,7 @@ export function installDocumentRuntime({trackActivity = true} = {}) {
     const now = performance.now();
     for (let i = expected.length - 1; i >= 0; i--) if (expected[i].expires < now) expected.splice(i, 1);
     const target = event.composedPath?.()[0] ?? event.target;
+    if (['input','change'].includes(event.type) && pointerEffect && pointerEffect.target === pointerTarget(target) && pointerEffect[event.type] && (event.inputType == null || ['insertText','insertReplacementText'].includes(event.inputType))) {pointerEffect[event.type]=false;return true;}
     if (event.type === 'beforeinput') {
       const input = expected.find(input => input.target === editTarget(target) && (
         input.textInput && input.inputType === event.inputType && input.data === event.data ||
@@ -76,10 +92,13 @@ export function installDocumentRuntime({trackActivity = true} = {}) {
       (item.type !== 'input' || item.inputTypes === undefined || item.inputTypes.includes(event.inputType ?? null)) && (item.x === undefined || Math.abs(item.x - event.clientX) <= 2 && Math.abs(item.y - event.clientY) <= 2) &&
       (item.deltaY === undefined || Math.abs(item.deltaX - event.deltaX) < 1 && Math.abs(item.deltaY - event.deltaY) < 1));
     if (index < 0) {
+      if (['pointerdown','pointermove','pointerup','pointercancel','keydown','wheel'].includes(event.type)) {pointerControl=undefined;pointerEffect=undefined;}
+      if (['change','pointermove','pointerup','pointercancel'].includes(event.type)) return true;
       if (['pointerdown','keydown'].includes(event.type)) for (let i=expected.length-1;i>=0;i--) if(expected[i].type==='click')expected.splice(i,1);
       return event.type === 'click';
     }
     const [input] = expected.splice(index,1);
+    if (['pointerdown','pointermove','pointerup'].includes(event.type)) pointerDefault(event,target,input);
     if (event.type === 'keydown') {
       const editor = textInputTarget();
       const native = keyboardControlInput(editor,event,input.inputTypes);
@@ -98,7 +117,7 @@ export function installDocumentRuntime({trackActivity = true} = {}) {
     }
     return true;
   };
-  if (trackActivity) for (const type of ['pointerdown', 'keydown', 'beforeinput', 'input', 'wheel', 'click']) addEventListener(type, event => {
+  if (trackActivity) for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'keydown', 'beforeinput', 'input', 'change', 'wheel', 'click']) addEventListener(type, event => {
     if (!event.isTrusted || automated(event)) return;
     userActivity = { documentId, sequence: ++activitySequence, kind: type, at: new Date().toISOString() };
   }, true);
@@ -130,16 +149,17 @@ export function installDocumentRuntime({trackActivity = true} = {}) {
         return {expected:true,markerId,documentId};
       }
       case 'finishInput':
+        if (pointerEffect?.markerId === input.markerId) pointerEffect=undefined;
         if (textInput?.markerId === input.markerId) textInput = undefined;
         for (let i = expected.length - 1; i >= 0; i--) if (expected[i].markerId === input.markerId) {
-          if (input.dispatched && !expected[i].textInput && !expected[i].keyboardInput && expected[i].type !== 'keydown') expected[i].expires = performance.now() + 500;
+          if (input.dispatched && !expected[i].textInput && !expected[i].keyboardInput && !['keydown','pointerdown','pointermove','pointerup'].includes(expected[i].type)) expected[i].expires = performance.now() + 500;
           else expected.splice(i, 1);
         }
         return { finished: true };
       case 'cursor':
         if (!globalThis.__opencuCursor) throw Object.assign(new Error('The original REA cursor runtime did not load.'), { code: 'CURSOR_UNAVAILABLE' });
         return globalThis.__opencuCursor.update({ ...input, waitForArrival: true });
-      case 'release': expected.length = 0; textInput = undefined; void globalThis.__opencuCursor?.update({ visible: false }); return { released: true };
+      case 'release': expected.length = 0; textInput = undefined; pointerControl=undefined; pointerEffect=undefined; void globalThis.__opencuCursor?.update({ visible: false }); return { released: true };
       default: throw Object.assign(new Error('Unknown content operation.'), { code: 'UNSUPPORTED_OPERATION' });
     }
   } };

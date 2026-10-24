@@ -11,6 +11,7 @@ import { createBrowserWaits } from './browser-waits.mjs';
 import { replOutput, partialReplError } from './repl-output.mjs';
 import { clickParameters } from '../../extension/click-options.js';
 import { pressParameters } from '../../extension/key-options.js';
+import {scrollDirection,scrollDistance,scrollDeltas} from '../../extension/scroll.js';
 import { createInputReleaseState } from './input-release.mjs';
 import { controlFailure } from '../protocol.mjs';
 import { createTargetCapabilities, createBrowserCapabilities } from './browser-capabilities.mjs';
@@ -251,17 +252,16 @@ export function createComputerRepl(request, report = () => {}) {
       keyDown: async key => act('keyDown', { key }),
       keyUp: async key => act('keyUp', { key }),
       scroll: async (value = {}, direction, distance) => {
-        if (direction === undefined) return act('scroll', value);
-        const directions = {up: [0,-1], u: [0,-1], down: [0,1], d: [0,1], left: [-1,0], l: [-1,0], right: [1,0], r: [1,0]};
-        const vector = directions[direction];
-        if (!vector) throw new TypeError('Unknown scroll direction');
-        let pixels;
-        if (distance && typeof distance === 'object') pixels = distance.pixels;
-        else {
+        if (direction === undefined) {scrollDeltas(value);return act('scroll', value);}
+        const vector = scrollDirection(direction), parsed = scrollDistance(distance), location = point(value);
+        if (parsed.pages !== undefined && target.backend === 'browser' && location.elementId != null)
+          return act('scroll',{...location,scrollDirection:direction,scrollPages:parsed.pages});
+        let pixels = parsed.pixels;
+        if (pixels === undefined) {
           const shot = last?.screenshot, viewport = shot?.viewport;
           const dimension = vector[0] ? viewport?.width ?? shot?.image?.width ?? shot?.width : viewport?.height ?? shot?.image?.height ?? shot?.height;
           if (!dimension) throw new Error('Page-distance scrolling needs a current screenshot; use {pixels} or scroll({deltaX,deltaY})');
-          pixels = dimension * (distance ?? 1);
+          pixels = dimension * parsed.pages;
         }
         if (typeof pixels !== 'number' || !Number.isFinite(pixels) || pixels < 0) throw new TypeError('Scroll distance must be non-negative');
         return act('scroll', {...point(value), deltaX: vector[0]*pixels, deltaY: vector[1]*pixels});

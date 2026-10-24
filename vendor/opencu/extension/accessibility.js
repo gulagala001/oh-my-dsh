@@ -4,6 +4,7 @@ import { runTextEdit } from './text-edit.js';
 import {selectOptionsFunction, selectOptionsResult} from './select-options.js';
 import {captureAXTree, axElementKey} from './ax-tree.js';
 import {filePaths,validateFileInput,writeFileInput} from './file-input.js';
+import {readElementScrollGeometry} from './scroll.js';
 const states = new Map();
 const fail = message => { throw Object.assign(new Error(message), { code: 'STALE_ELEMENT' }); };
 function result(reply) {
@@ -78,6 +79,12 @@ export async function elementOperation(tabId, send, operation, args, router, edi
   }
   if (!backendNodeId) fail('Use an element ID from the latest Chromium accessibility observation.');
   if (operation === 'verifyElement') return {valid:true};
+  if (operation === 'scrollGeometry') {
+    const geometry = await readElementScrollGeometry(send,{backendNodeId,contextId:route?.contextId});
+    if (states.get(tabId)?.elements.get(args.elementId) !== entry) fail('The selected scroll element changed; observe again.');
+    if (route) await router.validate(route);
+    return geometry;
+  }
   if (operation === 'upload') {
     const files = filePaths(args.files);
     await validateFileInput(send,{backendNodeId,contextId:route?.contextId,files});
