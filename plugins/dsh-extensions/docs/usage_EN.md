@@ -42,7 +42,9 @@ Every page is a tab at the top of the **Plugins** page in the left sidebar: Skil
 
 - Personal: `~/.dsh/AGENTS.md`; `~/.agents/AGENTS.md` is shown when it exists.
 - Project: from the project root (the directory containing `.git`) down to the workspace directory, the `AGENTS.md` and `CLAUDE.md` at each level plus the local files `AGENTS.local.md` and `CLAUDE.local.md`. A missing `AGENTS.md` in the workspace directory shows a **Create** button.
-- File names and the project root marker follow DSH's current instruction settings. DSH does not load files larger than 1 MiB, and the page does not open them for editing.
+- File names, root markers and source limits come from the default preset and the selected workspace's open main conversations. DSH discovers the candidates. Disabled instruction loading offers no guessed creation targets, and unrelated projects do not contribute their presets.
+- Details show the host source limits and this page's editing limit. The page edits at most 1 MiB and respects a lower host limit; differing limits among relevant presets are marked. DSH's total byte budget still controls inclusion and truncation in model context.
+- Saving a symbolic link updates its target; deleting removes only the link. Saves and deletions run in order within one host. Request cancellation, plugin shutdown or a changed preset prevents uncommitted changes and preserves the original file on failure. Full edits use the last successful save; external editors and other hosts are outside this queue.
 
 ## Commands
 

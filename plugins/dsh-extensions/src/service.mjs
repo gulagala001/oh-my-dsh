@@ -2,7 +2,7 @@ import { Service } from '@deepseek-ai/cordis';
 import { ExtensionError, errorText, fail, homes } from './common.mjs';
 import { Skills } from './skills.mjs';
 import { Mcp } from './mcp.mjs';
-import { Instructions } from './instructions.mjs';
+import { Instructions, MAX_INSTRUCTION_BYTES } from './instructions.mjs';
 import { Commands } from './commands.mjs';
 import { Hooks } from './hooks.mjs';
 
@@ -14,9 +14,9 @@ function send(res, status, value) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(value));
 }
-async function body(req) {
+async function body(req, limit = MAX_BODY) {
   let size = 0; const chunks = [];
-  for await (const chunk of req) { size += chunk.length; if (size > MAX_BODY) fail('too-large', 'Request is too large', {}, 413); chunks.push(chunk); }
+  for await (const chunk of req) { size += chunk.length; if (size > limit) fail('too-large', 'Request is too large', {}, 413); chunks.push(chunk); }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch { fail('invalid-json', 'Request body must be JSON'); }
 }
 
@@ -61,15 +61,17 @@ export class Extensions extends Service {
     res.once('close', disconnect);
     try {
       if (!this.enabled) fail('service-missing', 'Extensions service is stopped', {}, 503);
-      if (req.method === 'GET') send(res, 200, await this.read(route, url.searchParams));
-      else if (req.method === 'POST') send(res, 200, await this.write(route, await body(req), controller.signal));
+      if (req.method === 'GET') send(res, 200, await this.read(route, url.searchParams, controller.signal));
+      // JSON may encode one content byte as six bytes (for example \\u0000).
+      else if (req.method === 'POST') send(res, 200, await this.write(route, await body(req,
+        route === '/instructions' ? MAX_INSTRUCTION_BYTES * 6 + 65536 : MAX_BODY), controller.signal));
       else send(res, 405, { error: 'Method not allowed', code: 'method' });
     } catch (error) {
       const known = error instanceof ExtensionError || error?.code === 'invalid-frontmatter';
       if (!res.destroyed && !res.writableEnded) send(res, known ? error.status ?? 400 : 500, { error: errorText(error), code: known ? error.code : 'internal', params: error.params ?? {} });
     } finally { res.off('close', disconnect); }
   }
-  async read(route, query) {
+  async read(route, query, signal) {
     const scope = () => this.scope(query.get('scope'));
     switch (route) {
       case '/state': return { version: VERSION, scopes: this.scopes(), homes: this.homes };
@@ -77,8 +79,8 @@ export class Extensions extends Service {
       case '/skills/file': return this.skills.read(scope(), query.get('key') ?? query.get('path'));
       case '/mcp': return this.mcp.list();
       case '/mcp/server': return this.mcp.server(query.get('name'));
-      case '/instructions': return this.instructions.list(scope());
-      case '/instructions/file': return this.instructions.read(scope(), query.get('path'));
+      case '/instructions': return this.instructions.list(scope(), signal);
+      case '/instructions/file': return this.instructions.read(scope(), query.get('path'), signal);
       case '/commands': return this.commands.list(scope());
       case '/commands/file': return this.commands.read(scope(), query.get('location'), query.get('name'));
       case '/hooks': return this.hooks.list();
@@ -103,8 +105,8 @@ export class Extensions extends Service {
       case '/mcp#import': return done({ names: await this.mcp.importJson(input.json) });
       case '/mcp#reconnect': await this.mcp.reconnect(input.name); return done();
       case '/mcp#managed': return done({ result: await this.mcp.setManaged(input.entryId, input.enabled === true) });
-      case '/instructions#save': await this.instructions.save(scope(), input.path, input.content); return done();
-      case '/instructions#delete': await this.instructions.remove(scope(), input.path); return done();
+      case '/instructions#save': await this.instructions.save(scope(), input.path, input.content, signal); return done();
+      case '/instructions#delete': await this.instructions.remove(scope(), input.path, signal); return done();
       case '/commands#save': await this.commands.save(scope(), input); return done();
       case '/commands#delete': await this.commands.remove(scope(), input.location, input.name); return done();
       case '/hooks#save': await this.hooks.save(input); return done();

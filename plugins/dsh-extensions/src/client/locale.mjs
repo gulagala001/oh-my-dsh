@@ -43,7 +43,9 @@ export const zh = {
 
   'instructions.intro': 'DSH 会把这些文件作为长期指令加载到会话中。项目中的文件按目录层级依次生效。',
   'instructions.group.user': '个人', 'instructions.group.project': '项目', 'instructions.missing': '未创建', 'instructions.create': '创建',
-  'instructions.local': '本地文件', 'instructions.tooLarge': '超过 1 MiB，DSH 不会加载', 'instructions.pick': '选择工作区可查看项目中的指令文件。',
+  'instructions.local': '本地文件', 'instructions.tooLarge': '超过编辑上限（{limit}）', 'instructions.pick': '选择工作区可查看项目中的指令文件。',
+  'instructions.partiallyLimited': '部分预设的单文件上限较低', 'instructions.sourceLimits': '宿主单文件上限', 'instructions.editLimit': '本页编辑上限',
+  'instructions.inactive': '当前默认预设及此工作区已打开的会话未启用指令加载。',
   'instructions.edit.title': '编辑 {name}', 'instructions.create.title': '创建 {name}', 'instructions.placeholder': '写下希望 DSH 在这里始终遵守的约定…',
   'instructions.size': '大小与修改时间', 'instructions.createHint': 'DSH 会读取这个位置的 {name}',
   'instructions.delete.title': '删除指令文件', 'instructions.delete.desc': '将删除 {path}。',
@@ -95,7 +97,8 @@ export const zh = {
   'error.command-taken': '/{name} 已由 DSH 或其他插件提供。', 'error.command-exists': '/{name} 已存在。', 'error.command-missing': '/{name} 已不存在。',
   'error.hook-command-required': '请填写命令。', 'error.invalid-hook-timeout': '超时需在 1–600 秒之间。', 'error.invalid-hook-matcher': '匹配规则不是有效的正则表达式。',
   'error.hook-changed': 'hooks.json 已被修改，请刷新后重试。', 'error.hooks-file-invalid': 'hooks.json 无法解析，请先修复或删除。', 'error.invalid-hook-event': '请选择支持的事件。',
-  'error.unknown-scope': '这个工作区已不可用。', 'error.instruction-too-large': '文件超过 1 MiB，DSH 不会加载。', 'error.instruction-path': '这不是 DSH 在此读取的指令文件。',
+  'error.unknown-scope': '这个工作区已不可用。', 'error.instruction-too-large': '文件超过本次编辑上限（{limit} 字节）。', 'error.instruction-path': '这不是 DSH 在此读取的指令文件。',
+  'error.instruction-changed': '指令预设已经变化，请刷新后重试。',
   'error.open-failed': '无法打开：{message}',
 };
 
@@ -142,7 +145,9 @@ export const en = {
 
   'instructions.intro': 'DSH loads these files into conversations as standing instructions. Project files apply by directory level.',
   'instructions.group.user': 'Personal', 'instructions.group.project': 'Project', 'instructions.missing': 'Not created', 'instructions.create': 'Create',
-  'instructions.local': 'Local file', 'instructions.tooLarge': 'Larger than 1 MiB; DSH will not load it', 'instructions.pick': 'Choose a workspace to see its instruction files.',
+  'instructions.local': 'Local file', 'instructions.tooLarge': 'Exceeds editing limit ({limit})', 'instructions.pick': 'Choose a workspace to see its instruction files.',
+  'instructions.partiallyLimited': 'Some presets have a lower source limit', 'instructions.sourceLimits': 'Host source limits', 'instructions.editLimit': 'Page editing limit',
+  'instructions.inactive': 'Instruction loading is disabled in the default preset and this workspace’s open conversations.',
   'instructions.edit.title': 'Edit {name}', 'instructions.create.title': 'Create {name}', 'instructions.placeholder': 'Write the conventions DSH should always follow here…',
   'instructions.size': 'Size and modified', 'instructions.createHint': 'DSH reads {name} from this location',
   'instructions.delete.title': 'Delete instruction file', 'instructions.delete.desc': 'Deletes {path}.',
@@ -194,6 +199,7 @@ export const en = {
   'error.command-taken': '/{name} is already provided by DSH or another plugin.', 'error.command-exists': '/{name} already exists.', 'error.command-missing': '/{name} no longer exists.',
   'error.hook-command-required': 'Enter a command.', 'error.invalid-hook-timeout': 'Timeout must be 1–600 seconds.', 'error.invalid-hook-matcher': 'The matcher is not a valid regular expression.',
   'error.hook-changed': 'hooks.json changed meanwhile. Refresh and try again.', 'error.hooks-file-invalid': 'hooks.json cannot be parsed. Fix or remove it first.', 'error.invalid-hook-event': 'Choose a supported event.',
-  'error.unknown-scope': 'This workspace is no longer available.', 'error.instruction-too-large': 'The file is larger than 1 MiB and DSH will not load it.', 'error.instruction-path': 'DSH does not read this file as an instruction file here.',
+  'error.unknown-scope': 'This workspace is no longer available.', 'error.instruction-too-large': 'The file exceeds the editing limit ({limit} bytes).', 'error.instruction-path': 'DSH does not read this file as an instruction file here.',
+  'error.instruction-changed': 'The instruction preset changed; refresh and try again.',
   'error.open-failed': 'Cannot open: {message}',
 };

@@ -85,6 +85,8 @@ Extensions 自定义命令在独立仓库维护，经 `scripts/sync-dsh-extensio
 
 Skill 管理同样在独立 Extensions 维护。固定 rc.2 的 `SkillRegistry.listLayerCandidates` 提供全部原生候选，保留被同名条目覆盖的文件；默认预设经 `agentPresets.acquireScope` 读取并释放，不创建 Agent。文件系统提供方的 `roots`／`get` 统一目录、解析及候选发布检查，正文读取和新建／导入不再另维护发现规则或等待文件监听器。更新宿主时须同时核对这几个接口和 `FileSystemSkillProvider` 类型识别；不支持的宿主明确失败。文件替换、整包发布及注册归属检查由同一写队列收尾，直接使原生目录缓存失效。原生作用域、冷预设、只读正文、根目录保护和发布失败回归在 `test/extensions-skills-native.test.mjs`，进入 core CI；网页验收还应核对技能与指令保存后正文立即刷新。
 
+指令管理通过声明的 Loader 依赖导入宿主 `dsh-agent-instructions` 与 `dsh-scope`，从 Cordis 活跃 fiber 读取已校验配置，并调用 `discoverBaselineInstructionFiles`；不读取 profile 的首个声明或另设默认配置。默认预设租约及所选项目主会话的 scope chain 限定候选来源，提交前复查预设版本与取消状态。尚未创建的文件仍需同目录名称校验，项目根沿用共用的标记查找；这是公开发现接口只返回已有文件所需的适配。保存／删除共用一个队列和原子文件写入，链接编辑保留链接、删除不删目标；正文按编辑上限有界读取，JSON 请求预算覆盖转义膨胀。原生源文件上限与本页 1 MiB 编辑上限分别展示，总上下文预算与内容去重仍由宿主控制。`test/extensions-instructions-native.test.mjs` 在 core CI 检查配置、路径、启停、预设替换与恢复；宿主升级须复核 Loader／fiber／scope 和发现接口。
+
 `pnpm build` 构建前端，并从 `presets/oh-my-dsh/agent.cordis.yml` 生成普通与 OMD-PTC 预设；修改源配置，不手改生成文件。
 
 临时聊天以服务端内存中的完整回合为历史来源，原生消息及模型重放信息原样用于下一次请求。每个标签页的请求编号递增；`done` 回执确认提交，`stop` 只取消对应请求、阻止该编号迟到执行，并等待真实调用清理。断线时核对该次回合，未确认前保留草稿并暂停发送，恢复操作不重新调用模型。前端状态由标签页记录持有，组件只订阅视图；关闭后清空历史，移除标签页后停止保活。

@@ -41,10 +41,10 @@ export async function findProjectRoot(cwd, markers = ['.git']) {
   }
 }
 
-export async function writeAtomic(path, text) {
+export async function writeAtomic(path, text, beforeCommit) {
   await mkdir(dirname(path), { recursive: true });
   const temporary = join(dirname(path), `.${randomUUID()}.tmp`);
-  try { await writeFile(temporary, text, { mode: 0o600 }); await rename(temporary, path); }
+  try { await writeFile(temporary, text, { mode: 0o600 }); await beforeCommit?.(); await rename(temporary, path); }
   catch (error) { await rm(temporary, { force: true }); throw error; }
 }
 

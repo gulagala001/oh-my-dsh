@@ -15,30 +15,32 @@ export function InstructionsPage() {
   const current = open && files.find(file => file.path === open);
   const edit = async file => {
     const loaded = await action.run(() => api(query('/instructions/file', { scope, path: file.path })));
-    if (loaded) setEditor({ path: file.path, name: file.display, exists: file.exists, content: loaded.content });
+    if (loaded) setEditor({ scope, path: file.path, name: file.display, exists: file.exists, content: loaded.content });
   };
   const menu = file => [{ id: 'edit', label: file.exists ? t('edit') : t('instructions.create'), disabled: file.tooLarge, run: () => edit(file) },
     ...file.exists ? folderActions(t, opener, dirname(file.path), task => action.run(task)) : [],
-    file.exists && { id: 'delete', label: t('delete'), run: () => setRemoving(file) }];
+    file.exists && { id: 'delete', label: t('delete'), run: () => setRemoving({ ...file, scope }) }];
   const tags = file => <>{!file.exists && <Tag tone="quiet">{t('instructions.missing')}</Tag>}{file.local && <Tag tone="quiet">{t('instructions.local')}</Tag>}
-    {file.tooLarge && <Tag tone="warning">{t('instructions.tooLarge')}</Tag>}</>;
+    {file.tooLarge && <Tag tone="warning">{t('instructions.tooLarge', { limit: formatSize(file.maxBytes) })}</Tag>}
+    {file.partiallyLimited && <Tag tone="warning">{t('instructions.partiallyLimited')}</Tag>}</>;
   const dialogs = <>
-    {editor && <InstructionEditor editor={editor} scope={scope} onClose={() => setEditor(null)} onSaved={async () => { setEditor(null); await list.reload({ quiet: true }); }}/>}
+    {editor && <InstructionEditor editor={editor} scope={editor.scope} onClose={() => setEditor(null)} onSaved={async () => { setEditor(null); await list.reload({ quiet: true }); }}/>}
     <Confirm open={!!removing} title={t('instructions.delete.title')} description={removing ? t('instructions.delete.desc', { path: removing.path }) : ''} busy={action.busy} error={action.error}
       onCancel={() => { setRemoving(null); action.clear(); }}
-      onConfirm={async () => { if (await action.run(() => api('/instructions', { scope, action: 'delete', path: removing.path }), t('deleted'))) { setRemoving(null); setOpen(null); await list.reload({ quiet: true }); } }}/>
+      onConfirm={async () => { if (await action.run(() => api('/instructions', { scope: removing.scope, action: 'delete', path: removing.path }), t('deleted'))) { setRemoving(null); setOpen(null); await list.reload({ quiet: true }); } }}/>
   </>;
   if (current) return <>
     <Detail title={current.display} tags={tags(current)} onBack={() => setOpen(null)}
       actions={<>{!current.tooLarge && <Button variant="outline" size="sm" onClick={() => edit(current)}>{current.exists ? t('edit') : t('instructions.create')}</Button>}
         <ActionsMenu actions={menu(current).slice(1)}/></>}>
       <Status error={action.error} notice={action.notice}/>
-      <Facts rows={[[t('path'), <code>{current.path}</code>], current.exists && [t('instructions.size'), `${formatSize(current.size)} · ${when(current.modifiedAt)}`]]}/>
+      <Facts rows={[[t('path'), <code>{current.path}</code>], current.exists && [t('instructions.size'), `${formatSize(current.size)} · ${when(current.modifiedAt)}`],
+        [t('instructions.sourceLimits'), current.sourceLimits.map(formatSize).join(' / ')], [t('instructions.editLimit'), formatSize(current.maxBytes)]]}/>
       {current.exists && !current.tooLarge && <InstructionContent scope={scope} path={current.path} snapshot={list.data}/>}
     </Detail>{dialogs}</>;
   const groups = [['user', files.filter(file => file.group === 'user')], ['project', files.filter(file => file.group === 'project')]].filter(([, items]) => items.length);
   return <Page start={<ScopePicker scope={scope} scopes={scopes}/>} end={<RefreshButton busy={list.loading} onClick={() => list.reload()}/>}
-    intro={t('instructions.intro')} status={<Status error={list.error ?? action.error} notice={action.notice} onRetry={list.error ? () => list.reload() : undefined}/>}>
+    intro={t(list.data?.active === false ? 'instructions.inactive' : 'instructions.intro')} status={<Status error={list.error ?? action.error} notice={action.notice} onRetry={list.error ? () => list.reload() : undefined}/>}>
     {list.loading && !list.data ? <p className="dshx-muted">{t('loading')}</p> : <>
       {groups.map(([key, items]) => <Group key={key} title={t(`instructions.group.${key}`)} count={items.filter(file => file.exists).length}
         hint={key === 'project' && list.data.projectRoot ? <code>{list.data.projectRoot}</code> : undefined}>
