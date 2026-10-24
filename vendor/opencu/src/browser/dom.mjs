@@ -1,11 +1,13 @@
 import {fail, finite} from '../protocol.mjs';
 import {elementFor} from './observation.mjs';
-import {hitTestViewport} from '../../extension/frame-router.js';
+import {hitTestViewport, withCDPFrameGuard} from '../../extension/frame-router.js';
 
-export async function callElement(record, request, operation, payload = {}) {
+export async function callElement(record, request, operation, payload = {}, options = {}) {
   const entry = elementFor(record, request);
-  const send = entry.route?.send ?? ((method, args) => record.session.send(method, args));
-  if (entry.route) await record.frameRouter.validate(entry.route);
+  const router = withCDPFrameGuard(record.frameRouter,options.wrapSend,options.guard);
+  const route = router?.route(entry.route) ?? entry.route;
+  const send = route?.send ?? (options.wrapSend ?? (send=>send))((method, args) => record.session.send(method, args));
+  if (route) await router.validate(route);
   let objectId;
   try {
     ({object: {objectId}} = await send('DOM.resolveNode', {backendNodeId: entry.backendNodeId, ...(entry.route ? {executionContextId:entry.route.contextId} : {})}));
@@ -68,25 +70,33 @@ export async function screenshotPoint(record, request) {
   return {x: x * viewport.width / width, y: y * viewport.height / height};
 }
 
-export async function hitTest(record, request) {
+export async function hitTest(record, request, options = {}) {
   const {x, y} = await screenshotPoint(record, request);
   const viewport = await record.page.evaluate(() => ({width: innerWidth, height: innerHeight}));
   if (x < 0 || y < 0 || x >= viewport.width || y >= viewport.height) fail('INVALID_COORDINATES', 'Hit-test point is outside the viewport');
-  const hit = await hitTestViewport((method, args) => record.session.send(method, args), {x, y});
-  let elementId = [...record.elements].find(([, entry]) => entry.backendNodeId === hit.backendNodeId)?.[0];
+  const router = withCDPFrameGuard(record.frameRouter,options.wrapSend,options.guard);
+  const main = record.frameRouter?.main ? await router.main() : undefined;
+  const send = (options.wrapSend ?? (send=>send))((method, args) => record.session.send(method, args));
+  const hit = await hitTestViewport(send, {x, y});
+  // The hit was produced by the root CDP session. A child target can reuse the
+  // same backend number for an unrelated control, so its handle is ineligible.
+  const rootHit = main && (!hit.frameId || hit.frameId === main.frameId);
+  let elementId = [...record.elements].find(([, entry]) => entry.backendNodeId === hit.backendNodeId &&
+    (!entry.route || rootHit && !entry.route.sessionId && entry.route.frameId === main.frameId && entry.route.documentId === main.documentId))?.[0];
+  options.check?.();
   if (!elementId) {
     elementId = ++record.nextElementId;
-    record.elements.set(elementId, {backendNodeId: hit.backendNodeId, observationId: record.observationId});
+    record.elements.set(elementId, {backendNodeId: hit.backendNodeId,...(rootHit ? {route:router.original(main)} : {}), observationId: record.observationId});
   }
-  return callElement(record, {elementId}, 'describe');
+  return callElement(record, {elementId}, 'describe',{},options);
 }
 
-export async function patchDOM(record, request) {
+export async function patchDOM(record, request, options = {}) {
   if (request.annotationControlChanges?.length) fail('UNSUPPORTED_ACTION', 'Website-provided annotation callbacks are not implemented; no DOM changes were made');
   const declarations = request.declarations ?? (request.styles && typeof request.styles === 'object' && !Array.isArray(request.styles)
     ? Object.entries(request.styles).map(([property, value]) => ({property, value})) : []);
   if (!Array.isArray(declarations) || declarations.length > 100) fail('INVALID_ARGUMENT', 'Provide at most 100 CSS declarations');
   if (request.text === undefined && !declarations.length) fail('INVALID_ARGUMENT', 'A text change or CSS declarations are required');
   if (request.text !== undefined && (typeof request.text !== 'string' || request.text.length > 100000)) fail('INVALID_ARGUMENT', 'text must be a string of at most 100000 characters');
-  return callElement(record, request, 'patch', {declarations, ...(request.text === undefined ? {} : {text: request.text})});
+  return callElement(record, request, 'patch', {declarations, ...(request.text === undefined ? {} : {text: request.text})},options);
 }

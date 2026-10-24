@@ -10,10 +10,9 @@ import { selectOptionsFunction, selectOptionsResult } from './opencu-select-opti
 import { guestKeySpec as inputKey, keyEventParameters } from './opencu-keyboard.js'
 import { runTextEdit, validateTextEditRequest } from './opencu-text-edit.js'
 import { createCDPFrameRouter, hitTestViewport, type CDPFrameRouter, type FrameElement } from './opencu-frame-router.js'
+import { captureAXTree, axElementKey } from './opencu-ax-tree.js'
 import { openCUDialogs, type DialogFence } from './opencu-dialogs.ts'
 
-type AXValue = { value?: string | number | boolean; relatedNodes?: { text?: string; idref?: string }[] }
-type AXNode = { nodeId: string; backendDOMNodeId?: number; ignored?: boolean; role?: AXValue; name?: AXValue; value?: AXValue; properties?: { name: string; value: AXValue }[]; childIds?: string[] }
 type RemoteResult = { result: { value?: unknown }; exceptionDetails?: { text: string; exception?: { description?: string } } }
 interface ObservationState {
   elements: Map<string, FrameElement>
@@ -229,6 +228,11 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       })
       return active ? active.guard(dispatch) : dispatch()
     } // CDP replies vary by method; validate at their consumers below.
+    const frameRouter = (): CDPFrameRouter => current.frameRouter ??= createCDPFrameRouter(send, listener => {
+      const receive = (_event: Electron.Event, method: string, params: unknown, sessionId?: string): void => {if (!sessionId) listener(method, params)}
+      guest.debugger.on('message', receive)
+      return () => {guest.debugger.removeListener('message', receive)}
+    })
     let releaseSend = send
     let objectId: string | undefined
     const insertMarkedText = async (text: string, verify?: () => Promise<unknown>): Promise<void> => {
@@ -254,11 +258,16 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       // Locator-created entries already have their own live frame validation.
       if (current.deferredAX && typeof args.elementId === 'string' && !current.elements.has(args.elementId)) {
         if (args.observationId !== undefined && args.observationId !== current.observationId) throw Object.assign(new Error('STALE_ELEMENT: element observation has expired'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
-        const tree: { nodes: AXNode[] } = await send('Accessibility.getFullAXTree')
-        if (!Array.isArray(tree.nodes)) throw new Error('Chromium returned no accessibility tree')
-        signal.throwIfAborted()
-        if (guest.isDestroyed() || documentGeneration !== current.documentGeneration) throw Object.assign(new Error('STALE_ELEMENT: document changed while resolving screenshot elements'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
-        for (const node of tree.nodes) if (!node.ignored && node.backendDOMNodeId) current.elements.set(`${current.identityScope}:${node.backendDOMNodeId}`, {backendNodeId:node.backendDOMNodeId})
+        const live = (): void => {
+          signal.throwIfAborted()
+          if (guest.isDestroyed() || documentGeneration !== current.documentGeneration) throw Object.assign(new Error('STALE_ELEMENT: document changed while resolving screenshot elements'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+        }
+        const captured = await captureAXTree(send, frameRouter(), live)
+        const elements = new Map(current.elements)
+        for (const {node, route, key} of captured.nodes) if (node.backendDOMNodeId) elements.set(`${current.identityScope}:${key}`, {backendNodeId:node.backendDOMNodeId, route})
+        await captured.validate()
+        live()
+        current.elements = elements
         delete current.deferredAX
       }
       if (operation === 'verifyElement') return await verifyElement()
@@ -385,15 +394,11 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       }
       if (operation === 'locator' || operation === 'domSnapshot') {
         const generation = current.documentGeneration
-        const router = current.frameRouter ??= createCDPFrameRouter(send, listener => {
-          const receive = (_event: Electron.Event, method: string, params: unknown, sessionId?: string): void => {if (!sessionId) listener(method, params)}
-          guest.debugger.on('message', receive)
-          return () => {guest.debugger.removeListener('message', receive)}
-        })
+        const router = frameRouter()
         const result = await runCDPLocator(send, { ...args, operation }, (backendNodeId, route) => {
           signal.throwIfAborted()
           if (generation !== current.documentGeneration) throw new Error('STALE_ELEMENT: document changed while resolving locator')
-          const elementId = `${current.identityScope}:${route.frameId}:${route.documentId}:${backendNodeId}`
+          const elementId = `${current.identityScope}:${axElementKey(backendNodeId,route)}`
           current.elements.set(elementId, {backendNodeId,route})
           return elementId
         }, router)
@@ -417,17 +422,18 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           current.deferredAX = true
           return { ...details, observationId, coordinateSpace: 'viewport-css-pixels' }
         }
-        const tree: { nodes: AXNode[] } = await send('Accessibility.getFullAXTree')
-        if (!Array.isArray(tree.nodes)) throw new Error('Chromium returned no accessibility tree')
-        live()
-        current.elements.clear()
-        const nodes = tree.nodes.filter(node => !node.ignored).map(node => {
-          const elementId = node.backendDOMNodeId ? `${current.identityScope}:${node.backendDOMNodeId}` : undefined
-          if (elementId && node.backendDOMNodeId) current.elements.set(elementId, {backendNodeId:node.backendDOMNodeId})
+        const captured = await captureAXTree(send, frameRouter(), live)
+        const elements = new Map<string, FrameElement>()
+        const nodes = captured.nodes.map(({node,route,key}) => {
+          const elementId = node.backendDOMNodeId ? `${current.identityScope}:${key}` : undefined
+          if (elementId && node.backendDOMNodeId) elements.set(elementId, {backendNodeId:node.backendDOMNodeId,route})
           return { ...(elementId ? { elementId } : {}), nodeId: node.nodeId, role: node.role?.value ?? '', name: node.name?.value ?? '',
             ...(node.value ? { value: node.value.value } : {}), children: node.childIds ?? [],
             properties: Object.fromEntries((node.properties ?? []).map(item => [item.name, item.value.value ?? item.value.relatedNodes?.map(related => related.text ?? related.idref) ?? null])) }
         })
+        await captured.validate()
+        live()
+        current.elements = elements
         current.observationId = observationId
         delete current.deferredAX
         return { ...details, observationId, coordinateSpace: 'viewport-css-pixels', ax: { source: 'chromium-accessibility-tree', nodes, stableIds: true, identityScope: current.identityScope },

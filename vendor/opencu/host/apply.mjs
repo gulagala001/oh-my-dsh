@@ -354,8 +354,8 @@ for (const [from, to] of [
 ]) pending.set(desktop + to + '.ts', await readFile(new URL(`./${from}.ts`, import.meta.url), 'utf8'));
 for (const extension of ['mjs', 'd.mts']) pending.set(desktop + 'opencu-presentation-images.' + extension,
   await readFile(new URL('../src/presentation-images.' + extension, import.meta.url), 'utf8'));
-// The same locator and real frame-session router serve all three browser backends.
-for (const file of ['dom-locator.js','cdp-locator.js','cdp-locator.d.ts','select-options.js','select-options.d.ts','frame-router.js','frame-router.d.ts','keyboard.js','keyboard.d.ts','text-edit.js','text-edit.d.ts']) {
+// Locators, AX observation and the real frame-session router serve all three browser backends.
+for (const file of ['dom-locator.js','cdp-locator.js','cdp-locator.d.ts','select-options.js','select-options.d.ts','frame-router.js','frame-router.d.ts','ax-tree.js','ax-tree.d.ts','keyboard.js','keyboard.d.ts','text-edit.js','text-edit.d.ts']) {
   const value = await readFile(new URL(`../extension/${file}`, import.meta.url), 'utf8');
   pending.set(desktop + 'opencu-' + file, value.replaceAll("'./dom-locator.js'", "'./opencu-dom-locator.js'").replaceAll("'./frame-router.js'", "'./opencu-frame-router.js'").replaceAll("'./select-options.js'", "'./opencu-select-options.js'"));
 }

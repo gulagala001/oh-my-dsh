@@ -75,6 +75,8 @@ Windows 原生 helper 由系统 Windows PowerShell 编译随包 C#，需要 Wind
 
 AX 默认返回紧凑语义文本，保留元素身份、层级、值、状态和动作；`details:true` 获取完整节点与几何。身份稳定且基线完整时返回差分，`disableDiffing:true` 强制全量；截图、静默观察、目标切换、截断或失效基线会恢复全量。截图返回附件引用。内置 guest 的透明捕获在可信 surface 中按页面深浅方案补齐默认 Canvas 背景，保留显式背景及原始尺寸，不修改网页。观察自动输出一次，`emit:false` 仅供代码读取。
 
+浏览器 AX 观察合并 Chromium 实际公开的同源、跨源和跨进程子框架，按框架及文档身份保存元素与层级；网页为 iframe 指定其他 ARIA 角色仍可读取其可访问内容，隐藏框架不额外公开控件。三种浏览器后端共用采集与路由，完整观察和身份复核成功后才发布新节点表。子框架导航、替换或移除后，旧元素会在输入前被拒绝，应在同一标签重新观察并使用新 ID；不能按节点数字或框架标题匹配新文档。
+
 浏览器支持 `tab.playwright` 的角色／文本／标签／placeholder／testId／CSS 定位、过滤、顺序选择、读取及常见输入，以及 `domSnapshot()`；定位器每次按当前文档解析，保留各后端的后台输入和释放路径。支持嵌套 frame（含跨源／OOPIF）、开放 shadow DOM，以及文本／名称／标签等位置的 RegExp。定位器按 timeoutMs 自动等待目标和可操作状态，提供 waitFor 的 visible／hidden／attached／detached 状态；只有确定尚未发送输入的失败才重试，已派发或结果不明的输入不会重放。frameLocator(...).domSnapshot() 可观察子 frame。定位解析保持同步，点击稳定等待由 CDP 宿主计时并复核同一元素、盒模型及可操作状态；再次滚动后等待目标及父 frame 布局稳定，光标移动后在实际按下前重新核验位置和命中，不对移动后的旧坐标盲点；无脚本 sandbox frame 不依赖页面定时器，也不放宽 sandbox／CSP 或执行网页内联脚本。内置 guest 文本输入在嵌入视图重入后恢复原目标子 frame 的焦点，避免把子 frame 中文丢到主文档；Chrome 扩展对不透明沙盒的 `Not allowed` 限制仍如实返回，不绕过。fill 支持文本、textarea、contenteditable 与 number 控件；number 接受有限数字字符串或空值清空，非法数字在派发前拒绝，保留只读／禁用保护。角色名称忽略 aria-hidden 与视觉隐藏的后代提示，保留显式 aria-labelledby 隐藏引用；原生 label 的名称不混入被标注控件自身的选项或默认正文，文本读取仍返回原正文。内置浏览器的 automation／父子表面 RPC 以结构化信封跨越 Electron IPC 和 contextBridge，在页面侧还原错误码与输入派发状态；主／子 preload 必须声明 `structuredErrors`，旧宿主明确拒绝。旧接口保留，导航增加 `goto`，输入增加 `typeText`，拖动支持起止坐标。
 
 [模型结果投影](<src/dsh/model-output.mjs>)不改控制器或 UI 保存的原始状态：默认摘要化历史目标、观察与批注，保留实时库存、控制失败、所选目标能力和观察身份；`opencu_state({includeHistory:true})` 可读取完整历史。模型侧保留全部可操作节点的语义信息，去除重复文本；完整节点、几何和后端原始属性可通过 details:true 读取。只请求截图时不夹带 AX。截图附件仍按附件 ID 去重。旧会话内容不改写，本改动不会自动消除已进入上下文的历史冗余。
@@ -133,5 +135,15 @@ OPENCU_DSH_SMOKE=1 node --test test/dsh.test.mjs
 ```
 
 该检查通过真实 DSH profile launcher、ToolRuntime 和 LocalAttachmentStore 调用插件；不连接预先启动的 OpenCU 服务，不修改当前工作 DSH。本仓库不执行公开发布或日常部署。
+
+源码 checkout 还可用 `scripts/cu-direct.mjs` 直接调用生产 runtime 和持久 Worker REPL。先安装开发依赖并运行 `npm run build:client`，再显式指定隔离数据和附件目录；默认只启用独立无头浏览器，应用许可不会自动批准。该开发入口不启动 DSH 页面，不覆盖宿主工具调度、附件规范化或浮窗交互验证。
+
+```sh
+node scripts/cu-direct.mjs --data-dir /absolute/isolated/cu/data --output-dir /absolute/isolated/cu/output --metrics-output /absolute/isolated/cu/calls.jsonl
+```
+
+标准输入每行一个 JSON，例如 `{"id":"inventory","code":"await cua.getState()","title":"Inspect targets"}`；后续行复用同一 REPL。`method` 可取 `run`（默认）、`request`、`reset`、`readImage`、`close`。脚本也导出 `createDirectSession(options)`，返回 `pid` 与同名异步方法；`run` 保留生产结果并附 `timing.totalMs`。缺少浏览器构建资产时提前返回 `BUILD_REQUIRED`；指标写入失败单独报告 `metricsError`，成功输入不会因此变成执行失败。正常结束必须调用 `close()`，取消或失败后应先观察状态，再决定是否继续。
+
+`scripts/cu-metrics.mjs` 可独立采样指定进程树：`node scripts/cu-metrics.mjs sample --root PID --output /absolute/isolated/cu/process.jsonl --summary /absolute/isolated/cu/summary.json --interval 500 --duration 30000`。记录 RSS、进程数、系统平滑 CPU、连续快照间实际观察到的 CPU 时间差、阶段与采样错误；调用记录只保留固定标签、耗时、字节数和状态，不保存代码、标题或正文。RSS 可能重复计入共享页；CPU 差值会遗漏新生、退出及采样间短命进程，不能据此比较不同宿主的 CU 独占开销。汇总的峰值、计数和总和精确，中位数在超过 1,024 个值后由固定容量样本估算；原始采样仍写入 JSONL。SIGINT／SIGTERM 只停止采样器并刷新汇总，不终止测量目标。
 
 隔离发行目录通过 `OPENCU_SOURCE_ROOT` 指向真实源码目录；文档检查从该目录读取 Git 清单，并核对当前构建目录的文档内容。

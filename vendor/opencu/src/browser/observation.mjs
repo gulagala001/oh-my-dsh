@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {mkdir, writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {fail, checkSignal} from '../protocol.mjs';
+import {captureAXTree, axElementKey} from '../../extension/ax-tree.js';
 
 export async function observePage(record, request, options) {
   checkSignal(request.signal);
@@ -10,17 +11,19 @@ export async function observePage(record, request, options) {
   const generation = record.documentGeneration;
   const observationId = randomUUID();
   const result = {observationId, url: record.page.url(), title: await record.page.title(), coordinateSpace: 'viewport-css-pixels'};
+  let captured, nextElements, nextElementId = record.nextElementId ?? 0;
+  const check = () => {
+    checkSignal(request.signal);
+    if (generation !== record.documentGeneration) fail('STALE_OBSERVATION', 'Document changed during observation');
+  };
   checkSignal(request.signal);
   if (format !== 'screenshot') {
-    const {nodes} = await record.session.send('Accessibility.getFullAXTree');
-    checkSignal(request.signal);
-    if (generation !== record.documentGeneration) fail('STALE_OBSERVATION', 'Document changed during accessibility observation');
-    const previous = new Map([...record.elements].filter(([, entry]) => !entry.route?.sessionId).map(([id, entry]) => [entry.backendNodeId, id]));
-    record.elements.clear();
-    const visible = nodes.filter(node => !node.ignored);
-    const elements = visible.map(node => {
-      const elementId = node.backendDOMNodeId ? previous.get(node.backendDOMNodeId) ?? ++record.nextElementId : undefined;
-      if (elementId) record.elements.set(elementId, {backendNodeId: node.backendDOMNodeId, observationId});
+    captured = await captureAXTree((method, params) => record.session.send(method, params),record.frameRouter,check);
+    const previous = new Map([...record.elements].map(([id, entry]) => [axElementKey(entry.backendNodeId,entry.route),id]));
+    nextElements = new Map();
+    const elements = captured.nodes.map(({node,route,key}) => {
+      const elementId = node.backendDOMNodeId ? previous.get(key) ?? ++nextElementId : undefined;
+      if (elementId) nextElements.set(elementId, {backendNodeId: node.backendDOMNodeId, route, observationId});
       return {
         ...(elementId ? {elementId} : {}), nodeId: node.nodeId,
         role: node.role?.value ?? '', name: node.name?.value ?? '',
@@ -62,8 +65,9 @@ export async function observePage(record, request, options) {
       ...(request.includeBase64 ? {base64: output.toString('base64')} : {}),
     };
   }
-  checkSignal(request.signal);
-  if (generation !== record.documentGeneration) fail('STALE_OBSERVATION', 'Document changed during observation');
+  await captured?.validate();
+  check();
+  if (nextElements) {record.elements = nextElements; record.nextElementId = nextElementId;}
   record.observationId = observationId;
   if (result.screenshot) {
     const {base64, ...mapping} = result.screenshot;
@@ -80,28 +84,28 @@ export function elementFor(record, request) {
   return entry;
 }
 
-export async function elementPoint(record, request) {
+export async function elementPoint(record, request, router = record.frameRouter, send = (method,params)=>record.session.send(method,params)) {
   const entry = elementFor(record, request);
-  if (entry.route) return record.frameRouter.point(entry);
+  if (entry.route) return router.point(entry);
   try {
-    const {object} = await record.session.send('DOM.resolveNode', {backendNodeId: entry.backendNodeId});
+    const {object} = await send('DOM.resolveNode', {backendNodeId: entry.backendNodeId});
     try {
-      const result = await record.session.send('Runtime.callFunctionOn', {
+      const result = await send('Runtime.callFunctionOn', {
         objectId: object.objectId,
         functionDeclaration: 'async function() { let previous; let stable = 0; for (let frame = 0; frame < 120; frame++) { this.scrollIntoView({behavior:"instant",block:"center",inline:"center"}); await new Promise(requestAnimationFrame); const box = this.getBoundingClientRect(); const current = [box.x,box.y,box.width,box.height]; if (previous && current.every((value,index) => Math.abs(value-previous[index]) < 0.5) && box.bottom > 0 && box.top < innerHeight) stable++; else stable = 0; if (stable >= 3) return; previous = current; } throw new Error("Element layout is moving"); }',
         awaitPromise: true,
       });
       if (result.exceptionDetails) throw new Error('Element cannot be scrolled into view');
-    } finally { await record.session.send('Runtime.releaseObject', {objectId: object.objectId}); }
-    const {model} = await record.session.send('DOM.getBoxModel', {backendNodeId: entry.backendNodeId});
+    } finally { await send('Runtime.releaseObject', {objectId: object.objectId}); }
+    const {model} = await send('DOM.getBoxModel', {backendNodeId: entry.backendNodeId});
     const quad = model.content;
     return {x: (quad[0] + quad[2] + quad[4] + quad[6]) / 4, y: (quad[1] + quad[3] + quad[5] + quad[7]) / 4};
   } catch { fail('STALE_ELEMENT', 'Element no longer has an actionable box; observe again'); }
 }
 
-export async function focusElement(record, request) {
+export async function focusElement(record, request, router = record.frameRouter) {
   const entry = elementFor(record, request);
-  if (entry.route) return record.frameRouter.focus(entry);
+  if (entry.route) return router.focus(entry);
   try {
     await record.session.send('DOM.focus', {backendNodeId: entry.backendNodeId});
   } catch { fail('STALE_ELEMENT', 'Element can no longer receive focus; observe again'); }

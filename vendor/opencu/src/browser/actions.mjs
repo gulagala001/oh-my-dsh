@@ -9,6 +9,7 @@ import {selectOptionsFunction, selectOptionsResult} from '../../extension/select
 import {clickParameters, checkClickHeld, holdClick} from '../../extension/click-options.js';
 import {pressParameters, checkPressHeld} from '../../extension/key-options.js';
 import {playwrightKeyIdentity} from './playwright-keyboard.mjs';
+import {withCDPFrameGuard} from '../../extension/frame-router.js';
 
 export function normalizeBrowserAction(request = {}) {
   const aliases = {goto: 'navigate', new_tab: 'newTab', close_tab: 'closeTab', double_click: 'doubleClick',
@@ -74,6 +75,13 @@ export async function actOnPage(record, request, options) {
     try { return await step(() => { record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1; return work(); }); }
     finally { signal?.removeEventListener('abort', stop); if (stopping) await stopping; }
   };
+  const frameOptions = {check,guard:step,wrapSend:transport=>(method,params)=>method === 'Runtime.releaseObject' ? transport(method,params) : step(()=>{
+    if (['DOM.focus','DOM.scrollIntoViewIfNeeded','DOM.setFileInputFiles'].includes(method) || method === 'Runtime.callFunctionOn' &&
+      (params?.arguments?.[0]?.value === 'patch' || params?.functionDeclaration?.includes('this.scrollIntoView('))) record.inputDispatchSequence = (record.inputDispatchSequence ?? 0)+1;
+    return transport(method,params);
+  })};
+  const frameRouter = withCDPFrameGuard(record.frameRouter,frameOptions.wrapSend,step);
+  const frameSend = frameOptions.wrapSend((method,params)=>record.session.send(method,params));
   const input = (events, work, beforeDispatch) => step(async () => {
     const textEdit = events.some(event => event.textInput);
     check();
@@ -89,7 +97,7 @@ export async function actOnPage(record, request, options) {
         if (elementGeneration !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed before element keyboard input');
         elementFor(record, request);
       }
-      if (request.elementId != null) {const entry = elementFor(record, request); if (entry.route) await record.frameRouter.validate(entry.route);}
+      if (request.elementId != null) {const entry = elementFor(record, request); if (entry.route) await frameRouter.validate(entry.route);}
       check();
       await beforeDispatch?.();
       check();
@@ -129,7 +137,7 @@ export async function actOnPage(record, request, options) {
     record.buttons.delete(button);
   };
   const point = async value => {
-    if (value.elementId !== undefined) return step(() => elementPoint(record, value));
+    if (value.elementId !== undefined) return step(() => elementPoint(record, value,frameRouter,frameSend));
     return step(() => screenshotPoint(record, {...request, ...value}));
   };
   const move = async value => {
@@ -140,7 +148,7 @@ export async function actOnPage(record, request, options) {
     return location;
   };
   const checkPointer = async () => {
-    if (request.elementId != null) {const entry = elementFor(record, request); if (entry.route) await record.frameRouter.checkPoint(entry,record.pointer);}
+    if (request.elementId != null) {const entry = elementFor(record, request); if (entry.route) await frameRouter.checkPoint(entry,record.pointer);}
     await checkScreenshot();
   };
   const click = async count => {
@@ -160,11 +168,13 @@ export async function actOnPage(record, request, options) {
     for (const key of [...click.keys].reverse()) await keyUp(key);
   };
   const focusKeyboardElement = () => step(async () => {
-    elementFor(record,request);
+    const entry = elementFor(record,request);
+    if (entry.route) await frameRouter.validate(entry.route);
+    check();
     // Missing observation IDs fail before this fence. Once focus is attempted,
     // its result may be unknown and must not be treated as an undispatched input.
-    record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1;
-    return focusElement(record,request);
+    if (!entry.route) record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1;
+    return focusElement(record,request,frameRouter);
   });
   const press = async (value = request.key, {durationMs:hold = request.durationMs, focus = true} = {}) => {
     const keyboard={mac:process.platform === 'darwin',identity:playwrightKeyIdentity};
@@ -179,19 +189,20 @@ export async function actOnPage(record, request, options) {
   switch (request.action) {
     case 'domSnapshot': {
       const generation = record.documentGeneration;
-      const result = await step(() => runCDPLocator((method, args) => record.session.send(method, args), {operation: 'domSnapshot', locator:request.locator ?? [], args: request.args ?? {}}, () => {}, record.frameRouter));
+      const result = await step(() => runCDPLocator(frameSend, {operation: 'domSnapshot', locator:request.locator ?? [], args: request.args ?? {}}, () => {}, frameRouter));
       if (generation !== record.documentGeneration) fail('STALE_OBSERVATION', 'Document changed during DOM snapshot');
       return {action: request.action, ...result};
     }
     case 'locator': {
       const generation = record.documentGeneration;
-      const result = await step(() => runCDPLocator((method, args) => record.session.send(method, args), request, (backendNodeId, route) => {
+      const result = await step(() => runCDPLocator(frameSend, request, (backendNodeId, route) => {
+        check();
         if (generation !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed while resolving the locator');
         let elementId = [...record.elements].find(([, entry]) => entry.backendNodeId === backendNodeId && ((!entry.route && !route.sessionId && route.frameId === route.sessionFrameId) || entry.route?.frameId === route.frameId && entry.route?.documentId === route.documentId))?.[0];
         if (elementId === undefined) elementId = ++record.nextElementId;
-        record.elements.set(elementId, {backendNodeId, route, observationId: record.observationId});
+        record.elements.set(elementId, {backendNodeId, route:frameRouter.original(route), observationId: record.observationId});
         return elementId;
-      }, record.frameRouter));
+      }, frameRouter));
       if (generation !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed while resolving the locator');
       if (Object.hasOwn(result, 'value')) return {action: request.action, value: result.value};
       const args = request.args ?? {}, method = request.method;
@@ -201,7 +212,7 @@ export async function actOnPage(record, request, options) {
         await actOnPage(record, {action: checking ? 'click' : method === 'dblclick' ? 'doubleClick' : method,
           elementId: result.elementId, locatorGeneration: generation, button: args.button, key: args.key, value: args.value,
           signal: request.signal, inputMode: request.inputMode}, options);
-        if (checking && await step(() => callElement(record, {elementId: result.elementId}, 'checked')) !== checked) fail('LOCATOR_ACTION_FAILED', 'Click did not produce the requested checked state');
+        if (checking && await step(() => callElement(record, {elementId: result.elementId}, 'checked',{},frameOptions)) !== checked) fail('LOCATOR_ACTION_FAILED', 'Click did not produce the requested checked state');
       }
       return {action: request.action, value: null};
     }
@@ -218,12 +229,12 @@ export async function actOnPage(record, request, options) {
     case 'reload': await navigate(() => page.reload({waitUntil: 'domcontentloaded', timeout: options.timeoutMs})); invalidate(); break;
     case 'focus':
     case 'activate': await step(() => page.bringToFront()); break;
-    case 'hitTest': return {action: request.action, element: await step(() => hitTest(record, request))};
-    case 'getDOM': return {action: request.action, element: await step(() => callElement(record, request, 'describe'))};
+    case 'hitTest': return {action: request.action, element: await step(() => hitTest(record, request,frameOptions))};
+    case 'getDOM': return {action: request.action, element: await step(() => callElement(record, request, 'describe',{},frameOptions))};
     case 'setText':
     case 'setStyle':
     case 'designTweak': {
-      const result = await step(() => patchDOM(record, request));
+      const result = await step(() => patchDOM(record, request,frameOptions));
       record.screenshot = undefined;
       return {action: request.action, ...result};
     }
@@ -258,7 +269,7 @@ export async function actOnPage(record, request, options) {
       const validate = async () => {
         check();
         if (generation !== record.documentGeneration || entry && elementFor(record,request) !== entry) fail('STALE_ELEMENT','The selected document or editable element changed');
-        if (entry?.route) await step(() => record.frameRouter.validate(entry.route));
+        if (entry?.route) await step(() => frameRouter.validate(entry.route));
         check();
       };
       const send = (method,params) => step(() => (entry?.route?.send ?? ((method,params)=>record.session.send(method,params)))(method,params));

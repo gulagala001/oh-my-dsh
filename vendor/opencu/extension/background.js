@@ -234,7 +234,7 @@ async function observe(identity, options = {}, token = controlToken(identity.tab
     await attach(identity, read);
     const current = await verify(identity, true, read);
     const dom = await content(identity.tabId, 'identity', { documentId: identity.documentId }, current.browserDocumentId, read);
-    const accessibility = await observeAccessibility(identity.tabId, (method, params) => read(() => cdp(identity.tabId, method, params)), identity.documentId, read.check, options);
+    const {commit, ...accessibility} = await read(() => observeAccessibility(identity.tabId, (method, params) => read(() => cdp(identity.tabId, method, params)), identity.documentId, read.check, {...options,deferCommit:true}, attached.get(identity.tabId)?.frameRouter));
     let screenshot;
     if (options.screenshot !== false) {
       if (Math.abs(dom.geometry.visual.scale - 1) > 0.001) fail('UNSUPPORTED_PINCH_ZOOM', 'Reset pinch zoom before screenshot-coordinate actions. Browser page zoom is supported.');
@@ -246,6 +246,7 @@ async function observe(identity, options = {}, token = controlToken(identity.tab
     }
     await verify(identity, true, read);
     read.check();
+    await read(commit);
     if (screenshot) observations.set(identity.tabId, screenshot);
     return { identity, ...dom, ...accessibility, ...(screenshot ? { screenshot } : {}) };
   });
@@ -259,8 +260,8 @@ async function preview(identity, token = controlToken(identity.tabId)) {
     return { dataUrl: `data:image/png;base64,${image.data}`, ...pngSize(image.data), active: tab.active && window.focused };
   });
 }
-async function actionPoint(identity, action, current, from = false) {
-  if (action.elementId != null) return elementOperation(identity.tabId, (method, params) => cdp(identity.tabId, method, params), 'point', action, attached.get(identity.tabId)?.frameRouter);
+async function actionPoint(identity, action, current, from = false, elementOptions = {}) {
+  if (action.elementId != null) return elementOperation(identity.tabId, (method, params) => cdp(identity.tabId, method, params), 'point', action, attached.get(identity.tabId)?.frameRouter, elementOptions);
   const x = from ? action.fromX : action.x, y = from ? action.fromY : action.y;
   if (!Number.isFinite(x) || !Number.isFinite(y)) fail('INVALID_COORDINATES', 'Finite x/y coordinates are required.');
   if (action.coordinateSpace === 'css') {
@@ -302,12 +303,13 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   const verifyInputElement = async () => {
     if (action.elementId == null) return;
     await readOperation(epoch, read => verify(identity, true, read));
-    await elementOperation(tabId, (method, params) => cdp(tabId, method, params), 'verifyElement', action, attached.get(tabId)?.frameRouter);
+    await element('verifyElement');
     checkControl(epoch);
   };
   let textInputFence, textInputGuard;
   const checkInput = () => {checkControl(epoch);textInputFence?.();};
-  const send = async (method, params) => {
+  const send = async (method, params, transport = (method,params) => cdp(tabId,method,params)) => {
+    if (method === 'Runtime.releaseObject') return transport(method,params);
     checkInput();
     if (method === 'DOM.setFileInputFiles') {
       await content(tabId, 'expectInput', { events: [{ type: 'input' }] }, current.browserDocumentId);
@@ -321,7 +323,15 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
         if (action.elementId != null) await verifyInputElement();
         checkInput();
       }
-      const result = await cdp(tabId, method, params); checkInput(); return result;
+      const operation = params?.arguments?.[0]?.value, phase = params?.arguments?.[1]?.value;
+      const writing = method.startsWith('Input.') || ['DOM.focus','DOM.scrollIntoViewIfNeeded','DOM.setFileInputFiles'].includes(method) ||
+        method === 'Runtime.callFunctionOn' && (['selectAll','setValue','patchDOM','point'].includes(operation) || phase === 'focus' || action.type === 'selectOption');
+      checkInput();
+      const before = inputState.inputSequence ?? 0;
+      if (writing) inputState.inputSequence = before+1;
+      const result = await transport(method, params);
+      if (action.type === 'selectOption' && result?.result?.value?.__opencuSelectError && inputState.inputSequence === before+1) inputState.inputSequence = before;
+      checkInput(); return result;
     } catch (error) {failure=error;throw error;}
     finally {
       // The paste fence remains interrupted after a modal. Never resume page JS
@@ -338,8 +348,9 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   const inputKey = (spec, down) => keyEvent(tabId, spec, down, epoch, action.elementId != null ? verifyInputElement : undefined);
   const pointer = (type, point, button = 'none', count = 0, extra = {}) => mouse(tabId, type, point, button, count, extra, epoch,
     action.elementId != null ? () => element('checkPoint', {...action,...point}) : undefined);
-  const element = (operation, args = action) => elementOperation(tabId, send, operation, args, attached.get(tabId)?.frameRouter);
   const step = async work => { checkControl(epoch); const result = await work(); checkControl(epoch); return result; };
+  const elementOptions = {check:checkInput,wrapSend:transport=>(method,params)=>send(method,params,transport),guard:work=>textInputGuard ? textInputGuard(work) : step(work)};
+  const element = (operation, args = action) => elementOperation(tabId, send, operation, args, attached.get(tabId)?.frameRouter,elementOptions);
   const invalidate = () => observations.delete(tabId);
   switch (action.type) {
     case 'navigate': {
@@ -370,12 +381,12 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       await step(() => chrome.windows.update(tab.windowId, { focused: true }));
       return done({ focused: true });
     case 'domSnapshot': {
-      const result = await locatorOperation(tabId, send, {operation:'domSnapshot', locator:action.locator ?? [], args:action.args ?? {}}, identity.documentId, attached.get(tabId)?.frameRouter);
+      const result = await locatorOperation(tabId, send, {operation:'domSnapshot', locator:action.locator ?? [], args:action.args ?? {}}, identity.documentId, attached.get(tabId)?.frameRouter,elementOptions);
       await step(() => verify(identity, true));
       return done(result);
     }
     case 'locator': {
-      const result = await locatorOperation(tabId, send, action, identity.documentId, attached.get(tabId)?.frameRouter);
+      const result = await locatorOperation(tabId, send, action, identity.documentId, attached.get(tabId)?.frameRouter,elementOptions);
       await step(() => verify(identity, true));
       if (Object.hasOwn(result, 'value')) return done({value:result.value});
       const args = action.args ?? {}, method = action.method;
@@ -389,7 +400,7 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       return done({value:null});
     }
     case 'hitTest': {
-      const point = await actionPoint(identity, action, current);
+      const point = await actionPoint(identity, action, current,false,elementOptions);
       return done({ element: await element('hitTest', point) });
     }
     case 'getDOM': return done({ element: await element('getDOM') });
@@ -413,9 +424,9 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       checkControl(epoch);
       try {
         const result = await element('selectOption');
-        invalidate(); attached.get(tabId).inputSequence = (attached.get(tabId).inputSequence ?? 0) + 1; return done(result);
+        invalidate(); return done(result);
       } catch (error) {
-        if (error.details?.inputDispatched !== false) {invalidate();attached.get(tabId).inputSequence = (attached.get(tabId).inputSequence ?? 0) + 1;}
+        if (error.details?.inputDispatched !== false) invalidate();
         throw error;
       }
     }
@@ -443,8 +454,8 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       chrome.debugger.onEvent.addListener(receive);
       try {
         const result=await guarded(()=>elementOperation(tabId,(method,params)=>guarded(()=>send(method,params)),action.type,action,attached.get(tabId)?.frameRouter,{
+          ...elementOptions,
           validate:async()=>{check();await guarded(()=>verify(identity,true));check();},
-          onFocus:()=>{check();inputState.inputSequence=(inputState.inputSequence??0)+1;},
           beforeFocus:()=>guarded(()=>cdp(tabId,'Emulation.setFocusEmulationEnabled',{enabled:true})),
           insertText:async(text,verifySelection)=>{await verifySelection();check();await guarded(()=>send('Input.insertText',{text}));},
         }));
@@ -454,7 +465,6 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
     case 'press_key': {
       if (action.elementId != null) {
         await element('verifyElement');
-        inputState.inputSequence = (inputState.inputSequence ?? 0) + 1;
         await element('focus');
       }
       invalidate();
@@ -466,14 +476,14 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
     case 'key_down': invalidate(); await inputKey(keySpec(action.key), true); return done({ held: true });
     case 'key_up': invalidate(); await inputKey(keySpec(action.key), false); return done({ released: true });
     case 'cursor': {
-      const point = action.visible === false ? { visible: false } : { ...await actionPoint(identity, action, current), visible: true };
+      const point = action.visible === false ? { visible: false } : { ...await actionPoint(identity, action, current,false,elementOptions), visible: true };
       attached.get(tabId).cursor = point.visible ? point : null;
       return step(() => content(tabId, 'cursor', point, current.browserDocumentId));
     }
     case 'click': case 'double_click': case 'right_click': case 'move': case 'mouse_down': case 'mouse_up': case 'scroll': case 'drag': {
       const held = attached.get(tabId);
       const point = action.type === 'mouse_up' && action.x === undefined && action.elementId === undefined
-        ? { x: held.x, y: held.y } : await step(() => actionPoint(identity, action, current));
+        ? { x: held.x, y: held.y } : await step(() => actionPoint(identity, action, current,false,elementOptions));
       const button = click?.button ?? (action.type === 'right_click' ? 'right' : action.button || 'left');
       if (!['left', 'middle', 'right'].includes(button)) fail('INVALID_BUTTON', 'Use left, middle or right mouse button.');
       if (action.type === 'scroll' && (!Number.isFinite(action.deltaX ?? 0) || !Number.isFinite(action.deltaY ?? 0))) fail('INVALID_SCROLL', 'Finite wheel deltas are required.');

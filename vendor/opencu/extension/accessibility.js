@@ -1,7 +1,8 @@
 import { runCDPLocator } from './cdp-locator.js';
-import { hitTestViewport } from './frame-router.js';
+import { hitTestViewport, withCDPFrameGuard } from './frame-router.js';
 import { runTextEdit } from './text-edit.js';
 import {selectOptionsFunction, selectOptionsResult} from './select-options.js';
+import {captureAXTree, axElementKey} from './ax-tree.js';
 const states = new Map();
 const fail = message => { throw Object.assign(new Error(message), { code: 'STALE_ELEMENT' }); };
 function result(reply) {
@@ -9,41 +10,55 @@ function result(reply) {
   return reply.result.value;
 }
 export function invalidateElements(tabId) { states.delete(tabId); }
-export async function observeAccessibility(tabId, send, documentId, check = () => {}, {format} = {}) {
+export async function observeAccessibility(tabId, send, documentId, check = () => {}, {format, deferCommit} = {}, router) {
   const observationId = crypto.randomUUID(), elements = new Map();
   const previous = states.get(tabId);
   const identityScope = previous && previous.documentId === documentId ? previous.identityScope : crypto.randomUUID();
-  if (format === 'screenshot') {
+  let captured;
+  const state = {elements,observationId,identityScope,documentId};
+  const commit = async () => {
+    await captured?.validate();
     check();
-    states.set(tabId, {elements, observationId, identityScope, documentId, deferredAX: true});
-    return {observationId};
+    if (states.get(tabId) !== previous) fail('Element observation changed during accessibility capture; observe again.');
+    states.set(tabId,state);
+  };
+  if (format === 'screenshot') {
+    state.deferredAX = true;
+    if (!deferCommit) await commit();
+    return {observationId,...(deferCommit ? {commit} : {})};
   }
-  const { nodes } = await send('Accessibility.getFullAXTree');
+  captured = await captureAXTree(send,router,check);
   check();
-  states.set(tabId, {elements, observationId, identityScope, documentId});
-  const visible = nodes.filter(node => !node.ignored).map(node => {
-    const elementId = node.backendDOMNodeId ? `${identityScope}:${node.backendDOMNodeId}` : undefined;
-    if (elementId) elements.set(elementId, {backendNodeId:node.backendDOMNodeId});
+  const visible = captured.nodes.map(({node,route,key}) => {
+    const elementId = node.backendDOMNodeId ? `${identityScope}:${key}` : undefined;
+    if (elementId) elements.set(elementId, {backendNodeId:node.backendDOMNodeId,route});
     return { ...(elementId ? { elementId } : {}), nodeId: node.nodeId, role: node.role?.value ?? '', name: node.name?.value ?? '',
       ...(node.value ? { value: node.value.value } : {}), children: node.childIds ?? [],
       properties: Object.fromEntries((node.properties ?? []).map(item => [item.name, item.value.value ?? item.value.relatedNodes?.map(node => node.text ?? node.idref) ?? null])) };
   });
-  return { observationId, ax: { nodes: visible, source: 'chromium-accessibility-tree', stableIds: true, identityScope },
+  if (!deferCommit) await commit();
+  return { observationId, ...(deferCommit ? {commit} : {}), ax: { nodes: visible, source: 'chromium-accessibility-tree', stableIds: true, identityScope },
     text: visible.map(node => `${node.elementId ? `[${node.elementId}] ` : ''}${node.role} ${JSON.stringify(node.name)}${node.value !== undefined ? ` value=${JSON.stringify(node.value)}` : ''}`).join('\n') };
 }
 export async function elementOperation(tabId, send, operation, args, router, editOptions = {}) {
+  editOptions.check?.();
+  router = withCDPFrameGuard(router,editOptions.wrapSend,editOptions.guard);
   const state = states.get(tabId), elements = state?.elements;
   if (args.observationId !== undefined && args.observationId !== state?.observationId) fail('Element observation has expired; observe again.');
   // A screenshot has no AX payload. A later element action still receives the
   // current index, built with that action's guarded CDP transport.
   if (state?.deferredAX && typeof args.elementId === 'string' && !elements.has(args.elementId)) {
-    const {nodes} = await send('Accessibility.getFullAXTree');
+    const captured = await captureAXTree(send,router);
+    const next = new Map();
+    for (const {node,route,key} of captured.nodes) if (node.backendDOMNodeId) next.set(`${state.identityScope}:${key}`,{backendNodeId:node.backendDOMNodeId,route:router?.original(route) ?? route});
+    await captured.validate();
+    editOptions.check?.();
     if (states.get(tabId) !== state) fail('Element observation has expired; observe again.');
-    for (const node of nodes) if (!node.ignored && node.backendDOMNodeId) elements.set(`${state.identityScope}:${node.backendDOMNodeId}`, {backendNodeId:node.backendDOMNodeId});
+    for (const [id,entry] of next) elements.set(id,entry);
     delete state.deferredAX;
   }
   const entry = elements?.get(args.elementId);
-  const route = entry?.route;
+  const route = router?.route(entry?.route) ?? entry?.route;
   let backendNodeId = entry?.backendNodeId, elementId = args.elementId;
   if (route) {await router.validate(route); send = route.send;}
   if (operation === 'hitTest') {
@@ -120,16 +135,18 @@ export async function elementOperation(tabId, send, operation, args, router, edi
   } finally { await send('Runtime.releaseObject', { objectId: object.objectId }); }
 }
 
-export async function locatorOperation(tabId, send, request, documentId, router) {
+export async function locatorOperation(tabId, send, request, documentId, router, options = {}) {
+  router = withCDPFrameGuard(router,options.wrapSend,options.guard);
   let state = states.get(tabId);
   if (!state || state.documentId !== documentId) {
     state = {elements:new Map(),identityScope:crypto.randomUUID(),documentId};
     states.set(tabId, state);
   }
   return runCDPLocator(send, request, (backendNodeId, route) => {
+    options.check?.();
     if (states.get(tabId) !== state) fail('Document changed while resolving locator.');
-    const elementId = `${state.identityScope}:${route.frameId}:${route.documentId}:${backendNodeId}`;
-    state.elements.set(elementId, {backendNodeId,route});
+    const elementId = `${state.identityScope}:${axElementKey(backendNodeId,route)}`;
+    state.elements.set(elementId, {backendNodeId,route:router?.original(route) ?? route});
     return elementId;
   }, router);
 }
