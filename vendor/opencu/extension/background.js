@@ -1,9 +1,10 @@
 import { observeAccessibility, elementOperation, locatorOperation, invalidateElements } from './accessibility.js';
 import { createPairingClient } from './pairing.js';
 import { createCDPFrameRouter } from './frame-router.js';
-import { extensionKeySpec as keySpec, keyEventParameters, sequentialTextKey, checkSequentialDeadline } from './keyboard.js';
+import { extensionKeySpec as keySpec, keyEventParameters, sequentialTextKey, checkSequentialDeadline, keyboardInputTypes } from './keyboard.js';
 import { clickParameters, checkClickHeld, holdClick } from './click-options.js';
 import { pressParameters, checkPressHeld } from './key-options.js';
+import {filePaths} from './file-input.js';
 const PATH = '/opencu-extension/v1';
 const attached = new Map(), observations = new Map(), documents = new Map(), releasing = new Set();
 let connection, connecting = false, reconnectDisabled = false, running = false, controlEpoch = 0, commandChain = Promise.resolve(), downloadChain = Promise.resolve(), status = { connected: false };
@@ -163,11 +164,25 @@ async function keyEvent(tabId, spec, down, epoch, beforeDispatch, keyboardEditab
   if (down) { state.keys.set(spec.key, spec); await saveAttached(); }
   checkControl(epoch);
   const event = keyEventParameters(spec, down, modifiers(state), /Mac/u.test(navigator.platform),keyboardEditable);
-  if (down) await content(tabId, 'expectInput', { events: [{ type: 'keydown', key: event.key }, { type: 'input' }] });
-  checkControl(epoch);
-  if (down && beforeDispatch) { await beforeDispatch(); checkControl(epoch); }
-  await cdp(tabId, 'Input.dispatchKeyEvent', event);
-  if (!down) { state.keys.delete(spec.key); await saveAttached(); }
+  let marker, failure;
+  try {
+    if (down) {
+      const inputTypes = keyboardInputTypes(spec.code,modifiers(state),/Mac/u.test(navigator.platform));
+      marker = await content(tabId,'expectInput',{events:[{type:'keydown',key:event.key,...(inputTypes.length ? {inputTypes} : {})}]});
+    }
+    checkControl(epoch);
+    if (down && beforeDispatch) {await beforeDispatch();checkControl(epoch);}
+    await cdp(tabId,'Input.dispatchKeyEvent',event);
+    if (!down) {state.keys.delete(spec.key);await saveAttached();}
+  } catch (error) {failure=error;throw error;}
+  finally {
+    if (marker && failure?.code !== 'JS_DIALOG_OPEN') try {
+      await content(tabId,'finishInput',{markerId:marker.markerId,documentId:marker.documentId,dispatched:false},marker.browserDocumentId);
+    } catch (error) {
+      if (!failure) throw error;
+      failure.details = {...failure.details,inputMarkerError:errorJSON(error)};
+    }
+  }
 }
 const buttonMask = state => [...state.buttons].reduce((n, button) => n | ({ left: 1, right: 2, middle: 4 }[button] || 0), 0);
 async function mouse(tabId, type, point, button = 'none', count = 0, extra = {}, epoch, beforeDispatch) {
@@ -325,7 +340,7 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       }
       const operation = params?.arguments?.[0]?.value, phase = params?.arguments?.[1]?.value;
       const writing = method.startsWith('Input.') || ['DOM.focus','DOM.scrollIntoViewIfNeeded','DOM.setFileInputFiles'].includes(method) ||
-        method === 'Runtime.callFunctionOn' && (['selectAll','setValue','patchDOM','point'].includes(operation) || phase === 'focus' || action.type === 'selectOption');
+        method === 'Runtime.callFunctionOn' && (['selectAll','setValue','patchDOM','point'].includes(operation) || phase === 'focus' || action.type === 'selectOption' || params?.functionDeclaration?.includes('__opencuClearFileInput'));
       checkInput();
       const before = inputState.inputSequence ?? 0;
       if (writing) inputState.inputSequence = before+1;
@@ -411,9 +426,9 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       return done(result);
     }
     case 'upload': {
-      if (!Array.isArray(action.files) || !action.files.length || action.files.some(file => typeof file !== 'string')) fail('INVALID_ARGUMENT', 'upload requires file paths');
-      await element('upload');
-      invalidate(); return done({ uploaded: true, files: action.files });
+      action = {...action,files:filePaths(action.files)};
+      const receipt = await element('upload');
+      invalidate(); return done(receipt);
     }
     case 'fill': {
       await element('selectAll');

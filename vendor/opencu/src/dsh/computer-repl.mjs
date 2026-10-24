@@ -13,6 +13,8 @@ import { clickParameters } from '../../extension/click-options.js';
 import { pressParameters } from '../../extension/key-options.js';
 import { createInputReleaseState } from './input-release.mjs';
 import { controlFailure } from '../protocol.mjs';
+import { createTargetCapabilities, createBrowserCapabilities } from './browser-capabilities.mjs';
+import { createClipboardAPI } from '../browser/clipboard.mjs';
 
 function checked(result) {
   if (result?.ok === false) throw controlFailure(result);
@@ -79,7 +81,7 @@ export function createComputerRepl(request, report = () => {}) {
   function targetAPI(target) {
     // A public descriptor is editable metadata, never the binding's authority.
     target = structuredClone(target);
-    let last, api;
+    let last, api, navigationVersion = 0;
     const targetRequest = () => ({targetId: target.id, targetIdentity: structuredClone(target.identity)});
     const observe = async (format, options = {}) => {
       const raw = await call('observe', { ...targetRequest(), format });
@@ -112,7 +114,7 @@ export function createComputerRepl(request, report = () => {}) {
       if (result.result?.target) {
         target = structuredClone(result.result.target); api.id = target.id; api.target = structuredClone(target);
       }
-      if (target.id !== payload.targetId || ['navigate', 'back', 'forward', 'reload', 'closeTab'].includes(action)) { observations.reset(); last = undefined; }
+      if (target.id !== payload.targetId || ['navigate', 'back', 'forward', 'reload', 'closeTab'].includes(action)) { observations.reset(); last = undefined; navigationVersion++; }
       return result;
     };
     const point = value => Array.isArray(value) ? { x: value[0], y: value[1] } : { elementId: value };
@@ -217,6 +219,7 @@ export function createComputerRepl(request, report = () => {}) {
     const navigation = createBrowserWaits({
       supported: () => target.backend === 'browser' && target.provider !== 'extension' && !String(target.browserId).startsWith('extension:'),
       track: trackWait,
+      fileChooser: {supported:() => target.capabilities?.includes('fileChooserEvents') === true,act:(action,args) => act(action,args)},
       state: async options => {
         const value = (await act('navigationState',options)).result?.value;
         if (!value || typeof value.url !== 'string' || typeof value.documentId !== 'string' || !['loading','interactive','complete'].includes(value.readyState))
@@ -229,9 +232,11 @@ export function createComputerRepl(request, report = () => {}) {
         : item.targetId === target.id,
       deliver: item => {deliveries.push(item);progress();},
     });
+    const optional = createTargetCapabilities({target:() => target,act,active:activeExecution,navigationVersion:() => navigationVersion,
+      show:value => { emit(value); return displayed(value); }});
     return api = {
       id: target.id, target: structuredClone(target),
-      capabilities: { list: () => target.capabilities ?? [], control: () => target.control },
+      capabilities: optional.capabilities,
       getAXState: async options => { const result = await observe('ax', options); return displayed(typeof result.observation.ax === 'string' ? result.observation.ax : JSON.stringify(result.observation.ax)); },
       getScreenshot: async options => displayed((await observe('screenshot', options)).image),
       getAXStateAndScreenshot: async options => { const result = await observe('both', options); return displayed({ state: typeof result.observation.ax === 'string' ? result.observation.ax : JSON.stringify(result.observation.ax), screenshot: result.image }); },
@@ -266,10 +271,8 @@ export function createComputerRepl(request, report = () => {}) {
       goto: async url => act('navigate', { url }),
       back: async () => act('back'), forward: async () => act('forward'), reload: async () => act('reload'),
       close: async () => act('closeTab'), focus: async () => call('focus', targetRequest()),
-      webmcp: {
-        listTools: async () => { const result = (await act('siteTools')).result; emit(result); return displayed(result.tools); },
-        invokeTool: async (registrationId, input) => { const result = (await act('invokeSiteTool', { registrationId, input })).result; emit(result); return displayed(result); },
-      },
+      ...(target.backend === 'browser' && target.provider === 'dsh' ? {webmcp:optional.legacy} : {}),
+      ...(target.backend !== 'native' ? {clipboard:createClipboardAPI({act,active:activeExecution,supported:() => target.sessionClipboard === true})} : {}),
       ...(target.backend !== 'native' ? { getJsDialog, playwright: createPlaywrightAPI(async (action, args) => { const result = await act(action, args); return result.result?.value; }, (value, show) => { observations.reset(); if (show) emit(value); return displayed(value); }, {signal: () => activeExecution().signal,navigation})} : {}),
       ...(['browser', 'native'].includes(target.backend) ? {selectText,paste} : {}),
       ...(target.backend === 'native' ? {performSecondaryAction} : {}),
@@ -380,7 +383,7 @@ export function createComputerRepl(request, report = () => {}) {
       if (browser!==undefined && typeof browser!=='string') throw new TypeError('browser must be a discovered browser ID or bound browser');
       return (await call('targets', browser ? { browserId: browser } : {})).targets.filter(target=>target.backend==='browser'&&(!browser||target.browserId===browser));
     };
-    const browserAPI = browserId => ({ id: browserId, browserId, capabilities: { list: () => ['tabs'] },
+    const browserAPI = browserId => ({ id: browserId, browserId, capabilities: createBrowserCapabilities(activeExecution),
       documentation: () => documentation('browser', true),
       tabs: { list: () => listTabs({browser:browserId}), get: async id => select({id, browserId}), new: async (url, options) => createTab(browserId, url, options) },
       getTab: async reference => select(typeof reference === 'string' ? { id: reference, browserId } : { ...reference, browserId }),

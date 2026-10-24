@@ -114,3 +114,28 @@ export function extensionKeySpec(value) {
   else throw Object.assign(new Error('Use named keys, letters, digits or F1–F12; type_text handles other Unicode.'), {code:'UNSUPPORTED_KEY',details:{inputDispatched:false,retryable:false}});
   return { key, code, windowsVirtualKeyCode: vk };
 }
+
+// Match the native editor operations of the actual physical key and held
+// logical modifiers. KeyV/MetaLeft aliases must describe the same transaction.
+export function keyboardInputTypes(code, modifiers, mac = false) {
+  const meta = !!(modifiers & 4), control = !!(modifiers & 2), shift = !!(modifiers & 8), alt = !!(modifiers & 1);
+  const primary = mac ? meta : control;
+  if (code === 'Insert' && shift && !meta && !control && !alt) return ['insertFromPaste','insertFromPasteAsQuotation'];
+  if (primary && !alt) {
+    if (code === 'KeyV') return ['insertFromPaste','insertFromPasteAsQuotation'];
+    if (code === 'KeyX') return ['deleteByCut'];
+    if (code === 'KeyZ') return [shift ? 'historyRedo' : 'historyUndo'];
+    if (code === 'KeyY') return ['historyRedo'];
+  }
+  if (mac && control && !meta && !alt) {
+    const types = {KeyH:['deleteContentBackward'],KeyD:['deleteContentForward'],
+      KeyK:['deleteSoftLineForward','deleteHardLineForward','deleteContentForward'],KeyT:['insertTranspose'],
+      KeyY:['insertFromYank','insertText'],KeyO:['insertParagraph','insertLineBreak'],Quote:['insertText']};
+    if (types[code]) return types[code];
+  }
+  if (code === 'Backspace') return ['deleteContentBackward',...(meta ? ['deleteSoftLineBackward','deleteHardLineBackward'] : alt || control ? ['deleteWordBackward'] : [])];
+  if (code === 'Delete') return ['deleteContentForward',...(shift ? ['deleteByCut'] : []),...(meta ? ['deleteSoftLineForward','deleteHardLineForward'] : alt || control ? ['deleteWordForward'] : [])];
+  if (['Enter','NumpadEnter'].includes(code)) return ['insertParagraph','insertLineBreak','insertText'];
+  if (!meta && !control && !alt && /^(?:Key[A-Z]|Digit[0-9]|Space|Backquote|Minus|Equal|BracketLeft|BracketRight|Backslash|Semicolon|Quote|Comma|Period|Slash|Numpad(?:[0-9]|Add|Subtract|Multiply|Divide|Decimal))$/u.test(code)) return ['insertText','insertReplacementText'];
+  return [];
+}

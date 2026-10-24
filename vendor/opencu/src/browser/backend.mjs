@@ -1,3 +1,5 @@
+import {createFileChoosers} from './file-chooser.mjs';
+import {restoreClipboardPermissions} from './clipboard.mjs';
 import {randomUUID, createHash} from 'node:crypto';
 import {mkdir, readFile} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
@@ -137,6 +139,7 @@ export async function createBrowserBackend(options = {}) {
     if (attempt.cleaned) return Promise.resolve();
     return attempt.cleaning ??= (async () => {
       for (const remove of attempt.removers) remove();
+      if (attempt.record?.fileChoosers) await attempt.record.fileChoosers.dispose();
       if (attempt.record?.activity && !attempt.activityDisposed) {
         await attempt.record.activity.dispose(); attempt.activityDisposed = true;
       }
@@ -153,7 +156,17 @@ export async function createBrowserBackend(options = {}) {
   function releaseRecord(record, {dismissDialogs = true} = {}) {
     let work = recordReleases.get(record);
     if (!work) {
-      work = releasePage(record, releaseTimeoutMs, {dismissDialogs, persistInputs: inputState.persist}).finally(() => { recordReleases.delete(record); });
+      work = (async () => {
+        let chooserFailure;
+        try {await record.fileChoosers?.release();}
+        catch (error) {chooserFailure = {targetId:record.id,error:error.message};}
+        const failures = await releasePage(record, releaseTimeoutMs, {dismissDialogs, persistInputs: inputState.persist});
+        if (!chooserFailure && !failures.length && record.page.isClosed()) {
+          records.delete(record.id); pages.delete(record.page);
+          await inputState.forget(record);
+        }
+        return chooserFailure ? [...failures,chooserFailure] : failures;
+      })().finally(() => { recordReleases.delete(record); });
       recordReleases.set(record, work);
     }
     return work;
@@ -183,7 +196,10 @@ export async function createBrowserBackend(options = {}) {
       if (failures.length) fail('RELEASE_FAILED', 'Initialization cleanup could not release input', failures);
       for (const attempt of pages.values()) await cleanupRegistration(attempt);
       if (!rootClosed) {
-        if (ownContext) await context?.close();
+        if (ownContext) {
+          await context?.close();
+          if (browser?.isConnected?.() === false) for (const record of records.values()) await restoreClipboardPermissions(record,{ownedProcessClosed:true});
+        }
         else if (connected) await browser?.close();
         rootClosed = true;
       }
@@ -219,19 +235,29 @@ export async function createBrowserBackend(options = {}) {
       const id = `tab:${createHash('sha256').update(`${browserId}\0${connectionId}\0${targetInfo.targetId}`).digest('hex').slice(0, 32)}`;
       const record = attempt.record = {
         id, page, session, dialogs: attempt.dialogs,
+        sessionClipboard: ownContext && (options.launchOptions?.headless ?? options.headless ?? true) === true,
         identity: {browserId, connectionId, targetId: targetInfo.targetId, contextId: targetInfo.browserContextId ?? 'default'},
         keys: new Set(), buttons: new Set(), pending: new Set(), elements: new Map(), nextElementId: 0, documentGeneration: 0,
       };
+      if (record.sessionClipboard) {
+        const permissionBrowser = browser;
+        record.clipboardPermissionSend = async (method,params) => {
+          const transport = await permissionBrowser.newBrowserCDPSession();
+          try {return await transport.send(method,params);}
+          finally {await transport.detach().catch(() => {});}
+        };
+      }
       record.frameRouter = createCDPFrameRouter((method, params) => session.send(method, params), listener => {
         const received = params => listener('Target.receivedMessageFromTarget', params), detached = params => listener('Target.detachedFromTarget', params);
         session.on('Target.receivedMessageFromTarget', received); session.on('Target.detachedFromTarget', detached);
         return () => {session.off('Target.receivedMessageFromTarget', received); session.off('Target.detachedFromTarget', detached);};
       });
+      record.fileChoosers = createFileChoosers(record);
       page.setDefaultTimeout(timeoutMs);
       attempt.removers.push(
         listen(page, 'download', download => { void capture(download, id).catch(error => backgroundErrors.push(error.message)); }),
-        listen(page, 'framenavigated', frame => { if (frame === page.mainFrame()) { record.documentGeneration++; record.elements.clear(); record.screenshot = undefined; } }),
-        listen(page, 'crash', () => { record.crashed = true; record.elements.clear(); record.screenshot = undefined; record.keys.clear(); record.buttons.clear(); void inputState.persist().catch(error=>backgroundErrors.push(error.message)); }),
+        listen(page, 'framenavigated', frame => { if (frame === page.mainFrame()) { record.documentGeneration++; record.fileChoosers.navigated(); record.elements.clear(); record.screenshot = undefined; } }),
+        listen(page, 'crash', () => { record.fileChoosers.navigated(); record.crashed = true; record.elements.clear(); record.screenshot = undefined; record.keys.clear(); record.buttons.clear(); void inputState.persist().catch(error=>backgroundErrors.push(error.message)); }),
         listen(page, 'domcontentloaded', () => {
           if (record.cursor && !closed) void updateCursor(record, {...record.cursor, animateMovement: false}).catch(error => backgroundErrors.push(error.message));
         }),
@@ -243,9 +269,13 @@ export async function createBrowserBackend(options = {}) {
       inputState.adopt(record);
       records.set(id, record);
       attempt.removers.push(listen(page, 'close', () => {
+        void record.fileChoosers.dispose().catch(error => backgroundErrors.push(error.message));
         for (const remove of attempt.removers) remove();
-        records.delete(id); pages.delete(page);
-        void inputState.forget(record).catch(error => backgroundErrors.push(error.message));
+        pages.delete(page);
+        if (!record.clipboardPermissionRestores?.size) {
+          records.delete(id);
+          void inputState.forget(record).catch(error => backgroundErrors.push(error.message));
+        }
       }));
       return record;
     })().catch(async error => {
@@ -299,8 +329,9 @@ export async function createBrowserBackend(options = {}) {
     targetInfo ??= (await record.session.send('Target.getTargetInfo')).targetInfo;
     return {
       id: record.id, backend: 'browser', kind: 'tab', browserId,
+      sessionClipboard: record.sessionClipboard === true,
       title: targetInfo.title, url: targetInfo.url, identity: record.identity,
-      capabilities: ['ax', 'screenshot', 'navigation', 'navigationWaits', 'tabs', 'focus', 'mouse', 'keyboard', 'uploads', 'downloads', 'downloadEvents', 'hitTest', 'getDOM', 'designTweak', 'dialogs'],
+      capabilities: ['ax', 'screenshot', 'navigation', 'navigationWaits', 'tabs', 'focus', 'mouse', 'keyboard', 'uploads', 'fileChooserEvents', 'downloads', 'downloadEvents', 'hitTest', 'getDOM', 'designTweak', 'dialogs'],
     };
   }
   async function recordFor(target) {
@@ -432,6 +463,9 @@ export async function createBrowserBackend(options = {}) {
       checkSignal(request.signal);
       const record = await recordFor(target);
       checkSignal(request.signal);
+      if (request.action === 'fileChooserArm') return record.dialogs.guard(async () => ({value:await record.fileChoosers.arm(request.fileChooserId,request.timeoutMs,() => checkSignal(request.signal),request.signal)}));
+      if (request.action === 'fileChooserPoll') return {value:await record.fileChoosers.poll(request.fileChooserId)};
+      if (request.action === 'fileChooserCancel') return {value:await record.fileChoosers.cancel(request.fileChooserId)};
       if (request.action === 'getDialog') return {dialog:record.dialogs.read()};
       if (request.action === 'handleDialog') {
         const result = await record.dialogs.handle(request);
@@ -520,7 +554,10 @@ export async function createBrowserBackend(options = {}) {
         await deliveryStore.flush();
         for (const attempt of pages.values()) await cleanupRegistration(attempt);
         if (!rootClosed) {
-          if (ownContext) await context?.close();
+          if (ownContext) {
+            await context?.close();
+            if (browser?.isConnected?.() === false) for (const record of records.values()) await restoreClipboardPermissions(record,{ownedProcessClosed:true});
+          }
           else if (connected) await browser?.close();
           rootClosed = true;
         }

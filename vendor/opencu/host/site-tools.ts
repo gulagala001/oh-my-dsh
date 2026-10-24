@@ -86,40 +86,56 @@ export async function invokeSiteTool(guest: WebContents, send: Send, args: Recor
   signal.throwIfAborted()
   if (typeof args.registrationId !== 'string' || !args.input || typeof args.input !== 'object' || Array.isArray(args.input)) throw new Error('Site tool invocation requires registrationId and an input object')
   const descriptor = [...registrations.get(guest)?.values() ?? []].find(item => item.tool.registrationId === args.registrationId)
-  if (!descriptor) throw new Error('STALE_SITE_TOOL: discover the current site tools again')
+  if (!descriptor) throw Object.assign(new Error('STALE_SITE_TOOL: discover the current site tools again'), {code:'STALE_SITE_TOOL',details:{inputDispatched:false}})
   const fresh = await inspectSiteTools(guest, send)
   signal.throwIfAborted()
-  if (!fresh.tools.some(tool => tool.registrationId === descriptor.tool.registrationId)) throw new Error('STALE_SITE_TOOL: the document or tool changed')
+  if (!fresh.tools.some(tool => tool.registrationId === descriptor.tool.registrationId)) throw Object.assign(new Error('STALE_SITE_TOOL: the document or tool changed'), {code:'STALE_SITE_TOOL',details:{inputDispatched:false}})
   await send('WebMCP.enable')
   signal.throwIfAborted()
   const { tool } = descriptor
   return new Promise((resolve, reject) => {
-    let invocationId: string | undefined, cancellation: Promise<void> | undefined, settled = false, cancelTimer: ReturnType<typeof setTimeout> | undefined
+    let invocationId: string | undefined, cancellation: Promise<void> | undefined, settled = false, dispatched = false, quiescent = false, cancelTimer: ReturnType<typeof setTimeout> | undefined
+    const earlyResponses = new Map<string, Record<string, unknown>>()
     const finish = (error?: Error, output?: unknown): void => {
       if (settled) return
       settled = true; clearTimeout(cancelTimer); signal.removeEventListener('abort', cancel)
       guest.debugger.removeListener('message', message); guest.removeListener('destroyed', destroyed)
-      if (error) reject(error)
-      else resolve({ output, tool, untrusted: true })
+      if (error) reject(Object.assign(error, {...(dispatched && !quiescent ? {code:'SITE_TOOL_CANCEL_FAILED'} : {}),
+        details:{...(error as Error & {details?:object}).details,inputDispatched:dispatched,effectVerified:false}}))
+      else resolve({ output, tool, untrusted: true, inputDispatched:true, effectVerified:false })
     }
     const cancellationFailed = (error: Error): void => { finish(Object.assign(error, { code: 'SITE_TOOL_CANCEL_FAILED' })) }
     const cancel = (): void => {
       cancelTimer ??= setTimeout(() => { cancellationFailed(new Error('Site tool cancellation was not acknowledged')) }, 5000)
       if (!invocationId) return
-      cancellation ??= send('WebMCP.cancelInvocation', { invocationId }).then(() => { finish(signal.reason) }, cancellationFailed)
+      cancellation ??= send('WebMCP.cancelInvocation', { invocationId }).then(() => { quiescent = true; finish(signal.reason) }, cancellationFailed)
     }
-    const message = (_event: Electron.Event, method: string, params: Record<string, unknown>): void => {
-      if (method !== 'WebMCP.toolResponded' || params.invocationId !== invocationId) return
+    const responded = (params: Record<string, unknown>): void => {
+      quiescent = true
       if (signal.aborted) finish(signal.reason)
       else if (params.status === 'Completed') finish(undefined, params.output)
       else finish(new Error(String(params.errorText ?? `Site tool ${String(params.status)}`)))
     }
-    const destroyed = (): void => finish(new Error('Site tool target closed'))
+    const message = (_event: Electron.Event, method: string, params: Record<string, unknown>): void => {
+      if (method !== 'WebMCP.toolResponded' || typeof params.invocationId !== 'string') return
+      // Immediate tools may respond before invokeTool's command acknowledgement.
+      // Retain only bounded candidate responses until that acknowledgement names
+      // the invocation; unrelated concurrent events can never settle this call.
+      if (!invocationId) { if (earlyResponses.size < 64) earlyResponses.set(params.invocationId,params); return }
+      if (params.invocationId === invocationId) responded(params)
+    }
+    const destroyed = (): void => { quiescent = true; finish(new Error('Site tool target closed')) }
     guest.debugger.on('message', message); guest.once('destroyed', destroyed); signal.addEventListener('abort', cancel, { once: true })
-    void send('WebMCP.invokeTool', { frameId: tool.frameId, toolName: tool.name, input: args.input }).then(result => {
+    void Promise.resolve().then(() => {
+      signal.throwIfAborted()
+      dispatched = true
+      return send('WebMCP.invokeTool', { frameId: tool.frameId, toolName: tool.name, input: args.input })
+    }).then(result => {
       if (typeof result.invocationId !== 'string') throw new Error('The browser returned no site tool invocation ID')
       invocationId = result.invocationId
       if (signal.aborted) cancel()
+      else if (earlyResponses.has(invocationId)) responded(earlyResponses.get(invocationId)!)
+      earlyResponses.clear()
     }).catch(error => finish(error))
   })
 }

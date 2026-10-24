@@ -1,3 +1,4 @@
+import {createFileChooserWait} from './browser-file-chooser.mjs';
 const invalid = message => Object.assign(new TypeError(message), {code:'INVALID_ARGUMENT',details:{inputDispatched:false}});
 const failure = (code, message, details) => Object.assign(new Error(message), {code,details});
 const isRegExp = value => Object.prototype.toString.call(value) === '[object RegExp]';
@@ -53,6 +54,7 @@ export function createBrowserWaits(context) {
       await control.pause();
     }
   };
+  const fileChooser = createFileChooserWait(context,options);
   return {
     expectNavigation(action, value) {
       if (typeof action !== 'function') throw invalid('expectNavigation requires one action callback');
@@ -83,7 +85,8 @@ export function createBrowserWaits(context) {
       return task('load-state wait',timeoutMs,control => wait(until,() => true,null,control));
     },
     waitForEvent(event,value) {
-      if (event !== 'download') throw invalid("waitForEvent supports only 'download'");
+      if (event === 'filechooser') return fileChooser(value);
+      if (event !== 'download') throw invalid("waitForEvent supports only 'download' and 'filechooser'");
       const {timeoutMs} = options(value,['timeoutMs']);
       return task('download',timeoutMs,async control => {
         // Start this cursor read synchronously, before a following click can be

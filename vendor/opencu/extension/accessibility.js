@@ -3,6 +3,7 @@ import { hitTestViewport, withCDPFrameGuard } from './frame-router.js';
 import { runTextEdit } from './text-edit.js';
 import {selectOptionsFunction, selectOptionsResult} from './select-options.js';
 import {captureAXTree, axElementKey} from './ax-tree.js';
+import {filePaths,validateFileInput,writeFileInput} from './file-input.js';
 const states = new Map();
 const fail = message => { throw Object.assign(new Error(message), { code: 'STALE_ELEMENT' }); };
 function result(reply) {
@@ -78,8 +79,12 @@ export async function elementOperation(tabId, send, operation, args, router, edi
   if (!backendNodeId) fail('Use an element ID from the latest Chromium accessibility observation.');
   if (operation === 'verifyElement') return {valid:true};
   if (operation === 'upload') {
-    await send('DOM.setFileInputFiles', { backendNodeId, files: args.files });
-    return { uploaded: true, files: args.files };
+    const files = filePaths(args.files);
+    await validateFileInput(send,{backendNodeId,contextId:route?.contextId,files});
+    if (route) await router.validate(route);
+    editOptions.check?.();
+    const receipt = await writeFileInput(send,{backendNodeId,contextId:route?.contextId,files});
+    return {uploaded:true,...receipt};
   }
   if (operation === 'focus') { if (route) await router.focus(entry); else await send('DOM.focus', { backendNodeId }); return { focused: true }; }
   if (operation === 'point' && route) return router.point(entry);

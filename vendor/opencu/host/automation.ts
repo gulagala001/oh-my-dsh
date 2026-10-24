@@ -8,6 +8,7 @@ import { inspectSiteTools, beginSiteTool, invokeSiteTool, cancelSiteTool } from 
 import { readPageImage } from './opencu-page-image.ts'
 import { runCDPLocator } from './opencu-cdp-locator.js'
 import { selectOptionsFunction, selectOptionsResult } from './opencu-select-options.js'
+import { filePaths, validateFileInput, writeFileInput } from './opencu-file-input.js'
 import { guestKeySpec as inputKey, keyEventParameters } from './opencu-keyboard.js'
 import { runTextEdit, validateTextEditRequest } from './opencu-text-edit.js'
 import { createCDPFrameRouter, hitTestViewport, type CDPFrameRouter, type FrameElement } from './opencu-frame-router.js'
@@ -41,11 +42,11 @@ const states = new WeakMap<WebContents, ObservationState>()
 const operations = new AsyncLocalStorage<{ fence: DialogFence; inputDispatched: boolean; operation: string; signal: AbortSignal; guard<T>(work: () => Promise<T>): Promise<T> }>()
 function dispatchesInput(method: string, params: Record<string, unknown>, operation?: string): boolean {
   if (method === 'Target.sendMessageToTarget' && typeof params.message === 'string') {
-    try { method = JSON.parse(params.message).method } catch { return false }
+    try { const command = JSON.parse(params.message); method = command.method; params = command.params ?? {} } catch { return false }
   }
   return typeof method === 'string' && (method.startsWith('Input.') ||
     ['DOM.focus', 'DOM.scrollIntoViewIfNeeded', 'DOM.setFileInputFiles'].includes(method) ||
-    method === 'Runtime.callFunctionOn' && ['focus', 'selectAll', 'patch'].includes(operation ?? ''))
+    method === 'Runtime.callFunctionOn' && (['focus', 'selectAll', 'patch'].includes(operation ?? '') || String(params.functionDeclaration ?? '').includes('__opencuClearFileInput')))
 }
 const guestExited = (): Error => Object.assign(new Error('The browser page process exited; reload the page before observing or sending input'), { code: 'BROWSER_GUEST_CRASHED', details: { inputDispatched: false } })
 // Error documents and ordinary HTTP pages need not expose crypto.randomUUID.
@@ -492,21 +493,28 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       }
       if (operation === 'focus') { await elementSend('DOM.focus', { backendNodeId }); live(); return { focused: true } }
       if (operation === 'upload') {
-        if (!Array.isArray(args.files) || !args.files.length || args.files.some(file => typeof file !== 'string' || !isAbsolute(file))) throw new Error('Upload requires absolute file paths')
+        const files = filePaths(args.files)
+        if (files.some(file => !isAbsolute(file))) throw Object.assign(new Error('Upload requires absolute paths on the browser host'), {code:'INVALID_ARGUMENT',details:{inputDispatched:false}})
         const live = (): void => {
           if (guest.isDestroyed()) throw new Error('The browser guest is closed')
           if (current.uploadGeneration !== uploadGeneration) throw Object.assign(new Error('Upload was cancelled'), { code: 'CONTROL_STOPPED' })
           if (!elementId || current.elements.get(elementId)?.backendNodeId !== backendNodeId) throw new Error('STALE_ELEMENT: observe the current document again')
         }
-        for (const file of args.files as string[]) {
+        for (let index = 0; index < files.length; index++) {
           live()
-          if (!(await stat(file)).isFile()) throw new Error('Upload source must be a regular file')
+          let info
+          try { info = await stat(files[index]!) }
+          catch (error) {throw Object.assign(new Error(`Upload source ${index + 1} is unavailable or unreadable`), {code:(error as NodeJS.ErrnoException).code ?? 'UPLOAD_SOURCE_UNAVAILABLE',details:{inputDispatched:false,sourceIndex:index}})}
+          if (!info.isFile()) throw Object.assign(new Error(`Upload source ${index + 1} must be a regular file`), {code:'INVALID_ARGUMENT',details:{inputDispatched:false,sourceIndex:index}})
         }
+        await validateFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
         live()
-        await elementSend('Runtime.evaluate', { expression: "globalThis.__opencuAnnotations?.expectInput([{type:'input'}])" })
+        if (files.length) await elementSend('Runtime.evaluate', { expression: "globalThis.__opencuAnnotations?.expectInput([{type:'input'}])" })
         live()
-        await elementSend('DOM.setFileInputFiles', { backendNodeId, files: args.files })
-        return { action: 'upload', files: args.files }
+        await validateFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
+        live()
+        const receipt = await writeFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
+        return {action:'upload',...receipt}
       }
       const remote: { object: { objectId?: string } } = await elementSend('DOM.resolveNode', { backendNodeId, ...(entry?.route ? {executionContextId:entry.route.contextId} : {}) })
       objectId = remote.object.objectId

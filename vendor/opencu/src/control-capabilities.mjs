@@ -6,9 +6,12 @@ const browser = Object.freeze({ defaultInputMode: 'background', selectionActivat
 /** Describe routes, not a promise that every application accepts every action. */
 export function controlCapabilities(target) {
   if (target.kind === 'tab' && ['browser', 'extension'].includes(target.backend)) return {...browser,
+    clipboard: target.sessionClipboard === true
+      ? {available:true,scope:'browser-session',route:'owned-headless-chromium-native',formats:'Native ClipboardItem formats; one item per write, 16 MiB total; secure document required',systemClipboard:false}
+      : {available:false,reason:'Isolated session clipboard requires an OpenCU-owned headless Chromium browser; system clipboard is never used'},
     waits: target.provider === 'extension' || target.backend === 'extension'
-      ? {navigation:false,download:false,reason:'Extension identity is document scoped; download history is browser wide. Use inventory and cua.downloads.list().'}
-      : {navigation:['commit','domcontentloaded','load'],download:'New target-owned download; verified complete file attachment. path() returns null; private storage paths are not exposed.',networkidle:false}};
+      ? {navigation:false,download:false,filechooser:false,reason:'Extension identity is document scoped; download history is browser wide. Use inventory and cua.downloads.list().'}
+      : {navigation:['commit','domcontentloaded','load'],download:'New target-owned download; verified complete file attachment. path() returns null; private storage paths are not exposed.',filechooser:target.capabilities?.includes('fileChooserEvents') === true,networkidle:false}};
   if (target.backend !== 'native') return undefined;
   const platform = target.platform, window = target.windowId != null;
   const axExtensions = platform === 'darwin' && target.kind !== 'desktop' ? ['selectText', 'paste', 'performSecondaryAction'] : [];

@@ -1,5 +1,6 @@
+import {uploadFiles} from '../browser/upload-files.mjs';
 import { randomUUID, timingSafeEqual, createHash } from 'node:crypto';
-import { mkdir, readFile, appendFile, writeFile, stat, rename, open, unlink } from 'node:fs/promises';
+import { mkdir, readFile, appendFile, writeFile, rename, open, unlink } from 'node:fs/promises';
 import { join, resolve, isAbsolute } from 'node:path';
 import { ExtensionError, EXTENSION_PATH, PROTOCOL_VERSION, parseTarget, targetId, normalizeAction } from './protocol.mjs';
 import { createDeliveryStore } from '../browser/deliveries.mjs';
@@ -433,8 +434,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       try {
         normalized = normalizeAction(action); delete normalized.signal;
         if (normalized.type === 'upload') {
-          if (!Array.isArray(normalized.files) || !normalized.files.length || normalized.files.some(file => typeof file !== 'string' || !isAbsolute(file))) throw failure('INVALID_ARGUMENT', 'upload requires absolute file paths');
-          for (const file of normalized.files) if (!(await stat(file)).isFile()) throw failure('INVALID_ARGUMENT', 'Upload source must be a regular file');
+          normalized.files = await uploadFiles(normalized.files,{check:() => action.signal?.throwIfAborted()});
           action.signal?.throwIfAborted();
         }
       } catch (error) { error.details = {...error.details, inputDispatched: false}; throw error; }

@@ -384,7 +384,8 @@ export async function createController({dataDir, browser, native} = {}) {
       // A clean shutdown receipt survives another restart, but never a new
       // dispatch. Persist invalidation first so a crash cannot reuse the receipt.
       const acknowledgedBefore = target.releaseAcknowledged;
-      const reading = ['getDialog','getDOM','domSnapshot','navigationState','hitTest','siteTools','cursor'].includes(request.action);
+      const reading = ['getDialog','getDOM','domSnapshot','navigationState','hitTest','siteTools','cursor',
+        'fileChooserArm','fileChooserPoll','fileChooserCancel','clipboardRead','clipboardReadText'].includes(request.action);
       let result;
       const recovery = dialogAction && aborter.signal.aborted ? new AbortController() : null;
       if (recovery) recoveryOperations.add(recovery);

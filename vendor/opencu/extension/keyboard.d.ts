@@ -8,3 +8,5 @@ export function guestKeySpec(value: unknown): {key:string;code:string;windowsVir
 export function extensionKeySpec(value: unknown): {key:string;code:string;windowsVirtualKeyCode:number};
 export function sequentialTextKey(character:string): string|undefined;
 export function checkSequentialDeadline(deadline?:number): void;
+
+export function keyboardInputTypes(code:string, modifiers:number, mac?:boolean): string[];

@@ -1,16 +1,17 @@
-import {stat} from 'node:fs/promises';
-import {isAbsolute} from 'node:path';
 import {checkSignal, fail, finite} from '../protocol.mjs';
 import {elementFor, elementPoint, focusElement} from './observation.mjs';
 import {hitTest, callElement, patchDOM, screenshotPoint, verifyScreenshot} from './dom.mjs';
 import {runCDPLocator} from '../../extension/cdp-locator.js';
 import {runTextEdit} from '../../extension/text-edit.js';
 import {selectOptionsFunction, selectOptionsResult} from '../../extension/select-options.js';
+import {validateFileInput,writeFileInput} from '../../extension/file-input.js';
+import {uploadFiles} from './upload-files.mjs';
 import {clickParameters, checkClickHeld, holdClick} from '../../extension/click-options.js';
 import {pressParameters, checkPressHeld} from '../../extension/key-options.js';
 import {playwrightKeyIdentity} from './playwright-keyboard.mjs';
+import {actOnClipboard,restoreClipboardPermissions} from './clipboard.mjs';
 import {withCDPFrameGuard} from '../../extension/frame-router.js';
-import {sequentialTextKey, checkSequentialDeadline, guestKeySpec, keyEventParameters} from '../../extension/keyboard.js';
+import {sequentialTextKey, checkSequentialDeadline, guestKeySpec, keyEventParameters, keyboardInputTypes} from '../../extension/keyboard.js';
 
 export function normalizeBrowserAction(request = {}) {
   const aliases = {goto: 'navigate', new_tab: 'newTab', close_tab: 'closeTab', double_click: 'doubleClick',
@@ -43,7 +44,9 @@ export async function actOnPage(record, request, options) {
   request = normalizeBrowserAction(request);
   const {page} = record;
   const signal = request.signal;
-  const check = () => { checkSignal(signal); options.actionGuard?.check(); };
+  const check = () => { checkSignal(signal); options.actionGuard?.check();
+    if (request.action === 'fileChooserSetFiles' && request.deadline !== undefined && Date.now() >= request.deadline) fail('FILE_CHOOSER_TIMEOUT','Setting file chooser files timed out; observe before deciding another action');
+  };
   const screenshotInput = request.elementId == null && ['screenshot', 'screenshot-pixels', 'physical-screenshot-pixels'].includes(request.coordinateSpace);
   const inputScreenshot = record.screenshot;
   const checkScreenshot = async () => { if (screenshotInput) await verifyScreenshot(record, request, inputScreenshot); };
@@ -66,6 +69,8 @@ export async function actOnPage(record, request, options) {
       return value;
     } finally { signal?.removeEventListener('abort', listener); }
   };
+  if (['clipboardRead','clipboardReadText','clipboardWrite','clipboardWriteText'].includes(request.action))
+    return actOnClipboard(record,request,{step,check,onWrite:() => {record.inputDispatchSequence=(record.inputDispatchSequence??0)+1;}});
   const navigate = async work => {
     let stopping;
     const stop = () => {
@@ -78,19 +83,19 @@ export async function actOnPage(record, request, options) {
   };
   const frameOptions = {check,guard:step,wrapSend:transport=>(method,params)=>method === 'Runtime.releaseObject' ? transport(method,params) : step(()=>{
     if (['DOM.focus','DOM.scrollIntoViewIfNeeded','DOM.setFileInputFiles'].includes(method) || method === 'Runtime.callFunctionOn' &&
-      (params?.arguments?.[0]?.value === 'patch' || params?.functionDeclaration?.includes('this.scrollIntoView('))) record.inputDispatchSequence = (record.inputDispatchSequence ?? 0)+1;
+      (params?.arguments?.[0]?.value === 'patch' || params?.functionDeclaration?.includes('this.scrollIntoView(') || params?.functionDeclaration?.includes('__opencuClearFileInput'))) record.inputDispatchSequence = (record.inputDispatchSequence ?? 0)+1;
     return transport(method,params);
   })};
   const frameRouter = withCDPFrameGuard(record.frameRouter,frameOptions.wrapSend,step);
   const frameSend = frameOptions.wrapSend((method,params)=>record.session.send(method,params));
   const input = (events, work, beforeDispatch) => step(async () => {
-    const textEdit = events.some(event => event.textInput);
+    const scopedInput = events.some(event => event.textInput || event.type === 'keydown');
     check();
     if (request.locatorGeneration !== undefined && request.locatorGeneration !== record.documentGeneration) fail('STALE_ELEMENT', 'Document changed before locator input');
     await record.session.send('Emulation.setFocusEmulationEnabled', { enabled: true });
     record.focusEmulated = true;
     check();
-    const expected = await options.expectInput?.(events), marker = textEdit ? expected : undefined;
+    const expected = await options.expectInput?.(events), marker = scopedInput ? expected : undefined;
     let failure;
     try {
       check();
@@ -116,8 +121,9 @@ export async function actOnPage(record, request, options) {
     playwrightKeyIdentity(key);
     record.keys.add(key);
     await options.persistInputs();
-    const events = [{type: 'keydown', key: key === 'Space' ? ' ' : key}];
-    if (!record.keys.has('Meta') && !record.keys.has('Control') && (key.length === 1 || ['Space', 'Backspace', 'Delete', 'Enter'].includes(key))) events.push({type: 'input'});
+    const modifiers = [...record.keys].reduce((bits,value) => bits | ({'modifier:Alt':1,'modifier:Control':2,'modifier:Meta':4,'modifier:Shift':8}[playwrightKeyIdentity(value)] ?? 0),0);
+    const inputTypes = keyboardInputTypes(playwrightKeyIdentity(key),modifiers,process.platform === 'darwin');
+    const events = [{type:'keydown',key:key === 'Space' ? ' ' : key,...(inputTypes.length ? {inputTypes} : {})}];
     // Locator text editors normalize Home/End without changing page/body scrolling
     // or replacing the trusted End/Home event with a different shortcut.
     if (process.platform === 'darwin' && request.keyboardEditable && ['Home','End'].includes(key)) {
@@ -344,13 +350,29 @@ export async function actOnPage(record, request, options) {
       } finally { await (entry.route?.send ?? ((method, params) => record.session.send(method, params)))('Runtime.releaseObject', {objectId: object.objectId}); }
       break;
     }
+    case 'fileChooserSetFiles':
     case 'upload': {
-      const {elementFor} = await import('./observation.mjs');
-      const entry = elementFor(record, request);
-      if (!Array.isArray(request.files) || !request.files.length || request.files.some(file => typeof file !== 'string' || !isAbsolute(file))) fail('INVALID_ARGUMENT', 'upload requires absolute file paths');
-      for (const file of request.files) if (!(await step(() => stat(file))).isFile()) fail('INVALID_ARGUMENT', 'Upload source must be a regular file');
-      await input([{type: 'input'}], () => (entry.route?.send ?? ((method, params) => record.session.send(method, params)))('DOM.setFileInputFiles', {backendNodeId: entry.backendNodeId, files: request.files}));
-      break;
+      const chooser = request.action === 'fileChooserSetFiles' ? await step(() => record.fileChoosers.entry(request.fileChooserId)) : undefined;
+      const entry = chooser ?? elementFor(record, request);
+      const send = frameOptions.wrapSend(entry.route?.send ?? ((method, params) => record.session.send(method, params)));
+      const files = await uploadFiles(request.files,{allowString:!!chooser,check,step});
+      const validate = async () => {
+        check();
+        if (entry.route) await frameRouter.validate(entry.route);
+        if (chooser) await record.fileChoosers.entry(request.fileChooserId);
+        else if (elementFor(record,request) !== entry) fail('STALE_ELEMENT','The file input changed; observe again');
+        return validateFileInput(send,{backendNodeId:entry.backendNodeId,contextId:entry.route?.contextId,files});
+      };
+      await validate();
+      let consumed = false,receipt;
+      try {
+        receipt = await input(files.length ? [{type:'input'}] : [],async () => {
+          if (chooser) {record.fileChoosers.consume(chooser);consumed=true;}
+          else await record.fileChoosers?.explicitUpload(entry);
+          return writeFileInput(send,{backendNodeId:entry.backendNodeId,contextId:entry.route?.contextId,files});
+        },validate);
+      } finally {if (consumed) await record.fileChoosers.finish(chooser);}
+      return {action:request.action,inputMode:'background',delivery:'target-cdp',effectVerified:receipt.cleared === true,...receipt};
     }
     case 'download': {
       const download = page.waitForEvent('download', {timeout: options.timeoutMs});
@@ -368,7 +390,17 @@ export async function actOnPage(record, request, options) {
 export async function releasePage(record, timeoutMs, {dismissDialogs = true, persistInputs} = {}) {
   if (record.page.isClosed() || record.crashed) {
     record.keys.clear(); record.buttons.clear();
-    return [];
+    // Closing a page does not revoke its origin's browser-context permission.
+    // Its own session may be gone; the backend retains a browser-level sender.
+    let timer;
+    try {
+      await Promise.race([(async () => {
+        await Promise.allSettled([...record.pending]);
+        await restoreClipboardPermissions(record);
+      })(),new Promise((_,reject) => {timer=setTimeout(() => reject(new Error('Clipboard permission release is still in flight')),timeoutMs);})]);
+      return [];
+    } catch (error) {return [{targetId:record.id,code:error.code,error:error.message}];}
+    finally {clearTimeout(timer);}
   }
   const dialog = record.dialogs?.read();
   if (dialog && !dismissDialogs) return [{targetId:record.id,error:'A JavaScript dialog remains open; automatic cleanup did not dismiss it',dialog}];
@@ -406,6 +438,8 @@ export async function releasePage(record, timeoutMs, {dismissDialogs = true, per
     const settled = await (guard ? guard.wait(pending) : pending);
     if (!settled) return [{targetId: record.id, error: 'Input command is still in flight'}, ...(dialogRelease?.failures ?? []).map(error=>({targetId:record.id,error}))];
     const failures = [];
+    try {await bounded(() => restoreClipboardPermissions(record));}
+    catch (error) {failures.push({targetId:record.id,code:error.code,error:error.message});}
     for (const button of [...record.buttons]) {
       try { await bounded(() => releaseInput(() => record.page.mouse.up({button}), () => record.buttons.delete(button))); }
       catch (error) { guard?.check(); failures.push({targetId: record.id, button, error: error.message}); }
