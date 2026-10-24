@@ -2,7 +2,7 @@
 
 [简体中文](getting-started.md) · [Docs index](README_EN.md) · [Public installation](../README_EN.md#readme-install) · [Usage](usage_EN.md) · [Troubleshooting](troubleshooting_EN.md)
 
-Start with an installed, fully restarted, matching environment. This guide covers the 0.100.0 source; see [downloads](releases.md) for public availability. Current source **`0.2.1-rc.3.omd.0.101.0` / DSH `0.2.1-rc.3`** bundles OpenCU `2.1.0`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
+Start with an installed, fully restarted, matching environment. This guide covers the 0.100.0 source; see [downloads](releases.md) for public availability. Current source **`0.2.1-rc.3.omd.0.101.1` / DSH `0.2.1-rc.3`** bundles OpenCU `2.1.0`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
 
 ## 1. Check Actual Versions and Model
 

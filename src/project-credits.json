@@ -553,7 +553,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.2.1-rc.3.omaa.0.17.2 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5",
+      "version": "0.2.1-rc.3.omaa.0.17.3 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"
