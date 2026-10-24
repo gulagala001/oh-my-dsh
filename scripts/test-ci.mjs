@@ -34,6 +34,7 @@ core.push('test/glyph-rendering.test.mjs');
 core.push('test/btw-integration.test.mjs');
 core.push('test/extensions-commands-native.test.mjs');
 core.push('test/extensions-skills-native.test.mjs');
+core.push('test/extensions-instructions-native.test.mjs');
 core.push('test/persona-settings-api.test.mjs');
 core.push('test/monitor-import.test.mjs', 'test/monitor-aggregate-cache.test.mjs');
 core.push('test/ptc-lifecycle.test.mjs', 'test/preset-projection.test.mjs');

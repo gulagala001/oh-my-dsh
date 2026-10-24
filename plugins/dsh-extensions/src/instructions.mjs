@@ -1,70 +1,137 @@
-import { readFile, rm, stat } from 'node:fs/promises';
-import { dirname, join, relative, resolve } from 'node:path';
+import { createReadStream } from 'node:fs';
+import { lstat, realpath, rm, stat } from 'node:fs/promises';
+import { basename, join, relative, resolve } from 'node:path';
 import { fail, findProjectRoot, tilde, writeAtomic } from './common.mjs';
 
 const INSTRUCTIONS_MODULE = '@deepseek-ai/dsh-agent-instructions';
-const DEFAULTS = { projectRootMarkers: ['.git'], instructionFileCandidates: ['AGENTS.md', 'CLAUDE.md'], localInstructionFileCandidates: ['AGENTS.local.md', 'CLAUDE.local.md'] };
-const MAX_BYTES = 1024 * 1024;
+export const MAX_INSTRUCTION_BYTES = 1024 * 1024;
+// Only creation needs a candidate that does not exist yet. Keep it in the
+// current directory, as required by the native discovery API.
+const names = values => values.filter(name => name && name !== '.' && name !== '..' && !/[\\/]/.test(name));
+const missing = error => error.code === 'ENOENT' || error.code === 'ENOTDIR';
 
-/** The files DSH's instruction loader reads, located with its active configuration. */
+/** Edit native instruction candidates using the active, validated preset configs. */
 export class Instructions {
-  constructor(ctx, homes) { this.ctx = ctx; this.homes = homes; }
-  config() {
-    try {
-      const found = (this.ctx.get('configEditor')?.configuration() ?? []).find(item => item.entry?.options?.name === INSTRUCTIONS_MODULE);
-      const value = found ? { ...found.inherited, ...found.override } : {};
-      const list = (key) => Array.isArray(value[key]) && value[key].every(item => typeof item === 'string') ? value[key] : DEFAULTS[key];
-      return { projectRootMarkers: list('projectRootMarkers'), instructionFileCandidates: list('instructionFileCandidates'), localInstructionFileCandidates: list('localInstructionFileCandidates') };
-    } catch { return DEFAULTS; }
+  constructor(ctx, homes) {
+    this.ctx = ctx; this.homes = homes; this.pending = Promise.resolve(); this.controller = new AbortController();
+    ctx.effect(() => () => { this.controller.abort(Error('The instruction editor is stopped')); return this.pending; });
   }
   async describe(path, extra) {
-    const info = await stat(path).catch(() => null);
-    return { path, exists: !!info?.isFile(), size: info?.isFile() ? info.size : 0, modifiedAt: info?.isFile() ? info.mtimeMs : null, tooLarge: (info?.size ?? 0) > MAX_BYTES, ...extra };
+    const entry = await lstat(path).catch(error => { if (missing(error)) return null; throw error; });
+    const info = entry?.isSymbolicLink() ? await stat(path) : entry;
+    if (info && !info.isFile()) fail('instruction-path', 'The instruction path is not a regular file', {}, 403);
+    return { path, exists: !!info, size: info?.size ?? 0, modifiedAt: info?.mtimeMs ?? null, ...extra };
   }
-  async candidates(scope) {
-    const config = this.config();
-    const files = [await this.describe(join(this.homes.dsh, 'AGENTS.md'), { group: 'user', display: tilde(join(this.homes.dsh, 'AGENTS.md')), creatable: true })];
-    const shared = await this.describe(join(this.homes.agents, 'AGENTS.md'), { group: 'user', display: tilde(join(this.homes.agents, 'AGENTS.md')), creatable: false });
-    if (shared.exists) files.push(shared);
-    if (!scope.cwd) return { files, config };
-    const cwd = resolve(scope.cwd), root = await findProjectRoot(cwd, config.projectRootMarkers);
-    const chain = [];
-    for (let dir = cwd; ; dir = dirname(dir)) { chain.unshift(dir); if (dir === root || dirname(dir) === dir) break; }
-    for (const dir of chain) {
-      for (const [names, local] of [[config.instructionFileCandidates, false], [config.localInstructionFileCandidates, true]]) {
-        for (const name of names) {
-          const path = join(dir, name), display = relative(root, path) || name;
-          const creatable = dir === cwd && !local && name === names[0];
-          const file = await this.describe(path, { group: 'project', display, local, creatable });
-          if (file.exists || creatable) files.push(file);
+  async withFiles(scope, use, requestSignal) {
+    const signal = requestSignal ? AbortSignal.any([this.controller.signal, requestSignal]) : this.controller.signal;
+    signal.throwIfAborted();
+    const loader = this.ctx.get('loader');
+    if (!loader?.import) fail('service-missing', 'The native instruction loader is unavailable', {}, 503);
+    const [native, routing] = await Promise.all([loader.import(INSTRUCTIONS_MODULE), loader.import('@deepseek-ai/dsh-scope')]);
+    const presets = this.ctx.get('agentPresets'), defaultId = presets?.defaultId;
+    const lease = presets && await presets.acquireScope(defaultId);
+    try {
+      const keys = new Set([undefined, ...routing.scopeChainOf(lease?.key)]), views = [];
+      for (const agent of scope.cwd ? this.ctx.get('agents')?.list?.() ?? [] : []) {
+        const cwd = this.ctx.get('workingDirectory')?.get?.(agent.session) ?? agent.session?.header?.cwd;
+        if (agent.session?.header?.origin !== 'subagent' && cwd && resolve(cwd) === resolve(scope.cwd)) {
+          const chain = routing.scopeChainOf(routing.scopeOf(agent.ctx));
+          views.push({ agent, chain });
+          for (const key of chain) keys.add(key);
         }
       }
-    }
-    return { files, config, projectRoot: root };
+      const policies = [...this.ctx.registry.get(native)?.fibers ?? []]
+        .filter(fiber => fiber.state === 2 && keys.has(routing.scopeOf(fiber.ctx)) && Number.isFinite(fiber.config.maxBytes) && fiber.config.maxBytes > 0)
+        .map(fiber => ({ fiber, config: fiber.config }));
+      const check = async () => {
+        signal.throwIfAborted();
+        let changed = presets?.defaultId !== defaultId || policies.some(({ fiber, config }) => fiber.state !== 2 || fiber.config !== config)
+          || views.some(({ agent, chain }) => {
+            const current = routing.scopeChainOf(routing.scopeOf(agent.ctx));
+            return current.length !== chain.length || current.some((key, index) => key !== chain[index]);
+          });
+        if (presets && !changed) {
+          const current = await presets.acquireScope(defaultId);
+          try { changed = current.key !== lease.key; } finally { await current[Symbol.asyncDispose](); }
+        }
+        signal.throwIfAborted();
+        if (changed)
+          fail('instruction-changed', 'The instruction preset changed; refresh and try again', {}, 409);
+      };
+      const rows = new Map(), roots = new Set(), candidates = new Set(), localCandidates = new Set();
+      const personal = join(this.homes.dsh, 'AGENTS.md'), shared = join(this.homes.agents, 'AGENTS.md');
+      for (const { config } of policies) {
+        const primary = names(config.instructionFileCandidates), local = names(config.localInstructionFileCandidates);
+        primary.forEach(name => candidates.add(name)); local.forEach(name => localCandidates.add(name));
+        const cwd = resolve(scope.cwd ?? this.homes.dsh);
+        const root = scope.cwd ? await findProjectRoot(cwd, config.projectRootMarkers) : cwd;
+        if (scope.cwd) roots.add(root);
+        const discovered = await native.discoverBaselineInstructionFiles({ ...config, cwd, projectRoot: root,
+          ...scope.cwd ? {} : { instructionFileCandidates: [], localInstructionFileCandidates: [] },
+          dshHome: this.homes.dsh, agentsHome: this.homes.agents, signal });
+        const paths = new Map(discovered.map(file => [file.absolutePath, file.displayPath]));
+        paths.set(personal, tilde(personal));
+        if (scope.cwd && primary[0]) paths.set(join(cwd, primary[0]), relative(root, join(cwd, primary[0])));
+        for (const [path, display] of paths) {
+          const group = path === personal || path === shared ? 'user' : 'project';
+          const creatable = path === personal || group === 'project' && path === join(cwd, primary[0] ?? '');
+          let row = rows.get(path);
+          if (!row) {
+            row = await this.describe(path, { group, display, local: group === 'project' && local.includes(basename(path)), creatable, sourceLimits: [] });
+            rows.set(path, row);
+          }
+          row.creatable ||= creatable;
+          if (!row.sourceLimits.includes(config.maxSourceBytes)) row.sourceLimits.push(config.maxSourceBytes);
+        }
+      }
+      for (const row of rows.values()) {
+        row.maxBytes = Math.min(MAX_INSTRUCTION_BYTES, Math.max(...row.sourceLimits));
+        row.tooLarge = row.size > row.maxBytes;
+        row.partiallyLimited = row.size > Math.min(...row.sourceLimits) && !row.tooLarge;
+      }
+      await check();
+      return await use({ files: [...rows.values()], active: policies.length > 0, candidates: [...candidates],
+        localCandidates: [...localCandidates], projectRoot: roots.size === 1 ? tilde([...roots][0]) : null }, check, signal);
+    } finally { await lease?.[Symbol.asyncDispose](); }
   }
-  async list(scope) {
-    const { files, config, projectRoot } = await this.candidates(scope);
-    return { files, candidates: config.instructionFileCandidates, localCandidates: config.localInstructionFileCandidates, projectRoot: projectRoot ? tilde(projectRoot) : null };
-  }
-  async allowed(scope, path) {
-    const file = (await this.candidates(scope)).files.find(item => item.path === path);
+  list(scope, signal) { return this.withFiles(scope, value => value, signal); }
+  allowed(files, path) {
+    const file = files.find(item => item.path === path);
     if (!file) fail('instruction-path', 'This file is not an instruction file DSH reads here', {}, 403);
     return file;
   }
-  async read(scope, path) {
-    const file = await this.allowed(scope, path);
-    if (!file.exists) return { ...file, content: '' };
-    if (file.tooLarge) fail('instruction-too-large', 'The file is larger than DSH loads (1 MiB)');
-    return { ...file, content: await readFile(path, 'utf8') };
+  checkSize(file, size) {
+    if (size > file.maxBytes) fail('instruction-too-large', 'The file exceeds the instruction editing limit', { limit: file.maxBytes });
   }
-  async save(scope, path, content) {
-    await this.allowed(scope, path);
-    if (typeof content !== 'string') fail('content-required', 'Content is required');
-    if (Buffer.byteLength(content) > MAX_BYTES) fail('instruction-too-large', 'The file is larger than DSH loads (1 MiB)');
-    await writeAtomic(path, content);
+  read(scope, path, signal) {
+    return this.withFiles(scope, async ({ files }, check, readSignal) => {
+      const file = this.allowed(files, path);
+      if (!file.exists) return { ...file, content: '' };
+      this.checkSize(file, file.size);
+      let content = '', size = 0;
+      for await (const chunk of createReadStream(path, { encoding: 'utf8', signal: readSignal })) {
+        size += Buffer.byteLength(chunk); this.checkSize(file, size); content += chunk;
+      }
+      await check(); return { ...file, content };
+    }, signal);
   }
-  async remove(scope, path) {
-    const file = await this.allowed(scope, path);
-    if (file.exists) await rm(path);
+  mutate(scope, action, signal) {
+    const task = this.pending.then(() => this.withFiles(scope, action, signal));
+    this.pending = task.catch(() => {}); return task;
+  }
+  save(scope, path, content, signal) {
+    return this.mutate(scope, async ({ files }, check) => {
+      const file = this.allowed(files, path);
+      if (typeof content !== 'string') fail('content-required', 'Content is required');
+      this.checkSize(file, Buffer.byteLength(content));
+      const target = file.exists ? await realpath(path) : path;
+      await writeAtomic(target, content, check);
+    }, signal);
+  }
+  remove(scope, path, signal) {
+    return this.mutate(scope, async ({ files }, check) => {
+      const file = this.allowed(files, path); await check();
+      if (file.exists) await rm(path);
+    }, signal);
   }
 }
