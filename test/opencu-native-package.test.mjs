@@ -25,6 +25,9 @@ test('native helper stays executable through npm packing and both OpenCU sync in
     for (const name of ['sync-opencu.mjs', 'native-package-modes.mjs', 'check-opencu-native.mjs']) {
       await copyFile(join(root, 'scripts', name), join(host, 'scripts', name));
     }
+    // This fixture isolates package bytes and modes; catalog generation is
+    // checked against the complete repository by the documentation gate.
+    await writeFile(join(host, 'scripts/build-credits.mjs'), '');
     await mkdir(join(bundled, 'src/native'), {recursive: true});
     for (const name of ['macos-identity.mjs', 'protocol.mjs']) {
       await copyFile(join(root, 'vendor/opencu/src/native', name), join(bundled, 'src/native', name));
