@@ -55,8 +55,10 @@ Every page is a tab at the top of the **Plugins** page in the left sidebar: Skil
   ```
 
 - Type `/name arguments` in the composer to send it. `$ARGUMENTS` becomes the whole input and `$1`…`$9` single space-separated words (quote words that contain spaces); when the template uses no arguments, they are appended. Attachments are sent along.
-- Names cannot shadow commands DSH or other plugins already provide; such files are marked as not active.
-- "From DSH and plugins" lists the other commands available now, read-only.
+- Commands cannot replace names already provided by DSH or another plugin in the same scope; conflicting files are marked. One conversation's preset does not reserve names in other projects. The global page shows global commands; a workspace also includes commands from that project's open conversations.
+- "From DSH and plugins" lists other commands in the selected scope, read-only. Refresh reconciles files with the menu and preserves unchanged registrations.
+- Each send reads the current file. Deleted, unreadable or malformed files report an error; an invalid project file never falls back to a personal template of the same name. Cancelling a request or disabling the plugin prevents messages not yet handed to the conversation. Use the conversation's Stop control for messages already accepted.
+- Within one host, saves, renames, deletions and refreshes run in order; only one concurrent creation of the same name succeeds. Re-enabling the plugin or restarting the host restores commands from existing files. The first command waits for project registration to finish.
 
 ## Hooks
 

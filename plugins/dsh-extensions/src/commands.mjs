@@ -1,10 +1,15 @@
 import { readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { symbols } from '@deepseek-ai/cordis';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { composeFrontmatter, splitFrontmatter } from './frontmatter.mjs';
 import { errorText, fail, findProjectRoot, kind, tilde, writeAtomic } from './common.mjs';
 
 const COMMAND_NAME = /^[a-z][a-z0-9_-]*$/;
+const original = value => value?.[symbols.original] ?? value;
+// Cordis 4.0.5: a registration owner is usable only while LOADING or ACTIVE.
+const usable = scope => scope?.fiber?.uid !== null && [1, 2].includes(scope?.fiber?.state);
+const clear = rows => { for (const entry of rows.values()) entry.dispose?.(); rows.clear(); };
 
 export function splitArguments(raw) {
   return [...raw.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)].map(match => match[1] ?? match[2] ?? match[3]);
@@ -24,7 +29,7 @@ async function readCommand(path, name, location) {
   catch (failure) { error = errorText(failure); }
   const firstLine = body.split('\n').map(line => line.replace(/^#+\s*/, '').trim()).find(Boolean) ?? '';
   const description = typeof data.description === 'string' && data.description.trim() ? data.description.trim() : firstLine.slice(0, 80) || name;
-  return { name, path, location, description, argumentHint: typeof data['argument-hint'] === 'string' ? data['argument-hint'].trim() : '', body: body.trim(), error };
+  return { name, path, location, description, argumentHint: typeof data['argument-hint'] === 'string' ? data['argument-hint'].trim() : '', body: body.trim(), content: text, error };
 }
 async function readDirectory(dir, location) {
   let entries;
@@ -34,7 +39,9 @@ async function readDirectory(dir, location) {
     if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
     const name = entry.name.slice(0, -3);
     if (!COMMAND_NAME.test(name)) continue;
-    commands.push(await readCommand(join(dir, entry.name), name, location));
+    // The registry needs discovery metadata, never a fallback copy of a prompt.
+    const { body, content, ...command } = await readCommand(join(dir, entry.name), name, location);
+    commands.push(command);
   }
   return commands;
 }
@@ -43,95 +50,138 @@ async function readDirectory(dir, location) {
 export class Commands {
   constructor(ctx, homes) {
     this.ctx = ctx; this.userDir = join(homes.dsh, 'commands');
-    this.user = new Map(); this.agents = new Map(); this.registry = null;
+    this.registry = null;
   }
   start() {
-    this.ctx.inject(['commands'], scope => {
-      this.registry = scope;
-      scope.effect(() => () => { this.registry = null; for (const entry of this.user.values()) entry.dispose?.(); this.user.clear(); });
-      void this.syncUser().catch(error => this.ctx.logger?.warn?.(`dsh-extensions: commands: ${errorText(error)}`));
-      for (const agent of this.ctx.get('agents')?.list?.() ?? []) void this.attach(agent);
+    return this.ctx.inject(['commands'], async scope => {
+      const owner = { scope, user: new Map(), agents: new Map(), pending: Promise.resolve() };
+      this.registry = owner;
+      scope.effect(() => async () => {
+        if (this.registry === owner) this.registry = null;
+        clear(owner.user);
+        const results = await Promise.allSettled([...owner.agents.keys()].map(agent => this.detach(agent, owner)));
+        const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+        if (errors.length) throw new AggregateError(errors, 'Command cleanup failed');
+      });
+      // The native registry resolves a cold Agent before executing its first
+      // command. Finish this scoped overlay inside that same creation barrier.
+      scope.on('agent/created', ({ agent }) => this.attach(agent, owner));
+      scope.on('agent/disposed', ({ agent }) => this.detach(agent, owner));
+      const ready = (this.ctx.get('agents')?.list?.() ?? []).map(agent => this.attach(agent, owner));
+      ready.push(this.syncUser(owner));
+      await Promise.all(ready);
     });
-    this.ctx.on('agent/created', ({ agent }) => { void this.attach(agent); });
-    this.ctx.on('agent/disposed', ({ agent }) => this.detach(agent));
-    this.ctx.effect(() => () => { for (const agent of [...this.agents.keys()]) this.detach(agent); });
   }
-  /** Commands registered by DSH and other plugins, which custom files may not shadow. */
-  builtin() {
-    const commands = this.registry?.commands;
-    if (!commands) return [];
-    // Agent-scoped commands (for example from the agent preset) only show in a session's view.
-    const agent = (this.ctx.get('agents')?.list?.() ?? []).find(item => item.session?.header?.origin !== 'subagent');
+  active(owner) { return !!owner && this.registry === owner && usable(owner.scope); }
+  requireOwner(owner) { if (!this.active(owner)) fail('service-missing', 'The command service is stopped; refresh and try again', {}, 503); }
+  run(action, owner = this.registry) {
+    if (!this.active(owner)) return Promise.reject(new Error('The command service is stopped; refresh and try again'));
+    // File changes and their native registrations share one ordered operation.
+    const result = owner.pending.then(() => { this.requireOwner(owner); return action(owner); });
+    owner.pending = result.catch(() => {});
+    return result;
+  }
+  /** Native definition identities distinguish our rows from scoped shadows. */
+  builtin(owner, views = [undefined]) {
     const rows = new Map();
-    for (const view of agent ? [undefined, agent] : [undefined]) {
-      try { for (const row of commands.list(view)) rows.set(row.name, row); } catch {}
+    for (const agent of views) {
+      const own = new Set([...owner.user.values(), ...(owner.agents.get(agent)?.commands.values() ?? [])]
+        .filter(entry => entry.dispose).map(entry => entry.definitionId));
+      for (const row of owner.scope.commands.list(agent)) if (!own.has(row.definitionId)) rows.set(row.name, row);
     }
-    const own = new Set([...this.user.values()].filter(entry => entry.dispose).map(entry => entry.command.name));
-    for (const name of agent ? this.agents.get(agent)?.names ?? [] : []) own.add(name);
-    return [...rows.values()].filter(row => !own.has(row.name)).sort((a, b) => a.name.localeCompare(b.name))
+    return [...rows.values()].sort((a, b) => a.name.localeCompare(b.name))
       .map(row => ({ name: row.name, description: row.description, hint: row.input?.hint ?? '' }));
   }
-  definition(command) {
-    return { name: command.name, description: command.description,
+  definition(command, current = () => true) {
+    return { definitionId: `dsh-extensions:${command.path}`, name: command.name, description: command.description,
       input: { hint: command.argumentHint || 'arguments', attachments: true },
       handler: async invocation => {
-        // Read the file again so edits apply without re-registering.
-        const current = await readCommand(command.path, command.name, command.location).catch(() => command);
-        const text = expandTemplate(current.body, invocation.rawInput);
+        invocation.signal?.throwIfAborted();
+        if (!current()) throw Error(`/${command.name} is no longer active; refresh and try again`);
+        const file = await readCommand(command.path, command.name, command.location);
+        invocation.signal?.throwIfAborted();
+        if (!current()) throw Error(`/${command.name} is no longer active; refresh and try again`);
+        if (file.error) return { kind: 'error', text: `/${command.name}: ${file.error}` };
+        const text = expandTemplate(file.body, invocation.rawInput);
         if (!text && !invocation.attachments.length) return { kind: 'error', text: `/${command.name} is empty` };
         invocation.agent.followup(createUserMessage({ content: [...invocation.attachments, ...text ? [{ type: 'text', text }] : []], source: { kind: 'user' } }));
         return { kind: 'success' };
       } };
   }
-  async syncUser() {
-    if (!this.registry) return;
-    const commands = await readDirectory(this.userDir, 'user');
-    for (const [name, entry] of this.user) { entry.dispose?.(); this.user.delete(name); }
-    const taken = new Set(this.builtin().map(row => row.name));
+  reconcile(owner, scope, rows, commands, agent) {
+    const taken = new Set(this.builtin(owner, [agent]).map(row => row.name));
+    const desired = new Map(commands.map(command => [command.name, command]));
+    for (const [name, entry] of rows) {
+      const next = desired.get(name), previous = entry.command;
+      if (!next || taken.has(name) || previous.description !== next.description || previous.argumentHint !== next.argumentHint) {
+        entry.dispose?.(); rows.delete(name);
+      }
+    }
     for (const command of commands) {
-      if (taken.has(command.name)) { this.user.set(command.name, { command, conflict: true }); continue; }
-      try { this.user.set(command.name, { command, dispose: this.registry.commands.register(this.definition(command)) }); }
-      catch (error) { this.user.set(command.name, { command, conflict: true, error: errorText(error) }); }
+      const previous = rows.get(command.name);
+      if (previous?.dispose) { previous.command = command; previous.error = command.error; continue; }
+      const entry = { command, error: command.error };
+      rows.set(command.name, entry);
+      // A malformed project file must report its error, not run a personal
+      // command of the same name. The live handler remains the file authority.
+      if (taken.has(command.name)) continue;
+      const definition = this.definition(command, () => this.active(owner) && usable(scope) && rows.get(command.name) === entry);
+      entry.definitionId = definition.definitionId;
+      try { entry.dispose = scope.commands.register(definition); }
+      catch (error) { entry.error = errorText(error); }
     }
   }
+  async updateUser(owner) {
+    const commands = await readDirectory(this.userDir, 'user');
+    this.requireOwner(owner);
+    this.reconcile(owner, owner.scope, owner.user, commands);
+  }
+  syncUser(owner = this.registry) { return this.run(current => this.updateUser(current), owner); }
   cwdOf(agent) { return this.ctx.get('workingDirectory')?.get?.(agent.session) ?? agent.session?.header?.cwd; }
-  async attach(agent) {
-    if (!this.registry || agent.session?.header?.origin === 'subagent' || this.agents.has(agent)) return;
-    const entry = { names: [], dispose: null, root: null };
-    this.agents.set(agent, entry);
-    try {
+  async attach(agent, owner = this.registry) {
+    agent = original(agent);
+    if (!this.active(owner) || agent.session?.header?.origin === 'subagent') return;
+    if (owner.agents.has(agent)) return owner.agents.get(agent).ready;
+    const entry = { commands: new Map(), root: null, scope: null, fiber: null };
+    owner.agents.set(agent, entry);
+    entry.ready = this.run(async () => {
       const cwd = this.cwdOf(agent);
       if (!cwd) return;
       entry.root = await findProjectRoot(cwd);
-      await this.registerProject(agent, entry);
-    } catch (error) { this.ctx.logger?.warn?.(`dsh-extensions: project commands: ${errorText(error)}`); }
+      if (!this.active(owner) || owner.agents.get(agent) !== entry) return;
+      entry.fiber = agent.ctx.inject(['commands'], scope => { entry.scope = scope; scope.effect(() => () => { entry.scope = null; clear(entry.commands); }); });
+      await entry.fiber;
+      await this.updateProject(owner, entry.root);
+    }, owner);
+    return entry.ready;
   }
-  async registerProject(agent, entry) {
-    entry.dispose?.(); entry.dispose = null; entry.names = [];
-    const commands = await readDirectory(join(entry.root, '.dsh/commands'), 'project');
-    if (this.agents.get(agent) !== entry) return;
-    const taken = new Set(this.builtin().map(row => row.name));
-    const usable = commands.filter(command => !taken.has(command.name));
-    if (!usable.length) return;
-    entry.names = usable.map(command => command.name);
-    // Agent-scoped rows shadow user rows of the same name for this session only.
-    const fiber = agent.ctx.inject(['commands'], scope => { for (const command of usable) scope.commands.register(this.definition(command)); });
-    entry.dispose = () => { try { (typeof fiber === 'function' ? fiber : fiber?.dispose)?.call(fiber); } catch {} };
+  async detach(agent, owner = this.registry) {
+    agent = original(agent);
+    const entry = owner?.agents.get(agent);
+    if (!entry) return;
+    owner.agents.delete(agent); clear(entry.commands);
+    await entry.fiber?.dispose();
   }
-  detach(agent) { const entry = this.agents.get(agent); this.agents.delete(agent); entry?.dispose?.(); }
-  async refreshProject(root) {
-    for (const [agent, entry] of this.agents) if (entry.root === root) await this.registerProject(agent, entry).catch(() => {});
+  async updateProject(owner, root) {
+    const commands = await readDirectory(join(root, '.dsh/commands'), 'project');
+    this.requireOwner(owner);
+    for (const [agent, entry] of owner.agents) if (entry.root === root && usable(entry.scope)) this.reconcile(owner, entry.scope, entry.commands, commands, agent);
+    return commands;
   }
+  refreshProject(root) { return this.run(owner => this.updateProject(owner, root)); }
   async projectDir(scope) { return scope.cwd ? join(await findProjectRoot(scope.cwd), '.dsh/commands') : null; }
-  async list(scope) {
-    await this.syncUser();
-    const builtin = this.builtin(), taken = new Set(builtin.map(row => row.name));
-    const project = await this.projectDir(scope);
+  views(owner, root) { return root ? [undefined, ...[...owner.agents].filter(([, entry]) => entry.root === root).map(([agent]) => agent)] : [undefined]; }
+  list(scope) { return this.run(async owner => {
+    await this.updateUser(owner);
+    const root = scope.cwd ? await findProjectRoot(scope.cwd) : null;
+    const project = root ? await this.updateProject(owner, root) : [];
+    const builtin = this.builtin(owner, this.views(owner, root)), taken = new Set(builtin.map(row => row.name));
     const describe = command => ({ name: command.name, description: command.description, argumentHint: command.argumentHint, path: command.path, location: command.location,
       error: command.error ?? null, conflict: taken.has(command.name) });
-    return { user: [...this.user.values()].map(entry => describe(entry.command)), project: project ? (await readDirectory(project, 'project')).map(describe) : [],
-      builtin, dirs: { user: tilde(this.userDir), project: tilde(project) } };
-  }
+    return { user: [...owner.user.values()].map(entry => ({ ...describe(entry.command), error: entry.error ?? null })),
+      project: project.map(command => ({ ...describe(command), error: command.error ?? [...owner.agents.values()].filter(entry => entry.root === root).map(entry => entry.commands.get(command.name)?.error).find(Boolean) ?? null })),
+      builtin, dirs: { user: tilde(this.userDir), project: tilde(root ? join(root, '.dsh/commands') : null) } };
+  }); }
   async locate(scope, location) {
     if (location === 'project') { const dir = await this.projectDir(scope); if (!dir) fail('project-required', 'Choose a workspace for project commands'); return dir; }
     return this.userDir;
@@ -140,25 +190,35 @@ export class Commands {
     if (!COMMAND_NAME.test(name ?? '')) fail('invalid-command-name', 'Command names start with a lowercase letter and use a-z, 0-9, - or _');
     const path = join(await this.locate(scope, location), `${name}.md`);
     if (await kind(path) !== 'file') fail('command-missing', `/${name} no longer exists`, { name }, 404);
-    return { ...await readCommand(path, name, location), content: await readFile(path, 'utf8') };
+    return readCommand(path, name, location);
   }
-  async save(scope, { location, name, previous, description, argumentHint, body }) {
+  save(scope, { location, name, previous, description, argumentHint, body }) { return this.run(async owner => {
     if (!COMMAND_NAME.test(name ?? '')) fail('invalid-command-name', 'Command names start with a lowercase letter and use a-z, 0-9, - or _');
     if (typeof body !== 'string' || !body.trim()) fail('template-required', 'The prompt template is required');
-    if (this.builtin().some(row => row.name === name)) fail('command-taken', `/${name} is already provided by DSH or another plugin`, { name }, 409);
+    const root = location === 'project' && scope.cwd ? await findProjectRoot(scope.cwd) : null;
+    if (this.builtin(owner, this.views(owner, root)).some(row => row.name === name)) fail('command-taken', `/${name} is already provided by DSH or another plugin`, { name }, 409);
     const dir = await this.locate(scope, location), path = join(dir, `${name}.md`);
     if (name !== previous && await kind(path)) fail('command-exists', `/${name} already exists`, { name }, 409);
+    this.requireOwner(owner);
     await writeAtomic(path, composeFrontmatter({ description: description?.trim(), 'argument-hint': argumentHint?.trim() }, body));
     if (previous && previous !== name && COMMAND_NAME.test(previous)) await rm(join(dir, `${previous}.md`), { force: true });
-    await this.afterChange(scope, location);
-  }
-  async remove(scope, location, name) {
+    await this.afterChange(owner, scope, location, name);
+  }); }
+  remove(scope, location, name) { return this.run(async owner => {
     if (!COMMAND_NAME.test(name ?? '')) fail('invalid-command-name', 'Invalid command name');
-    await rm(join(await this.locate(scope, location), `${name}.md`), { force: true });
-    await this.afterChange(scope, location);
-  }
-  async afterChange(scope, location) {
-    if (location === 'project') await this.refreshProject(await findProjectRoot(scope.cwd));
-    else await this.syncUser();
+    const path = join(await this.locate(scope, location), `${name}.md`);
+    this.requireOwner(owner);
+    await rm(path, { force: true });
+    await this.afterChange(owner, scope, location);
+  }); }
+  async afterChange(owner, scope, location, savedName) {
+    let rows;
+    if (location === 'project') {
+      const root = await findProjectRoot(scope.cwd);
+      await this.updateProject(owner, root);
+      rows = [...owner.agents.values()].filter(entry => entry.root === root).map(entry => entry.commands);
+    } else { await this.updateUser(owner); rows = [owner.user]; }
+    const error = savedName && rows.map(rows => rows.get(savedName)?.error).find(Boolean);
+    if (error) fail('command-registration', `/${savedName} was saved but could not be registered: ${error}`, { name: savedName }, 500);
   }
 }
