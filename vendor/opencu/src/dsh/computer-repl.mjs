@@ -11,9 +11,10 @@ import { replOutput, partialReplError } from './repl-output.mjs';
 import { clickParameters } from '../../extension/click-options.js';
 import { pressParameters } from '../../extension/key-options.js';
 import { createInputReleaseState } from './input-release.mjs';
+import { controlFailure } from '../protocol.mjs';
 
 function checked(result) {
-  if (result?.ok === false) throw Object.assign(new Error(result.error.message), result.error);
+  if (result?.ok === false) throw controlFailure(result);
   return result;
 }
 

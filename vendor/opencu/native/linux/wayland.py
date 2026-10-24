@@ -11,6 +11,7 @@ import threading
 import time
 import uuid
 from accessibility_input import perform as accessibility_action, verify_window
+import input_receipt
 
 
 class Failure(Exception):
@@ -416,7 +417,7 @@ def point(target, action):
 def notify(method, signature, *values):
     if not state['session']:
         fail('PERMISSION_DENIED', 'Desktop-sharing session ended')
-    call(REMOTE, method, '(oa{sv}' + signature + ')', (state['session'], {}, *values))
+    input_receipt.dispatch(call, REMOTE, method, '(oa{sv}' + signature + ')', (state['session'], {}, *values))
 
 
 def input_event(kind, code, down, target=None, expected=None):
@@ -479,7 +480,7 @@ def key_chord(value):
 
 def activate(target):
     if target['kind'] == 'app':
-        if not windows[target['id']].queryComponent().grabFocus():
+        if not input_receipt.dispatch(windows[target['id']].queryComponent().grabFocus):
             fail('FOCUS_REJECTED', 'The compositor rejected application focus')
     check(target)
 
@@ -510,7 +511,7 @@ def act(target, action, expected):
             key = target['id'] + ':' + str(uuid.uuid4())
             elements[key] = selected
             return dict(element=dict(elementId=key, name=selected.name, role=selected.getRoleName()))
-        return accessibility_action(root, selected, action, lambda: check(target, expected, False), fail)
+        return accessibility_action(root, selected, action, lambda: check(target, expected, False), fail, input_receipt.dispatch)
     if kind != 'activate' and mode != 'foreground':
         fail('FOREGROUND_REQUIRED', 'Wayland portal input is global; obtain user permission before focus and inputMode=foreground')
     if kind == 'activate':
@@ -550,7 +551,7 @@ def act(target, action, expected):
         with input_lock:
             check(target, expected)
             selected = element(target, action['elementId'])
-            accepted = selected.queryEditableText().setTextContents(str(action.get('value', action.get('text', '')))) if kind == 'set_value' else selected.queryAction().doAction(0)
+            accepted = input_receipt.dispatch(selected.queryEditableText().setTextContents, str(action.get('value', action.get('text', '')))) if kind == 'set_value' else input_receipt.dispatch(selected.queryAction().doAction, 0)
             if not accepted:
                 fail('INPUT_REJECTED', 'Application rejected accessibility action')
     elif kind in ('type_text', 'press_key', 'key_down', 'key_up'):
@@ -681,13 +682,11 @@ def perform(method, args, expected):
 
 
 def reply(request):
+    input_receipt.begin()
     try:
         value = dict(id=request['id'], ok=True, result=perform(request['method'], request.get('params', {}), request['epoch']))
     except Exception as error:
-        if isinstance(error, ChordAlreadyHeld):
-            details = dict(inputDispatched=False, retryable=False)
-        else:
-            details = dict(release=release()) if request['method'] == 'act' else {}
+        details = input_receipt.failure(error, release, isinstance(error, ChordAlreadyHeld)) if request['method'] == 'act' else {}
         value = dict(id=request['id'], ok=False, error=dict(code=getattr(error, 'code', 'NATIVE_FAILURE'), message=str(error), details=details))
     with output_lock:
         print(json.dumps(value), flush=True)

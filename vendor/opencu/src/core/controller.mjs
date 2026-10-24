@@ -1,8 +1,8 @@
 import {createStorage} from './storage.mjs';
 import {createBrowserBackend} from '../browser/backend.mjs';
 import {
-  PROTOCOL_VERSION, assertBackend, assertTarget, checkExpected, errorJSON, fail, inputReleased,
-  json, readOperation, referenceMatches, sameIdentity,
+  PROTOCOL_VERSION, assertBackend, assertTarget, changedViewError, checkExpected, errorJSON, fail, inputReleased,
+  json, readOperation, recoverableActionError, referenceMatches, sameIdentity,
 } from '../protocol.mjs';
 
 /** All public methods resolve to {ok:true,...} or {ok:false,error,state}. */
@@ -252,7 +252,8 @@ export async function createController({dataDir, browser, native} = {}) {
         checkOperation(operationEpoch);
         // Selection cannot bypass cold recovery or a previous stop.
         Object.assign(target, {verified: mode === 'active' && !releasePending && !previous?.cold, cold: previous?.cold ?? false,
-          releaseAcknowledged: previous?.releaseAcknowledged === true});
+          releaseAcknowledged: previous?.releaseAcknowledged === true,
+          ...(previous?.needsObservation ? {needsObservation: true} : {})});
         selected.set(target.id, target);
         activeTargetId = target.id;
         await persist();
@@ -275,17 +276,20 @@ export async function createController({dataDir, browser, native} = {}) {
         const recovery = aborter.signal.aborted ? new AbortController() : null;
         if (recovery) recoveryOperations.add(recovery);
         try {
-          const signal = recovery?.signal ?? aborter.signal;
+          const controlSignal = recovery?.signal ?? aborter.signal;
+          const signal = request.signal ? AbortSignal.any([controlSignal, request.signal]) : controlSignal;
           await verify(target, backend, false, operationEpoch, signal);
           checkOperation(operationEpoch);
           const activitySequence = userActivity.get(target.id)?.sequence ?? 0;
           const observation = await readOperation(() => backend.observe(json(target), {...request, signal, format: request.format ?? 'both'}), signal);
+          signal.throwIfAborted();
           checkOperation(operationEpoch);
           const activity = observation.userActivity, previous = userActivity.get(target.id);
           if (activity?.sequence && (previous?.documentId !== activity.documentId || previous.sequence < activity.sequence)) {
             userActivity.set(target.id, { ...activity, targetId: target.id });
           }
           observedActivity.set(target.id, activity?.sequence ?? activitySequence);
+          delete target.needsObservation;
           await persist();
           checkOperation(operationEpoch);
           return {targetId: target.id, observation, userActivity: userActivity.get(target.id) ?? null,
@@ -299,6 +303,7 @@ export async function createController({dataDir, browser, native} = {}) {
       const operationEpoch = epoch;
       const {target, backend} = targetFor(request.targetId, request.targetIdentity);
       if (target.cold || !dialogAction && !target.verified) fail('RECOVERY_REQUIRED', 'Resume this target before acting');
+      if (!dialogAction && target.needsObservation) fail('OBSERVATION_REQUIRED', 'The view changed during input. Observe this same target before continuing; do not replay uncertain input.', {inputDispatched: false, observationRequired: true});
       // A clean shutdown receipt survives another restart, but never a new
       // dispatch. Persist invalidation first so a crash cannot reuse the receipt.
       if (target.releaseAcknowledged) { target.releaseAcknowledged = false; await persist(); checkOperation(operationEpoch); }
@@ -334,21 +339,37 @@ export async function createController({dataDir, browser, native} = {}) {
         return {targetId: result?.target?.id ?? target.id, result: result ?? {}};
       }
       catch (error) {
+        let recoveredView = false;
+        if (operationEpoch === epoch && changedViewError(error) && typeof error.details?.inputDispatched === 'boolean') {
+          try {
+            let release = error.details.release;
+            if (error.details.inputDispatched && release === undefined && typeof backend.releaseTarget === 'function') {
+              try { release = await backend.releaseTarget(json(target), {dismissDialogs: false}); }
+              catch (failure) { release = {released: false, error: errorJSON(failure)}; }
+              checkOperation(operationEpoch);
+              error.details = {...error.details, release};
+            }
+            if (release === undefined && !error.details.inputDispatched || inputReleased(release)) {
+              if (error.details.inputDispatched) target.needsObservation = true;
+              error.details = {...error.details, observationRequired: true};
+              await persist(); checkOperation(operationEpoch);
+              recoveredView = true;
+            }
+          } catch (failure) {
+            if (operationEpoch === epoch) { block('faulted'); await releaseAll(); }
+            throw failure;
+          }
+        }
         const unresolvedLocator = ['locator','domSnapshot'].includes(request.action) && error.details?.inputDispatched !== true && ['LOCATOR_NOT_FOUND', 'AMBIGUOUS_LOCATOR', 'UNSUPPORTED_LOCATOR', 'LOCATOR_NOT_ACTIONABLE', 'LOCATOR_NOT_STABLE', 'STALE_ELEMENT', 'STALE_OBSERVATION', 'FRAME_NOT_FOUND', 'FRAME_DETACHED'].includes(error.code);
-        const rejectedEditing = ['selectText','paste'].includes(request.action) && error.details?.inputDispatched === false
-          && ['INVALID_ARGUMENT','ELEMENT_NOT_EDITABLE','AMBIGUOUS_TEXT','TEXT_NOT_FOUND','UNSUPPORTED_PASTE_FORMAT','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION','FRAME_NOT_FOUND','FRAME_DETACHED'].includes(error.code);
-        const rejectedSecondary = request.action === 'performSecondaryAction' && error.details?.inputDispatched === false
-          && ['INVALID_ARGUMENT','UNSUPPORTED_ACTION','ELEMENT_DISABLED','STALE_ELEMENT'].includes(error.code);
-        const rejectedClick = ['click','doubleClick','double_click','rightClick','right_click'].includes(request.action) && error.details?.inputDispatched === false
-          && ['INVALID_ARGUMENT','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION','FOREGROUND_REQUIRED','TARGET_NOT_ACTIVE'].includes(error.code);
-        const rejectedPress = ['press','pressKey','press_key','keypress','key','keyDown','keyUp','key_down','key_up'].includes(request.action) && error.details?.inputDispatched === false
-          && ['INVALID_ARGUMENT','INVALID_ACTION','UNKNOWN_KEY','UNSUPPORTED_KEY','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION','FOREGROUND_REQUIRED','TARGET_NOT_ACTIVE'].includes(error.code);
-        const staleTextInput = ['fill','setValue','set_value','type','typeText','type_text','input','ax_press'].includes(request.action) && error.details?.inputDispatched === false
-          && ['STALE_ELEMENT','STALE_OBSERVATION','FOREGROUND_REQUIRED','TARGET_NOT_ACTIVE','UNSUPPORTED_ACTION','INPUT_ALREADY_HELD'].includes(error.code);
-        const rejectedPointer = ['scroll','drag','move','mouse_move','mouseDown','mouseUp','mouse_down','mouse_up','hitTest','hit_test','cursor'].includes(request.action) && error.details?.inputDispatched === false
-          && ['INVALID_ARGUMENT','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION','FOREGROUND_REQUIRED','TARGET_NOT_ACTIVE'].includes(error.code);
         const recoverableDialog = ['JS_DIALOG_OPEN', 'STALE_DIALOG'].includes(error.code);
-        if (operationEpoch === epoch && !unresolvedLocator && !rejectedEditing && !rejectedSecondary && !rejectedClick && !rejectedPress && !staleTextInput && !rejectedPointer && !recoverableDialog) {
+        if (inputReleased(error.details?.release)) {
+          // A native helper owns one hardware input stream; browser release is
+          // scoped to one tab. Tell callers exactly which held inputs were cleared.
+          error.details.releasedTargetIds = target.backend === 'native'
+            ? [...selected.values()].filter(item => item.backend === 'native').map(item => item.id) : [target.id];
+        }
+        const failedRelease = error.details?.release !== undefined && !inputReleased(error.details.release);
+        if (operationEpoch === epoch && (failedRelease || !recoveredView && !recoverableActionError(error, request.action ?? request.type) && !unresolvedLocator && !recoverableDialog)) {
           block('faulted');
           await releaseAll();
         }

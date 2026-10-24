@@ -86,7 +86,7 @@ export function createBrowserPairing(directory) {
     },
     async forget(instanceId) { await update(pairs => pairs.filter(pair => pair.instanceId !== instanceId)); wake(); },
     async list() { await ready; return saved.pairs.map(({digest: ignored, origin, ...pair}) => ({...pair, extensionId: new URL(origin).hostname})); },
-    async request(browser, signal, {waitMs = 60000, discoveryMs = 2200, excludeInstanceIds = []} = {}) {
+    async request(browser, signal, {waitMs = 60000, discoveryMs = 2200, excludeInstanceIds = [], onWaiting} = {}) {
       await ready;
       signal?.throwIfAborted();
       const eligible = item => matches(item, browser) && !excludeInstanceIds.includes(item.instanceId);
@@ -105,14 +105,16 @@ export function createBrowserPairing(directory) {
       if (demand) fail('PAIRING_IN_PROGRESS', 'A browser connection request is already waiting for approval.');
       const current = demand = {id: randomUUID(), browser: choices[0].instanceId, denied: new Set(), connected: false};
       const expires = Date.now() + waitMs; wake();
+      let endWaiting;
       try {
+        endWaiting = onWaiting?.({kind: 'browser', requestId: current.id, appDisplayName: choices[0].label});
         while (!closed && !current.connected && Date.now() < expires) {
           if (choices.every(item => current.denied.has(key(item.origin, item.instanceId)))) fail('PAIRING_DECLINED', 'Browser connection was declined.');
           await wait(Math.max(1, expires - Date.now()), signal);
         }
         if (!current.connected) fail(closed ? 'CLOSED' : 'PAIRING_TIMEOUT', 'Browser connection was not approved.');
         return {connected: true};
-      } finally { if (demand === current) demand = undefined; wake(); }
+      } finally { if (demand === current) demand = undefined; endWaiting?.(); wake(); }
     },
     close() { closed = true; wake(); },
   };

@@ -1,6 +1,7 @@
 import { computerDescription, resetDescription } from './computer-docs.mjs';
 import { modelResult } from './model-output.mjs';
 import { createObservationProjector } from './observation-output.mjs';
+import { controlFailure } from '../protocol.mjs';
 
 export const TOOLS = [
   { name: 'opencu_connectBrowser', description: 'Request a local Chrome / Edge connection. On first use the installed extension automatically asks the user to Allow once; pairing persists across normal restarts and updates. Use browser from discovered candidates (extension:<id>), Chrome, Edge, or external. Does not select a tab or replay input.', inputSchema: { type: 'object', properties: { browser: { type: 'string' } } } },
@@ -60,7 +61,7 @@ export function installToolDefinitions(ctx, lease, sessionKey) {
         else if (['select','resume','stop','computer_use','computer_use_reset','openTarget'].includes(endpoint) || endpoint === 'act' && ['navigate','back','forward','reload','closeTab','domSnapshot'].includes(args.action)) projector.reset();
         try {
           const result = await lease.request(endpoint, args, { signal: exec.signal, attachments: ctx.attachments, sessionKey: id, modelProjection: endpoint === 'state' || endpoint === 'targets' });
-          if (result.ok === false) throw Object.assign(new Error(result.error.message), result.error);
+          if (result.ok === false) throw controlFailure(result);
           return modelResult(projector.project(result, args), args);
         } catch (error) { projector.reset(); throw error; }
       },

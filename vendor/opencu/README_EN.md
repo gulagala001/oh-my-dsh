@@ -64,6 +64,8 @@ OpenCU uses native DSH tool calls to operate real browsers and desktop applicati
 
 Target selection and actions prefer the background. Binding or viewing a target does not activate its window. Unsupported background actions return a specific limitation; foreground actions require the user’s consent. After manual interaction, observe again. Cancellation releases held input; dispatch alone does not prove success.
 
+When opening a preview, scrolling, resizing, or changing focus prevents an action from continuing, the existing session is retained. If input has started, OpenCU confirms release of that target's held input and requires a fresh observation before continuing; it never automatically replays the action. Waiting for application or browser approval does not consume the execution deadline or clear bindings. Unconfirmed input release and target identity changes remain protected.
+
 ## Scope
 
 macOS uses Accessibility and targeted input, Windows uses UI Automation, and Linux uses AT-SPI/X11, Hyprland IPC or Wayland portals.

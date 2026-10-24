@@ -269,7 +269,7 @@ export function createPluginRuntime(options = {}) {
     if (endpoint === 'capabilities') return { ok: true, ...runtime.runtimeInfo, config: publicConfig(getConfig()),
       native: await runtime.permissions(), browserResources: await browserResources.status(), connections: runtime.extensionConnections(), pairings: await runtime.browserPairings() };
     if (endpoint === 'connectBrowser') {
-      const requested = await runtime.connectBrowser({...args, signal});
+      const requested = await runtime.connectBrowser({...args, signal, onApprovalWait});
       return {ok: true, ...requested, browsers: [...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(requested.browsers ?? [])]};
     }
     let browserConnection = null, targetInventory;
@@ -281,7 +281,7 @@ export function createPluginRuntime(options = {}) {
       if (targetInventory.ok !== false && !args.browserId && !targetInventory.targets.length
         && !targetInventory.browsers?.some(browser => browser.connected && !browser.pairingRequired)
         && !targetInventory.errors?.length && sessionKey && runtime.runtimeInfo.backends.extension) {
-        browserConnection = await runtime.connectBrowser({signal});
+        browserConnection = await runtime.connectBrowser({signal, onApprovalWait});
         signal?.throwIfAborted();
         targetInventory = await runtime.listTargets({signal});
         signal?.throwIfAborted();
@@ -374,7 +374,7 @@ export function createPluginRuntime(options = {}) {
       else {
         const method = methods[endpoint];
         if (!method || typeof runtime[method] !== 'function') throw error('UNSUPPORTED_METHOD', 'Unknown or unsupported OpenCU operation');
-        result = targetInventory ?? await runtime[method](endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, includeBase64: false } : args);
+        result = targetInventory ?? await runtime[method](endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, signal, includeBase64: false } : args);
       }
       if (result.ok === false) return stripPaths(result);
       if (endpoint === 'targets' || endpoint === 'state') result.browsers = [...new Map([...(result.browsers ?? []), ...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(browserConnection?.browsers ?? [])].map(item => [item.id, item])).values()];

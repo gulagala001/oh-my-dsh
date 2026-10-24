@@ -138,7 +138,7 @@ final class NativeService {
                 }
                 let release = input.release()
                 var details: [String: Any] = ["release": release]
-                if clickAction || pressAction { details["inputDispatched"] = dispatched }
+                details["inputDispatched"] = dispatched
                 throw NativeFailure(failure.code, failure.message, failure.details.merging(details) { _, right in right })
             }
             catch { let release = input.release(); throw NativeFailure("NATIVE_ACTION_FAILED", error.localizedDescription, ["release": release]) }

@@ -12,13 +12,13 @@ def verify_window(element, root, fail):
     fail('TARGET_IDENTITY_CHANGED', 'Accessibility element is outside the selected window')
 
 
-def perform(root, element, action, check, fail):
+def perform(root, element, action, check, fail, dispatch=lambda work, *args: work(*args)):
     verify_window(element, root, fail)
     check()
     kind = action['type']
     try:
         if kind == 'set_value':
-            accepted = element.queryEditableText().setTextContents(str(action.get('value', action.get('text', ''))))
+            accepted = dispatch(element.queryEditableText().setTextContents, str(action.get('value', action.get('text', ''))))
         elif kind in ('click', 'ax_press'):
             if kind == 'click' and action.get('button', 'left') != 'left':
                 fail('FOREGROUND_REQUIRED', 'AT-SPI has no matching background right or middle click')
@@ -27,7 +27,7 @@ def perform(root, element, action, check, fail):
             index = next((names.index(name) for name in ('click', 'press', 'activate', 'toggle', 'select') if name in names), None)
             if index is None:
                 fail('FOREGROUND_REQUIRED', 'Element has no matching accessibility action; no global input was sent')
-            accepted = interface.doAction(index)
+            accepted = dispatch(interface.doAction, index)
         elif kind == 'scroll':
             dx, dy = action.get('deltaX', 0), action.get('deltaY', 0)
             if dx and dy:
@@ -57,7 +57,7 @@ def perform(root, element, action, check, fail):
                 fail('FOREGROUND_REQUIRED', 'Element has no named AT-SPI scroll action; no global wheel event was sent')
             verify_window(current, root, fail)
             check()
-            accepted = selected[0].doAction(selected[1])
+            accepted = dispatch(selected[0].doAction, selected[1])
         else:
             fail('FOREGROUND_REQUIRED', 'This action requires explicit foreground input permission')
     except NotImplementedError:

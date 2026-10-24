@@ -1,7 +1,7 @@
 import {randomUUID, createHash} from 'node:crypto';
 import {mkdir, readFile} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
-import {checkExpected, checkSignal, errorJSON, fail, readOperation, referenceMatches, sameIdentity} from '../protocol.mjs';
+import {checkExpected, checkSignal, errorJSON, fail, readOperation, recoverableActionError, referenceMatches, sameIdentity} from '../protocol.mjs';
 import {createDeliveryStore} from './deliveries.mjs';
 import {observePage} from './observation.mjs';
 import {actOnPage, releasePage, normalizeBrowserAction} from './actions.mjs';
@@ -157,6 +157,16 @@ export async function createBrowserBackend(options = {}) {
       recordReleases.set(record, work);
     }
     return work;
+  }
+  async function releaseTarget(target, {dismissDialogs = false} = {}) {
+    const record = await recordFor(target);
+    record.cursor = undefined; record.cursorRevision = (record.cursorRevision ?? 0) + 1;
+    const failures = await releaseRecord(record, {dismissDialogs});
+    await inputState.persist();
+    releaseFailures = [...releaseFailures.filter(failure => failure.targetId !== record.id), ...failures];
+    if (!record.page.isClosed() && !record.crashed && !record.dialogs.read())
+      await record.dialogs.guard(() => record.page.evaluate(() => { void globalThis.__opencuCursor?.update({visible: false}); })).catch(error => backgroundErrors.push(error.message));
+    return {released: !failures.length, failures};
   }
   function retireInitialization() {
     return retiringWork ??= (async () => {
@@ -429,6 +439,7 @@ export async function createBrowserBackend(options = {}) {
       record.dialogs.assertClosed();
       if (releaseFailures.length) fail('RELEASE_FAILED', 'Browser remains blocked until input release succeeds');
       const inputSequence = record.inputDispatchSequence ?? 0;
+      const heldKeys = new Set(record.keys), heldButtons = new Set(record.buttons);
       checkSignal(request.signal);
       const guard = record.dialogs.begin();
       try {
@@ -458,18 +469,26 @@ export async function createBrowserBackend(options = {}) {
           throw record.dialogs.openError(dialog);
         }
         if (['JS_DIALOG_OPEN','STALE_DIALOG'].includes(error.code)) throw error;
-        if (['click','doubleClick'].includes(request.action) && error.details.inputDispatched === false && ['INVALID_ARGUMENT','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION'].includes(error.code)) throw error;
-        if (request.action === 'press' && error.details.inputDispatched === false && ['INVALID_ARGUMENT','INVALID_ACTION','UNKNOWN_KEY','UNSUPPORTED_KEY','INPUT_ALREADY_HELD','RELEASE_REQUIRED','UNSUPPORTED_ACTION','STALE_ELEMENT','STALE_OBSERVATION'].includes(error.code)) throw error;
-        if (['fill','type'].includes(request.action) && error.details.inputDispatched === false && ['STALE_ELEMENT','STALE_OBSERVATION'].includes(error.code)) throw error;
+        if (recoverableActionError(error, request.action)) {
+          // A preflight can fail after journaling intent but before sending input.
+          // Discard only this attempt's intent; never release another held chord.
+          let changed = false;
+          for (const key of record.keys) if (!heldKeys.has(key)) { record.keys.delete(key); changed = true; }
+          for (const button of record.buttons) if (!heldButtons.has(button)) { record.buttons.delete(button); changed = true; }
+          if (changed) await inputState.persist();
+          throw error;
+        }
         if (request.action === 'locator' && error.details.inputDispatched !== true && ['FRAME_NOT_FOUND', 'FRAME_DETACHED', 'LOCATOR_NOT_STABLE', 'STALE_ELEMENT', 'STALE_OBSERVATION'].includes(error.code)) throw error;
         if (request.action === 'locator' && error.details.inputDispatched !== true && ['LOCATOR_NOT_FOUND', 'AMBIGUOUS_LOCATOR', 'UNSUPPORTED_LOCATOR', 'LOCATOR_NOT_ACTIONABLE'].includes(error.code)) throw error;
         releaseFailures = [...releaseFailures.filter(failure => failure.targetId !== record.id),{targetId:record.id,error:'Action failed before input release completed'}];
-        const released = await release({dismissDialogs:false});
+        const released = await releaseTarget(target, {dismissDialogs:false});
         if (!released.released) fail('RELEASE_FAILED', 'Action failed and input release is incomplete', {cause: error.message, failures: released.failures});
+        error.details.release = released;
         throw error;
       } finally { guard.finish(); }
     },
     release,
+    releaseTarget,
     verify,
     async deliveries() { return deliveryStore.list(); },
     close() {

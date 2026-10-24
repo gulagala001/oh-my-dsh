@@ -117,7 +117,7 @@ export function createBrowserHost() {
       const client = clientFor(target);
       const previous = bindings.get(target.id);
       const reading = ['getDialog', 'getDOM', 'domSnapshot', 'hitTest', 'siteTools', 'cursor'].includes(action.action);
-      if (!reading && previous && previous.client !== client) fail('RECOVERY_REQUIRED', 'The sidebar reconnected; select the original target again before input');
+      if (!reading && previous && previous.client !== client) fail('RECOVERY_REQUIRED', 'The sidebar reconnected; resume the original target before input', {inputDispatched: false});
       // Keep the connection that owns selection and unresolved input even after
       // it disappears from inventory. A replacement connection is not a receipt.
       const binding = previous ?? {target: json(target), client, needsRelease: false};
@@ -139,6 +139,12 @@ export function createBrowserHost() {
           binding.needsRelease = false;
         }
       }
+    },
+    async releaseTarget(target, {dismissDialogs = false} = {}) {
+      const binding = bindings.get(target.id), client = binding?.client ?? clientFor(target);
+      const result = await request(client, 'release', {target, dismissDialogs});
+      if (inputReleased(result) && binding) binding.needsRelease = false;
+      return result;
     },
     async release({ targets = [], dismissDialogs = true } = {}) {
       const failures = [];

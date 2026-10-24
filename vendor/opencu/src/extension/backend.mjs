@@ -417,12 +417,15 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     async act(target, action) {
       if (action.signal?.aborted) throw failure('CONTROL_STOPPED', 'Control has been stopped.');
       const { session, identity } = sessionFor(target);
-      const normalized = normalizeAction(action); delete normalized.signal;
-      if (normalized.type === 'upload') {
-        if (!Array.isArray(normalized.files) || !normalized.files.length || normalized.files.some(file => typeof file !== 'string' || !isAbsolute(file))) throw failure('INVALID_ARGUMENT', 'upload requires absolute file paths');
-        for (const file of normalized.files) if (!(await stat(file)).isFile()) throw failure('INVALID_ARGUMENT', 'Upload source must be a regular file');
-        action.signal?.throwIfAborted();
-      }
+      let normalized;
+      try {
+        normalized = normalizeAction(action); delete normalized.signal;
+        if (normalized.type === 'upload') {
+          if (!Array.isArray(normalized.files) || !normalized.files.length || normalized.files.some(file => typeof file !== 'string' || !isAbsolute(file))) throw failure('INVALID_ARGUMENT', 'upload requires absolute file paths');
+          for (const file of normalized.files) if (!(await stat(file)).isFile()) throw failure('INVALID_ARGUMENT', 'Upload source must be a regular file');
+          action.signal?.throwIfAborted();
+        }
+      } catch (error) { error.details = {...error.details, inputDispatched: false}; throw error; }
       const result = await controlRequest(session, 'act', { identity, action: normalized }, action.signal);
       if (result.closed) result.closedTargetId = typeof target === 'string' ? target : target.id;
       return result;

@@ -64,7 +64,7 @@ Windows 原生 helper 由系统 Windows PowerShell 编译随包 C#，需要 Wind
 - Windows 控件按所选窗口的实时 UIA 祖先链核验归属，允许 WebView2 跨进程子树，仍拒绝同进程的其他窗口。辅助功能读取在 MTA 线程执行，最多等待 5 秒；超时保留绑定，不发布迟到元素，仍可读取窗口截图。旧读取尚未结束时返回 `AX_BUSY`，不会反复创建线程。
 - macOS 的直接赋值、AXPress、元素坐标与指定元素输入均复核当前窗口归属；X11／Wayland 的元素坐标和前台命中测试同样按当前窗口祖先链核验，允许窗口内的跨进程控件，拒绝已移到同进程另一窗口的旧元素。
 - X11／Wayland 读树达到节点、深度或时间上限后停止枚举子节点并报告截断；Windows／Linux 后台滚动的祖先搜索有固定上限，执行前复核滚动控件仍属于所选窗口。
-- `APP_APPROVAL_TIMEOUT` 表示总执行时限内仍在等待用户授予应用访问权，不等于 helper 卡死；重选原目标后需响应授权请求。其他 `COMPUTER_TIMEOUT` 通过 `details.stage`／`pendingRequests` 标明挂起的后端调用或 JavaScript 阶段。取消和输入释放语义保持一致，不能据此重放可能已派发的输入。
+- 应用与浏览器授权的人工作答时间不消耗 JavaScript 执行预算；取消仍可立即结束等待。`COMPUTER_TIMEOUT` 通过 `details.stage`／`pendingRequests` 标明挂起的后端调用或 JavaScript 阶段。窗口／页面变化时保留绑定；若输入已开始，须确认该目标输入已释放，并在成功重新观察前阻止继续派发，不重放可能已生效的动作。浏览器按页面释放；原生 helper 释放其硬件输入流。`details.control` 给出实际控制状态和恢复方式，`releasedTargetIds` 明确释放范围。未知派发、身份变化与释放失败仍保留停止保护。
 - X11 使用 AT-SPI 动作与 XComposite 窗口像素；Wayland 使用 AT-SPI 动作，portal 仍只共享显示器，不提供被遮挡应用的独立像素，非活跃应用截图明确不可用。Windows／Linux 的后台滚动是应用定义的步长，不是精确像素。
 
 不支持的后台操作返回 `FOREGROUND_REQUIRED` 或具体 `BACKGROUND_*_UNAVAILABLE`。经用户同意后才能显式聚焦并传 `inputMode: 'foreground'`；原有焦点、身份、权限和取消保护仍在。Windows SendInput、X11 XTest、Wayland portal 键鼠不会作为隐式兜底。内置浏览器需要重新构建匹配的宿主、双 preload 和侧栏，并声明 `backgroundInput`；只更新插件会明确拒绝旧宿主。

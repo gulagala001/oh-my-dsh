@@ -53,6 +53,49 @@ export function inputReleased(result) {
     : acknowledged(result);
 }
 
+const recoverableActionErrors = new Set([
+  'STALE_SCREENSHOT', 'STALE_OBSERVATION', 'STALE_ELEMENT', 'OBSERVATION_REQUIRED', 'OBSERVATION_CHANGED', 'RECOVERY_REQUIRED',
+  'FRAME_NOT_FOUND', 'FRAME_DETACHED', 'TARGET_NOT_ACTIVE', 'TARGET_WINDOW_NOT_ACTIVE', 'FOREGROUND_REQUIRED',
+  'INVALID_ARGUMENT', 'INVALID_ACTION', 'INVALID_COORDINATES', 'INVALID_KEY', 'UNKNOWN_KEY', 'UNSUPPORTED_KEY',
+  'INVALID_BUTTON', 'INVALID_SCROLL', 'INVALID_TEXT', 'SCROLL_POINT_REQUIRED',
+  'INPUT_ALREADY_HELD', 'RELEASE_REQUIRED', 'UNSUPPORTED_ACTION', 'UNSUPPORTED_OPERATION', 'UNSUPPORTED_COORDINATE_SPACE',
+  'UNSUPPORTED_PINCH_ZOOM', 'UNSUPPORTED_URL', 'NO_HISTORY_ENTRY',
+  'LOCATOR_NOT_FOUND', 'AMBIGUOUS_LOCATOR', 'UNSUPPORTED_LOCATOR', 'LOCATOR_NOT_ACTIONABLE', 'LOCATOR_NOT_STABLE',
+  'ELEMENT_NOT_EDITABLE', 'ELEMENT_NOT_FOUND', 'ELEMENT_DISABLED', 'ELEMENT_NOT_VISIBLE', 'AMBIGUOUS_TEXT', 'TEXT_NOT_FOUND',
+  'UNSUPPORTED_PASTE_FORMAT', 'BACKGROUND_SELECTION_UNAVAILABLE', 'BACKGROUND_ACTION_UNAVAILABLE',
+  'BACKGROUND_KEYBOARD_UNAVAILABLE', 'BACKGROUND_HIT_TEST_UNAVAILABLE', 'ACTION_UNAVAILABLE', 'VALUE_NOT_SETTABLE',
+  'AX_VALUE_NOT_SETTABLE', 'WINDOW_REQUIRED',
+]);
+
+const changedViewErrors = new Set(['STALE_SCREENSHOT', 'STALE_OBSERVATION', 'STALE_ELEMENT', 'OBSERVATION_CHANGED',
+  'TARGET_NOT_ACTIVE', 'TARGET_WINDOW_NOT_ACTIVE', 'FRAME_NOT_FOUND', 'FRAME_DETACHED', 'LOCATOR_NOT_STABLE',
+  'ELEMENT_NOT_FOUND', 'ELEMENT_NOT_VISIBLE']);
+export const changedViewError = error => changedViewErrors.has(error?.code);
+
+/** A changed view or rejected input is recoverable only with an explicit dispatch receipt. */
+export function recoverableActionError(error, action) {
+  const uploadFile = action === 'upload' && ['ENOENT', 'ENOTDIR', 'EISDIR', 'EACCES'].includes(error?.code);
+  return error?.details?.inputDispatched === false && (recoverableActionErrors.has(error.code) || uploadFile)
+    && (error.details.release === undefined || inputReleased(error.details.release));
+}
+
+/** Preserve recovery facts without copying the controller's full target/history snapshot. */
+export function controlFailure(result) {
+  const error = result.error, state = result.state;
+  return Object.assign(new Error(error.message), error, state ? {details: {...error.details, control: {
+    mode: state.mode, activeTargetId: state.activeTargetId, releasePending: state.releasePending,
+    ...(state.releaseErrors?.length ? {releaseErrors: state.releaseErrors} : {}),
+    recovery: state.mode === 'active' ? error.details?.observationRequired
+      ? 'The view changed and the same binding is retained. Observe the current UI before continuing; do not replay uncertain input.'
+      : error.code === 'RECOVERY_REQUIRED'
+      ? 'Keep the existing binding. Reconnect and verify this same target with cua.resume(targetId) before continuing.'
+      : 'Keep the existing binding. Refresh the relevant observation or correct the rejected action.'
+      : state.mode === 'stopped' ? 'Explicitly stopped. Resume only when the user requests continuation.'
+      : state.releasePending ? 'Input release is unconfirmed. Retry release before attempting further input.'
+      : 'Bindings are retained. Inspect the current target, then use cua.resume(targetId) after verifying it. Do not reset the REPL or replay uncertain input.',
+  }}} : {});
+}
+
 export function json(value) {
   return JSON.parse(JSON.stringify(value));
 }

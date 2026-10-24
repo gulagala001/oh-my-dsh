@@ -48,6 +48,8 @@ namespace OpenCU {
     static readonly Dictionary<string, Dictionary<string, object>> mappings = new Dictionary<string, Dictionary<string, object>>();
     static readonly HashSet<int> keys = new HashSet<int>(), buttons = new HashSet<int>();
     static string directory, journal; static int epoch, nextElement; static volatile bool eof, closing;
+    [ThreadStatic] static bool inputDispatched;
+    static void Dispatch(Action work) { inputDispatched = true; work(); }
     sealed class TreeRead {
       internal Thread Worker;
       internal readonly Dictionary<string, AutomationElement> Elements = new Dictionary<string, AutomationElement>();
@@ -64,7 +66,11 @@ namespace OpenCU {
     static string S(Dictionary<string, object> value, string key, string fallback = "") { return Convert.ToString(V(value, key, fallback)); }
     static double N(Dictionary<string, object> value, string key, double fallback = 0) { double result = Convert.ToDouble(V(value, key, fallback)); if (Double.IsNaN(result) || Double.IsInfinity(result)) throw new Exception("INVALID_ARGUMENT: finite coordinates required"); return result; }
     static void Dpi() { try { if (SetThreadDpiAwarenessContext(new IntPtr(-4)) == IntPtr.Zero) throw new Exception("DPI_UNAVAILABLE: physical coordinate mode was rejected"); } catch (EntryPointNotFoundException) { throw new Exception("DPI_UNAVAILABLE: Windows 10 1703 or newer is required"); } }
-    static void Reply(object id, object result, Exception error = null) { lock (outputLock) { Console.WriteLine(Json().Serialize(error == null ? D("id", id, "ok", true, "result", result) : D("id", id, "ok", false, "error", D("code", error.Message.Contains(":") ? error.Message.Split(':')[0] : "NATIVE_FAILURE", "message", error.Message)))); Console.Out.Flush(); } }
+    static void Reply(object id, object result, Exception error = null) {
+      var failure = error == null ? null : D("code", error.Message.Contains(":") ? error.Message.Split(':')[0] : "NATIVE_FAILURE", "message", error.Message);
+      if (error != null && error.Data.Contains("opencuDetails")) failure["details"] = error.Data["opencuDetails"];
+      lock (outputLock) { Console.WriteLine(Json().Serialize(error == null ? D("id", id, "ok", true, "result", result) : D("id", id, "ok", false, "error", failure))); Console.Out.Flush(); }
+    }
     static Dictionary<string, object> Bounds(Rect rect) { return D("x", rect.Left, "y", rect.Top, "width", rect.Right - rect.Left, "height", rect.Bottom - rect.Top); }
     static Dictionary<string, object> Target(IntPtr window) {
       uint pid; GetWindowThreadProcessId(window, out pid); Rect rect;
@@ -95,7 +101,7 @@ namespace OpenCU {
       var desktop = OpenInputDesktop(0, false, 0x100); if (desktop == IntPtr.Zero) throw new Exception("DESKTOP_UNAVAILABLE: unlock the interactive desktop first"); CloseDesktop(desktop);
     }
     static void Persist() { var temp = journal + ".tmp"; File.WriteAllText(temp, Json().Serialize(D("keys", keys.ToArray(), "buttons", buttons.ToArray()))); if (File.Exists(journal)) File.Replace(temp, journal, null); else File.Move(temp, journal); }
-    static void Send(Input value) { if (value.Type == 1) value.Data.Key.Extra = Activity.Marker; else value.Data.Mouse.Extra = Activity.Marker; if (SendInput(1, new[] { value }, Marshal.SizeOf(typeof(Input))) != 1) throw new Exception("INPUT_REJECTED: Windows rejected input; elevated targets require matching privileges"); }
+    static void Send(Input value) { if (value.Type == 1) value.Data.Key.Extra = Activity.Marker; else value.Data.Mouse.Extra = Activity.Marker; inputDispatched = true; if (SendInput(1, new[] { value }, Marshal.SizeOf(typeof(Input))) != 1) throw new Exception("INPUT_REJECTED: Windows rejected input; elevated targets require matching privileges"); }
     static void Key(int key, bool down, int expected = -1) { lock (inputLock) { if (!down && !keys.Contains(key)) return; if (down && (expected != epoch || eof)) throw new Exception("CONTROL_STOPPED: input was cancelled"); if (down) { if (keys.Contains(key)) return; if ((GetAsyncKeyState(key) & 0x8000) != 0) throw new Exception("INPUT_ALREADY_HELD: user already holds this key"); keys.Add(key); Persist(); } Send(new Input { Type = 1, Data = new InputUnion { Key = new KeyInput { Key = (ushort)key, Flags = down ? 0u : 2u } } }); if (!down) { if ((GetAsyncKeyState(key) & 0x8000) != 0) throw new Exception("RELEASE_FAILED: key remains down"); keys.Remove(key); try { Persist(); } catch { keys.Add(key); throw; } } } }
     sealed class ChordAlreadyHeld : Exception { public ChordAlreadyHeld() : base("INPUT_ALREADY_HELD: pressKey cannot reuse an already held key; no input was dispatched") {} }
     static void PressChord(Dictionary<string, object> target, int[] chord, int expected) {
@@ -115,7 +121,7 @@ namespace OpenCU {
     static int ButtonKey(int button) { return button == 1 ? 2 : button == 2 ? 4 : 1; }
     static void Button(int button, bool down, int expected = -1) { lock (inputLock) { if (!down && !buttons.Contains(button)) return; if (down && (expected != epoch || eof)) throw new Exception("CONTROL_STOPPED: input was cancelled"); if (down) { if (buttons.Contains(button)) return; if ((GetAsyncKeyState(ButtonKey(button)) & 0x8000) != 0) throw new Exception("INPUT_ALREADY_HELD: user already holds this button"); buttons.Add(button); Persist(); } uint flag = button == 1 ? (down ? 8u : 16u) : button == 2 ? (down ? 32u : 64u) : (down ? 2u : 4u); Send(new Input { Type = 0, Data = new InputUnion { Mouse = new MouseInput { Flags = flag } } }); if (!down) { if ((GetAsyncKeyState(ButtonKey(button)) & 0x8000) != 0) throw new Exception("RELEASE_FAILED: button remains down"); buttons.Remove(button); try { Persist(); } catch { buttons.Add(button); throw; } } } }
     static void Cursor(Dictionary<string, object> target, Point at) { lock (outputLock) { Console.WriteLine(Json().Serialize(D("event", D("type", "cursor", "visible", true, "targetId", target["id"], "x", at.X, "y", at.Y, "space", "physical")))); Console.Out.Flush(); } }
-    static void Move(Dictionary<string, object> target, Point at, int expected) { lock (inputLock) { Check(expected, target); if (!SetCursorPos(at.X, at.Y)) throw new Exception("INPUT_REJECTED: pointer move failed"); Cursor(target, at); } }
+    static void Move(Dictionary<string, object> target, Point at, int expected) { lock (inputLock) { Check(expected, target); inputDispatched = true; if (!SetCursorPos(at.X, at.Y)) throw new Exception("INPUT_REJECTED: pointer move failed"); Cursor(target, at); } }
     static object Release() { lock (inputLock) { var failures = new List<string>(); foreach (int key in keys.ToArray().Reverse()) try { Key(key, false); } catch (Exception e) { failures.Add(e.Message); } foreach (int button in buttons.ToArray()) try { Button(button, false); } catch (Exception e) { failures.Add(e.Message); } lock (outputLock) { Console.WriteLine(Json().Serialize(D("event", D("type", "cursor", "visible", false)))); Console.Out.Flush(); } return D("released", failures.Count == 0, "failures", failures, "heldKeys", keys.ToArray(), "heldButtons", buttons.ToArray()); } }
     static void Check(int expected, Dictionary<string, object> target, bool foreground = true) { if (epoch != expected || eof) throw new Exception("CONTROL_STOPPED: input was cancelled"); Resolve(target, true); if (foreground) Foreground(target); }
     static int KeyCode(string name) {
@@ -244,11 +250,11 @@ namespace OpenCU {
         var scroll = (ScrollPattern)pattern; double dx = N(action, "deltaX"), dy = N(action, "deltaY");
         if (dx != 0 && !scroll.Current.HorizontallyScrollable || dy != 0 && !scroll.Current.VerticallyScrollable) throw new Exception("ACTION_UNAVAILABLE: requested axis is not scrollable");
         Func<double, ScrollAmount> amount = delta => delta == 0 ? ScrollAmount.NoAmount : delta > 0 ? delta > 100 ? ScrollAmount.LargeIncrement : ScrollAmount.SmallIncrement : delta < -100 ? ScrollAmount.LargeDecrement : ScrollAmount.SmallDecrement;
-        scroll.Scroll(amount(dx), amount(dy));
-      } else if (element.TryGetCurrentPattern(InvokePattern.Pattern, out pattern)) ((InvokePattern)pattern).Invoke();
-      else if (type == "click" && element.TryGetCurrentPattern(TogglePattern.Pattern, out pattern)) ((TogglePattern)pattern).Toggle();
-      else if (type == "click" && element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out pattern)) ((SelectionItemPattern)pattern).Select();
-      else if (type == "click" && element.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out pattern)) { var expand = (ExpandCollapsePattern)pattern; if (expand.Current.ExpandCollapseState == ExpandCollapseState.Expanded) expand.Collapse(); else expand.Expand(); }
+        Dispatch(() => scroll.Scroll(amount(dx), amount(dy)));
+      } else if (element.TryGetCurrentPattern(InvokePattern.Pattern, out pattern)) Dispatch(() => ((InvokePattern)pattern).Invoke());
+      else if (type == "click" && element.TryGetCurrentPattern(TogglePattern.Pattern, out pattern)) Dispatch(() => ((TogglePattern)pattern).Toggle());
+      else if (type == "click" && element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out pattern)) Dispatch(() => ((SelectionItemPattern)pattern).Select());
+      else if (type == "click" && element.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out pattern)) { var expand = (ExpandCollapsePattern)pattern; if (expand.Current.ExpandCollapseState == ExpandCollapseState.Expanded) Dispatch(() => expand.Collapse()); else Dispatch(() => expand.Expand()); }
       else throw new Exception("FOREGROUND_REQUIRED: element has no matching background accessibility action; no global input was sent");
       Check(expected, target, false); var result = D("performed", true, "type", type, "inputMode", "background", "delivery", "accessibility-acknowledged", "effectVerified", false);
        if (type == "scroll") result["scrollUnit"] = "UIA small/large increment; pixel magnitude is not supported";
@@ -257,17 +263,17 @@ namespace OpenCU {
     static object Act(Dictionary<string, object> target, Dictionary<string, object> action, int expected) {
       Check(expected, target, false); string type = S(action, "type"), mode = S(action, "inputMode", "background");
       if (mode != "background" && mode != "foreground") throw new Exception("INVALID_ACTION: inputMode must be background or foreground");
-      if (type == "activate") { if (IsIconic(Handle(target))) ShowWindow(Handle(target), 9); SetForegroundWindow(Handle(target)); Foreground(target); return D("focused", true, "target", Target(Handle(target))); }
+      if (type == "activate") { if (IsIconic(Handle(target))) Dispatch(() => { ShowWindow(Handle(target), 9); }); Dispatch(() => { SetForegroundWindow(Handle(target)); }); Foreground(target); return D("focused", true, "target", Target(Handle(target))); }
       bool semantic = type == "set_value" || type == "ax_press" || mode == "background" && (type == "click" || type == "scroll" || type == "hit_test");
       if (!semantic) {
         if (mode != "foreground") throw new Exception("FOREGROUND_REQUIRED: this action has no UI Automation background implementation; obtain user permission before focus and inputMode=foreground");
         Foreground(target);
       }
       if (mode == "background" && (type == "click" || type == "ax_press" || type == "scroll" || type == "hit_test")) return BackgroundAction(target, action, expected);
-      if (type == "activate") { SetForegroundWindow(Handle(target)); Foreground(target); }
+      if (type == "activate") { Dispatch(() => { SetForegroundWindow(Handle(target)); }); Foreground(target); }
       else if (type == "hit_test") { var at = Position(target, action); var hit = AutomationElement.FromPoint(new System.Windows.Point(at.X, at.Y)); VerifyElementWindow(target, hit); string id = S(target, "id") + ":" + Interlocked.Increment(ref nextElement); elements[id] = hit; return D("element", D("elementId", id, "name", hit.Current.Name, "role", hit.Current.ControlType.ProgrammaticName)); }
-      else if (type == "set_value") { object pattern; var element = Element(target, V(action, "elementId")); if (!element.TryGetCurrentPattern(ValuePattern.Pattern, out pattern) || ((ValuePattern)pattern).Current.IsReadOnly) throw new Exception("VALUE_NOT_SETTABLE: element has no writable value"); ((ValuePattern)pattern).SetValue(S(action, "value", S(action, "text"))); }
-      else if (type == "ax_press") { object pattern; var element = Element(target, V(action, "elementId")); if (!element.TryGetCurrentPattern(InvokePattern.Pattern, out pattern)) throw new Exception("ACTION_UNAVAILABLE: element cannot be invoked"); ((InvokePattern)pattern).Invoke(); }
+      else if (type == "set_value") { object pattern; var element = Element(target, V(action, "elementId")); if (!element.TryGetCurrentPattern(ValuePattern.Pattern, out pattern) || ((ValuePattern)pattern).Current.IsReadOnly) throw new Exception("VALUE_NOT_SETTABLE: element has no writable value"); Dispatch(() => ((ValuePattern)pattern).SetValue(S(action, "value", S(action, "text")))); }
+      else if (type == "ax_press") { object pattern; var element = Element(target, V(action, "elementId")); if (!element.TryGetCurrentPattern(InvokePattern.Pattern, out pattern)) throw new Exception("ACTION_UNAVAILABLE: element cannot be invoked"); Dispatch(() => ((InvokePattern)pattern).Invoke()); }
       else if (type == "type_text") { foreach (char ch in S(action, "text")) { Check(expected, target); if (ch == '\n' || ch == '\t') { int key = ch == '\n' ? 13 : 9; Key(key, true, expected); Key(key, false); } else { Send(new Input { Type = 1, Data = new InputUnion { Key = new KeyInput { Scan = ch, Flags = 4 } } }); Send(new Input { Type = 1, Data = new InputUnion { Key = new KeyInput { Scan = ch, Flags = 6 } } }); } } }
       else if (type == "key_down" || type == "key_up") Key(KeyCode(S(action, "key")), type == "key_down", expected);
       else if (type == "press_key") PressChord(target, KeyChord(S(action, "key")), expected);
@@ -319,7 +325,7 @@ namespace OpenCU {
       using (var owner = new FileStream(Path.Combine(directory, "owner.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)) {
         Dpi(); Activity.Start(); if (File.Exists(journal)) { var saved = Obj(Json().DeserializeObject(File.ReadAllText(journal))); foreach (object key in (IEnumerable)V(saved, "keys", new object[0])) keys.Add(Convert.ToInt32(key)); foreach (object button in (IEnumerable)V(saved, "buttons", new object[0])) buttons.Add(Convert.ToInt32(button)); if (!(bool)Obj(Release())["released"]) throw new Exception("RELEASE_FAILED: previous held input remains"); }
         var reader = new Thread(() => { string line; try { while ((line = Console.ReadLine()) != null) { var request = Obj(Json().DeserializeObject(line)); string method = S(request, "method"); if (method == "release" || method == "close") Interlocked.Increment(ref epoch); request["epoch"] = epoch; if (method == "preview" || method == "release" || method == "verify") ThreadPool.QueueUserWorkItem(_ => { try { Dpi(); Reply(V(request, "id"), Perform(method, Obj(V(request, "params")), epoch)); } catch (Exception error) { Reply(V(request, "id"), null, error); } }); else { lock (queueLock) queue.Enqueue(request); ready.Set(); } } } catch (Exception error) { Reply(0, null, error); } finally { eof = true; Interlocked.Increment(ref epoch); Release(); ready.Set(); } }); reader.IsBackground = true; reader.Start();
-        try { while (!closing) { Dictionary<string, object> request = null; lock (queueLock) if (queue.Count > 0) request = queue.Dequeue(); if (request == null) { if (eof) break; ready.WaitOne(); continue; } try { Reply(V(request, "id"), Perform(S(request, "method"), Obj(V(request, "params")), Convert.ToInt32(request["epoch"]))); } catch (Exception error) { if (S(request, "method") == "act" && !(error is ChordAlreadyHeld)) Release(); Reply(V(request, "id"), null, error); } } }
+        try { while (!closing) { Dictionary<string, object> request = null; lock (queueLock) if (queue.Count > 0) request = queue.Dequeue(); if (request == null) { if (eof) break; ready.WaitOne(); continue; } try { inputDispatched = false; Reply(V(request, "id"), Perform(S(request, "method"), Obj(V(request, "params")), Convert.ToInt32(request["epoch"]))); } catch (Exception error) { if (S(request, "method") == "act") { var details = D("inputDispatched", inputDispatched); if (!(error is ChordAlreadyHeld)) details["release"] = Release(); error.Data["opencuDetails"] = details; } Reply(V(request, "id"), null, error); } } }
         finally { Activity.Stop(); if (!(bool)Obj(Release())["released"]) Environment.ExitCode = 2; }
       }
     }

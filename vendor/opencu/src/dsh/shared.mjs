@@ -18,6 +18,7 @@ import { createBrowserHistory } from './browser-history.mjs';
 const key = Symbol.for('opencu.shared-root.v1');
 const roots = globalThis[key] ??= new WeakMap();
 const mutating = new Set(['select', 'observe', 'act', 'focus', 'openTarget', 'resume', 'computer_use']);
+const interruptsControl = endpoint => mutating.has(endpoint) && endpoint !== 'observe';
 const handBackTools = new Set(['ask_user_question']);
 
 // A turn that ends has finished with the desktop, so the window, the view and the control
@@ -115,9 +116,9 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       // Input release remains global; only the aborted owner's approvals are cancelled.
       // Anonymous API requests have no approval owner, so use a non-null root sentinel.
       const onAbort = () => { release ??= entry.runtime.request('stop', {}, { sessionKey: sessionKey ?? root }); };
-      if (mutating.has(endpoint)) signal?.addEventListener('abort', onAbort, { once: true });
+      if (interruptsControl(endpoint)) signal?.addEventListener('abort', onAbort, { once: true });
       try {
-        if (signal?.aborted) { if (mutating.has(endpoint)) onAbort(); signal.throwIfAborted(); }
+        if (signal?.aborted) { if (interruptsControl(endpoint)) onAbort(); signal.throwIfAborted(); }
         let result;
         if (endpoint === 'computer_use' || endpoint === 'computer_use_reset') {
           const id = sessionKey ?? root;

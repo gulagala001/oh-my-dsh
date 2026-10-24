@@ -187,7 +187,12 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     },
     async act(target, action = {}) {
       if (action.signal?.aborted) throw new NativeBackendError('CONTROL_STOPPED', 'Control has been stopped.');
-      const normalized = normalizeAction(action);
+      let normalized;
+      try { normalized = normalizeAction(action); }
+      catch (error) {
+        const failure = nativeError(error, 'act');
+        throw new NativeBackendError(failure.code, failure.message, {...failure.details, inputDispatched: false});
+      }
       if (process.platform !== 'darwin' && normalized.type === 'press_key' && normalized.durationMs !== undefined) {
         throw new NativeBackendError('UNSUPPORTED_ACTION', 'Timed native pressKey currently requires macOS; no input was dispatched.',
           {platform:process.platform,action:normalized.type,inputDispatched:false,retryable:false});
@@ -222,6 +227,8 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
         throw error;
       } finally { actionCursorTarget = undefined; action.signal?.removeEventListener('abort', abort); }
     },
+    // Native input has one hardware destination; its helper owns the release receipt.
+    releaseTarget: () => backend.release(),
     async release() {
       actionCursorTarget = undefined; hideCursor();
       try { return await request('release'); }

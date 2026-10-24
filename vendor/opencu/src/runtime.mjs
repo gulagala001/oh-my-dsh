@@ -61,12 +61,13 @@ export async function createRuntime(options = {}) {
     controller.presentationContrast = args => native?.presentationContrast?.(args) ?? { available: false };
     controller.extensionConnections = () => extension?.connections?.() ?? [];
     controller.browserPairings = () => options.browserPairing?.list() ?? [];
-    controller.connectBrowser = async ({browser, signal, requestApproval = false} = {}) => {
+    controller.connectBrowser = async ({browser, signal, requestApproval = false, onApprovalWait} = {}) => {
       const connected = extension?.connections?.() ?? [];
       const matches = connected.filter(item => !browser || browser === 'external' || [item.instanceId, 'extension:' + item.instanceId, item.label].includes(browser) || item.label.toLowerCase().includes(String(browser).toLowerCase()));
       if (matches.length && (!requestApproval || browser && browser !== 'external')) return {connected: true};
       if (!extension || !options.browserPairing) throw Object.assign(new Error('Browser extension connections are disabled.'), {code: 'EXTENSION_UNAVAILABLE'});
-      return options.browserPairing.request(browser, signal, requestApproval ? {excludeInstanceIds: connected.map(item => item.instanceId)} : undefined);
+      return options.browserPairing.request(browser, signal, {onWaiting: onApprovalWait,
+        ...(requestApproval ? {excludeInstanceIds: connected.map(item => item.instanceId)} : {})});
     };
     controller.forgetBrowser = ({instanceId}) => extension?.forget(instanceId);
     controller.openBrowserSettings = async ({ instanceId, section }) => {

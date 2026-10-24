@@ -24,6 +24,7 @@ import threading
 import time
 import uuid
 from accessibility_input import perform as accessibility_action, verify_window
+import input_receipt
 
 
 class Failure(Exception):
@@ -69,7 +70,7 @@ def execute_input(argv, expected=None, timeout=20):
         if expected is not None and (expected != epoch or ended or closing):
             fail('CONTROL_STOPPED', 'Input was cancelled')
         try:
-            process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            process = input_receipt.dispatch(subprocess.Popen, argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         except FileNotFoundError:
             fail('DEPENDENCY_UNAVAILABLE', argv[0] + ' is not installed')
         if expected is not None:
@@ -119,7 +120,7 @@ def hypr_json(*command):
 
 
 def dispatch(*dispatcher):
-    value = execute(['hyprctl', 'dispatch', *dispatcher])
+    value = input_receipt.dispatch(execute, ['hyprctl', 'dispatch', *dispatcher])
     message = stdout(value).strip()
     if value.returncode or message.startswith('error:'):
         fail('DISPATCH_REJECTED', (message or stderr(value).strip()) or 'Hyprland rejected the dispatcher')
@@ -1153,7 +1154,7 @@ def act(t, action, expected):
             key = t['id'] + ':' + str(uuid.uuid4())
             elements[key] = selected
             return dict(element=dict(elementId=key, name=selected.name, role=selected.getRoleName()))
-        return accessibility_action(root, selected, action, lambda: check(t, expected, False), fail)
+        return accessibility_action(root, selected, action, lambda: check(t, expected, False), fail, input_receipt.dispatch)
     if kind != 'activate':
         if mode != 'foreground':
             rejected('FOREGROUND_REQUIRED', 'uinput is global input; obtain user permission, then focus the window and repeat with inputMode=foreground')
@@ -1172,11 +1173,11 @@ def act(t, action, expected):
         elements[key] = hit
         return dict(element=dict(elementId=key, name=hit.name, role=hit.getRoleName()))
     elif kind == 'set_value':
-        if not element(t, action['elementId']).queryEditableText().setTextContents(str(action.get('value', action.get('text', '')))):
+        if not input_receipt.dispatch(element(t, action['elementId']).queryEditableText().setTextContents, str(action.get('value', action.get('text', '')))):
             fail('INPUT_REJECTED', 'Application rejected accessibility text input')
     elif kind == 'ax_press':
         a = element(t, action['elementId']).queryAction()
-        if not a.nActions or not a.doAction(0):
+        if not a.nActions or not input_receipt.dispatch(a.doAction, 0):
             fail('ACTION_UNAVAILABLE', 'Element did not perform its action')
     elif kind == 'type_text':
         type_text(t, action.get('text', ''), expected)
@@ -1346,15 +1347,12 @@ def perform(method, args, expected):
 
 
 def reply(request):
+    input_receipt.begin()
     try:
         value = dict(id=request['id'], ok=True, result=perform(request['method'], request.get('params', {}), request['epoch']))
     except Exception as error:
-        if isinstance(error, ChordAlreadyHeld):
-            details = dict(inputDispatched=False, retryable=False)
-        else:
-            details = dict(getattr(error, 'details', None) or {})
-            if request['method'] == 'act' and details.get('inputDispatched') is not False:
-                details['release'] = release()
+        preserve = isinstance(error, ChordAlreadyHeld) or (getattr(error, 'details', None) or {}).get('inputDispatched') is False
+        details = input_receipt.failure(error, release, preserve) if request['method'] == 'act' else dict(getattr(error, 'details', None) or {})
         value = dict(id=request['id'], ok=False, error=dict(code=getattr(error, 'code', 'NATIVE_FAILURE'), message=str(error), details=details))
     emit(value)
 

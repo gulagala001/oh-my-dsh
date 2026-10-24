@@ -12,6 +12,7 @@ import time
 import uuid
 import zlib
 from accessibility_input import perform as accessibility_action, verify_window
+import input_receipt
 
 # X11 owns physical desktop coordinates; AT-SPI supplies actual application objects.
 class Failure(Exception):
@@ -192,7 +193,7 @@ def input_event(kind, code, down, expected=None):
             held.add(code)
             persist()
         fn = xt.XTestFakeKeyEvent if kind == 'key' else xt.XTestFakeButtonEvent
-        if not fn(display, code, int(down), 0):
+        if not input_receipt.dispatch(fn, display, code, int(down), 0):
             fail('INPUT_REJECTED', 'XTest rejected input')
         x.XFlush(display)
         if not down:
@@ -427,7 +428,7 @@ def act(t, action, expected):
             key = t['id'] + ':' + str(uuid.uuid4())
             elements[key] = selected
             return dict(element=dict(elementId=key, name=selected.name, role=selected.getRoleName()))
-        return accessibility_action(root, selected, action, lambda: check(t, expected, False), fail)
+        return accessibility_action(root, selected, action, lambda: check(t, expected, False), fail, input_receipt.dispatch)
     if kind != 'activate':
         if mode != 'foreground':
             fail('FOREGROUND_REQUIRED', 'XTest is global input; obtain user permission before focus and inputMode=foreground')
@@ -435,15 +436,15 @@ def act(t, action, expected):
     def move(at):
         with input_lock:
             check(t, expected)
-            if not xt.XTestFakeMotionEvent(display, -1, int(at[0]), int(at[1]), 0):
+            if not input_receipt.dispatch(xt.XTestFakeMotionEvent, display, -1, int(at[0]), int(at[1]), 0):
                 fail('INPUT_REJECTED', 'XTest rejected pointer movement')
             x.XFlush(display)
             with output_lock:
                 print(json.dumps(dict(event=dict(type='cursor', visible=True, targetId=t['id'], x=int(at[0]), y=int(at[1]), space='physical'))), flush=True)
     button = {'left': 1, 'middle': 2, 'right': 3}.get(action.get('button', 'left'), 1)
     if kind == 'activate':
-        x.XRaiseWindow(display, t['windowId'])
-        x.XSetInputFocus(display, t['windowId'], 1, 0)
+        input_receipt.dispatch(x.XRaiseWindow, display, t['windowId'])
+        input_receipt.dispatch(x.XSetInputFocus, display, t['windowId'], 1, 0)
         x.XFlush(display)
     elif kind == 'hit_test':
         px, py = point(t, action)
@@ -456,11 +457,11 @@ def act(t, action, expected):
         elements[key] = hit
         return dict(element=dict(elementId=key, name=hit.name, role=hit.getRoleName()))
     elif kind == 'set_value':
-        if not element(t, action['elementId']).queryEditableText().setTextContents(str(action.get('value', action.get('text', '')))):
+        if not input_receipt.dispatch(element(t, action['elementId']).queryEditableText().setTextContents, str(action.get('value', action.get('text', '')))):
             fail('INPUT_REJECTED', 'Application rejected accessibility text input')
     elif kind == 'ax_press':
         a = element(t, action['elementId']).queryAction()
-        if not a.nActions or not a.doAction(0):
+        if not a.nActions or not input_receipt.dispatch(a.doAction, 0):
             fail('ACTION_UNAVAILABLE', 'Element did not perform its action')
     elif kind == 'type_text':
         if pyatspi is None:
@@ -472,7 +473,7 @@ def act(t, action, expected):
                 input_event('key', key, True, expected)
                 input_event('key', key, False)
             else:
-                pyatspi.Registry.generateKeyboardEvent(0, char, pyatspi.KEY_STRING)
+                input_receipt.dispatch(pyatspi.Registry.generateKeyboardEvent, 0, char, pyatspi.KEY_STRING)
     elif kind in ('key_down', 'key_up'):
         input_event('key', keycode(action['key']), kind == 'key_down', expected)
     elif kind == 'press_key':
@@ -610,13 +611,11 @@ def perform(method, args, expected):
 
 
 def reply(request):
+    input_receipt.begin()
     try:
         value = dict(id=request['id'], ok=True, result=perform(request['method'], request.get('params', {}), request['epoch']))
     except Exception as error:
-        if isinstance(error, ChordAlreadyHeld):
-            details = dict(inputDispatched=False, retryable=False)
-        else:
-            details = dict(release=release()) if request['method'] == 'act' else {}
+        details = input_receipt.failure(error, release, isinstance(error, ChordAlreadyHeld)) if request['method'] == 'act' else {}
         value = dict(id=request['id'], ok=False, error=dict(code=getattr(error, 'code', 'NATIVE_FAILURE'), message=str(error), details=details))
     with output_lock:
         print(json.dumps(value), flush=True)
