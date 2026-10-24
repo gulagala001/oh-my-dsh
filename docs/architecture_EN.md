@@ -4,7 +4,7 @@
 
 OMD organizes these features through dedicated plugin entry points. Workflow, turn rewind, personalities, extension management and the web workbench have their own plugin entry points. Theme management and Glyph also have independent product forms. OMD provides a composed workspace, while each independent product has its own purpose, host requirements and releases.
 
-This page describes the OMD 0.101.0 plugin structure and formal releases. Glyph is included in the theme plugin.
+This page describes the OMD 0.101.1 plugin structure and formal releases. Glyph is included in the theme plugin.
 
 ## Products you can choose independently
 

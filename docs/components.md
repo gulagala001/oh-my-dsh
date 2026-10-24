@@ -122,7 +122,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。 可选安装／推荐；当前兼容范围见插件兼容说明。
 
-- 固定来源／版本: [0.2.1-rc.3.omaa.0.17.2 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- 固定来源／版本: [0.2.1-rc.3.omaa.0.17.3 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Subscription Login

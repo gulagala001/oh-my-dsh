@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.0.101.1",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 0.101.1 · DSH 0.2.1-rc.3",
+      "notes": [
+        "修复智能体预设目录固定包仍指向旧版的问题，同步 OMAA 0.17.3 与实际校验值。",
+        "包含 0.101.0 全部浏览器交互、会话搜索与桌面适配改进。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.101.1.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.0.101.0",
       "severity": "normal",
       "unpublished": false,
