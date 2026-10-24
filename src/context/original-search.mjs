@@ -306,13 +306,21 @@ export function originalEvent(event, calls = new Map(), includeText = true) {
   return { text, ...(message.role === 'tool' ? { isError: message.isError === true } : {}), ...(attachments.length ? { attachments } : {}) };
 }
 
-function findTerm(chunk, term, offset, original) {
-  let at = chunk.indexOf(term);
+function foldedPattern(term) {
+  // Match only ASCII case pairs, just like fold(), without copying every
+  // history chunk. Explicit pairs leave all Unicode characters unchanged.
+  return new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[a-z]/g, char => `[${char}${char.toUpperCase()}]`), 'g');
+}
+
+function findTerm(chunk, term, offset, original, pattern) {
+  if (pattern) pattern.lastIndex = 0;
+  let at = pattern ? pattern.exec(chunk)?.index ?? -1 : chunk.indexOf(term);
   while (at >= 0) {
     const pos = offset + at;
     if (!identifier.test(term) || ((!wordChar(term[0]) || !wordChar(original[pos - 1]))
       && (!wordChar(term.at(-1)) || !wordChar(original[pos + term.length])))) return pos;
-    at = chunk.indexOf(term, at + 1);
+    if (pattern) pattern.lastIndex = at + 1;
+    at = pattern ? pattern.exec(chunk)?.index ?? -1 : chunk.indexOf(term, at + 1);
   }
   return -1;
 }
@@ -354,6 +362,8 @@ export async function searchOriginal(session, args = {}, { signal } = {}) {
     grams.set(term, [...new Set(chars.slice(0, -1).map((char, index) => char + chars[index + 1]))]);
   }
   const fuzzyTerms = terms.filter(term => !grams.has(term));
+  const patterns = new Map([foldedQuery, ...terms].map(term => [term, foldedPattern(term)]));
+  const overlap = Math.max(query.length, ...terms.map(term => term.length), 2) - 1;
   let work = 0, totalMatches = 0, cursorHit = !cursor;
   const cooperate = async () => {
     signal?.throwIfAborted();
@@ -380,20 +390,20 @@ export async function searchOriginal(session, args = {}, { signal } = {}) {
       await cooperate();
       hash.update(JSON.stringify([part.path, part.kind, part.text.length, part.attachment, part.isError]));
       if (part.attachment && attachments.length < 2) attachments.push(part.attachment);
-      const overlap = Math.max(query.length, ...terms.map(term => term.length), 2) - 1;
       for (let offset = 0; offset < part.text.length; offset += CHUNK_SIZE) {
         await cooperate();
-        const text = part.text.slice(offset, offset + CHUNK_SIZE + overlap), folded = fold(text);
-        hash.update(Buffer.from(part.text.slice(offset, offset + CHUNK_SIZE), 'utf16le'));
+        const text = part.text.slice(offset, offset + CHUNK_SIZE + overlap);
+        hash.update(part.text.slice(offset, offset + CHUNK_SIZE), 'utf16le');
         if (!exact) { const at = findTerm(text, query, offset, part.text); if (at >= 0) { exact = true; mark(part, at, query.length, true); } }
-        if (!foldedExact) { const at = findTerm(folded, foldedQuery, offset, part.text); if (at >= 0) { foldedExact = true; mark(part, at, query.length, true); } }
+        let foldedAt;
+        if (!foldedExact) { foldedAt = findTerm(text, foldedQuery, offset, part.text, patterns.get(foldedQuery)); if (foldedAt >= 0) { foldedExact = true; mark(part, foldedAt, query.length, true); } }
         for (const term of terms) if (!found.has(term)) {
-          const at = findTerm(folded, term, offset, part.text);
+          const at = term === foldedQuery && foldedAt !== undefined ? foldedAt : findTerm(text, term, offset, part.text, patterns.get(term));
           if (at >= 0) { found.add(term); mark(part, at, term.length); }
         }
         for (const [term, values] of grams) {
           const hits = gramHits.get(term) || new Set();
-          for (const gram of values) if (!hits.has(gram)) { const at = folded.indexOf(gram); if (at >= 0) { hits.add(gram); mark(part, offset + at, gram.length); } }
+          for (const gram of values) if (!hits.has(gram)) { const at = text.indexOf(gram); if (at >= 0) { hits.add(gram); mark(part, offset + at, gram.length); } }
           gramHits.set(term, hits);
         }
       }

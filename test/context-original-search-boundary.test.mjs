@@ -50,3 +50,54 @@ test('PTC source validation keeps prior call identities and local overrides isol
   assert.ok(result.text.includes('完整结果 😀 9007199254740993'));
   assert.equal(accepted.get('echo'), 'read'); assert.equal(accepted.get('root:ptc:1'), 'read');
 });
+
+test('original search folds ASCII only and preserves exact-match ranking', async () => {
+  const session = new FixtureSession();
+  user(session, 'K ſ İ ı');
+  user(session, 'k s i');
+  user(session, 'K S I');
+  const page = await searchOriginal(session, { query: 'K S I' });
+  assert.equal(page.totalMatches, 2);
+  assert.deepEqual(page.results.map(({ seq, score }) => [seq, score]), [[2, 400000], [1, 390000]]);
+  assert.equal((await searchOriginal(session, { query: 'K' })).totalMatches, 1);
+});
+
+test('original search treats punctuation as literals in folded phrases', async () => {
+  const session = new FixtureSession();
+  const query = '[Foo]+(bar)?.*\\path^$';
+  user(session, '[foo]+(BAR)?.*\\PATH^$');
+  user(session, query);
+  user(session, 'FOO BAR PATH');
+  const page = await searchOriginal(session, { query });
+  assert.deepEqual(page.results.slice(0, 2).map(({ seq, score }) => [seq, score]), [[1, 400000], [0, 390000]]);
+  assert.equal(page.results[1].snippets[0].text, '[foo]+(BAR)?.*\\PATH^$');
+  user(session, '_A/A/A');
+  assert.equal((await searchOriginal(session, { query: 'a/a' })).results[0].score, 390000,
+    'rejecting a word boundary must still consider the next overlapping literal match');
+});
+
+test('original search preserves chunk boundaries, overlapping matches and UTF-16 cursors', async () => {
+  const session = new FixtureSession();
+  user(session, 'x'.repeat(32766) + ' RUN_CODE 😀 \ud800');
+  user(session, '_run_code run_code_extra RUN_CODE \udc00');
+  user(session, 'run_code');
+  const first = await searchOriginal(session, { query: 'run_code', limit: 1 });
+  assert.equal(first.totalMatches, 3); assert.equal(first.results[0].seq, 2);
+  const next = await searchOriginal(session, { query: 'run_code', limit: 1, cursor: first.nextCursor });
+  assert.equal(next.results[0].seq, 0);
+  assert.ok(next.results[0].snippets[0].text.includes('RUN_CODE 😀 \ud800'));
+  user(session, 'new run_code');
+  const last = await searchOriginal(session, { query: 'run_code', limit: 1, cursor: next.nextCursor });
+  assert.equal(last.totalMatches, 3); assert.equal(last.results[0].seq, 1); assert.equal(last.nextCursor, null);
+  session.events[0].data.content[0].text += 'changed';
+  await assert.rejects(searchOriginal(session, { query: 'run_code', limit: 1, cursor: first.nextCursor }), /快照已变化/);
+});
+
+test('original search cancellation discards partial work and permits a complete retry', async () => {
+  const session = new FixtureSession();
+  for (let index = 0; index < 80; index++) user(session, 'a'.repeat(32768) + ' RUN_CODE');
+  const controller = new AbortController(), reason = Error('cancel search');
+  setImmediate(() => controller.abort(reason));
+  await assert.rejects(searchOriginal(session, { query: 'run_code' }, { signal: controller.signal }), error => error === reason);
+  assert.equal((await searchOriginal(session, { query: 'run_code' })).totalMatches, 80);
+});
