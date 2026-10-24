@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const STDERR_LIMIT = 8000;
@@ -88,7 +89,9 @@ export function codegraphCommand(cacheDir) {
 }
 
 export function codegraphEnvironment() {
-  const { getDefaultEnvironment } = require('@modelcontextprotocol/client/stdio');
+  // Keep the synchronous helper on the same ESM graph as the native MCP
+  // adapter and connect(). The package's require export loads a second SDK.
+  const { getDefaultEnvironment } = require(fileURLToPath(import.meta.resolve('@modelcontextprotocol/client/stdio')));
   return { ...getDefaultEnvironment(), CODEGRAPH_TELEMETRY: '0', CODEGRAPH_NO_DOWNLOAD: '1',
     CODEGRAPH_NO_DAEMON: '1', CODEGRAPH_HOST_PPID: String(process.pid), NO_COLOR: '1',
     CODEGRAPH_EXPLORE_DEDUP: '0', CODEGRAPH_MCP_TOOLS: 'explore,node,search,callers,callees,impact,files,status' };

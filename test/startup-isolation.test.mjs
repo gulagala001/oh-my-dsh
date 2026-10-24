@@ -25,6 +25,34 @@ test('optional native, MCP and Computer Use imports do not enter the main import
   `);
 });
 
+for (const warm of [false, true]) test(`CodeGraph shares the MCP ESM environment without retaining values (${warm ? 'loaded adapter' : 'cold helper'})`, () => {
+  isolated(`
+    import assert from 'node:assert/strict';
+    import { registerHooks } from 'node:module';
+    ${warm ? "await import('@deepseek-ai/dsh-mcp-client');" : ''}
+    registerHooks({ load(url, context, next) {
+      if (url.includes('/@modelcontextprotocol/') && url.endsWith('.cjs')) throw Error('duplicate CommonJS MCP graph');
+      return next(url, context);
+    } });
+    const { codegraphEnvironment } = await import(${JSON.stringify(new URL('../src/codegraph.mjs', import.meta.url).href)});
+    process.env.TERM = 'codegraph-environment-first';
+    process.env.CODEGRAPH_TEST_SECRET = 'synthetic-not-inherited';
+    const first = codegraphEnvironment();
+    assert.equal(first.TERM, 'codegraph-environment-first');
+    assert.equal(first.CODEGRAPH_TEST_SECRET, undefined);
+    const { getDefaultEnvironment } = await import('@modelcontextprotocol/client/stdio');
+    assert.deepEqual(first, { ...getDefaultEnvironment(), CODEGRAPH_TELEMETRY: '0', CODEGRAPH_NO_DOWNLOAD: '1',
+      CODEGRAPH_NO_DAEMON: '1', CODEGRAPH_HOST_PPID: String(process.pid), NO_COLOR: '1', CODEGRAPH_EXPLORE_DEDUP: '0',
+      CODEGRAPH_MCP_TOOLS: 'explore,node,search,callers,callees,impact,files,status' });
+    process.env.TERM = 'codegraph-environment-second';
+    assert.equal(codegraphEnvironment().TERM, 'codegraph-environment-second');
+    first.TERM = 'caller-owned';
+    assert.equal(codegraphEnvironment().TERM, 'codegraph-environment-second');
+    process.env.TERM = '() { unsafe shell function; }';
+    assert.equal(codegraphEnvironment().TERM, undefined);
+  `);
+});
+
 test('a failed runtime import retains the client-owning entry and authenticated root-cause route', () => {
   isolated(`
     import assert from 'node:assert/strict';
