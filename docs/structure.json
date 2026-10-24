@@ -374,6 +374,12 @@
       "role": "release",
       "language": "bilingual",
       "site": true
+    },
+    {
+      "path": "docs/release-0.101.2.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
     }
   ]
 }

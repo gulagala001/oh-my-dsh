@@ -28,12 +28,13 @@ export async function install(ctx,config={}) {
   const ownerFile=join(engine.store.root,'owners',`${process.pid}-${randomUUID()}.json`);
   const releaseCollection=await lease(join(engine.store.root,'collection.lock'),{waitMs:5000});
   try{
-    try{await collectGarbage(engine.store.root,{apply:true,locked:true});}catch(error){ctx.logger.warn('Rewind backup cleanup skipped: '+error.message);}
+    try{await collectGarbage(engine.store.root,{apply:true,locked:true,targetBytes:config.storageTargetBytes??2*1024**3,retentionMs:(config.retentionDays??30)*86400000,maxRewriteBytes:16*1024*1024});}catch(error){ctx.logger.warn('Rewind backup cleanup skipped: '+error.message);}
     // Publish ownership before releasing the collection fence: another starting
     // host must not collect pre-images that this host is about to capture.
     await atomic(ownerFile,{pid:process.pid,protocol:2,busy:false});
   }finally{await releaseCollection();}
   const maintenance=engine.maintenance=new Maintenance(engine,ownerFile,config);
+  maintenance.schedule();
   ctx.effect(()=>()=>maintenance.dispose());
   ctx.effect(()=>{const key=Symbol.for('dsh-rewind-plus.engine');ctx.root[key]=engine;return()=>{if(ctx.root[key]===engine)delete ctx.root[key];};});
   ctx.on('agent/pre-step',(payload,next)=>maintenance.run(()=>engine.preStep(payload,next),error=>{if(payload.signal?.aborted||isLockFailure(error))throw error;engine.backupGap(payload.agent,error);return next();},{signal:payload.signal}),{prepend:true});

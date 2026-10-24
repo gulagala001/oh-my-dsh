@@ -34,9 +34,11 @@ Before a tool starts, backup maintenance and workspace locks each wait at most 3
 
 Plain chat creates lightweight checkpoints without scanning the project. Files are captured before tools run. Unchanged content is reused; large files use 4 MiB chunks, SHA-256 deduplication and compression where useful.
 
-Up to 100 checkpoints and 20 undo records are retained per session. Idle session file backups expire after about 30 days. During idle time, unreferenced backups are collected and older records roll off toward a 2 GiB target covering backup content, indexes and recovery metadata. Open confirmations, incomplete transactions and the latest active recovery take priority. The target never rejects a new capture or interrupts normal tools.
+Up to 100 checkpoints and 20 undo records are retained per session. Idle session file backups expire after about 30 days. During idle time, unreferenced backups are collected and older records roll off toward a 2 GiB target covering backup content, indexes and recovery metadata. Open confirmations, incomplete transactions and the latest active recovery take priority. The soft target itself does not reject captures. A separate default 4 GiB write ceiling checks physical backup content and indexes under the shared writer lock, bounding new data from large workspaces and concurrent instances. Reaching it stops that capture and records a backup gap while normal tools continue. Existing recovery records are not forcibly deleted to meet the ceiling; recovery metadata and compaction temporary copies are separate.
 
-This is a soft target, not a limit on the whole DSH directory. A large active recovery may exceed it; native conversation logs and temporary filesystem overhead are separate. Original host logs are not deleted. Backups live under `$DSH_HOME/rewind-plus/v1`; uninstalling retains them. Do not remove that directory during recovery.
+This is a soft target, not a limit on the whole DSH directory. Captures before and after tools cover the entire eligible workspace. Unchanged files may be written to backups before idle collection releases them, so a large workspace can temporarily exceed the target. Native conversation logs and temporary filesystem overhead are separate. Original host logs are not deleted. Backups live under `$DSH_HOME/rewind-plus/v1`; uninstalling retains them. Do not remove that directory during recovery.
+
+Idle collection is scheduled even after short operations, which do not postpone an existing cleanup deadline; a busy peer instance triggers a later retry. Backup pack writes, compaction and restore temporary files check available disk space and reserve at least 512 MiB. Low space stops new backups without blocking normal tools and records that the affected file changes cannot be safely rewound. A restore interrupted by low space retains its recovery transaction. Unreferenced packs are deleted first; compaction that needs a temporary copy waits for sufficient space. Canonical paths prevent symbolic links or directory junctions from bypassing workspace/backup overlap protection.
 
 ## Update and remove
 
@@ -59,4 +61,4 @@ npm pack
 
 Use an isolated DSH profile for development. From the installed plugin directory, `node scripts/cleanup.mjs` previews cleanup; add `--apply` to run it manually.
 
-This release targets DSH 0.2.1-rc.2. Native installation, recovery and browser interaction were verified on macOS; Windows and Linux device workflows have not been verified.
+This release targets DSH 0.2.1-rc.3. Native installation, recovery and browser interaction were verified on macOS; Windows and Linux device workflows have not been verified.

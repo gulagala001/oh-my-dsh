@@ -30,7 +30,7 @@
 
 完整回合撤回与会话回退 内置撤回插件。
 
-- 固定来源／版本: [0.1.4-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
+- 固定来源／版本: [0.1.5-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/THIRD_PARTY_NOTICES.md)
 
 ### DSH Persona

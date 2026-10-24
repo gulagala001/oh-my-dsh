@@ -6,9 +6,11 @@ import { promisify } from 'node:util';
 import { randomUUID, createHash } from 'node:crypto';
 import { brotliCompress, brotliDecompress, constants as zc } from 'node:zlib';
 const compress=promisify(brotliCompress),decompress=promisify(brotliDecompress);
-import { hash, atomic, read, lease, syncDirectory } from './store.mjs';
+import { hash, atomic, read, lease, syncDirectory, ensureFreeSpace } from './store.mjs';
 const exec = promisify(execFile);
 const EXCLUDED = new Set(['.git','node_modules']);
+const inside=(parent,child)=>{const path=relative(parent,child);return !path||(!isAbsolute(path)&&path!=='..'&&!path.startsWith('..'+sep));};
+const signature=info=>info?[info.size,info.mtimeMs,info.ctimeMs,info.ino].join(':'):'';
 // Share only overlapping directory checks. Settled observations are discarded
 // before any caller resumes, so later files still check the live filesystem.
 function pendingRead(pending,key,read){
@@ -27,8 +29,8 @@ export function difference(before, after) {
   return changes;
 }
 export class Files {
-  constructor(root, config = {}) { this.root = root; this.cache=new Map();this.workspaces=new Map();this.blobs=new Set();this.stats={filesRead:0,bytesRead:0,cacheHits:0,storedBytes:0};this.storageBytes=null;this.index={};this.pending=new Map();this.pendingBytes=0;this.flushTail=Promise.resolve();this.bigFileTail=Promise.resolve(); this.limits = { chunkBytes:4*1024*1024, maxBlobBytes:64*1024*1024, storageTargetBytes:2*1024*1024*1024, ...config }; }
-  invalidateStorage(){this.storageReady=null;this.storageBytes=null;this.index={};this.blobs.clear();this.cache.clear();}
+  constructor(root, config = {}) { this.root = root; this.cache=new Map();this.workspaces=new Map();this.blobs=new Set();this.stats={filesRead:0,bytesRead:0,cacheHits:0,storedBytes:0};this.storageBytes=null;this.index={};this.pending=new Map();this.pendingBytes=0;this.flushTail=Promise.resolve();this.bigFileTail=Promise.resolve(); this.limits = { chunkBytes:4*1024*1024, maxBlobBytes:64*1024*1024, storageTargetBytes:2*1024*1024*1024, maxStorageBytes:4*1024**3, ...config };if(!Number.isSafeInteger(this.limits.maxStorageBytes)||this.limits.maxStorageBytes<=0)throw Error('备份容量上限必须为正整数字节数'); }
+  invalidateStorage(){this.storageReady=null;this.storageBytes=null;this.index={};this.blobs.clear();this.cache.clear();this.pending.clear();this.pendingBytes=0;}
   async workspace(cwd) {
     const base = await realpath(cwd);const cached=this.workspaces.get(base);if(cached&&cached.expires>Date.now())return cached.root;
     try { const {stdout} = await exec('git',['-C',base,'rev-parse','--show-toplevel'],{timeout:5000}); const root=await realpath(stdout.trim());this.workspaces.set(base,{root,expires:Date.now()+10000});return root; }
@@ -37,7 +39,10 @@ export class Files {
   blob(key) { if (!/^[a-f0-9]{64}$/.test(key)) throw Error('无效备份标识'); return join(this.root,'blobs',key); }
   async capture(cwd) {
     const root = await realpath(cwd);
-    if (this.root === root || this.root.startsWith(root+sep)) throw Error('备份目录不能位于被管理工作区中');
+    await mkdir(this.root,{recursive:true,mode:0o700});
+    const storageRoot=await realpath(this.root);
+    if(inside(root,storageRoot)||inside(storageRoot,root))throw Error('备份目录不能与被管理工作区重叠');
+    await this.ensureStorage();this.checkCapacity(0);await ensureFreeSpace(this.root,0);
     let names, coverage;
     try {
       const {stdout} = await exec('git',['-C',root,'ls-files','-z','--cached','--others','--exclude-standard'],{encoding:'utf8',maxBuffer:32*1024*1024,timeout:15000});
@@ -54,9 +59,8 @@ export class Files {
         }
       }; await walk(root);
     }
-    const manifest=Object.create(null),pathReads=new Map();let index=0;
+    const manifest=Object.create(null),pathReads=new Map();let index=0,failure;
     const candidates=names.sort().filter(path=>!path.split('/').some(p=>EXCLUDED.has(p))&&!path.endsWith('/'));
-    await this.ensureStorage();
     const captureOne=async path=>{
       const abs=await this.path(root,path,pathReads);let info;
       try{info=await lstat(abs);}catch(e){if(e.code==='ENOENT')return;throw e;}
@@ -70,7 +74,7 @@ export class Files {
       let key,chunks;
       if(info.size>this.limits.chunkBytes){
         const digest=createHash('sha256');chunks=[];
-        for await(const data of createReadStream(abs,{highWaterMark:this.limits.chunkBytes})){digest.update(data);this.stats.bytesRead+=data.length;const chunk=hash(data);await this.saveBlob(chunk,data);chunks.push(chunk);}
+        for await(const data of createReadStream(abs,{highWaterMark:this.limits.chunkBytes})){if(failure)throw failure;digest.update(data);this.stats.bytesRead+=data.length;const chunk=hash(data);await this.saveBlob(chunk,data);chunks.push(chunk);}
         key=digest.digest('hex');
       }else{const data=await readFile(abs);this.stats.bytesRead+=data.length;key=hash(data);await this.saveBlob(key,data);}
       const after=await lstat(abs);this.stats.filesRead++;
@@ -78,16 +82,30 @@ export class Files {
       const entry={kind:'file',hash:key,mode:info.mode&0o777,...(chunks?{chunks}: {})};manifest[path]=entry;this.cache.set(abs,{signature,entry});}finally{release();}
     };
     // Bound IO concurrency; wait for all workers even after a capture failure.
-    const outcomes=await Promise.allSettled(Array.from({length:Math.min(12,candidates.length)},async()=>{while(index<candidates.length){const path=candidates[index++];await captureOne(path);}}));
-    const failure=outcomes.find(r=>r.status==='rejected');await this.flushBlobs();if(failure)throw failure.reason;
+    await Promise.allSettled(Array.from({length:Math.min(12,candidates.length)},async()=>{try{while(!failure&&index<candidates.length){const path=candidates[index++];await captureOne(path);}}catch(error){failure??=error;}}));
+    await this.flushBlobs();if(failure)throw failure;
     if(this.cache.size>100000)this.cache.clear();
     return {root,manifest:Object.fromEntries(Object.entries(manifest).sort(([a],[b])=>a.localeCompare(b))),coverage};
   }
   async bigFile(){const wait=this.bigFileTail;let release;this.bigFileTail=new Promise(r=>release=r);await wait;return release;}
   async ensureStorage(){
     if(this.storageReady)return this.storageReady;
-    this.storageReady=(async()=>{await mkdir(join(this.root,'packs'),{recursive:true,mode:0o700});await mkdir(join(this.root,'blobs'),{recursive:true,mode:0o700});this.index=await read(join(this.root,'blob-index.json'),{});let total=0;for(const sub of ['blobs','packs'])for(const e of await readdir(join(this.root,sub),{withFileTypes:true}))if(e.isFile())total+=(await lstat(join(this.root,sub,e.name))).size;this.storageBytes=total;})();
+    this.storageReady=(async()=>{await mkdir(join(this.root,'packs'),{recursive:true,mode:0o700});await mkdir(join(this.root,'blobs'),{recursive:true,mode:0o700});this.index=await read(join(this.root,'blob-index.json'),{});await this.refreshUsage();})().catch(error=>{this.storageReady=null;throw error;});
     return this.storageReady;
+  }
+  async refreshUsage(){
+    let info;try{info=await lstat(join(this.root,'blob-index.json'));}catch(error){if(error.code!=='ENOENT')throw error;}
+    const current=signature(info);
+    if(this.storageBytes===null||this.storageSignature!==current){
+      let total=0;
+      for(const sub of ['blobs','packs'])for(const entry of await readdir(join(this.root,sub),{withFileTypes:true}))if(entry.isFile())total+=(await lstat(join(this.root,sub,entry.name))).size;
+      this.storageBytes=total;this.storageSignature=current;
+    }
+    this.indexBytes=info?.size||0;
+  }
+  checkCapacity(additional){
+    if(this.storageBytes+this.indexBytes+additional>this.limits.maxStorageBytes)
+      throw Object.assign(Error('回退备份达到容量上限，已停止新增文件备份；该段文件变化无法安全回退，请等待空闲清理或减少工作区范围。'),{code:'REWIND_STORAGE_LIMIT'});
   }
   async saveBlob(key,data){
     await this.ensureStorage();if(this.index[key]||this.pending.has(key)||this.blobs.has(key))return;
@@ -99,21 +117,37 @@ export class Files {
     }
     const stored=Buffer.concat([Buffer.from([flag]),payload]);
     if(this.index[key]||this.pending.has(key))return;
-    this.storageBytes+=stored.length;this.pending.set(key,stored);this.pendingBytes+=stored.length;
+    this.pending.set(key,stored);this.pendingBytes+=stored.length;
     if(this.pendingBytes>=8*1024*1024)await this.flushBlobs();
   }
   async flushBlobs(){
     const flush=async()=>{
       while(this.pending.size){
-      const release=await lease(join(this.root,'pack-index.lock'),{waitMs:5000});try{this.index=await read(join(this.root,'blob-index.json'),{});
+      const release=await lease(join(this.root,'pack-index.lock'),{waitMs:5000});try{this.index=await read(join(this.root,'blob-index.json'),{});await this.refreshUsage();
       for(const key of this.pending.keys())if(this.index[key]){this.pendingBytes-=this.pending.get(key).length;this.pending.delete(key);}
       if(!this.pending.size)return;
       const entries=[];let batchBytes=0;for(const entry of this.pending){if(entries.length&&batchBytes+entry[1].length>8*1024*1024)break;entries.push(entry);batchBytes+=entry[1].length;}
-      const pack=randomUUID()+'.pack',file=join(this.root,'packs',pack),h=await open(file,'wx',0o600);let offset=0;
+      const pack=randomUUID()+'.pack',file=join(this.root,'packs',pack);let offset=0;
       const added={};
-      try{for(const [key,bytes]of entries){await h.writeFile(bytes);added[key]={pack,offset,length:bytes.length};offset+=bytes.length;}await h.sync();}finally{await h.close();}
-      await syncDirectory(join(this.root,'packs'));
-      const index={...this.index,...added};await atomic(join(this.root,'blob-index.json'),index);this.index=index;
+      for(const [key,bytes]of entries){added[key]={pack,offset,length:bytes.length};offset+=bytes.length;}
+      const index={...this.index,...added};
+      const additional=offset+Buffer.byteLength(JSON.stringify(index));
+      this.checkCapacity(additional);await ensureFreeSpace(this.root,additional);
+      const h=await open(file,'wx',0o600);let publishing=false;
+      try{
+        try{for(const [,bytes]of entries)await h.writeFile(bytes);await h.sync();}finally{await h.close();}
+        await syncDirectory(join(this.root,'packs'));
+        publishing=true;await atomic(join(this.root,'blob-index.json'),index);this.index=index;
+        this.storageBytes+=offset;const info=await lstat(join(this.root,'blob-index.json'));this.storageSignature=signature(info);this.indexBytes=info.size;
+      }catch(error){
+        this.storageBytes=null;
+        // A directory sync can fail after the index rename committed. Never
+        // remove a pack that the durable index may already reference.
+        try{const current=publishing?await read(join(this.root,'blob-index.json'),null):{};
+          if(current&&!Object.values(current).some(entry=>entry.pack===pack))await unlink(file);
+        }catch{}
+        throw error;
+      }
       for(const [key,bytes]of entries)if(this.pending.get(key)===bytes){this.pending.delete(key);this.pendingBytes-=bytes.length;}
       this.stats.storedBytes+=offset;}finally{await release();}}
     };
@@ -163,7 +197,7 @@ export class Files {
       if(value.kind==='link') await symlink(value.target,temp);
       else {
         const digest=createHash('sha256'),h=await open(temp,'wx',value.mode);
-        try{for(const key of value.chunks||[value.hash]){const data=await this.readBlob(key);if(hash(data)!==key)throw Error(`备份校验失败：${path}`);digest.update(data);await h.writeFile(data);}if(digest.digest('hex')!==value.hash)throw Error(`备份校验失败：${path}`);await h.sync();}finally{await h.close();}
+        try{for(const key of value.chunks||[value.hash]){const data=await this.readBlob(key);if(hash(data)!==key)throw Error(`备份校验失败：${path}`);await ensureFreeSpace(dirname(abs),data.length);digest.update(data);await h.writeFile(data);}if(digest.digest('hex')!==value.hash)throw Error(`备份校验失败：${path}`);await h.sync();}finally{await h.close();}
         await chmod(temp,value.mode);
       }
       // Backup reads/decompression may take time. Fence the destination after

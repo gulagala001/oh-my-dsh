@@ -1,13 +1,24 @@
-import { mkdir, readFile, rename, open, lstat, rmdir, unlink } from 'node:fs/promises';
+import { mkdir, readFile, rename, open, lstat, rmdir, unlink, statfs } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 export const hash = value => createHash('sha256').update(typeof value === 'string' || Buffer.isBuffer(value) ? value : JSON.stringify(value)).digest('hex');
-export async function atomic(file, value) {
+export async function ensureFreeSpace(directory,bytes,reserveBytes=512*1024**2) {
+  const {bavail,bsize}=await statfs(directory,{bigint:true});
+  if(BigInt(bavail)*BigInt(bsize)-BigInt(bytes)<BigInt(reserveBytes))
+    throw Object.assign(Error(reserveBytes?'磁盘可用空间不足，已停止写入回退文件；至少需要保留 512 MiB 可用空间。':'磁盘空间不足以安全保存清理索引，已保留现有备份。'),{code:'REWIND_DISK_SPACE'});
+}
+export async function atomic(file, value, {reserveBytes}={}) {
   await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+  const content=JSON.stringify(value);
+  // Large session/undo records need the same headroom as content packs.
+  // Small ownership records must remain writable so low-space cleanup can run.
+  if(Buffer.byteLength(content)>1024*1024||reserveBytes!==undefined)await ensureFreeSpace(dirname(file),Buffer.byteLength(content),reserveBytes??512*1024**2);
   const temp = `${file}.${randomUUID()}.tmp`, handle = await open(temp, 'wx', 0o600);
-  try { await handle.writeFile(JSON.stringify(value)); await handle.sync(); } finally { await handle.close(); }
-  await rename(temp, file);
-  await syncDirectory(dirname(file));
+  try {
+    try { await handle.writeFile(content); await handle.sync(); } finally { await handle.close(); }
+    await rename(temp, file);
+    await syncDirectory(dirname(file));
+  } finally { await unlink(temp).catch(()=>{}); }
 }
 export async function syncDirectory(directory) {
   let parent;try {parent=await open(directory,'r');await parent.sync();}catch(error){if(!['EINVAL','ENOTSUP','EPERM','EISDIR'].includes(error.code))throw error;}finally{await parent?.close();}

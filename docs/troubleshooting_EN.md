@@ -2,7 +2,7 @@
 
 [简体中文](troubleshooting.md) · [Documentation](README_EN.md) · [First task](getting-started_EN.md) · [Installation](upgrade_EN.md)
 
-Keep the first complete error. Check the installed version, running version and data directory separately. Current source is **`0.2.1-rc.3.omd.0.101.1`**, bundling OpenCU `2.0.8`. Check [version matching and host prerequisites](install_EN.md) before changing the installation.
+Keep the first complete error. Check the installed version, running version and data directory separately. Current source is **`0.2.1-rc.3.omd.0.101.2`**, bundling OpenCU `2.0.8`. Check [version matching and host prerequisites](install_EN.md) before changing the installation.
 
 <a id="check-the-running-environment"></a>
 

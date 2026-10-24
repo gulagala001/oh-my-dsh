@@ -2,7 +2,7 @@
 
 [简体中文](usage.md) · [Docs index](README_EN.md) · [First task](getting-started_EN.md) · [Troubleshooting](troubleshooting_EN.md) · [Development](development_EN.md)
 
-> Current source is **OMD `0.2.1-rc.3.omd.0.101.1` / DSH `0.2.1-rc.3`**, bundling OpenCU; component versions are listed in [credits](components_EN.md). Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
+> Current source is **OMD `0.2.1-rc.3.omd.0.101.2` / DSH `0.2.1-rc.3`**, bundling OpenCU; component versions are listed in [credits](components_EN.md). Start with [version matching](install_EN.md); historical 0.10 users should follow their fixed-tag documentation.
 
 OMD retains DSH's models, projects, sessions, native tools, files, skills, and content tabs. The package ID and preset are both `oh-my-dsh`; settings, conversations and data from earlier versions migrate automatically after upgrading, see [the upgrade guide](upgrade_EN.md#package-name).
 
@@ -249,6 +249,8 @@ OMD bundles `@gulagala001/dsh-undo-plugin`. Double Esc while idle or `/rewind` o
 Rewind, undo and failure recovery use one historical cutoff for tasks, original-wording excerpts and verification evidence. Tools, the task dock, context and completion checks read the same native task record. Replayed messages are not counted as new user requirements and cannot resume paused reminders within a turn. Existing quotation numbers remain stable and may have gaps where replayed copies were skipped. Restored evidence is historical, not a fresh verification run. Legacy message-only snapshots without an event cutoff do not infer or overwrite task records.
 
 Before a tool starts, rewind backup maintenance and workspace locks each wait at most 30 seconds. A timeout returns an error without admitting a tool that has not obtained its lock. Cancellation releases queued backups that have not started; active backups finish their cleanup, and workspaces being restored reject new tools. This applies to Standard, PTC and other modes using the same rewind service.
+
+The 2 GiB backup target applies to idle collection. A separate default 4 GiB write ceiling checks physical backup content and indexes under the shared writer lock across instances. Existing recovery records are not forcibly deleted to meet it; recovery metadata and compaction temporary copies are separate. Captures before and after tools cover the entire eligible workspace, so unchanged files in large directories may be stored temporarily before collection. Short operations do not postpone a scheduled cleanup. Backup writes, compaction and restore temporary files check for at least 512 MiB of remaining free space. Low space stops new backups while normal tools continue, with an explicit record that the affected file changes cannot be safely rewound. Interrupted recovery retains its transaction and backups. Do not manually delete `$DSH_HOME/rewind-plus/v1` during recovery.
 
 Personalities, rewind backups, workflows and website imports retain their own data. Copying only `oh-my-dsh/` does not cover every feature; include the locations in [plugin data ownership](architecture_EN.md#data-retains-its-owner).
 

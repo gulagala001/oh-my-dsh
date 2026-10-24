@@ -56,7 +56,7 @@ export class RewindEngine {
       try{await this.store.lock('workspace:'+root,async()=>{
         if(--wave.count!==0)return;
         try{
-          let after,error=wave.error;try{after=await this.files.capture(root);}catch(e){error=e.message;}
+          let after,error=wave.error;if(!error)try{after=await this.files.capture(root);}catch(e){error=e.message;}
           const changes=!error?difference(wave.before.manifest,after.manifest):[];
           for(const id of wave.owners)await this.store.lock(id,async()=>{
             const st=await this.store.load(id);
