@@ -1,4 +1,6 @@
 import { basename } from 'node:path';
+import { createHash } from 'node:crypto';
+import { scheduler } from 'node:timers/promises';
 import { projectOf } from '../hub-store.mjs';
 import { sourceName } from '../message-source.mjs';
 import { eventTime, actualUser } from '../context/core.mjs';
@@ -30,7 +32,7 @@ const userText = e => (e.data?.content || []).filter(b => b.type === 'text').map
 const material = blocks => (blocks || []).flatMap(b => b.type === 'text' ? [b.text || ''] : b.type === 'tool-result' ? [b.isError ? '[observed tool error]' : '[observed tool result]', material(b.content)] : ['reasoning','tool-call'].includes(b.type) ? [] : [`[${b.type} attachment reference retained; contents not read]`]).join('\n');
 
 export class DreamSources {
-  constructor(hub, store) { this.hub=hub; this.ctx=hub.ctx; this.store=store; this.revisions=new Map();this.activity=new Map();this.activityTimer=null;this.catalogHeaders=new Map();this.lifecycle=new AbortController();this.pending=new Set();this.closing=null; }
+  constructor(hub, store) { this.hub=hub; this.ctx=hub.ctx; this.store=store; this.revisions=new Map();this.activity=new Map();this.activityTimer=null;this.catalogHeaders=new Map();this.lifecycle=new AbortController();this.pending=new Set();this.closing=null;this.eventDigests=new WeakMap(); }
   track(run) {
     this.lifecycle.signal.throwIfAborted();
     const task=run();this.pending.add(task);
@@ -41,6 +43,7 @@ export class DreamSources {
     if(this.closing)return this.closing;
     this.flushActivity();
     this.lifecycle.abort(Error('Dream 来源读取正在退出'));
+    this.eventDigests=new WeakMap();
     return this.closing=Promise.allSettled([...this.pending]);
   }
   persistence() { return this.ctx.get?.('sessionPersistence') || this.ctx.sessionPersistence; }
@@ -218,13 +221,51 @@ export class DreamSources {
       // clones its selected blocks separately. Adopt the native caller-owned
       // slice and its detached or deeply frozen graph. Older backends without
       // an ownership declaration still need the defensive copy.
-      return {header:structuredClone(handle.header),inherited:handle.inheritedEventCount||0,
+      return {header:structuredClone(handle.header),inherited:handle.inheritedEventCount||0,eventState,
         events:eventState==='detached'||eventState==='shared-frozen'?events:structuredClone(events)};
     } finally { await handle.close(); }
   }
   inspect(id,signal) { return this.track(()=>this.inspectSnapshot(id,this.signal(signal))); }
+  async eventDigest(events,eventState,signal) {
+    signal?.throwIfAborted();
+    // The host owns deep immutability. Check every identity and position, not
+    // just length/endpoints: replacement or reordering must miss the memo.
+    // Values retain only a digest token and an index, never source events.
+    const shared=eventState==='shared-frozen', token=shared?this.eventDigests.get(events[0])?.token:undefined;
+    if(token?.length===events.length) {
+      let matches=true;
+      for(let index=0;index<events.length;index++) {
+        const saved=this.eventDigests.get(events[index]);
+        if(saved?.token!==token||saved.index!==index){matches=false;break;}
+      }
+      if(matches)return token.digest;
+    }
+    // Preserve the exact JSON array byte stream without a whole-history
+    // string. Each event is native JSON; null also preserves array holes.
+    const hash=createHash('sha256').update('[');
+    let deadline=performance.now()+8;
+    for(let index=0;index<events.length;index++) {
+      signal?.throwIfAborted();
+      if(index)hash.update(',');
+      hash.update(JSON.stringify(events[index])??'null');
+      if(index+1<events.length&&performance.now()>=deadline) {
+        await scheduler.yield();signal?.throwIfAborted();deadline=performance.now()+8;
+      }
+    }
+    signal?.throwIfAborted();
+    const result=hash.update(']').digest('hex');
+    if(shared) {
+      const token={length:events.length,digest:result};
+      for(let index=0;index<events.length;index++) {
+        const event=events[index];
+        if(event&&typeof event==='object')this.eventDigests.set(event,{token,index});
+      }
+    }
+    return result;
+  }
   async inspectSnapshot(id,signal) {
     const snapshot=await this.read(id,signal), {header,events,inherited}=snapshot;
+    const eventDigest=await this.eventDigest(events,snapshot.eventState,signal);
     this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
     const old=this.store.session(id), sideQuestion=header.origin==='subagent'&&Boolean(btwDescriptor(events,inherited)), scope=await this.safeScope({...header,id},sideQuestion,signal);
     this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
@@ -235,7 +276,7 @@ export class DreamSources {
     }
     // Generation identity is immutable metadata, not file mtime or a representation carrier.
     const generation=digest([header.id,header.version,header.createdAt,header.parentSession,inherited]);
-    const value={id,title,...scope,available:true,activity:activity||Number(header.createdAt)||0,createdAt:Number(header.createdAt)||0,cwd:header.cwd||'',parentSession:header.parentSession,generation,inherited,eventCount:events.length,eventDigest:digest(events)};
+    const value={id,title,...scope,available:true,activity:activity||Number(header.createdAt)||0,createdAt:Number(header.createdAt)||0,cwd:header.cwd||'',parentSession:header.parentSession,generation,inherited,eventCount:events.length,eventDigest};
     this.store.saveSession(value);return {...snapshot,metadata:value};
   }
   async manifest(id,{signal,deepAgeMs,cut,before=Infinity}) {

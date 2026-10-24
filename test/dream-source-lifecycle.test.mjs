@@ -197,3 +197,81 @@ for (const kind of ['project', 'global']) test(`withdrawing the last ${kind} sou
   await service.enqueue(kind, target, { session: {} }); await service.drain();
   assert.equal(calls.length, 2, 'another invalidation is rebuilt once, never retried on every run');
 });
+
+function digestFixture(events, eventState = 'shared-frozen') {
+  let values = events, saves = 0, saved, memoryScope = 'project';
+  const store = { session: () => saved, saveSession(value) { saves++; saved = value; } };
+  const hub = { config: () => ({ memoryScope }), store: { peek() {} }, context: { store: { peek() {} } },
+    ctx: { sessionPersistence: { async open() { return {
+      header: { id: 'digest', version: 4, createdAt: 1, cwd: '/project' }, inheritedEventCount: 0,
+      async read() { return { events: values.slice(), eventState }; }, async close() {},
+    }; } } } };
+  return { sources: new DreamSources(hub, store), get saves() { return saves; }, get saved() { return saved; },
+    replace(next) { values = next; }, scope(value) { memoryScope = value; } };
+}
+const digestEvent = (seq, text) => Object.freeze({ seq, type: 'user/message', timestamp: seq + 10,
+  data: Object.freeze({ role: 'user', content: Object.freeze([Object.freeze({ type: 'text', text })]) }) });
+
+test('Dream inspection reuses the exact digest of an unchanged immutable native snapshot', async t => {
+  const { digest } = await import('../src/dream/core.mjs');
+  const events = Array.from({ length: 120 }, (_, i) => digestEvent(i, `原文 ${i} 😀\ud800\u0000 " \\`));
+  const f = digestFixture(events); t.after(() => f.sources.close());
+  assert.equal((await f.sources.inspect('digest')).metadata.eventDigest, digest(events));
+  const stringify = JSON.stringify;
+  let sourceSerializations = 0;
+  t.mock.method(JSON, 'stringify', function (value, ...args) {
+    if (events.includes(value) || Array.isArray(value) && value.some(event => events.includes(event))) sourceSerializations++;
+    return stringify(value, ...args);
+  });
+  const result = await f.sources.inspect('digest');
+  assert.equal(sourceSerializations, 0, 'unchanged native event graphs must not be serialized again');
+  assert.equal(result.metadata.eventDigest, f.saved.eventDigest);
+  assert.equal(f.saves, 2, 'scope and source metadata still refresh on every inspection');
+});
+
+test('Dream digest detects middle replacement, reordering, append, new identities and detached mutation', async t => {
+  const { digest } = await import('../src/dream/core.mjs');
+  const first = [digestEvent(0, '头'), digestEvent(1, '中'), digestEvent(2, '尾')];
+  const f = digestFixture(first); t.after(() => f.sources.close());
+  for (const events of [first, [first[0], digestEvent(1, '改变'), first[2]], [first[2], first[1], first[0]],
+    [...first, digestEvent(3, '追加')], first.map(event => structuredClone(event)), [], first]) {
+    f.replace(events);
+    assert.equal((await f.sources.inspect('digest')).metadata.eventDigest, digest(events));
+  }
+  for (const eventState of ['detached', 'unknown', null]) {
+    const mutable = structuredClone(first), detached = digestFixture(mutable, eventState);
+    t.after(() => detached.sources.close());
+    assert.equal((await detached.sources.inspect('digest')).metadata.eventDigest, digest(mutable));
+    mutable[1].data.content[0].text = '同一对象的新内容';
+    assert.equal((await detached.sources.inspect('digest')).metadata.eventDigest, digest(mutable));
+  }
+});
+
+test('Dream digest cancellation publishes no partial metadata and can retry', async t => {
+  const { digest } = await import('../src/dream/core.mjs');
+  const events = [digestEvent(0, 'a'), digestEvent(1, 'b'), digestEvent(2, 'c')], f = digestFixture(events);
+  t.after(() => f.sources.close());
+  let now = 0; t.mock.method(performance, 'now', () => now += 10);
+  const controller = new AbortController();
+  setImmediate(() => controller.abort(Error('cancel digest')));
+  await assert.rejects(f.sources.inspect('digest', controller.signal), /cancel digest/);
+  assert.equal(f.saves, 0); assert.equal(f.sources.pending.size, 0);
+  assert.equal((await f.sources.inspect('digest')).metadata.eventDigest, digest(events));
+  assert.equal(f.saves, 1);
+  setImmediate(() => f.sources.close());
+  f.replace([...events, digestEvent(3, 'new')]);
+  await assert.rejects(f.sources.inspect('digest'), /退出/);
+  await f.sources.close(); assert.equal(f.sources.pending.size, 0); assert.equal(f.saves, 1);
+});
+
+test('Dream scope is refreshed after digest yields and failed serialization can recover', async t => {
+  const events = [digestEvent(0, 'a'), digestEvent(1, 'b')], f = digestFixture(events);
+  t.after(() => f.sources.close());
+  let now = 0; t.mock.method(performance, 'now', () => now += 10);
+  setImmediate(() => f.scope('session'));
+  assert.equal((await f.sources.inspect('digest')).metadata.shared, false);
+  const bad = { seq: 0, type: 'user/message', data: {} }; bad.data.self = bad;
+  f.replace([bad]); await assert.rejects(f.sources.inspect('digest'), /circular/i);
+  assert.equal(f.saves, 1); assert.equal(f.sources.pending.size, 0);
+  f.replace(events); assert.equal((await f.sources.inspect('digest')).metadata.eventCount, 2);
+});
