@@ -7,6 +7,7 @@ import { gzipSync, gunzipSync } from 'node:zlib';
 import test from 'node:test';
 import { buildExtensionZip } from '../vendor/opencu/src/extension/distribution.mjs';
 import { deliveryBaseline, verifyDeliveryArchive } from '../scripts/check-opencu-delivery.mjs';
+import { hostTarget } from '../scripts/host-targets.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const additions = ['lib/extension.zip', 'src/extension/distribution.json', 'src/extension/distribution.mjs'];
@@ -48,7 +49,7 @@ test('final OMD tgz matches the committed OpenCU manifest and static ZIP distrib
   const pkg = JSON.parse(await readFile(join(root, 'vendor/opencu/package.json')));
   assert.equal(manifest.name, pkg.name); assert.equal(manifest.version, pkg.version);
   assert.equal(manifest.hostVersion, pkg.opencu.host);
-  assert.equal(pkg.opencu.sourceCommit, '687f282e8625c6b8d11ff58211a90524be2e4317', 'DSH source identity is not the OpenCU source commit');
+  assert.equal(pkg.opencu.sourceCommit, hostTarget(manifest.hostVersion).commit, 'DSH source identity must match the exact host, not the OpenCU source commit');
   for (const name of additions) assert.equal(hash(await readFile(join(root, 'vendor/opencu', name))), manifest.files[name]);
   const zip = await readFile(join(root, 'vendor/opencu/lib/extension.zip'));
   assert.equal(hash(zip), manifest.files['lib/extension.zip']);
