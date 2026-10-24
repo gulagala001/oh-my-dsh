@@ -2,23 +2,25 @@
 
 **安装步骤：[复制给 AI 安装](install.md#ai) · [在“添加插件”中安装](install.md#gui) · [English guide](install_EN.md)**
 
-OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表为 OMD 0.100.0 正式安装入口；选择与你正在运行的 DSH **完整版本**相同的一行。OMD includes OpenCU. The URLs below provide the formal 0.100.0 release. Match the complete DSH version.
+OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 0.100.2 的 rc.3 正式安装入口，旧宿主沿用原固定版本；选择与你正在运行的 DSH **完整版本**相同的一行。OMD includes OpenCU. The newest build is 0.100.2 for rc.3; older hosts retain their fixed releases. Match the complete DSH version.
 
 | DSH 宿主 / Host | OMD 插件 / Plugin | 可粘贴安装的包 / Package |
 | --- | --- | --- |
+| 0.2.1-rc.3 | 0.2.1-rc.3.omd.0.100.2 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.100.2/oh-my-dsh-0.2.1-rc.3.omd.0.100.2.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.100.2) |
 | 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100.0/oh-my-dsh-0.2.1-rc.2.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0) |
 | 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.100.0/oh-my-dsh-0.2.1-rc.1.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0) |
 
-## OMD 0.100.0
+## OMD 0.100.2
 
-[中文更新说明](release-0.100.0.md#zh-01000) · [English release notes](release-0.100.0.md#en-01000) · [dsh-ops 使用指南](dsh-ops.md)
+[中文更新说明](release-0.100.2.md#zh-01002) · [English release notes](release-0.100.2.md#en-01002) · [dsh-ops 使用指南](dsh-ops.md)
 
 ## 当前公开版本 / Current public version
 
-当前正式版本为 **0.100.0**；此前 0.19.0 草稿不作为安装入口。Current formal version: **0.100.0**; the earlier 0.19.0 drafts are not installation targets.
+当前 rc.3 正式版本为 **0.100.2**；此前 0.19.0 草稿不作为安装入口。Current rc.3 formal version: **0.100.2**; the earlier 0.19.0 drafts are not installation targets.
 
 | 完整宿主 / Exact host | 公开安装入口 / Public installation |
 | --- | --- |
+| DSH 0.2.1-rc.3 | [OMD 0.100.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.100.2) |
 | DSH 0.2.1-rc.2 | [OMD 0.100.0](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0) |
 | DSH 0.2.1-rc.1 | [OMD 0.100.0](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0) |
 

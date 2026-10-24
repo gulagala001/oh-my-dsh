@@ -100,11 +100,11 @@ export async function apply(ctx, config) {
   ctx.effect(() => () => hub.codegraph.dispose());
   const nativeVersionService = createVersionService();
   hub.omaaInstalledVersion = nativeVersionService.snapshot().currentVersion;
-  const omaaUpdates = () => ctx.get('omaa')?.updates;
-  let omaaInactive = false;
-  const originalVersionSnapshot = () => omaaInactive ? {
+  const omaaUpdates = () => ctx.get('omaaUpdates') ?? ctx.get('omaa')?.updates;
+  let omaaUnavailable = '';
+  const originalVersionSnapshot = () => omaaUnavailable ? {
     ...nativeVersionService.snapshot(), status: 'unknown', latestVersion: null, releases: [],
-    error: 'OMAA 已安装但未启用，请启用它以检查配对更新；卸载 OMAA 后可恢复原 OMD 更新。',
+    error: omaaUnavailable,
   } : nativeVersionService.snapshot();
   const sharedVersionSnapshot = shared => {
     if (!shared) return originalVersionSnapshot();
@@ -119,9 +119,12 @@ export async function apply(ctx, config) {
     snapshot: () => sharedVersionSnapshot(omaaUpdates()?.omdVersionSnapshot()),
     async check(force) {
       const shared = omaaUpdates();
-      if (shared) return sharedVersionSnapshot(await shared.omdVersionCheck(force));
-      omaaInactive = Boolean((await ctx.get('pluginManager')?.listBundles())?.some(row => row.name === 'oh-my-agents-above-all' && row.installed));
-      return omaaInactive ? originalVersionSnapshot() : nativeVersionService.check(force);
+      if (shared) { omaaUnavailable = ''; return sharedVersionSnapshot(await shared.omdVersionCheck(force)); }
+      const installed = (await ctx.get('pluginManager')?.listBundles())?.find(row => row.name === 'oh-my-agents-above-all' && row.installed);
+      omaaUnavailable = !installed ? '' : installed.enabled
+        ? 'OMAA 已启用，但更新服务暂不可用。请稍后重试；若仍失败，请检查插件加载状态。'
+        : 'OMAA 当前已停用，配对更新暂不可用。启用后可检查更新；当前已安装版本不受影响。';
+      return omaaUnavailable ? originalVersionSnapshot() : nativeVersionService.check(force);
     },
     dispose: () => nativeVersionService.dispose(),
   };

@@ -30,3 +30,5 @@
 - 尚未发布的修复记入更新日志“未发布”部分；来源与许可见[第三方声明](THIRD_PARTY_NOTICES.md)。
 
 文档结构、语言对应和页面变更流程见[文档维护规范](docs/documentation.md)，检查命令：`npm run docs:check`。
+
+发行上传前执行 `node scripts/check-release-assets.mjs --dir <待发目录>`，核对当前包的实际 SHA256、`metadata.json`（schema、包名、完整版本、hostVersion、file／filename、sourceCommit）与 `SHA256SUMS`。OMAA 还需同内容的 `<包名>.tgz.metadata.json` 和 `<包名>.tgz.sha256`；当前发行的 CI 使用同一契约检查，历史附件保留。
