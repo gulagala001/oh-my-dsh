@@ -4,7 +4,7 @@
   "source": "../opencu",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.3",
-  "archiveSha256": "80e5f33d18a56ab90f51907d5774ea776d82572c9f4751d5f99b742ab76c84bd",
+  "archiveSha256": "854df438ed8c92263ce2bc9a82ded7182ee3b5d5296630cdb6949d6cea7d8dc4",
   "files": {
     "CHANGELOG.md": "8e98e23149075c799554e8b58e0e724f11d4b4607f995278406e249ad58cc25d",
     "DEVELOPMENT.md": "28b8dc1f2cc04fa9313f3c522b53a92dea13f8eebb56699a7bb3172a7d817ab5",
@@ -78,7 +78,7 @@
     "host/downloads.ts": "6bb0d98773713a5a374c220b97b3ee699980a0430bd2c12e629963d321cdf660",
     "host/extensions.ts": "28ab3f4b799fb3deebbcbe5e51c327844228fda2c807283a53eaf179c4c01ad5",
     "host/files.ts": "77dd05a32d41dd591377a2b7f1c150c7a9f0ad34b11a3429e975caf05cac2700",
-    "host/guest-adapter.ts": "a52bf1ca89af2e835f0cf54ecb47ae2324322892bd34ef1ea79b10b79394af73",
+    "host/guest-adapter.ts": "dc05160c86652a1cf3656763d3eb206a935b822882386c9bb63cd9eefba6f960",
     "host/ipc-result.ts": "fff4e540ed0eac016b8469cfdcc7f1e19a522d2f390d71bce7650305865e9f50",
     "host/page-image.ts": "8dfac65bbc5da9f4b3f5ccebd627a4561d0814e87c720ec33d19f384542a2d91",
     "host/permissions.ts": "9390d73ecf7d14bb8464f320ed0cb06b86d9c8d38a57267739c09da757088ee7",
@@ -95,8 +95,8 @@
     "host/tab-close-guards.ts": "1725c5929921fac9108116203e61bb4e8a4e3c8f1bde5b7fd341a9088cfc4289",
     "host/tool-visibility.mjs": "42229e426bba736a0a876a8ef84cb84995c2b0fa2afdbe7f707e73271645ec7b",
     "lib/browser-surface.html": "e59df9f6a09e34ab6e41952a0d8f7d63de236f8857002326c92e493e1afcc716",
-    "lib/browser-surface.js": "8644971e279ec14e39f8632a7bc923f8d1e4ce6695a12e346614fddc2426f3e2",
-    "lib/client.js": "633e7bb6fcdace3f962e9c4bb3d8beeb13c91b785782f89a383d2aef18791526",
+    "lib/browser-surface.js": "862cea70dc7a10eaa9f428044f0d8ce63221fc0885865a38b2c79c35885bf7e0",
+    "lib/client.js": "63f956174ddbda001615effa5b4c1bc07f4b2ee664b373111ad0504d252da923",
     "lib/cursor.html": "4cb6dc405d432fb54a6b21ea18a5ef6617f1d3793e40928b0705b508f8736261",
     "lib/extension.zip": "3451511824006b82132739e48c01a725264c3dc67005f6eda83b299c4bca01b1",
     "lib/host-build.json": "0c9ed4b966c49938abfea7a021f6702c5f1bc98f294fef06b446799f4af1e80c",
@@ -413,7 +413,7 @@
     "lib/rea-assets/lua-ec4138ed9dd4.js": "076f861a8bf3292124ba64c8c0cb11e8780dfe13ef99413173ca82fd38d23d4f",
     "lib/rea-assets/luau-af32ac672287.js": "ed70e55bfc3f12337292553c90d236da6859fb47c1553be3e983647fb19dd64c",
     "lib/rea-assets/make-9a743bf89d5a.js": "b89fcc49263fc224bb981fc85c0bf879b766ec5df0285b445641cdfbd1378558",
-    "lib/rea-assets/manifest.json": "b84845878c3529a5a5b9fcc01555743b8a57ddc1e6054750d57e55a84451c734",
+    "lib/rea-assets/manifest.json": "138c96ba6cdf070943f59c9291334f98ee810c52a0f15f1191a4c5f57cab1a8c",
     "lib/rea-assets/markdown-1c15c2fc01dc.js": "c89ab0c9753185eec2faedae275ef59c59a6c40e430a9386f287250c8b485fe4",
     "lib/rea-assets/markdown-d7043fbbade8.js": "c6a081441a09aa7924d9a432fa4c5b7099f15472434d61786d580afbf4ae5a63",
     "lib/rea-assets/marko-4aec0bbd7e63.js": "e768995a4966c4bebebc4ffb7c7a1c2f835b9f3f331b4889c54a3437d4f917b9",
@@ -478,7 +478,7 @@
     "lib/rea-assets/opencu-chunk-VCGSX5P7.js": "5f8abae1415d8388e57b569475c463e52edf1b0c08092862b93102bf31d8aa06",
     "lib/rea-assets/opencu-chunk-XAFNVZ4W.js": "b4828d2749ed29e6c53d9f995b1f2bf036f2247cb5a6602e0220f750738b2356",
     "lib/rea-assets/opencu-chunk-ZB663FZI.js": "201746f39c89980389469770d9c44e83a19b36bcc669dd5d1dc805bf9246b55a",
-    "lib/rea-assets/opencu-client-TLIEQBT3.js": "43d2a80645c3d22e36b8dea8a96499448a597fbbdac33708bb92dd3993fa1966",
+    "lib/rea-assets/opencu-client-QNTXEOO6.js": "f1ee1073e5497f3f9cdf1da75aac5e87a60e51e086246a4d554d0d0c59ece9a7",
     "lib/rea-assets/openscad-8dbac786f981.js": "12626c2f8d3754456f7e22da8b679a6beca86265bfefa4b9ed043092b2b80780",
     "lib/rea-assets/ordinal-9b87408e3342.js": "e55fe9782b7d678f376d9593d5d353162752484123617ea555712f64cb6786f4",
     "lib/rea-assets/packet-7NZHBO7P-a556b9452792.js": "c6f2772b807f518fa25be78e1f498c8234c5e1e51b256b3ced062d94a23e8835",
@@ -776,5 +776,5 @@
     "src/runtime.mjs": "be6481fb738d40420f96cba8be1ab45b2b6566e721d053810464455050300a86",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
   },
-  "sourceCommit": "5ab4d41af0dae72a3809b30bf576c3448fe27695"
+  "sourceCommit": "7accdddb305c08782dd9be4cb9e2ad127deffbdc"
 }

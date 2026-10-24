@@ -18,6 +18,8 @@ export interface OpenCUGuestState {
   initialNavigation?: ReturnType<typeof resolveOpenCUNavigation>
   navigationReady?: Promise<void>
   releasePreparedAttach?: () => void
+  leaseId?: string
+  nativeGuestId?: number
 }
 export interface OpenCUGuestLease {
   readonly owner: WebContents
@@ -32,6 +34,12 @@ export class OpenCUGuests {
   private readonly preparedGuests = new WeakMap<WebContents, string>()
   private readonly preparingOwners = new Set<WebContents>()
   private readonly closedGuests = new WeakMap<WebContents, Map<string, { guestId: number; guest?: WebContents; work?: Promise<object>; receipt?: object }>>()
+  private recordClosed(owner: WebContents, id: string, guest: WebContents, guestId: number): void {
+    if (!guest.isDestroyed()) throw new Error('The original guest is not confirmed destroyed')
+    const entries = this.closedGuests.get(owner) ?? new Map()
+    this.closedGuests.set(owner, entries)
+    if (!entries.has(id)) entries.set(id, { guestId, guest })
+  }
   private settleClosed(owner: WebContents, id: string): Promise<object> {
     const entries = this.closedGuests.get(owner)!, entry = entries.get(id)!
     if (entry.receipt) return Promise.resolve(entry.receipt)
@@ -69,7 +77,32 @@ export class OpenCUGuests {
   }
   operate(owner: WebContents, lease: OpenCUGuestLease | undefined, capability: string, operation: unknown, args: unknown, allowedNavigation: (url: string) => boolean): Promise<unknown> {
     const preparing = capability === 'automation' && operation === 'prepareNavigation'
-    const current = this.owned(owner, lease, !preparing && !['downloads', 'profile'].includes(capability))
+    const checkingClosed = capability === 'automation' && operation === 'closedState'
+    const current = this.owned(owner, lease, !checkingClosed && !preparing && !['downloads', 'profile'].includes(capability))
+    if (checkingClosed) {
+      if (!args || typeof args !== 'object' || Array.isArray(args) || ('waitForClose' in args && typeof args.waitForClose !== 'boolean')) throw new Error('Invalid closed-state arguments')
+      const guest = current.guest, id = current.openCU.leaseId, guestId = current.openCU.nativeGuestId
+      if (!current.attached || !guest || !id || guestId === undefined) throw new Error('The original guest attachment is unavailable')
+      const closed = (): Promise<object> => { this.recordClosed(owner, id, guest, guestId); return this.settleClosed(owner, id) }
+      if (guest.isDestroyed()) return closed()
+      if (guest.session !== this.browserSession) throw new Error('Invalid OpenCU browser lease or owner')
+      if (!('waitForClose' in args) || !args.waitForClose) return Promise.resolve({ closed: false })
+      return new Promise<void>((resolve, reject) => {
+        let settled = false
+        const finish = (error?: Error): void => {
+          if (settled) return
+          settled = true
+          clearTimeout(timer); guest.off('destroyed', destroyed); owner.off('destroyed', ownerDestroyed)
+          error ? reject(error) : resolve()
+        }
+        const destroyed = (): void => finish()
+        const ownerDestroyed = (): void => finish(Object.assign(new Error('The original guest owner was destroyed before closure confirmation'), { code: 'RELEASE_FAILED' }))
+        const timer = setTimeout(() => finish(Object.assign(new Error('The original guest destruction is not confirmed'), { code: 'RELEASE_FAILED' })), 5000)
+        guest.once('destroyed', destroyed); owner.once('destroyed', ownerDestroyed)
+        if (owner.isDestroyed()) ownerDestroyed()
+        else if (guest.isDestroyed()) destroyed()
+      }).then(closed)
+    }
     if (preparing) {
       if (current.attached || current.openCU.initialNavigation) throw new Error('Navigation must be prepared before attaching a new guest')
       current.openCU.initialNavigation = resolveOpenCUNavigation(args, url => allowedNavigation(url) || URL.canParse(url) && this.allowsExtension(this.browserSession!, new URL(url)))
@@ -82,7 +115,6 @@ export class OpenCUGuests {
     if (capability === 'downloads') return openCUDownloadOperation(current.openCU, operation, args)
     if (capability === 'profile') return operateOpenCUProfile(this.browserSession!, operation, args)
     const guest = current.guest!
-    if (capability === 'automation' && operation === 'closedState') return Promise.resolve({ closed: false })
     if (capability === 'permissions') return this.permissions.operate(owner, guest, operation, args)
     if (capability === 'automation') return openCUAutomation(guest, operation, args, allowedNavigation)
     if (capability === 'extensions') return operateOpenCUExtensions(owner, guest, operation, args)
@@ -124,11 +156,11 @@ export class OpenCUGuests {
     if (!lease.openCU) return
     this.owned(lease.owner, lease, true)
     if (id) {
-      const owner = lease.owner, entries = this.closedGuests.get(owner) ?? new Map()
-      this.closedGuests.set(owner, entries)
-      const guestId = guest.id
+      const owner = lease.owner
+      lease.openCU.leaseId = id
+      const guestId = lease.openCU.nativeGuestId = guest.id
       guest.once('destroyed', () => {
-        entries.set(id, { guestId, guest })
+        this.recordClosed(owner, id, guest, guestId)
         void this.settleClosed(owner, id).catch(error => console.error('Destroyed OpenCU guest input remains pending', error))
       })
     }
