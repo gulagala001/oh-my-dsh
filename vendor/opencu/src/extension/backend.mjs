@@ -3,7 +3,7 @@ import { mkdir, readFile, appendFile, writeFile, stat, rename, open, unlink } fr
 import { join, resolve, isAbsolute } from 'node:path';
 import { ExtensionError, EXTENSION_PATH, PROTOCOL_VERSION, parseTarget, targetId, normalizeAction } from './protocol.mjs';
 import { createDeliveryStore } from '../browser/deliveries.mjs';
-import { readOperation } from '../protocol.mjs';
+import { inputReleased, readOperation } from '../protocol.mjs';
 
 const loopback = address => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address);
 const failure = (code, message) => new ExtensionError(code, message);
@@ -107,7 +107,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     session.waiter?.({ commands: [], disconnected: true }); session.waiter = null;
   }
   const sweep = setInterval(() => {
-    for (const session of sessions.values()) if (!closing && !session.releaseError && Date.now() - session.lastSeen > 25000) expire(session, 'Extension heartbeat expired; reconnect and select again.');
+    for (const session of sessions.values()) if (!closing && !session.releaseError && !session.targetReleaseErrors?.size && Date.now() - session.lastSeen > 25000) expire(session, 'Extension heartbeat expired; reconnect and select again.');
   }, 5000);
   sweep.unref();
 
@@ -178,9 +178,10 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     if (!session) throw failure('STALE_TARGET', 'Browser connection changed; listTargets() and select again.');
     return { session, identity };
   }
-  function cancelControlRequests(session, error) {
+  function cancelControlRequests(session, error, scope) {
     for (const [id, task] of pending) {
       if (session && task.session !== session || ['release', 'disconnect'].includes(task.method)) continue;
+      if (scope !== undefined && task.scope !== scope) continue;
       clearTimeout(task.timer); pending.delete(id);
       task.session.queue = task.session.queue.filter(command => command.id !== id);
       task.reject(error);
@@ -189,22 +190,26 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
   function request(session, method, params = {}, timeout = requestTimeoutMs, monitoring = false) {
     if (closed || !sessions.has(session.sessionId)) return Promise.reject(failure('DISCONNECTED', 'Extension is disconnected.'));
     if (closing && !['release', 'disconnect'].includes(method)) return Promise.reject(failure('CLOSING', 'Extension backend is shutting down; retry close before using control.'));
-    if (session.releaseError && !['release', 'disconnect'].includes(method)) return Promise.reject(session.releaseError);
+    const scope = params.identity ? String(params.identity.tabId) : undefined;
+    const blocked = session.releaseError ?? session.targetReleaseErrors?.get(scope);
+    if (blocked && !['release', 'disconnect'].includes(method)) return Promise.reject(blocked);
     const id = randomUUID();
     return new Promise((resolveResult, reject) => {
       const timer = setTimeout(() => {
         pending.delete(id); session.queue = session.queue.filter(c => c.id !== id);
         if (monitoring) { reject(failure('PRESENTATION_TIMEOUT', `${method} timed out; monitoring is unavailable.`)); return; }
         if (['release', 'disconnect'].includes(method)) {
-          session.releaseError = new ExtensionError('RELEASE_FAILED', `${method} timed out; input release remains unconfirmed. Retry release or disconnect.`, { method });
-          cancelControlRequests(session, session.releaseError);
-          reject(session.releaseError); return;
+          const error = new ExtensionError('RELEASE_FAILED', `${method} timed out; input release remains unconfirmed. Retry release or disconnect.`, { method });
+          if (scope === undefined) session.releaseError = error;
+          else (session.targetReleaseErrors ??= new Map()).set(scope,error);
+          cancelControlRequests(session,error,scope);
+          reject(error); return;
         }
         // Never replay an input after an unknown outcome. Fail closed and let the extension watchdog release input.
         expire(session, 'Command timed out; outcome is unknown. Reconnect explicitly before retrying.');
         reject(failure('COMMAND_TIMEOUT', `${method} timed out; action outcome may be unknown.`));
       }, timeout);
-      pending.set(id, { session, method, fullRelease: !params.identity, timer, resolve: resolveResult, reject });
+      pending.set(id, { session, method, scope, fullRelease: !params.identity, timer, resolve: resolveResult, reject });
       session.queue.push({ id, method, params, monitoring, epoch: session.epoch, deadline: Date.now() + timeout });
       session.waiter?.({ commands: session.queue.splice(0) }); session.waiter = null;
     });
@@ -283,19 +288,26 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         pending.delete(value.id); clearTimeout(task.timer);
         const releasing = ['release', 'disconnect'].includes(task.method);
         let error = value.ok === true ? null : new ExtensionError(value.error?.code || 'EXTENSION_FAILURE', value.error?.message || 'Extension command failed.', value.error?.details);
-        if (!error && releasing && (value.result?.released !== true || value.result.failures?.length || value.result.errors?.length)) error = new ExtensionError('RELEASE_FAILED', 'Browser input release was not acknowledged.', value.result);
+        if (!error && releasing && !inputReleased(value.result)) error = new ExtensionError('RELEASE_FAILED', 'Browser input release was not acknowledged.', value.result);
         if (error) {
-          if (releasing) { session.releaseError = error; cancelControlRequests(session, error); }
+          if (releasing) {
+            if (task.fullRelease) session.releaseError = error;
+            else (session.targetReleaseErrors ??= new Map()).set(task.scope,error);
+            cancelControlRequests(session,error,task.scope);
+          }
           task.reject(error);
         } else {
-          if (releasing && task.fullRelease) delete session.releaseError;
+          if (releasing) {
+            if (task.fullRelease) {delete session.releaseError;session.targetReleaseErrors?.clear();}
+            else session.targetReleaseErrors?.delete(task.scope);
+          }
           task.resolve(value.result);
         }
         send(res, 200, { accepted: true }, origin); return;
       }
       if (routeName === 'disconnect') {
         await persistEvents(session, value.events);
-        if (value.released === true && !value.failures?.length && !value.errors?.length) await retire(session);
+        if (inputReleased(value)) await retire(session);
         expire(session, 'User disconnected extension.'); send(res, 200, { disconnected: true }, origin); return;
       }
       throw failure('NOT_FOUND', 'Unknown extension protocol route.');

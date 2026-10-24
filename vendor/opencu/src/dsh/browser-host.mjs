@@ -121,6 +121,7 @@ export function createBrowserHost() {
       // Keep the connection that owns selection and unresolved input even after
       // it disappears from inventory. A replacement connection is not a receipt.
       const binding = previous ?? {target: json(target), client, needsRelease: false};
+      const owedBefore = binding.needsRelease;
       if (!reading) { binding.needsRelease = true; bindings.set(target.id, binding); }
       let interruption;
       const abort = () => { interruption ??= request(client, 'release', { target }).catch(error => ({ released: false, error: error.message })); };
@@ -129,8 +130,13 @@ export function createBrowserHost() {
         signal?.throwIfAborted();
         const result = await request(client, 'act', { target, action });
         signal?.throwIfAborted();
-        if (result?.closedTargetId === target.id) bindings.delete(target.id);
+        if (inputReleased(result?.release)) binding.needsRelease = false;
+        if (result?.closedTargetId === target.id) retire(target);
         return result;
+      } catch (error) {
+        if (error.details?.inputDispatched === false && error.details?.release === undefined) binding.needsRelease = owedBefore;
+        if (inputReleased(error.details?.release)) binding.needsRelease = false;
+        throw error;
       } finally {
         signal?.removeEventListener('abort', abort);
         if (interruption) {
@@ -141,29 +147,47 @@ export function createBrowserHost() {
       }
     },
     async releaseTarget(target, {dismissDialogs = false} = {}) {
-      const binding = bindings.get(target.id), client = binding?.client ?? clientFor(target);
+      let binding = bindings.get(target.id);
+      if (binding && !sameIdentity(binding.target.identity,target.identity)) fail('TARGET_IDENTITY_CHANGED','Release refers to another sidebar guest');
+      const present = liveClients().some(client => client.targets.some(current => current.id === target.id && sameIdentity(current.identity,target.identity)));
+      if (sameIdentity(retired.get(target.id)?.identity,target.identity) || target.cold && target.releaseAcknowledged === true && !binding && !present)
+        return {released:true,retired:true};
+      // A reconnect can release only a guest with the same complete occurrence.
+      const client = binding?.client && clients.get(binding.client.id) === binding.client ? binding.client : clientFor(target);
+      if (binding?.client && binding.client !== client && !client.targets.some(current => current.id === target.id && sameIdentity(current.identity,target.identity)))
+        fail('STALE_TARGET','The original sidebar guest has not reconnected');
+      if (!binding) {binding={target:json(target),client,needsRelease:true};bindings.set(target.id,binding);}
+      binding.needsRelease = true;
       const result = await request(client, 'release', {target, dismissDialogs});
       if (inputReleased(result) && binding) binding.needsRelease = false;
       return result;
     },
     async release({ targets = [], dismissDialogs = true } = {}) {
-      const failures = [];
+      const failures = [], releasedTargetIds = [];
       const retiredTargetIds = targets.filter(target => sameIdentity(retired.get(target.id)?.identity, target.identity)
         || target.cold && target.releaseAcknowledged === true && !bindings.has(target.id)
           && !liveClients().some(client => client.targets.some(current => sameIdentity(current.identity, target.identity)))).map(target => target.id);
       for (const target of targets) if (target.cold && !retiredTargetIds.includes(target.id) && !bindings.has(target.id))
         bindings.set(target.id, {target: json(target), needsRelease: true});
-      await Promise.all(liveClients().map(async client => {
+      // A broken idle page must not poison release of other guests. Every
+      // dispatch is journalled in bindings before the renderer receives it.
+      await Promise.all([...bindings.values()].map(async binding => {
+        if (!binding.needsRelease) {
+          if (!liveClients().some(client => client.targets.some(target => target.id === binding.target.id && sameIdentity(target.identity,binding.target.identity)))) {
+            retire(binding.target);retiredTargetIds.push(binding.target.id);
+          } else releasedTargetIds.push(binding.target.id);
+          return;
+        }
         try {
-          const result = await request(client, 'release', { dismissDialogs });
-          if (!inputReleased(result)) { failures.push({rendererId: client.id, code: 'RELEASE_FAILED', result}); return; }
-          for (const binding of bindings.values()) if (binding.client === client || client.targets.some(target =>
-            target.id === binding.target.id && sameIdentity(target.identity, binding.target.identity))) binding.needsRelease = false;
-        } catch (error) { failures.push({rendererId: client.id, code: error.code, message: error.message}); }
+          const result = await backend.releaseTarget(binding.target,{dismissDialogs});
+          if (!inputReleased(result)) { failures.push({targetId:binding.target.id,code:'RELEASE_FAILED',result}); return; }
+          binding.needsRelease = false; releasedTargetIds.push(binding.target.id);
+        } catch (error) { failures.push({targetId:binding.target.id,code:error.code,message:error.message}); }
       }));
       for (const binding of bindings.values()) if (binding.needsRelease) failures.push({targetId: binding.target.id,
         code: 'STALE_TARGET', message: 'The original sidebar guest has not acknowledged input release', identity: binding.target.identity});
-      return { released: failures.length === 0, failures, retiredTargetIds };
+      for (const target of targets) if (!bindings.has(target.id) && !target.cold && !retiredTargetIds.includes(target.id)) releasedTargetIds.push(target.id);
+      return { released: failures.length === 0, failures, retiredTargetIds, releasedTargetIds:[...new Set(releasedTargetIds)] };
     },
     async confirmClosedTargets(targets) {
       for (const target of targets) {
@@ -172,7 +196,7 @@ export function createBrowserHost() {
         const binding = bindings.get(target.id);
         if (binding && !sameIdentity(binding.target.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Recovery refers to another sidebar guest');
       }
-      for (const target of targets) bindings.delete(target.id);
+      for (const target of targets) retire(target);
       return {released: true};
     },
     async close() {
@@ -244,8 +268,11 @@ export function createBrowserHost() {
       if (method === 'browser/disconnect' && (!client || args.connectionId !== client.connectionId)) {
         // A late receipt can retire only its own connection's obligations.
         // It cannot disconnect or release a replacement using the same renderer ID.
-        if (inputReleased(args)) for (const [id, binding] of bindings)
-          if (binding.target.identity.rendererId === args.rendererId && binding.client?.connectionId === args.connectionId) bindings.delete(id);
+        if (inputReleased(args)) for (const binding of bindings.values())
+          if (binding.target.identity.rendererId === args.rendererId && binding.client?.connectionId === args.connectionId) {
+            if (client?.targets.some(target => target.id === binding.target.id && sameIdentity(target.identity,binding.target.identity))) binding.needsRelease = false;
+            else retire(binding.target);
+          }
         return {ok: true, ignored: true};
       }
       if (!client) fail('BROWSER_HOST_DISCONNECTED', 'Reconnect the sidebar renderer');

@@ -28,10 +28,14 @@ export async function createController({dataDir, browser, native} = {}) {
   const userActivity = new Map();
   const observedActivity = new Map();
   const previews = new Map();
-  let mode = saved ? 'recovery_required' : 'active';
+  let explicitlyStopped = saved?.closed !== true && (saved?.explicitlyStopped === true || saved?.mode === 'stopped');
+  let mode = explicitlyStopped ? 'stopped' : saved ? 'recovery_required' : 'active';
   let activeTargetId = saved?.activeTargetId ?? null;
   let releasePending = saved?.releasePending ?? false;
   let releaseErrors = saved?.releaseErrors ?? [];
+  // Only an explicit, successful target recovery can enable independent browser
+  // input while historical obligations remain. Never restore this authority cold.
+  let recoveryIsolated = false;
   let closed = false;
   let closing;
   const closedBackends = new Set();
@@ -41,7 +45,7 @@ export async function createController({dataDir, browser, native} = {}) {
   let tail = Promise.resolve();
 
   function snapshot() {
-    return json({version: PROTOCOL_VERSION, mode, activeTargetId, releasePending, releaseErrors,
+    return json({version: PROTOCOL_VERSION, mode, activeTargetId, releasePending, releaseErrors, recoveryIsolated, explicitlyStopped,
       targets: [...selected.values()], userActivity: [...userActivity.values()], closed});
   }
   function forgetTarget(id) {
@@ -63,9 +67,9 @@ export async function createController({dataDir, browser, native} = {}) {
     if (mode === 'closing') fail('CONTROLLER_CLOSING', 'Controller is closing');
     if (mode === 'close_failed' || closedBackends.size) fail('CLOSE_FAILED', 'Retry close before using this controller');
   }
-  function controlAllowed() {
+  function controlAllowed(target) {
     alive();
-    if (mode !== 'active' || releasePending) fail('CONTROL_STOPPED', `Control is blocked (${mode})`);
+    if (mode !== 'active' || releasePending && (!recoveryIsolated || target?.backend !== 'browser')) fail('CONTROL_STOPPED', `Control is blocked (${mode})`);
   }
   function checkOperation(operationEpoch) {
     if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Operation interrupted by cancellation or shutdown');
@@ -101,11 +105,16 @@ export async function createController({dataDir, browser, native} = {}) {
     } finally { if (recovery) recoveryOperations.delete(recovery); }
   }
   async function releaseAll({ dismissDialogs = false } = {}) {
+    recoveryIsolated = false;
     const failures = [];
+    for (const target of selected.values()) if (!backends.has(target.backend) && !target.releaseAcknowledged)
+      failures.push({backend:target.backend,targetId:target.id,code:'BACKEND_UNAVAILABLE',message:'The original input backend is unavailable; release is unconfirmed',released:false});
     for (const [name, backend] of backends) {
       if (closedBackends.has(name)) continue;
       try {
         const result = await backend.release({targets: [...selected.values()].filter(target => target.backend === name).map(json), dismissDialogs});
+        const released = new Set(result?.releasedTargetIds ?? []);
+        for (const target of selected.values()) if (target.backend === name && (inputReleased(result) || released.has(target.id))) target.releaseAcknowledged = true;
         for (const id of result?.retiredTargetIds ?? []) {
           if (selected.get(id)?.backend !== name) continue;
           forgetTarget(id);
@@ -124,9 +133,76 @@ export async function createController({dataDir, browser, native} = {}) {
       persistenceError ? [...failures, {stage: 'persist-release', ...errorJSON(persistenceError)}] : failures);
     if (persistenceError) throw persistenceError;
   }
+  async function recoverBrowser(target) {
+    const backend = backends.get('browser');
+    if (typeof backend?.releaseTarget !== 'function') return releaseAll();
+    const operationEpoch = epoch;
+    // Native helpers share hardware input across applications. Browser isolation
+    // must never turn an unresolved native key/button into permission to continue.
+    const native = backends.get('native');
+    if (!native && (releaseErrors.some(item => item.backend === 'native') || [...selected.values()].some(item => item.backend === 'native' && !item.releaseAcknowledged)))
+      fail('RELEASE_FAILED','The native backend is unavailable and its original hardware input release is unconfirmed');
+    if (native) {
+      let result;
+      try {
+        result = await native.release({targets:[...selected.values()].filter(t => t.backend === 'native').map(json),dismissDialogs:false});
+        checkOperation(operationEpoch);
+        if (!inputReleased(result)) fail('RELEASE_FAILED','Native input release remains unconfirmed',result);
+      } catch (error) {
+        if (operationEpoch === epoch) {
+          block('release_failed');
+          releaseErrors = [...releaseErrors.filter(item => item.backend !== 'native'),{backend:'native',...errorJSON(error),released:false}];
+          await persist();
+        }
+        throw error;
+      }
+      for (const item of selected.values()) if (item.backend === 'native') item.releaseAcknowledged = true;
+      releaseErrors = releaseErrors.filter(item => item.backend !== 'native');
+    }
+    if (target) {
+      target.verified = false;
+      let result;
+      try {
+        result = await backend.releaseTarget(json(target),{dismissDialogs:false});
+        checkOperation(operationEpoch);
+        if (!inputReleased(result)) fail('RELEASE_FAILED','This browser target has not acknowledged input release',result);
+      } catch (error) {
+        if (operationEpoch === epoch) {
+          target.releaseAcknowledged = false; releasePending = true;
+          releaseErrors = [...releaseErrors.filter(item => item.targetId !== target.id),{backend:'browser',targetId:target.id,...errorJSON(error),released:false}];
+          await persist();
+        }
+        throw error;
+      }
+      if (result.retired === true) { forgetTarget(target.id); await persist(); fail('TARGET_NOT_FOUND','The original browser target is closed; discover a live target'); }
+      target.releaseAcknowledged = true;
+    }
+    // Keep unconfirmed legacy targets visible and unverified, without asking
+    // unrelated renderers/profiles to recover before this target can be used.
+    const acknowledged = new Set([...selected.values()].filter(t => t.releaseAcknowledged).map(t => t.id));
+    const remaining = item => {
+      if (item.targetId && acknowledged.has(item.targetId)) return null;
+      const value = {...item};
+      if (Array.isArray(item.failures) && item.failures.length) {
+        value.failures = item.failures.map(remaining).filter(Boolean);
+        if (!value.failures.length) return null;
+      }
+      if (item.result) { value.result = remaining(item.result); if (!value.result) return null; }
+      return value;
+    };
+    releaseErrors = releaseErrors.map(remaining).filter(Boolean);
+    const pending = [...selected.values()].filter(item => item.backend === 'browser' && !item.releaseAcknowledged);
+    if (pending.length && !releaseErrors.length) releaseErrors = [{backend:'browser',released:false,
+      failures:pending.map(item => ({targetId:item.id,code:'STALE_TARGET',message:'This saved browser target still requires its own release receipt'}))}];
+    releasePending = releaseErrors.length > 0;
+    recoveryIsolated = true;
+    await persist(); checkOperation(operationEpoch);
+  }
   function block(nextMode) {
     alive();
     mode = nextMode;
+    if (nextMode === 'stopped') explicitlyStopped = true;
+    recoveryIsolated = false;
     releasePending = true;
     epoch++;
     aborter.abort();
@@ -175,13 +251,13 @@ export async function createController({dataDir, browser, native} = {}) {
       alive();
       // Recover cold state only for an explicit new tab after all prior release
       // obligations are acknowledged. An explicit stop remains stopped.
-      if (mode === 'recovery_required' && request.backend !== 'native') {
+      if (!explicitlyStopped && ['recovery_required','faulted','release_failed'].includes(mode) && request.backend !== 'native') {
         const operationEpoch = epoch, {browsers} = await inventory();
         if (!request.browserId || browsers.filter(item => item.id === request.browserId).length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected browser ID');
-        await releaseAll(); checkOperation(operationEpoch);
+        await recoverBrowser(); checkOperation(operationEpoch);
         aborter = new AbortController(); mode = 'active'; await persist();
       }
-      controlAllowed();
+      controlAllowed({backend:request.backend === 'native' ? 'native' : 'browser'});
       if (request.backend==='native') {
         const operationEpoch=epoch, backend=backends.get('native');
         if (request.launch!==true || ['id','targetId','identity','pid','windowId'].some(key=>request[key]!==undefined)) fail('INVALID_TARGET','Native launch requires a fresh app path or bundleId and launch:true');
@@ -216,7 +292,7 @@ export async function createController({dataDir, browser, native} = {}) {
         if (current.id !== target.id || current.browserId !== request.browserId || !sameIdentity(current.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed the created tab occurrence');
         Object.assign(target, current);
         await verify(target, backend, false, operationEpoch);
-        selected.set(target.id, {...target, verified: true, cold: false});
+        selected.set(target.id, {...target, verified: true, cold: false, releaseAcknowledged:true});
         activeTargetId = target.id;
         await persist();
         checkOperation(operationEpoch);
@@ -243,7 +319,7 @@ export async function createController({dataDir, browser, native} = {}) {
       if (reference?.identity && !sameIdentity(reference.identity, candidate.identity)) fail('TARGET_IDENTITY_CHANGED', 'Reference identity does not match the live occurrence');
       checkExpected(candidate, reference?.expected);
       const backend = backends.get(candidate.backend);
-      const controlling = mode === 'active' && !releasePending && !previous?.cold;
+      const controlling = mode === 'active' && !previous?.cold && (!releasePending || recoveryIsolated && candidate.backend === 'browser' && previous?.verified);
       try {
         const target = assertTarget(controlling ? await backend.select(candidate, {signal: aborter.signal}) : candidate, candidate.backend);
         checkOperation(operationEpoch);
@@ -251,8 +327,8 @@ export async function createController({dataDir, browser, native} = {}) {
         await verify(target, backend, previous?.cold ?? false, operationEpoch);
         checkOperation(operationEpoch);
         // Selection cannot bypass cold recovery or a previous stop.
-        Object.assign(target, {verified: mode === 'active' && !releasePending && !previous?.cold, cold: previous?.cold ?? false,
-          releaseAcknowledged: previous?.releaseAcknowledged === true,
+        Object.assign(target, {verified: controlling, cold: previous?.cold ?? false,
+          releaseAcknowledged: previous ? previous.releaseAcknowledged === true : true,
           ...(previous?.needsObservation ? {needsObservation: true} : {})});
         selected.set(target.id, target);
         activeTargetId = target.id;
@@ -269,7 +345,7 @@ export async function createController({dataDir, browser, native} = {}) {
         alive();
         checkOperation(operationEpoch);
         const {target, backend} = targetFor(request.targetId, request.targetIdentity);
-        if (target.provider === 'extension' || target.backend === 'extension' || target.id.startsWith('extension:')) controlAllowed();
+        if (target.provider === 'extension' || target.backend === 'extension' || target.id.startsWith('extension:')) controlAllowed(target);
         if (target.cold) fail('RECOVERY_REQUIRED', 'Resume and verify the saved occurrence before observing');
         // Read-only observation remains available after stop on supported backends,
         // but a second stop/close must also cancel that recovery read.
@@ -299,21 +375,24 @@ export async function createController({dataDir, browser, native} = {}) {
     },
     act: (request = {}) => response(() => serial(async () => {
       const dialogAction = ['getDialog', 'handleDialog'].includes(request.action);
-      if (dialogAction) alive(); else controlAllowed();
+      alive();
       const operationEpoch = epoch;
       const {target, backend} = targetFor(request.targetId, request.targetIdentity);
+      if (!dialogAction) controlAllowed(target);
       if (target.cold || !dialogAction && !target.verified) fail('RECOVERY_REQUIRED', 'Resume this target before acting');
       if (!dialogAction && target.needsObservation) fail('OBSERVATION_REQUIRED', 'The view changed during input. Observe this same target before continuing; do not replay uncertain input.', {inputDispatched: false, observationRequired: true});
       // A clean shutdown receipt survives another restart, but never a new
       // dispatch. Persist invalidation first so a crash cannot reuse the receipt.
-      if (target.releaseAcknowledged) { target.releaseAcknowledged = false; await persist(); checkOperation(operationEpoch); }
+      const acknowledgedBefore = target.releaseAcknowledged;
+      const reading = ['getDialog','getDOM','domSnapshot','hitTest','siteTools','cursor'].includes(request.action);
       let result;
       const recovery = dialogAction && aborter.signal.aborted ? new AbortController() : null;
       if (recovery) recoveryOperations.add(recovery);
       try {
         const signal = recovery?.signal ?? aborter.signal;
         await verify(target, backend, false, operationEpoch, signal);
-        if (dialogAction) alive(); else controlAllowed();
+        if (dialogAction) alive(); else controlAllowed(target);
+        if (!reading && target.releaseAcknowledged) { target.releaseAcknowledged = false; await persist(); checkOperation(operationEpoch); }
         result = await backend.act(json(target), {...request, signal});
         if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Action interrupted by cancellation or shutdown');
         if (result?.closedTargetId && (request.action !== 'closeTab' || result.closedTargetId !== target.id))
@@ -334,11 +413,18 @@ export async function createController({dataDir, browser, native} = {}) {
           activeTargetId = current.id;
         }
         if (result?.closedTargetId) forgetTarget(result.closedTargetId);
+        if (inputReleased(result?.release)) {
+          const current = selected.get(result?.target?.id ?? target.id);
+          if (current) current.releaseAcknowledged = true;
+        }
         await persist();
         checkOperation(operationEpoch);
         return {targetId: result?.target?.id ?? target.id, result: result ?? {}};
       }
       catch (error) {
+        if (error.details?.inputDispatched === false && acknowledgedBefore && error.details?.release === undefined) {
+          target.releaseAcknowledged = true; await persist(); checkOperation(operationEpoch);
+        }
         let recoveredView = false;
         if (operationEpoch === epoch && changedViewError(error) && typeof error.details?.inputDispatched === 'boolean') {
           try {
@@ -367,6 +453,8 @@ export async function createController({dataDir, browser, native} = {}) {
           // scoped to one tab. Tell callers exactly which held inputs were cleared.
           error.details.releasedTargetIds = target.backend === 'native'
             ? [...selected.values()].filter(item => item.backend === 'native').map(item => item.id) : [target.id];
+          for (const id of error.details.releasedTargetIds) if (selected.has(id)) selected.get(id).releaseAcknowledged = true;
+          await persist(); checkOperation(operationEpoch);
         }
         const failedRelease = error.details?.release !== undefined && !inputReleased(error.details.release);
         if (operationEpoch === epoch && (failedRelease || !recoveredView && !recoverableActionError(error, request.action ?? request.type) && !unresolvedLocator && !recoverableDialog)) {
@@ -401,7 +489,8 @@ export async function createController({dataDir, browser, native} = {}) {
       const signal = recovery?.signal ?? aborter.signal;
       try {
         if (releasePending || mode === 'recovery_required') {
-          await releaseAll();
+          if (target.backend === 'browser') await recoverBrowser(target);
+          else await releaseAll();
           checkOperation(operationEpoch);
         }
         await verify(target, backend, target.cold, operationEpoch, signal);
@@ -418,6 +507,7 @@ export async function createController({dataDir, browser, native} = {}) {
         Object.assign(target, resumed, {verified: true, cold: false});
         activeTargetId = target.id;
         mode = 'active';
+        explicitlyStopped = false;
         await persist();
         checkOperation(operationEpoch);
         return {target, state: snapshot()};

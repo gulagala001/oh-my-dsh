@@ -159,14 +159,19 @@ export async function createBrowserBackend(options = {}) {
     return work;
   }
   async function releaseTarget(target, {dismissDialogs = false} = {}) {
-    const record = await recordFor(target);
+    await initialize();
+    const record = records.get(target.id);
+    if (!record || !sameIdentity(record.identity,target.identity)) {
+      if (!record && target.cold && target.releaseAcknowledged === true) return {released:true,retired:true};
+      fail('TARGET_IDENTITY_CHANGED','Release requires the original browser occurrence');
+    }
     record.cursor = undefined; record.cursorRevision = (record.cursorRevision ?? 0) + 1;
     const failures = await releaseRecord(record, {dismissDialogs});
     await inputState.persist();
     releaseFailures = [...releaseFailures.filter(failure => failure.targetId !== record.id), ...failures];
     if (!record.page.isClosed() && !record.crashed && !record.dialogs.read())
       await record.dialogs.guard(() => record.page.evaluate(() => { void globalThis.__opencuCursor?.update({visible: false}); })).catch(error => backgroundErrors.push(error.message));
-    return {released: !failures.length, failures};
+    return {released: !failures.length, failures,...(!failures.length && record.page.isClosed() ? {retired:true} : {})};
   }
   function retireInitialization() {
     return retiringWork ??= (async () => {
@@ -322,14 +327,19 @@ export async function createBrowserBackend(options = {}) {
     return releasing ??= (async () => {
       if (retiring) await retireInitialization();
       if (inputState.hasPending() && !context) await initialize(internal || closing);
-      const failures = [];
+      const failures = [], releasedTargetIds = [], retiredTargetIds = [];
       if (!retiring && inputState.hasPending() && context) {
         try { await registerPages(context.pages(), internal || closing); }
         catch (error) { failures.push({error: error.message}); }
       }
       for (const record of records.values()) {
         record.cursor = undefined; record.cursorRevision = (record.cursorRevision ?? 0) + 1;
-        failures.push(...await releaseRecord(record, {dismissDialogs}));
+        const released = await releaseRecord(record, {dismissDialogs});
+        failures.push(...released);
+        if (!released.length) {
+          releasedTargetIds.push(record.id);
+          if (record.page.isClosed()) retiredTargetIds.push(record.id);
+        }
         if (!record.page.isClosed() && !record.crashed && !record.dialogs.read()) await record.dialogs.guard(() => record.page.evaluate(() => { void globalThis.__opencuCursor?.update({visible: false}); })).catch(error => backgroundErrors.push(error.message));
       }
       const liveIds = new Set([...records.values()].filter(record => !record.page.isClosed()).map(record => record.id));
@@ -344,14 +354,14 @@ export async function createBrowserBackend(options = {}) {
       }
       if (inputState.hasForeign()) failures.push({error: 'Another browser identity has unreleased persisted input'});
       releaseFailures = failures;
-      return {released: !failures.length, failures};
+      return {released: !failures.length, failures, releasedTargetIds, retiredTargetIds};
     })().finally(() => { releasing = undefined; });
   }
   return {
     async listBrowsers() { return context && !closed ? [{id: browserId, provider: 'browser', name: 'Chromium', connected: true}] : []; },
     async newTab(id, url, {signal} = {}) {
       if (id !== browserId) fail('TARGET_NOT_FOUND', 'Choose this connected browser ID');
-      if (releaseFailures.length) fail('RELEASE_FAILED', 'Browser remains blocked until input release succeeds');
+      if (releaseFailures.some(failure => !failure.targetId)) fail('RELEASE_FAILED', 'Browser connection input release remains unconfirmed');
       return (await newTab({url, signal})).target;
     },
     async listTargets({signal} = {}) {
@@ -437,7 +447,7 @@ export async function createBrowserBackend(options = {}) {
         return {...result,...(pendingDialog ? {pendingDialog} : {}),...(failures.length ? {releasePending:true,releaseFailures:failures} : {})};
       }
       record.dialogs.assertClosed();
-      if (releaseFailures.length) fail('RELEASE_FAILED', 'Browser remains blocked until input release succeeds');
+      if (releaseFailures.some(failure => !failure.targetId || failure.targetId === record.id)) fail('RELEASE_FAILED', 'This browser target remains blocked until input release succeeds');
       const inputSequence = record.inputDispatchSequence ?? 0;
       const heldKeys = new Set(record.keys), heldButtons = new Set(record.buttons);
       checkSignal(request.signal);
@@ -460,7 +470,7 @@ export async function createBrowserBackend(options = {}) {
             return guard.wait(activity.finish(marker));
           }}));
         await inputState.persist();
-        return {...result, target: await descriptor(record)};
+        return {...result, target: await descriptor(record),...(!record.keys.size && !record.buttons.size ? {release:{released:true}} : {})};
       } catch (error) {
         error.details = {...error.details, inputDispatched: error.details?.inputDispatched === true || (record.inputDispatchSequence ?? 0) !== inputSequence};
         const dialog = guard.dialog ?? record.dialogs.read();

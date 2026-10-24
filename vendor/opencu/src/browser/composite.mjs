@@ -57,7 +57,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
     } catch (error) { return {valid: false, reason: error.message, error: errorJSON(error)}; }
   }
   async function release({targets = [], dismissDialogs = true} = {}) {
-    const failures = [], results = [], retiredTargetIds = [];
+    const failures = [], results = [], retiredTargetIds = [], releasedTargetIds = [];
     const unavailable = new Set([...targets.map(providerName), ...Object.keys(releaseUnavailable)]);
     for (const [provider, backend] of [['browser', browser], ['extension', extension], ['dsh', dsh]]) if (backend) unavailable.delete(provider);
     for (const provider of unavailable) {
@@ -65,6 +65,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
         if (typeof releaseUnavailable[provider] !== 'function') fail('BACKEND_UNAVAILABLE', `Cannot verify input release for unavailable browser provider ${provider}`);
         const result = await releaseUnavailable[provider]({targets: targets.filter(target => providerName(target) === provider)});
         results.push({provider, result});
+        if (inputReleased(result)) releasedTargetIds.push(...targets.filter(target => providerName(target) === provider).map(target => target.id));
         if (!inputReleased(result)) failures.push({provider, code: 'RELEASE_UNACKNOWLEDGED', result});
       } catch (error) { failures.push({provider, ...errorJSON(error)}); }
     }
@@ -73,6 +74,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       try {
         const result = await backend.release({targets: targets.filter(target => providerName(target) === provider).map(target => unwrap(target, provider)), dismissDialogs});
         retiredTargetIds.push(...(result?.retiredTargetIds ?? []));
+        releasedTargetIds.push(...(inputReleased(result) ? targets.filter(target => providerName(target) === provider).map(target => target.id) : result?.releasedTargetIds ?? []));
         results.push({provider, result});
         if (!inputReleased(result)) failures.push({provider, code: 'RELEASE_UNACKNOWLEDGED', result});
       } catch (error) { failures.push({provider, ...errorJSON(error)}); }
@@ -82,10 +84,14 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       for (const target of targets) if (providerName(target) === 'extension') pending.set(target.id, target);
       for (const target of pending.values()) {
         try {
+          if (target.cold && target.releaseAcknowledged === true && !held.has(target.id) && typeof extension.connections === 'function' &&
+              !extension.connections?.().some(connection => ['instanceId','browserInstanceId','epoch'].every(key => connection[key] === target.identity[key]))) {
+            retiredTargetIds.push(target.id); stale.delete(target.id); continue;
+          }
           const result = await extension.release(unwrap(target, 'extension'));
           results.push({provider: 'extension', targetId: target.id, result});
           if (!inputReleased(result)) { held.set(target.id, target); failures.push({provider: 'extension', targetId: target.id, code: 'RELEASE_UNACKNOWLEDGED', result}); }
-          else { held.delete(target.id); if (result.retired === true) { retiredTargetIds.push(target.id); stale.delete(target.id); } }
+          else { releasedTargetIds.push(target.id);held.delete(target.id); if (result.retired === true) { retiredTargetIds.push(target.id); stale.delete(target.id); } }
         } catch (error) {
           held.set(target.id, target);
           failures.push({provider: 'extension', targetId: target.id, outcome: 'unknown', ...errorJSON(error)});
@@ -99,7 +105,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
         if (!inputReleased(result) && !(empty && pending.size === 0)) failures.push({provider: 'extension', code: 'RELEASE_UNACKNOWLEDGED', outcome: 'unknown', result});
       } catch (error) { failures.push({provider: 'extension', outcome: 'unknown', ...errorJSON(error)}); }
     }
-    return {released: failures.length === 0, failures, results, retiredTargetIds};
+    return {released: failures.length === 0, failures, results, retiredTargetIds, releasedTargetIds:[...new Set(releasedTargetIds)]};
   }
   const composite = {
     kind: 'browser',
@@ -118,7 +124,10 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       for (const provider of new Set(targets.map(providerName))) {
         const {backend} = providerFor({provider});
         if (!['extension', 'dsh'].includes(provider) || !backend.confirmClosedTargets) fail('UNSUPPORTED_OPERATION', 'Browser recovery is unavailable');
-        results.push(await backend.confirmClosedTargets(targets.filter(target => providerName(target) === provider).map(target => unwrap(target, provider))));
+        const group=targets.filter(target => providerName(target) === provider);
+        const result=await backend.confirmClosedTargets(group.map(target => unwrap(target, provider)));
+        results.push(result);
+        if (inputReleased(result)) for (const target of group) {held.delete(target.id);stale.delete(target.id);}
       }
       return {released: results.length > 0 && results.every(inputReleased)};
     },
@@ -178,7 +187,6 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       checkExpected(target, reference?.expected);
       if (reference?.identity && !sameIdentity(reference.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed document occurrence');
       if (stale.has(target.id)) fail('TARGET_IDENTITY_CHANGED', 'Navigation invalidated this document occurrence; select the new document');
-      if (provider === 'extension') held.set(target.id, target);
       const selected = wrap({...target, ...await backend.select(unwrap(target, provider), {signal})}, provider);
       if (selected.id !== target.id || !sameIdentity(selected.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed occurrence');
       return selected;
@@ -231,12 +239,20 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       const verified = await readOperation(() => verifyExtension(target, {signal: request.signal}), request.signal);
       checkSignal(request.signal);
       if (!verified.valid) fail('TARGET_IDENTITY_CHANGED', verified.reason);
+      const owedBefore = held.get(target.id);
       held.set(target.id, target);
       if (['activate', 'focus'].includes(request.action)) return {action: request.action, ...await composite.focus(target, {signal: request.signal})};
       const {signal, ...action} = request;
       action.type = aliases[request.action] ?? request.action;
       if (request.action === 'selectOption') action.value = request.values ?? request.value;
-      const result = await extension.act(unwrap(target, provider), {...action, signal});
+      let result;
+      try { result = await extension.act(unwrap(target, provider), {...action, signal}); }
+      catch (error) {
+        if (inputReleased(error.details?.release)) held.delete(target.id);
+        else if (error.details?.inputDispatched === false && !owedBefore) held.delete(target.id);
+        throw error;
+      }
+      if (inputReleased(result?.release)) held.delete(target.id);
       if (result?.reselectRequired && request.action !== 'newTab' && !navigation.has(request.action)) stale.add(target.id);
       checkSignal(signal);
       if (request.action === 'closeTab') {

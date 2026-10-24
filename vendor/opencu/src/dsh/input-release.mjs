@@ -43,6 +43,7 @@ export function createInputReleaseState() {
         if (['keyUp', 'key_up', 'mouseUp', 'mouse_up'].includes(action)) held.delete(key);
         if (endpoint === 'stop') clear();
         const outcome = result?.result ?? result;
+        if (inputReleased(outcome?.release)) clearTarget(args?.targetId);
         if (outcome?.releasePending === true || outcome?.pendingDialog && outcome.inputDispatched === true)
           held.add(JSON.stringify([args?.targetId, 'release']));
         if (action === 'handleDialog' && outcome?.handled && !outcome.releasePending) {
