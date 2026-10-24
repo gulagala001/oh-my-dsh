@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="docs/release-0.100.2.md"><img alt="OMD 0.100.2" src="https://img.shields.io/badge/release-OMD%200.100.2-0969da?style=flat-square"></a>
+  <a href="docs/release-0.101.0.md"><img alt="OMD 0.101.0" src="https://img.shields.io/badge/release-OMD%200.101.0-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub 累计下载量" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.3" src="https://img.shields.io/badge/DSH-0.2.1--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
@@ -44,10 +44,10 @@
 打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.100.2/oh-my-dsh-0.2.1-rc.3.omd.0.100.2.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.101.0/oh-my-dsh-0.2.1-rc.3.omd.0.101.0.tgz
 ```
 
-等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.100.2/SHA256SUMS).
+等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.101.0/SHA256SUMS).
 
 ### 2. 先试这一件事
 
@@ -97,7 +97,7 @@ OMD 组合 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench**�
 
 ### 用好浏览器、电脑和扩展
 
-内置 **OpenCU 2.0.8**，提供浏览器与应用发现、观察、后台优先操作、批注和浮动监看。停止与取消跟踪真实键鼠释放；读取挂起、授权超时和目标替换都有明确的处理结果。完整内嵌界面需匹配宿主适配及系统权限。
+内置 **OpenCU 2.2.0**，提供浏览器与应用发现、观察、后台优先操作、批注和浮动监看。停止与取消跟踪真实键鼠释放；读取挂起、授权超时和目标替换都有明确的处理结果。完整内嵌界面需匹配宿主适配及系统权限。
 
 **扩展管理**在插件页集中管理 Skill、MCP、指令文件、命令和 Hooks。可选 **dsh-ops** 提供文件、文档、命令与按需工具能力，在第三方功能中安装匹配宿主的固定兼容包。
 

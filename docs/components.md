@@ -12,7 +12,7 @@
 
 电脑与浏览器观察、操作、批注和预览 内置插件；支持独立安装与共装。
 
-- 固定来源／版本: [2.1.1-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- 固定来源／版本: [2.2.0-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - 许可／归属: See component notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -214,7 +214,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 OpenCU 使用的原始界面组件及来源记录 宿主／来源／素材，具体使用范围见来源记录。
 
-- 固定来源／版本: [SHA256:2070c0fe3c9e5fca21bdb0653e44303c8649d389ff879fc92cfacce156de6586](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- 固定来源／版本: [SHA256:d236579f487558f1eaa5e6a0da2c1c5cdba4f3c26cfbd74fdf0b887dfaf92b2c](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

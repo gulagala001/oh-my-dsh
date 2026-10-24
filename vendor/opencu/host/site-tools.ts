@@ -55,7 +55,7 @@ export async function inspectSiteTools(guest: WebContents, send: Send, router?: 
         if (typeof descriptor.name !== 'string' || !descriptor.name || descriptor.origin !== new URL(frameURL).origin) throw new Error('The browser returned an invalid site tool identity')
         const key = `${frame.id}\0${descriptor.name}`, signature = JSON.stringify(descriptor), document = JSON.stringify([documentKey(frame), data.registrationVersion]), old = previous?.get(key)
         const tool: Tool = { ...descriptor, frameId: frame.id, registrationId: old?.document === document && old.signature === signature ? old.tool.registrationId : randomUUID() }
-        next.set(key, { tool, document, signature, send: frameSend, sessionId: route?.sessionId }); tools.push(tool)
+        next.set(key, { tool, document, signature, send: frameSend, ...(route?.sessionId === undefined ? {} : {sessionId:route.sessionId}) }); tools.push(tool)
       }
     }
     if (route && router) {
@@ -184,8 +184,9 @@ export async function invokeSiteTool(guest: WebContents, send: Send, args: Recor
       return invokeSend('WebMCP.invokeTool', { frameId: tool.frameId, toolName: tool.name, input: args.input })
     }).then(result => {
       if (typeof result.invocationId !== 'string') throw new Error('The browser returned no site tool invocation ID')
-      invocationId = result.invocationId
-      if (earlyResponses.has(invocationId)) responded(earlyResponses.get(invocationId)!)
+      const acknowledgedId: string = result.invocationId
+      invocationId = acknowledgedId
+      if (earlyResponses.has(acknowledgedId)) responded(earlyResponses.get(acknowledgedId)!)
       else if (signal.aborted) cancel()
       earlyResponses.clear()
     }).catch(error => finish(error))

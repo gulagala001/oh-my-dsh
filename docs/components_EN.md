@@ -12,7 +12,7 @@ This catalog covers independently maintained products, optional integrations, ho
 
 Computer and browser observation, interaction, annotations and previews Bundled plugin; also distributed independently。
 
-- Pinned source / version: [2.1.1-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- Pinned source / version: [2.2.0-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - License / attribution: See component notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -214,7 +214,7 @@ Host, sessions, tools and UI components Host, source or asset; scope documented 
 
 Original frontend assets used by OpenCU and provenance Host, source or asset; scope documented in provenance。
 
-- Pinned source / version: [SHA256:2070c0fe3c9e5fca21bdb0653e44303c8649d389ff879fc92cfacce156de6586](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- Pinned source / version: [SHA256:d236579f487558f1eaa5e6a0da2c1c5cdba4f3c26cfbd74fdf0b887dfaf92b2c](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

@@ -310,7 +310,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       },
     })
     const retiredFrame = (error: unknown): boolean => ['FRAME_DETACHED', 'STALE_OBSERVATION', 'STALE_ELEMENT', 'BROWSER_GUEST_CRASHED'].includes((error as {code?:string}).code ?? '') || /Cannot find context|Execution context was destroyed|No session with given id|Session with given id not found|Session closed|Target closed|No frame with given id/iu.test((error as Error).message);
-    const frameFailure=(error:unknown,route?:FrameRoute):Promise<Error & {code?:string|number;details?:Record<string,unknown>} >=>inputFrameFailure(error as Error & {code?:string|number;details?:Record<string,unknown>},{documentChanged:()=>current.documentGeneration!==documentGeneration,validate:route?()=>frameRouter().validate(route):undefined})
+    const frameFailure=(error:unknown,route?:FrameRoute):Promise<Error & {code?:string|number;details?:Record<string,unknown>} >=>inputFrameFailure(error as Error & {code?:string|number;details?:Record<string,unknown>},{documentChanged:()=>current.documentGeneration!==documentGeneration,...(route ? {validate:()=>frameRouter().validate(route)} : {})})
     const monitorRoute = async (route: FrameRoute, expression: string): Promise<any> => {
       try {
       await frameRouter().validate(route)
@@ -584,7 +584,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
             if (type === 'mouseWheel' && inputElement?.route) await current.frameRouter!.checkPoint(inputElement as FrameElement & {route:NonNullable<FrameElement['route']>}, current.inputPosition)
             if (type === 'mouseWheel' && !wheel) {
               await verifyElement()
-              const geometry = await readElementScrollGeometry(inputElement?.route?.send ?? send,{backendNodeId:inputElement!.backendNodeId,contextId:inputElement?.route?.contextId})
+              const geometry = await readElementScrollGeometry(inputElement?.route?.send ?? send,{backendNodeId:inputElement!.backendNodeId,...(inputElement?.route ? {contextId:inputElement.route.contextId} : {})})
               if (args.scrollGeometry) checkScrollGeometry(args.scrollGeometry as ScrollGeometry,geometry)
               wheel = scrollDeltas(scrollRequest,geometry)
             }
@@ -743,7 +743,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       releaseSend = elementSend
       if (entry?.route) await current.frameRouter!.validate(entry.route)
       if (operation === 'scrollGeometry') {
-        const geometry = await readElementScrollGeometry(elementSend,{backendNodeId,contextId:entry?.route?.contextId})
+        const geometry = await readElementScrollGeometry(elementSend,{backendNodeId,...(entry?.route ? {contextId:entry.route.contextId} : {})})
         live()
         if (current.elements.get(String(args.elementId)) !== entry) throw Object.assign(new Error('The selected scroll element changed'),{code:'STALE_ELEMENT',details:{inputDispatched:false}})
         if (entry?.route) await current.frameRouter!.validate(entry.route)
@@ -775,15 +775,15 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           catch (error) {throw Object.assign(new Error(`Upload source ${index + 1} is unavailable or unreadable`), {code:(error as NodeJS.ErrnoException).code ?? 'UPLOAD_SOURCE_UNAVAILABLE',details:{inputDispatched:false,sourceIndex:index}})}
           if (!info.isFile()) throw Object.assign(new Error(`Upload source ${index + 1} must be a regular file`), {code:'INVALID_ARGUMENT',details:{inputDispatched:false,sourceIndex:index}})
         }
-        await validateFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
+        await validateFileInput(elementSend,{backendNodeId,...(entry?.route ? {contextId:entry.route.contextId} : {}),files})
         live()
         const uploadMarker = files.length && current.monitoringActive ? await markInput(entry?.route ?? await frameRouter().main(), [{type:'input',inputTypes:[null]}], backendNodeId) : undefined
         if (files.length && !current.monitoringActive) await elementSend('Runtime.evaluate', { expression: "globalThis.__opencuAnnotations?.expectInput([{type:'input'}])" })
         try {
           live()
-          await validateFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
+          await validateFileInput(elementSend,{backendNodeId,...(entry?.route ? {contextId:entry.route.contextId} : {}),files})
           live()
-          const receipt = await writeFileInput(elementSend,{backendNodeId,contextId:entry?.route?.contextId,files})
+          const receipt = await writeFileInput(elementSend,{backendNodeId,...(entry?.route ? {contextId:entry.route.contextId} : {}),files})
           return {action:'upload',...receipt}
         } finally { await finishMarker(uploadMarker, false) }
       }
