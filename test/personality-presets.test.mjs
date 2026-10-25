@@ -10,6 +10,21 @@ const second = 'user:22222222-2222-4222-8222-222222222222';
 const initial = { identityPreset: 'custom', identityCustomPrompt: '旧草稿', identityPrompt: '旧草稿' };
 const apply = (config, patch) => ({ ...config, ...normalizePersonalityPatch(config, patch) });
 
+test('OMD defaults and legacy settings match the embedded persona library', () => {
+  assert.equal(contextConfig({}).sessionPersonalityEnabled, true);
+  assert.equal(contextConfig({ sessionPersonalityEnabled: false }).sessionPersonalityEnabled, false);
+  for (const identityPreset of ['hardcore', 'softie']) {
+    const config = contextConfig({ identityPreset, identityPrompt: 'RETIRED_TEXT', identityCustomPrompt: 'KEEP_DRAFT' });
+    assert.equal(config.identityPreset, 'default');
+    assert.equal(config.identityPrompt, DEFAULT_IDENTITY);
+    assert.equal(config.identityCustomPrompt, 'KEEP_DRAFT');
+  }
+  const config = contextConfig({ identityPreset: first, identitySavedPresets: [{ id: first, name: '超频', text: 'KEEP_CUSTOM' }] });
+  assert.equal(config.identityPreset, first);
+  assert.equal(personalityText(config), 'KEEP_CUSTOM');
+  assert.equal(config.identitySavedPresets[0].name, '超频（自定义）');
+});
+
 test('named presets survive settings schema roundtrip, selection and explicit updates', () => {
   let config = apply(initial, savePersonalityPreset(initial, { id: first, name: '  我的搭子  ', text: '正文一' }));
   config = contextConfig(JSON.parse(JSON.stringify(config)));
@@ -17,8 +32,8 @@ test('named presets survive settings schema roundtrip, selection and explicit up
   assert.equal(config.identityPreset, first);
   assert.equal(personalityText(config), '正文一');
   assert.equal(customPersonality(config), '旧草稿');
-  config = apply(config, personalityPatch(config, 'softie'));
-  assert.equal(personalityText(config), PERSONALITY_PRESETS.softie.text);
+  config = apply(config, personalityPatch(config, 'economical'));
+  assert.equal(personalityText(config), PERSONALITY_PRESETS.economical.text);
   config = apply(config, personalityPatch(config, first));
   assert.equal(config.identityPrompt, '正文一');
   config = apply(config, savePersonalityPreset(config, { id: first, name: '重命名', text: '正文二' }));
@@ -45,7 +60,7 @@ test('deleting selected presets preserves effective text; builtins cannot be del
   assert.equal(config.identityPrompt, '当前正文');
   assert.equal(config.identityCustomPrompt, '当前正文');
   assert.deepEqual(config.identitySavedPresets, []);
-  for (const id of ['default', 'hardcore', 'softie', 'custom', 'off']) assert.throws(() => deletePersonalityPreset(config, id), /不可删除/);
+  for (const id of ['default', 'overclock', 'economical', 'custom', 'off']) assert.throws(() => deletePersonalityPreset(config, id), /不可删除/);
 });
 
 test('legacy and blank custom edits retain existing compatibility semantics', () => {
@@ -86,7 +101,7 @@ test('both server validation paths reject malformed and ambiguous presets', () =
     assert.throws(() => contextConfig({ ...initial, ...patch }));
     assert.throws(() => normalizePersonalityPatch(initial, patch));
   }
-  assert.throws(() => savePersonalityPreset(initial, { id: first, name: '软乎乎', text: '正文' }), /重名/);
+  assert.throws(() => savePersonalityPreset(initial, { id: first, name: '精算', text: '正文' }), /重名/);
   const config = apply(initial, savePersonalityPreset(initial, { id: first, name: 'My Persona', text: '正文' }));
   assert.throws(() => savePersonalityPreset(config, { id: second, name: 'my persona', text: '正文' }), /重名/);
   assert.throws(() => normalizePersonalityPatch(config, { identitySavedPresets: [] }), /未知/);

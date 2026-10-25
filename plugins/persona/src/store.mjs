@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { normalizePersonalityPatch, personalityPatch, personalityPreset, personalityProfile, savedPersonalityPresets, importPersonalityFile } from './shared/personality.mjs';
+import { normalizePersonalityPatch, personalityPatch, personalityPreset, personalityProfile, savedPersonalityPresets, importPersonalityFile, migratePersonalityConfig } from './shared/personality.mjs';
 
 export const CONFIG_KEYS = ['identityPrompt', 'identityPreset', 'identitySavedPresets', 'identityCustomPrompt', 'identityCustomModules', 'identityCustomDescription', 'sessionPersonalityEnabled'];
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
@@ -12,7 +12,7 @@ export function validateSessionId(id) {
 export function validateConfig(config) {
   if (!object(config) || Object.keys(config).some(key => !CONFIG_KEYS.includes(key))) throw Error('人格设置包含未知字段');
   if (config.sessionPersonalityEnabled !== undefined && typeof config.sessionPersonalityEnabled !== 'boolean') throw Error('会话人设开关必须是布尔值');
-  return { sessionPersonalityEnabled: false, ...config, ...personalityPatch(config, personalityPreset(config)) };
+  return { sessionPersonalityEnabled: true, ...config, ...personalityPatch(config, personalityPreset(config)) };
 }
 const read = (path, fallback) => {
   try { return JSON.parse(readFileSync(path, 'utf8')); }
@@ -27,7 +27,7 @@ export class PersonaStore {
     const saved = read(this.file, null);
     if (saved && (saved.version !== 1 || !object(saved.sessions) || !Array.isArray(saved.migrations))) throw Error('人格数据格式无效，原文件已保留');
     this.data = saved ?? { version: 1, config: {}, sessions: {}, migrations: [] };
-    this.data.config = validateConfig(this.data.config);
+    this.data.config = validateConfig(migratePersonalityConfig(this.data.config));
     for (const [id, preset] of Object.entries(this.data.sessions)) {
       validateSessionId(id);
       if (preset !== null && typeof preset !== 'string') throw Error('会话人格记录无效');
@@ -57,7 +57,7 @@ export class PersonaStore {
   migrateLegacy(config, directory) {
     const dir = resolve(directory);
     if (this.data.migrations.some(record => record.dir === dir)) return;
-    const legacy = validateConfig(pick(config)), ids = {};
+    const legacy = validateConfig(migratePersonalityConfig(pick(config))), ids = {};
     let current = this.config();
     if (!this.persisted) current = legacy;
     else {

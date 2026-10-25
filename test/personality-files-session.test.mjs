@@ -36,7 +36,7 @@ test('session selection persists independently; disable, deletion and failed wri
   try {
     let config = apply({}, importPersonalityFile({}, JSON.stringify(file)));
     const saved = config.identityPreset;
-    config = apply(config, { ...personalityPatch(config, 'softie'), sessionPersonalityEnabled: true });
+    config = apply(config, { ...personalityPatch(config, 'economical'), sessionPersonalityEnabled: true });
     const hub = { store: new HubStore(root), config: () => config };
     const a = { id: 'personality-a', header: { agentPreset: 'oh-my-dsh', origin: 'user' } };
     const b = { id: 'personality-b', header: { agentPreset: 'oh-my-dsh', origin: 'user' } };
@@ -48,7 +48,7 @@ test('session selection persists independently; disable, deletion and failed wri
     };
     assert.equal((await request(a, { preset: saved })).status, 200);
     assert.equal(sessionPersonality(hub, a).effectivePreset, saved);
-    assert.equal(sessionPersonality(hub, b).effectivePreset, 'softie');
+    assert.equal(sessionPersonality(hub, b).effectivePreset, 'economical');
     hub.store = new HubStore(root);
     const effective = sessionPersonality(hub, a);
     assert.deepEqual(effective.modules, file.modules);
@@ -59,7 +59,7 @@ test('session selection persists independently; disable, deletion and failed wri
     assert.ok(!text.includes('## Answer presentation'));
     assert.ok(omaaIdentityPrompt(hub, a).includes('STYLE_MARKER'));
     config = { ...config, sessionPersonalityEnabled: false };
-    assert.equal(sessionPersonality(hub, a).effectivePreset, 'softie');
+    assert.equal(sessionPersonality(hub, a).effectivePreset, 'economical');
     assert.equal((await request(a, { preset: 'off' })).status, 409);
     config = { ...config, sessionPersonalityEnabled: true };
     assert.equal(sessionPersonality(hub, a).effectivePreset, saved);
@@ -70,7 +70,7 @@ test('session selection persists independently; disable, deletion and failed wri
     hub.store.save = save;
     config = apply(config, deletePersonalityPreset(config, saved));
     assert.equal(sessionPersonality(hub, a).missing, true);
-    assert.equal(sessionPersonality(hub, a).effectivePreset, 'softie');
+    assert.equal(sessionPersonality(hub, a).effectivePreset, 'economical');
     assert.equal((await request(a, { preset: 'inherit' })).data.missing, false);
     await assert.rejects(request(a, { preset: 'unknown' }), /未知/);
     assert.equal((await request({ ...b, header: { agentPreset: 'oh-my-dsh', origin: 'subagent' } }, { preset: 'off' })).status, 409);
