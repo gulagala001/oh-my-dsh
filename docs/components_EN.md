@@ -122,7 +122,7 @@ Interactive charts, forms, calculators, simulations and games in answers. Option
 
 Agent presets and interfaces for Codex, Claude Code, Grok, Pi and ZCode workflows. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.2.1-rc.3.omaa.0.17.4 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.2.1-rc.3.omaa.0.17.5 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Subscription Login
