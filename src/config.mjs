@@ -1,6 +1,6 @@
 import z from '@deepseek-ai/schemastery';
 import { DEFAULT_IDENTITY } from './cc-adaptation/identity.mjs';
-import { personalityPatch, personalityPreset } from './cc-adaptation/personality.mjs';
+import { personalityPatch, personalityPreset, migratePersonalityConfig } from './cc-adaptation/personality.mjs';
 import { CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
 import { DEFAULT_IMAGE_RULES, validateImageRules } from './image-rules.mjs';
 import { PROMPT_STYLES, isPromptStyle } from './prompt-styles/options.mjs';
@@ -54,7 +54,7 @@ export const Config = z.object({
   identityCustomPrompt: z.string(),
   identityCustomModules: personalityModules,
   identityCustomDescription: z.string(),
-  sessionPersonalityEnabled: z.boolean().default(false),
+  sessionPersonalityEnabled: z.boolean().default(true),
   promptStyle: z.union(PROMPT_STYLES.map(option => option.value)).default('omd'),
   sessionPromptStyleEnabled: z.boolean().default(false),
   stateHintsEnabled: z.boolean().default(false),
@@ -97,6 +97,7 @@ for (const [key, field] of Object.entries(Config.dict)) if (!['dataDir', 'projec
 // Defaults apply to omitted values. An explicit null is not a numeric or
 // boolean setting; use the same schema for API writes and pipeline options.
 export function contextConfig(raw = {}) {
+  raw = migratePersonalityConfig(raw);
   if (Object.hasOwn(raw, 'promptStyle') && !isPromptStyle(raw.promptStyle)) throw Error('无效的系统提示词风格');
   if (Object.hasOwn(raw, 'taskVerificationMode') && !TASK_VERIFICATION_MODES.includes(raw.taskVerificationMode)) throw Error('无效的任务验证档位');
   if (Object.hasOwn(raw, 'multiImageFixRules')) validateImageRules(raw.multiImageFixRules);

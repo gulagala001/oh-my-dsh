@@ -9,6 +9,8 @@
       name: oh-my-dsh/opencu
     - id: omd-rewind
       name: oh-my-dsh/rewind
+    - id: omd-response-id-reuse
+      name: oh-my-dsh/response-id-reuse
 
 - id: agent-preset-registry
   config:

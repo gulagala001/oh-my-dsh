@@ -45,7 +45,7 @@ Check the right file, successful actual tool result, and accessible deliverable.
 | Model/Fast | Ultra has Workflow / Agent Team / Free submodes and prefers `xhigh`, otherwise highest. Agent Team requires DSH to enable it. Fast needs actual matching Subscriptions/model support. |
 | **Appearance** | Glyph and four other themes, native DSH, 29 palettes, fonts, backgrounds and reduced motion. |
 | **View original** | Read a tool result by line or keyword; import/export original-result archives from Context. |
-| **Session personality** | When enabled in settings, choose a personality in the main session permissions drawer, inherit the global one, or turn it off. |
+| **Session personality** | Enabled by default; choose a personality in the main session permissions drawer, inherit the global one, or turn it off. |
 | **Plugins → Skills / MCP / Instructions / Commands / Hooks** | Manage available extensions and project instructions. |
 | `/侧栏` / `/侧栏（网页版）` | Start an independent temporary discussion without leaving the main conversation. |
 | **Base components** | CodeGraph readiness and retained native/third-party entries. |

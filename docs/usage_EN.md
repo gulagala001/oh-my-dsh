@@ -166,7 +166,7 @@ Wide windows show an **On this page** outline to the left of the content. Select
 
 **System prompt style**, in the Agent group, offers seven choices: OMD default, native DSH, Codex, Cursor, Pi, Grok and ZCode. OMD default remains selected initially. **Enable per-chat prompt style** is off by default; enabling it reveals the selector in OMD/OMD-PTC main-chat permission menus. Chats without a saved choice follow the global selection. Disabling the switch uses the global style while preserving saved choices for re-enabling. Changes apply at the next turn. Personality, tools, tasks and memory retain their own functions. [Pinned sources and adaptations (Chinese)](prompt-adaptation.md).
 
-**Personality preset** selects the global default. The collapsed **Advanced** section manages multiple personalities: create, copy, rename, update, delete, import and export. The editing selection is independent of the global selection, so saving an edit does not switch the global personality. Deleting the selected global preset preserves all its modules in Custom. Copy built-in presets to edit them.
+**Personality preset** selects the global default: Default, Overclock (超频) or Economical (精算). Overclock expands useful reasoning and detail; Economical reduces repetition and unnecessary wording while preserving deliverable quality. The collapsed **Advanced** section manages multiple personalities: create, copy, rename, update, delete, import and export. The editing selection is independent of the global selection, so saving an edit does not switch the global personality. Deleting the selected global preset preserves all its modules in Custom. Copy built-in presets to edit them.
 
 When multiple windows edit personalities, a stale save stops and displays the current settings while keeping the local draft for review and an explicit retry. If another editor deleted that preset, its draft can be saved as a new preset.
 
@@ -174,7 +174,7 @@ Each personality has four modules: **Identity, Language style, Communication, an
 
 Use **Copy creation prompt**, give it to an AI with your character idea, and ask for a JSON file following the included format. **Import personality file** creates and selects a new preset; duplicate names are renamed automatically, existing presets are never overwritten, and invalid files show an error. **Export personality file** saves the current editor content for backup, sharing or further AI editing.
 
-Enable **Session personalities** to add a **Session personality** section to the permissions drawer in OMD and OMAA main conversations. Choose the global default, a specific personality, or Off. Changes apply to subsequent model requests, including in conversations already underway. Choices persist independently for each conversation. Disabling the feature uses the global personality while preserving saved choices for re-enabling. Deleted presets fall back to the global selection with a notice. Child conversations do not show this control.
+**Session personalities** are enabled by default, adding a **Session personality** section to the permissions drawer in OMD and OMAA main conversations. Choose the global default, a specific personality, or Off. Changes apply to subsequent model requests, including in conversations already underway. Choices persist independently for each conversation. Disabling the feature uses the global personality while preserving saved choices for re-enabling. Deleted presets fall back to the global selection with a notice. Child conversations do not show this control. Upgrades preserve an explicit disabled setting. Retired built-in global selections fall back to Default, and conversation selections fall back to the global choice; custom personality content is retained.
 
 Global background is user-maintained. On conflict, **Read latest version**, compare, merge/adopt, then save; reading does not overwrite a draft. Dream does not edit this background.
 
@@ -270,3 +270,5 @@ Current/remote versions, progress, errors, and restart states remain separate. G
 <a id="idle-preprocessing-and-image-budget"></a>
 
 See the [short development guide](development_EN.md) and [context/image budgets (Chinese)](context-workflow.md).
+
+Responses routes use the bundled response-ID reuse plugin. Verified capability and exact history extensions allow incremental input; unknown routes retain their original requests. It adds no UI, probe calls or generation stop conditions. Unloading its plugin entry removes interception.

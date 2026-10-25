@@ -182,6 +182,7 @@ For a bug report, include the full DSH and plugin versions, the entry point, min
 | [DSH BTW](https://github.com/gulagala001/dsh-btw) | Side chats, local history, follow-ups and independent cancellation |
 | [DSH Theme](https://github.com/gulagala001/dsh-theme-plugin) | Themes, colors, backgrounds, fonts and appearance management |
 | [Glyph](https://github.com/gulagala001/dsh-theme-plugin) | Animated character interface and whale visuals |
+| [DSH Response ID Reuse](https://github.com/gulagala001/dsh-response-id-reuse) | Automatic Responses ID continuation and full-request fallback |
 | [Billion Context](https://github.com/ranxianglei/billion-context) | Long-context compression, original-content recovery and cache diagnostics. |
 | [dsh-ops](https://github.com/T-Auto/dsh-ops) | Bounded file, document and shell tools with on-demand discovery. |
 | [DSH Intelligent UI](https://github.com/gulagala001/dsh-intelligent-ui) | Interactive charts, forms, calculators, simulations and games in answers. |

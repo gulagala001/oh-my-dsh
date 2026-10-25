@@ -207,3 +207,7 @@ The user-prompt basic, professional, planning, and iteration templates in `vendo
 Oh My DSH supplies its own model transport, input UI, draft history, cancellation and send handling. Additional integration instructions preserve the user's intent and structured references and prohibit invented requirements. These instructions are appended by `src/prompt-optimizer.mjs`; they do not modify the archived upstream files. The upstream application, UI, SDKs, history database and newer AGPL-licensed changes are not included.
 
 Source and license at the pinned revision: https://github.com/linshenkx/prompt-optimizer/tree/93c37090846dd7ba9619a0ebc152f205624df9f1
+
+## DSH Response ID Reuse
+
+`vendor/response-id-reuse` contains [gulagala001/dsh-response-id-reuse](https://github.com/gulagala001/dsh-response-id-reuse), package `@gulagala001/dsh-response-id-reuse`, under the MIT License. The source commit, exact host version and file hashes are recorded in [vendor/response-id-reuse.json](vendor/response-id-reuse.json). Its [license](vendor/response-id-reuse/LICENSE) accompanies the full package snapshot.

@@ -82,7 +82,8 @@
     "./deepseek-workbench": "./plugins/deepseek-workbench/src/index.mjs",
     "./extensions": "./plugins/dsh-extensions/src/index.mjs",
     "./workflow": "./vendor/workflow/src/index.mjs",
-    "./rewind": "./vendor/rewind/src/index.mjs"
+    "./rewind": "./vendor/rewind/src/index.mjs",
+    "./response-id-reuse": "./vendor/response-id-reuse/src/index.mjs"
   },
   "dsh": {
     "bundle": {
