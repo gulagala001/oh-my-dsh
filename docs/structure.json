@@ -392,6 +392,12 @@
       "role": "development",
       "language": "zh",
       "site": false
+    },
+    {
+      "path": "docs/release-0.104.0.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
     }
   ]
 }

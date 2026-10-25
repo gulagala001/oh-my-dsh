@@ -2,6 +2,19 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.0.104.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 0.104.0 · DSH 0.2.1-rc.3",
+      "notes": [
+        "内置通用 Responses ID 自动续传，无前端和额外探测调用。",
+        "人格预设调整为默认、超频、精算，会话人设默认开启。",
+        "修复设置说明挤压、窄面板换行及分段控件的重复 ID。",
+        "修复透明通知层、浏览器容器和装饰层拦截点击，以及通知 Portal 更换后引用旧容器的问题。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.104.0.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.0.103.0",
       "severity": "normal",
       "unpublished": false,

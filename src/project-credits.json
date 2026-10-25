@@ -17,8 +17,8 @@
       "source": "vendor/opencu/package.json",
       "license": "See component notices",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
-      "version": "2.2.0-dsh.0.2.1-rc.3",
-      "sourceSha256": "cdce1ea463a1294347b38a77597e7d9c16a38532696ddd74a5a1c592c8b35966",
+      "version": "2.2.1-dsh.0.2.1-rc.3",
+      "sourceSha256": "65ee1472324456f52dcc33ba324aa6529af21ecc868b89f2ddccab8cb747694a",
       "group": "products"
     },
     {
@@ -77,8 +77,8 @@
       "source": "plugins/persona/package.json",
       "license": "MIT",
       "notice": "plugins/persona/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.2-dsh.0.2.1-rc.3",
-      "sourceSha256": "62fdebbd8033110e55f5dcea0bf90a40f5c1a79b52799432ec39a65c67603223",
+      "version": "0.2.0-dsh.0.2.1-rc.3",
+      "sourceSha256": "38f950b6955a9b1bf1aeca0911661560be226ce9a115a441db0cd152d07a0156",
       "group": "products"
     },
     {
@@ -573,7 +573,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.2.1-rc.3.omaa.0.17.5 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5",
+      "version": "0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"

@@ -19,17 +19,17 @@
 In **Plugins → Add plugin**, paste the fixed package URL:
 
 ```text
-https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.1.2-dsh.0.2.1-rc.3/gulagala001-dsh-persona-plugin-0.1.2-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.0-dsh.0.2.1-rc.3/gulagala001-dsh-persona-plugin-0.2.0-dsh.0.2.1-rc.3.tgz
 ```
 
-[SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.1.2-dsh.0.2.1-rc.3/SHA256SUMS)
+[SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.0-dsh.0.2.1-rc.3/SHA256SUMS)
 
 This build targets exactly **DSH 0.2.1-rc.3**, **Cordis 4.0.5** and **Node.js 22.19+**.
 
-Install `gulagala001-dsh-persona-plugin-0.1.2-dsh.0.2.1-rc.3.tgz` using its absolute local path in **Plugins → Add plugin**, or run:
+Install `gulagala001-dsh-persona-plugin-0.2.0-dsh.0.2.1-rc.3.tgz` using its absolute local path in **Plugins → Add plugin**, or run:
 
 ```sh
-dsh plugin --profile desktop add /absolute/path/gulagala001-dsh-persona-plugin-0.1.2-dsh.0.2.1-rc.3.tgz
+dsh plugin --profile desktop add /absolute/path/gulagala001-dsh-persona-plugin-0.2.0-dsh.0.2.1-rc.3.tgz
 ```
 
 Replace `desktop` with your instance's actual profile and restart that instance after its current work finishes.
