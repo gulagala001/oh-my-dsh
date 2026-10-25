@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "documents": [
+    {
+      "path": "README.md",
+      "role": "home",
+      "language": "zh",
+      "translation": "README_EN.md"
+    },
+    {
+      "path": "README_EN.md",
+      "role": "home",
+      "language": "en",
+      "translation": "README.md"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "role": "release",
+      "language": "bilingual"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "role": "development",
+      "language": "bilingual"
+    },
+    {
+      "path": "docs/documentation.md",
+      "role": "development",
+      "language": "bilingual"
+    }
+  ]
+}
