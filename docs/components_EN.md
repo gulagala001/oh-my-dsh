@@ -87,6 +87,15 @@ Animated character interface and whale visuals Theme component distributed with 
 - Pinned source / version: [1.0.0-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/glyph-theme/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)
 
+### DSH Response ID Reuse
+
+[Project](https://github.com/gulagala001/dsh-response-id-reuse) · gulagala001 and contributors
+
+Automatic Responses ID continuation and full-request fallback Bundled backend plugin with shared runtime ownership。
+
+- Pinned source / version: [0.1.0-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
+- License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
+
 ## Optional integrations and recommendations
 
 ### Billion Context

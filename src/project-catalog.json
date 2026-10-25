@@ -409,6 +409,23 @@
       "source": "src/prompt-styles/upstream/zcode/source.json",
       "license": "Apache-2.0",
       "notice": "THIRD_PARTY_NOTICES.md#system-prompt-style-sources"
+    },
+    {
+      "id": "response-id-reuse",
+      "name": "DSH Response ID Reuse",
+      "url": "https://github.com/gulagala001/dsh-response-id-reuse",
+      "authors": "gulagala001 and contributors",
+      "purpose": {
+        "zh": "Responses 响应 ID 自动续传与完整请求回退",
+        "en": "Automatic Responses ID continuation and full-request fallback"
+      },
+      "relationship": {
+        "zh": "内置后端插件；共装时共享一份运行实例",
+        "en": "Bundled backend plugin with shared runtime ownership"
+      },
+      "source": "vendor/response-id-reuse/package.json",
+      "license": "MIT",
+      "notice": "vendor/response-id-reuse/LICENSE"
     }
   ]
 }
