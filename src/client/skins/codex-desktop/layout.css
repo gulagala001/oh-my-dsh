@@ -1,4 +1,4 @@
-/* Codex desktop adapter for DSH 0.1.7-alpha.1. Primary visual reference:
+/* Codex desktop adapter for the matched DSH host. Primary visual reference:
    the user's September 20 desktop capture. Keep native nodes and events. */
 html.omd[data-omd-layout="codex-desktop"] {
   & body, & body > * {
@@ -74,7 +74,12 @@ html.omd[data-omd-layout="codex-desktop"] {
   /* One title bar spans the conversation and the right pane. Only the header
      escapes its column; the conversation retains its native scroll container. */
   & .wSkVaW_root[data-phase="active"] { overflow: visible; }
-  & .wSkVaW_header { width: calc(100% + var(--codex-right-width, 0px)); box-sizing: border-box; position: relative; z-index: 12; min-height: 46px; padding: 7px 12px 7px 14px; gap: 8px; flex-wrap: nowrap; border-color: var(--omd-pane-line); }
+  & .wSkVaW_header { width: calc(100% + var(--codex-right-width, 0px)); box-sizing: border-box; position: relative; z-index: 12; display: flex; align-items: center; min-height: 46px; padding: 7px 12px 7px 14px; gap: 8px; flex-wrap: nowrap; border-color: var(--omd-pane-line); }
+  & .wSkVaW_headerLeading:has(> [data-slot="conversation.header.leading"]:only-child:empty) { display: none; }
+  /* This adapter also runs without OMD's shared chrome layer. Reserve native
+     macOS window controls once when flattening the title row into this flex. */
+  &[data-platform="darwin"] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] { padding-inline-start: var(--dsh-frame-leading-clearance, 0px); }
+  &[data-platform="darwin"] [data-sidebar-collapsed] .wSkVaW_header[data-window-drag] .wSkVaW_titleRow { padding-inline-start: 0; }
   & .wSkVaW_titleRow { display: contents; }
   & .wSkVaW_titleCluster { gap: 6px; }
   & .wSkVaW_crumb { font-size: 14px; padding: 3px 2px; border-radius: 5px; }
@@ -82,7 +87,9 @@ html.omd[data-omd-layout="codex-desktop"] {
   & .wSkVaW_headerActions { font-size: 12px; color: var(--omd-muted); }
   & .wSkVaW_headerUtilities { order: 1; margin-left: 8px; gap: 4px; }
   & .wSkVaW_headerCorner { order: 3; margin: 0 0 0 4px; }
-  & .wSkVaW_tabs { order: 2; margin: 0; padding: 2px; gap: 0; border: 1px solid var(--omd-pane-line); border-radius: 8px; background: transparent; }
+  & .wSkVaW_tabs { order: 2; flex: 0 1 auto; width: auto; max-width: 100%; align-items: center; margin: 0; padding: 2px; gap: 0; border: 1px solid var(--omd-pane-line); border-radius: 8px; background: transparent; }
+  & .wSkVaW_viewTabs { align-items: center; gap: inherit; }
+  & .wSkVaW_viewsMore { margin-top: 0; }
   & .codex-panel-toggle { width: 28px; height: 28px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--omd-muted); border: 0; border-radius: 7px; cursor: pointer; }
   & .codex-panel-toggle:hover { background: var(--omd-hover); color: var(--omd-text); }
   & .codex-panel-toggle svg { width: 16px; height: 16px; transform: scaleX(-1); }
