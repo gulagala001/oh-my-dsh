@@ -20,7 +20,7 @@ for (const lifecycle of ['released', 'replaced', 'retained']) test('a coordinato
   user('Keep the original user request.');
   const original = add('existing'), ready = Promise.withResolvers(), late = Promise.withResolvers(), calls = [];
   const hub = { store: { dir: directory }, scope: () => ({ mode: 'session', project: 'release-test' }),
-    config: () => ({ contextEnabled: true, traceEnabled: false, keepTailEvents: 0, prepareContinueTokens: 1, coordinatorMinGapMs: 0, coordinatorEvery: 1 }),
+    config: () => ({ memoryCacheEnabled: false, contextEnabled: true, traceEnabled: false, keepTailEvents: 0, prepareContinueTokens: 1, coordinatorMinGapMs: 0, coordinatorEvery: 1 }),
     action() {}, event() {}, ctx: { sessions: { async flush() {} } },
     async call(_agent, kind) {
       calls.push(kind);
@@ -61,7 +61,7 @@ for (const lifecycle of ['released', 'replaced', 'retained']) test('a coordinato
 async function fixture(t, settings = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'omd-context-lifecycle-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const config = { contextEnabled: true, traceEnabled: false, keepTailEvents: 0, prepareContinueTokens: 1, coordinatorMinGapMs: 0, backgroundConcurrency: 1, ...settings };
+  const config = { memoryCacheEnabled: false, contextEnabled: true, traceEnabled: false, keepTailEvents: 0, prepareContinueTokens: 1, coordinatorMinGapMs: 0, backgroundConcurrency: 1, ...settings };
   const session = Session.create('lifecycle');
   session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Keep the original request.' }] }), { surfaceOp: 'append' });
   const original = session.append('assistant/message', { turn: 1, step: 1, message: { id: 'original', role: 'assistant',

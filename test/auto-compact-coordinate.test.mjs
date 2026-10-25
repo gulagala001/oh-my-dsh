@@ -18,7 +18,7 @@ for (const scenario of ['accumulating', 'due', 'interrupted', 'pending']) test('
     message: { id: 'source', role: 'assistant', source: { kind: 'model', model: 'fixture' }, content: [{ type: 'text', text: 'Recorded observations. '.repeat(600) }] } }, { surfaceOp: 'append' });
   const before = structuredClone(session.snapshotEvents()), ready = Promise.withResolvers(), calls = [];
   const hub = { store: { dir: directory }, scope: () => ({ mode: 'session', project: 'auto-coordinate' }),
-    config: () => ({ contextEnabled: true, traceEnabled: false, autoCompactEnabled: true, autoCompactThreshold: 1000, coordinatorEvery: 4, coordinatorMinGapMs: 0 }),
+    config: () => ({ memoryCacheEnabled: false, contextEnabled: true, traceEnabled: false, autoCompactEnabled: true, autoCompactThreshold: 1000, coordinatorEvery: 4, coordinatorMinGapMs: 0 }),
     action() {}, event() {},
     ctx: { sessions: { async flush() {} }, tokenMeter: { measure(value) { return { totalTokens: Math.ceil(JSON.stringify(value.deriveMessages()).length / 4), nodes: [] }; } } },
     async call(_agent, kind, request, signal) {
