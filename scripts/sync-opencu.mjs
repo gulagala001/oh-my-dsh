@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { copyFile, mkdir, readFile, writeFile, rename, mkdtemp, stat, readdir, lstat, realpath } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile, rename, mkdtemp, stat, readdir, lstat, realpath, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve, join, dirname } from 'node:path';
 
@@ -9,43 +9,82 @@ const source = resolve(process.argv[2] || join(root, '../opencu'));
 const local = join(root, '../.local');
 await mkdir(local, { recursive: true });
 const staging = await mkdtemp(join(local, 'opencu-bundle-'));
-// Direct server/host-source fixes do not require replacing host-specific client
-// output. Membership/version/build-input changes still use the full package path.
-if (process.argv[3] === '--files') {
-  const selected = [...new Set(process.argv.slice(4))], target = join(root, 'vendor/opencu');
-  if (!selected.length) throw new Error('Select existing distributed source files');
+// Direct source fixes retain host-specific output. --client synchronizes only
+// rebuilt frontend/extension bytes; version/build-input changes use the package path.
+if (['--files', '--client'].includes(process.argv[3])) {
+  const clientOnly = process.argv[3] === '--client', target = join(root, 'vendor/opencu');
+  let selected = [...new Set(process.argv.slice(4))];
   const manifestPath = join(root, 'vendor/opencu.json'), originalManifest = await readFile(manifestPath);
   const manifest = JSON.parse(originalManifest), pkg = JSON.parse(await readFile(join(source, 'package.json')));
   if (pkg.name !== manifest.name || pkg.version !== manifest.version || pkg.opencu?.host !== manifest.hostVersion) throw new Error('Source-only sync requires the same package and host version');
   const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim();
+  const runtimeFile = /^lib\/rea-assets\/opencu-(?:client|chunk)-[A-Z0-9]{8}\.js$/;
+  const removed = new Set();
+  if (clientOnly) {
+    if (selected.length) throw new Error('--client takes no file arguments');
+    if (execFileSync('git', ['status', '--porcelain', '--untracked-files=normal'], { cwd: source, encoding: 'utf8' }).trim()) throw new Error('Commit the OpenCU source and generated extension before synchronizing its client');
+    execFileSync(process.execPath, ['scripts/check-extension-distribution.mjs'], { cwd: source, stdio: 'inherit' });
+    if (!(await readFile(join(source, 'lib/page-cursor.js'))).equals(await readFile(join(source, 'extension/page-cursor.js')))) throw new Error('Extension cursor differs from the rebuilt client');
+    const resources = JSON.parse(await readFile(join(source, 'lib/rea-assets/manifest.json')));
+    const runtime = resources.filter(record => record.source === 'opencu-client-build');
+    if (!runtime.length) throw new Error('Missing built OpenCU client resources');
+    const next = runtime.map(record => `lib/rea-assets/${record.file}`);
+    for (const record of runtime) {
+      const name = `lib/rea-assets/${record.file}`;
+      if (!runtimeFile.test(name) || createHash('sha256').update(await readFile(join(source, name))).digest('hex') !== record.sha256) throw new Error(`Invalid built client resource: ${name}`);
+    }
+    const previous = Object.keys(manifest.files).filter(name => runtimeFile.test(name));
+    previous.filter(name => !next.includes(name)).forEach(name => removed.add(name));
+    selected = [...new Set(['lib/client.js', 'lib/browser-surface.js', 'lib/presentation.js', 'lib/page-cursor.js',
+      'lib/page-annotations.js', 'lib/extension.zip', 'lib/rea-assets/manifest.json',
+      'extension/page-cursor.js', 'src/extension/distribution.json', ...previous, ...next])];
+  }
+  if (!selected.length) throw new Error('Select existing distributed source files');
   const updates = [];
   for (const name of selected) {
-    if (!Object.hasOwn(manifest.files, name) || name.includes('\\') || name.split('/').includes('..') ||
-      !/^(?:src\/(?!client\/)|host\/(?!build-inputs\/)|docs\/|DEVELOPMENT\.md$)/.test(name) || !/\.(?:mjs|js|ts|json|md|css|ya?ml)$/.test(name)) throw new Error(`Not an existing distributed source file: ${name}`);
+    const exists = Object.hasOwn(manifest.files, name);
+    if (name.includes('\\') || name.split('/').includes('..') || (!clientOnly && (!exists ||
+      !/^(?:src\/(?!client\/)|host\/(?!build-inputs\/)|docs\/|DEVELOPMENT\.md$)/.test(name) || !/\.(?:mjs|js|ts|json|md|css|ya?ml)$/.test(name))) ||
+      (clientOnly && !exists && !runtimeFile.test(name))) throw new Error(`Not a distributed OpenCU file: ${name}`);
     const from = join(source, name), destination = join(target, name);
-    if (await realpath(from) !== from || await realpath(destination) !== destination) throw new Error(`Refusing a non-owned source file: ${name}`);
-    const bytes = await readFile(from), previous = await readFile(destination);
-    const committed = execFileSync('git', ['show', `${commit}:${name}`], { cwd: source, maxBuffer: 8 * 1024 * 1024 });
-    if (!bytes.equals(committed)) throw new Error(`Commit the source file before synchronizing: ${name}`);
-    if (createHash('sha256').update(previous).digest('hex') !== manifest.files[name]) throw new Error(`Bundled source differs from its manifest: ${name}`);
-    const staged = join(staging, 'next', name);
-    await mkdir(dirname(staged), { recursive: true }); await writeFile(staged, bytes, { mode: (await stat(destination)).mode & 0o777 });
+    if (!exists) {
+      try { await lstat(destination); throw new Error(`Refusing an untracked destination: ${name}`); }
+      catch (error) { if (error.code !== 'ENOENT') throw error; }
+    }
+    if ((!removed.has(name) && await realpath(from) !== from) || (exists && await realpath(destination) !== destination) ||
+      (!exists && await realpath(dirname(destination)) !== dirname(destination))) throw new Error(`Refusing a non-owned source file: ${name}`);
+    const bytes = removed.has(name) ? null : await readFile(from), previous = exists ? await readFile(destination) : null;
+    if (bytes && (!clientOnly || !name.startsWith('lib/'))) {
+      const committed = execFileSync('git', ['show', `${commit}:${name}`], { cwd: source, maxBuffer: 8 * 1024 * 1024 });
+      if (!bytes.equals(committed)) throw new Error(`Commit the source file before synchronizing: ${name}`);
+    }
+    if (previous && createHash('sha256').update(previous).digest('hex') !== manifest.files[name]) throw new Error(`Bundled source differs from its manifest: ${name}`);
+    if (bytes && previous && bytes.equals(previous)) continue;
+    const staged = bytes ? join(staging, 'next', name) : null;
+    if (staged) {
+      await mkdir(dirname(staged), { recursive: true }); await writeFile(staged, bytes, { mode: exists ? (await stat(destination)).mode & 0o777 : 0o644 });
+    }
     updates.push({ name, destination, previous, staged });
-    manifest.files[name] = createHash('sha256').update(bytes).digest('hex');
+    if (bytes) manifest.files[name] = createHash('sha256').update(bytes).digest('hex');
+    else delete manifest.files[name];
   }
   manifest.source = '../opencu'; manifest.sourceCommit = commit;
   delete manifest.archiveSha256; // No new archive was built for this mixed source/output snapshot.
   const applied = [];
   try {
-    for (const update of updates) { await rename(update.staged, update.destination); applied.push(update); }
+    for (const update of updates) {
+      if (update.staged) await rename(update.staged, update.destination); else await rm(update.destination);
+      applied.push(update);
+    }
     await writeFile(join(staging, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     await rename(join(staging, 'manifest.json'), manifestPath);
   } catch (error) {
-    const rollback = await Promise.allSettled([...applied.map(update => writeFile(update.destination, update.previous)), writeFile(manifestPath, originalManifest)]);
+    const rollback = await Promise.allSettled([...applied.map(update => update.previous ? writeFile(update.destination, update.previous) : rm(update.destination, { force: true })), writeFile(manifestPath, originalManifest)]);
     throw new AggregateError([error, ...rollback.filter(result => result.status === 'rejected').map(result => result.reason)], 'OpenCU source sync failed');
   }
   execFileSync(process.execPath, [fileURLToPath(new URL('./build-credits.mjs', import.meta.url)), '--write'], { stdio: 'inherit' });
-  console.log(`Synced ${selected.length} committed OpenCU source files; existing built assets retained`);
+  await rm(staging, { recursive: true, force: true });
+  console.log(`Synced ${updates.length} OpenCU ${clientOnly ? 'client output' : 'committed source'} files from ${commit}`);
   process.exit(0);
 }
 let archive;

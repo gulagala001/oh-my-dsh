@@ -25,6 +25,10 @@ const DOCKED = '[data-sidebar-right-panel][data-sidebar-right-open] :is([data-do
 const GEOMETRY = /^(transform|translate|scale|rotate|opacity|visibility|clipPath|(?:min|max)?(?:Width|Height)|width|height|left|top|right|bottom|inset|gridTemplate|margin|padding)/;
 
 export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
+  // This full-window canvas is decorative, including when rendering cannot
+  // start. Host rules or a missing theme sheet must never turn it into a hit target.
+  canvas.inert = true;
+  canvas.style.setProperty('pointer-events', 'none', 'important');
   const background = canvas.getContext('2d');
   let g=background, local=false;
   let paintContext,paintFont,paintColor;

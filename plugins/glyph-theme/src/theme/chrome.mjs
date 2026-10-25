@@ -31,11 +31,13 @@ export function createCharacterChrome() {
         layer?.canvas.remove();layer?.caption?.remove();
         const canvas=document.createElement('canvas');
         canvas.className='omd-glyph-chrome';canvas.setAttribute('aria-hidden','true');
+        canvas.inert=true;
         host.appendChild(canvas);
         layer={canvas,g:canvas.getContext('2d')};layers.set(el,layer);
       }
       if(el.hasAttribute('data-composer-card')&&!layer.caption?.isConnected) {
         const caption=document.createElement('span');caption.className='omd-glyph-caption';caption.setAttribute('aria-hidden','true');
+        caption.inert=true;caption.style.setProperty('pointer-events','none','important');
         el.appendChild(caption);layer.caption=caption;
       }
     }
@@ -53,7 +55,7 @@ export function createCharacterChrome() {
       const w=r.width+padding*2,h=r.height+padding*2;
       const {canvas,g}=layer;
       if(canvas.width!==Math.ceil(w*dpr)||canvas.height!==Math.ceil(h*dpr)){canvas.width=Math.ceil(w*dpr);canvas.height=Math.ceil(h*dpr);}
-      const css=`left:${r.left-origin.left-padding}px;top:${r.top-origin.top-padding}px;width:${w}px;height:${h}px`;
+      const css=`left:${r.left-origin.left-padding}px;top:${r.top-origin.top-padding}px;width:${w}px;height:${h}px;pointer-events:none!important`;
       if(layer.css!==css){canvas.style.cssText=css;layer.css=css;}
       layer.r=r;layer.padding=padding;layer.dpr=dpr;
       g.setTransform(dpr,0,0,dpr,(padding-r.left)*dpr,(padding-r.top)*dpr);

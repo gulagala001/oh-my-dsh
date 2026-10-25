@@ -77,7 +77,7 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 
 修改组件或价格来源的 `scripts/sync-*.mjs` 在同步完成后调用同一个来源清单生成器，更新设置页与公开来源文档；其他手工修改来源清单输入后运行 `npm run credits:write`。`npm run docs:check` 检查生成内容是否一致。
 
-OpenCU 同版本的服务端 ESM、宿主源码与文档可运行 `node scripts/sync-opencu.mjs ../opencu --files src/dsh/downloads.mjs host/downloads.ts DEVELOPMENT.md docs/install.md docs/install_EN.md`，只替换列出的已提交、已分发文件并保留现有构建产物。入口拒绝未提交源文件、目标摘要不符、生成产物和新增文件；`vendor/opencu.json` 记录 `sourceCommit` 与逐文件摘要，并移除已不代表当前快照的 `archiveSha256`。新增／删除文件、变更版本、前端或生成输入时仍同步匹配宿主的完整包。宿主源码进入发行包不等于已经重建或更新桌面。
+OpenCU 同版本的服务端 ESM、宿主源码与文档可运行 `node scripts/sync-opencu.mjs ../opencu --files src/dsh/downloads.mjs host/downloads.ts DEVELOPMENT.md docs/install.md docs/install_EN.md`，只替换列出的已提交、已分发文件并保留现有构建产物。该模式拒绝未提交源文件、目标摘要不符、生成产物和新增文件。同版本客户端修改在完成受影响构建、更新扩展摘要并提交源码后，可用 `node scripts/sync-opencu.mjs ../opencu --client` 同步客户端、内容哈希分块和扩展光标／ZIP，校验资源摘要并清理被替代的分块，无需重新打完整包。两种模式均在 `vendor/opencu.json` 记录 `sourceCommit` 与逐文件摘要，并移除已不代表当前快照的 `archiveSha256`。其他文件成员、版本或构建输入变更仍同步匹配宿主的完整包。同步源码或客户端不等于已经重建或更新桌面。
 
 Persona 在独立仓库维护，`node scripts/sync-persona.mjs` 按实际 npm 分发清单同步至 `plugins/persona/`，包含公开文档与检查输入。人格设置写入仅使用 `/api/dsh-persona/settings`：GET 返回配置和 `ETag`，POST 通过 `If-Match` 提交读取时的标记；冲突返回 409 和当前配置，缺少标记返回 428。旧 OMD `/settings` 不再接受人格字段，已有配置字段仍用于迁移和读取。
 

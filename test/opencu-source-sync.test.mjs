@@ -49,3 +49,52 @@ test('source sync refuses dirty source, changed baseline, generated files and ne
   await writeFile(join(f.bundled, 'src/dsh/downloads.mjs'), 'existing local edit'); await assert.rejects(f.sync(['src/dsh/downloads.mjs']), /differs from its manifest/);
   assert.equal(await readFile(join(f.bundled, 'src/dsh/downloads.mjs'), 'utf8'), 'existing local edit');
 });
+
+test('client sync validates built chunks, replaces obsolete output and retains unrelated source', async t => {
+  const f = await fixture(t), oldChunk = 'lib/rea-assets/opencu-chunk-AAAAAAAA.js', newChunk = 'lib/rea-assets/opencu-chunk-BBBBBBBB.js';
+  const files = ['lib/client.js', 'lib/browser-surface.js', 'lib/presentation.js', 'lib/page-cursor.js',
+    'lib/page-annotations.js', 'lib/extension.zip', 'lib/rea-assets/manifest.json', 'extension/page-cursor.js', 'src/extension/distribution.json'];
+  for (const name of [...files, oldChunk, newChunk]) {
+    await mkdir(join(f.source, name, '..'), { recursive: true });
+    await mkdir(join(f.bundled, name, '..'), { recursive: true });
+    if (name === newChunk) continue;
+    await writeFile(join(f.bundled, name), `old ${name}`);
+    f.manifest.files[name] = hash(`old ${name}`);
+    if (name !== oldChunk) await writeFile(join(f.source, name), `new ${name}`);
+  }
+  const nextBytes = 'export const fresh = true;';
+  await writeFile(join(f.source, newChunk), nextBytes);
+  await writeFile(join(f.source, 'extension/page-cursor.js'), await readFile(join(f.source, 'lib/page-cursor.js')));
+  await writeFile(join(f.source, 'lib/rea-assets/manifest.json'), JSON.stringify([
+    { file: 'opencu-chunk-BBBBBBBB.js', sha256: hash(nextBytes), source: 'opencu-client-build' },
+  ]));
+  await writeFile(join(f.host, 'vendor/opencu.json'), JSON.stringify(f.manifest));
+  await mkdir(join(f.source, 'scripts'));
+  // The real extension-byte contract is covered by the distribution check;
+  // this fixture isolates sync preflight and file replacement behavior.
+  await writeFile(join(f.source, 'scripts/check-extension-distribution.mjs'), '');
+  await writeFile(join(f.source, '.gitignore'), 'lib/\n');
+  await exec('git', ['add', '.'], { cwd: f.source });
+  await exec('git', ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'client source'], { cwd: f.source });
+  const sync = () => exec(process.execPath, [join(f.host, 'scripts/sync-opencu.mjs'), f.source, '--client']);
+  await writeFile(join(f.source, newChunk), 'tampered output');
+  await assert.rejects(sync(), /Invalid built client resource/);
+  assert.equal(await readFile(join(f.bundled, 'lib/client.js'), 'utf8'), 'old lib/client.js');
+  await writeFile(join(f.source, newChunk), nextBytes);
+  await writeFile(join(f.bundled, newChunk), 'untracked local file');
+  await assert.rejects(sync(), /untracked destination/);
+  assert.equal(await readFile(join(f.bundled, newChunk), 'utf8'), 'untracked local file');
+  await rm(join(f.bundled, newChunk));
+  await sync();
+  await assert.rejects(readFile(join(f.bundled, oldChunk)), { code: 'ENOENT' });
+  const manifest = JSON.parse(await readFile(join(f.host, 'vendor/opencu.json')));
+  for (const name of [...files, newChunk]) {
+    const bytes = await readFile(join(f.bundled, name));
+    assert(bytes.equals(await readFile(join(f.source, name))));
+    assert.equal(manifest.files[name], hash(bytes));
+  }
+  assert.equal(manifest.files[oldChunk], undefined);
+  assert.equal(manifest.archiveSha256, undefined);
+  assert.equal(await readFile(join(f.bundled, 'src/dsh/downloads.mjs'), 'utf8'), 'export const previous = true;\n');
+  await sync(); // Repeated synchronization keeps the same runtime bytes.
+});
