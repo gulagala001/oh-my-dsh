@@ -1,7 +1,12 @@
 import React, { Children, isValidElement, useId, useRef, useState } from 'react';
-import { Button, Input, Switch, Checkbox, SegmentedControl, Menu, IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Input, Switch, Checkbox, SegmentedControl as NativeSegmentedControl, Menu, IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 
-export { Button, Input, Switch, Checkbox, SegmentedControl };
+export { Button, Input, Switch, Checkbox };
+
+export function SegmentedControl({ id, ...props }) {
+  const generated = useId();
+  return <div className="omd-native-segments"><NativeSegmentedControl {...props} id={id ?? generated}/></div>;
+}
 
 export const isSelectMenuTarget = target => Boolean(target?.closest?.('[role="menu"]')?.querySelector('[data-omd-select-option]'));
 

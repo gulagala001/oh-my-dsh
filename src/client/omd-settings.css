@@ -29,11 +29,14 @@
 .omd-set-row { display: block; width: 100%; padding: 12px 14px; border: 0; border-top: .5px solid var(--cx-line); background: none; color: inherit; font: inherit; text-align: left; }
 .omd-set-card > .omd-set-row:first-child, .omd-set-card > :first-child > .omd-set-row:first-child { border-top: 0; }
 .omd-set-row[data-disabled] { opacity: .6; }
-.omd-set-line { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.omd-set-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+/* Reserve readable copy before fitting controls. A zero flex basis lets a
+   wide control squeeze the description even when the row allows wrapping. */
+.omd-set-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.omd-set-copy { min-width: 0; flex: 1 1 16rem; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
 .omd-set-copy strong { font-size: 13px; font-weight: 500; }
 .omd-set-copy small, .omd-set-field small, .omd-set-route > small, .omd-set-folders > small { font-size: 12px; color: var(--cx-muted); line-height: 1.55; }
-.omd-set-control { flex: none; display: flex; align-items: center; gap: 8px; max-width: 60%; }
+.omd-set-control { flex: 0 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; max-width: 100%; margin-inline-start: auto; }
+.omd-set-control > * { min-width: 0; max-width: 100%; }
 .omd-set-credit a, .omd-set-link { color: var(--cx-muted); text-decoration: none; }
 .omd-set-credit a:hover, .omd-set-link:hover { color: var(--cx-text); text-decoration: underline; }
 .omd-set-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 14px; font-size: 12px; }
@@ -107,8 +110,6 @@
   .omd-set-layout[data-outline] > .omd-set-body { padding-left: 14px; }
 }
 @container omdfields (max-width: 460px) {
-  .omd-set-line { flex-wrap: wrap; }
-  .omd-set-control { max-width: 100%; }
   .omd-set-fields { grid-template-columns: 1fr; }
   .omd-image-body { margin-left: 0; }
   .omd-image-fields { margin-left: 6px; }

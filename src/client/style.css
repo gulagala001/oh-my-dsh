@@ -69,6 +69,10 @@ html[data-omd-skin] .tx-app input[type=checkbox]{ accent-color: var(--omd-switch
 .omd-native-select { display: inline-flex; min-width: 0; max-width: 100%; vertical-align: middle; }
 .omd-native-select > span, .omd-native-select button[aria-haspopup="menu"] { max-width: 100%; min-width: 0; }
 .omd-native-select-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Scroll the complete native tablist, keeping equal segment widths and its
+   indicator geometry intact when translated labels exceed the available row. */
+.omd-native-segments { min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
+.omd-native-segments > [role="tablist"] { width: max-content; }
 .omd-personalization .omd-native-select { max-width: 58%; }
 @media (max-width: 600px) { .omd-personalization .omd-native-select { max-width: 100%; } }
 

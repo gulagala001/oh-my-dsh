@@ -5,7 +5,7 @@
   --cx-blue: var(--dsw-alias-state-business-primary); --cx-tint: color-mix(in srgb, var(--cx-blue) 7%, var(--cx-bg));
   --cx-red: var(--dsw-alias-state-error-primary, #be555e);
   position: relative; display: flex; flex-direction: column; min-height: 0; width: 100%; box-sizing: border-box;
-  color: var(--cx-text); font-size: 13px; line-height: 1.6; container: omdset / inline-size;
+  color: var(--cx-text); font-size: 13px; line-height: 1.6; container: persona / inline-size;
 }
 .dsp-settings *, .dsp-settings *::before, .dsp-settings *::after { box-sizing: border-box; }
 .dsp-settings :is(h2, h3, p) { margin: 0; }
@@ -13,11 +13,12 @@
 .dsp-set-row { display: block; width: 100%; padding: 12px 14px; border: 0; border-top: .5px solid var(--cx-line); background: none; color: inherit; font: inherit; text-align: left; }
 .dsp-set-card > .dsp-set-row:first-child, .dsp-set-card > :first-child > .dsp-set-row:first-child { border-top: 0; }
 .dsp-set-row[data-disabled] { opacity: .6; }
-.dsp-set-line { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.dsp-set-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.dsp-set-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.dsp-set-copy { min-width: 0; flex: 1 1 16rem; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
 .dsp-set-copy strong { font-size: 13px; font-weight: 500; }
 .dsp-set-copy small, .dsp-set-field small, .dsp-set-route > small, .dsp-set-folders > small { font-size: 12px; color: var(--cx-muted); line-height: 1.55; }
-.dsp-set-control { flex: none; display: flex; align-items: center; gap: 8px; max-width: 60%; }
+.dsp-set-control { flex: 0 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; max-width: 100%; margin-inline-start: auto; }
+.dsp-set-control > * { min-width: 0; max-width: 100%; }
 .dsp-native-select { display: inline-flex; min-width: 0; max-width: 100%; vertical-align: middle; }
 .dsp-native-select > span, .dsp-native-select button[aria-haspopup="menu"] { max-width: 100%; min-width: 0; }
 .dsp-native-select-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -56,4 +57,4 @@
 .dsp-settings { display: block; container: persona / inline-size; }
 .dsp-settings > h2 { margin: 0 0 16px; font-size: 18px; }
 .dsp-set-page { padding: 22px; height: 100%; overflow: auto; }
-@container persona (max-width: 460px) { .dsp-set-line { flex-wrap: wrap; } .dsp-set-control { max-width: 100%; } .dsp-set-fields { grid-template-columns: 1fr; } }
+@container persona (max-width: 460px) { .dsp-set-fields { grid-template-columns: 1fr; } }
