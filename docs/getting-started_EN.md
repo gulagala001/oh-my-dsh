@@ -41,7 +41,7 @@ Check the right file, successful actual tool result, and accessible deliverable.
 | Star | Refine an unsent draft and keep versions; each call incurs usage. Automatic polish defaults off. |
 | **OMD Console** | The single right-sidebar entry: overview, context (prepare → hub → replace, compaction), memory (automatic Dream off; empty folder selection means all), call log, background log. `≥` is a lower bound; unknown is not zero; background calls also cost usage. New-session empty state is normal. |
 | Composer info bar | Native turn/token readings plus context and Dream job items; each opens the matching console section. |
-| **BT** | Task reminders on; verification reminders off. “View task evidence” opens requirements, status, and evidence. |
+| **BT** | Task reminders start on. Verification offers Off / Default / On, initially Default. Off disables the verification tool and requirements; On also enables completion reminders. “View task evidence” retains existing records. |
 | Model/Fast | Ultra has Workflow / Agent Team / Free submodes and prefers `xhigh`, otherwise highest. Agent Team requires DSH to enable it. Fast needs actual matching Subscriptions/model support. |
 | **Appearance** | Glyph and four other themes, native DSH, 29 palettes, fonts, backgrounds and reduced motion. |
 | **View original** | Read a tool result by line or keyword; import/export original-result archives from Context. |

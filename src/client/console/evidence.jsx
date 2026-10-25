@@ -15,13 +15,15 @@ export function EvidenceSection({ sessionId, visible }) {
   if (!sessionId) return <Empty icon="evidence" title="先选择一个会话"/>;
   if (!data) return error ? <Alert>{error}</Alert> : <Skeleton cards={3} rows={4}/>;
   const tasks = data.tasks || [], done = tasks.filter(t => t.status === 'completed').length;
+  const verification = data.taskVerificationMode !== 'off';
   const links = tasks.flatMap(t => t.links || []), passed = links.filter(l => l.lastRun?.pass).length;
   const history = data.legacyContext;
   return <div className="omc-section">
+    {!verification && <p className="omc-hint">本会话的任务验证已关闭，已有证据仅作历史记录保留。</p>}
     <div className="omc-stats omc-stats-4">
       <Stat label="任务" value={`${done}/${tasks.length}`} sub="已完成 / 全部" tone={tasks.length && done === tasks.length ? 'green' : undefined}/>
       <Stat label="证据" value={links.length} sub={`${passed} 项测试通过`}/>
-      <Stat label="待验证" value={tasks.filter(t => !t.links?.length).length} tone={tasks.some(t => !t.links?.length) ? 'amber' : undefined} sub="未关联证据"/>
+      <Stat label="待验证" value={verification ? tasks.filter(t => !t.links?.length).length : '—'} tone={verification && tasks.some(t => !t.links?.length) ? 'amber' : undefined} sub={verification ? '未关联证据' : '任务验证已关闭'}/>
       <Stat label="最近收尾" value={data.taskRelease?.total ? `${data.taskRelease.done}/${data.taskRelease.total}` : '—'} sub={data.taskRelease?.total ? `测试 ${data.taskRelease.tested} · 文字 ${data.taskRelease.textOnly}` : '暂无'}/>
     </div>
     {tasks.length > 0 && <StackBar legend={false} total={tasks.length} parts={[{ key: 'd', name: '完成', value: done, color: 'var(--omc-green)' }]}/>}
@@ -32,7 +34,7 @@ export function EvidenceSection({ sessionId, visible }) {
           <NativeButton size="sm" variant="ghost" type="button" className="omc-task-row" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : id)}>
             <span className={`omc-check ${task.status === 'completed' ? 'omc-on' : ''}`}>{task.status === 'completed' && <Icon name="check" size={11}/>}</span>
             <span className="omc-task-title">{task.content}</span>
-            {task.links?.some(l => l.lastRun?.pass) ? <Tag tone="green">测试通过</Tag> : task.links?.length ? <Tag tone="blue">有证据</Tag> : <Tag tone="amber">待验证</Tag>}
+            {task.links?.some(l => l.lastRun?.pass) ? <Tag tone="green">测试通过</Tag> : task.links?.length ? <Tag tone="blue">有证据</Tag> : verification ? <Tag tone="amber">待验证</Tag> : null}
             <Icon name="chevron" size={12}/>
           </NativeButton>
           {isOpen && <div className="omc-detail">
@@ -43,7 +45,7 @@ export function EvidenceSection({ sessionId, visible }) {
               {link.reason && <p className="omc-hint">原因：{link.reason}</p>}
               {link.lastRun?.tail && <details><summary>运行输出</summary><pre className="omc-pre">{link.lastRun.tail}</pre></details>}
             </div>; })}
-            {!task.links?.length && <p className="omc-hint">完成任务后关联实际验证证据。</p>}
+            {verification && !task.links?.length && <p className="omc-hint">完成任务后关联实际验证证据。</p>}
             {task.verification && <p className="omc-prose">{task.verification.method}<br/>{task.verification.result}</p>}
           </div>}
         </li>;

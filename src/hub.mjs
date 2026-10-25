@@ -16,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 import { MonitorLedger, reportedMonitorUsage } from './monitor-ledger.mjs';
 import { monitorTokenChunk } from './monitor-call.mjs';
 import { MonitorPricing } from './monitor-pricing.mjs';
+import { TASK_VERIFICATION_MODES, verificationMode } from './task-verification.mjs';
 
 const TASK_PAUSE_GUIDANCE = promptText('runtime/task-pause.md');
 const DREAM_CONSUMERS = Symbol('dream-consumers');
@@ -86,15 +87,36 @@ export class Hub extends Service {
     return { ...Object.fromEntries(Object.keys(Config.dict).filter(key => Object.hasOwn(value, key)).map(key => [key, value[key]])), ...this.persona?.config() };
   }
   taskReminders(session) {
-    const saved = (this.store.peek ? this.store.peek(session.id) : this.store.state(session.id))?.betterTodo;
-    return { todo: saved?.todo ?? true, verification: saved?.verification ?? false };
+    const read = id => (this.store.peek ? this.store.peek(id) : this.store.state(id));
+    const saved = read(session.id)?.betterTodo;
+    let inherited, parent = session.header?.origin === 'subagent' || Number(session.header?.delegationDepth) > 0 ? session.header.parentSession : null;
+    const seen = new Set([session.id]);
+    while (parent && !seen.has(parent)) {
+      seen.add(parent);
+      const state = read(parent);
+      if (state?.betterTodo?.verificationMode !== undefined || typeof state?.betterTodo?.verification === 'boolean') { inherited = state.betterTodo; break; }
+      parent = state?.parentSession;
+    }
+    const mode = verificationMode(saved, verificationMode(inherited, this.config().taskVerificationMode));
+    return { todo: saved?.todo ?? true, verificationMode: mode, verification: mode === 'on' };
   }
   setTaskReminders(session, patch) {
-    const state = this.store.state(session.id), previous = this.taskReminders(session), next = { ...previous, ...patch };
-    this.store.update(state, { betterTodo: next });
-    if (next.todo !== previous.todo || next.verification !== previous.verification) this.todoStore?.resetTurnControl(session);
+    if (Object.hasOwn(patch, 'verificationMode') && !TASK_VERIFICATION_MODES.includes(patch.verificationMode)) throw Error('无效的任务验证档位');
+    const state = this.store.state(session.id), previous = this.taskReminders(session), saved = { ...state.betterTodo };
+    if (Object.hasOwn(patch, 'todo')) saved.todo = patch.todo;
+    if (Object.hasOwn(patch, 'verificationMode') || Object.hasOwn(patch, 'verification')) {
+      saved.verificationMode = patch.verificationMode ?? (patch.verification ? 'on' : 'default');
+      delete saved.verification;
+    }
+    this.store.update(state, { betterTodo: saved });
+    const next = this.taskReminders(session);
+    if (next.todo !== previous.todo || next.verificationMode !== previous.verificationMode) this.todoStore?.resetTurnControl(session);
     if (!next.verification) this.taskReviews.delete(session.id);
+    this.refreshTaskVerification();
     return next;
+  }
+  refreshTaskVerification() {
+    for (const refresh of this.taskVerificationControllers ?? []) refresh();
   }
   scope(session, { effective = true } = {}) {
     if(effective&&this.dream?.sources?.projectlessKnown?.(session.header))return {mode:'session',project:`session:${session.id}`};
@@ -334,7 +356,7 @@ export class Hub extends Service {
     }
     text += '\n' + TASK_PAUSE_GUIDANCE;
     if (control.reminders.has(text)) return;
-    const notice = message(text, reviewing ? 'task-review' : 'task-reminder');
+    const notice = message(text, reviewing ? 'task-review' : reminders.verification ? 'task-verification' : 'task-reminder');
     agent.steer(notice);
     control.reminders.add(text);
     if (reviewing) this.taskReviews.set(session.id, { turn, messageId: notice.id, ids: store.textReviewLinkIds(session) });

@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Button, Checkbox, Choice, Input, SegmentedControl, Switch } from './native-controls.jsx';
 import { PROMPT_STYLES } from '../prompt-styles/options.mjs';
+import { TASK_VERIFICATION_OPTIONS, TASK_VERIFICATION_HINTS } from '../task-verification.mjs';
 import { Icon } from './native-icons.jsx';
 import { contextFrequencyOf, contextFrequencyPatch, contextRouteMode } from './context-client.mjs';
 import { PersonaSettings } from '../../plugins/persona/src/client/settings.jsx';
@@ -286,6 +287,7 @@ function GlobalBackground() {
 // ---- Agent ----------------------------------------------------------------------------
 
 function AgentHints({ config: c, commit }) {
+  const verificationId = useId(), verificationMode = c.taskVerificationMode ?? 'default';
   const intervals = [1, 3, 5, 10];
   const [customBudget, setCustomBudget] = useState(false);
   const budgetCustom = customBudget || !intervals.includes(c.budgetInjectionEvery ?? 1);
@@ -304,6 +306,9 @@ function AgentHints({ config: c, commit }) {
           </Fields>}/>
       </div>}/>
     <Toggle title="优化后台任务与等待" hint="长命令自动让出、完成结果预览和可中断等待；需要本版配套 DSH 运行时。" checked={c.backgroundTasksEnabled} onChange={v => commit({ backgroundTasksEnabled: v })}/>
+    <Row title="任务验证默认档位" hint={<span id={`${verificationId}-${verificationMode}-panel`} role="tabpanel" aria-labelledby={`${verificationId}-${verificationMode}`}>{TASK_VERIFICATION_HINTS[verificationMode]} 未在 BT 单独选择的会话使用此档位。</span>}>
+      <SegmentedControl id={verificationId} label="任务验证默认档位" value={verificationMode} options={TASK_VERIFICATION_OPTIONS} onChange={value => commit({ taskVerificationMode: value })}/>
+    </Row>
     <Toggle title="任务约束前置（CFR）" hint="在系统和待办工具提示词中加入约束提取、推导与核对规则，从下一次请求生效。" checked={c.todoConstraintFirst} onChange={v => commit({ todoConstraintFirst: v })}/>
   </>;
 }

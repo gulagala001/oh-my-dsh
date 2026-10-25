@@ -4,8 +4,8 @@ import { deepFreeze } from '@deepseek-ai/dsh-util-values';
 export const TODOLIST_EVENT = 'todo/write';
 export const passedTest = task => (task.links ?? []).some(link => link.kind === 'test' && link.lastRun?.pass === true);
 export const textOnly = task => !passedTest(task) && (task.links ?? []).some(link => link.kind === 'text');
-export const todosOf = tasks => tasks.map(task => ({
-  content: textOnly(task) ? `${task.title} ⚠ text-only` : task.title,
+export const todosOf = (tasks, verification = true) => tasks.map(task => ({
+  content: verification && textOnly(task) ? `${task.title} ⚠ text-only` : task.title,
   status: task.done ? 'completed' : 'pending',
 }));
 

@@ -4,6 +4,7 @@ import { personalityPatch, personalityPreset } from './cc-adaptation/personality
 import { CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
 import { DEFAULT_IMAGE_RULES, validateImageRules } from './image-rules.mjs';
 import { PROMPT_STYLES, isPromptStyle } from './prompt-styles/options.mjs';
+import { TASK_VERIFICATION_MODES } from './task-verification.mjs';
 
 const route = z.object({ provider: z.string().default(''), model: z.string().default(''), temperature: z.number().default(0.7), effort: z.string().default('off') });
 const personalityModules = z.object({ style: z.string(), communication: z.string(), presentation: z.string() });
@@ -62,6 +63,7 @@ export const Config = z.object({
   budgetInjectionEvery: z.number().step(1).min(1).default(1),
   backgroundTasksEnabled: z.boolean().default(true),
   todoConstraintFirst: z.boolean().default(false),
+  taskVerificationMode: z.union(TASK_VERIFICATION_MODES).default('default'),
   codegraphEnabled: z.boolean().default(true),
   componentAutoSetup: z.boolean().default(true),
   recommendedPluginsPageEnabled: z.boolean().default(true),
@@ -96,6 +98,7 @@ for (const [key, field] of Object.entries(Config.dict)) if (!['dataDir', 'projec
 // boolean setting; use the same schema for API writes and pipeline options.
 export function contextConfig(raw = {}) {
   if (Object.hasOwn(raw, 'promptStyle') && !isPromptStyle(raw.promptStyle)) throw Error('无效的系统提示词风格');
+  if (Object.hasOwn(raw, 'taskVerificationMode') && !TASK_VERIFICATION_MODES.includes(raw.taskVerificationMode)) throw Error('无效的任务验证档位');
   if (Object.hasOwn(raw, 'multiImageFixRules')) validateImageRules(raw.multiImageFixRules);
   personalityPatch(raw, personalityPreset(raw));
   for (const [key, value] of Object.entries(raw)) {

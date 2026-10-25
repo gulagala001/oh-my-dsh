@@ -1,8 +1,9 @@
 import { sourceName } from './message-source.mjs';
 import { appendShadow } from './context/shadow.mjs';
-import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutRuntime } from './task-context.mjs';
+import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutRuntime, isTaskVerificationReminder } from './task-context.mjs';
 import { TODOLIST_EVENT, readTaskSnapshot, passedTest, textOnly, todosOf } from './task-ledger.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
+import { withoutTaskVerification } from './task-verification.mjs';
 // Task ledger carried over from the earlier OMD ledger: preserve excerpts, anchors, item operations and evidence.
 // DSH V3 events and a unified model-facing tool are wired in tasks.mjs.
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -192,7 +193,8 @@ async function runTestLink(link, real, execute, timeoutMs) {
 
 // ---------- 清单存储（会话持久：每次变更 append 快照事件，重启从事件恢复） ----------
 
-export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
+export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS, verificationEnabled = () => true } = {}) {
+  const describe = (session, text) => verificationEnabled(session) ? text : withoutTaskVerification(text)
   // Continuation control belongs to one running turn, never to task completion.
   // A restart starts a new turn; the successful tool result retains the reason.
   const turnControls = new WeakMap()
@@ -214,7 +216,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   // cannot be overwritten by a verification command that started earlier.
   const commit = (session, r, next, { quiet = false } = {}) => {
     if (getRec(session) !== r) throw Error('任务清单已更新；本次操作未覆盖新任务，请重新查看任务与验证结果。')
-    session.append(TODOLIST_EVENT, { todos: todosOf(next.tasks), excerpts: next.excerpts, tasks: next.tasks, nextE: next.nextE, nextT: next.nextT, nextL: next.nextL, ...(quiet ? { quiet: true } : {}) })
+    session.append(TODOLIST_EVENT, { todos: todosOf(next.tasks, verificationEnabled(session)), excerpts: next.excerpts, tasks: next.tasks, nextE: next.nextE, nextT: next.nextT, nextL: next.nextL, ...(quiet ? { quiet: true } : {}) })
   }
   const clone = (r) => structuredClone({ excerpts: r.excerpts, tasks: r.tasks, nextE: r.nextE, nextT: r.nextT, nextL: r.nextL })
   const err = (text) => ({ text, isError: true })
@@ -287,7 +289,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       const events = session.snapshotEvents(), start = events.findLast(e => e.type === 'turn/start')
       if (!start || events.some(e => e.seq > start.seq && e.type === 'turn/end')) return err('Rejected: op:pause_turn requires an active turn.')
       turnControl(session).paused = true
-      return { text: `Todo and verification continuation reminders are paused for this turn. Tasks, evidence, and BT settings are unchanged.\nReason: ${args.reason.trim()}\nExplain what remains incomplete and what is needed to continue, then end your response. New user input or the next turn restores the checks. This does not stop background jobs or pause an active goal.` }
+      return { text: describe(session, 'Todo and verification continuation reminders are paused for this turn. Tasks, evidence, and BT settings are unchanged.') + `\nReason: ${args.reason.trim()}\nExplain what remains incomplete and what is needed to continue, then end your response. New user input or the next turn restores the checks. This does not stop background jobs or pause an active goal.` }
     }
     const rec = getRec(session)
     if (op === 'view') return { text: renderTree(rec) }
@@ -370,7 +372,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
           }
           // Compare resolved ranges, not alternate quotes of the same user text.
           if (title === t.title && anchor?.excerpt === t.anchor?.excerpt && anchor?.start === t.anchor?.start && anchor?.end === t.anchor?.end) {
-            echo.push(`Task ${t.id} unchanged — its checkmark and verification links were preserved.`)
+            echo.push(describe(session, `Task ${t.id} unchanged — its checkmark and verification links were preserved.`))
             continue
           }
           t.title = title; t.anchor = anchor
@@ -378,7 +380,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
           t.done = false
           t.links = []
           delete t.legacyVerification; delete t.legacySource
-          echo.push(`Task ${t.id} updated — its checkmark and verification links were cleared.`)
+          echo.push(describe(session, `Task ${t.id} updated — its checkmark and verification links were cleared.`))
         }
       }
       commit(session, rec, next)
@@ -419,6 +421,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
 
   /** 验证证据操作：link/run/unlink/view。 */
   const execVerifyLink = async (session, args, cwd, signal, execute) => {
+    if (!verificationEnabled(session)) return err('Task verification is disabled for this conversation.')
     const rec = getRec(session)
     const op = args?.op
     if (op === 'view') return { text: renderVerifyView(rec) }
@@ -471,6 +474,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
       for (const { t, l } of jobs) {
         // Cancellation is not a test result; preserve unfinished and unstarted evidence.
         if (signal?.aborted) { aborted = true; break }
+        if (!verificationEnabled(session)) throw Error('Task verification was disabled; completed results were preserved and remaining checks were not started.')
         if (getRec(session) !== current) throw Error('任务清单已更新；未继续执行旧任务的验证命令，请重新查看任务。')
         const real = existingPath(cwd, l.path)
         const startedAt = Date.now(), started = performance.now()
@@ -521,14 +525,15 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   const gateState = (session) => {
     const rec = getRec(session)
     const undone = rec.tasks.filter(t => !t.done).length
-    const unqualified = rec.tasks.filter(t => !t.links.some(qualified)).length
+    const unqualified = verificationEnabled(session) ? rec.tasks.filter(t => !t.links.some(qualified)).length : 0
     return { pass: rec.tasks.length === 0 || (undone === 0 && unqualified === 0), undone, unqualified, total: rec.tasks.length }
   }
   const blockingLines = (rec, { todo = true, verification = true } = {}) => rec.tasks
     .filter(t => (todo && !t.done) || (verification && !t.links.some(qualified)))
     .map(t => `${t.id} ${box4(t.done)} ${t.title}${verification ? ` — ${t.links.length ? t.links.map(deficitClause).join(' · ') : 'no link to real, valid evidence that the task is done'}` : ''}`)
-  const unresolvedText = (session, options) => `[todo list] Unresolved tasks remain:\n${blockingLines(getRec(session), options).join('\n')}\nContinue the permitted work that remains. A summary of progress is not completion of these tasks.`
+  const unresolvedText = (session, options) => `[todo list] Unresolved tasks remain:\n${blockingLines(getRec(session), { ...options, verification: verificationEnabled(session) && options?.verification !== false }).join('\n')}\nContinue the permitted work that remains. A summary of progress is not completion of these tasks.`
   const unqualifiedText = (session) => {
+    if (!verificationEnabled(session)) return undefined
     const rec = getRec(session), heading = rec.tasks.every(t => t.done)
       ? '[todo list] Every task is checked off, but these lack qualifying evidence:'
       : '[todo list] These tasks lack qualifying evidence:'
@@ -541,6 +546,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   }
   const textReviewLinkIds = (session) => reviewTargets(getRec(session)).flatMap(t => t.links.filter(l => l.kind === 'text' && l.asked !== true).map(l => l.id))
   const textReviewText = (session) => {
+    if (!verificationEnabled(session)) return undefined
     const targets = reviewTargets(getRec(session))
     if (!targets.length) return undefined
     const lines = targets.map(t => `${t.id} ${box4(t.done)} ${t.title} — ${t.links.filter(l => l.kind === 'text').map(reviewClause).join(' · ')}`)
@@ -558,6 +564,12 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
   }
 
   // Compare the live Todo/runtime block with the current ledger at request boundaries.
+  const retireVerificationReminders = session => {
+    for (const seq of [...session.surface.nodes]) {
+      const event = session.eventAt(seq)
+      if (event.type === 'user/message' && isTaskVerificationReminder(event.data)) appendShadow(session, [seq])
+    }
+  }
   const maintainInjection = (session, options = {}) => {
     let live = session.surface.nodes.map(seq => session.eventAt(seq)).filter(e => e.type === 'user/message' && (sourceName(e.data?.source) === 'oh-my-dsh:tasks' || e.data?.[TODO_META]));
     const desired = latestTaskContext(session, options.runtime);
@@ -590,5 +602,5 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS } = {}) {
     return session.append('user/message', msg, { surfaceOp: 'append' });
   }
 
-  return { execTaskMap, execCheck, execVerifyLink, releaseSummary, gateState, unresolvedText, unqualifiedText, textReviewText, textReviewLinkIds, markTextReviewed, maintainInjection, turnControl, resetTurnControl: session => turnControls.delete(session), snapshot: session => clone(getRec(session)) }
+  return { execTaskMap, execCheck, execVerifyLink, releaseSummary, gateState, unresolvedText, unqualifiedText, textReviewText, textReviewLinkIds, markTextReviewed, retireVerificationReminders, maintainInjection, turnControl, resetTurnControl: session => turnControls.delete(session), snapshot: session => clone(getRec(session)) }
 }

@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.0.102.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 0.102.0 · DSH 0.2.1-rc.3",
+      "notes": [
+        "BT 任务验证新增关闭／默认／开启三档，初始为默认；可设置全局默认档位并按会话独立保存。",
+        "关闭时停用验证工具、证据要求和验证催促；开启时恢复完整验证，保留普通 Todo 和历史证据。",
+        "统一 Native、PTC、提示词与界面状态，阻止旧验证调用和未开始的检查。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.102.0.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.0.101.1",
       "severity": "normal",
       "unpublished": false,

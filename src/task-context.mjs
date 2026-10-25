@@ -20,6 +20,14 @@ export function latestTaskContext(session, runtime = runtimeProviders.get(sessio
 }
 const messageOf = e => e?.type === 'user/message' ? e.data : e?.data?.message;
 export const isTaskInjection = e => e?.type === 'user/message' && sourceName(e.data?.source) === TASK_SOURCE;
+export function isTaskVerificationReminder(message) {
+  const source = sourceName(message?.source);
+  if (['oh-my-dsh:task-verification', 'oh-my-dsh:task-review'].includes(source)) return true;
+  if (source !== 'oh-my-dsh:task-reminder') return false;
+  // Retire the old mixed reminder format without touching user-authored text.
+  const text = (message.content ?? []).filter(block => block.type === 'text').map(block => block.text).join('\n');
+  return /lack qualifying evidence:|no link to real, valid evidence| — L\d+ (?:test |text — )/.test(text);
+}
 export function renderTodoInjection(rec) {
   if (!rec.tasks.length) return '[todo list]\n(empty — all tasks were removed)';
   return ['[todo list]', ...rec.tasks.map(t => `${t.done ? '[x]' : '[ ]'} ${t.id} ${t.title}`)].join('\n');
@@ -58,7 +66,7 @@ export function latestTodo(session) {
 }
 
 const referenceTools = new Set(['todo_write', 'task_map', 'runtime_status', 'recall', 'memory_search', ...BC_REFERENCE_TOOLS]);
-const controlSources = new Set(['oh-my-dsh:tasks', 'oh-my-dsh:state', 'oh-my-dsh:task-reminder', 'skill-catalog',
+const controlSources = new Set(['oh-my-dsh:tasks', 'oh-my-dsh:state', 'oh-my-dsh:task-reminder', 'oh-my-dsh:task-verification', 'oh-my-dsh:task-review', 'skill-catalog',
   'oh-my-dsh:dream-memory', 'oh-my-dsh:project-catalog', 'oh-my-dsh:manual-global']);
 const referencePrograms = new WeakMap();
 

@@ -79,7 +79,9 @@ Provide goals, inputs, boundaries, and delivery conditions. For multi-step tasks
 
 A verification batch keeps its starting work directory and saves each completed result. Cancellation or a later execution failure preserves earlier results. After a task edit, old results remain in history and cannot overwrite the new tasks. Python's pytest and any necessary script fallback share one test deadline; test output never selects a different runner after a failure.
 
-**BT** persists per conversation: task reminders default on; verification reminders off. Verification checks missing or textual evidence and may use more time/tokens. Turning reminders off keeps the tools. A blocker can pause this turn's reminders without marking completion.
+**BT** persists per conversation. Task completion reminders have a separate switch, initially on. The second control, task verification, has three positions: **Off / Default / On**, initially the middle **Default** position. Default provides `verify_link` and evidence instructions without prompting for verification at turn end. Off removes the verification tool from that conversation's native tool list and PTC SDK, disables evidence requirements, missing-evidence reminders and text-evidence review, and preserves ordinary Todo and existing evidence. On enables the complete verification mechanism, including both completion reminders and text-evidence review, which may use more time and tokens. A blocker can pause this turn's reminders without marking completion.
+
+The task verification default in **Settings → OMD → Agent** applies to conversations without an explicit BT selection; conversation choices persist independently. Legacy verification reminders off migrate to Default, and on migrate to On. Switching updates tools and the UI and retires disabled verification reminders. Requests already sent to a model cannot be recalled; stale verification calls are rejected, a command already running may finish and retain its result, and remaining checks do not start. Existing evidence remains readable in “View task evidence”; re-enabling does not require rebuilding tasks.
 
 ### Models and Work Modes
 

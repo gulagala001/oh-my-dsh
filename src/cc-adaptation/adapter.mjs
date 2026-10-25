@@ -5,6 +5,7 @@ import { browserTestingGuide } from '#opencu/src/dsh/browser-testing.mjs';
 import { agentPromptStyle } from '../prompt-styles/session.mjs';
 import { DSH_IDENTITY, renderPromptStyle } from '../prompt-styles/render.mjs';
 import { renderPersonality } from '../../plugins/persona/src/shared/prompt.mjs';
+import { withoutTaskVerification } from '../task-verification.mjs';
 
 import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
 const bindings = JSON.parse(readFileSync(new URL('./bindings.json', import.meta.url), 'utf8'));
@@ -54,6 +55,7 @@ export function transformAssembly(assembly, context, options = {}) {
     const absent = binding.fields.filter(name => !Object.hasOwn(fields, name));
     if (absent.length) { missing.push({ name: tool.name, fields: absent }); continue; }
     let description = load(binding.file);
+    if (tool.name === 'todo_write' && !known.has('verify_link')) description = withoutTaskVerification(description);
     if (tool.name === 'recall' && !Object.hasOwn(fields, 'search')) {
       description = description.replace(/ Use search=original[\s\S]*?Original search does not automatically search other sessions or change saved summaries and decisions\./, '');
     }

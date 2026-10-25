@@ -1,4 +1,4 @@
-.tx-app, .tx-scope-chip, .tx-brand-mark, .tx-wordmark, .tx-bt-option {
+.tx-app, .tx-scope-chip, .tx-brand-mark, .tx-wordmark, .tx-bt-option, .tx-bt-verification {
   --tx-bg: var(--dsw-alias-bg-base, Canvas);
   --tx-text: var(--dsw-alias-label-primary, CanvasText);
   --tx-muted: var(--dsw-alias-label-tertiary, GrayText);
@@ -42,6 +42,9 @@ html[data-omd-skin] .tx-app input[type=checkbox]{ accent-color: var(--omd-switch
 .tx-bt-option small { display: block; color: var(--tx-muted); font-size: 10px; line-height: 1.5; margin-top: 3px; }
 .tx-bt-state { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .tx-bt-state small { margin: 0; }
+.tx-bt-verification { display: flex; flex-direction: column; gap: 8px; width: 265px; max-width: calc(100vw - 48px); padding: 10px 12px; box-sizing: border-box; }
+.tx-bt-verification > strong { font-size: 12px; font-weight: 500; }
+.tx-bt-verification > small { color: var(--tx-muted); font-size: 10px; line-height: 1.5; white-space: normal; }
 @container txpanel (max-width: 330px) { .tx-app h2 { font-size: 18px; } }
 @media (prefers-reduced-motion: reduce) { .tx-app *, .tx-app *::before, .tx-app *::after { animation: none !important; transition: none !important; } }
 

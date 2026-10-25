@@ -14,7 +14,9 @@ import { user, system, plugin, exchange } from './context-fixture.mjs';
 
 async function fixture(t, overrides = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'context-first-window-'));
-  const cfg = contextConfig({ traceEnabled: true, keepTailEvents: 30, digestEvery: 48, digestWindow: 48,
+  // This suite covers the ordinary preparation path, independently of the
+  // product's now-enabled cached preparation default.
+  const cfg = contextConfig({ memoryCacheEnabled: false, traceEnabled: true, keepTailEvents: 30, digestEvery: 48, digestWindow: 48,
     prepareContinueTokens: 1, coordinatorEvery: 999, flushIdleMs: 0, ...overrides });
   const session = Session.create('first-window'), agent = { session, status: 'running' }, calls = [];
   const hub = { store: { dir: directory }, config: () => cfg, scope: () => ({ mode: 'session', project: 'fixture' }),
@@ -31,6 +33,7 @@ async function fixture(t, overrides = {}) {
 }
 function controls(s) {
   plugin(s, 'Runtime only', 'tasks'); plugin(s, 'Keep the todo list current', 'task-reminder');
+  plugin(s, 'Link missing evidence', 'task-verification'); plugin(s, 'Review text evidence', 'task-review');
   s.append('user/message', { id: 'catalog', role: 'user', source: { kind: 'skill-catalog' }, content: [{ type: 'text', text: 'Available skills' }] }, { surfaceOp: 'append' });
   return tool(s, 'run_code', { code: 'const r = await tools.todo_write({op:"list"}); console.log(r);' }, 'Task state only');
 }

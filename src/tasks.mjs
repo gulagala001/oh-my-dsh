@@ -1,11 +1,13 @@
 import { promptText } from './cc-adaptation/texts.mjs';
 import { z } from 'zod';
-import { validateJsonSchemaValue } from '@deepseek-ai/dsh-tools';
+import { validateJsonSchemaValue, renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
 import { randomUUID } from 'node:crypto';
 import { createTodoStore } from './todolist.mjs';
 import { normalizeTaskSnapshot, readTaskSnapshot, taskSnapshotFromEvents, todosOf } from './task-ledger.mjs';
 import { isDeepStrictEqual } from 'node:util';
 import { currentDirectory } from './working-directory.mjs';
+import { scopeOf } from '@deepseek-ai/dsh-scope';
+import { taskVerificationEnabled, withoutTaskVerification } from './task-verification.mjs';
 
 const TASK_ENTRY_SCHEMA = { type: 'object', properties: {
   id: { type: 'string', description: 'Required for edit: the existing task ID. Omit for excerpt/add.' },
@@ -29,7 +31,7 @@ const VERIFICATION_LINK_SCHEMA = { type: 'object', required: ['task', 'kind'], p
 export const TASK_DESCRIPTION = promptText('tools/todo-write.md');
 const TASK_PROPERTIES = {
   op: {"type":"string","enum":["excerpt","add","edit","remove","check","view","transcript","pause_turn"],"description":"Operation kind"},
-  reason: { type: 'string', description: 'Required for pause_turn: the concrete blocker or user stop request, and what is needed to continue. Tasks and evidence remain unchanged.' },
+  reason: { type: 'string', description: 'Required for pause_turn: the concrete blocker or user stop request, and what is needed to continue. Tasks remain unchanged.' },
   from: {"type":"string","description":"Required for excerpt: opening words of the block, verbatim, unique within its message"},
   to: {"type":"string","description":"Required for excerpt: closing words of the block, verbatim, unique within its message"},
   msg: {"type":"integer","description":"Only for excerpt when the quote appears in more than one user message: which message, using the [n] numbering from op:transcript"},
@@ -145,7 +147,9 @@ export function createVerificationRunner(ctx, exec, workdir = currentDirectory(c
   };
 }
 
-export function registerTasks(ctx, store = createTodoStore()) {
+export function registerTasks(ctx, store) {
+  const hub = ctx.omd, verificationEnabled = session => taskVerificationEnabled(hub, session);
+  store ??= createTodoStore({ verificationEnabled });
   // Shared root-realm key: match DSH's todos@2 fold, including its turn reset.
   // The full X ledger remains in todo/write data and is restored independently.
   const schema = z.array(z.object({ content: z.string(), status: z.enum(['pending', 'in_progress', 'completed']) })).nullable();
@@ -168,13 +172,14 @@ export function registerTasks(ctx, store = createTodoStore()) {
       },
     },
   ];
-  for (const { name, description, parameters, operations, title, run } of definitions) ctx.tools.register({
+  const tools = definitions.map(({ name, description, parameters, operations, title, run }) => ({
     name, description, parameters,
     output: { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] },
     execute(args, exec) {
       const { agent, signal } = exec, session = agent.session;
       const job = (pending.get(session.id) || Promise.resolve()).catch(() => {}).then(async () => {
         signal?.throwIfAborted();
+        if (name === 'verify_link' && !verificationEnabled(session)) throw Error('Task verification is disabled for this conversation.');
         const schema = operations.oneOf.find(branch => branch.properties.op.enum.includes(args?.op)) ?? parameters;
         const errors = validateJsonSchemaValue(schema, args);
         if (errors.length) throw new Error('Rejected: ' + errors.join('; '));
@@ -186,14 +191,87 @@ export function registerTasks(ctx, store = createTodoStore()) {
       return job.finally(() => { if (pending.get(session.id) === job) pending.delete(session.id); });
     },
     presentCall: args => ({ card: 'generic', title: title + ' · ' + args.op, kind: 'other', rawInput: args }),
-  });
+  }));
+  const releases = new Map(tools.map(tool => [tool.name, ctx.tools.register(tool)]));
+  if (hub) installTaskVerification(ctx, store, tools, releases);
   return store;
+}
+
+// Use the host's scope restrictions, so native calls, SDK discovery, and nested
+// dispatch agree. Each conversation owns its own restriction and Todo wording.
+function installTaskVerification(ctx, store, [todo, verify], releases) {
+  const hub = ctx.omd, agents = new Map(), owner = scopeOf(ctx);
+  const plainTodo = { ...todo, description: withoutTaskVerification(todo.description) };
+  const refresh = agent => {
+    if (!agent?.session || !agent.ctx?.tools) return;
+    let state = agents.get(agent);
+    if (!state) {
+      if (ctx.tools.get('verify_link', agent) !== verify) return;
+      state = { mode: undefined, dispose: [] }; agents.set(agent, state);
+      agent.ctx.effect(() => () => { state.dispose.splice(0).forEach(dispose => dispose()); agents.delete(agent); });
+    }
+    const mode = hub.taskReminders(agent.session).verificationMode;
+    if (state.mode === mode) return;
+    state.dispose.splice(0).forEach(dispose => dispose());
+    if (owner === agent) {
+      for (const release of releases.values()) release();
+      releases.clear();
+      releases.set('todo_write', ctx.tools.register(mode === 'off' ? plainTodo : todo));
+      if (mode !== 'off') releases.set('verify_link', ctx.tools.register(verify));
+    } else if (mode === 'off') {
+      state.dispose.push(agent.ctx.tools.restrict({ deny: ['verify_link'] }));
+      if (ctx.tools.get('todo_write', agent) === todo) state.dispose.push(agent.ctx.tools.register(plainTodo));
+    }
+    state.mode = mode;
+    store.resetTurnControl(agent.session);
+    if (mode !== 'on') {
+      hub.taskReviews.delete(agent.session.id);
+      store.retireVerificationReminders(agent.session);
+    }
+    restoreTaskProjection(ctx, agent.session);
+  };
+  const refreshAll = () => { for (const agent of agents.keys()) refresh(agent); };
+  hub.taskVerificationControllers ??= new Set();
+  ctx.effect(() => {
+    hub.taskVerificationControllers.add(refreshAll);
+    return () => { hub.taskVerificationControllers.delete(refreshAll); for (const state of agents.values()) state.dispose.splice(0).forEach(dispose => dispose()); agents.clear(); };
+  });
+  ctx.on('app-boot/config-reload', refreshAll, { global: true });
+  ctx.on('agent/pre-step', ({ agent }, next) => { refresh(agent); return next(); }, { prepend: true });
+  ctx.on('system-prompt/assemble', async (_initial, context, next) => {
+    const agent = context?.agent ?? context?.scope;
+    refresh(agent);
+    const assembly = await next();
+    if (!agent?.session || taskVerificationEnabled(hub, agent.session)) return assembly;
+    // Public prompt probes collect providers before their waterfall. Retire
+    // their pre-refresh catalog too, including SDKs of non-OMD prompt styles.
+    const sections = assembly.sections.flatMap(section => {
+      if (section.name === 'tool:verify_link') return [];
+      if (section.name === 'tool:todo_write') return [{ ...section, text: withoutTaskVerification(section.text) }];
+      if (section.name !== 'tools:sdk' || !/\bverify_link\b/.test(section.text)) return [section];
+      const runtime = ctx.get('ptcRuntime');
+      const sdk = ctx.tools.schemas(agent).filter(tool => tool.name !== 'run_code').map(tool => ({ ...tool, output: ctx.tools.get(tool.name, agent).output.schema }));
+      const text = runtime?.language === 'typescript' ? renderToolsSdk(sdk, runtime.programFormat)
+        : runtime?.language === 'python' ? renderToolsSdkPy(sdk) : null;
+      if (text === null) throw Error('Cannot update task verification in an unsupported PTC runtime.');
+      return [{ ...section, text }];
+    });
+    return { ...assembly, sections, tools: assembly.tools.filter(tool => tool.name !== 'verify_link').map(tool => tool.name === 'todo_write'
+      ? { ...tool, description: withoutTaskVerification(tool.description) } : tool) };
+  }, { prepend: true });
+  const denied = exec => exec.name === 'verify_link' && !taskVerificationEnabled(hub, exec.agent?.session)
+    ? 'Task verification is disabled for this conversation.' : undefined;
+  ctx.on('tools/pre-execute', (exec, next) => {
+    const reason = denied(exec);
+    return reason ? { kind: 'deny', reason, info: { code: 'UNKNOWN_TOOL' } } : next();
+  }, { prepend: true });
+  ctx.tools.guard(denied);
 }
 
 export function restoreTaskProjection(ctx, session) {
   const { event, record } = readTaskSnapshot(session);
   if (!Array.isArray(event?.data.tasks)) return;
-  const todos = todosOf(record.tasks);
+  const todos = todosOf(record.tasks, taskVerificationEnabled(ctx.omd, session));
   const current = ctx.sessionProjections.stateOf(session, 'todos');
   if (!todos.length && current === null || isDeepStrictEqual(current, todos)) return;
   // Restore X's persistent task dock after the shared projection's turn reset.

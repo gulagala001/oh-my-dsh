@@ -186,6 +186,7 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     contextConfig({ ...hub.config(), ...patch });
     if (patch.memoryScope !== undefined && !['session', 'project', 'global'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆；全局模式使用 global');
     if (Object.keys(patch).length) await ctx.settings.update('oh-my-dsh', patch);
+    if (Object.hasOwn(patch, 'taskVerificationMode')) hub.refreshTaskVerification();
     hub.context.cachedPreparation.configure();
     send(res, 200, hub.config()); return true;
   }

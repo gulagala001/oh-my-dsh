@@ -73,6 +73,7 @@ Roles: home · index · guide · development · sources · release · redirect. 
 | [docs/release-0.101.0.md](release-0.101.0.md) | release | bilingual | — |
 | [docs/release-0.101.1.md](release-0.101.1.md) | release | bilingual | — |
 | [docs/release-0.101.2.md](release-0.101.2.md) | release | bilingual | — |
+| [docs/release-0.102.0.md](release-0.102.0.md) | release | bilingual | — |
 | [docs/release-0.99.0.md](release-0.99.0.md) | release | bilingual | — |
 | [docs/release-0.99.1.md](release-0.99.1.md) | release | bilingual | — |
 | [docs/release-0.99.2.md](release-0.99.2.md) | release | bilingual | — |

@@ -54,7 +54,7 @@ import { TaskBudgets, consumeBudgetAliases } from './task-budget.mjs';
 import { WorkflowBudget } from '../vendor/workflow/src/budget.mjs';
 import { UltracodeControl, installUltracodeProjection } from './ultracode.mjs';
 import { installOverviewProjection } from './session-overview-projection.mjs';
-import { setRuntimeContext, taskContextMeta } from './task-context.mjs';
+import { setRuntimeContext, taskContextMeta, isTaskVerificationReminder } from './task-context.mjs';
 import { installBackground } from './background.mjs';
 import { mountRecommendedPlugins } from './recommended-plugins.mjs';
 import { mountPluginPreflight } from './plugin-preflight/service.mjs';
@@ -203,7 +203,8 @@ export async function apply(ctx, config) {
     if (consumed.size && !messages.some(m => !consumed.has(m.id)) && step === 1) return { kind: 'reject' };
     const decision = await next();
     if (decision.kind !== 'enter') return decision;
-    const accepted = consumed.size ? decision.messages.filter(m => !consumed.has(m.id)) : decision.messages;
+    const keepVerification = !isX(agent.session) || hub.taskReminders(agent.session).verification;
+    const accepted = decision.messages.filter(m => !consumed.has(m.id) && (keepVerification || !isTaskVerificationReminder(m)));
     hub.workflowBudget.admit(agent.session, { turn, step, messages: accepted, enabled: isX(agent.session) || isOmaaEnhanced(agent.session) });
     pendingSteps.set(agent, { turn, step, messages: accepted });
     return { ...decision, messages: accepted };
@@ -225,6 +226,7 @@ export async function apply(ctx, config) {
     if (isX(agent.session) && !signal.aborted && agent.session.header.origin !== 'subagent') {
       ensureSystemHead(agent.session, { turn, step });
       restoreTaskProjection(ctx, agent.session);
+      if (!hub.taskReminders(agent.session).verification) hub.todoStore?.retireVerificationReminders(agent.session);
       const state = hub.store.state(agent.session.id);
       if (state.memoryScope == null) { state.memoryScope = hub.config().memoryScope; hub.store.save(state); }
       hub.agents.set(agent.session.id, agent);
@@ -405,6 +407,7 @@ export async function apply(ctx, config) {
               if (typeof input[key] !== 'boolean') throw new Error('提醒选项必须为开或关');
               patch[key] = input[key];
             }
+            if (Object.hasOwn(input, 'verificationMode')) patch.verificationMode = input.verificationMode;
             send(res, 200, hub.setTaskReminders(scopeSession, patch)); return;
           }
           send(res, 200, hub.taskReminders(scopeSession)); return;
@@ -416,6 +419,7 @@ export async function apply(ctx, config) {
           res.setHeader('Cache-Control', 'no-store');
           send(res, 200, {
             config: hub.config(), directory,
+            taskVerificationMode: hub.taskReminders(scopeSession).verificationMode,
             notes: stored?.notes || [],
             legacyContext: stored && (stored.status || stored.pins?.length || stored.memoryContext?.doc || stored.checkpoint || stored.digests?.length || stored.probe || stored.probeNotes?.length) ? {
               status: stored.status, pins: stored.pins, workdoc: stored.memoryContext?.doc, checkpoint: stored.checkpoint,

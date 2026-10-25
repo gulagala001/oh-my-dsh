@@ -7,8 +7,9 @@ import { isOmdPreset } from '../legacy-identity.mjs';
 import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
 import { applySessionTimeZone } from './session-time-zone.mjs';
 import { apply as applyRewind, inject as rewindInject } from '../../vendor/rewind/src/client/index.jsx';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Menu } from '@deepseek-ai/dsh-client-ui-primitives';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Button, Menu, MenuItemButton, SegmentedControl } from '@deepseek-ai/dsh-client-ui-primitives';
+import { TASK_VERIFICATION_OPTIONS, TASK_VERIFICATION_HINTS } from '../task-verification.mjs';
 import { applyConsole } from './console/shell.jsx';
 import { openConsole } from './console/nav.mjs';
 import css from './style.css';
@@ -63,6 +64,7 @@ function BetterTodoChip(props) {
   return main && isOmdPreset(preset) ? <BetterTodoSessionChip {...props}/> : null;
 }
 function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
+  const modeId = useId();
   const [state, setState] = useState(null), [open, setOpen] = useState(false), [saving, setSaving] = useState(false), [error, setError] = useState('');
   const running = useSessionStatus(s => s.get(sessionId)?.running), active = useRef(sessionId), revision = useRef(0), writing = useRef(null); active.current = sessionId;
   const load = useCallback(async () => {
@@ -73,25 +75,38 @@ function BetterTodoSessionChip({ sessionId, useSessionStatus }) {
   }, [sessionId]);
   useEffect(() => { setOpen(false); setSaving(false); setError(''); }, [sessionId]);
   useEffect(() => { void load(); }, [load, running]);
+  useEffect(() => {
+    const refresh = () => { void load(); };
+    window.addEventListener('omd:settings-saved', refresh);
+    return () => window.removeEventListener('omd:settings-saved', refresh);
+  }, [load]);
   const ready = state?.sessionId === sessionId;
-  const toggle = async key => {
+  const update = async patch => {
     if (!ready || saving) return;
     const write = { sessionId }; writing.current = write; ++revision.current;
     setSaving(true); setError('');
     try {
-      const next = await api('/better-todo' + suffix(sessionId), { [key]: !state[key] });
+      const next = await api('/better-todo' + suffix(sessionId), patch);
       if (active.current === sessionId) setState({ sessionId, ...next });
     } catch (e) { if (active.current === sessionId) setError(e.message); }
     finally { if (writing.current === write) writing.current = null; if (active.current === sessionId) setSaving(false); }
   };
-  const chip = <Button size="sm" variant="ghost" type="button" className={cx('tx-scope-chip', 'tx-bt-chip', ready && !state.todo && !state.verification && 'tx-bt-off')} aria-label="BT · Better Todo" aria-haspopup="menu" aria-expanded={open} title="Better Todo · 收尾提醒" onClick={() => { void load(); setOpen(!open); }}><strong>BT</strong><Icon name="down" size={12}/></Button>;
-  const items = [{ type: 'label', id: 'title', text: 'Better Todo' }, ...[
-    ['todo', '待办完成提醒', '仍有未完成待办时提醒继续'],
-    ['verification', '验证完成提醒', '缺少验证证据时提醒，含文字证据复核；完成率更高，也更耗时间和 token'],
-  ].map(([id, label, hint]) => ({ id, disabled: !ready || saving, label: <span className="tx-bt-option"><span><strong>{label}</strong><small>{hint}</small></span></span> })),
-    { type: 'separator', id: 'sep' }, { id: 'evidence', label: <span className="tx-bt-option"><span><strong>查看任务证据</strong><small>需求原文、验证命令与结果</small></span><span className="tx-bt-state">›</span></span> }];
-  return <><Menu open={open} anchor={chip} items={items} selection="check" selectedIds={ready ? ['todo', 'verification'].filter(id => state[id]) : []} footer={[{ type: 'label', id: 'status', text: error || '仅本会话 · 可随时更改' }]} onSelect={id => { if (id === 'evidence') { setOpen(false); openConsole('evidence'); } else toggle(id); }} onClose={() => setOpen(false)} portal side="top" align="end" compact autoFocus/>
-</>;
+  const mode = ready ? state.verificationMode : 'default';
+  const chip = <Button size="sm" variant="ghost" type="button" className={cx('tx-scope-chip', 'tx-bt-chip', ready && !state.todo && mode === 'off' && 'tx-bt-off')} aria-label="BT · Better Todo" aria-haspopup="menu" aria-expanded={open} title="Better Todo · 待办与验证" onClick={() => { void load(); setOpen(!open); }}><strong>BT</strong><Icon name="down" size={12}/></Button>;
+  const items = [{ type: 'label', id: 'title', text: 'Better Todo' },
+    { id: 'todo', disabled: !ready || saving, label: <span className="tx-bt-option"><span><strong>待办完成提醒</strong><small>仍有未完成待办时提醒继续</small></span></span> }];
+  return <Menu open={open} anchor={chip} items={items} selection="check" selectedIds={ready && state.todo ? ['todo'] : []}
+    footer={[{ type: 'label', id: 'status', text: error || '仅本会话 · 可随时更改' }]}
+    onSelect={id => { if (id === 'todo') void update({ todo: !state.todo }); }} onClose={() => setOpen(false)} portal side="top" align="end" compact autoFocus>
+    <div className="tx-bt-verification">
+      <strong>任务验证</strong>
+      <SegmentedControl id={modeId} label="任务验证" value={mode} options={TASK_VERIFICATION_OPTIONS} disabled={!ready || saving} onChange={verificationMode => { void update({ verificationMode }); }}/>
+      <small id={`${modeId}-${mode}-panel`} role="tabpanel" aria-labelledby={`${modeId}-${mode}`}>{TASK_VERIFICATION_HINTS[mode]}</small>
+    </div>
+    <MenuItemButton separatorBefore onSelect={() => { setOpen(false); openConsole('evidence'); }}>
+      <span className="tx-bt-option"><span><strong>查看任务证据</strong><small>{mode === 'off' ? '任务验证已关闭 · 已有记录保留' : '需求原文、验证命令与结果'}</small></span><span className="tx-bt-state">›</span></span>
+    </MenuItemButton>
+  </Menu>;
 }
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
