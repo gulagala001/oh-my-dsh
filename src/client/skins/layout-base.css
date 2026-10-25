@@ -29,7 +29,14 @@ html[data-omd-skin] [data-conversation-content][data-content-phase='active'] > [
 html[data-omd-skin] .wSkVaW_header { min-height: 56px; padding: 10px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-bottom: 1px solid var(--tx-shell-line); }
 html[data-omd-skin] .wSkVaW_titleRow { flex: 1 1 240px; min-width: 0; }
 html[data-omd-skin] .wSkVaW_headerUtilities { margin-left: 10px; gap: 5px; }
-html[data-omd-skin] .wSkVaW_tabs { order: -1; flex: 0 0 auto; align-items: center; margin: 0; gap: 2px; padding: 2px; border-radius: 8px; background: var(--tx-shell-hover); }
+html[data-omd-skin] .wSkVaW_headerCorner { margin-right: 0; }
+/* rc.3 separates pinned views from extension tools in a full-width grid row.
+   These skins use flex headers: size that row by content and style the native
+   inner view group as well, without moving or replacing either slot. */
+html[data-omd-skin] .wSkVaW_headerLeading:has(> [data-slot="conversation.header.leading"]:only-child:empty) { display: none; }
+html[data-omd-skin] .wSkVaW_tabs { order: -1; flex: 0 1 auto; width: auto; max-width: 100%; align-items: center; margin: 0; gap: 2px; padding: 2px; border-radius: 8px; background: var(--tx-shell-hover); }
+html[data-omd-skin] .wSkVaW_viewTabs { align-items: center; gap: inherit; }
+html[data-omd-skin] .wSkVaW_viewsMore { margin-top: 0; }
 html[data-omd-skin] .wSkVaW_tab { padding: 5px 10px; border-radius: 6px; font-size: 12px; line-height: 18px; font-weight: 400; }
 html[data-omd-skin] .wSkVaW_tab:after { display: none; }
 html[data-omd-skin] .wSkVaW_tabActive { background: var(--tx-shell-bg); color: var(--tx-shell-text); box-shadow: 0 1px 3px #00000008; }
