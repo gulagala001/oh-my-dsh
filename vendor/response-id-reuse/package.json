@@ -1,15 +1,35 @@
 {
   "name": "@gulagala001/dsh-response-id-reuse",
-  "version": "0.1.0-dsh.0.2.1-rc.3",
+  "version": "0.1.1-dsh.0.2.1-rc.3",
   "description": "Transparent, no-probe Responses ID continuation for DeepSeek Harness.",
   "type": "module",
   "license": "MIT",
   "author": "gulagala001",
   "main": "src/index.mjs",
-  "exports": { ".": "./src/index.mjs", "./package.json": "./package.json" },
-  "engines": { "node": ">=22.19", "dsh": "0.2.1-rc.3" },
-  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
-  "files": ["src", "cordis.patch.yml", "README.md", "README_EN.md", "CHANGELOG.md", "CONTRIBUTING.md", "LICENSE", "docs", "scripts"],
+  "exports": {
+    ".": "./src/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=22.19",
+    "dsh": "0.2.1-rc.3"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "src",
+    "cordis.patch.yml",
+    "README.md",
+    "README_EN.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "docs",
+    "scripts"
+  ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "check": "node --check src/index.mjs && node --check src/engine.mjs && node --check src/shared.mjs",
@@ -18,10 +38,27 @@
     "check:public": "node scripts/check-public-files.mjs",
     "prepack": "npm run check && npm run docs:check && npm run check:public"
   },
-  "peerDependencies": { "@deepseek-ai/cordis": "4.0.5", "@deepseek-ai/dsh-llm": "0.2.1-rc.3" },
-  "devDependencies": { "@deepseek-ai/cordis": "4.0.5", "@deepseek-ai/dsh-llm": "0.2.1-rc.3" },
-  "keywords": ["dsh-plugin", "deepseek-harness", "responses", "previous-response-id", "continuation"],
-  "repository": { "type": "git", "url": "git+https://github.com/gulagala001/dsh-response-id-reuse.git" },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.3"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.3"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "responses",
+    "previous-response-id",
+    "continuation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gulagala001/dsh-response-id-reuse.git"
+  },
   "homepage": "https://github.com/gulagala001/dsh-response-id-reuse#readme",
-  "bugs": { "url": "https://github.com/gulagala001/dsh-response-id-reuse/issues" }
+  "bugs": {
+    "url": "https://github.com/gulagala001/dsh-response-id-reuse/issues"
+  }
 }

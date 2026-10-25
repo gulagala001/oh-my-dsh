@@ -8,7 +8,7 @@ function sort(value) {
   return value;
 }
 function normalized(item) {
-  if (item.role) return { role: item.role, content: typeof item.content === 'string'
+  if (item.role) return { role: item.role, ...(item.phase === undefined ? {} : { phase: item.phase }), content: typeof item.content === 'string'
     ? [{ type: 'text', text: item.content }]
     : (item.content ?? []).map(b => ['text', 'input_text', 'output_text'].includes(b.type) ? { type: 'text', text: b.text ?? '' } : b) };
   if (item.type === 'reasoning') return { type: item.type, encrypted_content: item.encrypted_content,
@@ -27,14 +27,6 @@ function policy(url) {
   const host = new URL(url).hostname;
   const bailian = host === 'cn-beijing.maas.qianwenaiapi.com' || host.endsWith('.maas.aliyuncs.com');
   return { bailian, cmd: host === 'api.commandcode.ai', chainTtl: bailian ? 6 * 86400000 : 6 * 3600000 };
-}
-function verifiedSource(url, model) {
-  const vendor = policy(url);
-  if (vendor.bailian && ['qwen3.8-flash', 'qwen3.7-flash', 'deepseek-v4-flash-0731', 'deepseek-v4.1-flash-1017'].includes(model)) {
-    return model === 'deepseek-v4.1-flash-1017' ? 'existing-real-test' : 'official-bailian-documentation';
-  }
-  if (vendor.cmd && model === 'deepseek/deepseek-v4.1-flash') return 'existing-real-test';
-  return null;
 }
 function identityHeaders(headers) {
   return [...headers].filter(([name]) => !/^(accept|accept-encoding|content-type|content-length|user-agent|connection|host|date|traceparent|tracestate|x-request-id|http-referer|x-title)$/.test(name) && !name.startsWith('x-stainless-')).sort(([a], [b]) => a.localeCompare(b));
@@ -122,19 +114,18 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         || privateOnly(headers)) return baseFetch(input, init);
       const session = meta.sessionId ?? body.prompt_cache_key;
       if (typeof session !== 'string' || !session.length) return baseFetch(input, init);
+      const originalBody = body;
+      body = { ...body };
       if (typeof body.input === 'string') body.input = textInput(body.input);
       if (!Array.isArray(body.input) || body.input.length > 8192) return baseFetch(input, init);
       const scope = sha(canonical({ url, provider: meta.provider, model: body.model, headers: identityHeaders(headers) }));
       const checked = capabilities.get(scope);
-      const evidence = verifiedSource(url, body.model);
       const disabled = checked?.expiresAt > now() && checked.state === 'unsupported';
-      const supported = evidence && !disabled;
       stats.requests++;
-      if (!supported) {
+      if (disabled) {
         stats.full++;
         const response = await baseFetch(input, init);
-        if (!evidence && (!checked || checked.expiresAt <= now())) capability(scope, meta, 'unverified', 'no-free-verification-evidence');
-        stats.last = { provider: meta.provider, model: meta.model, mode: 'full', reason: disabled ? checked.reason : 'unverified-no-probe',
+        stats.last = { provider: meta.provider, model: meta.model, mode: 'full', reason: checked.reason,
           inputItems: body.input.length, inputBytes: Buffer.byteLength(JSON.stringify(body)) };
         persist(); return response;
       }
@@ -158,11 +149,11 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       const commit = output => {
         if (closed || !eligible || request.signal.aborted || generations.get(chainKey) !== generation
             || output?.status !== 'completed') return;
-        if (typeof output.id !== 'string' || output.id.length > 262144 || output.store === false || !Array.isArray(output.output)) {
+        if (typeof output.id !== 'string' || !output.id || output.id.length > 262144 || output.store !== true || !Array.isArray(output.output)) {
           capability(scope, meta, 'unsupported', 'normal-response-not-stored'); return;
         }
         chains.set(chainKey, { id: output.id, prefix: [...inputHashes, ...hashes(output.output)], expiresAt: now() + vendor.chainTtl });
-        capability(scope, meta, useId && !fallback ? 'supported' : 'stored', useId && !fallback ? 'normal-continuation-accepted' : evidence);
+        capability(scope, meta, useId && !fallback ? 'supported' : 'stored', useId && !fallback ? 'normal-continuation-accepted' : 'normal-response-storage-confirmed');
         row.committed = true; persist();
       };
       const send = (payload, outgoingHeaders) => baseFetch(new Request(request, { headers: outgoingHeaders,
@@ -175,7 +166,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
           if (why && (useId || why === 'unsupported')) {
             await response.body?.cancel();
             fallback = true; row.fallback = why; row.mode = 'full-fallback'; stats.fallbacks++;
-            const payload = { ...body, store: false };
+            const payload = { ...originalBody, store: false };
             delete payload.previous_response_id;
             eligible = false;
             capability(scope, meta, 'unsupported', why === 'unsupported' ? 'provider-rejected-state' : 'provider-rejected-id', why === 'unsupported' ? capabilityTtlMs : 3600000);

@@ -93,7 +93,7 @@ Animated character interface and whale visuals Theme component distributed with 
 
 Automatic Responses ID continuation and full-request fallback Bundled backend plugin with shared runtime ownership。
 
-- Pinned source / version: [0.1.0-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
+- Pinned source / version: [0.1.1-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
 
 ## Optional integrations and recommendations

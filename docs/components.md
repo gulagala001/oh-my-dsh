@@ -93,7 +93,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共装时共享一份运行实例。
 
-- 固定来源／版本: [0.1.0-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
+- 固定来源／版本: [0.1.1-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
 
 ## 可选集成与推荐

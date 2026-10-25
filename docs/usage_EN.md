@@ -271,4 +271,4 @@ Current/remote versions, progress, errors, and restart states remain separate. G
 
 See the [short development guide](development_EN.md) and [context/image budgets (Chinese)](context-workflow.md).
 
-Responses routes use the bundled response-ID reuse plugin. Verified capability and exact history extensions allow incremental input; unknown routes retain their original requests. It adds no UI, probe calls or generation stop conditions. Unloading its plugin entry removes interception.
+Responses routes use the bundled response-ID reuse plugin. Storage confirmation from normal responses and exact history extensions allow incremental input; unavailable continuation falls back to full context. It adds no UI, probe calls or generation stop conditions. Unloading its plugin entry removes interception.
