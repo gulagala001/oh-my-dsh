@@ -35,7 +35,7 @@ async function modeApi(sessionId, body, signal) {
 function Chevron({ back = false }) { return <Icon name="chevron" size={14} className={back ? 'omd-model-back' : undefined}/>; }
 function Reset() { return <Icon name="refresh" size={16}/>; }
 
-function ModelPanel({ ctx, sessionId, locked, available, directory, load, renderSlot, additive = false }) {
+function ModelPanel({ ctx, sessionId, locked, available, directory, load, renderSlot, rememberModel, additive = false }) {
   const state = useStore(directory);
   const faces = useMemo(() => {
     const projections = ctx.sessions.binding(sessionId)?.session.projections;
@@ -60,19 +60,24 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
     try { const next = await modeApi(sessionId); if (live.current && revision === ticket.current) { setMode(next); if (!preserveError) setError(''); } }
     catch (e) { if (live.current && revision === ticket.current) setError(current => preserveError && current ? current : e.message); }
   }, [sessionId, available]);
-  useEffect(() => { void refresh(); }, [refresh, projected, preset]);
+  useEffect(() => { void refresh(); }, [refresh, projected, preset,
+    state.current?.provider, state.current?.model, state.current?.reasoningEffort]);
   useEffect(() => ctx.modules?.entries.state.subscribe(() => { void refresh(); }), [ctx, refresh]);
   useEffect(() => { if (!available || locked) setOpen(false); }, [available, locked]);
 
-  const selected = mode?.selected ?? state.current;
+  // The native directory owns both the selection and its availability. Mode
+  // metadata can arrive later (or belong to the previous default/selection).
+  const selected = state.current;
+  const modeReady = Boolean(mode && selected && sameRoute(mode.selected, selected)
+    && mode.selected.reasoningEffort === selected.reasoningEffort);
   const group = state.groups.find(item => item.id === selected?.provider);
   const model = group?.models.find(item => item.id === selected?.model);
   const choices = useMemo(() => [
     ...effortChoices(model).map(choice => /^ultra$/i.test(choice.label) ? { ...choice, label: `${choice.label} 推理` } : choice),
-    ...mode?.eligible ? [{ id: 'omd:ultra', label: 'Ultra', mode: 'ultra' }] : [],
-  ], [model, mode?.eligible]);
+    ...modeReady && mode?.eligible ? [{ id: 'omd:ultra', label: 'Ultra', mode: 'ultra' }] : [],
+  ], [model, modeReady, mode?.eligible]);
   const effective = selected?.reasoningEffort ?? model?.reasoning?.defaultEffort;
-  const activeMode = mode?.mode ?? 'off';
+  const activeMode = modeReady ? mode.mode : 'off';
   const submodes = ultraSubmodes.filter(item => item.id !== 'team' || mode?.teamAvailable === true);
   const submode = submodes.find(item => item.id === (submodeDraft ?? mode?.submode)) ?? ultraSubmodes[2];
   const selectedIndex = activeMode !== 'off' ? choices.findIndex(item => item.mode === activeMode) : choices.findIndex(item => !item.mode && item.id === effective);
@@ -88,7 +93,8 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   };
   const label = selectedIndex < 0 && draft === null ? effective ?? '默认' : level?.label ?? '默认';
   const savedLabel = selectedIndex < 0 ? effective ?? '默认' : choices[selectedIndex]?.label ?? '默认';
-  const busy = saving || state.pending !== null, sliderDisabled = busy || !mode || !model || choices.length < 2;
+  const busy = saving || state.pending !== null, sliderDisabled = busy || !modeReady || !model || choices.length < 2;
+  useEffect(() => { if (open && state.status === 'ready' && state.routable === false) setPane('model'); }, [open, state.status, state.routable]);
   useEffect(() => { if (!open || pane !== 'effort' || level?.mode !== 'ultra') setSubmodeOpen(false); }, [open, pane, level?.mode]);
 
   const close = (focus = false) => { clearTimeout(commitTimer.current); gestureRevision.current = null; focusAfterSave.current = null; setSubmodeOpen(false); setOpen(false); setDraft(null); draftRef.current = null; setDragging(false); draggingRef.current = false; if (focus) trigger.current?.focus(); };
@@ -124,7 +130,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
 
   const save = async (route, nextMode, reasoningEffort, nextSubmode = nextMode === 'off' ? mode?.savedSubmode ?? submode.id
     : activeMode === 'ultra' ? submode.id : preferredUltraSubmode(submodes, submode.id), remember = false) => {
-    if (!mode || writing.current || locked) return false;
+    if (!modeReady || writing.current || locked) return false;
     writing.current = true; ++ticket.current;
     // Native disabled controls lose focus. Keep Escape/Tab available while
     // saving, then restore only if the user has not moved to another control.
@@ -137,6 +143,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
       let revision = mode.revision;
       while (true) {
         const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, submode: nextSubmode, expectedRevision: revision });
+        rememberModel?.(sessionId, next.selected);
         if (!live.current) return false;
         setMode(next);
         if (next.mode === 'ultra' && (remember || readUltraSubmode() === undefined)) rememberUltraSubmode(next.savedSubmode ?? next.submode);
@@ -210,7 +217,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   if (!available) return null;
   return <>
     <Button size="sm" variant="ghost" ref={trigger} type="button" className="omd-model-trigger" data-mode={activeMode} disabled={locked} aria-label={`${additive ? 'OMD 模式与思考强度' : '模型与思考强度'}：${modelName} · ${savedLabel}${activeMode === 'ultra' ? ` · ${submode.label}` : ''}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? id : undefined}
-      onClick={() => { if (open) close(); else { setPane(selected ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
+      onClick={() => { if (open) close(); else { setPane(model && state.routable !== false ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
       <span>{additive && activeMode !== 'ultra' ? 'OMD' : renderModelLabel(group, model, 'trigger')}</span><span className="omd-model-caption">· {savedLabel}{activeMode === 'ultra' ? ` · ${submode.label}` : ''}</span><span aria-hidden="true">⌃</span>
     </Button>
     {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
@@ -228,7 +235,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
                 onClick={() => setSubmodeOpen(value => !value)}>Ultra<Icon name="down" size={12}/></Button>}/>
               : label}
           </h2>
-          <Button size="sm" variant="ghost" type="button" className="omd-model-reset" aria-label="恢复默认思考强度" title="恢复默认思考强度" disabled={busy || !model || !mode}
+          <Button size="sm" variant="ghost" type="button" className="omd-model-reset" aria-label="恢复默认思考强度" title="恢复默认思考强度" disabled={busy || !model || !modeReady}
             onClick={() => void save({provider:selected.provider,model:selected.model}, 'off', model.reasoning?.defaultEffort)}><Reset/></Button>
           <Button size="sm" variant="ghost" ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{renderModelLabel(group, model, 'menu')}</span><Chevron/></Button>
         </header>
@@ -245,11 +252,11 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
             onBlur={() => { if (!draggingRef.current && draftRef.current !== null) commit(draftRef.current); }}/>
         </div>
         <div className="omd-effort-notice" data-visible={mode?.pending || undefined} role="status">{mode?.pending ? '已保存，下一轮生效。' : ''}</div>
-        {state.routable === false && <p className="omd-model-error">当前模型不可用，请选择其他模型。</p>}
       </> : <>
         <div className="omd-model-search"><Button size="sm" variant="ghost" type="button" aria-label="返回思考强度" onClick={() => setPane('effort')}><Chevron back/></Button><Input ref={search} type="search" aria-label="搜索模型" placeholder="搜索模型" value={query} onChange={e=>setQuery(e.target.value)}/></div>
+        {state.routable === false && <p className="omd-model-error">已保存的模型渠道 {selected?.provider} / {selected?.model} 当前不可选，请重新选择。草稿内容已保留。</p>}
         <div className="omd-model-options" role="listbox" aria-label="模型">
-          {state.groups.map(group => { const models = group.models.filter(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase())); return !models.length ? null : <div role="group" aria-label={group.name} key={group.id}><div className="omd-model-provider">{group.name}</div>{models.map(item => <Button size="sm" variant="ghost" type="button" role="option" aria-selected={sameRoute(selected,{provider:group.id,model:item.id})} key={item.id} disabled={busy || !mode} onClick={() => void chooseModel(group.id,item)}><span>{renderModelLabel(group, item, 'option')}</span>{sameRoute(selected,{provider:group.id,model:item.id}) && <span aria-hidden="true">✓</span>}</Button>)}</div>; })}
+          {state.groups.map(group => { const models = group.models.filter(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase())); return !models.length ? null : <div role="group" aria-label={group.name} key={group.id}><div className="omd-model-provider">{group.name}</div>{models.map(item => <Button size="sm" variant="ghost" type="button" role="option" aria-selected={sameRoute(selected,{provider:group.id,model:item.id})} key={item.id} disabled={busy || !modeReady} onClick={() => void chooseModel(group.id,item)}><span>{renderModelLabel(group, item, 'option')}</span>{sameRoute(selected,{provider:group.id,model:item.id}) && <span aria-hidden="true">✓</span>}</Button>)}</div>; })}
           {state.status === 'loading' && <p className="omd-model-status">正在加载模型…</p>}
           {state.status !== 'loading' && !state.groups.some(group => group.models.some(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase()))) && <p className="omd-model-status">没有匹配的模型</p>}
         </div>
@@ -259,7 +266,34 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   </>;
 }
 
-export function applyModelPanel(ctx) {
+export function applyModelPanel(ctx, { rememberModel } = {}) {
+  // Native /model and other native selectors use directory.select; automatic
+  // transfers use remote.session.selectModel and never enter this UI boundary.
+  ctx.inject?.(['modelDirectories'], scope => {
+    const models = scope.modelDirectories, original = models.directoryFor, restores = new Map();
+    function directoryFor(id) {
+      const directory = original.call(this, id);
+      if (!restores.has(directory)) {
+        const select = directory.select;
+        let revision = 0;
+        async function choose(selection) {
+          const ticket = ++revision;
+          const result = await select.call(this, selection);
+          if (result.ok && ticket === revision) rememberModel?.(id, selection);
+          return result;
+        }
+        const restore = () => { if (directory.select === choose) directory.select = select; restores.delete(directory); };
+        directory.select = choose; restores.set(directory, restore);
+        ctx.sessions.scope(id).effect(() => restore);
+      }
+      return directory;
+    }
+    models.directoryFor = directoryFor;
+    scope.effect(() => () => {
+      if (models.directoryFor === directoryFor) models.directoryFor = original;
+      for (const restore of restores.values()) restore();
+    });
+  });
   ctx.effect(() => { const style = document.createElement('style'); style.dataset.plugin = 'omd-model-panel'; style.textContent = css; document.head.append(style); return () => style.remove(); });
   const name = 'conversation.input.model';
   const listeners = new Set();
@@ -281,7 +315,7 @@ export function applyModelPanel(ctx) {
       nativeEntries.add(original);
       return function Panel(props) {
         const main = useMainConversation(props);
-        return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props}/> : null;
+        return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} rememberModel={rememberModel}/> : null;
       };
     });
     const reconcile = () => {
@@ -305,6 +339,6 @@ export function applyModelPanel(ctx) {
     const main = useMainConversation(props);
     const shown = useSyncExternalStore(subscribe, () => additive);
     const removed = props.useSession(s => s.removed) ?? false;
-    return main && shown && props.available ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} locked={removed} additive/> : null;
+    return main && shown && props.available ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} locked={removed} rememberModel={rememberModel} additive/> : null;
   }));
 }

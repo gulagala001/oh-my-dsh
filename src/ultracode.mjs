@@ -19,10 +19,17 @@ export function savedUltraMode(state) {
 }
 const same = (a, b) => a?.provider === b?.provider && a?.model === b?.model && a?.reasoningEffort === b?.reasoningEffort;
 const human = message => message?.source?.kind === 'user';
-const emptyFold = () => ({ through: 0, model: null, request: null, preset: undefined, turn: 0, humans: 0, humanIds: new Set() });
+const emptyFold = () => ({ through: 0, model: null, pendingModel: null, request: null, preset: undefined, turn: 0, humans: 0, humanIds: new Set() });
 function foldEvent(state, event) {
-  if (event.type === 'model/selection') state.model = { ...event.data, seq: event.seq };
-  else if (event.type === 'request/header') state.request = event.data.header;
+  if (event.type === 'model/selection') {
+    state.model = { ...event.data, seq: event.seq };
+    state.pendingModel = state.model;
+  } else if (event.type === 'request/header') {
+    state.request = event.data.header;
+    // Match the native modelSelection projection: a matching request consumes
+    // pending intent, while a different in-flight request leaves it intact.
+    if (same(state.pendingModel, state.request.config)) state.pendingModel = null;
+  }
   else if (event.type === 'agent-preset/selected') state.preset = event.data.agentPreset;
   else if (event.type === 'turn/start') state.turn = event.data.turn;
   else if (event.type === 'user/message' && human(event.data) && !state.humanIds.has(event.data.id)) { state.humanIds.add(event.data.id); state.humans++; }
@@ -110,7 +117,7 @@ export class UltracodeControl {
   }
   view(session, agent = this.ctx.agents.get(session.id)) {
     const state = this.fold(session);
-    const route = state.model ?? session.requestHeader()?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
+    const route = state.pendingModel ?? state.request?.config ?? session.requestHeader?.()?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
     const view = modeView(state, route, this.store.peek(session.id)?.ultracode, this.eligible(agent), this.teamAvailable(agent));
     const active = agent && this.active.get(agent);
     const activeSubmode = active?.submode === 'team' && !view.teamAvailable ? 'free' : active?.submode;
@@ -191,7 +198,7 @@ export class UltracodeControl {
     // Match the native agentPreset projection, including an inherited selection.
     const preset = state.preset === undefined ? header.agentPreset : state.preset;
     const capability = await this.coldCapability(preset, signal); signal?.throwIfAborted();
-    const route = state.model ?? state.request?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
+    const route = state.pendingModel ?? state.request?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
     return { ...modeView(state, route, stored?.ultracode, capability.eligible, this.coldTeamAvailable()), ...capability, cold: true, archivedOnly: false, preset: preset ?? null };
   }
   select(sessionId, input) { return this.writeSelection(sessionId, input); }

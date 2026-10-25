@@ -38,7 +38,7 @@ async function fixture(t, { presetMounted = true } = {}) {
     const shell = { value: empty(), state: store({ phase: 'plain', draft: '', attachmentIds: [] }), notices: store(null),
       captureDraft() { return structuredClone(this.value); }, restoreDraft(value) { this.value = structuredClone(value); },
       onSubmission(fn) { listeners.add(fn); return () => listeners.delete(fn); },
-      submit() { calls.push(['submit', id, this.value.draft]); this.value = empty(); for (const fn of [...listeners]) fn({ kind: 'success' }); },
+      submit() { calls.push(['submit', id, this.value.draft]); rows[id].blank = false; this.value = empty(); for (const fn of [...listeners]) fn({ kind: 'success' }); },
       notify(level, text) { notices.push([level, text]); }, focus() {},
     };
     shells.set(id, shell); rows[id] = { cwd: '/synthetic/' + id, blank: true };
@@ -64,7 +64,8 @@ async function fixture(t, { presetMounted = true } = {}) {
     installConversationLifecycle: noop, applyStartupNotice: () => noop,
     createChatSettings: () => ({ dispose: noop }),
     applyProjectlessWorkspaces(ctx) {
-      const drafts = new ProjectlessDrafts(ctx, { storage: { getItem: () => null, setItem: noop }, request: async () => ({ cwd: '/synthetic/independent' }) });
+      const saved = new Map();
+      const drafts = new ProjectlessDrafts(ctx, { storage: { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) }, request: async () => ({ cwd: '/synthetic/independent' }) });
       ctx.effect(() => () => drafts.dispose()); capture.drafts = drafts; return drafts;
     },
     mountOptionalClient: (ctx, name, load, report) => mountOptionalClient(ctx, name, async () => ({
@@ -76,10 +77,12 @@ async function fixture(t, { presetMounted = true } = {}) {
   const plugin = module.exports;
   await root.plugin(TypertRegistry);
   root.provide('connection', { interactions: 'none', rpc: { open: async function* () {}, call: async (_path, endpoint, payload) => {
+    if (endpoint === 'session/modelCatalog') return { ok: true, value: { default: selectedModel,
+      groups: [{ id: selectedModel.provider, models: [{ id: selectedModel.model }] }], failures: [] } };
     calls.push([endpoint, payload.args]); return refusal ? { ok: false, error: { message: '选择预设失败' } } : { ok: true };
   } } });
   await root.plugin(gateway);
-  await root.remote.$mount({ package: '@fixture/session', descriptors: [descriptor('session', 'selectModel', ['request']), descriptor('subagents', 'noop', [])] });
+  await root.remote.$mount({ package: '@fixture/session', descriptors: [descriptor('session', 'selectModel', ['request']), descriptor('session', 'modelCatalog', []), descriptor('subagents', 'noop', [])] });
   let withdraw;
   const mountPreset = async () => { withdraw = await root.remote.$mount({ package: '@fixture/presets', descriptors: [descriptor('agentPresets', 'select', ['sessionId', 'preset'])] }); };
   if (presetMounted) await mountPreset();
@@ -91,7 +94,7 @@ async function fixture(t, { presetMounted = true } = {}) {
     mountPreset, withdraw: () => withdraw(), refuse: value => { refusal = value; } };
 }
 
-test('first independent send and subsequent new chat inherit settings through their actual owner', async t => {
+test('first independent send preserves settings and the next new chat reuses its carrier without copying the viewed chat', async t => {
   const f = await fixture(t), { drafts } = f.capture;
   assert.equal(f.fiber.state, 2);
   drafts.mark('source'); f.shells.get('source').restoreDraft({ ...empty(), draft: '你好' });
@@ -101,8 +104,10 @@ test('first independent send and subsequent new chat inherit settings through th
   assert.equal(f.shells.get('source').captureDraft().draft, '');
   assert.notEqual(f.current, 'source');
   await drafts.startDraft(f.current);
-  assert.equal(f.calls.filter(call => call[0] === 'agentPresets/select').length, 2);
-  assert.equal(f.calls.filter(call => call[0] === 'session/selectModel').length, 2);
+  assert.deepEqual(f.notices, []);
+  assert.equal(f.current, 'source');
+  assert.equal(f.calls.filter(call => call[0] === 'agentPresets/select').length, 1);
+  assert.equal(f.calls.filter(call => call[0] === 'session/selectModel').length, 1);
   assert.deepEqual(f.calls.filter(call => call[0] === 'session/selectModel').map(call => call[1].request),
     f.calls.filter(call => call[0] === 'agentPresets/select').map(call => ({ sessionId: call[1].sessionId, ...selectedModel })));
   assert.equal(drafts.isDraft(f.current), true);

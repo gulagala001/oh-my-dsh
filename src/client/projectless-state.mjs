@@ -1,5 +1,9 @@
 const STORAGE_KEY = 'omd.projectless-drafts.v1';
+const PREFERENCES_KEY = 'omd.draft-preferences.v1';
 const emptyDraft = () => ({ draft: '', occurrences: [], attachmentIds: [] });
+const validModel = value => value && typeof value.provider === 'string' && value.provider
+  && typeof value.model === 'string' && value.model;
+const sameModel = (a, b) => a?.provider === b?.provider && a?.model === b?.model && a?.reasoningEffort === b?.reasoningEffort;
 
 export function initializeDraft(conversation, binding, options) {
   if (conversation.input.requestDraftInitialization) return conversation.input.requestDraftInitialization(binding, options);
@@ -117,6 +121,54 @@ export class ProjectlessDrafts {
   }
   emit() { ++this.revision; for (const fn of this.listeners) fn(); }
   save(next) { this.storage.setItem(STORAGE_KEY, JSON.stringify(next)); this.drafts = next; this.emit(); }
+  preferences() {
+    try {
+      const value = JSON.parse(this.storage.getItem(PREFERENCES_KEY) || '{}');
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    } catch { return {}; }
+  }
+  workspaceState() { return this.ctx.get?.('workspaces')?.list?.getSnapshot() ?? { items: [], archivedSessionIds: [] }; }
+  scopeFor(id) {
+    if (this.isDraft(id) || id && this.preferences().global?.draft === id) return 'global';
+    const workspace = this.workspaceState().items.find(item => item.sessionIds.includes(id));
+    return workspace ? `workspace:${workspace.workspaceId}` : 'global';
+  }
+  remember(scope, patch) {
+    const preferences = this.preferences();
+    this.storage.setItem(PREFERENCES_KEY, JSON.stringify({ ...preferences, [scope]: { ...preferences[scope], ...patch } }));
+  }
+  // Called by user-facing model controls only, never by projection replay or
+  // the native RPC used to restore a draft or transfer its first message.
+  rememberModel(id, selected) {
+    if (this.lifetime.signal.aborted || !validModel(selected)) return;
+    this.remember(this.scopeFor(id), { model: { provider: selected.provider, model: selected.model,
+      ...(selected.reasoningEffort === undefined ? {} : { reasoningEffort: selected.reasoningEffort }) } });
+  }
+  async applyModelPreference(id, scope, signal) {
+    const catalog = checked(await this.ctx.remote.session.modelCatalog());
+    signal.throwIfAborted();
+    // Snapshot the host default once. Automatic native selection also saves
+    // the host-wide default; it must not leak one workspace into another.
+    if (!validModel(this.preferences().global?.model)) this.remember('global', { model: catalog.default });
+    const preference = this.preferences()[scope]?.model ?? this.preferences().global?.model;
+    if (!validModel(preference)) return;
+    if (!validModel(this.preferences()[scope]?.model)) this.remember(scope, { model: preference });
+    const available = catalog.groups.some(group => group.id === preference.provider && group.models.some(model => model.id === preference.model));
+    if (!available) {
+      this.shell(id).notify('error', `记住的模型渠道 ${preference.provider} / ${preference.model} 当前不可选，请重新选择；草稿已保留`);
+      return;
+    }
+    const session = this.ctx.sessions.binding(id).session;
+    const blank = session.getSnapshot?.().blank ?? this.ctx.sessions.list.getSnapshot().byId[id]?.blank;
+    if (blank !== true || !sameModel(this.preferences()[scope]?.model, preference)) return;
+    const projection = session.projections.faceOf('modelSelection').getSnapshot();
+    // Pin even an unchanged default on this draft: another workspace's native
+    // selection must not later move a still-unselected draft with the global default.
+    if (!sameModel(projection?.next ?? projection?.lastUsed, preference)) {
+      checked(await this.ctx.remote.session.selectModel({ sessionId: id, ...preference }));
+      signal.throwIfAborted();
+    }
+  }
   current() {
     if (this.lifetime.signal.aborted) return undefined;
     return this.ctx.sessions.list.getSnapshot().ids.find(id => this.ctx.sessions.retainInfo(id).getSnapshot().retainedBy.mainView > 0);
@@ -291,45 +343,55 @@ export class ProjectlessDrafts {
       targetRef?.release(); sourceRef?.release(); this.pending.delete(id); this.emit();
     }
   }
-  async startDraft(from, options) {
+  async startDraft(from, options, workspaceId, beforeOpen) {
     if (this.lifetime.signal.aborted) return;
-    if (this.newDraft) return this.newDraft;
+    const scope = workspaceId === undefined ? 'global' : `workspace:${workspaceId}`;
+    if (this.newDraft && this.newDraftScope === scope) return this.newDraft;
     const navigation = this.ctx.layout.beginNavigation();
     const signal = AbortSignal.any([navigation, this.lifetime.signal]);
     const attempt = (async () => {
       let sourceRef, targetRef;
       try {
-        sourceRef = this.ctx.sessions.retain(from, { source: 'workspaceOperation', signal });
-        await sourceRef.ready;
+        if (from) {
+          sourceRef = this.ctx.sessions.retain(from, { source: 'workspaceOperation', signal });
+          await sourceRef.ready;
+        }
         signal.throwIfAborted();
-        // Native blank Sessions are hidden drafts. Reuse an existing directory
-        // only for this unsent carrier; send() always allocates its own cwd.
-        const source = this.ctx.sessions.binding(from).session;
-        const agentPreset = options?.agentPreset ?? source.projections.faceOf('agentPreset').getSnapshot();
         const sessions = this.ctx.sessions.list.getSnapshot();
-        const cwd = sessions.byId[from].cwd;
-        // New Session must bring back a retained unsent draft, including its
-        // settings and attachments. Never adopt another preset or an admitted
-        // first send merely because its carrier still looks blank.
-        const reusable = Object.keys(this.drafts).find(id => this.isDraft(id) && !this.isBusy(id)
-          && sessions.byId[id]?.blank === true && sessions.byId[id]?.projectionValues?.agentPreset === agentPreset);
-        const id = reusable ?? await this.ctx.sessions.create({ cwd, agentPreset });
+        const workspaces = this.workspaceState();
+        const usable = id => sessions.byId[id]?.blank === true && !this.isBusy(id)
+          && sessions.byId[id]?.origin !== 'subagent' && !sessions.byId[id]?.projectionValues?.subagent
+          && !workspaces.archivedSessionIds.includes(id) && this.scopeFor(id) === scope;
+        const preferred = this.preferences()[scope]?.draft;
+        const reusable = usable(preferred) ? preferred : usable(from) ? from : sessions.ids.find(usable);
+        // One native blank per explicit workspace, and one global carrier.
+        // Reuse is independent of preset and of generated chat directories.
+        const agentPreset = options?.agentPreset ?? sessions.byId[reusable]?.projectionValues?.agentPreset;
+        const cwd = sessions.byId[reusable ?? from]?.cwd;
+        const id = await this.ctx.sessions.create({
+          ...(workspaceId === undefined ? cwd ? { cwd } : {} : { workspaceId }),
+          ...(reusable ? { sessionId: reusable } : {}), ...(agentPreset ? { agentPreset } : {}),
+        });
         signal.throwIfAborted();
         targetRef = this.ctx.sessions.retain(id, { source: 'workspaceOperation', signal });
         await targetRef.ready;
         signal.throwIfAborted();
-        if (!reusable) await this.copySettings(from, id, signal, agentPreset);
+        this.remember(scope, { draft: id });
+        if (workspaceId === undefined) this.mark(id);
+        await this.applyModelPreference(id, scope, signal);
         signal.throwIfAborted();
-        this.mark(id);
         if (options && initializeDraft(this.ctx.get('conversation'), targetRef.binding, options) === 'blocked') {
           throw Error('草稿正在提交，请稍后重试；现有草稿已保留');
         }
+        await beforeOpen?.(id);
         signal.throwIfAborted();
         this.ctx.uiWorkspace.openSession(id);
-      } catch (error) { if (!signal.aborted) this.shell(from).notify('error', error.message); }
+      } catch (error) { if (!signal.aborted) {
+        if (from) this.shell(from).notify('error', error.message); else throw error;
+      } }
       finally { targetRef?.release(); sourceRef?.release(); }
     })();
-    this.newDraft = attempt;
+    this.newDraft = attempt; this.newDraftScope = scope;
     try { await attempt; } finally { if (this.newDraft === attempt) this.newDraft = null; }
   }
   dispose() { this.lifetime.abort(); this.listeners.clear(); }

@@ -154,7 +154,7 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
   ctx.effect(() => () => {
     if (projectlessDrafts.transferOptimizer === optimizer.transferDraft) projectlessDrafts.transferOptimizer = previousOptimizer;
   });
-  applyModelPanel(ctx);
+  applyModelPanel(ctx, { rememberModel: (id, selected) => projectlessDrafts.rememberModel(id, selected) });
   applySubscriptionFast(ctx);
   applyMemoryPermissions(ctx);
   applyPromptStylePermissions(ctx);

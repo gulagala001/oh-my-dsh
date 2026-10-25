@@ -33,7 +33,11 @@ Disable/uninstall retains models, credentials, sessions, drafts, and memory. Old
 
 ## Projectless Chat
 
-Hover the workspace label and click **×**. Drafts, attachments, model, and access selection remain; you can select another workspace. First send creates a directory on the DSH host, normally **Documents/DSH/date/first-message-name**, numbered on collision. Refresh/restart/continuation reuses it; another conversation gets another directory. It is not registered as a workspace; the conversation stays Ungrouped.
+Each workspace reuses one unsent draft; global **New Session** reuses a separate draft. Repeated creation and preset changes preserve its text and attachments. Clicking **×** on the workspace label opens the global draft; choosing a workspace opens that workspace's draft. Their contents do not overwrite each other.
+
+Each workspace and the global scope remember their last manually selected provider, model, and reasoning effort. Viewing old conversations and restoring settings do not update these preferences. Existing conversations keep their own models; a scope without a saved preference starts with the default. If a remembered route is unavailable, the selector asks you to choose again and preserves the draft.
+
+The global draft's first send creates a directory on the DSH host, normally **Documents/DSH/date/first-message-name**, numbered on collision. Refresh/restart/continuation reuses it; another conversation gets another directory. It is not registered as a workspace; the conversation stays Ungrouped. Successful sends clear and reuse the global draft carrier instead of leaving a new blank session behind for every chat. Failed sends retain the original draft for retry.
 
 **An automatic file directory is not a Dream project.** Chat and descendants not added to a real workspace stay isolated. Changing the save root/current execution directory or deleting the original directory must not admit historical Chat or old Dream jobs into shared organization. Unknown ownership is temporarily isolated with diagnostics while basic chat continues. Explicitly joining a native workspace uses that ownership and selected scope. [Dream isolation (Chinese)](dream-memory.md)
 

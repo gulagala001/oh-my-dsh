@@ -38,6 +38,18 @@ test('legacy Pro becomes Ultra Workflow while the retired mode cannot reactivate
   await assert.rejects(f.select('ultracode'), /无效/);
 });
 
+test('consumed model choices follow later native request routes while pending choices retain priority', () => {
+  const f = fixture();
+  const header = config => f.events.push({ seq: f.session.seq, type: 'request/header', data: { header: { config } } });
+  const chosen = f.events[0].data;
+  header(chosen);
+  header({ provider: 'current', model: 'current-model', reasoningEffort: 'high' });
+  assert.equal(f.control.view(f.session).selected.model, 'current-model', 'a consumed historical choice is not a pending choice');
+  f.events.push({ seq: f.session.seq, type: 'model/selection', data: { provider: 'next', model: 'pending-model' } });
+  header({ provider: 'current', model: 'current-model' });
+  assert.equal(f.control.view(f.session).selected.model, 'pending-model', 'an older in-flight request cannot consume a different pending choice');
+});
+
 test('all Ultra strategies keep the Pro effort rule and remember selection while off', async () => {
   const f = fixture(undefined, true);
   for (const submode of ['workflow', 'team', 'free']) {

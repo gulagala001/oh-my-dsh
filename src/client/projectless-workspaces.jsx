@@ -23,7 +23,7 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
   const useDrafts = () => useSyncExternalStore(drafts.subscribe, drafts.getSnapshot);
   ctx.effect(() => {
     const style = document.createElement('style'); style.dataset.plugin = 'omd-projectless'; style.textContent = css; document.head.append(style);
-    const workspace = ctx.uiWorkspace, original = workspace.startSession, originalRestore = workspace.restoreSelection;
+    const workspace = ctx.uiWorkspace, original = workspace.startSession, originalOpen = workspace.openWorkspace, originalRestore = workspace.restoreSelection;
     let initialCreations = 0;
     // A failed initial restore retries on every Session-list update. During an
     // explicit first creation, that retry would cancel the user's navigation
@@ -37,22 +37,15 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
     drafts.openInitialWorkspace = async (workspaceId, agentPreset) => {
       if (drafts.lifetime.signal.aborted) return;
       initialCreations++;
-      try { await workspace.openWorkspace(workspaceId, undefined, { agentPreset }); }
+      try { await drafts.startDraft(undefined, { agentPreset }, workspaceId); }
       finally { initialCreations--; }
     };
     function start(workspaceId, options) {
-      const id = drafts.current();
-      if (workspaceId !== undefined || !id) return original.call(workspace, workspaceId, options);
-      if (drafts.isDraft(id) || drafts.isManaged(id)) { void drafts.startDraft(id, options); return; }
-      // Discovery normally completes when the composer mounts. This read also
-      // covers a New Session click immediately after a restored chat opens.
-      void drafts.inspect(id).then(managed => {
-        if (drafts.current() !== id || drafts.lifetime.signal.aborted) return;
-        if (managed) return drafts.startDraft(id, options);
-        original.call(workspace, workspaceId, options);
-      }).catch(error => { if (!drafts.lifetime.signal.aborted) drafts.shell(id).notify('error', error.message); });
+      return drafts.startDraft(drafts.current(), options, workspaceId).catch(onError);
     }
     workspace.startSession = start;
+    const openWorkspace = (id, beforeOpen, options) => drafts.startDraft(drafts.current(), options, id, beforeOpen);
+    workspace.openWorkspace = openWorkspace;
     // The native Ungrouped row renders a create button but its onCreate skips
     // groups without a Workspace. Keep that row and route only its button to
     // the existing projectless draft flow, without inheriting a Workspace.
@@ -62,14 +55,13 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
       if (!button || button.disabled || !button.closest('[class*="_rowActions"]')
         || button.closest('[role="treeitem"]')?.dataset.rowKey !== 'workspace:') return;
       event.preventDefault(); event.stopPropagation();
-      const sessions = ctx.sessions.list.getSnapshot();
-      const id = drafts.current() ?? sessions.ids.find(id => sessions.byId[id]?.cwd);
-      if (id) void drafts.startDraft(id);
+      void start();
     };
     document.addEventListener('click', onUngroupedCreate, true);
     return () => {
       document.removeEventListener('click', onUngroupedCreate, true);
       if (workspace.startSession === start) workspace.startSession = original;
+      if (workspace.openWorkspace === openWorkspace) workspace.openWorkspace = originalOpen;
       if (workspace.restoreSelection === restore) workspace.restoreSelection = originalRestore;
       drafts.dispose(); style.remove();
     };
@@ -94,7 +86,6 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
   });
   decorate('conversation.hero.workspace', Original => function Picker(props) {
     useDrafts();
-    const sessions = props.useSessions(s => s);
     const id = drafts.current(), pending = drafts.isDraft(id), managed = drafts.isManaged(id);
     const [open, setOpen] = useState(false), anchor = useRef(null);
     useEffect(() => { setOpen(false); void drafts.inspect(id).catch(() => {}); }, [id]);
@@ -111,10 +102,8 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
         });
         return;
       }
-      // A refused navigation must leave the cancelled source projectless.
-      // Choosing its original Workspace explicitly restores that selection.
-      if (workspaceId === props.selectedId) drafts.clear(id);
-      setOpen(false); props.onPick(workspaceId);
+      setOpen(false); props.onClose();
+      void drafts.startDraft(id, undefined, workspaceId).catch(onError);
     };
     if (pending || managed) return <>
       <span className="omd-projectless-picker"/>
@@ -127,7 +116,7 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
     </>;
     return <>
       <Button size="sm" variant="ghost" type="button" className="omd-workspace-clear" aria-label="取消工作区" title="不在工作区中工作"
-        disabled={!id || !props.selectedId} onClick={() => { props.onClose(); try { drafts.mark(id); } catch { drafts.shell(id).notify('error', '浏览器无法保存草稿，请检查存储空间后重试'); } }}>
+        disabled={!id || !props.selectedId} onClick={() => { props.onClose(); void drafts.startDraft(id).catch(onError); }}>
         <Icon name="close" size={14}/>
       </Button>
       <Original {...props} onPick={pick}/>
