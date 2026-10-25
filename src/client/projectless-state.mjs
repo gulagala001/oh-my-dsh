@@ -181,7 +181,7 @@ export class ProjectlessDrafts {
   isManaged(id) { return !this.lifetime.signal.aborted && this.managed.get(id) === true; }
   isBusy(id) { return !this.lifetime.signal.aborted && this.pending.has(id); }
   mark(id) {
-    if (!this.isDraft(id)) this.save({ ...this.drafts, [id]: { requestId: crypto.randomUUID(), sessionId: crypto.randomUUID() } });
+    this.save({ [id]: this.isDraft(id) ? this.drafts[id] : { requestId: crypto.randomUUID(), sessionId: crypto.randomUUID() } });
   }
   clear(id) { if (Object.hasOwn(this.drafts, id)) { const next = { ...this.drafts }; delete next[id]; this.save(next); } }
   async inspect(id) {
@@ -197,23 +197,19 @@ export class ProjectlessDrafts {
     this.inspections.set(id, attempt); return attempt;
   }
   shell(id) { return this.ctx.get('conversation').input.for(this.ctx.sessions.binding(id).ctx); }
-  async copySettings(from, to, signal = this.lifetime.signal, requestedPreset) {
+  async copySettings(from, to, signal = this.lifetime.signal) {
     signal.throwIfAborted();
     const source = this.ctx.sessions.binding(from).session;
     const projections = source.projections;
     await copyPermissions(source, this.ctx.sessions.binding(to).session, signal);
     signal.throwIfAborted();
-    const sourcePreset = projections.faceOf('agentPreset').getSnapshot();
-    const preset = requestedPreset ?? sourcePreset;
+    const preset = projections.faceOf('agentPreset').getSnapshot();
     const model = projections.faceOf('modelSelection').getSnapshot();
     if (preset) checked(await this.ctx.remote.agentPresets.select(to, preset));
     signal.throwIfAborted();
     const selected = model?.next ?? model?.lastUsed;
     if (selected) checked(await this.ctx.remote.session.selectModel({ sessionId: to, ...selected }));
     signal.throwIfAborted();
-    // Explicit native actions (for example Create Plugin) own their preset.
-    // Carry model and permissions, but never transplant another preset's mode.
-    if (preset !== sourcePreset) return;
     if (preset?.startsWith('omaa-')) {
       const transferred = await fetch('omaa/api/session-transfer', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
@@ -345,6 +341,10 @@ export class ProjectlessDrafts {
   }
   async startDraft(from, options, workspaceId, beforeOpen) {
     if (this.lifetime.signal.aborted) return;
+    if (workspaceId === undefined && this.pending.size) {
+      this.shell(from ?? this.pending.keys().next().value).notify('info', '全局草稿正在发送，请稍后重试');
+      return;
+    }
     const scope = workspaceId === undefined ? 'global' : `workspace:${workspaceId}`;
     if (this.newDraft && this.newDraftScope === scope) return this.newDraft;
     const navigation = this.ctx.layout.beginNavigation();

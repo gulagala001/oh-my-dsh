@@ -27,8 +27,8 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
     let initialCreations = 0;
     // A failed initial restore retries on every Session-list update. During an
     // explicit first creation, that retry would cancel the user's navigation
-    // and try the broken default again. The native openWorkspace still owns
-    // admission, blank reuse, navigation cancellation and error presentation.
+    // and try the broken default again. Native Session creation still owns
+    // admission and validates whether the requested blank can be reused.
     function restore(...args) {
       if (initialCreations) return Promise.resolve();
       return originalRestore.apply(this, args);

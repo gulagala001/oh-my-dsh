@@ -90,6 +90,14 @@ test('a submitting draft keeps its content when initialization is blocked', asyn
   assert.deepEqual(f.opened, []); assert.equal(f.notices.length, 1); assert.equal(f.minted, 0);
 });
 
+test('new global chat cannot allocate another carrier while the one draft is sending', async t => {
+  const f = fixture(t); f.drafts.pending.set('saved', {});
+  await f.drafts.startDraft('current');
+  assert.equal(f.created.length, 0); assert.equal(f.opened.length, 0);
+  assert.equal(f.draftsById.saved.draft, 'keep unsent text');
+  assert.match(f.notices[0][1], /正在发送/);
+});
+
 test('draft initialization delegates append, references and attachments to the native owner', () => {
   const binding = {}, options = { prompt: 'new text', whenDraftExists: 'append' };
   const conversation = { input: { requestDraftInitialization: (target, request) => {
