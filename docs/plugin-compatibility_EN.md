@@ -6,7 +6,7 @@ OMD retains native DSH tools, skills, sessions and third-party entries. **Use pl
 
 ## Match the artifacts
 
-Current source targets DSH `0.2.1-rc.2`: OMD `0.100.0` and standalone/bundled OpenCU `2.1.0`. DSH `0.2.1-rc.1` has a separate build; these two complete host versions are currently supported. Independent projects such as IUI and OMAA need their own matching builds; relabeling the same frontend is not adaptation.
+The current release targets DSH `0.2.1-rc.3`: OMD `1.0.1` and standalone/bundled OpenCU `2.2.1`. Older rc.1/rc.2 hosts retain their fixed historical builds. Independent projects such as IUI and OMAA need their own matching builds; relabeling the same frontend is not adaptation.
 
 Do not replace current work with old packages, older HEAD or version exemptions. Back up actual data and retain explicit settings, accounts and third-party provenance.
 
@@ -40,20 +40,24 @@ Workflow, Rewind, DeepSeek Workbench, Persona and Extensions have independent fo
 | **OMAA** | Independent presets/features, usable through supported workflow/mode boundaries. |
 | **Subscriptions** | Independent login, account pools, routing and persistent Fast settings. OMD supplies no accounts, quota or server-priority guarantees. |
 | **Intent / requirement understanding** | Independent and off by default, separate from OMD's system instructions and manual draft refinement. |
-| **[dsh-ops](dsh-ops_EN.md)** | File, document and shell tools by T-Auto, with progressive tool discovery and result references. Fixed rc.1/rc.2 compatibility packages pin upstream `0.4.1`; native mode and PTC retain host permissions, sandbox policies and native tools. |
+| **[dsh-ops](dsh-ops_EN.md)** | File, document and shell tools by T-Auto, with progressive tool discovery and result references. Fixed rc.3 compatibility packages pin upstream `0.4.1`; native mode and PTC retain host permissions, sandbox policies and native tools. |
 | **DeepSeek Workbench** | Independent web-chat and migration product. OMD controls its included entry under Features; a separately installed package is managed by the native plugin page. |
 | **OpenDesign / standard plugins** | Retain independent skills, tools, UI ownership, account requirements and licenses. |
 | **Development-injected projects** | Follow their project instructions when no standard artifact exists; do not disguise them as directly installable packages. |
 
 ## Recommendations, updates and data
 
-Plugin preflight wraps the running host’s `pluginManager`, independently of marketplace names and without changing marketplace UI. `installBundle`, `setBundleEnabled`, and `setPluginEnabled` entries with an identifiable bundle use the same check. OMD recommended updates check their candidate before removing the old bundle. Checks reuse the selected bundles’ code and enablement, without copying private plugin configuration or accounts; plugins requiring external services may therefore receive an incomplete result. This validates basic operation, not every feature or delayed failure.
+Plugin preflight wraps the running host’s `pluginManager`, independently of marketplace names and without changing marketplace UI. `installBundle`, `setBundleEnabled`, and `setPluginEnabled` entries with an identifiable bundle use the same check. OMD recommended updates check their candidate before removing the old bundle. Checks reuse the selected bundles’ code and enablement, without copying private plugin configuration or accounts; plugins requiring external services may therefore receive an incomplete result. Onboarding follows the visible state and accepts a ready interface without account setup or API keys. Candidate entries must exist in native inventory and finish loading. Blank pages, failed scripts and runtime errors still fail; readiness timeouts are reported as incomplete. This validates basic operation, not every feature or delayed failure.
 
 On macOS/Linux, the controller and isolated host reuse modules within one temporary process, while the browser remains separate. Host startup, plugin activation, page loading, composer and Settings checks all remain in place; Windows retains its previous separate host process. Package preparation reuses existing native tool caches, including Corepack’s default cache; the trial runtime keeps its isolated environment. Passing requires all checks and process cleanup to finish. Early exits, abnormal exits and cleanup timeouts do not pass.
 
-Current validation targets an isolated macOS DSH `0.2.1-rc.2` host, including native installation, the dsh-market desktop bridge and isolated startup through the desktop app’s packaged CLI; the running desktop app was not updated. On macOS/Linux, process-tree and temporary-directory sampling stops a check at approximately 1.5 GiB summed process memory or 1 GiB temporary files; sampling is not an OS hard quota. Windows uses process-tree termination and timeouts, has not been verified on a physical machine, and does not claim equivalent RSS/disk sampling. Other host builds and complete external CLI coverage need separate integration and validation. Preflight installs no resident daemon and does not rewrite the user’s command-line entry points.
+Current validation targets an isolated macOS DSH `0.2.1-rc.3` host, including native installation, the dsh-market desktop bridge and isolated startup through the desktop app’s packaged CLI; the running desktop app was not updated. On macOS/Linux, process-tree and temporary-directory sampling stops a check at approximately 2 GiB summed process memory or 1 GiB temporary files; sampling is not an OS hard quota. Windows uses process-tree termination and timeouts, has not been verified on a physical machine, and does not claim equivalent RSS/disk sampling. Other host builds and complete external CLI coverage need separate integration and validation. Preflight installs no resident daemon and does not rewrite the user’s command-line entry points.
 
 The catalog lists purpose, original author, fixed source, full host, SHA-256 and state. Unknown hosts, missing artifacts and unpublished targets do not get invented installation entries. Use the current profile's native manager; on desktop, use the app or its bundled CLI.
+
+Current fixed recommendations: BC 0.1.202, dsh-ops 0.1.0 (rc.3 build), Subscription Login 0.9.11, OpenDesign 0.1.0-omd.1.0.0, Intent Assistant 0.3.3 (rc.3 build), DSH Market 1.70.3, the fixed Infinite Gen 4 0.4.0 source, Status Rotator 0.38.0, DSH × Blender 2.6.1 and Balance Whale Widget 0.4.2. Sources and SHA-256 values are pinned in the catalog. Accounts, Blender connections and paid requests still need the respective plugin configuration.
+
+Older or incompatible installations show an available Update action even alongside an error. Intent Assistant uses the native profile and retains review/automatic modes, read-only checks and draft protection. [Release notes](release-1.0.1.md)
 
 Automatic updates default off and apply only to eligible installed/enabled releases. They do not cross hosts, approve scripts or restart. Accounts, OAuth, Fast and paid behavior need separate confirmation.
 

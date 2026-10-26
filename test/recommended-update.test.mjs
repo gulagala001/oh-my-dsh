@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RecommendedPluginManager } from '../src/recommended-plugins.mjs';
+import { recommendedPlugins } from '../src/recommended-plugin-catalog.mjs';
 
 const plugin = { id: 'addon', packageName: 'addon', review: { version: '2.0.0', sha256: 'a'.repeat(64) } };
 
@@ -65,6 +66,23 @@ test('preparation failure leaves the installed bundle untouched', async t => {
   assert.equal(view.version, '1.0.0');
   assert.equal(view.installed, true);
   assert.match(view.error, /checksum mismatch/);
+});
+
+test('settings offers the reviewed update even when the installed package is incompatible', async t => {
+  const f = fixture(t);
+  assert.equal((await f.view()).updateAvailable, true);
+  assert.equal((await f.view()).expectedVersion, '2.0.0');
+  await f.service.start('addon', 'update');
+  assert.equal((await f.view()).updateAvailable, false);
+  const entry = recommendedPlugins.find(row => row.id === 'omd-intent-assistant');
+  const service = new RecommendedPluginManager({ catalog: [entry], hostVersion: '0.2.1-rc.3',
+    manager: { async listBundles() { return [{ name: entry.packageName, version: '0.3.0', installed: true, enabled: false,
+      error: { code: 'incompatible-version' } }]; } }, getConfig: () => ({}), saveConfig() {} });
+  t.after(() => service.close());
+  const row = (await service.status()).plugins[0];
+  assert.equal(row.updateAvailable, true);
+  assert.equal(row.needsBuildSwitch, true);
+  assert.ok(row.error);
 });
 
 test('only stop-profile permits installation after a refused removal', async t => {

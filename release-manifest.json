@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.1.0.1",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 1.0.1 · DSH 0.2.1-rc.3",
+      "notes": [
+        "修复插件预检固定等待 API Key 导致普遍超时，保留真实启动与界面检查。",
+        "修复第三方固定包匹配及旧版更新入口，更新五项上游固定发行。",
+        "需求理解 0.3.3 适配 rc.3 原生 SDK 与 profile，保留审查、自动模式和只读查证。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.0.1.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.1.0.0",
       "severity": "normal",
       "unpublished": false,

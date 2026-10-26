@@ -400,6 +400,12 @@
       "site": true
     },
     {
+      "path": "docs/release-1.0.1.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
+    },
+    {
       "path": "docs/release-1.0.0.md",
       "role": "release",
       "language": "bilingual",

@@ -9,6 +9,24 @@ import { pluginManagementError, requirePluginChange } from './plugin-operation.m
 import { withPluginPreflight } from './plugin-preflight/service.mjs';
 
 export const AUTO_UPDATE_INTERVAL = 6 * 60 * 60 * 1000;
+function reviewedMigration(plugin, currentVersion, hostVersion, automatic = false) {
+  const review = plugin.review;
+  if (!review || !/^[a-f0-9]{64}$/.test(review.sha256 ?? '')) return false;
+  const fork = typeof review.upstreamVersion === 'string' && currentVersion === review.upstreamVersion && plugin.githubRelease
+    && review.releaseTag === 'v' + (review.releaseVersion || review.version)
+    && (review.version.startsWith(currentVersion + '-omd.') || !automatic && plugin.requireReviewedVersion && plugin.hostBuilds && review.dsh === hostVersion);
+  const build = plugin.hostBuilds && review.dsh === hostVersion
+    && [...Object.entries(plugin.historicalHostBuilds ?? {}), ...Object.entries(plugin.hostBuilds)]
+      .some(([host, value]) => host !== hostVersion && value.version === currentVersion);
+  return Boolean(fork || build);
+}
+
+function reviewedUpdateAvailable(plugin, bundle, hostVersion) {
+  if (!bundle?.installed || bundle.readOnlyReason || !bundle.version || !plugin.review) return false;
+  try { return compareVersions(plugin.review.version, bundle.version) > 0 || reviewedMigration(plugin, bundle.version, hostVersion); }
+  catch { return false; }
+}
+
 export function pluginInstallSpec(plugin, version) {
   if (plugin.bundled) throw Error('内置插件随 OMD 管理，请通过 OMD 更新');
   parseVersion(version);
@@ -102,6 +120,8 @@ export class RecommendedPluginManager {
         const needsBuildSwitch = !!plugin.hostBuilds && installed && !!bundle.version && !!plugin.review && !bundle.version.startsWith(this.hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.');
         return { id: plugin.id, installed, enabled: !!bundle?.enabled, readOnly: !!bundle?.readOnlyReason, removable: !!bundle?.removable && !bundle?.readOnlyReason, unavailable: this.unavailable(plugin),
           version: bundle?.version || null, ...record,
+          expectedVersion: plugin.review?.version ?? null,
+          updateAvailable: !this.unavailable(plugin) && reviewedUpdateAvailable(plugin, bundle, this.hostVersion),
           ...(plugin.hostBuilds ? { hostVersion: this.hostVersion, review: plugin.review ?? null, expectedVersion: plugin.review?.version ?? null, needsBuildSwitch,
             ...(needsBuildSwitch && !record?.error ? { message: this.unavailable(plugin)
               ? '当前安装包面向其他宿主，安装与更新暂未开放；已有界面状态数据将保留。'
@@ -184,15 +204,9 @@ export class RecommendedPluginManager {
         // A reviewed fork may retain the upstream base version with an -omd
         // suffix. SemVer ranks that below upstream's stable release, so allow
         // only the catalog's exact, SHA-pinned migration to the fixed fork.
-        const reviewedForkMigration = typeof plugin.review?.upstreamVersion === 'string'
-          && current?.version === plugin.review.upstreamVersion
-          && version === plugin.review?.version && plugin.githubRelease
-          && plugin.review?.releaseTag === 'v' + (plugin.review.releaseVersion || version) && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 || '')
-          && (version.startsWith(current.version + '-omd.') || !automatic && plugin.requireReviewedVersion && plugin.hostBuilds && plugin.review.dsh === this.hostVersion);
-        const reviewedBuildMigration = !!plugin.hostBuilds && plugin.review?.dsh === this.hostVersion && /^[a-f0-9]{64}$/.test(plugin.review?.sha256 ?? '')
-          && [...Object.entries(plugin.historicalHostBuilds ?? {}), ...Object.entries(plugin.hostBuilds)].some(([host, build]) => host !== this.hostVersion && build.version === current?.version);
+        const reviewedMigrationAllowed = version === plugin.review?.version && reviewedMigration(plugin, current?.version, this.hostVersion, automatic);
         if (automatic && plugin.hostBuilds && current?.version && !current.version.startsWith(this.hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.')) { this.records.set(plugin.id, { ...this.records.get(plugin.id), message: '宿主已变更，请手动更新为对应核验构建；界面状态数据将保留。', error: '' }); return false; }
-        if (comparison !== null && ((comparison < 0 && !reviewedForkMigration && !reviewedBuildMigration) || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
+        if (comparison !== null && ((comparison < 0 && !reviewedMigrationAllowed) || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
           this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (current.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' });
           return false;
         }

@@ -6,6 +6,7 @@ import { rmSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
 import { launchNativeHost } from './native-host.mjs';
+import { checkRuntimePage } from './page.mjs';
 import { cleanEnvironment, copyCandidate } from './process.mjs';
 import { LIMITS, packageDigest, problem, redact } from './shared.mjs';
 
@@ -20,7 +21,8 @@ const exists = path => access(path).then(() => true, () => false);
 const json = async path => JSON.parse(await readFile(path, 'utf8'));
 const send = process.send.bind(process);
 const notify = message => { if (process.connected) send({ ...message, channelKey }, () => {}); };
-const phase = (stage, message) => notify({ type: 'phase', stage, message });
+let currentStage = 'preparation';
+const phase = (stage, message) => { currentStage = stage; notify({ type: 'phase', stage, message }); };
 const abort = new AbortController();
 let browser, browserLaunch, preparing, finishing, nativeHost, disconnected = false, hostStopping = false, hostLog = '', candidate;
 const nativeExit = process.exit.bind(process);
@@ -178,62 +180,13 @@ async function prepare() {
 }
 
 async function checkPage(chromium, executablePath, bootstrap) {
-  const errors = [];
   browser = await (browserLaunch = chromium.launchPersistentContext(join(root, 'browser'), { executablePath, headless: true, env,
     downloadsPath: join(root, 'downloads'), tracesDir: join(root, 'traces'), viewport: { width: 1024, height: 768 },
     args: ['--js-flags=--max-semi-space-size=8',
       ...(process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : [])] }));
   abort.signal.throwIfAborted();
   const page = browser.pages()[0] || await browser.newPage();
-  let rejectFatal;
-  const fatal = new Promise((_, reject) => { rejectFatal = reject; });
-  page.on('pageerror', error => {
-    if (errors.length < 10) errors.push(String(error.stack || error.message).slice(0, 4096));
-    rejectFatal(Object.assign(problem('client-failed', '隔离页面运行失败：' + String(error.message).slice(0, 512)), { details: errors.join('\n') }));
-  });
-  await Promise.race([(async () => {
-  await page.goto(bootstrap, { waitUntil: 'domcontentloaded', timeout: 15000 });
-  const input = page.locator('[data-composer-input]').first();
-  const proceed = page.getByRole('button', { name: '继续', exact: true });
-  const key = page.getByRole('button', { name: '添加 API Key', exact: true });
-  // The composer renders behind onboarding before its buttons hydrate. Wait
-  // for the real onboarding action rather than clicking through its overlay.
-  await proceed.or(key).first().waitFor({ state: 'visible', timeout: 12000 });
-  if (await proceed.isVisible()) { await proceed.click(); await key.waitFor({ state: 'visible' }); }
-  if (await key.isVisible()) {
-    await key.click(); const skip = page.getByRole('button', { name: '稍后配置', exact: true });
-    await skip.click(); await skip.waitFor({ state: 'hidden' });
-  }
-  const inventory = await page.evaluate(async () => {
-    const call = async method => {
-      const response = await fetch('/api/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: {} } }) });
-      const data = await response.json();
-      if (!response.ok || !data.result?.ok) throw Error('无法读取原生插件加载状态：' + method);
-      return data.result.value;
-    };
-    return { plugins: await call('pluginManager/listPlugins'), bundles: await call('pluginManager/listBundles') };
-  });
-  const ownIds = new Set(inventory.bundles.find(bundle => bundle.name === candidate.name)?.rows.map(row => row.entryId));
-  const failed = inventory.plugins.filter(row => row.enabled && (row.fiberPhase === 'failed' || row.fiberPhase === null));
-  if (failed.length) throw Object.assign(problem(failed.some(row => ownIds.has(row.entryId)) ? 'host-failed' : 'environment-unavailable',
-    '隔离插件组合存在加载失败：' + failed.map(row => row.moduleName).join('、')), { details: hostLog });
-  const waiting = inventory.plugins.filter(row => ownIds.has(row.entryId) && row.enabled && row.fiberPhase === 'pending');
-  if (waiting.length) throw Object.assign(problem('environment-unavailable', '候选插件仍在等待依赖服务，预检未完成'), { details: hostLog });
-  const diagnostic = page.getByRole('alert', { name: 'Oh My DSH 启动诊断', exact: true });
-  if (await diagnostic.isVisible()) throw Object.assign(problem('client-failed', '隔离页面报告增强功能启动失败'),
-    { details: await diagnostic.innerText() });
-  if (await input.getAttribute('contenteditable') === 'false' && await input.getAttribute('data-phase') === 'inert') {
-    // A fresh native profile asks for a workspace before editing. Exercise
-    // that picker rather than treating the intentional empty state as a crash.
-    await input.click({ timeout: 5000 });
-    await page.getByRole('menu').first().waitFor({ state: 'visible', timeout: 5000 }); await page.keyboard.press('Escape');
-  } else { await input.fill('插件启动检查', { timeout: 8000 }); await input.fill(''); }
-  await page.getByRole('button', { name: '账号菜单', exact: true }).click({ timeout: 5000 });
-  await page.getByRole('menuitem', { name: '设置', exact: true }).click({ timeout: 5000 });
-  await page.getByRole('dialog', { name: '设置', exact: true }).waitFor({ state: 'visible', timeout: 5000 });
-  if (errors.length) throw Object.assign(problem('client-failed', '隔离页面出现运行错误'), { details: errors.join('\n') });
-  })(), fatal]);
+  await checkRuntimePage(page, bootstrap, { candidate: candidate.name, entryId: input.entryId });
 }
 
 let result;
@@ -247,6 +200,6 @@ try {
   nativeHost.assertAlive?.();
   result = { ok: true, ...prepared, checks: ['host-start', 'plugin-activation', 'page-load', 'composer', 'settings'] };
 } catch (error) {
-  result = { ok: false, code: error.code || 'probe-failed', message: error.message,
-    details: redact(error.details || hostLog || error.stack) };
+  result = { ok: false, code: error.code || (currentStage === 'preparation' ? 'preparation-failed' : 'probe-failed'), message: error.message,
+    details: redact([hostLog, error.details || error.stack].filter(Boolean).join('\n')) };
 } finally { await finish(result); }

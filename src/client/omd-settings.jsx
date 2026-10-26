@@ -107,10 +107,12 @@ function FeatureRow({ plugin, features, thirdParty }) {
   const unavailable = installed && Object.hasOwn(installed, 'unavailable') ? installed.unavailable : plugin.unavailable;
   const cannotEnable = !installed?.installed && (unavailable || plugin.manualInstall);
   const locked = pending || !!state?.busy || !!error;
+  const update = installed?.updateAvailable && <Button type="button" size="sm" variant="ghost" disabled={locked} onClick={() => void act({ id: plugin.id, action: 'update' })}>更新</Button>;
   const checked = operation ? ['enable', 'install'].includes(operation.action) || (operation.action === 'update' && installed?.enabled) : installed?.enabled === true;
   const status = operation ? <Status>{operationLabel[operation.action]}</Status>
-    : installed?.error ? <Status error action={installed.enabled && !installed.readOnly && <Button type="button" size="sm" variant="ghost" disabled={locked} onClick={() => void act({ id: plugin.id, action: 'enable' })}>重试</Button>}>{installed.error}</Status>
+    : installed?.error ? <Status error action={update || (installed.enabled && !installed.readOnly && <Button type="button" size="sm" variant="ghost" disabled={locked} onClick={() => void act({ id: plugin.id, action: 'enable' })}>重试</Button>)}>{installed.error}</Status>
     : installed?.needsBuildSwitch && !unavailable ? <Status action={<Button type="button" size="sm" variant="ghost" disabled={locked} onClick={() => void act({ id: plugin.id, action: 'update' })}>更新</Button>}>{installed.message || '当前安装包面向其他 DSH 版本，需要更新为匹配版本。'}</Status>
+    : update ? <Status action={update}>可更新至 {installed.expectedVersion}</Status>
     : installed?.restartRequired ? <Status>重启 DSH 后生效</Status>
     : installed?.readOnly ? <Status>此功能由宿主配置管理。</Status>
     : cannotEnable ? <Status>{unavailable || plugin.manualInstall}</Status>

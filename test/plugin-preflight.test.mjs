@@ -9,6 +9,29 @@ import { pathToFileURL } from 'node:url';
 import { PluginPreflight, withPluginPreflight } from '../src/plugin-preflight/service.mjs';
 import { packageDigest, LIMITS } from '../src/plugin-preflight/shared.mjs';
 import { runProbe, sweep, packageEnvironment, cleanEnvironment, copyCandidate } from '../src/plugin-preflight/process.mjs';
+import { activationState } from '../src/plugin-preflight/page.mjs';
+
+test('activation requires a selected, present candidate and settled runtime entries', () => {
+  const row = { entryId: 'include:fixture', patchId: 'fixture', moduleName: 'fixture', enabled: true, fiberPhase: 'active' };
+  const bundle = { name: 'fixture', enabled: true, rows: [{ rowId: 'fixture', entryId: row.entryId }] };
+  const inventory = { plugins: [row], bundles: [bundle] };
+  assert.deepEqual(activationState(inventory, 'fixture', 'fixture'), []);
+  for (const phase of ['loading', 'pending', 'unloading', null]) {
+    row.fiberPhase = phase;
+    assert.deepEqual(activationState(inventory, 'fixture'), [row]);
+  }
+  row.fiberPhase = 'failed';
+  assert.throws(() => activationState(inventory, 'fixture'), { code: 'host-failed' });
+  row.fiberPhase = 'active';
+  assert.throws(() => activationState(inventory, 'missing'), { code: 'environment-unavailable' });
+  assert.throws(() => activationState(inventory, 'fixture', 'missing'), { code: 'environment-unavailable' });
+  bundle.enabled = false;
+  assert.throws(() => activationState(inventory, 'fixture'), { code: 'environment-unavailable' });
+  bundle.enabled = true; inventory.plugins = [];
+  assert.throws(() => activationState(inventory, 'fixture'), { code: 'environment-unavailable' });
+  inventory.plugins = [row, { ...row, entryId: 'include:other', moduleName: 'other', fiberPhase: 'pending' }];
+  assert.deepEqual(activationState(inventory, 'fixture'), []);
+});
 
 test('copied installed candidates retain real imports with hoisted, scoped and private dependencies', async t => {
   const root = await mkdtemp(join(tmpdir(), 'omd-preflight-deps-'));
@@ -122,6 +145,15 @@ test('changed profile and unavailable browser are reported as incomplete, not co
   const pending = f.manager.installBundle('fixture'); await until(() => f.service.snapshot().phase === 'decision');
   assert.equal(f.service.snapshot().failure.kind, 'unavailable');
   f.service.decide(f.service.snapshot().id, 'cancel'); assert.equal((await pending).application, 'cancelled');
+});
+test('a UI readiness timeout is incomplete and cannot silently continue installation', async t => {
+  const f = await fixture(t, async () => { throw Object.assign(Error('首次启动界面未就绪'), { code: 'ui-timeout' }); });
+  const pending = f.manager.installBundle('fixture'); await until(() => f.service.snapshot().phase === 'decision');
+  assert.equal(f.service.snapshot().failure.kind, 'unavailable');
+  assert.match(f.service.snapshot().repair, /不能据此判定插件不兼容/);
+  assert.deepEqual(f.calls, []);
+  f.service.decide(f.service.snapshot().id, 'cancel');
+  assert.equal((await pending).application, 'cancelled');
 });
 test('only one preflight runs, shutdown cancels its decision and restores native descriptors', async t => {
   const f = await fixture(t, async () => { throw failure; });

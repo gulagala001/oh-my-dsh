@@ -23,12 +23,13 @@
 - 文档构建：`node scripts/build-docs.mjs`，检查链接与锚点并渲染图示，无需启动 DSH。
 - 插件自有日志事件通过宿主 `appendPluginRecord` 写入；普通 `Session.append` 不接收 `ignorable`。涉及事件持久化时用真实 Session 与原生冷恢复检查，不能以宽松替身代替存储契约。
 - 工具契约检查：`npm run tools:check`，核对自有工具的 Native 对象参数及 TypeScript／Python SDK；自有注册使用 `checkedTool`，范围与互斥要求由工具执行层校验并写入参数说明。构建、CI 和 prepack 执行同一检查。
+- 第三方目录升级须核对原作者固定工件与 SHA-256、实际宿主加载和设置入口。兼容构建使用 `scripts/build-intent-compat.mjs` 等固定输入构建器，保留功能、原许可和来源；包内产品 README／兼容说明／双语更新日志由构建器一并生成，不放宽宿主版本要求。预检页面的按需浏览器回归为 `node --test test/plugin-preflight-page.test.mjs`，使用已有浏览器，可通过 `OMD_TEST_BROWSER` 指定路径，不自动下载。
 - 公开文件检查：`node scripts/check-public-files.mjs`，核对 Git 文件、新增历史和安装包中的私有资料；本地缺少 `origin/main` 时明确报告未检查新增历史，不把它当作发布授权。
 - 首页截图与动图放在 `docs/images/`，中英文入口同步，尺寸不超过素材原宽；在 `docs/images/readme-screenshots.json` 记录来源、尺寸与哈希。
 - 新指南接入[文档目录](docs/README.md)，中英入口保持对应；安装命令标明环境，发布说明区分已发布与未发布。
 - 版本使用完整宿主前缀加 `omd.主版本.功能版本.补丁版本`；功能更新递增功能位并归零补丁，修复递增补丁位。
 - 发行同步包版本、tag、发行清单、README 徽章与安装命令、升级与本版说明；内置组件版本以 vendor 清单为准。
-- 每版（含补丁版）新增 `docs/release-<版本>.md`（当前示例：`docs/release-1.0.0.md`） 并登记 `docs/structure.json` 与站点集合；`CHANGELOG.md` 以当前双语正文开头并保留旧版正文，历史页面保留，更新当前导航与固定安装入口；更新推荐目录固定包；更新器按完整宿主版本发现发行，不登记产品功能系列白名单。
+- 每版（含补丁版）新增 `docs/release-<版本>.md`（当前示例：`docs/release-1.0.1.md`） 并登记 `docs/structure.json` 与站点集合；`CHANGELOG.md` 以当前双语正文开头并保留旧版正文，历史页面保留，更新当前导航与固定安装入口；更新推荐目录固定包；更新器按完整宿主版本发现发行，不登记产品功能系列白名单。
 - `main` 不跟踪构建产物：发版提交在完整构建后用 `git add -f lib plugins/*/lib` 带上产物，再打 tag 并上传 Release 包；应用内更新安装的是 Release 包。
 - 尚未发布的修复记入更新日志“未发布”部分；来源与许可见[第三方声明](THIRD_PARTY_NOTICES.md)。
 

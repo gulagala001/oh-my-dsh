@@ -71,14 +71,14 @@ identity, exact host and per-file SHA-256 hashes are recorded in
 [vendor/rewind.json](vendor/rewind.json); its [license](vendor/rewind/LICENSE)
 and [notices](vendor/rewind/THIRD_PARTY_NOTICES.md) accompany the snapshot.
 
-# Optional recommendation: OMD Prompt Optimizer
+# Optional recommendation: Intent Assistant
 
-“需求理解 · OMD UI 增强版” is an optional, separately installed derivative of
+“需求理解 / Intent Assistant” is an optional, separately installed derivative of
 [dsh-prompt-optimizer](https://github.com/WestFox-AwA/dsh-prompt-optimizer) 0.7.4,
 originally authored by **啃轮胎的西狐（WestFox-AwA）**. **gulagala001** maintains the
-OMD adaptation. It is not an official upstream release. The separate plugin
+SDK adapter. It is not an official upstream release. The separate plugin
 preserves the upstream BSD-3-Clause license, attribution and source provenance;
-its code is not bundled with Oh My DSH.
+the fixed rc.3 distribution is reproduced by `scripts/build-intent-compat.mjs` from the SHA-256-pinned 0.3.0 archive. Native message constructors use the host Loader and configuration follows the current profile. The installer keeps the exact DSH version requirement.
 
 # dsh-ops compatibility distribution
 

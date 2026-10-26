@@ -66,20 +66,11 @@ export const recommendedPlugins = [
     },
   },
   {
-    "id": "dsh-plugin-subscriptions",
-    "name": "订阅登录",
-    "packageName": "dsh-plugin-subscriptions",
-    "author": "原作者：V1ki · OMD 适配：gulagala001",
-    "description": "直接登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。",
-    "category": "模型能力",
-    "url": "https://github.com/V1ki/dsh-plugin-subscriptions",
-    githubRelease: 'gulagala001/dsh-plugin-subscriptions',
-    unavailable: '当前公开订阅插件尚未核验 DSH 0.2.1-alpha.2。本地 0.9.9-omd.3 已完成三宿主对应 SDK 与 OMD 0.13 的隔离原生验证，尚未公开发布，暂不提供公开安装或更新；已有安装仍可卸载。真实账号与付费请求未验收。',
-    unavailableHosts: ['0.2.1-alpha.2'],
-    review: { version: '0.9.8-omd.1', upstreamVersion: '0.9.8', releaseTag: 'v0.9.8-omd.1', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.9.0', combinations: [{ dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.9.0' }, { dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.9.0' }], platforms: ['Mac（隔离 Web 宿主）'],
-      provenance: { repository: 'gulagala001/dsh-plugin-subscriptions', commit: 'fac507e40af60246e5e364f07d41960b193f02e9' },
-      sha256: 'a80b5fec117acc65f23f7f7d991050797621c621f76fbc577252b3389b2533cd',
-      note: '固定 OMD 适配发行包，源码 fac507e；保留 V1ki 的 MIT 版权与上游来源，非上游 npm 正式发行。两宿主已在 Mac 隔离 Web 核验原生安装、启停、重启、卸载及 OMD 共存。真实账号 Fast 点击、provider 优先级、付费请求及订阅额度未验收；Windows/Linux 原生桌面未实测。' },
+    id: 'dsh-plugin-subscriptions', name: '订阅登录', packageName: 'dsh-plugin-subscriptions', author: 'V1ki',
+    description: '登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。',
+    category: '模型能力', url: 'https://github.com/V1ki/dsh-plugin-subscriptions', supportedHostVersions: ['0.2.1-rc.3'],
+    review: { version: '0.9.11', dsh: '0.2.1-rc.3', sha256: '15d6c2bffc309d17f921a8371b9746570e58c464d7775d462bbfa10a09b12e6d',
+      note: '原作者固定 npm 包；已核验 rc.3 原生安装、启动与设置入口。账号登录、真实额度及付费模型调用需用户配置。' },
   },
   {
     id: 'dsh-open-design', name: '设计技能 · OpenDesign', packageName: 'dsh-open-design', author: 'omegapaopao · 技能来源：nexu-io/open-design 及各技能作者',
@@ -91,25 +82,24 @@ export const recommendedPlugins = [
       note: '固定上游 a9d4f4c 的 OMD 适配包，非上游官方发行。52技能、同名项目优先、原生安装启停卸载和checker已在隔离Mac验证；保留许可与来源。真实模型设计、联网技能和Windows尚未验收。发行包锁定此桥接版本，不跟随OMD主插件tag更新。' },
   },
   {
-    id: 'omd-intent-assistant', name: '需求理解', packageName: 'omd-prompt-optimizer', author: '原作者：啃轮胎的西狐（WestFox-AwA） · OMD 适配：gulagala001',
+    id: 'omd-intent-assistant', name: '需求理解', packageName: 'omd-prompt-optimizer', versionSuffix: 'intent',
+    author: '原作者：啃轮胎的西狐（WestFox-AwA） · 兼容适配：gulagala001',
     upstream: { name: 'dsh-prompt-optimizer', url: 'https://github.com/WestFox-AwA/dsh-prompt-optimizer' },
     description: '发送前梳理本轮需求，保留原话，支持审查、自动模式和只读查证；启用后可在输入框选择模式。',
     category: '模型能力', url: 'https://github.com/gulagala001/omd-prompt-optimizer',
-    githubRelease: 'gulagala001/omd-prompt-optimizer',
-    unavailable: '公开需求理解版本 0.3.0 尚不兼容 DSH 0.2.1-alpha.2。本地 0.3.2 已完成三宿主与 OMD 0.13 的隔离原生交互及冷重启验证，尚未公开发布，暂不提供公开安装或更新；已有安装仍可卸载。真实模型效果未验收。',
-    unavailableHosts: ['0.2.1-alpha.2'],
-    review: { version: '0.3.0', releaseTag: 'v0.3.0', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.9.0', combinations: [{ dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.9.0' }, { dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.9.0' }], platforms: ['Mac（隔离 Web 宿主）'],
-      provenance: { repository: 'gulagala001/omd-prompt-optimizer', commit: '9237848d68930eb8c477c299a1358596cb96d3dd' },
-      sha256: '8b9eb882ddd57c4098b874628663615858c4a987f49fd6927235d7bd1afdeadf',
-      note: '固定源码 9237848 的 OMD 适配发行包，基于原作 dsh-prompt-optimizer 0.7.4，保留 BSD-3-Clause 许可与署名，非上游官方发行版。两宿主已在 Mac 隔离 Web 核验原生安装、启停、卸载、原话发送、关闭恢复及 OMD 共存。真实模型效果及 Windows/Linux 原生桌面未同等实测。' },
+    githubRelease: 'gulagala001/oh-my-dsh', requireReviewedVersion: true,
+    hostBuilds: {
+      '0.2.1-rc.3': { version: '0.2.1-rc.3.intent.0.3.3', upstreamVersion: '0.3.0', releaseVersion: '0.2.1-rc.3.omd.1.0.1', releaseTag: 'v0.2.1-rc.3.omd.1.0.1', asset: 'omd-prompt-optimizer-0.2.1-rc.3.intent.0.3.3.tgz', sha256: 'd5ee05d821d009161d3c42e3d4b0b1319436eced0dd431f91bb68ae5db74af75', dsh: '0.2.1-rc.3', allowPrerelease: false },
+    },
   },
   {
     id: 'dsh-market', name: '插件市场', packageName: 'dshmarket', author: 'dsh-market',
     description: '在 DSH 内浏览、搜索和安装社区插件与主题，支持分类筛选、更新管理及配置备份。安装后在设置中打开插件市场。',
     category: '插件管理', url: 'https://github.com/dsh-market/dsh-market',
-    review: { version: '1.66.14', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.12.0', combinations: [{ dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.12.0' }, { dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.12.0' }], platforms: ['Mac（隔离 Web 宿主）'],
-      sha256: '598b1e94be1278f93cd0b344612b701b4de7e04e8c4ffce05fec25ea62828279',
-      note: '固定 npm 发行包；两宿主原生安装、OMD 两种加载顺序、设置贡献、启停、重启及卸载已核验。实际市场联网下载、配置备份恢复和原生桌面未作完整业务验收。' },
+    supportedHostVersions: ['0.2.1-rc.3'],
+    review: { version: '1.70.3', dsh: '0.2.1-rc.3',
+      sha256: 'bf7b4ed2446e984bcf73276b328b6827a46727e88f7a0cba96d82ebab90dceb1',
+      note: '原作者固定发行包；已核验 rc.3 原生安装、启动与基础界面。外部账号、服务及其他平台需各自配置和验证。' },
   },
   {
     id: 'dsh-infinite-gen-4', name: '无限四代', packageName: 'dsh-infinite-gen-4', author: 'Minglink',
@@ -124,26 +114,29 @@ export const recommendedPlugins = [
     id: 'dsh-status-rotator', name: '动态思考文案', packageName: 'dsh-status-rotator', author: '01Virex',
     description: '把“深度求索中…”替换为轮换文案，支持打字机、彩色渐变、弹幕和主题词库，可在设置中编辑。',
     category: '界面增强', url: 'https://github.com/01Virex/dsh-status-rotator',
-    review: { version: '0.35.0', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.12.0', combinations: [{ dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.12.0' }, { dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.12.0' }], platforms: ['Mac（隔离 Web 宿主）'],
-      sha256: '0d5e848d5edd6fb97098a54ce393989330e3f63bf42ad6cde87527e2128c3c7d',
-      note: '固定 npm 发行包，源码与包逐文件核对。两宿主与 OMD 的两种加载顺序、原生设置贡献、启停、重启及卸载已核验；未实测原生桌面 App、Windows/Linux 或全部动态文案效果。' },
+    supportedHostVersions: ['0.2.1-rc.3'],
+    review: { version: '0.38.0', dsh: '0.2.1-rc.3',
+      sha256: '83e4388bdfdf6b583a4efb03064bdd00b823c4feb8dc3358a2dde2f6907c75c1',
+      note: '原作者固定发行包；已核验 rc.3 原生安装、启动与基础界面。外部账号、服务及其他平台需各自配置和验证。' },
   },
   {
     id: 'dsh-blender-plugin', name: 'DSH × Blender', packageName: '@dsh-external/dsh-blender-plugin', author: 'sixtysevenlf',
     description: '让模型直接操控 Blender：查看视口、编辑场景、渲染、批量任务与事务回滚。需要 Blender 及配套连接插件。',
     category: '三维创作', url: 'https://github.com/sixtysevenlf/dsh-blender-plugin',
     githubRelease: 'sixtysevenlf/dsh-blender-plugin',
-    review: { version: '1.0.5', releaseTag: 'v1.0.5', asset: 'dsh-external-dsh-blender-plugin-1.0.5.tgz', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.12.0', combinations: [{ dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.12.0' }, { dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.12.0' }], platforms: ['Mac（隔离 Web 宿主）'],
-      sha256: '7277a45b6c7b6d5f7ffe1dcd36ac0e83d24b666c3dd4ed9b3730d71c18d1195e',
-      note: '固定 GitHub 标准发行资产；两宿主原生安装、15 个工具声明、设置、两种加载顺序、启停、重启、卸载及后台进程清理已核验。仍需配置 Blender 端连接；实际视口、几何、渲染与事务未验收，Linux 资产与同版本源码有共享路径差异，Windows/Linux 未实测。' },
+    supportedHostVersions: ['0.2.1-rc.3'],
+    review: { version: '2.6.1', releaseTag: 'v2.6.1', asset: 'dsh-external-dsh-blender-plugin-2.6.1.tgz', dsh: '0.2.1-rc.3',
+      sha256: 'ed00e3d2bec9ddf67f9f837a181811832c152bb60f8680b3a8d58ebc0a6f662e',
+      note: '原作者固定发行包；已核验 rc.3 原生安装、启动与基础界面。外部账号、服务及其他平台需各自配置和验证。' },
   },
   {
     id: 'dsh-whale-widget', name: '小鲸鱼记账挂件', packageName: 'dsh-whale-widget', author: 'MeteorNOX',
     description: '在 DSH 界面显示 DeepSeek 余额、今日用量与每轮消耗，支持拖拽吸附、自定义角色和互动泡泡。',
     category: '用量管理', url: 'https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget',
-    review: { version: '0.3.18', dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.12.0', combinations: [{ dsh: '0.2.0-rc.2', omd: '0.2.0-rc.2.omd.0.12.0' }, { dsh: '0.2.1-alpha.1', omd: '0.2.1-alpha.1.omd.0.12.0' }], platforms: ['Mac（隔离 Web 宿主）'],
-      sha256: '81045aa394d3dadd5100d52159697e8381f82f63d65f4d2c57029b558dcc0efd',
-      note: '固定 DSH npm 支线，保持与 Codex 支线区分。两宿主原生安装、OMD 两种加载顺序、无凭据服务、设置贡献、启停、重启与卸载已核验；真实余额、计费、拖拽及原生桌面未作完整业务验收。' },
+    supportedHostVersions: ['0.2.1-rc.3'],
+    review: { version: '0.4.2', dsh: '0.2.1-rc.3',
+      sha256: '2368de8192c4ba28682a6344f78ace11cb41bac397c13981e36dfca49c0ebc78',
+      note: '原作者固定发行包；已核验 rc.3 原生安装、启动与基础界面。外部账号、服务及其他平台需各自配置和验证。' },
   },
 ];
 
@@ -156,6 +149,6 @@ export function resolveRecommendedPlugin(plugin, hostVersion) {
   if (plugin.unavailable && (!plugin.unavailableHosts || plugin.unavailableHosts.includes(hostVersion))) return { ...plugin, review };
   if (!review) return { ...plugin, review: undefined, unavailable: hostVersion ? `当前 DSH ${hostVersion} 没有已核验的对应构建，暂不提供安装或更新。支持的完整宿主版本：${supportedHosts.join('、')}。已有安装仍可卸载。` : '未能核实当前 DSH 完整版本，暂不提供安装或更新。已有安装仍可卸载。', unavailableHosts: undefined };
   const prefix = hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.';
-  const valid = review.dsh === hostVersion && typeof review.version === 'string' && review.version.startsWith(prefix) && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.version.slice(prefix.length)) && review.releaseTag === 'v' + (review.releaseVersion || review.version) && (!review.releaseVersion || (plugin.id === 'dsh-ops' && review.releaseVersion === hostVersion + '.omd.0.99.0')) && review.asset === plugin.packageName + '-' + review.version + '.tgz' && /^[a-f0-9]{64}$/.test(review.sha256 ?? '');
+  const valid = review.dsh === hostVersion && typeof review.version === 'string' && review.version.startsWith(prefix) && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.version.slice(prefix.length)) && review.releaseTag === 'v' + (review.releaseVersion || review.version) && (!review.releaseVersion || (review.releaseVersion.startsWith(hostVersion + '.omd.') && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.releaseVersion.slice((hostVersion + '.omd.').length)))) && review.asset === plugin.packageName + '-' + review.version + '.tgz' && /^[a-f0-9]{64}$/.test(review.sha256 ?? '');
   return { ...plugin, review, unavailable: valid ? null : `DSH ${hostVersion} 对应的 ${plugin.name} 核验发行包尚未准备完成，暂不提供安装或更新。`, unavailableHosts: undefined };
 }

@@ -136,11 +136,11 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 ### Subscription Login
 
-[项目](https://github.com/V1ki/dsh-plugin-subscriptions) · 原作者：V1ki · OMD 适配：gulagala001
+[项目](https://github.com/V1ki/dsh-plugin-subscriptions) · V1ki
 
-直接登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。 可选安装／推荐；当前兼容范围见插件兼容说明。
+登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。 可选安装／推荐；当前兼容范围见插件兼容说明。
 
-- 固定来源／版本: [0.9.8-omd.1](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- 固定来源／版本: [0.9.11](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### OpenDesign
@@ -154,11 +154,11 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 ### Prompt Optimizer
 
-[项目](https://github.com/WestFox-AwA/dsh-prompt-optimizer) · 原作者：啃轮胎的西狐（WestFox-AwA） · OMD 适配：gulagala001
+[项目](https://github.com/WestFox-AwA/dsh-prompt-optimizer) · 原作者：啃轮胎的西狐（WestFox-AwA） · 兼容适配：gulagala001
 
 发送前梳理本轮需求，保留原话，支持审查、自动模式和只读查证；启用后可在输入框选择模式。 可选安装／推荐；当前兼容范围见插件兼容说明。
 
-- 固定来源／版本: [0.3.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- 固定来源／版本: [0.2.1-rc.3.intent.0.3.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### DSH Market
@@ -167,7 +167,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 在 DSH 内浏览、搜索和安装社区插件与主题，支持分类筛选、更新管理及配置备份。安装后在设置中打开插件市场。 可选安装／推荐；当前兼容范围见插件兼容说明。
 
-- 固定来源／版本: [1.66.14](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- 固定来源／版本: [1.70.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Infinite Gen 4
@@ -185,7 +185,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 把“深度求索中…”替换为轮换文案，支持打字机、彩色渐变、弹幕和主题词库，可在设置中编辑。 可选安装／推荐；当前兼容范围见插件兼容说明。
 
-- 固定来源／版本: [0.35.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- 固定来源／版本: [0.38.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### DSH × Blender
@@ -194,7 +194,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 让模型直接操控 Blender：查看视口、编辑场景、渲染、批量任务与事务回滚。需要 Blender 及配套连接插件。 可选安装／推荐；当前兼容范围见插件兼容说明。
 
-- 固定来源／版本: [1.0.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- 固定来源／版本: [2.6.1](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Balance Whale Widget
@@ -203,7 +203,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 在 DSH 界面显示 DeepSeek 余额、今日用量与每轮消耗，支持拖拽吸附、自定义角色和互动泡泡。 可选安装／推荐；当前兼容范围见插件兼容说明。
 
-- 固定来源／版本: [0.3.18](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- 固定来源／版本: [0.4.2](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ## 宿主、数据与素材

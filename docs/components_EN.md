@@ -136,11 +136,11 @@ Agent presets and interfaces for Codex, Claude Code, Grok, Pi and ZCode workflow
 
 ### Subscription Login
 
-[Project](https://github.com/V1ki/dsh-plugin-subscriptions) · 原作者：V1ki · OMD 适配：gulagala001
+[Project](https://github.com/V1ki/dsh-plugin-subscriptions) · V1ki
 
 Connect supported subscription providers and discover models. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.9.8-omd.1](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.9.11](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### OpenDesign
@@ -154,11 +154,11 @@ Design skills, templates and design systems. Optional recommendation; see compat
 
 ### Prompt Optimizer
 
-[Project](https://github.com/WestFox-AwA/dsh-prompt-optimizer) · 原作者：啃轮胎的西狐（WestFox-AwA） · OMD 适配：gulagala001
+[Project](https://github.com/WestFox-AwA/dsh-prompt-optimizer) · 原作者：啃轮胎的西狐（WestFox-AwA） · 兼容适配：gulagala001
 
 Review and clarify requests before sending. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.3.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.2.1-rc.3.intent.0.3.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### DSH Market
@@ -167,7 +167,7 @@ Review and clarify requests before sending. Optional recommendation; see compati
 
 Browse and manage community plugins and themes. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [1.66.14](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [1.70.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Infinite Gen 4
@@ -185,7 +185,7 @@ Prompt research and response-state presentation. Optional recommendation; see co
 
 Rotating activity text in the interface. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.35.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.38.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### DSH × Blender
@@ -194,7 +194,7 @@ Rotating activity text in the interface. Optional recommendation; see compatibil
 
 Connect DSH tools to Blender. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [1.0.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [2.6.1](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Balance Whale Widget
@@ -203,7 +203,7 @@ Connect DSH tools to Blender. Optional recommendation; see compatibility guide f
 
 Usage and balance widget with interactive characters. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.3.18](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.4.2](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ## Host, data and source assets

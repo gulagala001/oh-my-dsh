@@ -582,9 +582,9 @@
       "id": "dsh-plugin-subscriptions",
       "name": "Subscription Login",
       "url": "https://github.com/V1ki/dsh-plugin-subscriptions",
-      "authors": "原作者：V1ki · OMD 适配：gulagala001",
+      "authors": "V1ki",
       "purpose": {
-        "zh": "直接登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。",
+        "zh": "登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。",
         "en": "Connect supported subscription providers and discover models."
       },
       "relationship": {
@@ -592,7 +592,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.9.8-omd.1",
+      "version": "0.9.11",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"
@@ -620,7 +620,7 @@
       "id": "omd-intent-assistant",
       "name": "Prompt Optimizer",
       "url": "https://github.com/WestFox-AwA/dsh-prompt-optimizer",
-      "authors": "原作者：啃轮胎的西狐（WestFox-AwA） · OMD 适配：gulagala001",
+      "authors": "原作者：啃轮胎的西狐（WestFox-AwA） · 兼容适配：gulagala001",
       "purpose": {
         "zh": "发送前梳理本轮需求，保留原话，支持审查、自动模式和只读查证；启用后可在输入框选择模式。",
         "en": "Review and clarify requests before sending."
@@ -630,7 +630,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.3.0",
+      "version": "0.2.1-rc.3.intent.0.3.3",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"
@@ -649,7 +649,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "1.66.14",
+      "version": "1.70.3",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"
@@ -687,7 +687,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.35.0",
+      "version": "0.38.0",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"
@@ -706,7 +706,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "1.0.5",
+      "version": "2.6.1",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"
@@ -725,7 +725,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.3.18",
+      "version": "0.4.2",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"

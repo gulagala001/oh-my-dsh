@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 const core = [
   'startup-isolation', 'metering-contract',
   'start', 'monitor-partial', 'monitor-read-cache', 'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget', 'task-budget-persistence',
-  'file-upload-compat', 'search-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update',
+  'file-upload-compat', 'search-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update', 'dsh-ops-compat',
   'context-store-cache', 'context-coordinate-release',
   'model-reply', 'temporary-chat', 'prompt-optimizer-drafts',
   'dream-source-lifecycle', 'dream-job-control',
