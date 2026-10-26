@@ -6,6 +6,10 @@ import { PTC_CONTROL_NAMES } from './ptc-control-compat.mjs';
 const currentRun = new AsyncLocalStorage();
 const original = value => value?.[symbols.original] ?? value;
 const registries = new WeakMap();
+export const currentPtcBudget = () => {
+  const run = currentRun.getStore();
+  return run ? { budgetMs: run.budget, remainingMs: Math.max(0, run.budget - (performance.now() - run.startedAt)), explicit: run.explicit, adaptive: run.adaptive, defaultMs: run.defaultMs, maximumMs: run.maximumMs } : null;
+};
 const failure = (message, code, pending = false) => ({
   isError: true, content: [{ type: 'text', text: `Error: ${message}` }],
   error: { message, info: { code, cleanupPending: pending } },
@@ -15,7 +19,7 @@ const failure = (message, code, pending = false) => ({
 // cooperative timeout does not bound a provider's cleanup or a nested tool
 // which ignores cancellation. Bound those waits, but never report them as
 // successful cleanup or admit overlapping work in the affected Session.
-export function installPtcLifecycle(ctx, { cleanupMs = 5000 } = {}) {
+export function installPtcLifecycle(ctx, { cleanupMs = 5000, adaptiveBudgets = () => false } = {}) {
   const registry = original(ctx.tools);
   let shared = registries.get(registry);
   if (!shared) { shared = { executions: new Map(), runs: new Set(), unowned: {} }; registries.set(registry, shared); }
@@ -43,9 +47,11 @@ export function installPtcLifecycle(ctx, { cleanupMs = 5000 } = {}) {
     return result;
   };
   const blocked = () => failure('A previous PTC call is still cleaning up after cancellation. No new tool was started. Wait for cleanup before retrying.', 'OMD_PTC_CLEANUP_PENDING', true);
-  const arm = run => {
-    run.timer = setTimeout(() => run.controller.abort(Object.assign(new Error(`PTC program timed out after ${run.budget}ms`),
-      { code: 'OMD_PTC_TIMEOUT' })), run.budget);
+  const arm = (run, restart = true) => {
+    if (restart) run.startedAt = performance.now();
+    clearTimeout(run.timer);
+    run.timer = setTimeout(() => run.controller.abort(Object.assign(new Error(`PTC program timed out after ${run.budget}ms (${run.explicit ? 'explicit' : run.budget > run.defaultMs ? 'automatically extended' : 'default'} outer budget). ${run.explicit ? 'An explicit outer deadline cannot extend' : `Automatic extension is bounded by ${run.maximumMs}ms total`}${run.childBudget > run.budget ? `; a nested call requested ${run.childBudget}ms` : ''}. For longer foreground work, set run_code.timeoutMs for the complete program, or start a supported background job. Inspect completed effects before retrying.`),
+      { code: 'OMD_PTC_TIMEOUT' })), Math.max(0, run.budget - (performance.now() - run.startedAt)));
   };
   const begin = exec => {
     if (exec.name !== 'run_code') return;
@@ -56,7 +62,8 @@ export function installPtcLifecycle(ctx, { cleanupMs = 5000 } = {}) {
       || requested !== undefined && (!Number.isFinite(requested) || requested <= 0)) return;
     const controller = new AbortController();
     const run = { owner: ownerOf(exec), controller, signal: AbortSignal.any([exec.signal, controller.signal]),
-      budget: Math.min(requested ?? timeout.defaultMs, timeout.maxMs), pending: new Set(),
+      budget: Math.min(requested ?? timeout.defaultMs, timeout.maxMs), explicit: requested !== undefined, defaultMs: timeout.defaultMs, maximumMs: timeout.maxMs, adaptive: false,
+      adaptiveRequested: requested === undefined && adaptiveBudgets(exec.agent?.session), childBudget: 0, pending: new Set(),
       tokens: new Set([exec.token]), closed: false, root: exec.token, lifetime,
       controls: new Map(PTC_CONTROL_NAMES.map(name => [name, ctx.tools.get(name, exec.agent)]).filter(([, tool]) => tool !== undefined)) };
     const aborted = () => { run.abortedAt = performance.now(); };
@@ -116,6 +123,15 @@ export function installPtcLifecycle(ctx, { cleanupMs = 5000 } = {}) {
     const run = runOf(exec) ?? begin(exec);
     if (!run) return next();
     const root = exec.token === run.root;
+    if (!root) {
+      const budgets = [exec.arguments?.timeoutMs, exec.arguments?.timeout_ms, ctx.tools.get(exec.name, exec.agent)?.timeoutMs]
+        .filter(value => typeof value === 'number' && Number.isFinite(value) && value > 0);
+      const requested = Math.max(0, ...budgets); run.childBudget = Math.max(run.childBudget, requested);
+      if (run.adaptive && requested && !run.signal.aborted) {
+        const deadline = Math.min(run.maximumMs, performance.now() - run.startedAt + requested + cleanupMs);
+        if (deadline > run.budget) { run.budget = deadline; arm(run, false); }
+      }
+    }
     if (root && run.timer === undefined) arm(run);
     const upstream = exec.signal;
     const signal = AbortSignal.any([upstream, run.signal]);
@@ -166,7 +182,13 @@ export function installPtcLifecycle(ctx, { cleanupMs = 5000 } = {}) {
       const run = currentRun.getStore();
       if (!mounted || !active || !run || !runs.has(run)) return previous.call(this, spec);
       const signal = spec.signal ? AbortSignal.any([spec.signal, run.signal]) : run.signal;
-      try { return await bounded(run, () => previous.call(this, { ...spec, signal }), cleanupMs, signal); }
+      // A resolved millisecond deadline is the provider's public contract.
+      // The native worker retains the hard maximum; the shared signal owns
+      // the adaptive default. Explicit caller deadlines are never extended.
+      const outer = !run.runtimeStarted; run.runtimeStarted = true;
+      if (outer) run.adaptive = run.adaptiveRequested && Number.isFinite(spec.timeoutMs) && spec.timeoutMs > 0;
+      const resolved = outer && run.adaptive ? { ...spec, timeoutMs: run.maximumMs, signal } : { ...spec, signal };
+      try { return await bounded(run, () => previous.call(this, resolved), cleanupMs, signal); }
       catch (error) {
         if (!signal.aborted) throw error;
         if (!run.signal.aborted) run.controller.abort(signal.reason);
@@ -180,6 +202,14 @@ export function installPtcLifecycle(ctx, { cleanupMs = 5000 } = {}) {
       if (descriptor) Object.defineProperty(runtime, 'run', descriptor); else delete runtime.run;
     });
   });
+  ctx.on('system-prompt/assemble', async (_initial, context, next) => {
+    const assembly = await next(), timeout = ctx.get('ptcRuntime')?.timeout;
+    if (!context?.agent || !adaptiveBudgets(context.agent.session) || !timeout) return assembly;
+    const policy = `OMD timeout policy: when timeoutMs is omitted, the initial ${timeout.defaultMs}ms budget can extend for actual nested tool timeout requests, up to ${timeout.maxMs}ms total. An explicitly supplied timeoutMs is a hard outer deadline and never extends. Cancellation and cleanup remain active. Use background jobs for work beyond that maximum.`;
+    return { ...assembly, tools: assembly.tools.map(tool => tool.name === 'run_code' && tool.parameters?.properties?.timeoutMs
+      ? { ...tool, parameters: { ...tool.parameters, properties: { ...tool.parameters.properties,
+        timeoutMs: { ...tool.parameters.properties.timeoutMs, description: policy } } } } : tool) };
+  }, { global: true });
   ctx.effect(() => () => {
     active = false;
     for (const run of runs) {

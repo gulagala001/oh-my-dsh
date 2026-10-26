@@ -21,6 +21,7 @@
 ## 文档与发行
 
 - 文档构建：`node scripts/build-docs.mjs`，检查链接与锚点并渲染图示，无需启动 DSH。
+- 工具契约检查：`npm run tools:check`，核对自有工具的 Native 对象参数及 TypeScript／Python SDK；自有注册使用 `checkedTool`，范围与互斥要求由工具执行层校验并写入参数说明。构建、CI 和 prepack 执行同一检查。
 - 公开文件检查：`node scripts/check-public-files.mjs`，核对 Git 文件、新增历史和安装包中的私有资料；本地缺少 `origin/main` 时明确报告未检查新增历史，不把它当作发布授权。
 - 首页截图与动图放在 `docs/images/`，中英文入口同步，尺寸不超过素材原宽；在 `docs/images/readme-screenshots.json` 记录来源、尺寸与哈希。
 - 新指南接入[文档目录](docs/README.md)，中英入口保持对应；安装命令标明环境，发布说明区分已发布与未发布。

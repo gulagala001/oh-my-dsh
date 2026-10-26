@@ -35,14 +35,15 @@
     "test:context": "node --test test/context-*.test.mjs",
     "simulate": "node scripts/simulate.mjs",
     "plugins:submissions": "node scripts/plugin-submissions.mjs",
-    "prepack": "npm run metering:check && npm run prompts:check && npm run docs:check && node scripts/check-public-files.mjs",
+    "prepack": "npm run metering:check && npm run tools:check && npm run prompts:check && npm run docs:check && node scripts/check-public-files.mjs",
     "prompts:check": "node scripts/check-prompt-styles.mjs",
     "docs:check": "node scripts/check-docs.mjs && node scripts/build-credits.mjs",
     "docs:write": "node scripts/check-docs.mjs --write",
     "release:check": "node scripts/check-release-assets.mjs",
     "credits:write": "node scripts/build-credits.mjs --write",
     "credits:check": "node scripts/build-credits.mjs",
-    "metering:check": "node scripts/check-metering.mjs"
+    "metering:check": "node scripts/check-metering.mjs",
+    "tools:check": "node scripts/build-metering.mjs && node scripts/check-tool-contracts.mjs"
   },
   "dependencies": {
     "@ast-grep/wasm": "0.51.0",

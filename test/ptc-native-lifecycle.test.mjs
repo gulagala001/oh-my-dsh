@@ -6,7 +6,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { installPtcLifecycle } from '../src/ptc-lifecycle.mjs';
+import { installPtcLifecycle, currentPtcBudget } from '../src/ptc-lifecycle.mjs';
 
 const anchor = createRequire(realpathSync(process.env.OMD_PTC_TEST_HOST
   ?? createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json')));
@@ -16,7 +16,7 @@ const [{ ToolRuntime }, { NodePtcRuntime }, { LocalSubprocessRuntime }] = await 
   load('tools'), load('ptc-runtime-node'), load('subprocess-local'),
 ]);
 
-async function fixture(t, executionMode = 'per-call') {
+async function fixture(t, executionMode = 'per-call', adaptive = false) {
   const directory = await mkdtemp(join(tmpdir(), 'ptc-native-')), ctx = new Context(), gates = [];
   const session = { id: 'native-ptc', append() {} }, agent = { ctx, session };
   ctx.reflect.provide('systemPrompt', { tools() {}, section() {}, getSectionOrder() { return 0; } });
@@ -28,7 +28,7 @@ async function fixture(t, executionMode = 'per-call') {
   await ctx.plugin(LocalSubprocessRuntime);
   await ctx.plugin(NodePtcRuntime, { executionMode, timeoutMs: 500, maxTimeoutMs: 1500, graceMs: 25 });
   await ctx.plugin(ToolRuntime, { mode: 'ptc' });
-  if (process.env.OMD_PTC_BASELINE !== '1') installPtcLifecycle(ctx, { cleanupMs: 50 });
+  if (process.env.OMD_PTC_BASELINE !== '1') installPtcLifecycle(ctx, { cleanupMs: 50, adaptiveBudgets: () => adaptive });
   await new Promise(resolve => setImmediate(resolve));
   let sequence = 0, probes = 0;
   ctx.tools.register({ name: 'probe', description: 'Native PTC round trip', parameters: { type: 'object', properties: {} },
@@ -84,4 +84,27 @@ test('retained PTC variables survive ordinary calls and clear on timeout as in t
   assert.equal((await f.call('await new Promise(() => {});', { arguments: { timeoutMs: 100 } })).isError, true);
   await delay(25);
   assert.match((await f.call('console.log(typeof kept);')).content[0].text, /undefined/);
+});
+
+for (const mode of ['per-call', 'persistent-in-memory']) test(`adaptive default budgets share native cancellation and explicit limits (${mode})`, async t => {
+  const f = await fixture(t, mode, true);
+  f.ctx.tools.register({ name: 'slow', description: 'Synthetic delayed operation with a declared millisecond budget',
+    parameters: { type: 'object', properties: { timeoutMs: { type: 'number' }, delayMs: { type: 'number' } }, required: ['timeoutMs', 'delayMs'] },
+    output: { schema: { type: 'number' }, render: (_args, value) => [{ type: 'text', text: String(value) }] },
+    async execute(args, exec) { await delay(args.delayMs, null, { signal: exec.signal }); return args.delayMs; } });
+  f.ctx.tools.register({ name: 'budget', description: 'Current real execution budget', parameters: { type: 'object', properties: {} },
+    output: { schema: { type: 'object' }, render: (_args,value)=>[{type:'text',text:JSON.stringify(value)}] }, execute: currentPtcBudget });
+  const output = mode === 'per-call' ? 'return await tools.budget({});' : 'console.log(JSON.stringify(await tools.budget({})));';
+  const extended = await f.call('await tools.slow({timeoutMs:900,delayMs:650});'+output);
+  assert.equal(extended.isError,false,JSON.stringify(extended.content));
+  const budget = mode === 'per-call' ? extended.value.result : JSON.parse(extended.value.logs[0]);
+  assert.equal(budget.explicit,false);assert.equal(budget.adaptive,true);assert.ok(budget.budgetMs>500 && budget.budgetMs<=1500);
+  assert.equal(budget.defaultMs,500);assert.equal(budget.maximumMs,1500);
+  const explicit = await f.call('await tools.slow({timeoutMs:900,delayMs:650});', {arguments:{timeoutMs:150}});
+  assert.equal(explicit.isError,true);assert.match(JSON.stringify(explicit),/explicit|150ms|150\)/);
+  const capped = await f.call('await tools.slow({timeoutMs:5000,delayMs:2000});');
+  assert.equal(capped.isError,true);assert.match(JSON.stringify(capped),/1500/);
+  const stop=new AbortController(), cancelled=f.call('await tools.slow({timeoutMs:900,delayMs:650});',{signal:stop.signal});
+  setTimeout(()=>stop.abort({kind:'user'}),80);assert.equal((await cancelled).isError,true);
+  assert.equal((f.ctx.subprocess[symbols.original] ?? f.ctx.subprocess).live.size,0);
 });

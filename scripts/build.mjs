@@ -1,4 +1,5 @@
 import './build-host.mjs';
+await import('./check-tool-contracts.mjs');
 import './check-prompt-styles.mjs';
 import './build-deepseek-workbench.mjs';
 import './build-overview-native.mjs';

@@ -1,3 +1,4 @@
+import { estimateText } from '../metering/estimate.mjs';
 import { encode, decode } from '@toon-format/toon';
 import { createTwoFilesPatch } from 'diff';
 import { isDeepStrictEqual } from 'node:util';
@@ -72,4 +73,4 @@ export function exactDelta(before, after) {
 export function referenced(view, record) {
   return `${view.text}\n[${view.lossless ? 'lossless view' : 'partial view'}; original=${record.ref}; sha256=${record.sourceHash}; recall(rawRef="${record.ref}")]`;
 }
-export function worthwhile(before, after) { return after.length + 128 < before.length && after.length <= before.length * .9; }
+export function worthwhile(before, after) { return after.length + 128 < before.length && after.length <= before.length * .9 && estimateText(after) < estimateText(before); }

@@ -109,7 +109,7 @@ export class EvidenceStore {
       catch (error) { if (error.code !== 'EEXIST') throw error; await verify(); }
     } finally { await unlink(temporary).catch(() => {}); }
   }
-  async save({ sessionId, callId, tool, args, text, complete = true, rule, parent }) {
+  async save({ sessionId, callId, tool, args, text, complete = true, rule, parent, readKey }) {
     if (!validId(sessionId) || !validId(callId) || !validId(tool) || typeof text !== 'string') throw Error('原文身份不完整');
     if (!text.isWellFormed()) throw Error('原文包含无效 Unicode，保留工具原结果');
     const bytes = Buffer.byteLength(text);
@@ -118,7 +118,7 @@ export class EvidenceStore {
     await this.storeObject(sourceHash, text);
     const ref = 'omd-raw:' + randomUUID();
     const record = { version: 1, ref, sessionId, callId, tool, argumentsHash: hash(args ?? {}),
-      sourceHash, bytes, characters: text.length, complete, rule, parent, createdAt: Date.now(),
+      sourceHash, bytes, characters: text.length, complete, rule, parent, readKey, createdAt: Date.now(),
       ...indexTerms(text), committed: false };
     await this.persist(record);
     await this.indexOwner(record);

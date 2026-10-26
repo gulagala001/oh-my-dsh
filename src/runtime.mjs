@@ -1,3 +1,4 @@
+import { installFileReadIntegrity } from './file-read-integrity.mjs';
 import { installOmaaEnhancement, omaaWorkflowComposition, omaaIdentityPrompt } from './omaa-enhancement.mjs';
 import { installResultReduction } from './result-reduction/service.mjs';
 import { acquirePersona } from '../plugins/persona/src/index.mjs';
@@ -74,7 +75,6 @@ export async function apply(ctx, config) {
   await migrateSessionStorage(ctx, directory);
   installToolSchedulerCompatibility(ctx);
   installToolCancellationPresentation(ctx);
-  installPtcLifecycle(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });
   hub.omaaWorkflowComposition = omaaWorkflowComposition;
   hub.omaaIdentityPrompt = session => omaaIdentityPrompt(hub, session);
@@ -156,7 +156,9 @@ export async function apply(ctx, config) {
   mountPluginPreflight(ctx, hub);
   const isX = session => isOmdPreset(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
+  installPtcLifecycle(ctx, { adaptiveBudgets: session => Boolean(session && (isX(session) || isOmaaEnhanced(session))) });
   installResultReduction(ctx, hub, session => isX(session) || isOmaaEnhanced(session));
+  installFileReadIntegrity(ctx, session => isX(session) || isOmaaEnhanced(session));
   hub.ultracode = new UltracodeControl(ctx, session => isX(session) || (isOmaaEnhanced(session) && ctx.get('omaa').modeFor(session) === 'default'), hub.store);
   hub.omaaWorkMode = {
     inspect: (session, agent) => hub.ultracode.inspectView(session, agent),

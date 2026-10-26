@@ -38,13 +38,13 @@ export function modelColor(model) {
 
 export const EVENT_KINDS = {
   prepare: '预处理', coordinate: '中枢决定', replace: '应用替换', compactProcessed: '压缩已处理', compactFull: '全量压缩',
-  adaptive: '主动异步', autoCompact: 'Auto Compact', dream: 'Dream',
+  adaptive: '主动异步', autoCompact: 'Auto Compact', dream: 'Dream', imagePreparation: '图片预检', toolOptimization: '工具优化',
 };
 // Replacement events carry the savings; Auto Compact reports the same replacement again.
 export const SAVING_KINDS = ['replace', 'compactFull', 'compactProcessed'];
 export const savedOf = kinds => (kinds || []).filter(x => SAVING_KINDS.includes(x.key)).reduce((n, x) => n + (x.savedTokens || 0), 0);
 export const eventKindLabel = kind => EVENT_KINDS[kind] || kind;
-export const STATUS = {
+export const STATUS = { local: ['本地预检', 'gray'], recovered: ['已恢复', 'green'],
   success: ['成功', 'green'], error: ['失败', 'red'], cancelled: ['已取消', 'gray'], skip: ['保留', 'gray'],
   stale: ['已过期', 'amber'], running: ['运行中', 'blue'], info: ['信息', 'gray'],
 };

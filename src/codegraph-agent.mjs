@@ -1,3 +1,4 @@
+import { checkedTool } from './tool-contract.mjs';
 import { currentDirectory } from './working-directory.mjs';
 import { codegraphCatalogOwner } from './codegraph-agent-lifecycle.mjs';
 
@@ -8,7 +9,7 @@ export const CODEGRAPH_DISABLED_GUIDE = 'CodeGraph is disabled in component sett
 export async function apply(ctx) {
   const runtime = ctx.omd.codegraph, owner = codegraphCatalogOwner(ctx);
   if (!owner.active()) return;
-  ctx.tools.register({
+  ctx.tools.register(checkedTool({
     name: 'codegraph_index',
     description: 'Refresh or rebuild a local CodeGraph index. The current project is prepared automatically by default. Existing indexes are incrementally synchronized. Queries then synchronize edits automatically. Uses the bundled runtime; no global installation needed.',
     parameters: { type: 'object', properties: { projectPath: { type: 'string', description: 'Project directory, defaults to the session working directory.' } } },
@@ -17,7 +18,7 @@ export async function apply(ctx) {
       if (runtime.enabled === false) throw new Error('CodeGraph 已关闭。');
       return runtime.index(args, { cwd: currentDirectory(ctx, agent.session), signal });
     },
-  });
+  }));
   let loaded = false, attempted = -1, loading;
   const registered = new Set();
   const load = () => {

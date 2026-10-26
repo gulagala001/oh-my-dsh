@@ -31,6 +31,7 @@ export function CallsSection({ sessionId, visible, range, period, params }) {
   const active = Object.entries(filter).filter(([key, v]) => v && v !== 'all' && key !== 'query').length;
 
   return <div className="omc-section">
+    <p className="omc-footnote">这里记录模型调用结果；摘要等产物是否通过校验，请看后台日志。本地图片预检单列为恢复事件，不计作上游调用失败。</p>
     <div className="omc-filters">
       <Search value={filter.query} onChange={query => set({ query })} placeholder="搜索模型、类型或错误"/>
       <Select label="类型" value={filter.kind} onChange={kind => set({ kind })} options={[['', '全部类型'], ...(f.kinds || []).map(x => [x, kindLabel(x)])]}/>

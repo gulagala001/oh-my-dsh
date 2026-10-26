@@ -1,3 +1,4 @@
+import { isLocalImagePreflight, localImageEvent, imagePreflightsFor } from './monitor-attempt.mjs';
 import { ownedUsageRequest } from './metering/stream.mjs';
 import { assertRequestFits, inputBudget, requestPricing } from './metering/estimate.mjs';
 import { usageReceipt, usageFields } from './metering/usage.mjs';
@@ -150,6 +151,21 @@ export class Hub extends Service {
     this.store.state(agent.session.id).pendingFrame = { at: Date.now(), turn, step };
   }
   record(session, kind, entry) {
+    const recoveryKey = `${session.id}:${entry.turn}:${entry.step}`;
+    if (isLocalImagePreflight(entry)) {
+      this.event(session, localImageEvent(entry));
+      try { this.monitor?.append({ ...entry, sessionId: session.id, kind }); } catch {}
+      if (entry.source === 'native') {
+        const pending = imagePreflightsFor(this).get(recoveryKey) ?? [];
+        if (!pending.some(item=>item.id===entry.id)) pending.push(entry);
+        imagePreflightsFor(this).set(recoveryKey, pending);
+      }
+      return;
+    }
+    if (entry.status === 'success' && entry.source === 'native') {
+      for (const local of imagePreflightsFor(this).get(recoveryKey) ?? []) this.event(session, localImageEvent(local, true));
+      imagePreflightsFor(this).delete(recoveryKey);
+    }
     entry = { ...entry, usage: reportedMonitorUsage(entry.usage, entry.hasOutput) };
     const state = this.store.state(session.id);
     state.cwd = session.header.cwd;
@@ -310,6 +326,7 @@ export class Hub extends Service {
   }
   observe(session, event) {
     if (event.type === 'step/end' || event.type === 'turn/end') {
+      for (const key of imagePreflightsFor(this).keys()) if (key.startsWith(`${session.id}:${event.data.turn}:`) && (event.type === 'turn/end' || key === `${session.id}:${event.data.turn}:${event.data.step}`)) imagePreflightsFor(this).delete(key);
       // Preparation can abort before live.start, leaving no assistant settlement.
       const request = this.requestStarts.get(session.id);
       if (request?.turn === event.data.turn && (event.type === 'turn/end' || request.step === event.data.step)) this.requestStarts.delete(session.id);
@@ -337,7 +354,7 @@ export class Hub extends Service {
           ...(request?.route ? { effort: request.route.reasoningEffort ?? null } : {}),
           status: cancelled ? 'cancelled' : failed ? 'error' : 'success', startedAt: request?.streamStartedAt ?? request?.startedAt,
           durationMs: request ? Date.now() - (request.streamStartedAt ?? request.startedAt) : null, firstTokenMs: request?.firstTokenMs ?? null,
-          ...(failed ? { error: output.finish.failure?.message || (cancelled ? '已取消' : event.type === 'assistant/attempt' ? '请求未完成' : output.finish.kind) } : {}),
+          ...(failed ? { failure: output.finish.failure, error: (output.finish.failure?.code ? `[${output.finish.failure.code}] ` : '') + (output.finish.failure?.message || (cancelled ? '已取消' : event.type === 'assistant/attempt' ? '请求未完成' : output.finish.kind)) } : {}),
         });
       } finally {
         if (request && this.requestStarts.get(session.id) === request) this.requestStarts.delete(session.id);

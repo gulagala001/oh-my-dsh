@@ -75,6 +75,8 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 | `vendor/opencu/` | OpenCU 分发快照；由同步脚本维护源码、构建产物与摘要，不手改 |
 | `scripts/`、`test/` | 构建／启动／检查 |
 
+自有工具经 `src/tool-contract.mjs` 使用同一份受宿主支持的参数定义进行展示和执行校验；`npm run tools:check` 检查 Native、TypeScript 与 Python SDK，已接入构建、CI 和 prepack。工具上下文优化复用原生执行器、请求投影及监控账本，参数定义、目录裁剪和计量必须一起检查 Native／PTC 路径。
+
 修改组件或价格来源的 `scripts/sync-*.mjs` 在同步完成后调用同一个来源清单生成器，更新设置页与公开来源文档；其他手工修改来源清单输入后运行 `npm run credits:write`。`npm run docs:check` 检查生成内容是否一致。
 
 OpenCU 同版本的服务端 ESM、宿主源码与文档可运行 `node scripts/sync-opencu.mjs ../opencu --files src/dsh/downloads.mjs host/downloads.ts DEVELOPMENT.md docs/install.md docs/install_EN.md`，只替换列出的已提交、已分发文件并保留现有构建产物。该模式拒绝未提交源文件、目标摘要不符、生成产物和新增文件。同版本客户端修改在完成受影响构建、更新扩展摘要并提交源码后，可用 `node scripts/sync-opencu.mjs ../opencu --client` 同步客户端、内容哈希分块和扩展光标／ZIP，校验资源摘要并清理被替代的分块，无需重新打完整包。两种模式均在 `vendor/opencu.json` 记录 `sourceCommit` 与逐文件摘要，并移除已不代表当前快照的 `archiveSha256`。其他文件成员、版本或构建输入变更仍同步匹配宿主的完整包。同步源码或客户端不等于已经重建或更新桌面。

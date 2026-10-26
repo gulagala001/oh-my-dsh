@@ -1,3 +1,4 @@
+import { checkedTool } from './tool-contract.mjs';
 import { registerContextCommands } from './context/commands.mjs';
 import { installPromptAdapter } from './cc-adaptation/adapter.mjs';
 import { mainPrompt as MAIN_PERSONA } from './cc-adaptation/texts.mjs';
@@ -18,10 +19,10 @@ export function apply(ctx) {
   installPromptAdapter(ctx);
   new ReplacementCanvas(ctx, hub);
   hub.todoStore = registerTasks(ctx, hub.todoStore);
-  ctx.tools.register({ name: 'note', description: NOTE_DESCRIPTION,
+  ctx.tools.register(checkedTool({ name: 'note', description: NOTE_DESCRIPTION,
     parameters: { type: 'object', properties: { text: { type: 'string', description: 'Note content' } }, required: ['text'] }, output: result,
     async execute({ text }, { agent }) { const state = hub.store.state(agent.session.id); hub.store.update(state, { notes: [...state.notes, { text, at: Date.now() }] }); return text; },
-  });
+  }));
   registerContextRecall(ctx, hub);
   installCatalog(ctx, hub);
   registerContextViews(ctx, hub);

@@ -1,3 +1,4 @@
+import { checkedTool } from './tool-contract.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 import { z } from 'zod';
 import { validateJsonSchemaValue, renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
@@ -172,7 +173,7 @@ export function registerTasks(ctx, store) {
       },
     },
   ];
-  const tools = definitions.map(({ name, description, parameters, operations, title, run }) => ({
+  const tools = definitions.map(({ name, description, parameters, operations, title, run }) => checkedTool({
     name, description, parameters,
     output: { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] },
     execute(args, exec) {

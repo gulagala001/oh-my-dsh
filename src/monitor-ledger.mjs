@@ -5,6 +5,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { monitorActivityFingerprint } from './monitor-activity.mjs';
+import { emptyOptimization, addOptimization } from './result-reduction/accounting.mjs';
 
 const fields = USAGE_FIELDS;
 const measurements = ['durationMs', 'inputTotalTokens', 'knownInputTokens', 'knownTotalTokens', 'cacheMeasuredInputTokens', 'cacheMeasuredReadTokens', ...fields];
@@ -83,7 +84,7 @@ export const monitorUsage = usageFields;
 export function monitorQuery(params, now = Date.now()) {
   const get = key => params instanceof URLSearchParams ? params.get(key) : params?.[key];
   const range = get('range') || 'session', period = get('period') || 'all', status = get('status') || 'all';
-  if (!['session', 'all'].includes(range) || !['all', 'today', '7d', '30d'].includes(period) || !['all', 'error', 'cancelled'].includes(status)) throw Error('监控筛选无效');
+  if (!['session', 'all'].includes(range) || !['all', 'today', '7d', '30d'].includes(period) || !['all', 'error', 'cancelled', 'local', 'recovered'].includes(status)) throw Error('监控筛选无效');
   const limit = get('limit') == null ? 50 : Number(get('limit'));
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw Error('监控分页大小无效');
   const filter = Object.fromEntries(['provider', 'model', 'kind', 'query'].map(key => {
@@ -140,6 +141,7 @@ export class MonitorLedger {
       this.replace=this.db.prepare('INSERT INTO calls VALUES('+Array(21).fill('?').join(',')+') ON CONFLICT(id) DO UPDATE SET '+columns.map(key=>key+'=excluded.'+key).join(',')+' WHERE calls.sessionId=excluded.sessionId AND calls.kind=excluded.kind AND calls.source=excluded.source AND ((excluded.eventSeq IS NOT NULL AND (calls.eventSeq IS NULL OR excluded.eventSeq>=calls.eventSeq)) OR (excluded.eventSeq IS NULL AND excluded.at>=calls.at))');
       this.insertTiming = this.db.prepare('INSERT OR IGNORE INTO call_timings VALUES(?,?)');
       this.insertEvent = this.db.prepare('INSERT OR IGNORE INTO events VALUES(' + Array(12).fill('?').join(',') + ')');
+      this.replaceEvent = this.db.prepare('INSERT INTO events VALUES(' + Array(12).fill('?').join(',') + ') ON CONFLICT(id) DO UPDATE SET status=excluded.status,title=excluded.title,detail=excluded.detail,data=excluded.data WHERE events.sessionId=excluded.sessionId AND events.kind=excluded.kind');
     } catch (error) {
       this.error = String(error.message); try { this.db?.close(); } catch {} this.db = null;
     }
@@ -148,6 +150,14 @@ export class MonitorLedger {
     if (!this.db || this.closed) return false;
     try {
       const u = monitorUsage(reportedMonitorUsage(entry.usage, entry.hasOutput)), id = text(entry.id, 512) || randomUUID();
+      if (entry.source === 'native' && !entry.hasOutput && !Object.values(u).some(value => value > 0)
+        && this.db.prepare("SELECT 1 FROM events WHERE id=? AND sessionId=? AND kind='imagePreparation' AND json_extract(data,'$.providerRequestSent')=0").get('image-preflight:' + id, entry.sessionId)) {
+        // Verified local preparation belongs to events, including on legacy
+        // import. Retain any contradictory positive provider receipt.
+        const removed = this.db.prepare(`DELETE FROM calls WHERE id=? AND sessionId=? AND source='native' AND ${fields.map(key=>`COALESCE(${key},0)=0`).join(' AND ')}`).run(id, entry.sessionId);
+        if (removed.changes) this.db.prepare('DELETE FROM call_timings WHERE id=?').run(id);
+        return true;
+      }
       if(usageReceipt(entry.usage).inconsistent)this.appendEvent({id:'usage:'+id,sessionId:entry.sessionId,kind:'usage',status:'error',title:'用量回执不一致',detail:'原始计数互相矛盾，未计作精确用量。',data:{callId:id,usage:entry.usage}});
       const status = ['success', 'error', 'cancelled'].includes(entry.status) ? entry.status : entry.error ? 'error' : 'success';
       (entry.replace?this.replace:this.insert).run(id, text(entry.sessionId), text(entry.kind) || 'unknown', number(entry.at) ?? this.now(),
@@ -165,7 +175,7 @@ export class MonitorLedger {
     try {
       let data = null;
       if (entry.data && typeof entry.data === 'object') { data = JSON.stringify(entry.data); if (data.length > 8000) data = null; }
-      const result = this.insertEvent.run(text(entry.id, 512) || randomUUID(), text(entry.sessionId), text(entry.kind) || 'unknown', number(entry.at) ?? this.now(),
+      const result = (entry.replace ? this.replaceEvent : this.insertEvent).run(text(entry.id, 512) || randomUUID(), text(entry.sessionId), text(entry.kind) || 'unknown', number(entry.at) ?? this.now(),
         text(entry.status, 32) || 'success', text(entry.title, 400), text(entry.detail, 2000),
         number(entry.count), Number.isFinite(entry.savedTokens) ? entry.savedTokens : null, number(entry.inputTokens), number(entry.outputTokens), data);
       // These direct writes cannot affect receipt metrics. Like total_changes(),
@@ -195,6 +205,20 @@ export class MonitorLedger {
   }
   hasSession(id) {
     return Boolean(this.db && !this.closed && this.db.prepare('SELECT 1 FROM calls WHERE sessionId=? LIMIT 1').get(id));
+  }
+  optimizationSnapshot(sessionId) {
+    if (!this.db || this.closed) throw Error(this.error || '监控账本不可用');
+    this.optimizationCache ??= new Map();
+    const revision = this.db.prepare('SELECT COUNT(*) n,MAX(rowid) last FROM events WHERE sessionId=? AND kind=?').get(sessionId, 'toolOptimization');
+    const key = `${revision.n}:${revision.last}`, cached = this.optimizationCache.get(sessionId);
+    if (cached?.key === key) return cached.value;
+    const value = emptyOptimization();
+    for (const entry of this.db.prepare('SELECT data FROM events WHERE sessionId=? AND kind=? ORDER BY at,id').iterate(sessionId, 'toolOptimization')) {
+      if (entry.data) addOptimization(value, JSON.parse(entry.data));
+    }
+    this.optimizationCache.set(sessionId, { key, value });
+    while (this.optimizationCache.size > 128) this.optimizationCache.delete(this.optimizationCache.keys().next().value);
+    return value;
   }
   import(states) {
     if (!this.db || this.closed) return;

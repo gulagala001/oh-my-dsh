@@ -365,7 +365,7 @@ test('CU visibility keeps fingerprints, releases session references and preserve
   f.ctx.emit('agent/disposed', { agent: f.agent }); await f.service.settled();
   assert.equal(f.service.visible.size, 0); assert.equal(f.service.results.size, 0); assert.equal(f.service.computerCuts.size, 0);
   assert.equal(f.service.cachedCharacters, 0);
-  assert.equal(f.service.state(f.session).requests, 7); assert.equal(f.service.state(f.session).lastRequest, null);
+  assert.equal(f.service.state(f.session).requests, 7); assert.deepEqual(f.service.state(f.session).lastRequest, { used: 10 });
   assert.equal((await f.service.recall(f.session, { rawRef: saved.ref })).text, body);
 });
 

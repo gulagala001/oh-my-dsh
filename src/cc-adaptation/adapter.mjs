@@ -1,3 +1,4 @@
+import { selectCatalog, rememberCatalog, projectCatalogAssembly } from '../result-reduction/catalog.mjs';
 import { readFileSync } from 'node:fs';
 import { sessionPersonality } from '../personality-session.mjs';
 import { createHash } from 'node:crypto';
@@ -103,7 +104,7 @@ export function transformAssembly(assembly, context, options = {}) {
   if (constraintGuidance) persona += '\n\n## Constraint-first reasoning\n' + constraintGuidance;
   const suppressed = new Set();
   for (const name of applied) for (const section of map[name].sections ?? []) suppressed.add(section);
-  let sdkRegenerated = false;
+  let sdkRegenerated = false, sdkSchemas;
   const sections = assembly.sections.flatMap(section => {
     if (section.name === 'oh-my-dsh:persona') return [{ ...section, text: persona, interpolate: false }];
     if (section.name === 'harness:identity' && style !== 'dsh') return [];
@@ -127,7 +128,7 @@ export function transformAssembly(assembly, context, options = {}) {
         const adapted = changedSchemas.get(tool.name);
         return { ...(adapted ?? tool), ...(adapted ? { description: sdkDescription(tool.name, adapted.description) } : {}), output: definition.output.schema };
       });
-      sdkRegenerated = true;
+      sdkRegenerated = true; sdkSchemas = sdk;
       return [{ ...section, text: options.renderSdk(sdk), interpolate: false }];
     }
     if (suppressed.has(section.name)) return [];
@@ -150,7 +151,7 @@ export function transformAssembly(assembly, context, options = {}) {
   if (sha((assembly.tools ?? []).map(x => [x.name, x.parameters])) !== sha(result.tools.map(x => [x.name, x.parameters]))) {
     throw new Error('Prompt adapter attempted to change a callable schema.');
   }
-  return { assembly: result, audit: { applied: true, changed: [...applied].sort(), retained, incompatible: missing,
+  return { assembly: result, sdkSchemas, audit: { applied: true, changed: [...applied].sort(), retained, incompatible: missing,
     sdkRegenerated, style, toolsHash: sha(result.tools), mainHash: sha(persona) } };
 }
 
@@ -159,13 +160,12 @@ export function installPromptAdapter(ctx) {
   const seen = new Set();
   ctx.on('system-prompt/assemble', async (_initial, context, next) => {
     const assembly = await next();
-    if (!context?.agent || context.agent.session?.header?.origin === 'subagent'
-        || !assembly.sections.some(section => section.name === 'oh-my-dsh:persona')) return assembly;
+    if (!context?.agent) return assembly;
     const schemas = ctx.tools.schemas(context.scope ?? context.agent);
     const style = agentPromptStyle(ctx.omd, context.agent);
     const activeSdk = assembly.sections.some(section => section.name === 'tools:sdk' && section.text);
     let renderSdk;
-    if (activeSdk && style === 'omd') {
+    if (activeSdk && (style === 'omd' || ctx.omd.optimization?.enabled(context.agent.session))) {
       const { renderToolsSdk, renderToolsSdkPy } = await import('@deepseek-ai/dsh-tools');
       const runtime = ctx.get('ptcRuntime');
       const language = runtime?.language;
@@ -182,6 +182,16 @@ export function installPromptAdapter(ctx) {
       backgroundTasksEnabled: ctx.omd.backgroundOptions?.(context.agent)?.interruptibleWait === true,
       schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent),
     });
+    // Catalog projection is independent of persona/style adaptation and also
+    // covers delegated agents which deliberately retain their native prompts.
+    result.assembly = projectCatalogAssembly(result.assembly, {
+      enabled: ctx.omd.optimization?.enabled(context.agent.session), renderSdk,
+      schemas: result.sdkSchemas ?? schemas.map(tool => ({ ...tool, output: ctx.tools.get(tool.name, context.scope ?? context.agent)?.output?.schema })),
+      select: schemas => selectCatalog(ctx, ctx.omd, context.agent, schemas),
+      remember: plan => rememberCatalog(ctx.omd, plan),
+    });
+    result.audit.toolsHash = sha(result.assembly.tools);
+    result.assembly.sections.push({ name: 'omd:execution-contract', text: read('runtime/execution-contract.md'), interpolate: false });
     if (ctx.omd.persona) result.assembly.sections.push({ name: 'dsh-persona:applied', text: '', interpolate: false });
     const key = sha(result.audit);
     if (!seen.has(key)) {
