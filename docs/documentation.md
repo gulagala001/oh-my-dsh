@@ -76,11 +76,11 @@ Roles: home · index · guide · development · sources · release · redirect. 
 | [docs/release-0.102.0.md](release-0.102.0.md) | release | bilingual | — |
 | [docs/release-0.103.0.md](release-0.103.0.md) | release | bilingual | — |
 | [docs/release-0.104.0.md](release-0.104.0.md) | release | bilingual | — |
-| [docs/release-0.105.0.md](release-0.105.0.md) | release | bilingual | — |
 | [docs/release-0.99.0.md](release-0.99.0.md) | release | bilingual | — |
 | [docs/release-0.99.1.md](release-0.99.1.md) | release | bilingual | — |
 | [docs/release-0.99.2.md](release-0.99.2.md) | release | bilingual | — |
 | [docs/release-0.99.3.md](release-0.99.3.md) | release | bilingual | — |
+| [docs/release-1.0.0.md](release-1.0.0.md) | release | bilingual | — |
 | [docs/releases.md](releases.md) | release | zh | — |
 | [docs/runtime-state-background.md](runtime-state-background.md) | guide | zh | — |
 | [docs/showcase_EN.md](showcase_EN.md) | guide | zh | — |

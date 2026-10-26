@@ -1,8 +1,8 @@
-# OMD 0.105.0 · DSH 0.2.1-rc.3
+# OMD 1.0.0 · DSH 0.2.1-rc.3
 
-[中文](#zh-01050) | [English](#en-01050)
+[中文](#zh-100) | [English](#en-100)
 
-<a id="zh-01050"></a>
+<a id="zh-100"></a>
 
 ## 中文
 
@@ -30,7 +30,7 @@
 - 内置 Response ID Reuse 更新至 0.1.2，保留 OpenCU 2.2.1 的截图传输改进与 Workflow 计量更新。
 - 修正当前下载页、版本徽章和组件文档中的过期版本信息。
 
-<a id="en-01050"></a>
+<a id="en-100"></a>
 
 ## English
 
@@ -66,7 +66,7 @@ Install the fixed package through **Plugins → Add plugin** on **DSH 0.2.1-rc.3
 
 | DSH | 固定安装包 / Fixed package | SHA256SUMS |
 | --- | --- | --- |
-| 0.2.1-rc.3 | [OMD 0.105.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.105.0/oh-my-dsh-0.2.1-rc.3.omd.0.105.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.105.0/SHA256SUMS) |
+| 0.2.1-rc.3 | [OMD 1.0.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.0.0/oh-my-dsh-0.2.1-rc.3.omd.1.0.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.0.0/SHA256SUMS) |
 
 [安装指南](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md)
 
