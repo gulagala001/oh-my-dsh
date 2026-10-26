@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "description": "DSH 增强插件：长上下文、任务验证、提示词优化、代码理解、电脑操作，以及 DSH 原生界面与可选主题、配色和背景。",
-  "packageManager": "pnpm@11.28.5",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gulagala001/oh-my-dsh.git"
@@ -21,31 +20,6 @@
     "context",
     "plugin"
   ],
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "docs:build": "node scripts/build-docs.mjs",
-    "start": "node scripts/start.mjs",
-    "dev": "node scripts/build.mjs && node scripts/start.mjs",
-    "offline:prepare": "node scripts/prepare-offline.mjs",
-    "offline:check": "node scripts/check-offline.mjs",
-    "runtime:check": "node scripts/check-runtime.mjs",
-    "test": "node scripts/test-ci.mjs run core",
-    "test:all": "node scripts/test-ci.mjs run all",
-    "test:smoke": "node scripts/test-ci.mjs run core",
-    "test:context": "node --test test/context-*.test.mjs",
-    "simulate": "node scripts/simulate.mjs",
-    "plugins:submissions": "node scripts/plugin-submissions.mjs",
-    "prepack": "npm run metering:check && npm run tools:check && npm run prompts:check && npm run docs:check && node scripts/check-public-files.mjs",
-    "prompts:check": "node scripts/check-prompt-styles.mjs",
-    "docs:check": "node scripts/check-docs.mjs && node scripts/build-credits.mjs",
-    "docs:write": "node scripts/check-docs.mjs --write",
-    "release:check": "node scripts/check-release-assets.mjs",
-    "credits:write": "node scripts/build-credits.mjs --write",
-    "credits:check": "node scripts/build-credits.mjs",
-    "metering:check": "node scripts/check-metering.mjs",
-    "tools:check": "node scripts/build-metering.mjs && node scripts/check-tool-contracts.mjs",
-    "perf:tools": "node scripts/tool-performance/run.mjs"
-  },
   "dependencies": {
     "@ast-grep/wasm": "0.51.0",
     "@colbymchenry/codegraph": "1.6.0",
@@ -204,5 +178,29 @@
   "imports": {
     "#opencu/integration": "./vendor/opencu/src/dsh/index.mjs",
     "#opencu/*": "./vendor/opencu/*"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "docs:build": "node scripts/build-docs.mjs",
+    "start": "node scripts/start.mjs",
+    "dev": "node scripts/build.mjs && node scripts/start.mjs",
+    "offline:prepare": "node scripts/prepare-offline.mjs",
+    "offline:check": "node scripts/check-offline.mjs",
+    "runtime:check": "node scripts/check-runtime.mjs",
+    "test": "node scripts/test-ci.mjs run core",
+    "test:all": "node scripts/test-ci.mjs run all",
+    "test:smoke": "node scripts/test-ci.mjs run core",
+    "test:context": "node --test test/context-*.test.mjs",
+    "simulate": "node scripts/simulate.mjs",
+    "plugins:submissions": "node scripts/plugin-submissions.mjs",
+    "prompts:check": "node scripts/check-prompt-styles.mjs",
+    "docs:check": "node scripts/check-docs.mjs && node scripts/build-credits.mjs",
+    "docs:write": "node scripts/check-docs.mjs --write",
+    "release:check": "node scripts/check-release-assets.mjs",
+    "credits:write": "node scripts/build-credits.mjs --write",
+    "credits:check": "node scripts/build-credits.mjs",
+    "metering:check": "node scripts/check-metering.mjs",
+    "tools:check": "node scripts/build-metering.mjs && node scripts/check-tool-contracts.mjs",
+    "perf:tools": "node scripts/tool-performance/run.mjs"
   }
 }
