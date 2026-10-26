@@ -4,7 +4,7 @@
   "version": "0.1.1-dsh.0.2.1-rc.3",
   "host": "0.2.1-rc.3",
   "source": "../dsh-response-id-reuse",
-  "sourceCommit": "95e6e545ef94e2a6b2d9110c4bd18d1353c7c801",
+  "sourceCommit": "5b315702d57e15ba54971d5bc34212e3158b76d0",
   "files": {
     "CHANGELOG.md": "0279783e8dc136f43537d43dd5716e4797eb80bbb357dcd256487bb9d0eaa9b1",
     "CONTRIBUTING.md": "9d807ab4e720444c509ee9bc1c5cb244bc574e4aa5fd67796568d41f1460fe85",
