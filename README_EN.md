@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="docs/release-0.104.0.md"><img alt="OMD 0.104.0" src="https://img.shields.io/badge/release-OMD%200.103.0-0969da?style=flat-square"></a>
+  <a href="docs/release-0.105.0.md"><img alt="OMD 0.105.0" src="https://img.shields.io/badge/release-OMD%200.105.0-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.3" src="https://img.shields.io/badge/DSH-0.2.1--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
@@ -44,10 +44,10 @@ Models use your DSH configuration. The default installation grants full file/com
 Open **Plugins → Add plugin** in the DSH instance you use, then paste:
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.104.0/oh-my-dsh-0.2.1-rc.3.omd.0.104.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.105.0/oh-my-dsh-0.2.1-rc.3.omd.0.105.0.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.104.0/SHA256SUMS).
+Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.0.105.0/SHA256SUMS).
 
 ### 2. Try this first
 

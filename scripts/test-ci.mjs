@@ -27,7 +27,7 @@ core.push('test/overview-native-style.test.mjs', 'test/session-overview.test.mjs
 core.push('test/web-chat-page-scripts.test.mjs');
 core.push('test/context-optimization.test.mjs', 'test/bc-compatibility.test.mjs',
   'test/personality-files-session.test.mjs', 'test/projectless-disposal.test.mjs', 'test/projectless-cancellation.test.mjs', 'test/projectless-navigation.test.mjs');
-core.push('test/tool-optimization-paths.test.mjs', 'test/monitor-preflight.test.mjs',
+core.push('test/tool-optimization-paths.test.mjs', 'test/session-plugin-records.test.mjs', 'test/monitor-preflight.test.mjs',
   'test/tool-computation.test.mjs', 'test/web-fetch-pool.test.mjs');
 core.push('test/result-reduction-memo.test.mjs', 'test/legacy-identity.test.mjs', 'test/legacy-settings.test.mjs');
 core.push('test/evidence-lifecycle.test.mjs');

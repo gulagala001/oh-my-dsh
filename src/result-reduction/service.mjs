@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { appendPluginRecord } from '@deepseek-ai/dsh-session';
 import { ProgramOutputs, programView } from './program.mjs';
 import { emptyOptimization, addOptimization } from './accounting.mjs';
 import { measureRequest, requestPricing } from '../metering/estimate.mjs';
@@ -49,7 +50,7 @@ export class ResultReduction {
   }
   record(session, row) {
     addOptimization(this.state(session), row);
-    try { session.append('plugin:oh-my-dsh/tool-optimization', row, { ignorable: true }); }
+    try { appendPluginRecord(session, 'plugin:oh-my-dsh/tool-optimization', row); }
     catch (error) { this.persistenceError = error.message; }
     this.indexRecord(session, row);
   }

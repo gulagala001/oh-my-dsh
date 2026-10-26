@@ -10,7 +10,7 @@
 
 Check the actual DSH version, desktop/Web mode, data directory (DSH_HOME), and profile. Desktop uses desktop; Web uses the profile in its original launch command. A different CLI on PATH may belong to a different installation.
 
-DSH **0.2.1-rc.2** uses OMD **0.100.0**; DSH **0.2.1-rc.1** also uses OMD **0.100.0**. Select the matching package from [downloads](releases.md); DSH 0.2.0-rc.2 is a different host. Keep a newer or customized installation unchanged until a matching upgrade is available.
+DSH **0.2.1-rc.3** uses OMD **0.105.0**; DSH **0.2.1-rc.2** uses OMD **0.100.0**; DSH **0.2.1-rc.1** also uses OMD **0.100.0**. Select the matching package from [downloads](releases.md); DSH 0.2.0-rc.2 is a different host. Keep a newer or customized installation unchanged until a matching upgrade is available.
 
 ## 2. Stop and Back Up
 

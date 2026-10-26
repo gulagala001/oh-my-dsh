@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { Context } from '@deepseek-ai/cordis';
 import { ToolRuntime, renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
 import { LlmRuntime, LlmAdapter, createToolResultMessage, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
-import { FixtureSession } from './context-fixture.mjs';
+import { Session } from '@deepseek-ai/dsh-session';
 import { installResultReduction, ResultReduction } from '../src/result-reduction/service.mjs';
 import { MonitorLedger } from '../src/monitor-ledger.mjs';
 import { installCatalog, selectCatalog, rememberCatalog, projectCatalogAssembly } from '../src/result-reduction/catalog.mjs';
@@ -21,7 +21,7 @@ const { NodePtcRuntime } = await import(host.resolve('@deepseek-ai/dsh-ptc-runti
 const { LocalSubprocessRuntime } = await import(host.resolve('@deepseek-ai/dsh-subprocess-local'));
 const text = value => [{ type: 'text', text: value }];
 async function fixture(t, mode = 'ptc') {
-  const dir = await mkdtemp(join(tmpdir(), 'omd-tool-paths-')), ctx = new Context(), session = new FixtureSession(), agent = { ctx, session };
+  const dir = await mkdtemp(join(tmpdir(), 'omd-tool-paths-')), ctx = new Context(), session = Session.create('s1'), agent = { ctx, session };
   const append = session.append.bind(session);
   session.append = (...args) => { const event = append(...args); ctx.emit('session/event', session, event); return event; };
   ctx.reflect.provide('systemPrompt', { tools() {}, section() {}, getSectionOrder() { return 0; } });

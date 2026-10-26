@@ -11,6 +11,7 @@ import { homedir } from 'node:os';
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { realpath } from 'node:fs/promises';
 import { migrateSessionStorage } from './session-migration.mjs';
+import { installSessionRecordRepair } from './session-record-repair.mjs';
 import { currentDirectory } from './working-directory.mjs';
 import { apiSessionTarget } from './api-session.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
@@ -78,6 +79,7 @@ export async function apply(ctx, config) {
   installSearchCompatibility(ctx, directory);
   installWebFetchPooling(ctx);
   await migrateSessionStorage(ctx, directory);
+  installSessionRecordRepair(ctx, directory);
   installToolSchedulerCompatibility(ctx);
   installToolCancellationPresentation(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });

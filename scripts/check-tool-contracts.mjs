@@ -38,6 +38,12 @@ async function scan(dir) {
       if (node.type === 'CallExpression' && node.callee?.property?.name === 'register' && node.callee?.object?.property?.name === 'tools') {
         assert.notEqual(node.arguments[0]?.type, 'ObjectExpression', `${file.pathname}: owned tool must use checkedTool`);
       }
+      if (node.type === 'CallExpression' && node.callee?.property?.name === 'append') {
+        const type = node.arguments[0]?.value;
+        assert.ok(typeof type !== 'string' || !type.startsWith('plugin:'), `${file.pathname}: plugin records must use appendPluginRecord`);
+        assert.ok(!node.arguments[2]?.properties?.some(p => (p.key?.name ?? p.key?.value) === 'ignorable'),
+          `${file.pathname}: Session.append does not accept ignorable`);
+      }
       for (const value of Object.values(node)) if (Array.isArray(value)) value.forEach(walk); else if (value && typeof value === 'object') walk(value);
     };
     walk(ast);

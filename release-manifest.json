@@ -2,6 +2,19 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.0.105.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 0.105.0 · DSH 0.2.1-rc.3",
+      "notes": [
+        "修复工具优化事件导致历史加载失败；保留原始备份并定点恢复已有记录。",
+        "统一请求计量、压缩预算与优化统计，显示预处理触发进度。",
+        "优化 Native／PTC 工具发现、结果精简、原文回查与执行开销。",
+        "修复部分文件读取后的覆盖保护、PTC 等待预算和 Responses ID 续传恢复。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.105.0.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.0.104.0",
       "severity": "normal",
       "unpublished": false,

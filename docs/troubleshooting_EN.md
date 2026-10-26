@@ -2,9 +2,16 @@
 
 [简体中文](troubleshooting.md) · [Documentation](README_EN.md) · [First task](getting-started_EN.md) · [Installation](upgrade_EN.md)
 
-Keep the first complete error. Check the installed version, running version and data directory separately. Current source is **`0.2.1-rc.3.omd.0.101.2`**, bundling OpenCU `2.0.8`. Check [version matching and host prerequisites](install_EN.md) before changing the installation.
+Keep the first complete error. Check the installed version, running version and data directory separately. Current source is **`0.2.1-rc.3.omd.0.105.0`**, bundling OpenCU `2.2.1`. Check [version matching and host prerequisites](install_EN.md) before changing the installation.
 
 <a id="check-the-running-environment"></a>
+
+## History blocked by a tool optimization record
+
+If the error names `plugin:oh-my-dsh/tool-optimization` and `not marked ignorable`, install OMD 0.105.0 or a later fixed release, restart after active tasks finish, and reopen the conversation. New events use the native plugin record API. Recovery first backs up the original log under `session-record-repair/<session ID>/` in the OMD data directory, acquires the native write lease, adds only the missing marker on recognized statistics records, and atomically publishes after full native validation.
+
+Messages, sequence numbers, tool results, branch references and statistics payloads stay unchanged. Live writer ownership, incomplete trailing frames, unrelated unknown events and identity mismatches retain the original file and report the reason. Do not delete the conversation or bypass native validation. Healthy histories require no repair scan or rewrite.
+
 
 ## Check the Running Environment
 
