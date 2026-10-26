@@ -357,9 +357,22 @@ export async function createController({dataDir, browser, native} = {}) {
           await verify(target, backend, false, operationEpoch, signal);
           checkOperation(operationEpoch);
           const activitySequence = userActivity.get(target.id)?.sequence ?? 0;
-          const observation = await readOperation(() => backend.observe(json(target), {...request, signal, format: request.format ?? 'both'}), signal);
+          let observation = await readOperation(() => backend.observe(json(target), {...request, signal, format: request.format ?? 'both'}), signal);
           signal.throwIfAborted();
           checkOperation(operationEpoch);
+          // The sidebar bridge already supplies encoded bytes as base64. Move
+          // those bytes into this request's private attachment channel before
+          // the controller's JSON boundary duplicates the large payload.
+          const screenshot = observation.screenshot;
+          if (typeof request.captureImage === 'function' && screenshot && screenshot.captureId === undefined) {
+            let encoded = screenshot.base64 || screenshot.data;
+            if (!encoded && typeof screenshot.dataUrl === 'string') encoded = /^data:image\/[\w+.-]+;base64,(.+)$/.exec(screenshot.dataUrl)?.[1];
+            if (typeof encoded === 'string') {
+              const captureId = await request.captureImage(Buffer.from(encoded, 'base64'));
+              const {base64, data, dataUrl, ...metadata} = screenshot;
+              observation = {...observation, screenshot: {...metadata, captureId}};
+            }
+          }
           const activity = observation.userActivity, previous = userActivity.get(target.id);
           if (activity?.sequence && (previous?.documentId !== activity.documentId || previous.sequence < activity.sequence)) {
             userActivity.set(target.id, { ...activity, targetId: target.id });

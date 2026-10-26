@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { hash } from './evidence.mjs';
 import { dataView } from './reducers.mjs';
 import { structuralSearch, languages } from './ast.mjs';
+import { compute } from '../compute.mjs';
+import { articleView as directArticleView } from './article.mjs';
 
 const fileObservations = new WeakMap();
 const output = { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] };
@@ -48,15 +50,11 @@ export async function fileSource(ctx, exec, path) {
   fileObservations.set(source, [{ target, version: before.version }]);
   return source;
 }
-export async function articleView(html, url = 'https://document.invalid/') {
-  const [{ Readability }, { JSDOM }] = await Promise.all([import('@mozilla/readability'), import('jsdom')]);
-  // JSDOM defaults run neither page scripts nor external resources.
-  const dom = new JSDOM(html, { url });
-  try {
-    const article = new Readability(dom.window.document, { maxElemsToParse: 100000, charThreshold: 100 }).parse();
-    if (!article?.textContent?.trim()) throw Error('没有识别出文章正文；可读取原文或查询片段');
-    return { title: article.title, byline: article.byline, text: article.textContent.trim() };
-  } finally { dom.window.close(); }
+export async function articleView(html, url = 'https://document.invalid/', signal) {
+  signal?.throwIfAborted();
+  const result = html.length < 32 * 1024 ? await directArticleView(html, url) : await compute('article', { html, url }, signal);
+  signal?.throwIfAborted();
+  return result;
 }
 function count(value, fallback, max) { value ??= fallback; if (!Number.isSafeInteger(value) || value < 1 || value > max) throw Error(`范围必须在 1–${max} 内`); return value; }
 
@@ -98,7 +96,7 @@ export function registerContextViews(ctx, hub) {
       let view, partial = false;
       if (args.view === 'raw') view = source.text;
       else if (args.view === 'data') { const data = dataView(source.text); if (!data) throw Error('data 视图需要有效 JSON'); view = data.text; }
-      else if (args.view === 'article') { const article = await articleView(source.text, args.url); view = [article.title, article.byline, article.text].filter(Boolean).join('\n\n'); partial = true; }
+      else if (args.view === 'article') { const article = await articleView(source.text, args.url, exec.signal); view = [article.title, article.byline, article.text].filter(Boolean).join('\n\n'); partial = true; }
       else if (args.view === 'outline') {
         view = source.text.split('\n').map((line, i) => ({ line, number: i + 1 })).filter(({ line }) => /^\s*(?:#{1,6}\s|(?:export\s+)?(?:async\s+)?(?:function|class|interface|def|fn|struct|enum)\b|<h[1-6]\b)/.test(line)).map(({ line, number }) => `${number}: ${line}`).join('\n'); partial = true;
       } else if (args.view === 'query') {

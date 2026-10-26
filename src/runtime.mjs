@@ -64,14 +64,19 @@ import * as btwPlugin from '../vendor/btw/src/index.mjs';
 import { isBtwSession } from './dream/side-question.mjs';
 import { TemporaryChats, handleTemporaryChatApi } from './temporary-chat.mjs';
 import { createProjectlessWorkspaceService } from './projectless-workspaces.mjs';
+import { closeToolComputations } from './compute.mjs';
+import { clearOriginalSearchCache } from './context/original-search.mjs';
+import { installWebFetchPooling } from './web-fetch-pool.mjs';
 
 export async function apply(ctx, config) {
+  ctx.effect(() => () => { clearOriginalSearchCache(); return closeToolComputations(); });
   installLoaderLifecycleCompatibility(ctx);
   installFileUploadCompatibility(ctx);
   const migratedDirectory = migrateLegacyInstallation(ctx, { home: process.env.DSH_HOME || join(homedir(), '.dsh'), dataDir: config.dataDir });
   const legacy = await legacySettings(ctx, 'oh-my-dsh', Config, ['opencu']);
   const directory = legacy.value.dataDir || migratedDirectory;
   installSearchCompatibility(ctx, directory);
+  installWebFetchPooling(ctx);
   await migrateSessionStorage(ctx, directory);
   installToolSchedulerCompatibility(ctx);
   installToolCancellationPresentation(ctx);

@@ -329,7 +329,7 @@ function snippet(part, at, length) {
   let start = Math.max(0, at - 100), end = Math.min(part.text.length, start + SNIPPET_SIZE);
   if (start > 0 && /[\udc00-\udfff]/.test(part.text[start])) start--;
   if (end < part.text.length && /[\udc00-\udfff]/.test(part.text[end])) end--;
-  return { text: part.text.slice(start, end), offset: start, path: part.path, kind: part.kind,
+  return { text: part.text.slice(start, end), offset: start, path: [...part.path], kind: part.kind,
     before: start > 0, after: end < part.text.length, ...(part.isError ? { isError: true } : {}) };
 }
 
@@ -337,11 +337,93 @@ const compare = (a, b) => b.score - a.score || a.seq - b.seq;
 const after = (candidate, cursor) => !cursor || compare(candidate, cursor) > 0;
 const cursorFor = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 
+// Cache only proven immutable accepted prefixes, never arbitrary mutable facades.
+// Each caller still resolves/authorizes its Session and takes a fresh snapshot.
+let originalIndexes = new WeakMap();
+const liveIndexes = new Set(), immutableValues = new WeakSet();
+const INDEX_MAX_BYTES = 8 * 1024 * 1024, INDEX_MAX_EVENTS = 4096, INDEX_IDLE_MS = 30_000;
+function immutableJson(value) {
+  const pending = [value], checked = new Set();
+  while (pending.length) {
+    const item = pending.pop();
+    if (typeof item === 'function' || typeof item === 'symbol') return false;
+    if (!item || typeof item !== 'object' || immutableValues.has(item)) continue;
+    if (!Object.isFrozen(item) || ![Object.prototype, Array.prototype, null].includes(Object.getPrototypeOf(item))) return false;
+    if (checked.has(item)) continue;
+    checked.add(item);
+    for (const descriptor of Object.values(Object.getOwnPropertyDescriptors(item))) {
+      if (!Object.hasOwn(descriptor, 'value')) return false;
+      pending.push(descriptor.value);
+    }
+  }
+  for (const item of checked) immutableValues.add(item);
+  return true;
+}
+export function clearOriginalSearchCache() {
+  for (const index of liveIndexes) clearTimeout(index.timer);
+  liveIndexes.clear(); originalIndexes = new WeakMap();
+}
+async function originalIndex(session, events, through, generation, signal) {
+  if (!Object.isFrozen(events)) return null;
+  let previous = originalIndexes.get(session);
+  if (previous && (previous.generation !== generation || previous.records.length > events.length
+    || previous.records.some((record, index) => record.event.deref() !== events[index]))) previous = undefined;
+  const records = previous?.records.slice() ?? [], calls = new Map(previous?.calls),
+    hash = records.at(-1)?.hash.copy() ?? createHash('sha256');
+  let bytes = previous?.bytes ?? 0, work = 0;
+  const cooperate = async () => { signal?.throwIfAborted(); if (++work >= 32) { work = 0; await yieldImmediate(); signal?.throwIfAborted(); } };
+  for (let index = records.length; index < through && index < INDEX_MAX_EVENTS; index++) {
+    await cooperate();
+    const event = events[index];
+    if (!event || event.seq !== index) throw Error('目标会话原始事件序列不完整');
+    if (!immutableJson(event)) return null;
+    // Keep a tentative fold: an oversized document must not advance the cached
+    // call identities beyond the prefix represented by records.
+    const updates = new Map(), nextCalls = {
+      get: id => updates.has(id) ? updates.get(id) : calls.get(id),
+      has: id => updates.has(id) || calls.has(id),
+      set(id, name) { updates.set(id, name); return this; },
+    }, message = originalMessage(event, nextCalls);
+    const parts = message ? [...messageParts(message, nextCalls)] : [];
+    const weight = 512 + parts.reduce((sum, part) => sum + part.text.length * 2 + 160, 0);
+    if (bytes + weight > INDEX_MAX_BYTES) break;
+    hash.update(JSON.stringify([event.seq, event.type, message?.id, message?.role, message?.source, message?.toolCallId, message?.isError,
+      message?.dispatch && [message.dispatch.rootCallId, message.dispatch.parentCallId, message.dispatch.name]]));
+    for (const part of parts) {
+      await cooperate();
+      hash.update(JSON.stringify([part.path, part.kind, part.text.length, part.attachment, part.isError]));
+      for (let offset = 0; offset < part.text.length; offset += CHUNK_SIZE) {
+        await cooperate(); hash.update(part.text.slice(offset, offset + CHUNK_SIZE), 'utf16le');
+      }
+    }
+    records.push({ event: new WeakRef(event), message: message ? { role: message.role, isError: message.isError } : null, parts, hash: hash.copy() });
+    for (const [id, name] of updates) calls.set(id, name);
+    bytes += weight;
+  }
+  signal?.throwIfAborted();
+  const index = { generation, records, calls, bytes, owner: new WeakRef(session) };
+  const prior = originalIndexes.get(session);
+  clearTimeout(prior?.timer); liveIndexes.delete(prior);
+  originalIndexes.set(session, index); liveIndexes.add(index);
+  while (liveIndexes.size > 3) {
+    const old = liveIndexes.values().next().value, owner = old.owner.deref();
+    clearTimeout(old.timer); liveIndexes.delete(old);
+    if (owner && originalIndexes.get(owner) === old) originalIndexes.delete(owner);
+  }
+  index.timer = setTimeout(() => {
+    const owner = index.owner.deref(); liveIndexes.delete(index);
+    if (owner && originalIndexes.get(owner) === index) originalIndexes.delete(owner);
+  }, INDEX_IDLE_MS);
+  index.timer.unref();
+  return index;
+}
+
 /** Search one already-resolved session; never open parents, catalogs or sidecars.
  * A read-only facade needs id, header, inheritedEventCount and snapshotEvents().
  * Continuations scan the original fixed prefix, so logging this recall and later
  * appends cannot skip/repeat hits. A fresh search includes those new events.
- * No event text, index, or result cache survives the call.
+ * A bounded, short-lived index reuses only deeply immutable accepted prefixes;
+ * mutable snapshots use the original scanning path, including cursor hashing.
  */
 export async function searchOriginal(session, args = {}, { signal } = {}) {
   signal?.throwIfAborted();
@@ -355,7 +437,9 @@ export async function searchOriginal(session, args = {}, { signal } = {}) {
   if (!Array.isArray(events)) throw Error('宿主没有返回可读取的原始事件快照');
   const through = cursor?.through ?? events.length;
   if (through > events.length || inherited > events.length) throw Error('原文搜索快照已变化；请重新搜索');
-  const hash = createHash('sha256'), calls = new Map(), best = [];
+  const prepared = await originalIndex(session, events, through, generation, signal);
+  const cachedThrough = Math.min(through, prepared?.records.length ?? 0);
+  const hash = cachedThrough ? prepared.records[cachedThrough - 1].hash.copy() : createHash('sha256'), calls = new Map(prepared?.calls), best = [];
   const foldedQuery = fold(query), grams = new Map();
   for (const term of terms) if (/^\p{Script=Han}{3,}$/u.test(term)) {
     const chars = Array.from(term);
@@ -373,8 +457,9 @@ export async function searchOriginal(session, args = {}, { signal } = {}) {
     await cooperate();
     const event = events[index];
     if (!event || event.seq !== index) throw Error('目标会话原始事件序列不完整');
-    const message = originalMessage(event, calls);
-    hash.update(JSON.stringify([event.seq, event.type, message?.id, message?.role, message?.source, message?.toolCallId, message?.isError,
+    const cached = prepared?.records[index];
+    const message = cached ? cached.message : originalMessage(event, calls);
+    if (!cached) hash.update(JSON.stringify([event.seq, event.type, message?.id, message?.role, message?.source, message?.toolCallId, message?.isError,
       message?.dispatch && [message.dispatch.rootCallId, message.dispatch.parentCallId, message.dispatch.name]]));
     if (!message) continue;
     const found = new Set(), gramHits = new Map(), marks = [], attachments = [];
@@ -386,14 +471,14 @@ export async function searchOriginal(session, args = {}, { signal } = {}) {
       if (priority) marks.unshift(entry); else marks.push(entry);
       marks.splice(2);
     };
-    for (const part of messageParts(message, calls)) {
+    for (const part of cached ? cached.parts : messageParts(message, calls)) {
       await cooperate();
-      hash.update(JSON.stringify([part.path, part.kind, part.text.length, part.attachment, part.isError]));
-      if (part.attachment && attachments.length < 2) attachments.push(part.attachment);
+      if (!cached) hash.update(JSON.stringify([part.path, part.kind, part.text.length, part.attachment, part.isError]));
+      if (part.attachment && attachments.length < 2) attachments.push(structuredClone(part.attachment));
       for (let offset = 0; offset < part.text.length; offset += CHUNK_SIZE) {
         await cooperate();
         const text = part.text.slice(offset, offset + CHUNK_SIZE + overlap);
-        hash.update(part.text.slice(offset, offset + CHUNK_SIZE), 'utf16le');
+        if (!cached) hash.update(part.text.slice(offset, offset + CHUNK_SIZE), 'utf16le');
         if (!exact) { const at = findTerm(text, query, offset, part.text); if (at >= 0) { exact = true; mark(part, at, query.length, true); } }
         let foldedAt;
         if (!foldedExact) { foldedAt = findTerm(text, foldedQuery, offset, part.text, patterns.get(foldedQuery)); if (foldedAt >= 0) { foldedExact = true; mark(part, foldedAt, query.length, true); } }

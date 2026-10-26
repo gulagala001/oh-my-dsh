@@ -406,7 +406,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       return request(session, 'preview', { identity }, requestTimeoutMs, true);
     },
     async observe(target, options = {}) {
-      const {signal, ...payload} = options;
+      const {signal, captureImage, ...payload} = options;
       if (signal?.aborted) throw failure('CONTROL_STOPPED', 'Control has been stopped.');
       const { session, identity } = sessionFor(target);
       if (options.fullPage) throw failure('UNSUPPORTED_OPERATION', 'Extension screenshots are viewport-only.');
@@ -417,9 +417,13 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       if (options.format !== 'screenshot' && (result.ax?.source !== 'chromium-accessibility-tree' || !Array.isArray(result.ax.nodes))) throw failure('INVALID_OBSERVATION', 'The extension did not return a Chromium accessibility tree; reload the matching extension package.');
       if (result.screenshot) {
         const screenshot = result.screenshot, bytes = Buffer.from(screenshot.data, 'base64');
-        const directory = join(dir, 'observations'); await mkdir(directory, { recursive: true, mode: 0o700 });
-        const path = join(directory, screenshot.id + '.png'); await writeFile(path, bytes, { mode: 0o600 });
-        screenshot.path = path; screenshot.mediaType = screenshot.mimeType;
+        if (typeof captureImage === 'function' && bytes.length <= 32 * 1024 * 1024) screenshot.captureId = await captureImage(bytes);
+        else {
+          const directory = join(dir, 'observations'); await mkdir(directory, { recursive: true, mode: 0o700 });
+          const path = join(directory, screenshot.id + '.png'); await writeFile(path, bytes, { mode: 0o600 });
+          screenshot.path = path;
+        }
+        screenshot.mediaType = screenshot.mimeType;
         screenshot.base64 = screenshot.data;
         screenshot.viewport = { width: screenshot.bounds.width, height: screenshot.bounds.height };
         if (!options.includeBase64) { delete screenshot.data; delete screenshot.base64; }

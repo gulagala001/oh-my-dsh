@@ -127,7 +127,7 @@ export function createPluginRuntime(options = {}) {
       await unlink(actual);
     } catch (failure) { if (failure.code !== 'ENOENT') console.warn('OpenCU screenshot cleanup', failure); }
   }
-  async function attachScreenshot(result, attachments) {
+  async function attachScreenshot(result, attachments, captures) {
     const screenshot = result.observation?.screenshot;
     if (!screenshot) return result;
     if (!attachments?.saveImage) throw error('ATTACHMENTS_UNAVAILABLE', 'Image attachment storage is required for screenshot observations');
@@ -138,7 +138,11 @@ export function createPluginRuntime(options = {}) {
       if (match) { mediaType = match[1]; base64 = match[2]; }
     }
     let bytes;
-    if (typeof base64 === 'string') bytes = Buffer.from(base64, 'base64');
+    if (screenshot.captureId !== undefined) {
+      bytes = captures?.get(screenshot.captureId);
+      if (!bytes) throw error('INVALID_SCREENSHOT', 'Screenshot has no owned encoded bytes');
+      captures.delete(screenshot.captureId);
+    } else if (typeof base64 === 'string') bytes = Buffer.from(base64, 'base64');
     else if (screenshot.path) {
       const file = await privateFile(screenshot.path, 32 * 1024 * 1024);
       try { bytes = await file.readFile(); } finally { await file.close(); }
@@ -149,7 +153,7 @@ export function createPluginRuntime(options = {}) {
     if (!image) { image = await attachments.saveImage({ data: bytes, mediaType, name: `opencu-${result.targetId || 'observation'}.png` }); imageRefs.set(digest, image); }
     await imageRegistry.retain(image);
     await discardScreenshot(screenshot.path);
-    const { path, base64: ignored, data, dataUrl, ...metadata } = screenshot;
+    const { path, captureId, base64: ignored, data, dataUrl, ...metadata } = screenshot;
     return { ...result, observation: { ...result.observation, screenshot: { ...metadata, image } }, image };
   }
   async function deliveries(runtime, attachments, signal, { emit = true, id } = {}) {
@@ -228,6 +232,8 @@ export function createPluginRuntime(options = {}) {
     return {args: bound, target};
   }
   async function request(endpoint, args = {}, { attachments, signal, sessionKey, modelProjection = false, onApprovalWait, handBackGuard, onControlStart } = {}) {
+    const captures = new Map();
+    let acceptingCaptures = true;
     if (disposed) throw new Error('OpenCU plugin is unloading');
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw error('INVALID_ARGUMENT', 'OpenCU payload must be an object');
     if (endpoint === 'appApprovals/read') return { ok: true, approvals: await appApprovals.read() };
@@ -375,17 +381,25 @@ export function createPluginRuntime(options = {}) {
       else {
         const method = methods[endpoint];
         if (!method || typeof runtime[method] !== 'function') throw error('UNSUPPORTED_METHOD', 'Unknown or unsupported OpenCU operation');
-        result = targetInventory ?? await runtime[method](endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, signal, includeBase64: false } : args);
+        result = targetInventory ?? await runtime[method](endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, signal, includeBase64: false,
+          captureImage(bytes) {
+            signal?.throwIfAborted();
+            if (!acceptingCaptures) throw error('INVALID_SCREENSHOT', 'Screenshot delivery is no longer active');
+            if (!Buffer.isBuffer(bytes) || !bytes.length) throw error('INVALID_SCREENSHOT', 'Screenshot encoded bytes are invalid');
+            const id = randomUUID(); captures.set(id, bytes); return id;
+          } } : args);
       }
       if (result.ok === false) return stripPaths(result);
       if (endpoint === 'targets' || endpoint === 'state') result.browsers = [...new Map([...(result.browsers ?? []), ...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(browserConnection?.browsers ?? [])].map(item => [item.id, item])).values()];
       if (endpoint === 'targets' || endpoint === 'state') result.browserProviders = runtime.runtimeInfo.browserProviders;
-      if (result.observation) { result = await attachScreenshot(result, attachments); lastObservation = { targetId: result.targetId, observation: stripPaths(result.observation), image: result.image ?? null }; }
+      if (result.observation) { result = await attachScreenshot(result, attachments, captures); lastObservation = { targetId: result.targetId, observation: stripPaths(result.observation), image: result.image ?? null }; }
       if (result.state) result = { ...result, state: { ...result.state, status: result.state.mode, selectedTarget: result.state.targets.find(target => target.id === result.state.activeTargetId) ?? null, annotations, lastObservation, revision, activity }, service: { name: 'OpenCU', ...runtime.runtimeInfo }, config: publicConfig(getConfig()) };
       // The worker still needs raw AX nodes for diffing and details:true. Omit
       // duplicate text/history before cloning them across the worker boundary.
       return stripPaths(modelProjection ? modelResult(result, {...args, ...(endpoint === 'observe' ? {details:true} : {})}) : result);
     } finally {
+      acceptingCaptures = false;
+      captures.clear();
       if (active.has(endpoint)) { revision++; activity = { ...activity, status: 'settled', finishedAt: new Date().toISOString() }; }
     }
   }

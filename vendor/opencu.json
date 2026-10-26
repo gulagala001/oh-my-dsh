@@ -1,13 +1,12 @@
 {
   "name": "opencu",
   "version": "2.2.1-dsh.0.2.1-rc.3",
-  "source": "opencu@2.2.1-dsh.0.2.1-rc.3",
+  "source": "../opencu",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.3",
-  "archiveSha256": "44ee3515fedc4d690aa8ebc9c40f420ca40bc11ffb819d385a7f1c27852206de",
   "files": {
     "CHANGELOG.md": "edb41c86b780fe33619cfc3f686d94b9f56d31e92536d0db2fa4245fafab7c6a",
-    "DEVELOPMENT.md": "accd908454c5870d2008755dc8a552e7db499ed0afadf886c4bf5804851e877d",
+    "DEVELOPMENT.md": "088f5818f837ee17bc99ce341899e4b9f5ae0fc4fe3e6382f73dde2856291f03",
     "README.md": "6b8da7dcdd6ee54b8ab54c9a5624aa646f54f45e11d20720555eca434be583a9",
     "README_EN.md": "c4e8e8980fe9996b53f49679825e44af4a9d0ff6fd6609fc1348a18e52ecc621",
     "THIRD_PARTY_NOTICES.md": "e4ab08236d3fc27da96af6aa6ba40871c498f81ea890abbd873a905ecd8644b0",
@@ -721,14 +720,14 @@
     "src/browser/dom.mjs": "444b5c23e4844a467acf068015e20cccf58590ef410720e976e49eef9bb86dc8",
     "src/browser/file-chooser.mjs": "6f24bc5cba8d914c5f2e0a8a53519cb6e99f45fc6d8a1231ffeb31f4379728c6",
     "src/browser/input-state.mjs": "b3db1cae3d1714d14f258ec00c52c677d0781bd1fc65221e9b035ef155c0fc44",
-    "src/browser/observation.mjs": "355e967ea4bc94ab5be94a23d9b00e4940f28981e979e1a46782b330953a3df2",
+    "src/browser/observation.mjs": "2a599da0909fdf33d560926cbd7851254fed3f480a03f741d0924673861ec51c",
     "src/browser/playwright-keyboard.mjs": "3b68fce1f550cd81e2ec8aee01f65662deb2b03ffd0059df110cebda9010f444",
     "src/browser/resources.mjs": "1bc9f1d5616fada3cea44f6c30830f6c6bf825fdf0ea002e6c2a78fad3ee381a",
     "src/browser/unavailable-release.mjs": "fb78435de247bb5b54a07f9551bf8af7f61657188d32ea28a59575bc9f4657c3",
     "src/browser/upload-files.mjs": "95dd693fa0fecfabb103e8a3d76bcece9f263daa373e42da2ed105b836670262",
     "src/browser/user-activity.mjs": "ccb4759ca01aecd500a8226b9eac8696a1afdcda3efc01d8e4a6fb184805f7ce",
     "src/control-capabilities.mjs": "837a10b2a5d266089c30d67bc1eb3015a21ca28a597adcf887df0ac410b76b4b",
-    "src/core/controller.mjs": "a3098ac92006a5890f466e3a7a32609eebefc2d528b2d06eacfec32dd3219a4b",
+    "src/core/controller.mjs": "67760e5b89f058cbe452b671d2991746b73d5ad99c3d6b3315336b8b8b284394",
     "src/core/storage.mjs": "4398f66c2d43ea1bef79cd788adb68493501045d27de170f05152573a1cb7b3a",
     "src/dsh/activity.mjs": "dc6337f7467799172cc70224338f4a06847e1526f1016cf73ab0b652df43189f",
     "src/dsh/app-approvals.mjs": "ea82cbe0f28dddde8cc25d07538329cbd64d7e575f4261a6111c3047d120d81b",
@@ -754,10 +753,10 @@
     "src/dsh/preferences.mjs": "9fe12ecd020ce8acf4621cbe22876d896c464c080e15dbcbd1f1fafd1e2741f1",
     "src/dsh/presentation.mjs": "8217eda88a533f35842f6ecf4f78d77bacf154e45619286822777c268193f3d0",
     "src/dsh/repl-output.mjs": "b6bff1e63f0d640ecf03ff5e907b4c382c27a7c66ab028adc31071e06089bb14",
-    "src/dsh/runtime.mjs": "25bd4848b6dd4fca5333bd1e4f2c496494bf91e1cd329491e6e13e30568ddfa7",
+    "src/dsh/runtime.mjs": "76e5165955eb9f2a092ca78df2e8719ac31a6cacc4f39e6616df49cfcc5aefda",
     "src/dsh/shared.mjs": "212e1f735075b51f774d4afd46b28fb2193281d4b330ccfe79b0334c63ebf724",
     "src/dsh/tools.mjs": "c72ad5859a2a52dafe42e5986230015ebcfd448cfaa197ba73be5b9b6d7d78d1",
-    "src/extension/backend.mjs": "9f22e50e006b8d01b24c08ead5fec45d5749ae9ab08eec40310e4fc8a36ec065",
+    "src/extension/backend.mjs": "997f71891365512e2d85c9a9ba451618643520dadec284ba71e2401052e852b8",
     "src/extension/distribution.json": "2e53c209018171e648057f236eab2df1ee6e7ff1e18c4fdbaaa59d0b6b0841f2",
     "src/extension/distribution.mjs": "30e489adbd2c65f8e78f3a4175aa36c162b547b8bed6694648c0e9a547383194",
     "src/extension/index.mjs": "109c9209c5c092542fbc82eff94367fbee713ba162deeac0c5b93199b6f29008",
@@ -778,5 +777,6 @@
     "src/protocol.mjs": "c0546b75c8eb11a6b03d1db382a94811f2d79a8bb3b263bfa790397478f949d3",
     "src/runtime.mjs": "be6481fb738d40420f96cba8be1ab45b2b6566e721d053810464455050300a86",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
-  }
+  },
+  "sourceCommit": "b4930895dda3e4e35dd9f5e2d55112962deb694c"
 }

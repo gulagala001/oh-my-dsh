@@ -50,16 +50,20 @@ export async function observePage(record, request, options) {
       }
       output = await sharp(bytes).resize({width: request.maxWidth, height: request.maxHeight, fit: 'inside', withoutEnlargement: true}).png().toBuffer();
     }
-    const metadata = await sharp(output).metadata();
+    const metadata = output === bytes ? original : await sharp(output).metadata();
     const viewport = await record.page.evaluate(() => ({width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY}));
     checkSignal(request.signal);
     if (['width', 'height', 'deviceScaleFactor', 'scrollX', 'scrollY'].some(key => viewport[key] !== viewportBefore[key])) fail('STALE_OBSERVATION', 'Viewport or scroll changed during screenshot capture; observe again');
-    const directory = join(options.dataDir, 'observations');
-    await mkdir(directory, {recursive: true});
-    const path = join(directory, `${observationId}.png`);
-    await writeFile(path, output, {mode: 0o600});
+    let path, captureId;
+    if (typeof request.captureImage === 'function' && output.length <= 32 * 1024 * 1024) captureId = await request.captureImage(output);
+    else {
+      const directory = join(options.dataDir, 'observations');
+      await mkdir(directory, {recursive: true});
+      path = join(directory, `${observationId}.png`);
+      await writeFile(path, output, {mode: 0o600});
+    }
     result.screenshot = {
-      path, mediaType: 'image/png', width: metadata.width, height: metadata.height,
+      ...(path ? {path} : {captureId}), mediaType: 'image/png', width: metadata.width, height: metadata.height,
       originalWidth: original.width, originalHeight: original.height, viewport, fullPage,
       pixelsPerCssPixel: {x: metadata.width / (original.width / viewport.deviceScaleFactor), y: metadata.height / (original.height / viewport.deviceScaleFactor)},
       ...(request.includeBase64 ? {base64: output.toString('base64')} : {}),
@@ -70,7 +74,7 @@ export async function observePage(record, request, options) {
   if (nextElements) {record.elements = nextElements; record.nextElementId = nextElementId;}
   record.observationId = observationId;
   if (result.screenshot) {
-    const {base64, ...mapping} = result.screenshot;
+    const {base64, captureId, ...mapping} = result.screenshot;
     record.screenshot = {...mapping, observationId, url: result.url};
   }
   return result;

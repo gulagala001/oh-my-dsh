@@ -43,7 +43,8 @@
     "credits:write": "node scripts/build-credits.mjs --write",
     "credits:check": "node scripts/build-credits.mjs",
     "metering:check": "node scripts/check-metering.mjs",
-    "tools:check": "node scripts/build-metering.mjs && node scripts/check-tool-contracts.mjs"
+    "tools:check": "node scripts/build-metering.mjs && node scripts/check-tool-contracts.mjs",
+    "perf:tools": "node scripts/tool-performance/run.mjs"
   },
   "dependencies": {
     "@ast-grep/wasm": "0.51.0",
