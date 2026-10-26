@@ -45,6 +45,7 @@ function processRows() {
 }
 function processTree(pid) {
   const rows = processRows(); if (!rows) return null;
+  if (!rows.some(row => row.pid === pid)) return null;
   const owned = new Set([pid]); let changed = true;
   while (changed) { changed = false; for (const row of rows) if (owned.has(row.parent) && !owned.has(row.pid)) { owned.add(row.pid); changed = true; } }
   const selected = rows.filter(row => owned.has(row.pid));
@@ -62,7 +63,8 @@ const report = { schemaVersion: 1, harnessHash, kind: 'omd-tool-performance', so
   interpretation: { scope: 'Direct cases: ToolRuntime entry to checked result. host-workflow: actual local protocol model, real main/child agents and complete goal/workflow turn. Neither measures external model or GUI latency.', cold: 'First measured operation after setup in a fresh process; setup imports modules and seeds state-tasks with a todo excerpt. Filesystem cache is uncontrolled.',
     firstStageResult: 'First completed named phase, not streamed model-visible output. firstEffectiveResultMs is the first top-level read/write receipt in Native compound workloads, host-workflow uses the first native tool-result event time; other cases use the complete non-streaming result. This is not GUI paint time.',
     stages: 'Nested inclusive spans; do not sum into total.', cpu: 'process.cpuUsage includes worker threads; descendant subprocess/browser CPU is unavailable (null).',
-    memory: 'process resourceUsage high-water includes setup. Tree RSS is sampled every ~25ms; fast peaks/short-lived children can be missed, shared memory may be counted more than once.',
+    memory: 'process resourceUsage high-water includes setup. Tree RSS is sampled every ~25ms; fast peaks/short-lived children can be missed, shared memory may be counted more than once. idleTree is a separate snapshot after the idle wait; the child waits for its acknowledgement before cleanup. A missing root/process inventory produces null, never a zero-sized tree.',
+    eventLoop: 'Native monitorEventLoopDelay, 10 ms resolution. Each operation has unmeasured 20 ms waits before timing and after freezing wall/CPU results; after resetting the histogram a further 1 ms timer yield activates the probe before synchronous work. Max includes timer interval and sampling-window scheduling noise; actual waits/sample count are reported. No observation remains null.',
     equivalence: 'Full AST/article/search/MCP/image JSON hashes. Workflow normalizes workspace path, random evidence refs and receipt-dependent original-search through/cursor. AST archive hashes are verified against exact bytes, then recomputed with normalized paths. System/state cases hash explicitly asserted semantic fields, not volatile IDs/timestamps/versions.',
     unsupported: ['No external models, GUI or working DSH; detailed family limitations are in coverage.'], percentiles: 'Nearest-rank; small-sample p95 is descriptive only.' } };
 try {
@@ -75,23 +77,32 @@ try {
       const child = fork(fileURLToPath(new URL('./worker.mjs', import.meta.url)), [JSON.stringify({ ...options, name, directory })], { env, cwd: options.root,
         stdio: ['ignore', 'pipe', 'pipe', 'ipc'], detached: process.platform !== 'win32' });
       const observed = new Map();
-      let value, failure, log = '', idle = false, peakTreeRssBytes = null, peakProcessCount = null, idleTree = null;
-      const sample = () => { const tree = processTree(child.pid); if (!tree) return; for (const member of tree.members) if (member.pid !== child.pid) observed.set(member.pid, member.started); delete tree.members; peakTreeRssBytes = Math.max(peakTreeRssBytes ?? 0, tree.rssBytes); peakProcessCount = Math.max(peakProcessCount ?? 0, tree.processCount); if (idle) idleTree = tree; };
+      let value, failure, log = '', idleStarted = false, idleSnapshotTaken = false, peakTreeRssBytes = null, peakProcessCount = null, idleTree = null;
+      const sample = () => { const tree = processTree(child.pid); if (!tree) return null; for (const member of tree.members) if (member.pid !== child.pid) observed.set(member.pid, member.started); delete tree.members; peakTreeRssBytes = Math.max(peakTreeRssBytes ?? 0, tree.rssBytes); peakProcessCount = Math.max(peakProcessCount ?? 0, tree.processCount); return tree; };
       const monitor = setInterval(sample, 25);
       const residues = () => (processRows() ?? []).filter(row => observed.get(row.pid) === row.started);
       const kill = () => { for (const row of residues()) { try { process.kill(row.pid, 'SIGKILL'); } catch {} } try { process.kill(process.platform === 'win32' ? child.pid : -child.pid, 'SIGKILL'); } catch {} };
       stopCurrent = () => { failure = Error('Benchmark interrupted'); kill(); };
       const watchdog = setTimeout(() => { failure = Error(`Case ${name} exceeded 180 seconds`); kill(); }, 180000);
       child.stdout.on('data', data => { log = (log + data).slice(-4000); }); child.stderr.on('data', data => { log = (log + data).slice(-4000); });
-      child.on('message', message => { if (message.type === 'idle-start') idle = true; if (message.type === 'result') value = message.result; if (message.type === 'error') failure = Error(message.error); });
+      child.on('message', message => {
+        if (message.type === 'idle-start') idleStarted = true;
+        if (message.type === 'idle-end') {
+          if (!idleStarted || idleSnapshotTaken) { failure = Error('Unexpected idle snapshot request'); kill(); return; }
+          idleTree = sample(); idleSnapshotTaken = true;
+          child.send({ type: 'idle-ack' }, error => { if (error) { failure = error; kill(); } });
+        }
+        if (message.type === 'result') value = message.result;
+        if (message.type === 'error') failure = Error(message.error);
+      });
       child.on('error', error => { failure = error; });
       child.on('exit', (code, signal) => {
         clearInterval(monitor); clearTimeout(watchdog); stopCurrent = null;
         const residualDescendants = residues().map(row => row.pid); if (residualDescendants.length) kill();
         let residualGroup = null;
         if (process.platform !== 'win32') { try { process.kill(-child.pid, 0); residualGroup = true; kill(); } catch { residualGroup = false; } }
-        if (failure || code !== 0 || !value || residualGroup || residualDescendants.length) reject(failure ?? Error(`${name}: exit=${code}/${signal}; residualGroup=${residualGroup}; descendants=${residualDescendants.length}; ${log}`));
-        else resolveCase({ ...value, processWallMs: performance.now() - begun, resources: { peakTreeRssBytes, peakProcessCount, idleTree, residualGroup, residualDescendants }, log: log || null });
+        if (failure || code !== 0 || !value || !idleSnapshotTaken || residualGroup || residualDescendants.length) reject(failure ?? Error(`${name}: exit=${code}/${signal}; idleSnapshotTaken=${idleSnapshotTaken}; residualGroup=${residualGroup}; descendants=${residualDescendants.length}; ${log}`));
+        else resolveCase({ ...value, processWallMs: performance.now() - begun, resources: { peakTreeRssBytes, peakProcessCount, idleTree, idleTreeStatus: idleTree ? 'captured-before-cleanup' : 'unavailable', residualGroup, residualDescendants }, log: log || null });
       });
     });
     const warm = result.samples.filter(sample => sample.mode === 'warm');

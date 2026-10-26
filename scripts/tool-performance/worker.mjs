@@ -6,28 +6,59 @@ import { mkdir } from 'node:fs/promises';
 import { scenario, hash } from './scenarios.mjs';
 
 const options = JSON.parse(process.argv[2]);
+const EVENT_LOOP_RESOLUTION_MS = 10, EVENT_LOOP_PROBE_WAIT_MS = 20, EVENT_LOOP_ACTIVATION_MS = 1;
 let current, firstResult, firstVisible, started, cancellation;
 const phase = async (name, fn) => {
   const start = performance.now();
   try { const value = await fn(); firstResult ??= performance.now() - started; if (name === 'visible.first') firstVisible ??= performance.now() - started; return value; }
   finally { if (current) (current[name] ??= []).push(performance.now() - start); }
 };
-let fixture;
+function acknowledgeIdleSnapshot() {
+  if (!process.send || !process.connected) throw Error('Idle snapshot requires the parent IPC channel');
+  return new Promise((resolve, reject) => {
+    const finish = (error) => {
+      clearTimeout(timer); process.off('message', onMessage); process.off('disconnect', onDisconnect);
+      if (error) reject(error); else resolve();
+    };
+    const onMessage = message => { if (message.type === 'idle-ack') finish(); };
+    const onDisconnect = () => finish(Error('Parent disconnected before idle snapshot acknowledgement'));
+    const timer = setTimeout(() => finish(Error('Parent did not acknowledge idle snapshot within 10 seconds')), 10000);
+    process.on('message', onMessage); process.once('disconnect', onDisconnect);
+    process.send({ type: 'idle-end' }, error => { if (error) finish(error); });
+  });
+}
+let fixture, eventLoop;
 try {
   await mkdir(options.directory, { recursive: true });
   const setupStart = performance.now();
   fixture = await scenario({ ...options, phase });
   const setupMs = performance.now() - setupStart;
-  const samples = [], eventLoop = monitorEventLoopDelay({ resolution: 10 }); eventLoop.enable();
+  const samples = [];
+  eventLoop = monitorEventLoopDelay({ resolution: EVENT_LOOP_RESOLUTION_MS }); eventLoop.enable();
   for (let index = 0; index <= options.repeats; index++) {
+    // Arm the native monitor before synchronous work. Reset its histogram only
+    // after this unmeasured wait; resetting does not restart its pending timer.
+    const probeStart = performance.now(); await delay(EVENT_LOOP_PROBE_WAIT_MS);
+    eventLoop.reset();
+    // A promise continuation in the reset timer's own phase can run before the
+    // native monitor's due callback. Enter a later timer turn before blocking.
+    await delay(EVENT_LOOP_ACTIVATION_MS);
+    const beforeProbeWaitMs = performance.now() - probeStart;
     current = {}; firstResult = undefined; firstVisible = undefined; started = performance.now();
-    eventLoop.reset(); const cpu = process.cpuUsage();
+    const cpu = process.cpuUsage();
     const result = await fixture.run(new AbortController().signal);
     const totalMs = performance.now() - started, used = process.cpuUsage(cpu);
-    samples.push({ mode: index ? 'warm' : 'first-after-setup', totalMs, firstEffectiveResultMs: firstVisible ?? fixture.diagnostics?.()?.nativeFirstResultMs ?? totalMs, firstStageResultMs: firstResult ?? totalMs,
+    const firstEffectiveResultMs = firstVisible ?? fixture.diagnostics?.()?.nativeFirstResultMs ?? totalMs, firstStageResultMs = firstResult ?? totalMs;
+    const stages = current; current = null;
+    // Freeze tool wall/CPU results before yielding so a blocked monitor tick can
+    // run. Probe waits and later result hashing are outside measured tool time.
+    const afterStart = performance.now(); await delay(EVENT_LOOP_PROBE_WAIT_MS);
+    const afterProbeWaitMs = performance.now() - afterStart;
+    samples.push({ mode: index ? 'warm' : 'first-after-setup', totalMs, firstEffectiveResultMs, firstStageResultMs,
       processCpuMs: (used.user + used.system) / 1000, treeCpuMs: ['ptc-workflow', 'native-system', 'browser-image', 'terminal', 'host-workflow'].includes(options.name) ? null : (used.user + used.system) / 1000,
-      stagesMs: Object.fromEntries(Object.entries(current).map(([key, values]) => [key, { calls: values.length, total: values.reduce((a, b) => a + b, 0) }])),
+      stagesMs: Object.fromEntries(Object.entries(stages).map(([key, values]) => [key, { calls: values.length, total: values.reduce((a, b) => a + b, 0) }])),
       eventLoopMaxDelayMs: eventLoop.count ? eventLoop.max / 1e6 : null,
+      eventLoopProbe: { resolutionMs: EVENT_LOOP_RESOLUTION_MS, requestedWaitEachMs: EVENT_LOOP_PROBE_WAIT_MS, activationYieldMs: EVENT_LOOP_ACTIVATION_MS, beforeWaitMs: beforeProbeWaitMs, afterWaitMs: afterProbeWaitMs, samples: eventLoop.count },
       diagnostics: fixture.diagnostics?.() ?? null,
       resultHash: hash(result), resultBytes: Buffer.byteLength(JSON.stringify(result)) });
   }
@@ -49,6 +80,9 @@ try {
   process.send?.({ type: 'idle-start' });
   await delay(options.idleMs);
   const idle = { rssBytes: process.memoryUsage().rss, heapUsedBytes: process.memoryUsage().heapUsed, activeResourceTypes: process.getActiveResourcesInfo() };
+  // The parent freezes the live process tree while all fixture resources remain
+  // open. Cleanup may start only after that exact snapshot is acknowledged.
+  await acknowledgeIdleSnapshot();
   const { fingerprint, stats } = fixture;
   let computeCleanupMs = null;
   try {
@@ -61,4 +95,4 @@ try {
 } catch (error) {
   try { await fixture?.close(); } catch {}
   process.send?.({ type: 'error', error: error.stack ?? String(error) }); process.exitCode = 1;
-} finally { process.disconnect?.(); }
+} finally { eventLoop?.disable(); process.disconnect?.(); }
