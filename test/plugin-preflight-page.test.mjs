@@ -30,6 +30,12 @@ function done(d){d.remove();root.inert=false;}
 function editor(){const d=dialog('API Key');button(english?'Configure later':'稍后配置',()=>done(d),d);}
 function choice(){const d=dialog('Login');button(english?'Add API Key':'添加 API Key',()=>{done(d);editor()},d);}
 if(scenario==='direct')editor();
+else if(['disabled-auto-close','vanishing'].includes(scenario)){
+ const d=dialog('预览版说明'),b=button('继续',()=>done(d),d);
+ if(scenario==='disabled-auto-close')b.disabled=true;
+ else b.animate([{transform:'translateX(0)'},{transform:'translateX(100px)'}],{duration:300,iterations:Infinity});
+ setTimeout(()=>done(d),350);
+}
 else if(['choice','ready-after-welcome','direct-after-welcome','english','settling'].includes(scenario)){
  const d=dialog(english?'Preview Notice':'预览版说明');
  button(english?'Continue':'继续',()=>{done(d);if(scenario==='ready-after-welcome'||scenario==='settling')return;if(scenario==='direct-after-welcome')editor();else choice()},d);
@@ -47,13 +53,13 @@ account.onclick=()=>{const m=document.createElement('div');m.setAttribute('role'
   const browser = await chromium.launch({ headless: true, ...(process.env.OMD_TEST_BROWSER ? { executablePath: process.env.OMD_TEST_BROWSER } : {}) });
   t.after(() => browser.close());
   const url = `http://127.0.0.1:${server.address().port}/`;
-  for (const name of ['choice', 'direct', 'direct-after-welcome', 'ready-after-welcome', 'ready', 'english', 'hidden-choice', 'settling',
+  for (const name of ['choice', 'direct', 'direct-after-welcome', 'ready-after-welcome', 'ready', 'english', 'hidden-choice', 'settling', 'disabled-auto-close', 'vanishing',
     'blocked', 'blank', 'client-failed', 'script-failed', 'host-failed', 'loading']) await t.test(name, async () => {
     scenario = name; reads = 0;
     const page = await browser.newPage();
     try {
       const codes = { blocked: 'ui-timeout', blank: 'client-failed', 'client-failed': 'client-failed', 'script-failed': 'client-failed', 'host-failed': 'host-failed', loading: 'environment-timeout' };
-      const result = checkRuntimePage(page, url, { candidate: 'fixture', timeoutMs: 1800 });
+      const result = checkRuntimePage(page, url, { candidate: 'fixture', timeoutMs: name === 'vanishing' ? 3000 : 1800 });
       if (codes[name]) await assert.rejects(result, { code: codes[name] });
       else { await result; assert.equal(await page.getByRole('dialog', { name: /^(设置|Settings)$/ }).isVisible(), true); }
     } finally { await page.close(); }

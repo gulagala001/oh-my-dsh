@@ -133,7 +133,9 @@ for (const omaa of [false, true]) test('successful handoff preserves native sett
   });
   await drafts.copySettings('from', 'to');
   assert.deepEqual(calls, [['to', omaa ? 'omaa-test' : 'oh-my-dsh'], { sessionId: 'to', provider: 'synthetic', model: 'local', reasoningEffort: 'high' }]);
-  assert.equal(requests.length, omaa ? 1 : 3);
+  assert.equal(requests.length, omaa ? 2 : 4);
   assert.ok(requests.every(request => request.signal === drafts.lifetime.signal));
-  if (!omaa) assert.deepEqual(JSON.parse(requests[2].body), { provider: 'synthetic', model: 'local', mode: 'off', submode: 'team', expectedRevision: 7 });
+  assert.equal(requests[0].url, 'oh-my-dsh/api/draft-preferences');
+  assert.deepEqual(JSON.parse(requests[0].body), { sourceSessionId: 'from', targetSessionId: 'to', requestId: 'to' });
+  if (!omaa) assert.deepEqual(JSON.parse(requests[3].body), { provider: 'synthetic', model: 'local', mode: 'off', submode: 'team', expectedRevision: 7 });
 });

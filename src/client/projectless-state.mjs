@@ -210,6 +210,15 @@ export class ProjectlessDrafts {
     const selected = model?.next ?? model?.lastUsed;
     if (selected) checked(await this.ctx.remote.session.selectModel({ sessionId: to, ...selected }));
     signal.throwIfAborted();
+    const preferences = await fetch('oh-my-dsh/api/draft-preferences', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
+      body: JSON.stringify({ sourceSessionId: from, targetSessionId: to, requestId: this.drafts[from]?.requestId ?? to }),
+    });
+    if (!preferences.ok) {
+      const error = await preferences.json().catch(() => ({}));
+      throw Error(error.error || '无法保留会话人设与偏好；草稿已保留');
+    }
+    signal.throwIfAborted();
     if (preset?.startsWith('omaa-')) {
       const transferred = await fetch('omaa/api/session-transfer', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,

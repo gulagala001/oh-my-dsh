@@ -24,8 +24,15 @@ export async function finishOnboarding(page, timeoutMs = 12000) {
     let acted = false;
     for (const action of actions) {
       const visible = action.filter({ visible: true }).first();
-      if (!await visible.isVisible()) continue;
-      await visible.click({ timeout: Math.max(1, Math.min(1500, deadline - Date.now())) });
+      try {
+        if (!await visible.isVisible() || !await visible.isEnabled({ timeout: 250 })) continue;
+        await visible.click({ timeout: Math.max(1, Math.min(1500, deadline - Date.now())) });
+      }
+      catch (error) {
+        // The host can finish onboarding or replace its dialog while a click
+        // waits for stability. Re-observe within the overall readiness budget.
+        if (error.name !== 'TimeoutError' || page.isClosed()) throw error;
+      }
       acted = true; break;
     }
     // Visibility alone also matches the composer behind an inert modal. Test
