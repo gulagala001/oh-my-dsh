@@ -150,7 +150,9 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         if (closed || !eligible || request.signal.aborted || generations.get(chainKey) !== generation
             || output?.status !== 'completed') return;
         if (typeof output.id !== 'string' || !output.id || output.id.length > 262144 || output.store !== true || !Array.isArray(output.output)) {
-          capability(scope, meta, 'unsupported', 'normal-response-not-stored'); return;
+          // One unstored response cannot establish a chain, but it does not
+          // reject storage for later requests or invalidate other chains.
+          capability(scope, meta, 'unconfirmed', 'normal-response-not-stored'); return;
         }
         chains.set(chainKey, { id: output.id, prefix: [...inputHashes, ...hashes(output.output)], expiresAt: now() + vendor.chainTtl });
         capability(scope, meta, useId && !fallback ? 'supported' : 'stored', useId && !fallback ? 'normal-continuation-accepted' : 'normal-response-storage-confirmed');
@@ -169,7 +171,10 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
             const payload = { ...originalBody, store: false };
             delete payload.previous_response_id;
             eligible = false;
-            capability(scope, meta, 'unsupported', why === 'unsupported' ? 'provider-rejected-state' : 'provider-rejected-id', why === 'unsupported' ? capabilityTtlMs : 3600000);
+            // A stale ID only invalidates this chain. Cache a negative
+            // capability solely when the provider explicitly rejects state.
+            capability(scope, meta, why === 'unsupported' ? 'unsupported' : 'unconfirmed',
+              why === 'unsupported' ? 'provider-rejected-state' : 'provider-rejected-id');
             row.sentItems = allInput.length; row.sentBytes = Buffer.byteLength(JSON.stringify(payload));
             const retryHeaders = new Headers(headers); retryHeaders.delete('content-length');
             response = await send(payload, retryHeaders);
