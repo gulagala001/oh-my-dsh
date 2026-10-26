@@ -243,6 +243,9 @@ export async function scenario({ root, directory, name, phase, size = 1200, brow
     // A fresh immutable evidence ID and appended execution receipts vary by run. Keep all
     // actual file/search values; only the known source prefix/cursor depend on receipt count.
     delete recalled.nextCursor; delete recalled.through;
-    return normalize({ ...values, recall: recalled });
+    const archived = await service.evidence.text(await service.evidence.meta(values.ast.rawRef), signal);
+    assert.equal(hash(archived), values.ast.sourceHash);
+    const canonicalArchiveHash = hash(normalize(JSON.parse(archived)));
+    return normalize({ ...values, ast: { ...values.ast, sourceHash: canonicalArchiveHash }, recall: recalled });
   }, cancel: null, async close() { service.release(); await service.settled(); await ctx.fiber.dispose(); } };
 }

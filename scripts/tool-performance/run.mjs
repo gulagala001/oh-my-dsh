@@ -52,7 +52,7 @@ const report = { schemaVersion: 1, kind: 'omd-tool-performance', source: { root:
     firstStageResult: 'First completed named phase, not streamed model-visible output. Non-streaming tool-visible first result equals total.',
     stages: 'Nested inclusive spans; do not sum into total.', cpu: 'process.cpuUsage includes worker threads; descendant subprocess/browser CPU is unavailable (null).',
     memory: 'process resourceUsage high-water includes setup. Tree RSS is sampled every ~25ms; fast peaks/short-lived children can be missed, shared memory may be counted more than once.',
-    equivalence: 'Full AST/article/search/MCP/image JSON hashes. Workflow normalizes workspace path, random evidence refs and receipt-dependent original-search through/cursor. System/state cases hash explicitly asserted semantic fields, not volatile IDs/timestamps/versions.',
+    equivalence: 'Full AST/article/search/MCP/image JSON hashes. Workflow normalizes workspace path, random evidence refs and receipt-dependent original-search through/cursor. AST archive hashes are verified against exact bytes, then recomputed with normalized paths. System/state cases hash explicitly asserted semantic fields, not volatile IDs/timestamps/versions.',
     unsupported: ['No external models, GUI or working DSH; detailed family limitations are in coverage.'], percentiles: 'Nearest-rank; small-sample p95 is descriptive only.' } };
 try {
   for (const name of options.cases) {
