@@ -8,7 +8,9 @@ Automatic ID continuation for Responses API providers. Reuse server-stored conte
 
 - Enabled when loaded; runs entirely in the backend.
 - Uses ordinary response receipts, with no provider allowlist or probe messages.
-- Sends full context when history changes or continuation is unavailable.
+- Keeps usable continuation histories for main requests, background work and concurrent branches.
+- Rebuilds continuation through ordinary requests after temporary storage misses.
+- Replaces an expired ID during the full-context fallback and matches reusable history prefixes exactly.
 - Restores native behavior when disabled or uninstalled.
 
 ## Install
@@ -18,10 +20,10 @@ Automatic ID continuation for Responses API providers. Reuse server-stored conte
 Paste this URL into **Plugins → Add plugin**:
 
 ```text
-https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.1-dsh.0.2.1-rc.3/gulagala001-dsh-response-id-reuse-0.1.1-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.2-dsh.0.2.1-rc.3/gulagala001-dsh-response-id-reuse-0.1.2-dsh.0.2.1-rc.3.tgz
 ```
 
-[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.1-dsh.0.2.1-rc.3/SHA256SUMS)
+[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.2-dsh.0.2.1-rc.3/SHA256SUMS)
 
 ## Uninstall
 

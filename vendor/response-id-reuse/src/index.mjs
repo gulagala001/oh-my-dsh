@@ -45,4 +45,4 @@ export async function install(ctx) {
 }
 
 export const apply = (ctx, config = {}) => config.enabled === false ? undefined
-  : acquireShared(ctx, 'transport', { name: 'dsh-response-id-reuse-runtime', inject, apply: install });
+  : acquireShared(ctx, 'transport', { name: 'dsh-response-id-reuse-runtime', runtimeRevision: 2, inject, apply: install });

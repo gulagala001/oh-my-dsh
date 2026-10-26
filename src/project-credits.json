@@ -498,8 +498,8 @@
       "source": "vendor/response-id-reuse/package.json",
       "license": "MIT",
       "notice": "vendor/response-id-reuse/LICENSE",
-      "version": "0.1.1-dsh.0.2.1-rc.3",
-      "sourceSha256": "1205deb51cd3da0de44250f661c1c0872a3c15f54070761475216c06b64207af",
+      "version": "0.1.2-dsh.0.2.1-rc.3",
+      "sourceSha256": "193b4cabdba8afea057458a983325b58798b9a8dcafd626e6e3bcb7c19e9eb71",
       "group": "products"
     },
     {

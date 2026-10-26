@@ -8,6 +8,7 @@ function sort(value) {
   return value;
 }
 function normalized(item) {
+  if (!item || typeof item !== 'object') return item;
   if (item.role) return { role: item.role, ...(item.phase === undefined ? {} : { phase: item.phase }), content: typeof item.content === 'string'
     ? [{ type: 'text', text: item.content }]
     : (item.content ?? []).map(b => ['text', 'input_text', 'output_text'].includes(b.type) ? { type: 'text', text: b.text ?? '' } : b) };
@@ -15,7 +16,8 @@ function normalized(item) {
     text: (item.content?.length ? item.content : item.summary ?? []).map(b => b.text ?? '').join('') };
   if (item.type === 'function_call') {
     let args = item.arguments; try { args = JSON.parse(args); } catch {}
-    return { type: item.type, call_id: item.call_id, name: item.name, arguments: args };
+    return { type: item.type, call_id: item.call_id, name: item.name,
+      ...(item.namespace === undefined ? {} : { namespace: item.namespace }), arguments: args };
   }
   const { id, status, ...rest } = item;
   return rest;
@@ -23,6 +25,17 @@ function normalized(item) {
 const hashes = items => items.map(x => sha(canonical(normalized(x))));
 const isPrefix = (all, prefix) => all.length > prefix.length && prefix.every((h, i) => all[i] === h);
 const textInput = text => [{ role: 'user', content: [{ type: 'input_text', text }] }];
+function inputKinds(input) {
+  const kinds = new Set();
+  const visit = value => {
+    if (Array.isArray(value)) { for (const item of value) visit(item); return; }
+    if (!value || typeof value !== 'object') return;
+    if (['input_image', 'input_file', 'input_audio', 'audio'].includes(value.type)) kinds.add(value.type);
+    if (Array.isArray(value.content)) visit(value.content);
+    if (Array.isArray(value.output)) visit(value.output);
+  };
+  visit(input); return [...kinds].sort();
+}
 function policy(url) {
   const host = new URL(url).hostname;
   const bailian = host === 'cn-beijing.maas.qianwenaiapi.com' || host.endsWith('.maas.aliyuncs.com');
@@ -47,9 +60,8 @@ function rejection(status, error) {
 export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
   capabilityTtlMs = 86400000 } = {}) {
   const capabilities = new Map(), chains = new Map();
-  const active = new Map(), generations = new Map();
   const stats = { requests: 0, full: 0, continued: 0, fallbacks: 0, probeRequests: 0, last: null };
-  let closed = false, serial = 0;
+  let closed = false;
   const prune = (map, limit) => {
     for (const [key, entry] of map) if (entry.expiresAt <= now()) map.delete(key);
     while (map.size > limit) map.delete(map.keys().next().value);
@@ -64,10 +76,6 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
   const capability = (scope, meta, state, reason, ttl = capabilityTtlMs) => {
     capabilities.set(scope, { provider: meta.provider, model: meta.model, state, reason,
       checkedAt: now(), expiresAt: now() + ttl }); persist();
-  };
-  const release = (chainKey, generation) => {
-    if (active.get(chainKey) === generation) active.delete(chainKey);
-    if (generations.get(chainKey) === generation) generations.delete(chainKey);
   };
   function observe(response, commit, finish, onPartial) {
     const headers = new Headers(response.headers); headers.delete('content-length');
@@ -107,8 +115,8 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       if (closed) return baseFetch(input, init);
       const request = new Request(input instanceof Request ? input.clone() : input, init), url = request.url;
       if (request.method !== 'POST' || !new URL(url).pathname.endsWith('/responses')) return baseFetch(input, init);
-      let body;
-      try { body = JSON.parse(await request.clone().text()); } catch { return baseFetch(input, init); }
+      let body, originalText;
+      try { originalText = await request.clone().text(); body = JSON.parse(originalText); } catch { return baseFetch(input, init); }
       const headers = new Headers(request.headers);
       if (!body || body.model !== meta.model || body.previous_response_id || body.conversation || body.background
         || privateOnly(headers)) return baseFetch(input, init);
@@ -119,65 +127,80 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       if (typeof body.input === 'string') body.input = textInput(body.input);
       if (!Array.isArray(body.input) || body.input.length > 8192) return baseFetch(input, init);
       const scope = sha(canonical({ url, provider: meta.provider, model: body.model, headers: identityHeaders(headers) }));
-      const checked = capabilities.get(scope);
+      const { input: allInput, stream: _stream, store: _store, prompt_cache_key: _key, ...parameters } = body;
+      // Gate only the request shape that was explicitly rejected. Text-only
+      // helpers and image histories can reach different storage implementations.
+      const capabilityKey = sha(canonical({ scope, parameters, kinds: inputKinds(allInput) }));
+      const checked = capabilities.get(capabilityKey);
       const disabled = checked?.expiresAt > now() && checked.state === 'unsupported';
       stats.requests++;
       if (disabled) {
         stats.full++;
         const response = await baseFetch(input, init);
         stats.last = { provider: meta.provider, model: meta.model, mode: 'full', reason: checked.reason,
-          inputItems: body.input.length, inputBytes: Buffer.byteLength(JSON.stringify(body)) };
+          inputItems: body.input.length, inputBytes: Buffer.byteLength(originalText) };
         persist(); return response;
       }
       const vendor = policy(url);
-      const { input: allInput, stream: _stream, store: _store, prompt_cache_key: _key, ...parameters } = body;
       const chainKey = sha(canonical({ scope, session, parameters }));
-      const generation = ++serial; generations.set(chainKey, generation);
-      const prior = chains.get(chainKey);
       const inputHashes = hashes(allInput);
-      const useId = !active.has(chainKey) && prior?.expiresAt > now() && isPrefix(inputHashes, prior.prefix);
-      active.set(chainKey, generation); chains.delete(chainKey);
+      persist();
+      let prior, priorKey;
+      for (const [key, candidate] of chains) {
+        if (candidate.chainKey === chainKey && (!prior || candidate.prefix.length >= prior.prefix.length)
+            && isPrefix(inputHashes, candidate.prefix)) { prior = candidate; priorKey = key; }
+      }
+      const useId = Boolean(prior);
+      // Reserve only the selected ID before the next await. Independent or
+      // concurrent histories retain their candidates; no ID is sent twice.
+      if (priorKey) chains.delete(priorKey);
       const wire = { ...body, store: true, ...(useId ? { input: allInput.slice(prior.prefix.length), previous_response_id: prior.id } : {}) };
       if (vendor.cmd) delete wire.prompt_cache_key;
       const h = new Headers(headers); h.delete('content-length');
       if (vendor.bailian) h.set('x-dashscope-session-cache', 'enable');
+      const wireText = JSON.stringify(wire);
       const row = { provider: meta.provider, model: meta.model, mode: useId ? 'continued' : 'stored-full',
-        inputItems: allInput.length, sentItems: wire.input.length, inputBytes: Buffer.byteLength(JSON.stringify(body)),
-        sentBytes: Buffer.byteLength(JSON.stringify(wire)), fallback: null };
+        inputItems: allInput.length, sentItems: wire.input.length, inputBytes: Buffer.byteLength(originalText),
+        sentBytes: Buffer.byteLength(wireText), fallback: null };
       let eligible = true, fallback = false;
-      const finish = () => { release(chainKey, generation); stats.last = row; persist(); };
+      const finish = () => { stats.last = row; persist(); };
       const commit = output => {
-        if (closed || !eligible || request.signal.aborted || generations.get(chainKey) !== generation
+        if (closed || !eligible || request.signal.aborted || row.committed
             || output?.status !== 'completed') return;
         if (typeof output.id !== 'string' || !output.id || output.id.length > 262144 || output.store !== true || !Array.isArray(output.output)) {
           // One unstored response cannot establish a chain, but it does not
           // reject storage for later requests or invalidate other chains.
-          capability(scope, meta, 'unconfirmed', 'normal-response-not-stored'); return;
+          capability(capabilityKey, meta, 'unconfirmed', 'normal-response-not-stored'); return;
         }
-        chains.set(chainKey, { id: output.id, prefix: [...inputHashes, ...hashes(output.output)], expiresAt: now() + vendor.chainTtl });
-        capability(scope, meta, useId && !fallback ? 'supported' : 'stored', useId && !fallback ? 'normal-continuation-accepted' : 'normal-response-storage-confirmed');
+        const prefix = [...inputHashes, ...hashes(output.output)];
+        const candidateKey = chainKey + ':' + sha(prefix.join(':'));
+        chains.delete(candidateKey);
+        chains.set(candidateKey, { chainKey, id: output.id, prefix, expiresAt: now() + vendor.chainTtl });
+        capability(capabilityKey, meta, useId && !fallback ? 'supported' : 'stored', useId && !fallback ? 'normal-continuation-accepted' : 'normal-response-storage-confirmed');
         row.committed = true; persist();
       };
-      const send = (payload, outgoingHeaders) => baseFetch(new Request(request, { headers: outgoingHeaders,
-        body: JSON.stringify(payload), redirect: 'error' }));
+      const send = (text, outgoingHeaders) => baseFetch(new Request(request, { headers: outgoingHeaders,
+        body: text, redirect: 'error' }));
       try {
-        let response = await send(wire, h);
+        let response = await send(wireText, h);
         if (!response.ok) {
           let error; try { error = await response.clone().json(); } catch {}
           const why = rejection(response.status, error);
           if (why && (useId || why === 'unsupported')) {
             await response.body?.cancel();
             fallback = true; row.fallback = why; row.mode = 'full-fallback'; stats.fallbacks++;
-            const payload = { ...originalBody, store: false };
+            const payload = { ...originalBody, store: why === 'invalid-id' };
             delete payload.previous_response_id;
-            eligible = false;
+            eligible = why === 'invalid-id';
             // A stale ID only invalidates this chain. Cache a negative
             // capability solely when the provider explicitly rejects state.
-            capability(scope, meta, why === 'unsupported' ? 'unsupported' : 'unconfirmed',
+            capability(capabilityKey, meta, why === 'unsupported' ? 'unsupported' : 'unconfirmed',
               why === 'unsupported' ? 'provider-rejected-state' : 'provider-rejected-id');
-            row.sentItems = allInput.length; row.sentBytes = Buffer.byteLength(JSON.stringify(payload));
-            const retryHeaders = new Headers(headers); retryHeaders.delete('content-length');
-            response = await send(payload, retryHeaders);
+            if (eligible && vendor.cmd) delete payload.prompt_cache_key;
+            const fallbackText = JSON.stringify(payload);
+            row.sentItems = allInput.length; row.sentBytes = Buffer.byteLength(fallbackText);
+            const retryHeaders = eligible ? h : new Headers(headers); retryHeaders.delete('content-length');
+            response = await send(fallbackText, retryHeaders);
           }
         }
         row.status = response.status;
@@ -191,7 +214,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
   return { fetchFor, inspect,
     async flush() {},
     async close() {
-      closed = true; capabilities.clear(); chains.clear(); active.clear(); generations.clear();
+      closed = true; capabilities.clear(); chains.clear();
     },
   };
 }
