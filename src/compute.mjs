@@ -6,13 +6,13 @@ const pending = [];
 let worker, current, idle, generation = 0, nextId = 0, stopping;
 function finish(item, error, value) {
   item.signal?.removeEventListener('abort', item.abort);
-  if (error) item.reject(error); else item.resolve(value);
+  if (error !== undefined) item.reject(error); else item.resolve(value);
 }
 function retire(reason) {
   clearTimeout(idle);
   const retired = worker; worker = undefined; generation++;
   if (current) { const item = current; current = undefined; finish(item, reason); }
-  if (!retired) return Promise.resolve();
+  if (!retired) return stopping ?? Promise.resolve();
   const done = retired.terminate().then(() => undefined);
   stopping = done;
   done.finally(() => { if (stopping === done) stopping = undefined; drain(); });

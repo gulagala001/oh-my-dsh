@@ -21,6 +21,10 @@ test('large pure computations preserve parser output and release a cancelled wor
     aborter.abort(reason);
     await assert.rejects(pending, error => error === reason);
     assert.equal((await structuralSearch(text, 'javascript', 'console.log($A)')).matches.length, 2000);
+    const zero = new AbortController();
+    const cancelled = structuralSearch(text, 'javascript', 'console.log($A)', zero.signal);
+    zero.abort(0);
+    await assert.rejects(cancelled, error => error === 0);
   } finally { await closeToolComputations(); }
 });
 
