@@ -875,6 +875,7 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
         return { ...r, documentCount: documents.length, assetCount: assets.length, originalEventCount: (originalSeqs || sourceSeqs).length, live: Boolean(spans.get(record)) };
       }) }),
       backlog: backlogView(session, s, cfg, index, spans), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
+      prepareProgress: { current: s.eventsSincePrepare || 0, target: cfg.digestEvery, initial: !s.records.length, enabled: cfg.contextEnabled },
       memoryCache: { ...s.memoryCache, enabled: cfg.memoryCacheEnabled },
       limits: { batchWindows: cfg.prepareBatchWindows, concurrency: cfg.backgroundConcurrency, continueTokens: cfg.prepareContinueTokens },
       failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > cfg.backgroundMaxRetries ? kind === 'prepare' && s.failures[kind].validation ? 'waiting-events' : 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,

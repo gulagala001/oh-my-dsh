@@ -7,27 +7,40 @@ import { OptimizationCard } from '../context-evidence.jsx';
 const MODE = { raw: ['原文', 'gray'], detail: ['摘要＋资料', 'blue'], brief: ['仅摘要', 'green'] };
 const CHOICE = { keep: '保留原文', detail: '摘要＋资料', brief: '仅摘要' };
 const retryText = r => ({ 'waiting-main': '等待主会话成功后恢复', 'waiting-events': '等待新增事件后重试', manual: '重试已暂停', retrying: '等待自动重试' })[r];
-const preparationWait = deferred => !deferred ? null : deferred.reason === 'first-window-budget'
+const preparationWait = (deferred, minimumTokens) => !deferred ? null : deferred.reason === 'input-budget'
+  ? deferred.message || '完整请求超过输入预算，等待调整预算'
+  : deferred.reason === 'first-window-budget'
   ? `首批有效内容 ${deferred.events}/${deferred.minimumEvents} 条 · 输入预算不足，请提高预算或手动准备`
   : deferred.reason === 'first-window' ? `首批有效内容 ${deferred.events}/${deferred.minimumEvents} 条 · 等待积累`
-    : `未达到最低文本量：${deferred.events} 条、≈${k(deferred.estimatedTokens)}`;
+    : `有效内容 ≈${k(deferred.estimatedTokens)}${minimumTokens ? `/${k(minimumTokens)}` : ''} tokens · 等待达到最低文本量`;
+
+function preparationStep(c) {
+  const progress = c.prepareProgress, failure = c.failures?.prepare;
+  const cadenceWait = progress && !progress.initial && progress.current < progress.target
+    ? `本轮新增 ${progress.current}/${progress.target} 条 · 还差 ${progress.target - progress.current} 条` : null;
+  const waiting = c.manualOperation || c.transactionPending ? '等待当前整理完成'
+    : progress?.enabled === false ? '自动预处理已关闭'
+      : c.memoryCache?.enabled && c.memoryCache.waitingReason || preparationWait(c.prepareDeferred, c.limits?.continueTokens) || cadenceWait;
+  return { key: 'prepare', title: '预处理', running: c.preparing, tone: c.preparing ? 'blue' : failure ? 'red' : 'gray',
+    text: c.preparing ? '正在生成摘要' : failure ? `${retryText(c.retry?.prepare) || '失败'}：${failure.message}`
+      : waiting || (c.backlog?.events ? '等待可整理的完整片段' : '等待新内容'),
+    detail: `待处理总量 ${c.backlog?.events ?? 0} 条 · ≈${k(c.backlog?.estimatedTokens)}` };
+}
 
 /** Pipeline lights shared by the overview, this section and the dock popover. */
 export function pipelineSteps(c) {
+  const preparation = preparationStep(c);
   if (c.bc?.backend === 'bc') return [
-    { key: 'prepare', title: '资料准备', running: c.preparing, tone: c.failures?.prepare ? 'red' : 'blue', text: c.preparing ? '正在归档' : c.failures?.prepare?.message || '保留事实、用户原话与资料' },
+    { ...preparation, title: '资料准备', ...(c.preparing ? { text: '正在归档' } : {}) },
     { key: 'archive', title: '档案', tone: 'green', text: `${c.records?.length ?? c.recordCount ?? 0} 段 · Dream 与回查可用` },
     { key: 'bc', title: 'BC 压缩', tone: c.bc.error ? 'red' : 'green', text: c.bc.error || (c.bc.pendingBackend ? '等待切换' : '由 Billion Context 管理') },
   ];
   const adaptive = c.compressionMode === 'adaptive', a = c.adaptive || {};
-  const prepareError = c.failures?.prepare, coordError = c.failures?.coordinate;
-  const cacheWait = c.memoryCache?.enabled && c.memoryCache.waitingReason;
-  const materialWait = preparationWait(c.prepareDeferred);
+  const coordError = c.failures?.coordinate;
   const first = adaptive
     ? { key: 'check', title: '主动检查', running: a.running, tone: a.running ? 'blue' : a.error ? 'red' : 'green',
       text: a.running ? '正在判断' : a.error ? `失败：${a.error}` : a.waitingReason || (a.lastDecision === 'skip' ? `保留 · ${a.reason || ''}` : a.lastDecision === 'compress' ? '已准备替换' : '等待新内容') }
-    : { key: 'prepare', title: '预处理', running: c.preparing, tone: c.preparing ? 'blue' : prepareError ? 'red' : cacheWait || materialWait ? 'gray' : 'green',
-      text: c.preparing ? '正在生成摘要' : prepareError ? `${retryText(c.retry?.prepare) || '失败'}：${prepareError.message}` : cacheWait || materialWait || `待处理 ${c.backlog?.events ?? 0} 条 · ≈${k(c.backlog?.estimatedTokens)}` };
+    : preparation;
   const second = adaptive
     ? { key: 'plan', title: '替换方案', tone: c.pending ? 'green' : 'gray', text: c.pending ? '结果已准备' : a.lastDecision === 'stale' ? '结果已过期' : '等待整理结果' }
     : { key: 'hub', title: '中枢', running: c.coordinating, tone: c.coordinating ? 'blue' : coordError ? 'red' : c.pending ? 'green' : 'gray',
@@ -114,7 +127,7 @@ export function ContextSection({ sessionId, visible, go, params }) {
           <Button kind="primary" icon="check" busy={action.busy === '/compact'} disabled={locked}
             onClick={() => s('/compact', {}, r => r.queued ? '已排队，下一次请求边界应用' : r.changed ? '替换已应用，原文仍在日志中' : '没有可应用的结果')}>应用</Button>
         </div> : pending?.error ? <Alert tone="warn">已准备的方案暂不可用：{pending.error}</Alert> : null}
-        {c.prepareDeferred && <p className="omc-hint">{preparationWait(c.prepareDeferred)}。</p>}
+        {c.prepareDeferred && <p className="omc-hint">{preparationWait(c.prepareDeferred, c.limits?.continueTokens)}。</p>}
         {c.manualQueued > 0 && <p className="omc-hint">{c.manualQueued} 项压缩等待请求边界。</p>}
       </Card>
     </div>

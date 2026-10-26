@@ -237,7 +237,7 @@ export function KV({ rows }) {
 
 export function Steps({ steps }) {
   return <ol className="omc-steps">{steps.map(s => <li key={s.key} className={cx(`omc-step-${s.tone || 'gray'}`)}>
-    <Dot tone={s.tone} pulse={s.running}/><div><strong>{s.title}</strong><span>{s.text}</span></div>
+    <Dot tone={s.tone} pulse={s.running}/><div><strong>{s.title}</strong><span>{s.text}</span>{s.detail && <span>{s.detail}</span>}</div>
   </li>)}</ol>;
 }
 
