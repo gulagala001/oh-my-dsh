@@ -14,6 +14,8 @@ test('large pure computations preserve parser output and release a cancelled wor
     assert.deepEqual(await structuralSearch(text, 'javascript', 'console.log($A)'), await directSearch(text, 'javascript', 'console.log($A)'));
     const html = '<html><title>Source</title><article>' + '<p>Complete original article with clear meaningful paragraphs.</p>'.repeat(1000) + '</article></html>';
     assert.deepEqual(await articleView(html), await directArticle(html));
+    const small = '<html><article><p>' + 'Complete source paragraph. '.repeat(20) + '</p></article></html>';
+    assert.deepEqual(await articleView(small), await directArticle(small));
     const aborter = new AbortController(), reason = Error('cancel pure computation');
     const pending = structuralSearch(text.repeat(30), 'javascript', 'console.log($A)', aborter.signal);
     aborter.abort(reason);

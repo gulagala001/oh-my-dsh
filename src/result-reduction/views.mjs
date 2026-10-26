@@ -4,7 +4,6 @@ import { hash } from './evidence.mjs';
 import { dataView } from './reducers.mjs';
 import { structuralSearch, languages } from './ast.mjs';
 import { compute } from '../compute.mjs';
-import { articleView as directArticleView } from './article.mjs';
 
 const fileObservations = new WeakMap();
 const output = { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] };
@@ -52,7 +51,9 @@ export async function fileSource(ctx, exec, path) {
 }
 export async function articleView(html, url = 'https://document.invalid/', signal) {
   signal?.throwIfAborted();
-  const result = html.length < 32 * 1024 ? await directArticleView(html, url) : await compute('article', { html, url }, signal);
+  // Keep the DOM dependency in its own Node realm, including small pages.
+  // Desktop profile module routing does not support all of jsdom's CJS probes.
+  const result = await compute('article', { html, url }, signal);
   signal?.throwIfAborted();
   return result;
 }

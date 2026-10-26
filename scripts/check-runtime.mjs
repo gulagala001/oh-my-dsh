@@ -3,6 +3,7 @@ import { realpathSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inspect } from 'node:util';
+import { Worker } from 'node:worker_threads';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const failure = error => inspect(error, { depth: 5, colors: false });
@@ -48,12 +49,34 @@ export async function checkNativeDependencies(directory, { portable = false } = 
   return { checks, errors };
 }
 
+async function checkArticleWorker(directory) {
+  // Exercise the same isolated module realm used by the installed parser. The
+  // Desktop profile resolver and jsdom's CJS probes are not interchangeable.
+  const worker = new Worker(pathToFileURL(join(directory, 'src/compute-worker.mjs')), { execArgv: [] });
+  try {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(Error('Article worker dependency check timed out')), 10000);
+      const finish = error => { clearTimeout(timer); if (error) reject(error); else resolve(); };
+      worker.once('error', finish);
+      worker.once('exit', code => finish(Error(`Article dependency worker exited (${code})`)));
+      worker.once('message', reply => finish(reply.error ? Error(reply.error.message)
+        : reply.id === 1 && reply.value?.text?.includes('Runtime dependency fixture') ? undefined : Error('Article worker returned an invalid result')));
+      worker.postMessage({ id: 1, operation: 'article', input: { html: '<html><article><p>' + 'Runtime dependency fixture with a complete paragraph. '.repeat(20) + '</p></article></html>', url: 'https://document.invalid/' } });
+    });
+  } finally { await worker.terminate(); }
+}
+
 export async function checkDeferredDependencies(directory, options = {}) {
   const checks = [], errors = [], require = createRequire(join(directory, 'package.json'));
-  for (const name of ['@modelcontextprotocol/client', '@modelcontextprotocol/client/stdio', '@deepseek-ai/dsh-mcp-client', 'playwright', 'ws', '@mozilla/readability', 'jsdom']) {
+  for (const name of ['@modelcontextprotocol/client', '@modelcontextprotocol/client/stdio', '@deepseek-ai/dsh-mcp-client', 'playwright', 'ws']) {
     try { await import(pathToFileURL(dependencyPath(directory, require.resolve(name), options.portable)).href); checks.push(name); }
     catch (error) { errors.push(`${name}: ${failure(error)}`); }
   }
+  try {
+    for (const name of ['@mozilla/readability', 'jsdom']) dependencyPath(directory, require.resolve(name), options.portable);
+    await checkArticleWorker(directory);
+    checks.push('@mozilla/readability', 'jsdom', 'article-worker');
+  } catch (error) { errors.push(`article-worker: ${failure(error)}`); }
   const native = await checkNativeDependencies(directory, options);
   checks.push(...native.checks); errors.push(...native.errors);
   return { checks, errors };
