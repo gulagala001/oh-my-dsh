@@ -201,11 +201,11 @@ test('receipt costs keep arbitrary callbacks live, recover after failure and bou
 
 test('receipt cost scans stream positional rows with independent complete callback values', t => {
   const { ledger, append, read, now } = fixture(t);
-  const usage = { inputTokens: 1.25, outputTokens: 2.5, cacheReadTokens: 0, cacheWriteTokens: 3.75,
-    reasoningTokens: 0.5, totalTokens: 7.5 };
+  const usage = { inputTokens: 5, outputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 15,
+    reasoningTokens: 2, totalTokens: 30 };
   append('complete', now - 1, { provider: 'provider-中文', model: 'model-🙂', usage });
   append('missing', now - 2, { provider: null, model: null, usage: null });
-  append('partial', now - 3, { usage: { outputTokens: 0, totalTokens: 2 ** 53 } });
+  append('partial', now - 3, { usage: { outputTokens: 0, totalTokens: Number.MAX_SAFE_INTEGER } });
   const prepare = ledger.db.prepare.bind(ledger.db);
   let arrayScans = 0, callbacks = [], allowArrays = true;
   ledger.db.prepare = sql => {
@@ -223,7 +223,7 @@ test('receipt cost scans stream positional rows with independent complete callba
   assert.deepEqual(callbacks, [
     { provider: 'provider-中文', model: 'model-🙂', usage },
     { provider: null, model: null, usage: {} },
-    { provider: 'fixture', model: 'fixture', usage: { outputTokens: 0, totalTokens: 2 ** 53 } },
+    { provider: 'fixture', model: 'fixture', usage: { outputTokens: 0, totalTokens: Number.MAX_SAFE_INTEGER } },
   ]);
   assert.equal(new Set(callbacks).size, 3); assert.equal(new Set(callbacks.map(call => call.usage)).size, 3);
   assert.equal(result.costSummary.totals[0].amount, 0.1 + 0.2 + 0.3);

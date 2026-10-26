@@ -1,5 +1,5 @@
 import { hash, activeRecords, createSurfaceIndex, liveSpan, prepareCandidate, candidateInput, decodeResult, validatePrepared, newRecord, backlogView } from './core.mjs';
-import { serializePreparationInput } from './input-budget.mjs';
+import { preparationRequest, preparationEvents } from './input-budget.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL } from './prompts.mjs';
 import { decodeCachedPreparation } from './cached-preparation.mjs';
 
@@ -25,7 +25,8 @@ export class AutoCompaction {
       if (job) void job.then(restart, restart); else restart();
     }
   }
-  used(session) { return this.pipeline.hub.ctx.tokenMeter?.measure(session)?.totalTokens ?? 0; }
+  threshold(session, cfg = this.pipeline.config()) { return Math.min(cfg.autoCompactThreshold, this.pipeline.adapter.safetyThreshold?.(session) ?? Infinity); }
+  used(session) { return this.pipeline.adapter.measureContext?.(session)?.totalTokens ?? this.pipeline.hub.ctx.tokenMeter?.measure(session)?.totalTokens ?? 0; }
   fingerprint(session, state, cfg) {
     return hash([session.surface.nodes, state.records.map(r => [r.id, r.version, r.mode, r.mergedInto]), cfg.autoCompactThreshold, cfg.autoCompactMode,
       cfg.memoryCacheEnabled, cfg.memoryCacheEnabled ? this.pipeline.cachedPreparation.version(session) : null]);
@@ -53,7 +54,7 @@ export class AutoCompaction {
     }
     if (signal?.aborted || p.manualSessions.has(id)) return Promise.resolve(null);
     const s = p.state(session);
-    if (s.transaction || s.manualQueue.length || this.used(session) < cfg.autoCompactThreshold) return Promise.resolve(null);
+    if (s.transaction || s.manualQueue.length || this.used(session) < this.threshold(session,cfg)) return Promise.resolve(null);
     if (s.autoCompact?.lastKey === this.fingerprint(session, s, cfg)) return Promise.resolve(null);
     const startedKey = this.fingerprint(session, s, cfg);
     let checkedKey;
@@ -75,7 +76,7 @@ export class AutoCompaction {
       for (const kind of ['prepare', 'coordinate', 'adaptive']) p.controllers.get(id + ':' + kind)?.abort(Error('Auto Compact 已接管本次整理'));
       await Promise.allSettled(['prepare', 'coordinate', 'adaptive'].map(kind => p.jobs.get(id + ':' + kind)).filter(Boolean));
       current();
-      if (this.used(session) < cfg.autoCompactThreshold) return null;
+      if (this.used(session) < this.threshold(session,cfg)) return null;
       s.pending = null;
       if (resumeReview) s.review.needed = true;
       s.autoCompact = { ...s.autoCompact, lastAt: Date.now(), mode: cfg.autoCompactMode, threshold: cfg.autoCompactThreshold, beforeTokens: this.used(session), error: null };
@@ -96,20 +97,17 @@ export class AutoCompaction {
           if (applied) result = applied;
         }
         current();
-        if (this.used(session) < cfg.autoCompactThreshold) break;
-        const events = prepareCandidate(session, s, preparation, p.adapter.pairing);
+        if (this.used(session) < this.threshold(session,cfg)) break;
+        const events = preparationEvents(p, agent, s, preparation);
         if (!events) break;
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
         const cached = cfg.memoryCacheEnabled ? p.cachedPreparation.build(agent, events, inputs) : null;
-        if (cfg.memoryCacheEnabled && !cached) break;
+        // Cache reuse may improve cost, but cannot block a safety compression.
         let reply;
         if (cached) reply = await p.cachedPreparation.call(agent, cached, controller, activeSignal);
         else {
-          const encoded = serializePreparationInput(inputs, cfg.prepareInputTokens * 4);
-          reply = await p.call(agent, 'prepare', { system: PREPARE_SYSTEM,
-            messages: [p.adapter.message(encoded, 'prepare-input')], tools: [PREPARE_TOOL],
-            ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) }, activeSignal);
+          reply = await p.call(agent, 'prepare', preparationRequest(p, agent, inputs, cfg), activeSignal);
         }
         current();
         const prepared = validatePrepared(cached ? decodeCachedPreparation(reply) : decodeResult(reply, PREPARE_TOOL.name), inputs.decision_sources);

@@ -88,7 +88,7 @@ export function registerContextViews(ctx, hub) {
         if (value.statusCode < 200 || value.statusCode >= 300 || typeof value.body?.content !== 'string') throw Error('网页未成功返回正文');
         source = { text: value.body.content, source: value.url, complete: !value.truncated };
       }
-      const maximum = count(args.maxChars, service.limit(exec.agent.session), 48000);
+      let maximum = count(args.maxChars, service.limit(exec.agent.session), 48000);
       if (maximum < 256) throw Error('maxChars 至少为 256');
       let view, partial = false;
       if (args.view === 'raw') view = source.text;
@@ -101,6 +101,7 @@ export function registerContextViews(ctx, hub) {
         const terms = args.query.toLowerCase().trim().split(/\s+/), lines = source.text.split('\n');
         view = lines.map((line, i) => ({ line, i })).filter(({ line }) => terms.some(term => line.toLowerCase().includes(term))).map(({ line, i }) => `${i + 1}: ${line}`).join('\n'); partial = true;
       } else throw Error('未知视图');
+      maximum=service.limit(exec.agent.session,maximum,view);
       exec.signal.throwIfAborted();
       const record = await service.archive(exec, source.text, 'view-' + args.view, source.complete);
       return service.finish(exec, JSON.stringify({ source: source.source, rawRef: record.ref, sourceHash: record.sourceHash, rawComplete: record.complete,
@@ -127,8 +128,8 @@ export function registerContextViews(ctx, hub) {
       const all = { language, pattern, files, totalMatches: matches.length, matches };
       const record = await hub.optimization.archive(exec, JSON.stringify(all), 'ast-search');
       let page = matches.slice(offset, offset + limit);
-      while (page.length > 1 && JSON.stringify(page).length > hub.optimization.limit(exec.agent.session)) page.pop();
-      if (page.length === 1 && page[0].text.length > hub.optimization.limit(exec.agent.session)) page = [{ ...page[0], text: page[0].text.slice(0, hub.optimization.limit(exec.agent.session)), partial: true, notice: 'Match text is a preview, not an editing basis. Read the full match from rawRef before editing.' }];
+      while (page.length > 1 && JSON.stringify(page).length > hub.optimization.limit(exec.agent.session,12000,JSON.stringify(page))) page.pop();
+      if (page.length === 1 && page[0].text.length > hub.optimization.limit(exec.agent.session,12000,page[0].text)) page = [{ ...page[0], text: page[0].text.slice(0, hub.optimization.limit(exec.agent.session,12000,page[0].text)), partial: true, notice: 'Match text is a preview, not an editing basis. Read the full match from rawRef before editing.' }];
       return hub.optimization.finish(exec, JSON.stringify({ language, pattern, files, totalMatches: matches.length, offset, matches: page,
         coverage: 'Only the explicitly selected files; parse failures are listed, never treated as no matches.',
         rawRef: record.ref, sourceHash: record.sourceHash, ...(offset + page.length < matches.length ? { nextOffset: offset + page.length } : {}) }));

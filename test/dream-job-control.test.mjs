@@ -27,7 +27,7 @@ async function fixture(t, { stream, now, close } = {}) {
         if (stream) for await (const chunk of stream(options, input, calls.length)) { finished ||= chunk.type === 'finish'; yield chunk; }
         else yield { type: 'tool-call-delta', index: 0, id: 'save', name: 'save_memory', argumentsDelta: JSON.stringify(reply(input)) };
         if (!finished) {
-          yield { type: 'usage', usage: { inputTokens: 11, outputTokens: 7 } };
+          yield { type: 'usage', usage: { inputTokens: 11, outputTokens: 7, totalTokens: 18 } };
           yield { type: 'finish', reason: { kind: 'stop' } };
         }
       } finally { active--; }

@@ -1,5 +1,6 @@
+import { usageReceipt } from '../metering/usage.mjs';
 export const kindNames = {
-  main: '主执行', subagent: '子代理', compactFull: '全量压缩', autoCompact: 'Auto Compact', prepare: '上下文预处理', coordinate: '中枢判断', adaptive: '主动异步整理',
+  nativeCompact: '原生安全压缩', main: '主执行', subagent: '子代理', compactFull: '全量压缩', autoCompact: 'Auto Compact', prepare: '上下文预处理', coordinate: '中枢判断', adaptive: '主动异步整理',
   dream: 'Dream', dreamSession: '会话记忆', dreamProject: '项目记忆', dreamGlobal: '全局记忆', promptOptimizer: '提示词优化',
   background: '记忆消化（历史）', recall: '记忆检索（历史）', state: '状态提炼（历史）', curation: '记忆整理（历史）', surgeon: '上下文整理（历史）', probeAsk: '探针出题（历史）', probeAnswer: '探针作答（历史）',
 };
@@ -11,13 +12,11 @@ export const compact = value => { if (!known(value)) return '—'; const n = val
 const inputBuckets = ['inputTokens', 'cacheReadTokens', 'cacheWriteTokens'];
 const sumKnown = (metric, keys) => keys.some(key => known(metric?.[key])) ? keys.reduce((sum, key) => sum + number(metric?.[key]), 0) : undefined;
 const exactInput = metric => Object.hasOwn(metric || {}, 'inputTotalTokens') ? known(metric.inputTotalTokens) ? metric.inputTotalTokens : undefined
-  : known(metric?.totalTokens) && known(metric?.outputTokens) && metric.totalTokens >= metric.outputTokens ? metric.totalTokens - metric.outputTokens
-  : inputBuckets.every(key => known(metric?.[key])) ? sumKnown(metric, inputBuckets) : undefined;
+  : usageReceipt(metric).inputTotalTokens ?? undefined;
 export const input = metric => Object.hasOwn(metric || {}, 'knownInputTokens') ? known(metric.knownInputTokens) ? metric.knownInputTokens : undefined
-  : exactInput(metric) ?? sumKnown(metric, inputBuckets);
+  : usageReceipt(metric).knownInputTokens ?? undefined;
 export const tokens = metric => Object.hasOwn(metric || {}, 'knownTotalTokens') ? known(metric.knownTotalTokens) ? metric.knownTotalTokens : undefined
-  : known(metric?.totalTokens) ? metric.totalTokens
-  : known(input(metric)) || known(metric?.outputTokens) ? number(input(metric)) + number(metric?.outputTokens) : undefined;
+  : usageReceipt(metric).knownTotalTokens ?? undefined;
 export const inputPartial = metric => number(metric?.inputUnreported) > 0 || !known(exactInput(metric));
 export const tokenPartial = metric => known(metric?.totalUnreported) ? metric.totalUnreported > 0 : number(metric?.unmetered) > 0
   || !known(metric?.totalTokens) && (inputPartial(metric) || !known(metric?.outputTokens));

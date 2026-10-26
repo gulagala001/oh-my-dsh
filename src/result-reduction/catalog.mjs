@@ -1,3 +1,4 @@
+import { estimateToolsTokens, estimateText } from '../metering/estimate.mjs';
 import { hash } from './evidence.mjs';
 const optional = name => /^mcp__/.test(name) && !/codegraph_explore$/.test(name) || /^opencu_/.test(name);
 export function installCatalog(ctx, hub) {
@@ -23,7 +24,7 @@ export function installCatalog(ctx, hub) {
     const tools = [...base, ...extras], admitted = new Set(tools.map(t => t.name));
     const hidden = assembly.tools.filter(t => !admitted.has(t.name));
     if (!hidden.length) return assembly;
-    hub.optimization.schemaSavings.set(hash(tools), Math.max(0, Math.floor((Buffer.byteLength(JSON.stringify(assembly.tools)) - Buffer.byteLength(JSON.stringify(tools)) - 400) / 3)));
+    hub.optimization.schemaSavings.set(hash(tools), Math.max(0, estimateToolsTokens(assembly) - estimateToolsTokens({ tools }) - estimateText(`${hidden.length} optional tools are discoverable with tool_find(query). Search by service name or task. Discovery returns exact current schemas; permissions and tool execution are unchanged.`)));
     if (hub.optimization.schemaSavings.size > 128) hub.optimization.schemaSavings.delete(hub.optimization.schemaSavings.keys().next().value);
     return { ...assembly, tools, sections: [...assembly.sections.filter(s => !s.name.startsWith('tool:') || !hidden.some(t => s.name === 'tool:' + t.name)),
       { name: 'omd:tool-discovery', order: 81, text: `${hidden.length} optional tools are discoverable with tool_find(query). Search by service name or task. Discovery returns exact current schemas; permissions and tool execution are unchanged.`, interpolate: false }] };

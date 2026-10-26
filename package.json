@@ -35,13 +35,14 @@
     "test:context": "node --test test/context-*.test.mjs",
     "simulate": "node scripts/simulate.mjs",
     "plugins:submissions": "node scripts/plugin-submissions.mjs",
-    "prepack": "npm run prompts:check && npm run docs:check && node scripts/check-public-files.mjs",
+    "prepack": "npm run metering:check && npm run prompts:check && npm run docs:check && node scripts/check-public-files.mjs",
     "prompts:check": "node scripts/check-prompt-styles.mjs",
     "docs:check": "node scripts/check-docs.mjs && node scripts/build-credits.mjs",
     "docs:write": "node scripts/check-docs.mjs --write",
     "release:check": "node scripts/check-release-assets.mjs",
     "credits:write": "node scripts/build-credits.mjs --write",
-    "credits:check": "node scripts/build-credits.mjs"
+    "credits:check": "node scripts/build-credits.mjs",
+    "metering:check": "node scripts/check-metering.mjs"
   },
   "dependencies": {
     "@ast-grep/wasm": "0.51.0",
@@ -83,7 +84,9 @@
     "./extensions": "./plugins/dsh-extensions/src/index.mjs",
     "./workflow": "./vendor/workflow/src/index.mjs",
     "./rewind": "./vendor/rewind/src/index.mjs",
-    "./response-id-reuse": "./vendor/response-id-reuse/src/index.mjs"
+    "./response-id-reuse": "./vendor/response-id-reuse/src/index.mjs",
+    "./token-meter": "./lib/host/token-meter.mjs",
+    "./compaction": "./lib/host/compaction.mjs"
   },
   "dsh": {
     "bundle": {

@@ -47,30 +47,7 @@ export function contentChars(blocks) {
     : b.type === 'tool-call' ? b.name.length + (typeof b.arguments === 'string' ? b.arguments : JSON.stringify(b.arguments)).length
     : b.type === 'tool-result' ? contentChars(b.content) : 0), 0);
 }
-// Same density/framing as the host; image and file pricing are route-owned.
-export function contentTokens(blocks, { imagePricing, fileText } = {}) {
-  let tokens = 0;
-  const images = attachmentsOf(blocks, '', 0).filter(a => a.block.type === 'image').map(a => a.block);
-  const prices = imagePricing ? imagePricing.priceImages(images) : null;
-  if (prices && prices.length !== images.length) throw Error('Image pricing returned a mismatched occurrence count');
-  let cursor = 0;
-  const visit = values => {
-    for (const b of values || []) {
-      if (['text', 'reasoning'].includes(b.type)) tokens += Math.ceil((b.text || '').length / 4) + 4;
-      else if (b.type === 'tool-call') tokens += Math.ceil(b.name.length / 4) + Math.ceil((typeof b.arguments === 'string' ? b.arguments : JSON.stringify(b.arguments)).length / 4) + 4;
-      else if (b.type === 'tool-result') { tokens += 4; visit(b.content); }
-      else if (b.type === 'image' && prices) { const p = prices[cursor++]; tokens += p.visualTokens + Math.ceil(p.text.length / 4) + 4; }
-      else if (b.type === 'file' && fileText) tokens += Math.ceil(fileText(b.attachment).length / 4) + 4;
-      else { const { offloaded, ...ref } = b; tokens += Math.ceil(JSON.stringify(b.type === 'image' ? ref : b).length / 4) + 4; }
-    }
-  };
-  visit(blocks); return tokens;
-}
-export function messageTokens(message, pricing) {
-  if (!message) return 0;
-  if (message.role === 'system') return message.content.length ? Math.ceil(contentChars(message.content) / 4) + 4 : 0;
-  return contentTokens(message.content, pricing) + 4;
-}
+export { estimateContent as contentTokens, estimateMessage as messageTokens } from '../metering/estimate.mjs';
 export function recordAssets(record) { return record.assets || []; }
 export function assetBlocks(record, { recall = false } = {}) {
   return recordAssets(record).flatMap((asset, i) => {

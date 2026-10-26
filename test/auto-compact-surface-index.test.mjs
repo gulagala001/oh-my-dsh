@@ -36,7 +36,7 @@ function fixture(count = 12, recordCount = 4, mode = 'detail') {
     config: () => config, state: () => state, store: { save() {} }, releaseState() {},
     reportError(_agent, _kind, error) { throw error; },
     hub: { ctx: { tokenMeter: { measure: () => ({ totalTokens: tokens }) } }, action() {}, event() {} },
-    adapter: { pairing: { before: () => true, after: () => true }, message: content => ({ content }) },
+    adapter: { pairing: { before: () => true, after: () => true }, message: text => ({ role:'user',content:[{type:'text',text}] }) },
     async applyReady(_agent, { ids }) {
       selected.push(ids); batchMaps.push(maps); tokens = 0;
       return { changed: true };

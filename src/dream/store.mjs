@@ -1,3 +1,4 @@
+import { usageReceipt } from '../metering/usage.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -281,10 +282,9 @@ export class DreamStore {
   }
   settle(id, usage, error) {
     const row=this.db.prepare('SELECT * FROM calls WHERE id=?').get(id);if(!row)return;
-    const value=decode(row), fields=['inputTokens','cacheReadTokens','cacheWriteTokens','outputTokens'];
-    const total=fields.reduce((n,k)=>n+(Number.isFinite(usage?.[k])?Math.max(0,usage[k]):0),0);
-    const known=usage&&Number.isFinite(usage.inputTokens)&&usage.inputTokens>=0&&Number.isFinite(usage.outputTokens)&&usage.outputTokens>=0&&total>0;
-    const charged=known?Math.ceil(total):row.reserved;
+    const value=decode(row), receipt=usageReceipt(usage);
+    const known=receipt.totalTokens !== null;
+    const charged=known?receipt.totalTokens:Math.max(row.reserved,receipt.knownTotalTokens??0);
     this.db.prepare('UPDATE calls SET charged=?,data=? WHERE id=?').run(charged,encode({...value,usage:usage||null,estimated:!known,error:error||null}),id);
   }
   catalog({ kind='project', project='', query='', cursor, limit=LIMITS.page } = {}) {

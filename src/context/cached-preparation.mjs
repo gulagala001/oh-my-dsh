@@ -69,7 +69,7 @@ export class CachedPreparation {
     this.pipeline = pipeline;
     this.active = new Map(); this.waiting = new Map(); this.enabled = false;
     this.snapshots = new RequestSnapshots(id => this.active.get(id)?.abort(Error('主会话模型路由已改变')),
-      snapshot => pipeline.hub.images?.snapshotReason(snapshot));
+      snapshot => pipeline.hub.images?.snapshotReason(snapshot), pipeline.adapter.measureRequest, pipeline.adapter.routeStamp);
     this.pending = this.snapshots.pending; this.requests = this.snapshots.requests;
   }
   configure() {
@@ -82,7 +82,7 @@ export class CachedPreparation {
     if (!this.configure() || p.closed || !isAgentLoopRequest(options)) return;
     const cfg = p.config();
     if (!cfg.contextEnabled && !cfg.autoCompactEnabled) return;
-    this.snapshots.capture(session, options, cfg.prepareInputTokens * 4);
+    this.snapshots.capture(session, options, cfg.prepareInputTokens);
   }
   confirm(session, route) {
     if (!this.configure()) return false;
@@ -122,18 +122,18 @@ export class CachedPreparation {
         && this.snapshots.current(snapshot) && hash(imageSourceValue(events.map(summaryMessageReader(session)))) === sourceSignature;
       return { request: built.request, current };
     }
-    return this.defer(session, reason || this.snapshots.waitingReason(session), resume);
+    this.clearWaiting(session);
+    return null;
   }
   buildRequest(session, snapshot, inputs) {
     const p = this.pipeline;
-    if (snapshot.bytes > p.config().prepareInputTokens * 4) return { reason: cachedBudgetReason };
     const { payload, reason } = cachedPreparationInput(session, snapshot, inputs);
     if (!payload) return { reason };
     const task = `${CACHED_PREPARE_TASK}\n\n${JSON.stringify(payload)}`;
     const request = { ...snapshot.request, purpose: 'compaction',
       messages: [...snapshot.request.messages, p.adapter.message(task, 'cached-prepare-task')] };
     assertCachedRequestPrefix(snapshot.request, request);
-    if (Buffer.byteLength(JSON.stringify(request)) > p.config().prepareInputTokens * 4)
+    if (this.snapshots.measurement(request,snapshot).tokens > (p.adapter.inputLimit?.(session,request,p.config().prepareInputTokens) ?? p.config().prepareInputTokens))
       return { reason: cachedBudgetReason };
     return { request };
   }

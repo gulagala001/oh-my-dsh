@@ -232,7 +232,8 @@ export class BillionContext {
     const agent = p.agents.get(session.id);
     if (agent && backend === 'omd') void p.coordinate(agent, true);
   }
-  async refresh(session, signal, inputHostTokens) {
+  async refresh(session, signal, inputMeasurement) {
+    const sampleStamp={replaceGeneration:session.surface.replaceGeneration,route:JSON.stringify(session.requestHeader?.()?.config)};
     const native = this.native();
     if (!native?.origin || !this.state(session).bc) return null;
     const status = await this.api(native.origin, '/status?conversationId=' + encodeURIComponent(this.identity(session).conversationId), undefined, signal);
@@ -241,8 +242,9 @@ export class BillionContext {
     const previous = this.meters.get(session.id);
     // The outgoing estimate excludes the response. Anchor against the native
     // input before dispatch so the response is counted as growth next time.
-    const hostTokens = inputHostTokens ?? (previous?.requests === status.requests ? previous?.hostTokens : null);
-    const current = { ...status, sentTokens: detail?.contextUpperTokens ?? null, sampledAt: Date.now(), hostTokens, conversationId: this.identity(session).conversationId };
+    const basis = inputMeasurement ?? (previous?.requests === status.requests ? previous : null);
+    const hostTokens = basis?.hostTokens ?? null;
+    const current = { ...status, replaceGeneration:basis?.replaceGeneration??sampleStamp.replaceGeneration,route:basis?.route??sampleStamp.route, sentTokens: detail?.contextUpperTokens ?? null, sampledAt: Date.now(), hostTokens, conversationId: this.identity(session).conversationId };
     this.meters.set(session.id, current); return current;
   }
   view(session) { return { backend: this.backend(session), pendingBackend: this.hub.context.store.peek(session.id)?.pendingBackend ?? null,
@@ -251,7 +253,7 @@ export class BillionContext {
   effectiveTokens(session, hostTokens) {
     if (!this.active(session)) return hostTokens;
     const sample = this.meters.get(session.id);
-    if (!sample || sample.conversationId !== this.identity(session).conversationId || !Number.isFinite(sample.sentTokens) || !Number.isFinite(sample.hostTokens)) return hostTokens;
+    if (!sample || sample.replaceGeneration !== session.surface.replaceGeneration || sample.route !== JSON.stringify(session.requestHeader?.()?.config) || sample.conversationId !== this.identity(session).conversationId || !Number.isFinite(sample.sentTokens) || !Number.isFinite(sample.hostTokens)) return hostTokens;
     return sample.sentTokens + Math.max(0, hostTokens - sample.hostTokens);
   }
   install(ctx, managed) {
@@ -303,7 +305,7 @@ export class BillionContext {
       const state = owner.native();
       if (!useBc && !state) { yield* next(); return; }
       let request = { bypass: !useBc };
-      const inputHostTokens = useBc ? owner.hub.ctx.tokenMeter?.measure(session)?.totalTokens : undefined;
+      const inputMeasurement = useBc ? {hostTokens:owner.hub.ctx.tokenMeter?.measure(session)?.totalTokens,replaceGeneration:session.surface.replaceGeneration,route:JSON.stringify(session.requestHeader?.()?.config)} : undefined;
       try {
         if (useBc) {
           const origin = await owner.connect(options.signal);
@@ -325,7 +327,7 @@ export class BillionContext {
         if (useBc && !request.routed) throw Error('当前模型通道未经过 BC，未将本次请求标为 BC 压缩成功。');
         if (useBc) {
           delete owner.identity(session).error;
-          await owner.refresh(session, options.signal, inputHostTokens).catch(error => { owner.identity(session).error = error.message; });
+          await owner.refresh(session, options.signal, inputMeasurement).catch(error => { owner.identity(session).error = error.message; });
           owner.hub.context.store.save(owner.state(session));
         }
       } catch (error) {

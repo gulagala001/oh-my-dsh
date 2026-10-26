@@ -1,3 +1,5 @@
+await import('./build-metering.mjs');
+await import('./check-metering.mjs');
 import { build } from 'esbuild';
 import { mkdir, readFile, writeFile, rm, realpath, readdir, lstat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';

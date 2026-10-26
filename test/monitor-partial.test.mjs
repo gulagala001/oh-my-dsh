@@ -97,15 +97,15 @@ test('conditional metrics preserve empty, unknown and measured-zero readings acr
   append('unknown', null, { status: 'error' });
   append('zero', { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
     reasoningTokens: 0, totalTokens: 0 }, { hasOutput: false, status: 'cancelled', durationMs: 0 });
-  append('partial', { inputTokens: 0.25, outputTokens: 1.25, cacheReadTokens: 0.5 });
-  append('measured', { inputTokens: 0.25, outputTokens: 0.5, cacheReadTokens: 0.5, cacheWriteTokens: 0.25 });
+  append('partial', { inputTokens: 1, outputTokens: 5, cacheReadTokens: 2 });
+  append('measured', { inputTokens: 1, outputTokens: 2, cacheReadTokens: 2, cacheWriteTokens: 1 });
   append('missing-cache', { inputTokens: 2, outputTokens: 3, totalTokens: 5 });
   append('contradiction', { inputTokens: 5, outputTokens: 2, cacheReadTokens: 10, cacheWriteTokens: 0, totalTokens: 7 });
-  const expected = { calls: 6, errors: 1, cancelled: 1, unmetered: 2, usageUnreported: 1,
-    totalUnreported: 2, outputUnreported: 1, inputBucketUnreported: 1, cacheUnreported: 2,
-    cacheWriteUnreported: 3, durationUnreported: 5, inputUnreported: 2,
-    cacheMeasuredCalls: 1, cacheMeasuredInputTokens: 1, cacheMeasuredReadTokens: 0.5,
-    durationMs: 0, knownTotalTokens: 15.5 };
+  const expected = { calls: 6, errors: 1, cancelled: 1, unmetered: 3, usageUnreported: 2,
+    totalUnreported: 3, outputUnreported: 2, inputBucketUnreported: 2, cacheUnreported: 3,
+    cacheWriteUnreported: 4, durationUnreported: 5, inputUnreported: 3,
+    cacheMeasuredCalls: 1, cacheMeasuredInputTokens: 4, cacheMeasuredReadTokens: 2,
+    durationMs: 0, knownTotalTokens: 19 };
   const full = read(), usage = read({ usageOnly: true }), calls = read({ callsOnly: true });
   const rows = [full.totals, full.metrics.main, ...Object.values(full.groups).flat(), ...full.series,
     usage.metrics.main, calls.totals];
@@ -115,4 +115,13 @@ test('conditional metrics preserve empty, unknown and measured-zero readings acr
   assert.equal(missing.cacheMeasuredInputTokens, null);
   assert.equal(missing.cacheMeasuredReadTokens, null);
   assert.equal(missing.durationMs, null);
+});
+
+test('a cumulative settlement replaces one receipt and an older archive cannot overwrite it', t => {
+  const f=fixture(t);
+  f.append('attempt',{inputTokens:10,outputTokens:5,totalTokens:15},{eventSeq:1});
+  f.append('attempt',{inputTokens:10,outputTokens:9,totalTokens:19},{eventSeq:2,replace:true});
+  assert.equal(f.query().totals.calls,1);assert.equal(f.query().totals.knownTotalTokens,19);
+  f.append('attempt',{inputTokens:10,outputTokens:5,totalTokens:15},{eventSeq:1,replace:true});
+  assert.equal(f.query().totals.knownTotalTokens,19);
 });

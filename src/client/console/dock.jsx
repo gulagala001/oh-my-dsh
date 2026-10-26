@@ -1,3 +1,4 @@
+import { cacheRatio, tokenAmount } from '../monitor-format.mjs';
 import { Button as NativeButton } from '../native-controls.jsx';
 // Composer dock items. Native statistics entries are shadowed by the same id
 // at a lower priority (the documented ui-chat replacement rule); the native
@@ -12,18 +13,10 @@ import { useMainConversation } from '../main-conversation.mjs';
 import { isOmdPreset } from '../../legacy-identity.mjs';
 
 // Native ui-chat readings, so a replaced pill reads exactly like the original.
-const exact = n => Number(n || 0).toLocaleString('en-US');
+const exact = n => n == null ? '未返回' : Number(n).toLocaleString('en-US');
 const tok = n => { const v = Math.max(0, n || 0), s = x => x >= 100 ? String(Math.round(x)) : String(Math.round(x * 10) / 10); return v < 1e3 ? String(v) : v < 1e6 ? `${s(v / 1e3)}K` : `${s(v / 1e6)}M`; };
 const tps = v => { const c = Math.max(0, v); return c >= 10 ? String(Math.round(c)) : String(Math.round(c * 10) / 10); };
 const secs = ms => { const s = ms / 1000; if (s < 60) return `${Math.round(s * 10) / 10}秒`; const w = Math.round(s); return `${Math.floor(w / 60)}分${w % 60}秒`; };
-function hitPercent(read, prompt) {
-  if (!prompt) return null;
-  if (read >= prompt) return '100';
-  const ratio = read / prompt * 100, whole = Math.round(ratio);
-  if (whole < 100) return String(whole);
-  for (let d = 1; d < 8; d++) { const v = (Math.floor(ratio * 10 ** d) / 10 ** d).toFixed(d); if (Number(v) < 100) return v; }
-  return '99.9';
-}
 function useIsOmd(props) {
   const main = useMainConversation(props);
   const preset = props.useSessions(s => s.byId?.[props.sessionId]?.projectionValues?.agentPreset);
@@ -42,12 +35,13 @@ function Pill({ seat, stat, icon, label, aria, title, value, children, footer, t
 const Plain = ({ stat, icon, label }) => <span className="omc-pill-anchor" data-composer-stat={stat}><span className="omc-pill omc-pill-plain">{icon}<span className="omc-pill-label">{label}</span></span></span>;
 const Sep = () => <span className="omc-pill-sep" aria-hidden="true">·</span>;
 
-const speedOf = stats => stats.decodeMs > 0 ? `${tps(stats.decodeTokens / (stats.decodeMs / 1000))} tok/s` : null;
-const billed = usage => usage.uncachedInputTokens + usage.cacheReadTokens + usage.cacheWriteTokens;
-const cacheOf = usage => hitPercent(usage.cacheReadTokens, billed(usage));
+const speedOf = (stats,usage) => !(usage?.outputUnreported>0) && stats.decodeMs > 0 ? `${tps(stats.decodeTokens / (stats.decodeMs / 1000))} tok/s` : null;
+const billed = usage => usage.knownInputTokens ?? 0;
+const bucket = (usage,key,missing) => usage.calls>0&&usage[missing]===usage.calls?'未返回':`${usage[missing]?'≥':''}${exact(usage[key])}`;
+const cacheOf = usage => { const ratio=cacheRatio(usage); return ratio==='—'?null:ratio.replace(/%$/,''); };
 
-function ActivityRows({ stats }) {
-  const speed = speedOf(stats);
+function ActivityRows({ stats, usage }) {
+  const speed = speedOf(stats,usage);
   return <dl className="omc-kv">
     {stats.llmMs > 0 && <><dt>模型用时</dt><dd>{secs(stats.llmMs)}</dd></>}
     {stats.toolMs > 0 && <><dt>工具调用用时</dt><dd>{secs(stats.toolMs)}</dd></>}
@@ -64,10 +58,10 @@ function UsageRows({ usage, sessionId, open }) {
   return <>
     <dl className="omc-kv">
       {cache && <><dt>缓存命中</dt><dd>{cache}%</dd></>}
-      <dt>未缓存输入</dt><dd>{exact(usage.uncachedInputTokens)} tok</dd>
-      <dt>缓存读取</dt><dd>{exact(usage.cacheReadTokens)} tok</dd>
-      {usage.cacheWriteTokens !== 0 && <><dt>缓存写入</dt><dd>{exact(usage.cacheWriteTokens)} tok</dd></>}
-      <dt>输出</dt><dd>{exact(usage.outputTokens)} tok</dd>
+      <dt>未缓存输入</dt><dd>{bucket(usage,'uncachedInputTokens','inputBucketUnreported')} tok</dd>
+      <dt>缓存读取</dt><dd>{bucket(usage,'cacheReadTokens','cacheUnreported')} tok</dd>
+      {usage.cacheWriteTokens !== 0 && <><dt>缓存写入</dt><dd>{bucket(usage,'cacheWriteTokens','cacheWriteUnreported')} tok</dd></>}
+      <dt>输出</dt><dd>{bucket(usage,'outputTokens','outputUnreported')} tok</dd>
     </dl>
     {data && bgCalls > 0 && <div className="omc-pop-section"><span>OMD 后台（另计）</span><b>{tok(bgTokens)} tok · {bgCalls} 次</b></div>}
   </>;
@@ -75,25 +69,25 @@ function UsageRows({ usage, sessionId, open }) {
 
 function useStats(useProjection) {
   const stats = useProjection?.('sessionStats'), usage = useProjection?.('tokenUsage');
-  const hasUsage = usage && (billed(usage) > 0 || usage.outputTokens > 0);
+  const hasUsage = usage && (usage.calls > 0 || billed(usage) > 0 || usage.outputTokens > 0);
   return { stats: stats && stats.steps > 0 ? stats : null, usage: hasUsage ? usage : null };
 }
 
-function ActivityPill({ stats, mode, main }) {
-  const seat = usePopover(), speed = speedOf(stats), icon = <IconGaugeOutlineRegular/>;
+function ActivityPill({ stats, usage, mode, main }) {
+  const seat = usePopover(), speed = speedOf(stats,usage), icon = <IconGaugeOutlineRegular/>;
   if (mode === 'compact') return speed ? <Plain stat="activity" icon={icon} label={speed}/> : null;
   const counts = `${stats.turns} 轮 ${stats.steps} 步`;
   return <Pill seat={seat} stat="activity" icon={icon} aria={speed ? `${counts} · ${speed}` : counts} title="会话统计"
     label={<>{counts}{speed && <><Sep/>{speed}</>}</>} footer={main && <Jump section="calls" extra={{ kind: 'main' }}>主执行调用日志</Jump>}>
-    <ActivityRows stats={stats}/>
+    <ActivityRows stats={stats} usage={usage}/>
   </Pill>;
 }
 function UsagePill({ usage, mode, sessionId, main }) {
   const seat = usePopover(), icon = <IconDatabaseOutlineRegular/>, cache = cacheOf(usage);
   const cacheText = cache != null ? `缓存命中 ${cache}%` : null;
   if (mode === 'compact') return cacheText ? <Plain stat="usage" icon={icon} label={cacheText}/> : null;
-  const total = billed(usage) + usage.outputTokens, totalText = `${tok(total)} tok`;
-  return <Pill seat={seat} stat="usage" icon={icon} aria={cacheText ? `${totalText} · ${cacheText}` : totalText} title="Token 用量" value={`${exact(total)} tok`}
+  const total = usage.knownTotalTokens, totalText = `${tokenAmount(usage,tok)} tok`;
+  return <Pill seat={seat} stat="usage" icon={icon} aria={cacheText ? `${totalText} · ${cacheText}` : totalText} title="Token 用量" value={`${tokenAmount(usage,exact)} tok`}
     label={<>{totalText}{cacheText && <><Sep/>{cacheText}</>}</>} footer={main && <Jump section="overview">用量概览</Jump>}>
     <UsageRows usage={usage} sessionId={sessionId} open={main && seat.open}/>
   </Pill>;
@@ -105,8 +99,8 @@ function createStats(readMode) {
   const useMode = () => useSyncExternalStore(subscribe, snapshot, snapshot);
   const ActivityStat = memo(function ActivityStat(props) {
     const main = useMainConversation(props);
-    const mode = useMode(), { stats } = useStats(props.useProjection);
-    return stats ? <ActivityPill stats={stats} mode={mode} main={main}/> : null;
+    const mode = useMode(), { stats,usage } = useStats(props.useProjection);
+    return stats ? <ActivityPill stats={stats} usage={usage} mode={mode} main={main}/> : null;
   });
   const UsageStat = memo(function UsageStat(props) {
     const main = useMainConversation(props);
@@ -119,7 +113,7 @@ function createStats(readMode) {
     const mode = useMode(), { stats, usage } = useStats(props.useProjection);
     if (!stats && !usage) return null;
     return <span className="omc-pill-group" data-composer-stats="">
-      {stats && <ActivityPill stats={stats} mode={mode} main={main}/>}{usage && <UsagePill usage={usage} mode={mode} sessionId={props.sessionId} main={main}/>}
+      {stats && <ActivityPill stats={stats} usage={usage} mode={mode} main={main}/>}{usage && <UsagePill usage={usage} mode={mode} sessionId={props.sessionId} main={main}/>}
     </span>;
   });
   return { activity: ActivityStat, usage: UsageStat, stats: CombinedStat };

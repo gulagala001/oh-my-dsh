@@ -1,3 +1,4 @@
+import { preparationEvents } from './input-budget.mjs';
 import { randomUUID } from 'node:crypto';
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { assertCachedRequestPrefix } from './request-prefix.mjs';
@@ -20,13 +21,13 @@ export class AdaptiveCompaction {
       pipeline.controllers.get(id + ':adaptive')?.abort(Error('主会话模型路由已改变'));
       const state = pipeline.store.cache.get(id);
       if (state?.pending?.source === 'adaptive') { state.pending = null; pipeline.store.save(state); }
-    }, snapshot => pipeline.hub.images?.snapshotReason(snapshot));
+    }, snapshot => pipeline.hub.images?.snapshotReason(snapshot), pipeline.adapter.measureRequest, pipeline.adapter.routeStamp);
     this.requests = this.snapshots.requests;
   }
   capture(session, options) {
     const p = this.pipeline;
     if (p.closed || !p.config().contextEnabled || p.mode(session) !== 'adaptive' || !isAgentLoopRequest(options)) return;
-    this.snapshots.capture(session, options, p.config().prepareInputTokens * 4);
+    this.snapshots.capture(session, options, p.config().prepareInputTokens);
     const snapshot = this.snapshots.pending.get(session.id);
     if (!snapshot.request) return;
     const messageIds = new Set(options.messages.map(m => m.id));
@@ -79,9 +80,7 @@ export class AdaptiveCompaction {
     const s = p.state(session), status = s.adaptive ||= {};
     const snapshots = this.snapshots.candidates(session);
     const wait = reason => { if (status.waitingReason !== reason) { status.waitingReason = reason; p.store.save(s); } };
-    if (!snapshots.length) { wait(this.snapshots.waitingReason(session)); return; }
     const usable = snapshots.filter(snapshot => snapshot.userRevision === userRevision(session));
-    if (!usable.length) { wait(this.snapshots.latest.get(id)?.request === null ? cachedBudgetReason : '等待包含当前用户要求的主请求'); return; }
     if (s.transaction || s.pending || s.manualQueue.length) { wait('等待已有替换或手动操作完成'); return; }
     if (!force && (status.failures || 0) > cfg.backgroundMaxRetries) { wait('检查失败，等待手动重试'); return; }
     const pressure = p.adapter.pressure?.(session) ?? 0;
@@ -89,30 +88,36 @@ export class AdaptiveCompaction {
     if (!force && Date.now() - (status.lastAt || 0) < cfg.coordinatorMinGapMs) {
       wait('等待后台检查间隔'); this.schedule(agent, cfg.coordinatorMinGapMs - (Date.now() - status.lastAt)); return;
     }
-    const events = prepareCandidate(session, s, cfg, p.adapter.pairing);
+    const events = preparationEvents(p, agent, s, cfg);
     let built, reason;
     for (const snapshot of usable) {
       const attempt = this.buildRequest(session, s, cfg, snapshot, events, pressure);
       if (attempt.request) { built = { ...attempt, snapshot }; break; }
       reason ??= attempt.reason;
     }
+    if (!built) {
+      const request = { ...(this.snapshots.owners.get(id)?.route ?? session.requestHeader?.()?.config ?? agent.options), messages:[], tools:[], purpose:'compaction',
+        ...(cfg.digestMaxTokens > 0 ? {maxTokens:cfg.digestMaxTokens} : {}) };
+      const snapshot = { session,request,owner:this.snapshots.owners.get(id),seqs:new Set(),throughSeq:-1,userRevision:userRevision(session),fallback:true };
+      const attempt = this.buildRequest(session,s,cfg,snapshot,events,pressure);
+      if (attempt.request) built = { ...attempt,snapshot }; else reason = attempt.reason;
+    }
     if (!built) { wait(reason); return; }
     const { snapshot, raw, selected, offeredPrepared, candidates, request } = built;
-    const fingerprint = hash([candidates, snapshot.userRevision, snapshot.request.messages.at(-1)?.id, routeKey(snapshot.request), pressure >= 0.85]);
+    const fingerprint = hash([candidates, snapshot.userRevision, snapshot.request.messages.at(-1)?.id ?? hash(selected), routeKey(snapshot.request), pressure >= 0.85]);
     if (!force && status.lastKey === fingerprint) { wait('同一批材料已检查，等待变化'); return; }
     this.forced.delete(id);
     return this.run(agent, { snapshot, raw, selected, offeredPrepared, request, fingerprint, status, s, cfg });
   }
   buildRequest(session, s, cfg, snapshot, events, pressure) {
     const p = this.pipeline;
-    if (snapshot.bytes > cfg.prepareInputTokens * 4) return { reason: cachedBudgetReason };
     const moved = new Set(s.traceSlot ? s.traceSlot.movedSourceSeqs || [s.traceSlot.sourceSeq] : []);
     const tracePresent = s.traceSlot && snapshot.seqs.has(s.traceSlot.carrierSeq);
     const projectedOut = e => tracePresent && moved.has(e.seq) && session.deriveEventMessage(e)?.role === 'assistant'
       && session.deriveEventMessage(e).content.every(b => b.type === 'reasoning' && typeof b.text === 'string');
     const raw = events && preparationWorkload(session, s, events.filter(e => !projectedOut(e))).estimatedTokens >= cfg.prepareContinueTokens
       && events.every(e => !session.deriveEventMessage(e) || snapshot.seqs.has(e.seq) || e.seq > snapshot.throughSeq || projectedOut(e)) ? events : null;
-    const prepared = activeRecords(s).filter(r => !raw?.parents?.includes(r.id) && liveSpan(session, r) && liveSpan(session, r).seqs.every(seq => snapshot.seqs.has(seq)));
+    const prepared = activeRecords(s).filter(r => !raw?.parents?.includes(r.id) && liveSpan(session, r) && (snapshot.fallback || liveSpan(session, r).seqs.every(seq => snapshot.seqs.has(seq))));
     if (!raw && !prepared.length) return { reason: '当前没有足够的可整理材料' };
     const selected = raw ? candidateInput(session, raw, 0) : null;
     if (selected) selected.summary_scope.event_seqs = selected.summary_scope.event_seqs.filter(seq => !projectedOut(session.eventAt(seq)));
@@ -139,8 +144,8 @@ export class AdaptiveCompaction {
     }
     const task = `${ADAPTIVE_TASK}\n\n${JSON.stringify({ pressure_ratio: pressure, last_rejection: s.review.lastRejection || null, candidates })}`;
     const request = { ...snapshot.request, purpose: 'compaction', messages: [...snapshot.request.messages, p.adapter.message(task, 'adaptive-task')] };
-    assertCachedRequestPrefix(snapshot.request, request);
-    if (Buffer.byteLength(JSON.stringify(request)) > cfg.prepareInputTokens * 4) return { reason: cachedBudgetReason };
+    if (!snapshot.fallback) assertCachedRequestPrefix(snapshot.request, request);
+    if (this.snapshots.measurement(request,snapshot).tokens > (p.adapter.inputLimit?.(session,request,cfg.prepareInputTokens) ?? cfg.prepareInputTokens)) return { reason: cachedBudgetReason };
     return { raw, selected, offeredPrepared, candidates, request };
   }
   run(agent, { snapshot, raw, selected, offeredPrepared, request, fingerprint, status, s, cfg }) {
@@ -153,7 +158,7 @@ export class AdaptiveCompaction {
     const current = () => !p.closed && !controller.signal.aborted && p.agents.get(id) === agent
       && p.mode(session) === 'adaptive' && (s.compressionModeRevision || 0) === revision && p.config().contextEnabled && !p.manualSessions.has(id)
       && (this.isManaged?.(session) ?? true)
-      && this.snapshots.current(snapshot);
+      && (snapshot.fallback ? snapshot.userRevision === userRevision(session) && this.snapshots.owners.get(id) === snapshot.owner : this.snapshots.current(snapshot));
     const job = (async () => {
       const result = await p.call(agent, 'adaptive', request, controller.signal, () => { if (!current()) throw Error('后台检查条件已改变'); });
       controller.signal.throwIfAborted();
@@ -222,6 +227,15 @@ export class AdaptiveCompaction {
 
 export function installAdaptiveCapture(ctx, isManagedSession, pipeline) {
   pipeline.adaptive.isManaged = isManagedSession;
+  const invalidate=()=>{
+    for(const snapshots of [pipeline.adaptive.snapshots,pipeline.cachedPreparation.snapshots])for(const [id,owner] of snapshots.owners){
+      if(owner.stamp===snapshots.identity(owner.route))continue;
+      pipeline.controllers.get(id+':adaptive')?.abort(Error('模型配置已变化'));
+      pipeline.adaptive.drop(id);pipeline.cachedPreparation.drop(id);
+    }
+  };
+  ctx.on('llm/adapters-updated',invalidate,{global:true});
+  ctx.on('settings/document-updated',invalidate,{global:true});
   ctx.on('llm/stream', (options, next) => {
     if (isAgentLoopRequest(options) && options.sessionId) {
       const session = ctx.sessions.get(options.sessionId);

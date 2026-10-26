@@ -1,3 +1,4 @@
+import { textUpperBound, requestUpperBound } from '../metering/estimate.mjs';
 import { createHash } from 'node:crypto';
 
 export const LIMITS = Object.freeze({ session: 1200, project: 2400, global: 600, page: 20, input: 16000, read: 4000 });
@@ -6,7 +7,7 @@ export const nodeKey = (kind, id = '') => kind === 'global' ? 'global' : `${kind
 export const textSize = text => Array.from(String(text)).length;
 // Deliberately conservative across CJK and opaque references. Actual provider
 // usage replaces the reservation; missing usage never becomes a free call.
-export const estimateTokens = value => Buffer.byteLength(typeof value === 'string' ? value : JSON.stringify(value)) + 64;
+export const estimateTokens = value => value?.messages ? requestUpperBound(value).tokens : textUpperBound(typeof value === 'string' ? value : JSON.stringify(value)) + 64;
 export const quotaDay = now => new Date(now).toISOString().slice(0, 10);
 export const quotaReset = now => Date.parse(quotaDay(now) + 'T00:00:00Z') + 86400000;
 export function validateScope(value) {

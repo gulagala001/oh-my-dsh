@@ -1,15 +1,15 @@
+import { measureRequest, requestPricing } from '../metering/estimate.mjs';
 import { EvidenceStore, hash } from './evidence.mjs';
 import { reduceText, textOf, readIdentity, referenced, worthwhile, exactDelta } from './reducers.mjs';
 import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { installRequestProjection } from '../llm-request-projection.mjs';
 import { contentTokens } from '../context/materials.mjs';
-import { hash as contentHash, jsonBytes, requestBytes, frozenJsonValue } from './json-metrics.mjs';
+import { hash as contentHash, frozenJsonValue } from './json-metrics.mjs';
 
 const chars = content => content?.reduce((n, b) => n + (b.type === 'text' ? b.text.length : 0), 0) ?? 0;
-const estimate = value => Math.ceil(Buffer.byteLength(typeof value === 'string' ? value : JSON.stringify(value)) / 3);
+const estimate = value => contentTokens(Array.isArray(value) ? value : [typeof value === 'string' ? { type: 'text', text: value } : value]);
 const eventKey = (session, callId) => session.id + ':' + callId;
 const argumentsHash = args => { try { return hash(typeof args === 'string' ? JSON.parse(args) : args); } catch { return null; } };
-const media = blocks => (blocks ?? []).flatMap(b => ['image', 'file'].includes(b.type) ? [b] : b.type === 'tool-result' ? media(b.content) : []);
 
 export class ResultReduction {
   constructor(ctx, hub, managed) {
@@ -204,7 +204,7 @@ export class ResultReduction {
             } else baselines.set(item.readKey, item);
           }
           item.sourceTokens ??= estimate([{ type: 'text', text: item.source }]);
-          const saved = Math.max(0, item.sourceTokens - Math.ceil(jsonBytes(next.content) / 3));
+          const saved = Math.max(0, item.sourceTokens - estimate(next.content));
           if (saved) rules.push({ rule: next !== message ? (item.source === baselines.get(item.readKey)?.source ? 'visible-read-repeat' : 'visible-read-delta') : item.record.rule, saved, elapsedMs: item.elapsedMs });
         }
       }
@@ -227,10 +227,16 @@ export class ResultReduction {
     this.projections.set(projected.messages, rules);
     return projected;
   }
-  limit(session, requested = 12000) {
-    const budget = this.state(session).lastRequest;
-    const remaining = budget?.capacity ? Math.max(768, (budget.capacity - budget.used - budget.reserved) * 2) : 12000;
-    return Math.max(256, Math.min(48000, requested, remaining));
+  limit(session, requested = 12000, text) {
+    const maximum=Math.max(256,Math.min(48000,requested));
+    if(typeof text!=='string')return maximum;
+    let available;
+    try { available=this.hub.context?.adapter.catalogBudget?.(session); } catch { /* No current model capacity. */ }
+    if(!Number.isFinite(available))return maximum;
+    let low=0,high=Math.min(maximum,text.length);
+    while(low<high){const mid=Math.ceil((low+high)/2);if(estimate([{type:'text',text:text.slice(0,mid)}])<=available)low=mid;else high=mid-1;}
+    if(low>0&&/[\uD800-\uDBFF]/.test(text[low-1]))low--;
+    return low;
   }
 }
 
@@ -260,14 +266,10 @@ export function installResultReduction(ctx, hub, managed) {
     const state = service.state(session), rules = [...(service.projections.get(options.messages) ?? [])];
     const schemaSaved = service.schemaSavings.size ? service.schemaSavings.get(contentHash(options.tools ?? [])) : 0;
     if (service.enabled(session) && schemaSaved > 0) rules.push({ rule: 'scoped-tool-discovery', saved: schemaSaved, elapsedMs: 0 });
-    let used = Math.ceil(requestBytes(options) / 3);
-    try {
-      used += contentTokens(options.messages.flatMap(m => media(m.content)), { imagePricing: ctx.llm.imageRequestPricing?.(options.provider, options.model), fileText: ctx.llm.fileRequestText ? ref => ctx.llm.fileRequestText(ref) : undefined });
-      used = Math.max(used, ctx.tokenMeter?.measure(session)?.totalTokens ?? 0);
-    } catch { /* Host preflight remains authoritative for unsupported media. */ }
+    const used = measureRequest(options, requestPricing(ctx.llm, options)).tokens;
     let info;
     try { info = await ctx.llm.resolveModelInfo(options.provider, options.model, options.signal); } catch { /* The host reports route errors. */ }
-    state.lastRequest = { used, capacity: info?.context?.contextWindow ?? null, reserved: (options.maxTokens ?? info?.defaultMaxTokens ?? 0) + Math.ceil(used * .1), estimated: true };
+    state.lastRequest = { revision: session.seq, used, capacity: info?.context?.contextWindow ?? null, reserved: (options.maxTokens ?? info?.defaultMaxTokens ?? 0) + Math.ceil(used * .1), estimated: true };
     let succeeded = false;
     service.visible.delete(session.id);
     for await (const frame of next()) { if (frame.type === 'finish') succeeded = !['error', 'aborted', 'abort'].includes(frame.reason?.kind); yield frame; }

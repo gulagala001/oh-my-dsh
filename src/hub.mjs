@@ -1,3 +1,6 @@
+import { ownedUsageRequest } from './metering/stream.mjs';
+import { assertRequestFits, inputBudget, requestPricing } from './metering/estimate.mjs';
+import { usageReceipt, usageFields } from './metering/usage.mjs';
 import { sourceName } from './message-source.mjs';
 import { Service } from '@deepseek-ai/cordis';
 import { BlockAssembler, assembleAssistantStream, createUserMessage, isHarnessError } from '@deepseek-ai/dsh-llm';
@@ -152,12 +155,19 @@ export class Hub extends Service {
     state.cwd = session.header.cwd;
     state.parentSession = session.header.parentSession;
     state.origin = session.header.origin ?? null;
+    const previous=entry.id&&state.lastNativeCall?.id===entry.id?state.lastNativeCall:null;
+    if(previous)entry={...previous,...entry,usage:entry.usage??previous.usage,error:entry.error??null,durationMs:entry.durationMs??previous.durationMs,firstTokenMs:entry.firstTokenMs??previous.firstTokenMs,startedAt:entry.startedAt??previous.startedAt,replace:true};
+    const prior=usageReceipt(previous?.usage,{hasOutput:previous?.hasOutput});
+    const measured=usageFields(entry.usage),priorFields=usageFields(previous?.usage);
     const metric = state.metrics[kind] ??= { calls: 0, errors: 0, durationMs: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
-    metric.calls++; metric.errors += Number(Boolean(entry.error)); metric.durationMs += entry.durationMs || 0;
-    for (const field of ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']) metric[field] = (metric[field] || 0) + (entry.usage?.[field] || 0);
-    if (entry.usage?.reasoningTokens !== undefined) metric.reasoningTokens = (metric.reasoningTokens || 0) + entry.usage.reasoningTokens;
-    if (!entry.usage) metric.unmetered = (metric.unmetered || 0) + 1;
-    metric.peakContext = Math.max(metric.peakContext || 0, (entry.usage?.inputTokens || 0) + (entry.usage?.cacheReadTokens || 0) + (entry.usage?.cacheWriteTokens || 0));
+    const previousKnownTotal = metric.knownTotalTokens ?? usageReceipt(metric).knownTotalTokens ?? 0;
+    metric.calls+=Number(!previous); metric.errors += Number(Boolean(entry.error))-Number(Boolean(previous?.error)); metric.durationMs += (entry.durationMs||0)-(previous?.durationMs||0);
+    for (const field of ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']) metric[field] = (metric[field] || 0) + (measured[field] ?? 0) - (priorFields[field] ?? 0);
+    if (measured.reasoningTokens !== null || priorFields.reasoningTokens !== null) metric.reasoningTokens = (metric.reasoningTokens || 0) + (measured.reasoningTokens ?? 0) - (priorFields.reasoningTokens ?? 0);
+    const receipt = usageReceipt(entry.usage, { hasOutput:entry.hasOutput });
+    metric.knownTotalTokens = previousKnownTotal + (receipt.knownTotalTokens ?? 0) - (previous ? prior.knownTotalTokens ?? 0 : 0);
+    metric.unmetered=(metric.unmetered||0)+Number(receipt.totalTokens===null)-Number(Boolean(previous)&&prior.totalTokens===null);
+    metric.peakContext = Math.max(metric.peakContext || 0, receipt.inputTotalTokens ?? receipt.knownInputTokens ?? 0);
     const recent = session.requestHeader()?.config;
     const frame = state.pendingFrame;
     const call = { at: Date.now(), turn: frame?.turn, step: frame?.step, sessionId: session.id, kind, ...entry,
@@ -168,6 +178,8 @@ export class Hub extends Service {
     delete state.contextHistory;
     const completed = frame ? null : session.snapshotEvents().findLast(e => e.type === 'step/end');
     call.turn ??= completed?.data.turn; call.step ??= completed?.data.step;
+    if(entry.source==='native')state.lastNativeCall=call;
+    if(previous)state.activity=state.activity.filter(item=>item.id!==call.id);
     state.activity.push(call);
     state.activity = state.activity.slice(-60);
     // An enabled own budget has already saved this complete state synchronously.
@@ -224,7 +236,10 @@ export class Hub extends Service {
       finalConfig = prepared.config;
       if (preserveRoute && kind === 'prepare' && fields.some(key => JSON.stringify(finalConfig[key]) !== JSON.stringify(config[key])))
         throw Error('主执行请求配置已改变，未发送不同前缀的后台请求');
-      iterator = prepared.stream({ ...envelope, ...finalConfig, sessionId: agent.session.id, signal })[Symbol.asyncIterator]();
+      const modelInfo = await this.ctx.llm.resolveModelInfo?.(finalConfig.provider,finalConfig.model,signal);
+      const inputLimit = ['prepare','adaptive'].includes(kind) ? this.config().prepareInputTokens : Infinity;
+      assertRequestFits({ ...envelope, ...finalConfig }, inputBudget({ inputLimit, contextWindow:modelInfo?.context?.contextWindow, maxTokens:finalConfig.maxTokens ?? modelInfo?.defaultMaxTokens ?? 0 }), requestPricing(this.ctx.llm,finalConfig));
+      iterator = prepared.stream(ownedUsageRequest({ ...envelope, ...finalConfig, sessionId: agent.session.id, signal },kind))[Symbol.asyncIterator]();
       signal.throwIfAborted();
       startedAt = Date.now();
       Object.assign(active, finalConfig, { status: 'running', startedAt, effort: finalConfig.reasoningEffort ?? null });
@@ -308,6 +323,7 @@ export class Hub extends Service {
     }
     if ((event.type === 'assistant/message' || event.type === 'assistant/attempt') && sourceName(event.data.message?.source) !== NS + ':shadow') {
       const output = assembleAssistantStream(event.data.stream);
+      const fact=this.ctx.tokenMeter?.receiptFor?.(session,event);
       const pending = this.requestStarts.get(session.id);
       const request = pending && pending.turn === event.data.turn && pending.step === event.data.step ? pending : null;
       const route = request?.route ?? (event.data.message?.source?.kind === 'model' ? event.data.message.source : session.requestHeader()?.config ?? {});
@@ -315,7 +331,7 @@ export class Hub extends Service {
       const failed = cancelled || event.type === 'assistant/attempt' || ['error', 'max-tokens'].includes(output.finish.kind);
       try {
         this.record(session, session.header.origin === 'subagent' ? 'subagent' : 'main', {
-          id: `native:${session.id}:${event.seq}`, source: 'native', eventSeq: event.seq, at: event.time,
+          id: `native:${session.id}:${fact?.eventSeq ?? event.seq}`, source: 'native', eventSeq: event.seq, at: event.time,
           turn: event.data.turn, step: event.data.step, hasOutput: Boolean(event.data.message?.content?.length || output.blocks().length),
           provider: route.provider, model: route.model, usage: event.data.usage ?? output.usage,
           ...(request?.route ? { effort: request.route.reasoningEffort ?? null } : {}),

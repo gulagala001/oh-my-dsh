@@ -1,3 +1,4 @@
+import { estimateToolsTokens } from './metering/estimate.mjs';
 import { monitorQuery, monitorEventQuery } from './monitor-ledger.mjs';
 import { monitorCallCost } from './monitor-call.mjs';
 import { monitorCallPrice, monitorPriceCatalog, monitorCostCacheKey } from './monitor-pricing.mjs';
@@ -152,7 +153,7 @@ function monitorContextReadings({ hub, ctx, session }) {
   const optional = (label, read, fallback = null) => {
     try { return read() ?? fallback; } catch { warnings.push(`${label}暂时不可用。`); return fallback; }
   };
-  const meter = session ? optional('当前上下文读数', () => ctx.tokenMeter.measure(session)) : null;
+  const meter = session ? optional('当前上下文读数', () => hub.context.adapter.measureContext?.(session) ?? ctx.tokenMeter.measure(session)) : null;
   const frame = session && meter ? optional('上下文记录', () => meter.nodes.map(node => {
     const event = session.eventAt(node.seq), message = event ? session.deriveEventMessage(event) : null;
     return { seq: node.seq, kind: sourceName(message?.source) || message?.source?.kind || event?.type || 'unknown', role: message?.role,
@@ -162,7 +163,7 @@ function monitorContextReadings({ hub, ctx, session }) {
     const header = session.requestHeader?.();
     if (!header) return null;
     // Same fixed text-density and framing as the host's tool-schema estimate.
-    return header.tools?.length ? Math.ceil(JSON.stringify(header.tools).length / 4) + 4 : 0;
+    return estimateToolsTokens(header);
   }) : null;
   const contextCapacity = session ? optional('模型窗口', () => hub.context.adapter.contextCapacity(session)) : null;
   return { meter, frame, toolsTokens, contextCapacity, warnings };

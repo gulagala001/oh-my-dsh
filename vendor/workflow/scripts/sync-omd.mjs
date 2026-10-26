@@ -65,7 +65,7 @@ try {
     await copyFile(source, path);
     hashes[name] = sha256(await readFile(path));
   }
-  const manifest = { schema: 1, package: pkg.name, version: pkg.version, host: snapshot.version, upstream: { repository: snapshot.repository, commit: snapshot.commit, tag: snapshot.tag }, files: hashes };
+  const manifest = { schema: 1, sourceCommit: execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(), package: pkg.name, version: pkg.version, host: snapshot.version, upstream: { repository: snapshot.repository, commit: snapshot.commit, tag: snapshot.tag }, files: hashes };
   const pendingManifest = manifestPath + `.sync-${process.pid}`;
   await writeFile(pendingManifest, JSON.stringify(manifest, null, 2) + '\n');
   try { await rename(destination, backup); moved = true; } catch (error) { if (error.code !== 'ENOENT') throw error; }

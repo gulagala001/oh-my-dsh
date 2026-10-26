@@ -65,3 +65,16 @@
       name: oh-my-dsh/host/ui-conversation
     - id: omd-ui-chat
       name: oh-my-dsh/host/ui-chat
+
+# One meter owns native context/usage projections and every OMD consumer.
+- id: token-meter
+  disabled: true
+- insert:
+    - id: omd-token-meter
+      name: oh-my-dsh/token-meter
+
+- id: compaction-basic
+  disabled: true
+- insert:
+    - id: omd-compaction-basic
+      name: oh-my-dsh/compaction

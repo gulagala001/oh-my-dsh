@@ -80,7 +80,7 @@ export async function mountHostComponent(ctx, name, createModule, dependencies, 
   const originalEntry = await requireHostEntry(ctx, name);
   const component = await createHostModule(originalEntry, createModule, dependencies);
   const tree = originalEntry.parent.tree;
-  const inherited = ['jobs-local', 'bash-sandbox', 'pwsh-sandbox'].includes(name);
+  const inherited = ['jobs-local', 'bash-sandbox', 'pwsh-sandbox', 'compaction-basic', 'token-meter'].includes(name);
   let effective = config;
   let inheritedConfig;
   if (inherited) {

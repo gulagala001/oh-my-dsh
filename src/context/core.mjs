@@ -1,3 +1,4 @@
+import { estimateText } from '../metering/estimate.mjs';
 import { sourceName } from '../message-source.mjs';
 import { isTaskInjection, summaryMessageReader, withoutTodo, TODO_META } from '../task-context.mjs';
 import { createHash, randomUUID } from 'node:crypto';
@@ -33,7 +34,7 @@ export const sourceHash = (session, seqs) => hash(seqs.map(seq => {
   if (!e) throw new Error(`Missing source event ${seq}`);
   return [e.seq, e.type, e.data];
 }));
-export const estimate = text => Math.ceil(String(text).length / 4);
+export const estimate = estimateText;
 export const hasOpaqueContent = blocks => (blocks || []).some(b => !['text', 'reasoning', 'tool-call', 'tool-result'].includes(b.type) || (b.type === 'tool-result' && hasOpaqueContent(b.content)));
 
 export function validatePrepared(value, decisionSources = []) {
@@ -171,7 +172,7 @@ export function preparationWorkload(session, state, events) {
   const covered = new Set(activeRecords(state).flatMap(r => liveSpan(session, r, index)?.seqs || []));
   const read = summaryMessageReader(session);
   const fresh = events.flatMap(e => index.positions.has(e.seq) && !covered.has(e.seq) && preparationMessage(e, read(e)) || []);
-  return { events: fresh.length, estimatedTokens: Math.ceil(fresh.reduce((n, m) => n + contentChars(m.content), 0) / 4) };
+  return { events: fresh.length, estimatedTokens: fresh.reduce((n, m) => n + messageTokens(m), 0) };
 }
 
 export function normalizeChoices(value, state, session, allowedIds) {
@@ -285,23 +286,18 @@ export function prepareCandidate(session, state, cfg, pairing, { minimumEvents =
     if (pairing.before(session, nodes[i])) { first = i; break; }
   }
   if (first < 0) return null;
-  let end = first, lastSafe = -1, chars = 0, members = 0, freshChars = 0, freshEvents = 0, inputLimited = false;
-  const maxChars = (cfg.prepareInputTokens || 300000) * 4;
+  let end = first, lastSafe = -1, members = 0, freshTokens = 0, freshEvents = 0, inputLimited = false;
   for (; end < stop; end++) {
     const seq = nodes[end], e = session.eventAt(seq);
     const message = summaryRead(e), fresh = !keep.has(seq) && !owners.has(seq) && preparationMessage(e, message);
-    if (fresh) { freshChars += contentChars(fresh.content); freshEvents++; }
-    if (message) { chars += JSON.stringify(keep.has(seq) ? '[Protected host context retained in place.]' : materialText(message.content, seq)).length + 80; if (!keep.has(seq)) members++; }
+    if (fresh) { freshTokens += messageTokens(fresh); freshEvents++; }
+    if (message && !keep.has(seq)) members++;
     const splitRecord = [...spans.values()].some(span => span.start <= end && span.end > end);
     if (!splitRecord && pairing.after(session, seq)) {
-      if (chars > maxChars) {
-        if (lastSafe < first) throw Error('一个完整工具往返超过预处理输入预算；原文保留，请提高输入预算。');
-        end = lastSafe; inputLimited = true; break;
-      }
       lastSafe = end;
       // A short first window must grow with new arrivals instead of blocking
       // every later attempt below the minimum text threshold forever.
-      if (members >= cfg.digestWindow && freshEvents >= minimumEvents && Math.ceil(freshChars / 4) >= (cfg.prepareContinueTokens || 0)) break;
+      if (members >= cfg.digestWindow && freshEvents >= minimumEvents && freshTokens >= (cfg.prepareContinueTokens || 0)) break;
     }
   }
   if (end >= stop) end = lastSafe;

@@ -1,3 +1,4 @@
+import { assertRequestFits, inputBudget, requestPricing } from '../metering/estimate.mjs';
 import { BlockAssembler, isHarnessError } from '@deepseek-ai/dsh-llm';
 import { DreamStore } from './store.mjs';
 import { DreamSources } from './sources.mjs';
@@ -296,7 +297,7 @@ export class DreamService {
             reasoningEffort:effort!=='inherit'&&info.reasoning?.efforts.some(item=>item.id===effort)?effort:undefined}));
           actual={...prepared.config,effort:prepared.config.reasoningEffort??null};maxTokens=prepared.config.maxTokens;
           const capacity=prepared.context?.contextWindow;
-          if(capacity&&estimated+maxTokens+1024>capacity)throw Error('Dream 请求超过当前模型容量，请使用更大上下文的后台模型');
+          assertRequestFits({...request,...prepared.config},inputBudget({inputLimit:LIMITS.input,contextWindow:capacity,maxTokens:maxTokens??0,headroom:1024}),requestPricing(this.hub.ctx.llm,prepared.config));
         }
         this.checkJob(job,joined);
         callId=this.store.reserve(estimated+maxTokens,c.dreamDailyTokens??200000,{jobId:job.id,kind:input.kind,route:actual,promptVersion:DREAM_PROMPT_VERSION},this.epoch);

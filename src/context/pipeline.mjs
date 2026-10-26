@@ -1,9 +1,10 @@
+import { replacementEstimate } from '../metering/estimate.mjs';
 import { catalogPage } from './catalog.mjs';
 import { sourceName } from '../message-source.mjs';
 import { contextConfig } from '../config.mjs';
 export { contextConfig };
 import { randomUUID } from 'node:crypto';
-import { serializePreparationInput } from './input-budget.mjs';
+import { preparationRequest, preparationEvents } from './input-budget.mjs';
 import { compactFull } from './full-compaction.mjs';
 import { ContextStore } from './store.mjs';
 import { createSurfaceIndex, hash, userRevision, userMessages, rawText, actualUser, eventTime, prepareCandidate, candidateInput, coordinatorInput, newRecord, activeRecords, liveSpan, validatePrepared, normalizeChoices, decodeResult, recordText, backlogView, recordSnapshot, preparationWorkload, resolveTraceSlot } from './core.mjs';
@@ -354,7 +355,7 @@ export class ContextPipeline {
       const batchLimit = recovering ? this.config().prepareBatchWindows : 1;
       do {
         const cfg = this.config(), minimumEvents = !force && !handoff && !s.records.length ? cfg.digestWindow : 0;
-        const events = prepareCandidate(session, s, cfg, this.adapter.pairing, { minimumEvents });
+        const events = preparationEvents(this, agent, s, cfg, { minimumEvents });
         const workload = preparationWorkload(session, s, events || []);
         if (workload.events < minimumEvents || events && workload.estimatedTokens < cfg.prepareContinueTokens) {
           this.cachedPreparation.clearWaiting(session);
@@ -368,13 +369,11 @@ export class ContextPipeline {
         inputs.target_characters = cfg.summaryTargetChars;
         if (s.failures.prepare) inputs.previous_rejection = s.failures.prepare.message;
         const cached = cfg.memoryCacheEnabled ? this.cachedPreparation.build(agent, events, inputs, { force, retry }) : null;
-        if (cfg.memoryCacheEnabled && !cached) break;
+        // A reusable prefix is optional; cold or over-budget sessions use the same bounded segment.
         const admit = () => this.admitMainSuccess(agent, 'prepare', mainSuccess, controller);
         const execute = () => {
           if (cached) return this.cachedPreparation.call(agent, cached, controller, controller.signal, admit);
-          const encoded = serializePreparationInput(inputs, cfg.prepareInputTokens * 4);
-          const args = { system: PREPARE_SYSTEM, messages: [this.adapter.message(encoded, 'prepare-input')], tools: [PREPARE_TOOL],
-            ...(cfg.digestMaxTokens > 0 ? { maxTokens: cfg.digestMaxTokens } : {}) };
+          const args = preparationRequest(this, agent, inputs, cfg);
           return this.call(agent, 'prepare', args, controller.signal, admit);
         };
         const result = await execute().catch(error => { providerFailure = true; throw error; });
@@ -409,6 +408,10 @@ export class ContextPipeline {
         if (completed >= batchLimit || !s.prepareBacklog.events) break;
       } while (!this.closed && !controller.signal.aborted);
     })().catch(e => {
+      if (!controller.signal.aborted && e.code === 'INPUT_BUDGET_EXCEEDED') {
+        s.prepareDeferred = { reason:'input-budget',inputBudget:this.config().prepareInputTokens,events:0,estimatedTokens:0,at:Date.now(),message:e.message,force };
+        this.store.save(s); return;
+      }
       if (!controller.signal.aborted) {
         this.reportError(agent, 'prepare', e, providerFailure, validationFailure);
         s.failures.prepare.forced = force;
@@ -787,7 +790,7 @@ export class ContextPipeline {
       const s = this.state(agent.session), deferred = s.prepareDeferred;
       if (!deferred || this.mode(agent.session) !== 'pipeline') continue;
       const enough = deferred.events >= (s.records.length ? 0 : cfg.digestWindow) && deferred.estimatedTokens >= cfg.prepareContinueTokens;
-      if (enough || deferred.reason === 'first-window-budget' && cfg.prepareInputTokens > deferred.inputBudget) void this.prepare(agent, false);
+      if (enough || ['first-window-budget','input-budget'].includes(deferred.reason) && cfg.prepareInputTokens > deferred.inputBudget) void this.prepare(agent, deferred.force ?? false);
     }
     this.adaptive.reconfigure();
   }
@@ -836,14 +839,16 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
   // console polling never repeats token counting for an unchanged session.
   estimate(session, s, index, spans, cfg = this.config()) {
     if (s.transaction) return null;
-    const key = [session.surface.nodes.length, session.surface.nodes.at(-1), s.pending?.id, s.records.length, s.records.map(r => r.version + r.mode).join()].join(':');
+    const reading=this.hub.ctx.tokenMeter?.measure(session);
+    const key = [JSON.stringify(cfg),reading?.nodes?.map(n=>n.tokens).join(','),reading?.estimatorVersion,session.seq, JSON.stringify(session.requestHeader?.()), session.surface.nodes.length, session.surface.nodes.at(-1), s.pending?.id, s.records.length, s.records.map(r => r.version + r.mode).join()].join(':');
     const cache = this.estimates ??= new Map(), hit = cache.get(session.id);
     if (hit?.key === key) return hit.value;
     const pricing = this.adapter.pricing?.(session);
     const run = plan => {
       try {
         const tx = plan && createTransaction(session, { ...s, transaction: null }, plan, { ...cfg, traceEnabled: false }, this.adapter.pairing, pricing);
-        return tx ? { ...tx.stats, inputTokens: tx.inputTokens, outputTokens: tx.outputTokens } : null;
+        return tx ? { ...tx.stats, inputTokens: tx.inputTokens, outputTokens: tx.outputTokens,
+          afterTokens:replacementEstimate(reading,tx.inputTokens,tx.outputTokens) } : null;
       } catch (error) { return { error: error.message }; }
     };
     let compact = null;

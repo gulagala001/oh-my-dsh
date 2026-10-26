@@ -112,7 +112,7 @@ test('an input-limited first window waits with a budget reason and resumes after
   work(f.session, 2);
   await f.p.prepare(f.agent);
   assert.equal(f.calls.length, 0);
-  assert.equal(f.state.prepareDeferred.reason, 'first-window-budget');
+  assert.equal(f.state.prepareDeferred.reason, 'input-budget');
   f.cfg.prepareInputTokens = 10000;
   f.p.reconfigure(); await f.p.jobs.get(f.session.id + ':prepare');
   assert.equal(f.calls.length, 1);

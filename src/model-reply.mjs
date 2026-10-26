@@ -1,3 +1,4 @@
+import { assertRequestFits, inputBudget } from './metering/estimate.mjs';
 import { BlockAssembler, isHarnessError } from '@deepseek-ai/dsh-llm';
 
 // Text-only auxiliary calls share completion and cancellation ownership. The
@@ -15,6 +16,7 @@ export async function readModelReply(prepare, request, signal, { start = () => {
     preparing = Promise.resolve().then(() => { signal?.throwIfAborted(); return prepare(); });
     prepared = await Promise.race([preparing, cancelled]);
     signal?.throwIfAborted(); start(prepared, assembler);
+    assertRequestFits({ ...prepared.config,...request },inputBudget({contextWindow:prepared.context?.contextWindow,maxTokens:prepared.config.maxTokens ?? 0}));
     iterator = prepared.stream({ ...prepared.config, ...request, signal })[Symbol.asyncIterator]();
     for (;;) {
       pendingNext = iterator.next();

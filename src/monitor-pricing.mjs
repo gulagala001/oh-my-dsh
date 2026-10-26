@@ -1,3 +1,4 @@
+import { usageReceipt } from './metering/usage.mjs';
 import { readFileSync } from 'node:fs';
 import { readFile, writeFile, rename, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -77,8 +78,8 @@ function createPricing(data) {
       const found = selectEntry(call.provider, call.model), override = custom.find(p => p.provider === call.provider && p.model === call.model);
       if (!found && !override) return null;
       const entry = found?.entry, base = entry?.cost, usage = call.usage || {};
-      const totalInput = known(usage.totalTokens) && known(usage.outputTokens) && usage.totalTokens >= usage.outputTokens
-        ? usage.totalTokens - usage.outputTokens : ['inputTokens', 'cacheReadTokens', 'cacheWriteTokens'].reduce((n, key) => n + (known(usage[key]) ? usage[key] : 0), 0);
+      const receipt = usageReceipt(usage);
+      const totalInput = receipt.inputTotalTokens ?? receipt.knownInputTokens ?? 0;
       const tier = base?.tiers?.findLast(t => totalInput > t.above);
       // A route's resolved catalog rates depend on its current context tier,
       // not the receipt's token counts. Keep one template per bounded selection.

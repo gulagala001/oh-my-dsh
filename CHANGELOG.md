@@ -929,3 +929,28 @@ This release includes the changes since 0.17.4 and fixes the missing preset cont
 ## 更早版本 / Earlier releases
 
 0.17 之前的版本见 [GitHub Releases](https://github.com/gulagala001/oh-my-dsh/releases)。Earlier versions are listed on GitHub Releases.
+
+
+# OMD 未发布 / Unreleased · DSH 0.2.1-rc.3
+
+[中文](#zh-unreleased) | [English](#en-unreleased)
+
+<a id="zh-unreleased"></a>
+
+## 中文
+
+### 问题修复
+
+- 统一请求计量与用量回执；修复压缩后旧计量残留、预处理字节门槛、缓存快照阻塞及预算少记。原生兜底支持小窗口和受预算约束的分段摘要。
+
+<a id="en-unreleased"></a>
+
+## English
+
+### Bug Fixes
+
+- Unifies request measurement and usage receipts; fixes stale post-compaction accounting, byte-based preparation gates, snapshot-dependent stalls and undercounted budgets. Native fallback supports small windows and bounded segmented summaries.
+
+## 安装 / Installation
+
+适用宿主 / Target host: **DSH 0.2.1-rc.3**。本节改动尚未发布安装包。 / No installation artifact has been published for these changes.

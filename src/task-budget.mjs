@@ -1,3 +1,5 @@
+import { usageReceipt } from './metering/usage.mjs';
+
 const emptyLimits = () => ({ tokens: null, rounds: null, timeMs: null });
 const freshBudget = () => ({ limits: emptyLimits(), tokens: 0, rounds: 0, elapsedMs: 0, unmetered: 0, configured: false, visible: true });
 const aliases = { token: 'tokens', tokens: 'tokens', 总token: 'tokens', 轮次: 'rounds', rounds: 'rounds', 时间: 'timeMs', time: 'timeMs' };
@@ -36,14 +38,14 @@ export function renderBudget(budget, { language = 'zh' } = {}) {
     const row = (label, used, limit, scale = 1, unit = '') => `${label}: ${format(used / scale)}${unit} / ${limit == null ? 'unlimited' : `${format(limit / scale)}${unit} (${format(used / limit * 100)}%)`}`;
     return ['Budget', row('Tokens', budget.tokens, limits.tokens), row('Model rounds', budget.rounds, limits.rounds),
       row('Execution time', budget.elapsedMs, limits.timeMs, 60000, ' minutes'),
-      ...(budget.unmetered ? [`Token usage was not reported for ${budget.unmetered} additional calls.`] : [])].join('\n');
+      ...(budget.unmetered ? [`Complete token usage was not reported for ${budget.unmetered} additional calls.`] : [])].join('\n');
   }
   if (Object.values(limits).every(value => value == null)) return '预算：无限制';
   const format = value => value.toLocaleString('en-US', { maximumFractionDigits: 1 });
   const row = (label, used, limit, scale = 1, unit = '') => `${label}：${format(used / scale)}${unit} / ${limit == null ? '无限制' : `${format(limit / scale)}${unit}（${format(used / limit * 100)}%）`}`;
   return ['预算', row('Token', budget.tokens, limits.tokens), row('模型轮次', budget.rounds, limits.rounds),
     row('执行时间', budget.elapsedMs, limits.timeMs, 60000, ' 分钟'),
-    ...(budget.unmetered ? [`另有 ${budget.unmetered} 次调用未返回 token 用量。`] : [])].join('\n');
+    ...(budget.unmetered ? [`另有 ${budget.unmetered} 次调用未返回完整 token 用量，当前为已知下界。`] : [])].join('\n');
 }
 
 // Counters persist with the session; open clock intervals are process-local so
@@ -88,11 +90,13 @@ export class TaskBudgets {
       seen.add(id);
       const state = this.hub.store.state(id), budget = state.budget && { ...state.budget };
       if (budget?.configured && budget.visible) {
-        if (id === session.id && kind === 'main') budget.rounds++;
-        if (entry.usage) for (const key of ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']) {
-          const value = entry.usage[key]; if (Number.isFinite(value) && value >= 0) budget.tokens += value;
-        }
-        else budget.unmetered++;
+        const producer=session.id+':'+kind;
+        const previous=entry.id&&budget.receipts?.[producer]?.id===entry.id?budget.receipts[producer]:null;
+        if (id === session.id && kind === 'main'&&!previous) budget.rounds++;
+        const receipt = usageReceipt(entry.usage, { hasOutput: entry.hasOutput });
+        budget.tokens += (receipt.knownTotalTokens??0)-(previous?.tokens??0);
+        budget.unmetered += Number(receipt.totalTokens===null)-(previous?.unknown??0);
+        if(entry.id)budget.receipts={...budget.receipts,[producer]:{id:entry.id,tokens:receipt.knownTotalTokens??0,unknown:Number(receipt.totalTokens===null)}};
         this.save({ id }, budget);
         if (id === session.id) savedOwn = true;
       }

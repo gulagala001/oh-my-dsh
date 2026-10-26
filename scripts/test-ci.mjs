@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 
 // A few known regressions only; no host installation, browser or build matrix.
 const core = [
-  'startup-isolation',
+  'startup-isolation', 'metering-contract',
   'start', 'monitor-partial', 'monitor-read-cache', 'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget', 'task-budget-persistence',
   'file-upload-compat', 'search-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update',
   'context-store-cache', 'context-coordinate-release',
@@ -48,6 +48,8 @@ if (command === 'matrix') {
   if (new Set(files).size !== files.length || files.some(file => !existsSync(file))) throw new Error('Suite contains duplicate or missing tests');
   if (command === 'list') console.log(JSON.stringify(files));
   else if (command === 'run') {
+    const built=spawnSync(process.execPath,['scripts/build-metering.mjs'],{stdio:'inherit'});
+    if(built.status!==0)throw Error('Metering build failed');
     const result = spawnSync(process.execPath, ['--test', '--test-concurrency=2', `--test-shard=${shard}`, ...files], { stdio: 'inherit' });
     if (result.error) throw result.error;
     process.exitCode = result.status ?? 1;

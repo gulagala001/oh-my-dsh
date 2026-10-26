@@ -63,7 +63,11 @@ export async function checkRuntime(directory = root) {
   directory = resolve(directory);
   const checks = [], errors = [];
   for (const entry of ['src/index.mjs', 'src/runtime.mjs', 'src/ptc.mjs', 'vendor/opencu/src/dsh/index.mjs']) {
-    try { await import(pathToFileURL(join(directory, entry)).href); checks.push(entry); }
+    try {
+      const plugin=await import(pathToFileURL(join(directory, entry)).href);
+      if(typeof plugin.apply!=='function')throw Error('Plugin entry does not export apply()');
+      checks.push(entry);
+    }
     catch (error) { errors.push(`${entry}: ${failure(error)}`); }
   }
   const deferred = await checkDeferredDependencies(directory);

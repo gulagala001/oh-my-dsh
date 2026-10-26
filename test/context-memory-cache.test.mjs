@@ -1,3 +1,4 @@
+import { measureRequest } from '../src/metering/estimate.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -93,31 +94,15 @@ test('disabled cache keeps the independent preparation request and tool response
   assert.equal(f.state.records.length, 1);
 });
 
-test('missing, unconfirmed, incomplete and oversized snapshots wait without uncached fallback', async t => {
-  const f = await fixture(t);
-  await f.pipeline.prepare(f.agent, true);
-  assert.equal(f.calls.length, 0);
-  const main = f.take(f.main(), false);
-  await f.pipeline.prepare(f.agent, true);
-  assert.equal(f.calls.length, 0);
-  f.cfg.prepareInputTokens = Math.ceil(JSON.stringify(main).length / 4);
-  f.pipeline.mainSucceeded(f.session, main);
-  await f.pipeline.jobs.get(f.session.id + ':prepare');
-  assert.equal(f.calls.length, 0);
-  assert.match(f.state.memoryCache.waitingReason, /预算/);
-  f.cfg.prepareInputTokens = 300000;
-  f.pipeline.cachedPreparation.snapshots.drop(f.session.id);
-  f.take(f.main({ messages: main.messages.slice(0, 2) }));
-  await new Promise(setImmediate);
-  await f.pipeline.jobs.get(f.session.id + ':prepare');
-  assert.equal(f.calls.length, 0);
-  assert.match(f.state.memoryCache.waitingReason, /处理范围/);
-  f.take();
-  await new Promise(setImmediate);
-  await f.pipeline.jobs.get(f.session.id + ':prepare');
-  assert.equal(f.calls.length, 1, 'A successful containing snapshot resumes the deferred manual request');
-  assert.equal(f.state.records.length, 1);
-  assert.deepEqual(f.state.failures, {});
+for (const scenario of ['missing','unconfirmed','incomplete','oversized']) test(`cache ${scenario} uses a bounded complete segment without waiting`, async t => {
+  const f=await fixture(t,{prepareInputTokens:6000});
+  if(scenario==='unconfirmed')f.take(f.main(),false);
+  if(scenario==='incomplete')f.take(f.main({messages:f.main().messages.slice(0,2)}));
+  if(scenario==='oversized')f.take(f.main({system:'x'.repeat(40000)}));
+  await f.pipeline.prepare(f.agent,true);
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0].tools[0].name,'prepare_segment');
+  assert.ok(measureRequest(f.calls[0]).tokens<=f.cfg.prepareInputTokens);
+  assert.equal(f.state.records.length,1);assert.equal(f.pipeline.cachedPreparation.waiting.size,0);
 });
 
 test('source paths exclude recall/task payloads, and generated tool calls never execute or publish', async t => {
@@ -159,24 +144,13 @@ test('disabled, released, changed-route and replaced-source requests cannot publ
   }
 });
 
-test('Auto Compact waits for a snapshot and then uses the same cached preparation without enabling normal background work', async t => {
-  const f = await fixture(t, { contextEnabled: false, autoCompactEnabled: true, autoCompactThreshold: 100, autoCompactMode: 'brief' });
-  f.hub.ctx.tokenMeter = { measure: () => ({ totalTokens: f.session.surface.nodes.includes(f.work[0].seq) ? 500 : 50, nodes: [] }) };
+test('Auto Compact can compress a cold session without a cached prefix or normal background work', async t => {
+  const f=await fixture(t,{contextEnabled:false,autoCompactEnabled:true,autoCompactThreshold:100,autoCompactMode:'brief'});
+  f.hub.ctx.tokenMeter={measure:()=>({totalTokens:f.session.surface.nodes.includes(f.work[0].seq)?500:50,nodes:[]})};
   await f.pipeline.autoCompact.check(f.agent);
-  assert.equal(f.calls.length, 0);
-  assert.equal(f.state.failures.autoCompact, undefined);
-  const main = f.take(f.main(), false);
-  const newest = f.session.append('assistant/message', { turn: 1, step: 2, message: { id: 'latest-reply', role: 'assistant',
-    source: { kind: 'model', model: 'large' }, content: [{ type: 'text', text: 'The latest execution completed.' }] } }, { surfaceOp: 'append' });
-  f.pipeline.mainSucceeded(f.session, main);
-  await f.pipeline.jobs.get(f.session.id + ':autoCompact');
-  assert.equal(f.calls.length, 1);
-  assert.deepEqual(f.calls[0].messages.slice(0, -1), main.messages);
-  assert.ok(f.calls[0].messages.at(-1).content[0].text.includes('The latest execution completed.'));
-  assert.ok(f.state.records[0].originalSeqs.includes(newest.seq));
-  assert.equal(f.state.records[0].mode, 'brief');
-  assert.ok(!f.session.surface.nodes.includes(f.work[0].seq));
-  assert.equal(f.state.failures.autoCompact, undefined);
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0].tools[0].name,'prepare_segment');
+  assert.equal(f.state.records[0].mode,'brief');assert.ok(!f.session.surface.nodes.includes(f.work[0].seq));
+  assert.equal(f.state.failures.autoCompact,undefined);
 });
 
 test('a growing main request retains a smaller confirmed prefix and the deferred preparation', async t => {
@@ -186,7 +160,7 @@ test('a growing main request retains a smaller confirmed prefix and the deferred
   await f.pipeline.prepare(f.agent, true);
   assert.equal(f.calls.length, 1, 'An oversized main request must not erase an already usable prefix');
   assert.deepEqual(f.calls[0].messages.slice(0, -1), first.messages);
-  assert.ok(Buffer.byteLength(JSON.stringify(f.calls[0])) <= f.cfg.prepareInputTokens * 4);
+  assert.ok(measureRequest(f.calls[0]).tokens <= f.cfg.prepareInputTokens);
   assert.equal(f.state.records.length, 1);
 });
 
@@ -213,17 +187,11 @@ test('request growth cannot cancel an in-flight cached preparation', async t => 
   assert.deepEqual(f.state.failures, {});
 });
 
-test('an oversized first request reports the budget and preserves manual retry across route changes', async t => {
-  const f = await fixture(t, { prepareInputTokens: 6000 });
-  f.state.eventsSincePrepare = 0;
-  f.take(f.main({ system: 'x'.repeat(30000) }));
-  await f.pipeline.prepare(f.agent, true);
-  assert.match(f.state.memoryCache.waitingReason, /预算/);
-  f.take(f.main({ model: 'new-model' }));
-  await new Promise(setImmediate);
-  await f.pipeline.jobs.get(f.session.id + ':prepare');
-  assert.equal(f.calls.length, 1, 'The explicit pending preparation survives a route change');
-  assert.equal(f.calls[0].model, 'new-model');
+test('an oversized first prefix does not block an explicit preparation', async t => {
+  const f=await fixture(t,{prepareInputTokens:6000});f.state.eventsSincePrepare=0;
+  f.take(f.main({system:'x'.repeat(30000)}));await f.pipeline.prepare(f.agent,true);
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0].tools[0].name,'prepare_segment');
+  assert.equal(f.state.records.length,1);
 });
 
 test('raising the budget resumes a waiting preparation without another main request', async t => {
@@ -235,7 +203,7 @@ test('raising the budget resumes a waiting preparation without another main requ
   await new Promise(setImmediate);
   await f.pipeline.jobs.get(f.session.id + ':prepare');
   assert.equal(f.state.records.length, 1);
-  assert.equal(f.state.memoryCache.waitingReason, null);
+  assert.equal(f.state.memoryCache?.waitingReason ?? null, null);
 });
 
 for (const scenario of ['growth', 'suffix', 'unconfirmed']) test('adaptive preparation preserves successful prefixes: ' + scenario, async t => {
@@ -269,13 +237,14 @@ test('adaptive request growth does not discard an in-flight result, but a new ro
     f.take();
     await f.ready.promise;
     const job = f.pipeline.jobs.get(f.session.id + ':adaptive');
+    if(change==='route')f.reply(async()=>[{type:'text',text:'{"action":"skip","reason":"New route checked."}'}]);
     f.take(f.main({ system: 'x'.repeat(30000), ...(change === 'route' ? { model: 'other' } : {}) }));
     late.resolve([{ type: 'text', text: JSON.stringify({ action: 'compress', choices: [{ id: 'new-window', action: 'brief' }],
       prepared: { summary: 'Observed tool result.', documents: [] } }) }]);
     await job;
     await new Promise(setImmediate);
     assert.equal(f.state.records.length, change === 'growth' ? 1 : 0, change);
-    if (change === 'route') assert.match(f.state.adaptive.waitingReason, /预算/);
+    if (change === 'route') assert.ok(f.calls.every(call=>measureRequest(call).tokens<=f.cfg.prepareInputTokens));
     assert.equal(f.state.adaptive.error, null);
   }
 });
@@ -314,22 +283,13 @@ test('maintenance exclusion defers adaptive work without losing the successful r
   assert.equal(f.state.adaptive.lastDecision, 'skip');
 });
 
-for (const blockedBy of ['snapshot', 'budget']) test('a deferred manual adaptive check resumes after ' + blockedBy, async t => {
-  const f = await fixture(t, { memoryCacheEnabled: false, coordinatorMinGapMs: 0 });
-  f.state.compressionMode = 'adaptive'; f.state.eventsSincePrepare = 0;
-  f.reply(async () => [{ type: 'text', text: '{"action":"skip","reason":"Keep the recorded work."}' }]);
-  if (blockedBy === 'budget') {
-    const main = f.main(); f.cfg.prepareInputTokens = Math.ceil(Buffer.byteLength(JSON.stringify(main)) / 4); f.take(main);
-  }
-  await f.pipeline.adaptive.check(f.agent, { force: true });
-  assert.equal(f.calls.length, 0);
-  if (blockedBy === 'budget') { f.cfg.prepareInputTokens = 300000; f.pipeline.reconfigure(); }
-  else f.take();
-  await new Promise(setImmediate);
-  await f.pipeline.jobs.get(f.session.id + ':adaptive');
-  assert.equal(f.calls.length, 1);
-  assert.equal(f.state.adaptive.lastDecision, 'skip');
-  assert.equal(f.pipeline.adaptive.forced.size, 0);
+test('a manual adaptive check can run on a cold session', async t => {
+  const f=await fixture(t,{memoryCacheEnabled:false,coordinatorMinGapMs:0});
+  f.state.compressionMode='adaptive';f.state.eventsSincePrepare=0;
+  f.reply(async()=>[{type:'text',text:'{"action":"skip","reason":"Keep the recorded work."}'}]);
+  await f.pipeline.adaptive.check(f.agent,{force:true});
+  assert.equal(f.calls.length,1);assert.equal(f.state.adaptive.lastDecision,'skip');
+  assert.equal(f.pipeline.adaptive.forced.size,0);
 });
 
 test('automatic cached preparation waits for a full first factual window and excludes PTC task wrappers', async t => {

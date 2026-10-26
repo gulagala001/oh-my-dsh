@@ -63,7 +63,7 @@ export function ContextSection({ sessionId, visible, go, params }) {
   const m = meter.data, hostCurrent = m?.meter?.totalTokens, current = bc ? c.bc.status?.sentTokens : hostCurrent, cap = bc ? c.bc.status?.contextLimit : m?.contextCapacity;
   const { parts, estimatedTokens, adjustmentTokens } = composition(m?.frame, hostCurrent, m?.toolsTokens);
   const pending = c.estimate?.pending, compactEst = c.estimate?.compact;
-  const after = !bc && current != null && pending && !pending.error ? current - pending.estimatedSavedTokens : null;
+  const after = !bc && current != null && pending && !pending.error ? pending.afterTokens : null;
   const rawLive = records.filter(r => r.live && r.mode === 'raw').length;
   const last = c.lastReplacement;
   const openDoc = id => documents.read(`/context/document?${qs({ session: sessionId, id })}`);

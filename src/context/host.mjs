@@ -1,3 +1,4 @@
+import { textUpperBound, measureRequest, requestPricing, inputBudget } from '../metering/estimate.mjs';
 import { TODO_META } from '../task-context.mjs';
 import { CompactionEngine, compactCheckpointSource, toolPairingBalancedBefore, toolPairingBalancedAfter } from '@deepseek-ai/dsh-compaction';
 import { CONTEXT_WINDOW_EXCEEDED_CODE, createUserMessage } from '@deepseek-ai/dsh-llm';
@@ -6,26 +7,34 @@ import { appendShadow } from './shadow.mjs';
 export function createHostAdapter(hub) {
   const routes = new WeakMap();
   const message = (text, kind) => createUserMessage({ content: [{ type: 'text', text }], source: { kind: 'plugin:oh-my-dsh:' + kind } });
+  const measureContext = session => {
+    const route=routes.get(session)?.route,header=session.requestHeader?.();
+    return hub.ctx.tokenMeter.measure(session,route?{...header,config:route}:undefined);
+  };
   const requestBudget = session => {
     const prepared = routes.get(session), { route, info } = prepared ?? { route: session.requestHeader?.()?.config };
     const capacity = prepared ? info?.context?.contextWindow : session.requestContext?.()?.contextWindow;
     if (!capacity) return null;
     const available = capacity - (route?.maxTokens ?? info?.defaultMaxTokens ?? 0);
     const headroom = Math.min(65536, Math.floor(Math.max(0, available) * 0.1));
-    const hostTokens = hub.ctx.tokenMeter.measure(session).totalTokens;
-    const request = hub.optimization?.state(session).lastRequest;
-    // BC owns the transmitted-history estimate. The local optimization meter
-    // still sees the uncompressed host log and must not replace that estimate.
-    const optimizedTokens = hub.bc?.active(session) ? 0 : request?.used ?? 0;
-    return { available, usable: available - headroom, used: Math.max(hub.bc?.effectiveTokens(session, hostTokens) ?? hostTokens, optimizedTokens) };
+    const hostTokens = measureContext(session).totalTokens;
+    return { available, usable: available - headroom, used: hub.bc?.effectiveTokens(session, hostTokens) ?? hostTokens };
   };
   return {
+    measureContext,
+    routeStamp(request) { return hub.ctx.tokenMeter?.routeStamp?.(request) ?? null; },
+    measureRequest(request) { return measureRequest(request, requestPricing(hub.ctx.llm, request)); },
+    inputLimit(session, request, limit = Infinity) {
+      const prepared = routes.get(session), info = prepared && prepared.route?.provider === request.provider && prepared?.route?.model === request.model ? prepared.info : null;
+      return inputBudget({ inputLimit: limit, contextWindow: info?.context?.contextWindow, maxTokens: request.maxTokens ?? info?.defaultMaxTokens ?? 0 });
+    },
+    safetyThreshold(session) { return requestBudget(session)?.usable ?? Infinity; },
     contextCapacity(session) {
       const prepared = routes.get(session);
       return (prepared ? prepared.info?.context?.contextWindow : session.requestContext?.()?.contextWindow) ?? null;
     },
     pricing(session) {
-      const config = session.requestHeader?.()?.config;
+      const config = routes.get(session)?.route ?? session.requestHeader?.()?.config;
       const llm = hub.ctx.get?.('llm') || hub.ctx.llm;
       return { imagePricing: config && llm?.imageRequestPricing?.(config.provider, config.model),
         evidenceRefsFor: seqs => hub.optimization?.refsFor(session, seqs) ?? [],
@@ -47,7 +56,7 @@ export function createHostAdapter(hub) {
     },
     catalogCost(text) {
       // The native heuristic underprices CJK. A byte floor keeps publication conservative.
-      return Math.max(hub.ctx.tokenMeter.estimateMessage(message(text, 'project-catalog')), Buffer.byteLength(text));
+      return Math.max(hub.ctx.tokenMeter.estimateMessage(message(text, 'project-catalog')), textUpperBound(text));
     },
     dreamBudget(session, credit = 0) {
       const budget = requestBudget(session);

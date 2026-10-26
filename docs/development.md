@@ -118,3 +118,8 @@ CodeGraph 目录探测与原生 MCP 适配器由运行时的同一个 catalog �
 图片、上下文预算和空闲预处理见[上下文整理与原文回查](context-workflow.md)；来源与许可见[第三方声明](../THIRD_PARTY_NOTICES.md)。
 
 内置 BTW 使用 `node scripts/sync-btw.mjs ../dsh-btw-plugin` 按 npm 实际分发清单同步独立插件的完整构建、文档清单和检查脚本；`vendor/btw.json` 记录来源提交、精确宿主及文件哈希。服务端与前端直接使用同一插件入口，匹配的独立与内置版本共用注册生命周期。
+
+
+当前 token 计量由一个 `tokenMeter` 服务负责原生上下文／用量投影，OMD 预处理、压缩收益、工具结果、Dream 和预算共用 `src/metering` 的请求与回执契约。真实回执、估算、保守预占和未知字段分别处理；输出属于累计消费，但不直接加进下一次请求的上下文。压缩和回退使旧前缀回执失效，模型路由及图片投影沿用原生 LLM 服务。原生压缩继续使用 `BasicCompactionEngine` 的事务、工具配对和恢复；公开摘要钩子负责把超窗输入分段为完整、受预算约束的请求。没有缓存快照时也可整理。
+
+`node scripts/build-metering.mjs` 只构建受影响的宿主计量与摘要适配。原生函数来源固定于 `src/metering/native/source.json`；工厂通过原有 Loader 解析 SDK，原注册项由 bundle 暂停，卸载后恢复。投影版本由计量源码和原生来源摘要生成，避免算法更新后继续读取旧缓存。`pnpm metering:check` 检查估算／回执解析归属、原生来源摘要和内置 Workflow 同源清单，已接入宿主构建、CI 与 prepack；`test/metering-contract.test.mjs` 覆盖部分回执、实测基准失效、原生日志重放、小窗口及分段摘要。改动后先执行上述受影响构建，再运行定点测试。

@@ -1,3 +1,4 @@
+import { usageReceipt } from './metering/usage.mjs';
 import { monitorCallPrice } from './monitor-pricing.mjs';
 
 const known = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
@@ -18,6 +19,7 @@ export async function* monitorCallStream(stream, timing, now = Date.now) {
 // Public API prices are automatic; an exact-route custom price takes priority.
 export function monitorCallCost(call, prices = [], price = monitorCallPrice(call, prices)) {
   if (!price || !/^[A-Z]{3}$/.test(price.currency)) return null;
+  if(usageReceipt(call.usage).inconsistent)return null;
   const usage = call.usage || {}, fields = ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens'];
   if (!fields.some(key => known(usage[key]))) return null;
   const exact = known(usage.totalTokens) && fields.reduce((n, key) => n + (known(usage[key]) ? usage[key] : 0), 0) === usage.totalTokens;

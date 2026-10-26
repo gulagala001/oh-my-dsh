@@ -13,6 +13,7 @@ function isolated(source) {
 
 test('optional native, MCP and Computer Use imports do not enter the main import graph', () => {
   isolated(`
+    import assert from 'node:assert/strict';
     import { registerHooks } from 'node:module';
     const blocked = ['sharp', '@modelcontextprotocol/client', '@deepseek-ai/dsh-mcp-client', '#opencu/integration'];
     registerHooks({ resolve(specifier, context, next) {
@@ -21,7 +22,8 @@ test('optional native, MCP and Computer Use imports do not enter the main import
       return next(specifier, context);
     } });
     await import(${JSON.stringify(new URL('../src/index.mjs', import.meta.url).href)});
-    await import(${JSON.stringify(new URL('../src/runtime.mjs', import.meta.url).href)});
+    const runtime=await import(${JSON.stringify(new URL('../src/runtime.mjs', import.meta.url).href)});
+    assert.equal(typeof runtime.apply,'function');
   `);
 });
 

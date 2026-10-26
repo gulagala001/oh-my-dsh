@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/deepseek-ai/deepseek-harness",
+  "commit": "1f81c047fc48fa190a683e469daa699857e9afe8",
+  "path": "packages/llm/token-meter/src",
+  "files": {
+    "surface-fold.ts": "686f597a7fdc9d45394c68eb8ef4f472094978d2483b597ee2a1def210dfb878",
+    "route-pricing.ts": "4201c430b66e12fd40dcf264034bbc517cb73867f4b31a68b90c8a3ff3210840",
+    "summarizer.ts": "03ef6eb0b6a011530829820e30ff709c2c1b34cfa37a98c19c0037432b9d2f55"
+  },
+  "paths": {
+    "summarizer.ts": "packages/compaction/compaction-basic/src/summarizer.ts"
+  }
+}

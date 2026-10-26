@@ -15,7 +15,7 @@ export function collectRuntimeStatus(agent, hub, { now = Date.now(), messages = 
   const header = session.requestHeader?.()?.config;
   const records = activeRecords(hub.context.state(session)).filter(r => liveSpan(session, r));
   const jobs = agent.ctx?.get?.('jobs') ?? hub.ctx.get?.('jobs');
-  const meter = hub.ctx.tokenMeter.measure(session);
+  const meter = hub.context.adapter.measureContext?.(session) ?? hub.ctx.tokenMeter.measure(session);
   const input = messages.findLast(m => m.source?.kind === 'user')?.id
     ?? events.findLast(e => e.type === 'user/message' && e.surfaceOp === 'append' && e.data?.source?.kind === 'user')?.data.id ?? null;
   return {

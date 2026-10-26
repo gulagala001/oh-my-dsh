@@ -156,3 +156,28 @@ Install the fixed package matching the complete DSH version through **Plugins �
 - Exact DSH 0.2.1-rc.2 support; package `dsh-workflow-plus`, MIT license and pinned GitHub Release distribution.
 
 完整双语发行说明 / Full bilingual release notes: [docs/releases.md](docs/releases.md).
+
+
+# DSH Workflow 未发布 / Unreleased · DSH 0.2.1-rc.3
+
+[中文](#zh-unreleased) | [English](#en-unreleased)
+
+<a id="zh-unreleased"></a>
+
+## 中文
+
+### 问题修复
+
+- 通过原生流解析读取 V4 嵌套用量回执，避免已有输出计量仍被当作未计量而阻止派发；同一次尝试的累计回执替换旧值，真正重试独立计量；记账保存失败不提交内存状态。内置同步记录源码提交。
+
+<a id="en-unreleased"></a>
+
+## English
+
+### Bug Fixes
+
+- Reads V4 nested usage through the native stream reader so measured output no longer blocks dispatch as unmetered. Cumulative receipts replace prior samples, actual retries are charged separately, and failed persistence does not commit in-memory accounting. Embedded synchronization records the source commit.
+
+## 安装 / Installation
+
+适用宿主 / Target host: **DSH 0.2.1-rc.3**。本节改动尚未发布安装包。 / No installation artifact has been published for these changes.

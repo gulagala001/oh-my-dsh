@@ -1,49 +1,35 @@
+import { inputSQL, knownInputSQL, knownTotalSQL, cacheMeasuredSQL, validUsageSQL } from './metering/usage-sql.mjs';
+import { reportedUsage, usageFields, usageReceipt, USAGE_FIELDS } from './metering/usage.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { monitorActivityFingerprint } from './monitor-activity.mjs';
 
-const fields = ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'reasoningTokens', 'totalTokens'];
+const fields = USAGE_FIELDS;
 const measurements = ['durationMs', 'inputTotalTokens', 'knownInputTokens', 'knownTotalTokens', 'cacheMeasuredInputTokens', 'cacheMeasuredReadTokens', ...fields];
 const additive = ['calls', 'errors', 'cancelled', 'unmetered', 'usageUnreported', 'totalUnreported', 'outputUnreported', 'cacheMeasuredCalls',
   'inputUnreported', 'inputBucketUnreported', 'cacheUnreported', 'cacheWriteUnreported', 'durationUnreported', ...measurements];
 const number = value => Number.isFinite(value) && value >= 0 ? value : null;
 const text = (value, limit = 256) => typeof value === 'string' ? value.slice(0, limit) : null;
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const inputSQL = `CASE WHEN totalTokens>=outputTokens THEN totalTokens-outputTokens
-  ELSE inputTokens+cacheReadTokens+cacheWriteTokens END`;
-// Sum known disjoint buckets per call, not aggregate exact-call subtotals: the
-// latter silently omit partial receipts and can mix cache numerator/denominator.
-const knownInputSQL = `CASE WHEN (${inputSQL}) IS NOT NULL THEN (${inputSQL})
-  WHEN inputTokens IS NOT NULL OR cacheReadTokens IS NOT NULL OR cacheWriteTokens IS NOT NULL
-  THEN COALESCE(inputTokens,0)+COALESCE(cacheReadTokens,0)+COALESCE(cacheWriteTokens,0) END`;
-const knownTotalSQL = `CASE WHEN totalTokens IS NOT NULL THEN totalTokens
-  WHEN (${knownInputSQL}) IS NOT NULL OR outputTokens IS NOT NULL
-  THEN COALESCE((${knownInputSQL}),0)+COALESCE(outputTokens,0) END`;
-// Keep both sides of the hit rate on the same valid receipts. Missing writes
-// are fine when the receipt independently establishes the exact input total.
-const cacheMeasuredSQL = `(${inputSQL})>0 AND cacheReadTokens IS NOT NULL AND cacheReadTokens<=(${inputSQL})
-  AND COALESCE(inputTokens,0)+cacheReadTokens+COALESCE(cacheWriteTokens,0)<=(${inputSQL})
-  AND (inputTokens IS NULL OR cacheWriteTokens IS NULL OR inputTokens+cacheReadTokens+cacheWriteTokens=(${inputSQL}))
-  AND (totalTokens IS NULL OR outputTokens IS NULL OR totalTokens>=outputTokens)`;
 // FILTER skips aggregate steps for non-matching receipts. Keep the original
 // predicates, NULL readings and SUM order, including zero for an empty range.
 const metricsSQL = `COUNT(*) calls, COUNT(*) FILTER (WHERE status='error') errors,
   COUNT(*) FILTER (WHERE ${cacheMeasuredSQL}) cacheMeasuredCalls,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${inputSQL}) FILTER (WHERE ${cacheMeasuredSQL}) END cacheMeasuredInputTokens,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(cacheReadTokens) FILTER (WHERE ${cacheMeasuredSQL}) END cacheMeasuredReadTokens,
-  COUNT(*) FILTER (WHERE status='cancelled') cancelled, COUNT(*) FILTER (WHERE totalTokens IS NULL OR outputTokens IS NULL OR (${inputSQL}) IS NULL) unmetered,
+  COUNT(*) FILTER (WHERE status='cancelled') cancelled, COUNT(*) FILTER (WHERE NOT (${validUsageSQL}) OR totalTokens IS NULL OR outputTokens IS NULL OR (${inputSQL}) IS NULL) unmetered,
   COUNT(*) FILTER (WHERE (${knownTotalSQL}) IS NULL) usageUnreported,
-  COUNT(*) FILTER (WHERE totalTokens IS NULL) totalUnreported, COUNT(*) FILTER (WHERE outputTokens IS NULL) outputUnreported,
-  COUNT(*) FILTER (WHERE inputTokens IS NULL) inputBucketUnreported,
-  COUNT(*) FILTER (WHERE cacheReadTokens IS NULL) cacheUnreported, COUNT(*) FILTER (WHERE cacheWriteTokens IS NULL) cacheWriteUnreported,
+  COUNT(*) FILTER (WHERE totalTokens IS NULL OR NOT (${validUsageSQL})) totalUnreported, COUNT(*) FILTER (WHERE outputTokens IS NULL OR NOT (${validUsageSQL})) outputUnreported,
+  COUNT(*) FILTER (WHERE inputTokens IS NULL OR NOT (${validUsageSQL})) inputBucketUnreported,
+  COUNT(*) FILTER (WHERE cacheReadTokens IS NULL OR NOT (${validUsageSQL})) cacheUnreported, COUNT(*) FILTER (WHERE cacheWriteTokens IS NULL OR NOT (${validUsageSQL})) cacheWriteUnreported,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(durationMs) END durationMs,
   COUNT(*) FILTER (WHERE durationMs IS NULL) durationUnreported, COUNT(*) FILTER (WHERE (${inputSQL}) IS NULL) inputUnreported,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${inputSQL}) END inputTotalTokens,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${knownInputSQL}) END knownInputTokens,
   CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${knownTotalSQL}) END knownTotalTokens,
-  ${fields.map(key => `CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${key}) END ${key}`).join(',')},
+  ${fields.map(key => `CASE WHEN COUNT(*)=0 THEN 0 ELSE SUM(${key}) FILTER (WHERE ${validUsageSQL}) END ${key}`).join(',')},
   CASE WHEN COUNT(*)=0 THEN 0 ELSE MAX(${inputSQL}) END peakContext`;
 
 const groupedMetricsSQL = [[cacheMeasuredSQL, '_cacheMeasured'], [knownTotalSQL, '_knownTotal'],
@@ -92,19 +78,8 @@ export function addMonitorMetric(target, value) {
 
 // Missing optional buckets stay missing. In particular a missing cache reading
 // is not evidence of a cache miss, and reasoning is a subset of output.
-export function reportedMonitorUsage(usage, hasOutput = false) {
-  // pi-ai can emit its all-zero initializer even when no usage receipt arrived.
-  // Once output exists, those zeros cannot establish measured consumption.
-  const values = fields.map(key => number(usage?.[key]));
-  return hasOutput && values.some(value => value === 0) && values.every(value => value === null || value === 0) ? null : usage;
-}
-export function monitorUsage(usage) {
-  const result = Object.fromEntries(fields.map(key => [key, number(usage?.[key])]));
-  if (result.totalTokens === null && ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens'].every(key => result[key] !== null)) {
-    result.totalTokens = result.inputTokens + result.outputTokens + result.cacheReadTokens + result.cacheWriteTokens;
-  }
-  return result;
-}
+export const reportedMonitorUsage = reportedUsage;
+export const monitorUsage = usageFields;
 export function monitorQuery(params, now = Date.now()) {
   const get = key => params instanceof URLSearchParams ? params.get(key) : params?.[key];
   const range = get('range') || 'session', period = get('period') || 'all', status = get('status') || 'all';
@@ -161,6 +136,8 @@ export class MonitorLedger {
       this.db.prepare('INSERT OR IGNORE INTO metadata VALUES(?,?)').run('startedAt', String(now()));
       this.startedAt = Number(this.db.prepare('SELECT value FROM metadata WHERE key=?').get('startedAt').value);
       this.insert = this.db.prepare('INSERT OR IGNORE INTO calls VALUES(' + Array(21).fill('?').join(',') + ')');
+      const columns=['sessionId','kind','at','provider','model','status','source','turn','step','eventSeq','startedAt','durationMs','effort','error',...fields];
+      this.replace=this.db.prepare('INSERT INTO calls VALUES('+Array(21).fill('?').join(',')+') ON CONFLICT(id) DO UPDATE SET '+columns.map(key=>key+'=excluded.'+key).join(',')+' WHERE calls.sessionId=excluded.sessionId AND calls.kind=excluded.kind AND calls.source=excluded.source AND ((excluded.eventSeq IS NOT NULL AND (calls.eventSeq IS NULL OR excluded.eventSeq>=calls.eventSeq)) OR (excluded.eventSeq IS NULL AND excluded.at>=calls.at))');
       this.insertTiming = this.db.prepare('INSERT OR IGNORE INTO call_timings VALUES(?,?)');
       this.insertEvent = this.db.prepare('INSERT OR IGNORE INTO events VALUES(' + Array(12).fill('?').join(',') + ')');
     } catch (error) {
@@ -171,8 +148,9 @@ export class MonitorLedger {
     if (!this.db || this.closed) return false;
     try {
       const u = monitorUsage(reportedMonitorUsage(entry.usage, entry.hasOutput)), id = text(entry.id, 512) || randomUUID();
+      if(usageReceipt(entry.usage).inconsistent)this.appendEvent({id:'usage:'+id,sessionId:entry.sessionId,kind:'usage',status:'error',title:'用量回执不一致',detail:'原始计数互相矛盾，未计作精确用量。',data:{callId:id,usage:entry.usage}});
       const status = ['success', 'error', 'cancelled'].includes(entry.status) ? entry.status : entry.error ? 'error' : 'success';
-      this.insert.run(id, text(entry.sessionId), text(entry.kind) || 'unknown', number(entry.at) ?? this.now(),
+      (entry.replace?this.replace:this.insert).run(id, text(entry.sessionId), text(entry.kind) || 'unknown', number(entry.at) ?? this.now(),
         text(entry.provider), text(entry.model), status, text(entry.source) || 'background',
         number(entry.turn), number(entry.step), number(entry.eventSeq), number(entry.startedAt), number(entry.durationMs),
         text(entry.effort), text(entry.error, 2000), ...fields.map(key => u[key]));

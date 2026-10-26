@@ -18,7 +18,7 @@ test('combined optimization budget preserves the BC transmission estimate', () =
   const adapter = createHostAdapter(hub);
   assert.equal(adapter.pressure(session), 100 / 9000);
   active = false;
-  assert.equal(adapter.pressure(session), 12000 / 9000);
+  assert.equal(adapter.pressure(session), 2000 / 9000);
 });
 import { user, system, exchange, plugin } from './context-fixture.mjs';
 
@@ -120,6 +120,6 @@ test('BC current-state protection never duplicates image payloads and its meter 
   const projected = protectBcContext(options, session);
   assert.equal(projected.messages[0], options.messages[0]);
   assert.ok(projected.messages.at(-1).content.every(block => block.type === 'text'));
-  hub.bc.meters.set(session.id, { conversationId: session.id, sentTokens: 200, hostTokens: 1000 });
+  hub.bc.meters.set(session.id, { conversationId: session.id, replaceGeneration:session.surface.replaceGeneration,route:JSON.stringify(session.requestHeader?.()?.config), sentTokens: 200, hostTokens: 1000 });
   assert.equal(hub.bc.effectiveTokens(session, 1150), 350);
 });

@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "sourceCommit": "b3a57e63ebea0d6e798d72a917dc215212e8a6d3",
   "package": "dsh-workflow-plus",
   "version": "0.1.5-dsh.0.2.1-rc.3",
   "host": "0.2.1-rc.3",
@@ -9,7 +10,7 @@
     "tag": "dsh-v0.2.1-rc.3"
   },
   "files": {
-    "CHANGELOG.md": "47da8c3874d9a015174e622049bbdb49d53e2b26942b8782e5c4f9492452ae94",
+    "CHANGELOG.md": "b86825ff5ad995fec1472b86af2d6076e159678ad9f7982f55d0faa6493a5d55",
     "cordis.patch.yml": "6f818b0977db06f8a4e745b15d44447d4c4632878a31a1639010cc0c639fbe6b",
     "docs/architecture.md": "43b036adf14a8e05ffac57714aee5fe0d29c26aeccd15aa9c6723676202251de",
     "docs/documentation.md": "30bd7b2abfbdbbc0583e704f732e6ddec1746282fb9e3180157c863b925c6493",
@@ -26,7 +27,7 @@
     "lib/host/workflow-ptc.factory.mjs": "873318c1103dad7c804fe3e471b44bb5501c0497b04d4464591c34aa62e2d7c9",
     "lib/host/workflow-spawn.factory.mjs": "49b82fecd81edd9b0964bde508e67a539adce3e3255bbf7b2dfd1040f02a8971",
     "LICENSE": "5122e186494989a8d9a492cae953cfb88ac124239af0ab0ad8fb53eca1a1ccc5",
-    "package.json": "f81124a50f2a0c9274be4b14149c1fc1ecd6ae6931bf0fe90a50d205dc54c565",
+    "package.json": "3130a171a694e018371f7b2146e613c7e63b9b3f9c5cbcc2c333a20affd9edda",
     "README_EN.md": "3a74b9f68a4300c532ebe984aebf60e2abaa873f128ff2efd96199f37ca705b4",
     "README.md": "3174299d8b87e62eca1c2d485161d83c855e1ed93fac5eef412116aebc30eb53",
     "scripts/build-client.mjs": "bc99ff795410e84a6e02b4b80e8e5d2ca44b8975a43b79d5d216e1ed45b88da6",
@@ -39,8 +40,8 @@
     "scripts/host-const-enums.json": "66c0e29a9ac0df0a609a11647e169a17f2ccc36fbe0b12f32ae1a3d2ae493468",
     "scripts/host-const-enums.mjs": "70add6de38dedd019000d1409ca6b250bf19bd13e68a9a2d933d2f753efdeb86",
     "scripts/prepack.mjs": "c45e3fc4bee8ab65e00452e0e5c197619da3aef9315d3ef7f9fd1470f46cf98b",
-    "scripts/sync-omd.mjs": "e7e3c6f2eed313981ca585bf969813027661c865ba74b99317fe6ac630d01459",
-    "src/budget.mjs": "35e2f70c7c0a947f7a1f4d1fb02a2c212634f9390c1bcd404aa0601dd49d3c2a",
+    "scripts/sync-omd.mjs": "36864d8328d708550a5d5940738092776f1253db4a1804607f7901d9f3aa0378",
+    "src/budget.mjs": "b10b2ea54653ac9f4c53d066f2da6ad0220b6ece8b4159206bceafca6bc938dc",
     "src/client/index.jsx": "98bd28bdb8026779aa69a9276504149e965928e5d9956be87336cd48c59aef92",
     "src/client/slot-decoration.mjs": "ae89a29a99e861b01823d32205c83c51458efde9388fc5ec597d0ec218b3375c",
     "src/client/workflow-header.css": "a699c07e4cfdbd64c480a8decf525cd94d9d04e29fc2df17554994634d81897e",

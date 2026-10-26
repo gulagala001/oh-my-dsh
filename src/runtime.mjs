@@ -268,6 +268,17 @@ export async function apply(ctx, config) {
     }
     return next();
   }, { global: true });
+  ctx.on('token-meter/receipt', ({request,receipt}) => {
+    const session=ctx.sessions.get(request.sessionId);
+    if(!session || hub.closed || !monitored(session))return;
+    const failed=Boolean(receipt.error) || ['error','aborted','max-tokens'].includes(receipt.finish?.kind);
+    hub.record(session,'nativeCompact',{
+      id:receipt.id,source:'native',provider:request.provider,model:request.model,
+      effort:request.reasoningEffort??null,usage:receipt.usage,hasOutput:receipt.hasOutput,
+      startedAt:receipt.startedAt,durationMs:receipt.durationMs,
+      status:failed?'error':'success',error:receipt.error?.message??(failed?receipt.finish?.failure?.message??receipt.finish?.kind??'请求未完成':null),
+    });
+  }, {global:true});
   installContextErrorRecovery(ctx, hub, session=>isX(session)&&!isBtwSession(session));
   ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => { if (isX(agent.session)&&!isBtwSession(agent.session)) hub.finishTasks(agent, turn, signal); }, { global: true });
   ctx.on('agent/status', ({ agent, status }) => {
