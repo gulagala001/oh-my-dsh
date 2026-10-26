@@ -83,6 +83,9 @@ OMD 组合 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench**�
 
 按需工具发现、文件与网页视图、AST 代码搜索和 CodeGraph 帮助定位材料。历史整理、Auto Compact 与 **Dream** 分别管理上下文和会话／项目／全局记忆；也可选用 Billion Context 管理压缩，Dream、回查、任务、侧问与分支继续协作。
 
+
+工具调用也更高效：代码检索、网页正文读取、原文回查与截图传递减少重复处理；工具结果中的重复内容会被精简，减少上下文占用和 Token 消耗，需要细节时仍可查看完整原文。
+
 [上下文优化与原文](docs/context-optimization.md) · [压缩与 BC](docs/context-workflow.md) · [Dream](docs/dream-memory.md)
 
 ### 让界面和表达方式适合自己
@@ -90,6 +93,19 @@ OMD 组合 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench**�
 **Glyph 动态字符**用立体字符鲸鱼、局部波纹和字符控件组织工作空间。还可选择 DSH 原生、Codex Desktop、iOS Liquid Glass、Claude CLI、Google Material，搭配 **29 套配色**、背景、字体和分区颜色；已有外观选择继续保留。
 
 **人格管理**分为身份与人格、语言风格、沟通方式、回答呈现四个模块，支持多个预设、复制修改、JSON 导入导出和 AI 创作提示词。启用会话人设后，可为不同主会话单独选择、继承全局或关闭人格。
+
+
+两种内置人格预设，按任务选择：
+
+- **精算**：追求省 Token、高效率和快速交付，直达结果，把用量花在有价值的内容上。**作者实测效率提升 50%。**
+- **超频**：追求更深入、完整的回答和交付，愿意为复杂问题投入更多推敲与细节，适合需要充分分析和打磨的任务。
+
+<p align="center">
+  <a href="docs/images/economical-token-usage.png"><img src="docs/images/economical-token-usage.png" alt="精算实测：Token 用量与缓存命中" width="320"></a>
+  <a href="docs/images/economical-yellow-crane-tower.png"><img src="docs/images/economical-yellow-crane-tower.png" alt="精算实测作品：黄鹤楼体素场景" width="320"></a>
+</p>
+
+<p align="center">精算实测展示：用量统计与作品效果</p>
 
 ![外观示例](docs/images/release/themes.jpg)
 

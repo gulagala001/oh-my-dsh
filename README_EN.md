@@ -83,6 +83,9 @@ Start without a project: the first message creates a dedicated file directory th
 
 On-demand tool discovery, file and webpage views, AST pattern search and CodeGraph help locate relevant material. History processing, Auto Compact and **Dream** manage context and session/project/global memory. Optional Billion Context can own compaction while Dream, recall, tasks, side questions and branches continue working together.
 
+
+Tool calls are more efficient, with less repeated work in code search, article reading, original-result lookup and screenshot transfer. Repetitive tool output is shortened to reduce context use and token consumption, while complete originals remain available when you need the details.
+
 [Optimization and originals](docs/context-optimization.md#english) · [Compaction and BC](docs/context-workflow.md) · [Dream](docs/dream-memory.md)
 
 ### Choose your workspace and voice
@@ -90,6 +93,19 @@ On-demand tool discovery, file and webpage views, AST pattern search and CodeGra
 **Glyph** combines a three-dimensional character whale, local ripples and character controls. Choose from Glyph, native DSH, Codex Desktop, iOS Liquid Glass, Claude CLI and Google Material, with **29 palettes**, backgrounds, fonts and region colors. Existing appearance choices remain saved.
 
 **Personality management** separates identity, language style, communication and answer presentation. Manage multiple presets, duplicate and edit them, import/export JSON, or use the supplied creation prompt with an AI. Optional session personalities let each main conversation inherit the global preset, select its own, or disable personality guidance.
+
+
+Choose between two built-in personality presets for the task:
+
+- **Economical**: aims for lower token use, efficient execution and quick delivery, focusing effort on useful results. **The author reports a 50% efficiency improvement in their tests.**
+- **Overclock**: aims for greater depth, completeness and polish, investing more effort in reasoning and detail for complex tasks.
+
+<p align="center">
+  <a href="docs/images/economical-token-usage.png"><img src="docs/images/economical-token-usage.png" alt="Economical test: token usage and cache hits" width="320"></a>
+  <a href="docs/images/economical-yellow-crane-tower.png"><img src="docs/images/economical-yellow-crane-tower.png" alt="Economical test result: a voxel Yellow Crane Tower" width="320"></a>
+</p>
+
+<p align="center">Economical test showcase: usage and the resulting creation</p>
 
 ![Appearance examples](docs/images/release/themes.jpg)
 

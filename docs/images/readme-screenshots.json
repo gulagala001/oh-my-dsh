@@ -44,6 +44,28 @@
       "bytes": 1799415,
       "mimeType": "image/gif",
       "sha256": "cd8542d1af54a5badc353bab8b91c278d71a771e17c7be6b6c65487c75e973a1"
+    },
+    {
+      "file": "docs/images/economical-token-usage.png",
+      "type": "user-provided-screenshot",
+      "capturedDate": "2026-10-26",
+      "source": "Author-provided Economical preset usage screenshot.",
+      "width": 684,
+      "height": 360,
+      "bytes": 40154,
+      "mimeType": "image/png",
+      "sha256": "46bbdc179bed1893dc6912f377e063ba9cbb218f7138a575611a736fbff9aeeb"
+    },
+    {
+      "file": "docs/images/economical-yellow-crane-tower.png",
+      "type": "user-provided-screenshot",
+      "capturedDate": "2026-10-26",
+      "source": "Author-provided Yellow Crane Tower voxel result screenshot.",
+      "width": 2264,
+      "height": 1458,
+      "bytes": 3806351,
+      "mimeType": "image/png",
+      "sha256": "df58570a50f858d7554f74ad85683f0314d71251d853c1570584ffc144dd35cc"
     }
   ]
 }
