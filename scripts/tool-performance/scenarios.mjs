@@ -4,11 +4,13 @@ import { pathToFileURL } from 'node:url';
 import { join } from 'node:path';
 import { writeFile, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
 
-export const scenarioNames = ['ast', 'article', 'original-search', 'original-search-mutable', 'native-workflow', 'ptc-workflow', 'native-system', 'browser-image', 'mcp-local', 'state-tasks'];
+export const scenarioNames = ['ast', 'article', 'original-search', 'original-search-mutable', 'native-workflow', 'ptc-workflow', 'native-system', 'browser-image', 'mcp-local', 'state-tasks', 'terminal', 'schedule-rules', 'http-fetch', 'host-workflow'];
 const deepFreeze = value => { if (value && typeof value === 'object' && !Object.isFrozen(value)) { Object.values(value).forEach(deepFreeze); Object.freeze(value); } return value; };
 export const hash = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
-export async function scenario({ root, directory, name, phase, size = 1200, browserExecutable }) {
+export async function scenario({ root, directory, name, phase, size = 1200, browserExecutable, repeats = 7 }) {
+  if (name === 'host-workflow') { const { hostWorkflow } = await import('./host-workflow.mjs'); return hostWorkflow({ root, directory, phase, repeats, size }); }
   const load = file => import(pathToFileURL(join(root, file)).href);
   const source = Array.from({ length: size }, (_, i) => `export function item${i}(value) { console.log("item-${i}", value); return value + ${i}; }`).join('\n');
   const history = Array.from({ length: size }, (_, seq) => ({ seq, timestamp: seq + 1000, type: 'user/message', data: {
@@ -102,6 +104,75 @@ export async function scenario({ root, directory, name, phase, size = 1200, brow
     return result.value;
   };
   const normalize = value => JSON.parse(JSON.stringify(value).replaceAll(directory, '<workspace>').replace(/omd-raw:[a-f0-9-]{36}/g, 'omd-raw:<reference>'));
+  if (name === 'http-fetch') {
+    const [httpNative, web, timers, proxy, webTool] = await Promise.all([native('web-fetch-http'), native('web'), native('timeout'), native('http-proxy'), native('tool-web')]);
+    const transport = createRequire(host.resolve('@deepseek-ai/dsh-web-fetch-http'))('undici');
+    await ctx.plugin(web.WebRuntime);
+    let connections = 0, requests = 0, resolves = 0, diagnostics;
+    const body = '<html><title>Local source</title><body>' + 'Complete local content. 中文。'.repeat(size) + '</body></html>';
+    const server = createServer((request, response) => {
+      requests++;
+      const respond = () => { response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); response.end(body); };
+      if (request.url === '/slow') { const timer = setTimeout(respond, 500); response.on('close', () => clearTimeout(timer)); } else respond();
+    });
+    server.on('connection', () => connections++);
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const port = server.address().port, url = `http://fixture.invalid:${port}/document`;
+    // Explicit native resolver seam for a deterministic local HTTP fixture.
+    // This does not test production public-IP validation or DNS safety.
+    const provider = new httpNative.HttpFetchProvider(httpNative.Config({ maxBodyChars: 1000000 }), async () => { resolves++; return [{ address: '127.0.0.1', family: 4 }]; });
+    ctx.web.registerFetchProvider(provider);
+    webTool.apply(ctx, webTool.Config({}));
+    let releasePool;
+    try { const { bindWebFetchPooling } = await load('src/web-fetch-pool.mjs'); releasePool = bindWebFetchPooling(ctx.web, { ...httpNative, ...web, ...timers, ...proxy, ...transport }); }
+    catch (error) { if (error.code !== 'ERR_MODULE_NOT_FOUND') throw error; }
+    const readBody = provider.readBody.bind(provider); provider.readBody = (...args) => phase('http.decodeAndCap', () => readBody(...args));
+    return { fingerprint: hash({ version: 1, name, body, requestsPerRun: 6 }), stats: { bodyBytes: Buffer.byteLength(body), requestsPerRun: 6 }, async run(signal) {
+      const before = { connections, requests, resolves }, results = [];
+      for (let i = 0; i < 6; i++) {
+        const result = await call('web_fetch', { url }, signal);
+        assert.equal(result.statusCode, 200); assert.equal(result.body.content, body); assert.equal(result.truncated, false);
+        results.push({ ...result, url: result.url.replace(`:${port}`, ':<port>') });
+      }
+      diagnostics = { connections: connections - before.connections, requests: requests - before.requests, resolverCalls: resolves - before.resolves, poolingInstalled: Boolean(releasePool) };
+      assert.equal(diagnostics.requests, 6); assert.equal(diagnostics.resolverCalls, 6);
+      return results;
+    }, diagnostics: () => diagnostics, cancel: signal => provider.fetch({ url: `http://fixture.invalid:${port}/slow` }, signal),
+    async close() { await releasePool?.(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); service.release(); await service.settled(); await ctx.fiber.dispose(); } };
+  }
+  if (name === 'schedule-rules') {
+    const { createEveryScheduleRecord, createCronScheduleRecord, resolveRecurringOccurrence } = await native('schedule');
+    const now = Date.UTC(2026, 0, 1), count = Math.min(size, 2000);
+    return { fingerprint: hash({ version: 1, name, count, now }), stats: { rules: count }, async run(signal) {
+      const rules = await phase('schedule.parseAndCreate', () => Array.from({ length: count }, (_, i) => i % 2
+        ? createEveryScheduleRecord(`schedule-${i}`, 'Check generated source', 300, now, 'Fixture rule')
+        : createCronScheduleRecord(`schedule-${i}`, 'Check generated source', { expression: '*/5 * * * *', time_zone: 'Asia/Shanghai' }, now, 'Fixture rule')));
+      signal.throwIfAborted();
+      const occurrences = await phase('schedule.nextOccurrence', () => rules.map(rule => resolveRecurringOccurrence(rule, now + 310000)));
+      assert.equal(rules.length, count); assert.ok(rules.every(rule => Date.parse(rule.scheduledAt) === now + 300000));
+      assert.ok(occurrences.every(item => Date.parse(item.nextScheduledAt) > now + 310000));
+      return { rules, occurrences };
+    }, cancel: null, async close() { service.release(); await service.settled(); await ctx.fiber.dispose(); } };
+  }
+  if (name === 'terminal') {
+    const [{ SessionProjectionRegistry }, { TerminalSessionService }, backend, terminalTool] = await Promise.all([
+      native('session-projection'), native('terminal'), native('terminal-bash'), native('tool-terminal'),
+    ]);
+    await ctx.plugin(SessionProjectionRegistry); await ctx.plugin(TerminalSessionService);
+    backend.apply(ctx, backend.Config({ shellArgs: ['--noprofile', '--norc'], timeoutMs: 10000 }));
+    terminalTool.apply(ctx, terminalTool.Config({}));
+    await new Promise(resolve => setImmediate(resolve));
+    return { fingerprint, stats, async run(signal) {
+      const opened = await call('terminal_open', { type: 'shell', cwd: directory }, signal);
+      try {
+        const sent = await call('terminal_send', { sessionId: opened.sessionId, text: 'wc -l < fixture.js' }, signal);
+        const output = await call('terminal_read', { sessionId: opened.sessionId, count: 30 }, signal);
+        const listed = await call('terminal_list', {}, signal);
+        assert.ok(output.text.includes(String(size - 1))); assert.ok(listed.some(item => item.sessionId === opened.sessionId));
+        return { lineCount: size - 1, hasExpectedOutput: true, type: opened.type, sendKind: sent.kind, status: opened.status.kind };
+      } finally { await call('terminal_close', { sessionId: opened.sessionId }, new AbortController().signal); }
+    }, cancel: null, async close() { service.release(); await service.settled(); await ctx.fiber.dispose(); } };
+  }
   if (name === 'state-tasks') {
     const { SessionProjectionRegistry } = await native('session-projection');
     const { GoalService } = await native('goal');
@@ -164,24 +235,30 @@ export async function scenario({ root, directory, name, phase, size = 1200, brow
     const { chromium } = require('playwright');
     const { LocalAttachmentStore } = await native('attachment-local');
     await ctx.plugin(LocalAttachmentStore, { dshHome: directory });
-    const { observePage } = await load('vendor/opencu/src/browser/observation.mjs');
+    const { createPluginRuntime } = await load('vendor/opencu/src/dsh/runtime.mjs');
     const browser = await chromium.launch({ headless: true, executablePath: browserExecutable });
     const page = await browser.newPage({ viewport: { width: 1280, height: 960 }, deviceScaleFactor: 1 });
     await page.route('**/*', route => route.abort());
     await page.setContent('<html><title>Tool performance fixture</title><body style="margin:0;background:#123456">' +
       Array.from({ length: 60 }, (_, i) => `<div style="height:12px;width:${100 + i * 13}px;background:rgb(${i * 3},110,180)"></div>`).join('') + '</body></html>');
-    const record = { page, documentGeneration: 1, elements: new Map(), id: 'fixture-tab' };
-    const screenshot = page.screenshot.bind(page); page.screenshot = (...args) => phase('browser.capture', () => screenshot(...args));
+    const runtime = createPluginRuntime({ dataDir: directory, nativeEnabled: false, extensionEnabled: false, browserOptions: { context: page.context() } });
+    const inventory = await runtime.request('targets'); assert.equal(inventory.ok, true); assert.equal(inventory.targets.length, 1);
+    const selected = await runtime.request('select', { reference: inventory.targets[0] }); assert.equal(selected.ok, true, JSON.stringify(selected));
+    let captured;
+    const screenshot = page.screenshot.bind(page); page.screenshot = (...args) => phase('browser.capture', async () => { captured = await screenshot(...args); return captured; });
+    const saveImage = ctx.attachments.saveImage.bind(ctx.attachments); ctx.attachments.saveImage = (...args) => phase('attachment.saveImage', () => saveImage(...args));
     return { fingerprint: hash({ version: 1, name, viewport: [1280, 960], bars: 60 }), stats: { viewportPixels: 1280 * 960, bars: 60 }, async run(signal) {
-      const observed = await phase('browser.observe', () => observePage(record, { format: 'screenshot', maxWidth: 640, signal }, { dataDir: directory, timeoutMs: 10000 }));
-      const bytes = await phase('image.read', () => readFile(observed.screenshot.path));
-      const ref = await phase('attachment.saveImage', () => ctx.attachments.saveImage({ data: bytes, mediaType: 'image/png', name: 'fixture.png' }));
+      const response = await phase('browser.observeAndAttach', () => runtime.request('observe', { targetId: selected.target.id, format: 'screenshot', maxWidth: 640 }, { attachments: ctx.attachments, signal }));
+      assert.equal(response.ok, true, JSON.stringify(response));
+      const observed = response.observation, ref = response.image;
       const saved = await phase('attachment.readImage', () => ctx.attachments.readImage(ref, signal));
       assert.equal(observed.screenshot.width, 640); assert.equal(observed.screenshot.height, 480);
       assert.equal(ref.width, 640); assert.equal(ref.height, 480);
       assert.ok(saved.data.length > 0);
-      return { screenshot: { ...observed.screenshot, path: '<ephemeral>' }, pngHash: hash(bytes), storedHash: hash(Buffer.from(saved.data)), ref };
-    }, cancel: null, async close() { await browser.close(); service.release(); await service.settled(); await ctx.fiber.dispose(); } };
+      const { image, ...mapping } = observed.screenshot; const { name: imageName, ...identity } = ref;
+      assert.match(imageName, /^opencu-.*\.png$/); assert.equal(image.attachmentId, ref.attachmentId);
+      return { screenshot: mapping, capturedHash: hash(captured), storedHash: hash(Buffer.from(saved.data)), ref: identity };
+    }, cancel: null, async close() { await runtime.close(); await browser.close(); service.release(); await service.settled(); await ctx.fiber.dispose(); } };
   }
   if (name === 'native-system') {
     const [search, { LocalBashExecutor }, shellEnv, { LocalJobRegistry }, jobsTool, { SessionProjectionRegistry }, todo] = await Promise.all([
@@ -199,7 +276,7 @@ export async function scenario({ root, directory, name, phase, size = 1200, brow
     let runIndex = 0;
     return { fingerprint, stats, async run(signal) {
       const file = `written-${++runIndex}.txt`, body = 'Synthetic file body\nneedle-one\n' + 'record\n'.repeat(size);
-      const written = await call('write', { file_path: file, content: body }, signal);
+      const written = await phase('visible.first', () => call('write', { file_path: file, content: body }, signal));
       const initial = await call('read', { file_path: file, limit: 10 }, signal);
       await call('edit', { file_path: file, old_string: 'needle-one', new_string: 'needle-two' }, signal);
       const edited = await call('read', { file_path: file, offset: 2, limit: 1 }, signal);
@@ -236,7 +313,7 @@ export async function scenario({ root, directory, name, phase, size = 1200, brow
         const recall = JSON.parse(await tools.recall(${JSON.stringify(recallArgs)}));
         return {read,view,ast,recall};` }, signal);
       values = result.result;
-    } else values = { read: await call('read', readArgs, signal), view: JSON.parse(await call('context_view', viewArgs, signal)),
+    } else values = { read: await phase('visible.first', () => call('read', readArgs, signal)), view: JSON.parse(await call('context_view', viewArgs, signal)),
       ast: JSON.parse(await call('code_search', astArgs, signal)), recall: JSON.parse(await call('recall', recallArgs, signal)) };
     assert.equal(values.read.lines.length, 40); assert.equal(values.ast.totalMatches, size);
     const recalled = JSON.parse(values.recall.content[0].text); assert.equal(recalled.totalMatches, Math.ceil(size / 17));

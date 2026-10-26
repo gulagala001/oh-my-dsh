@@ -6,10 +6,10 @@ import { mkdir } from 'node:fs/promises';
 import { scenario, hash } from './scenarios.mjs';
 
 const options = JSON.parse(process.argv[2]);
-let current, firstResult, started, cancellation;
+let current, firstResult, firstVisible, started, cancellation;
 const phase = async (name, fn) => {
   const start = performance.now();
-  try { const value = await fn(); firstResult ??= performance.now() - started; return value; }
+  try { const value = await fn(); firstResult ??= performance.now() - started; if (name === 'visible.first') firstVisible ??= performance.now() - started; return value; }
   finally { if (current) (current[name] ??= []).push(performance.now() - start); }
 };
 let fixture;
@@ -20,14 +20,15 @@ try {
   const setupMs = performance.now() - setupStart;
   const samples = [], eventLoop = monitorEventLoopDelay({ resolution: 10 }); eventLoop.enable();
   for (let index = 0; index <= options.repeats; index++) {
-    current = {}; firstResult = undefined; started = performance.now();
+    current = {}; firstResult = undefined; firstVisible = undefined; started = performance.now();
     eventLoop.reset(); const cpu = process.cpuUsage();
     const result = await fixture.run(new AbortController().signal);
     const totalMs = performance.now() - started, used = process.cpuUsage(cpu);
-    samples.push({ mode: index ? 'warm' : 'first-after-setup', totalMs, firstStageResultMs: firstResult ?? totalMs,
-      processCpuMs: (used.user + used.system) / 1000, treeCpuMs: ['ptc-workflow', 'native-system', 'browser-image'].includes(options.name) ? null : (used.user + used.system) / 1000,
+    samples.push({ mode: index ? 'warm' : 'first-after-setup', totalMs, firstEffectiveResultMs: firstVisible ?? fixture.diagnostics?.()?.nativeFirstResultMs ?? totalMs, firstStageResultMs: firstResult ?? totalMs,
+      processCpuMs: (used.user + used.system) / 1000, treeCpuMs: ['ptc-workflow', 'native-system', 'browser-image', 'terminal', 'host-workflow'].includes(options.name) ? null : (used.user + used.system) / 1000,
       stagesMs: Object.fromEntries(Object.entries(current).map(([key, values]) => [key, { calls: values.length, total: values.reduce((a, b) => a + b, 0) }])),
       eventLoopMaxDelayMs: eventLoop.count ? eventLoop.max / 1e6 : null,
+      diagnostics: fixture.diagnostics?.() ?? null,
       resultHash: hash(result), resultBytes: Buffer.byteLength(JSON.stringify(result)) });
   }
   eventLoop.disable();
