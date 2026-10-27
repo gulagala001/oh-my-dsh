@@ -96,7 +96,7 @@ export class ProjectlessDrafts {
     if (this.inspections.has(id)) return this.inspections.get(id);
     const cwd = this.ctx.sessions.list.getSnapshot().byId[id]?.cwd;
     if (!cwd) return false;
-    const attempt = this.request('?cwd=' + encodeURIComponent(cwd), undefined, this.lifetime.signal).then(value => {
+    const attempt = this.request('?cwd=' + encodeURIComponent(cwd) + '&session=' + encodeURIComponent(id), undefined, this.lifetime.signal).then(value => {
       if (this.lifetime.signal.aborted) return false;
       this.managed.set(id, value.managed); this.emit(); return this.isManaged(id);
     }).finally(() => this.inspections.delete(id));
@@ -119,8 +119,10 @@ export class ProjectlessDrafts {
         signal.throwIfAborted();
         const sessions = this.ctx.sessions.list.getSnapshot();
         const workspaces = this.workspaceState();
+        const workspace = workspaces.items.find(item => item.workspaceId === workspaceId);
         const usable = id => sessions.byId[id]?.blank === true
           && sessions.byId[id]?.origin !== 'subagent' && !sessions.byId[id]?.projectionValues?.subagent
+          && (workspaceId === undefined || sessions.byId[id].cwd === workspace?.path)
           && !workspaces.archivedSessionIds.includes(id) && this.scopeFor(id) === scope;
         const preferred = this.preferences()[scope]?.draft;
         let reusable;

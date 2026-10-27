@@ -164,7 +164,7 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
     return await safeDirectory(workspace.cwd) ? workspace : null;
   }
 
-  async function owns(cwd, { requireDirectory = true } = {}) {
+  async function owns(cwd, { requireDirectory = true, sessionId } = {}) {
     if (typeof cwd !== 'string' || !path.isAbsolute(cwd) || path.normalize(cwd) !== cwd) return false;
     if (!await safeDirectory(claimsDir) || !await safeDirectory(requestsDir)) return false;
     const claim = await readJson(path.join(claimsDir, `${hash(cwd)}.json`));
@@ -173,6 +173,11 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
     const record = await readJson(path.join(requestsDir, `${claim.requestHash}.json`));
     if (!record || record.state !== 'ready') return false;
     const id = requestKey(record.requestId);
+    // New projectless allocation uses the final native Session ID as its
+    // request identity. Directory provenance alone cannot authorize another
+    // blank Session left behind by an older first-send flow to reuse its cwd.
+    // Dream can still query provenance without claiming session ownership.
+    if (sessionId !== undefined && sessionId !== id) return false;
     // Claims outlive changes to the configured root. Verify the original
     // allocation rather than treating old Chat directories as new projects.
     const allocationRoot = absolute(record.root, 'stored root');

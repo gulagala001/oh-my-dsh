@@ -135,6 +135,31 @@ test('adding a projectless directory to a workspace changes draft ownership with
   assert.deepEqual(f.draftsById.saved, original);
 });
 
+test('directory inspection carries the exact Session identity and rejects another chat\'s blank carrier', async t => {
+  const f = fixture(t), requests = [];
+  f.drafts.managed.clear();
+  f.drafts.remember('global', { draft: 'saved' });
+  f.drafts.request = async (path, body) => {
+    if (body) return { cwd: '/isolated/' + body.requestId };
+    const query = new URLSearchParams(path.slice(1)); requests.push(query);
+    assert.ok(query.get('session'));
+    return { managed: query.get('session') === 'actual-directory-owner' };
+  };
+  await f.drafts.startDraft('saved');
+  assert.notEqual(f.opened.at(-1), 'saved');
+  assert.ok(requests.some(query => query.get('session') === 'saved' && query.get('cwd') === '/old-carrier'));
+  assert.equal(f.draftsById.saved.draft, 'keep unsent text');
+});
+
+test('a stale workspace membership cannot reuse a blank bound to a different directory', async t => {
+  const f = fixture(t);
+  f.rows['draft-a'].cwd = '/B';
+  await f.drafts.startDraft('a', undefined, 'A');
+  assert.notEqual(f.opened.at(-1), 'draft-a');
+  assert.equal(f.rows[f.opened.at(-1)].cwd, '/A');
+  assert.equal(f.rows['draft-a'].cwd, '/B');
+});
+
 test('draft initialization delegates append, references and attachments to the native owner', () => {
   const binding = {}, options = { prompt: 'new text', whenDraftExists: 'append' };
   const conversation = { input: { requestDraftInitialization: (target, request) => {

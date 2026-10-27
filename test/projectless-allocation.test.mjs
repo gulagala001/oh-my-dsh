@@ -120,3 +120,15 @@ test('concurrent allocations keep other requests, user symlinks and confirmed pa
   for (const result of [first, second, third]) assert.equal(await f.service.owns(result.cwd), true);
   assert.equal((await fs.readdir(path.dirname(f.claimFile))).length, 3);
 });
+
+test('directory provenance does not authorize a leftover blank Session to reuse another chat directory', async t => {
+  const f = await fixture(t), owner = 'final-chat-id';
+  const allocated = await f.service.prepare({ requestId: owner, prompt: 'Existing project' });
+  await fs.writeFile(path.join(allocated.cwd, 'original.txt'), 'original project');
+  assert.equal(await f.service.owns(allocated.cwd), true, 'Dream retains old directory provenance');
+  assert.equal(await f.service.owns(allocated.cwd, { sessionId: owner }), true);
+  assert.equal(await f.service.owns(allocated.cwd, { sessionId: null }), false, 'missing UI identity cannot claim ownership');
+  assert.equal(await f.service.owns(allocated.cwd, { sessionId: 'leftover-blank-session' }), false);
+  assert.equal(await f.reopen().owns(allocated.cwd, { sessionId: 'leftover-blank-session' }), false);
+  assert.equal(await fs.readFile(path.join(allocated.cwd, 'original.txt'), 'utf8'), 'original project');
+});

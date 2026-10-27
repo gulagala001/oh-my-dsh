@@ -367,7 +367,7 @@ export async function apply(ctx, config) {
         if (await handleTemporaryChatApi({ service: temporaryChats, req, res, url })) return;
         if (url.pathname === '/oh-my-dsh/api/projectless-workspace') {
           if (req.method === 'GET') {
-            send(res, 200, { managed: await projectless.owns(url.searchParams.get('cwd') || '') }); return;
+            send(res, 200, { managed: await projectless.owns(url.searchParams.get('cwd') || '', { sessionId: id }) }); return;
           }
           if (req.method === 'POST') { send(res, 200, await projectless.prepare(await readBody(req))); return; }
           send(res, 405, { error: '不支持此方法' }); return;
