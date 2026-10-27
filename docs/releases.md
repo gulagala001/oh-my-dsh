@@ -2,17 +2,17 @@
 
 **安装步骤：[复制给 AI 安装](install.md#ai) · [在“添加插件”中安装](install.md#gui) · [English guide](install_EN.md)**
 
-OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 1.0.2 的 rc.3 正式安装入口，旧宿主沿用原固定版本；选择与你正在运行的 DSH **完整版本**相同的一行。OMD includes OpenCU. The newest build is 1.0.2 for rc.3; older hosts retain their fixed releases. Match the complete DSH version.
+OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 1.1.0 的 rc.3 正式安装入口，旧宿主沿用原固定版本；选择与你正在运行的 DSH **完整版本**相同的一行。OMD includes OpenCU. The newest build is 1.1.0 for rc.3; older hosts retain their fixed releases. Match the complete DSH version.
 
 | DSH 宿主 / Host | OMD 插件 / Plugin | 可粘贴安装的包 / Package |
 | --- | --- | --- |
-| 0.2.1-rc.3 | 0.2.1-rc.3.omd.1.0.2 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.0.2/oh-my-dsh-0.2.1-rc.3.omd.1.0.2.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.0.2) |
+| 0.2.1-rc.3 | 0.2.1-rc.3.omd.1.1.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.0/oh-my-dsh-0.2.1-rc.3.omd.1.1.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.1.0) |
 | 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100.0/oh-my-dsh-0.2.1-rc.2.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0) |
 | 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.100.0/oh-my-dsh-0.2.1-rc.1.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0) |
 
-## OMD 1.1.0 · 发行准备 / Prepared
+## OMD 1.1.0
 
-[中文更新说明](release-1.1.0.md#zh-110) · [English release notes](release-1.1.0.md#en-110)。尚未公开发布，现有公开安装入口保持。Not published yet; existing public installation links remain current.
+[中文更新说明](release-1.1.0.md#zh-110) · [English release notes](release-1.1.0.md#en-110) · [dsh-ops 使用指南](dsh-ops.md)
 
 ## OMD 1.0.2
 
@@ -20,11 +20,11 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 
 
 ## 当前公开版本 / Current public version
 
-当前 rc.3 正式版本为 **1.0.2**；此前 0.19.0 草稿不作为安装入口。Current rc.3 formal version: **1.0.2**; the earlier 0.19.0 drafts are not installation targets.
+当前 rc.3 正式版本为 **1.1.0**；此前 0.19.0 草稿不作为安装入口。Current rc.3 formal version: **1.1.0**; the earlier 0.19.0 drafts are not installation targets.
 
 | 完整宿主 / Exact host | 公开安装入口 / Public installation |
 | --- | --- |
-| DSH 0.2.1-rc.3 | [OMD 1.0.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.0.2) |
+| DSH 0.2.1-rc.3 | [OMD 1.1.0](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.1.0) |
 | DSH 0.2.1-rc.2 | [OMD 0.100.0](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0) |
 | DSH 0.2.1-rc.1 | [OMD 0.100.0](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0) |
 
@@ -65,6 +65,6 @@ For older hosts, use the matching tag's documentation. Do not choose a package s
 
 | 独立数据源 | 当前回执 | OMD 1.1.0 |
 | --- | --- | --- |
-| Awesome DSH Plugin | [1.0.2 更新已合并](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9688) | 待正式发布后更新同一条目 |
-| TYEclipse DSH Plugins Hub | [投稿仍开放，待审](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 待正式发布后更新同一投稿 |
-| coderPerseus DSH Hub | [投稿仍开放，待审](https://github.com/coderPerseus/dsh-hub/issues/57) | 待正式发布后更新同一投稿 |
+| Awesome DSH Plugin | [1.0.2 更新已合并](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9688) | 待同步至 1.1.0 |
+| TYEclipse DSH Plugins Hub | [投稿仍开放，待审](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 待同步原投稿至 1.1.0 |
+| coderPerseus DSH Hub | [投稿已关闭，收录状态待核实](https://github.com/coderPerseus/dsh-hub/issues/57) | 待同步原投稿至 1.1.0 |

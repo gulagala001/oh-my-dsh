@@ -6,7 +6,7 @@
 
 ## 中文
 
-本版已进入发行准备，尚未公开发布。包含 1.0.2 之后的功能和修复。
+本版新增 Ultra 思考强度与偏好记忆，并修复新聊天、原生主题和电脑操作的相关问题。
 
 ### 新增功能
 
@@ -36,7 +36,7 @@
 
 ## English
 
-This version is prepared for release and has not been published. It includes the features and fixes since 1.0.2.
+This release adds Ultra reasoning effort and persistent preferences, with fixes for new chats, the native theme and computer interaction.
 
 ### New Features
 
@@ -64,9 +64,9 @@ This version is prepared for release and has not been published. It includes the
 
 ## 安装 / Installation
 
-发行准备包精确匹配 **DSH 0.2.1-rc.3**。下方是发布后的固定地址，公开发布前请继续使用[当前公开版本](docs/releases.md)。更新保留原 profile、配置、会话及用户文件；当前任务结束后按宿主提示启用或完整重启。
+在 **插件 → 添加插件** 使用下方固定包，精确匹配 **DSH 0.2.1-rc.3**。更新保留原 profile、配置、会话及用户文件；当前任务结束后按宿主提示启用或完整重启。
 
-The prepared package targets **DSH 0.2.1-rc.3** exactly. The URLs below become available after publication; until then use the [current public release](docs/releases.md). Keep the existing profile, settings, conversations and user files, then activate or fully restart when current tasks finish.
+Install the fixed package through **Plugins → Add plugin** on **DSH 0.2.1-rc.3**. Keep the existing profile, settings, conversations and user files, then activate or fully restart when current tasks finish.
 
 | DSH | 固定安装包 / Fixed package | SHA256SUMS |
 | --- | --- | --- |
