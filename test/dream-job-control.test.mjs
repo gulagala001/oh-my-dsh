@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { Context } from '@deepseek-ai/cordis';
 import { LlmRuntime, LlmAdapter, createUserMessage } from '@deepseek-ai/dsh-llm';
@@ -11,6 +11,7 @@ const route = { provider: 'fixture', model: 'fixture' };
 const reply = input => ({ summary: 'Verified source retained', references: input.sources.map(source => source.id) });
 
 async function fixture(t, { stream, now, close } = {}) {
+  await mkdir(resolve('.local'), { recursive: true });
   const directory = await mkdtemp(join(resolve('.local'), 'dream-control-'));
   const ctx = new Context(), store = new DreamStore(directory, { now });
   const config = { dreamAutoEnabled: true, backgroundMaxRetries: 0, dreamDailyTokens: 10000000,

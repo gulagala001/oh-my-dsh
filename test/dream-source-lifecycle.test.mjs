@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { DreamStore } from '../src/dream/store.mjs';
 import { DreamService } from '../src/dream/service.mjs';
@@ -75,6 +75,7 @@ test('source snapshot cancellation and failed reads close their handles and can 
 });
 
 async function fixture(t) {
+  await mkdir(resolve('.local'), { recursive: true });
   const directory = await mkdtemp(join(resolve('.local'), 'dream-source-'));
   let store = new DreamStore(directory), service;
   t.after(async () => { if (service) await service.close(); else if (!store.closed) store.close(); await rm(directory, { recursive: true, force: true }); });
