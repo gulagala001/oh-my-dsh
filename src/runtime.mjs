@@ -65,7 +65,6 @@ import * as btwPlugin from '../vendor/btw/src/index.mjs';
 import { isBtwSession } from './dream/side-question.mjs';
 import { TemporaryChats, handleTemporaryChatApi } from './temporary-chat.mjs';
 import { createProjectlessWorkspaceService } from './projectless-workspaces.mjs';
-import { transferDraftPreferences } from './draft-preferences.mjs';
 import { closeToolComputations } from './compute.mjs';
 import { clearOriginalSearchCache } from './context/original-search.mjs';
 import { installWebFetchPooling } from './web-fetch-pool.mjs';
@@ -366,11 +365,6 @@ export async function apply(ctx, config) {
         if (rejectUntrusted(ctx, req, res)) return;
         if (await handleSkinAsset(req, res, url)) return;
         if (await handleTemporaryChatApi({ service: temporaryChats, req, res, url })) return;
-        if (url.pathname === '/oh-my-dsh/api/draft-preferences') {
-          if (req.method !== 'POST') { send(res, 405, { error: '仅支持 POST' }); return; }
-          const input = await readBody(req);
-          send(res, 200, transferDraftPreferences(ctx, hub, input)); return;
-        }
         if (url.pathname === '/oh-my-dsh/api/projectless-workspace') {
           if (req.method === 'GET') {
             send(res, 200, { managed: await projectless.owns(url.searchParams.get('cwd') || '') }); return;

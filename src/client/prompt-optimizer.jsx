@@ -9,7 +9,7 @@ import { isSubagentSession, useMainConversation } from './main-conversation.mjs'
 const descriptions = { basic: '只润色表达，保留原意和限制。', structured: '整理已有目标、约束与交付要求。', planning: '将现有任务组织为可执行的步骤。' };
 function Sparkle() { return <Icon name="spark" size={16}/>; }
 
-export function applyPromptOptimizer(ctx, { draftLock } = {}) {
+export function applyPromptOptimizer(ctx) {
   const preferences = createOptimizerPreferences(), controllers = new Map(), drafts = new Map();
   let closed = false;
   const controllerFor = sessionId => {
@@ -20,7 +20,6 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     if (saved) return saved;
     const shell = ctx.get('conversation').input.for(binding.ctx);
     const controller = new DraftOptimizer({ sessionId, shell, preferences }); controllers.set(binding, controller);
-    controller.locked = () => draftLock?.isBusy(sessionId) === true;
     controller.restoreNavigation(drafts.get(sessionId)); drafts.delete(sessionId);
     binding.ctx.effect(() => () => {
       if (!closed && !binding.session.getSnapshot().removed) {
@@ -48,7 +47,6 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     return controller ? <Entry key={sessionId} controller={controller} useInput={useInput}/> : null;
   }
   function Entry({ controller, useInput }) {
-    useSyncExternalStore(draftLock?.subscribe ?? (() => () => {}), draftLock?.getSnapshot ?? (() => 0));
     const prefs = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot), state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
     const input = useInput(s => s), [open, setOpen] = useState(false), [localError, setLocalError] = useState('');
     const [presetName, setPresetName] = useState('');
@@ -87,8 +85,8 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     const changeRequirements = action => { try { action(); setLocalError(''); } catch (error) { setLocalError(error.message || '设置保存失败，原设置保持不变。'); } };
     const refine = () => { if (!instruction.trim()) { setLocalError('请先填写继续优化的要求'); return; } setLocalError(''); void controller.run({ instruction }); };
     if (!prefs.enabled) return null;
-    const locked = controller.locked(), editingBlocked = locked || !!state.busy;
-    const canOptimize = !locked && Boolean(input?.draft.trim()) && input.phase === 'plain' && !/^\s*\//.test(input.draft);
+    const editingBlocked = !!state.busy;
+    const canOptimize = Boolean(input?.draft.trim()) && input.phase === 'plain' && !/^\s*\//.test(input.draft);
     return <div className="omd-opt-entry omd-opt-theme" ref={anchor} onPointerEnter={event => { if (event.pointerType !== 'touch') reveal(); }} onPointerLeave={leave} onBlur={blur}>
       <Button size="sm" variant="outline" type="button" className="omd-opt-star" aria-label={prefs.automatic ? '提示词优化：每次都优化已开启，点击关闭' : '提示词优化：点击开启每次都优化'} aria-pressed={prefs.automatic} aria-expanded={open} aria-controls={open ? id : undefined} aria-haspopup="dialog" title={prefs.automatic ? '每次都优化已开启 · 点击关闭 · 悬停展开' : '点击开启每次都优化 · 悬停展开'} onFocus={event => { if (!panel.current?.contains(event.relatedTarget)) reveal(); }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); reveal(); requestAnimationFrame(() => panel.current?.querySelector('button')?.focus()); } }} onClick={() => { reveal(); set({ automatic: !prefs.automatic }); }} data-busy={state.busy || undefined}><Sparkle/></Button>
       {open && createPortal(<section id={id} ref={panel} className="omd-opt-drawer omd-opt-theme" style={position} role="dialog" aria-label="提示词优化" onPointerEnter={cancelClose} onPointerLeave={leave} onBlur={blur}>
@@ -103,7 +101,7 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
           {selectedPreset && <div className="omd-opt-actions"><span>{Object.hasOwn(prefs.requirementDrafts, selectedPreset.id) ? '要求已暂存，保存修改可更新预设' : '已选择保存的预设'}</span><div><Button size="sm" variant="outline" type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.saveRequirementPreset(presetName, true))}>另存为预设</Button><Button size="sm" variant="outline" type="button" disabled={!!state.busy} onClick={() => changeRequirements(() => preferences.removeRequirementPreset())}>删除预设</Button></div></div>}
           <p className="omd-opt-hint">用于首次和后续优化；留空沿用原行为。切换保留已编辑要求，刷新后仍可使用。</p>
         </div>
-        <div className="omd-opt-actions"><span>范围：当前草稿</span><Button size="sm" variant="primary" type="button" className="omd-opt-primary" disabled={locked || (!state.busy && !canOptimize)} onClick={() => state.busy ? controller.cancel() : void controller.run()}>{state.busy ? '停止优化' : '开始优化'}</Button></div>
+        <div className="omd-opt-actions"><span>范围：当前草稿</span><Button size="sm" variant="primary" type="button" className="omd-opt-primary" disabled={!state.busy && !canOptimize} onClick={() => state.busy ? controller.cancel() : void controller.run()}>{state.busy ? '停止优化' : '开始优化'}</Button></div>
         {state.versions.length > 0 && <div className="omd-opt-history"><div className="omd-opt-actions"><label>版本 <Select aria-label="提示词版本" value={state.cursor} disabled={editingBlocked} onChange={event => controller.selectVersion(Number(event.target.value))}>{state.versions.map((version, i) => <option key={i} value={i}>{version}</option>)}</Select></label><div><Button size="sm" variant="outline" type="button" disabled={editingBlocked || state.cursor <= 0} onClick={() => controller.selectVersion(state.cursor - 1)}>撤销</Button><Button size="sm" variant="outline" type="button" disabled={editingBlocked || state.cursor >= state.versions.length - 1} onClick={() => controller.selectVersion(state.cursor + 1)}>重做</Button><Button size="sm" variant="outline" type="button" disabled={editingBlocked || state.cursor === 0} onClick={() => controller.selectVersion(0)}>恢复原稿</Button></div></div>
           <div className="omd-opt-refine"><Input aria-label="继续优化要求" placeholder="例如：更短一点，保留限制" value={instruction} onChange={event => setInstruction(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); event.stopPropagation(); refine(); } }}/><Button size="sm" variant="outline" type="button" disabled={!!state.busy || !canOptimize} onClick={refine}>继续优化</Button></div>
         </div>}
@@ -116,13 +114,5 @@ export function applyPromptOptimizer(ctx, { draftLock } = {}) {
     </div>;
   }
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'omd-prompt-optimizer', order: 90 }, Optimizer));
-  return {
-    preferences,
-    transferDraft(from, to) {
-      const saved = controllerFor(from)?.navigationState({ deactivate: false });
-      // Observe admission before the target composer mounts. Its pending/error
-      // events must retain the original and optimized versions on a failed send.
-      controllerFor(to)?.restoreNavigation(saved);
-    },
-  };
+  return { preferences };
 }

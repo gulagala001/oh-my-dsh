@@ -49,7 +49,7 @@ async function fixture(t, { presetMounted = true } = {}) {
   const services = {
     sessions: { list: { getSnapshot: () => ({ ids: [...bindings.keys()], byId: rows }) }, binding: id => bindings.get(id),
       retainInfo: id => store({ retainedBy: { mainView: id === current ? 1 : 0 } }),
-      async create({ sessionId = `new-${++serial}` }) { if (!bindings.has(sessionId)) bindings.set(sessionId, session(sessionId)); return sessionId; },
+      async create({ sessionId = `new-${++serial}` }) { calls.push(['create', sessionId]); if (!bindings.has(sessionId)) bindings.set(sessionId, session(sessionId)); return sessionId; },
       retain(id) { references++; return { binding: bindings.get(id), ready: Promise.resolve(), release() { references--; } }; },
     },
     layout: { beginNavigation: () => new AbortController().signal },
@@ -94,23 +94,22 @@ async function fixture(t, { presetMounted = true } = {}) {
     mountPreset, withdraw: () => withdraw(), refuse: value => { refusal = value; } };
 }
 
-test('first independent send preserves settings and the next new chat reuses its carrier without copying the viewed chat', async t => {
+test('native first send keeps its final identity; next new chat allocates independently', async t => {
   const f = await fixture(t), { drafts } = f.capture;
   assert.equal(f.fiber.state, 2);
-  drafts.mark('source'); f.shells.get('source').restoreDraft({ ...empty(), draft: '你好' });
-  await drafts.send('source', f.shells.get('source'), 'queue', []);
+  await drafts.startDraft('source');
+  const id = f.current, creates = f.calls.filter(call => call[0] === 'create').length;
+  const shell = f.shells.get(id), nativeSubmit = shell.submit;
+  shell.restoreDraft({ ...empty(), draft: '你好', attachmentIds: ['attachment'] });
+  shell.submit('queue');
   assert.deepEqual(f.notices, []);
-  assert.equal(f.calls.filter(call => call[0] === 'submit').length, 1);
-  assert.equal(f.shells.get('source').captureDraft().draft, '');
-  assert.notEqual(f.current, 'source');
-  await drafts.startDraft(f.current);
-  assert.deepEqual(f.notices, []);
-  assert.equal(f.current, 'source');
-  assert.equal(f.calls.filter(call => call[0] === 'agentPresets/select').length, 1);
-  assert.equal(f.calls.filter(call => call[0] === 'session/selectModel').length, 1);
-  assert.deepEqual(f.calls.filter(call => call[0] === 'session/selectModel').map(call => call[1].request),
-    f.calls.filter(call => call[0] === 'agentPresets/select').map(call => ({ sessionId: call[1].sessionId, ...selectedModel })));
-  assert.equal(drafts.isDraft(f.current), true);
+  assert.equal(f.current, id); assert.equal(shell.submit, nativeSubmit);
+  assert.deepEqual(f.calls.filter(call => call[0] === 'submit'), [['submit', id, '你好']]);
+  assert.equal(f.calls.filter(call => call[0] === 'create').length, creates);
+  assert.equal(drafts.isManaged(id), true);
+  await drafts.startDraft(id);
+  assert.notEqual(f.current, id);
+  assert.equal(f.calls.filter(call => call[0] === 'agentPresets/select').length, 0);
   assert.equal(f.references, 0);
 });
 
@@ -131,17 +130,17 @@ test('preset availability gates the owning plugin and withdrawal recreates its d
   assert.equal(f.fiber.state, 0); assert.equal(previous.lifetime.signal.aborted, true);
   await f.mountPreset(); await f.fiber.await();
   assert.equal(f.fiber.state, 2); assert.notEqual(f.capture.drafts, previous);
-  await f.capture.drafts.copySettings('source', 'source');
+  await f.capture.drafts.startDraft('source');
+  assert.equal(f.capture.drafts.isManaged(f.current), true);
 });
 
-test('a refused preset preserves the source draft and retry identity without admitting a message', async t => {
+test('a refused preset preserves the existing native draft without submitting it', async t => {
   const f = await fixture(t), { drafts } = f.capture, source = f.shells.get('source');
-  drafts.mark('source'); source.restoreDraft({ ...empty(), draft: '保留原稿' });
-  const choice = drafts.drafts.source;
-  f.refuse(true); await drafts.send('source', source, 'queue', []);
-  assert.equal(source.captureDraft().draft, '保留原稿'); assert.equal(drafts.drafts.source, choice);
+  drafts.managed.set('source', true); source.restoreDraft({ ...empty(), draft: '保留原稿' });
+  f.refuse(true); await drafts.startDraft('source', { agentPreset: 'cordis' });
+  assert.equal(source.captureDraft().draft, '保留原稿');
   assert.deepEqual(f.notices, [['error', '选择预设失败']]);
   assert.equal(f.calls.filter(call => call[0] === 'submit').length, 0); assert.equal(f.references, 0);
-  f.refuse(false); await drafts.send('source', source, 'queue', []);
-  assert.equal(f.calls.filter(call => call[0] === 'submit').length, 1); assert.equal(f.references, 0);
+  f.refuse(false); await drafts.startDraft('source'); source.submit();
+  assert.equal(f.current, 'source'); assert.equal(f.calls.filter(call => call[0] === 'submit').length, 1); assert.equal(f.references, 0);
 });

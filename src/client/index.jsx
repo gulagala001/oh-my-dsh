@@ -148,12 +148,7 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
       applySessionOverview(scope, openCU);
     } };
   }, report);
-  const optimizer = applyPromptOptimizer(ctx, { draftLock: projectlessDrafts });
-  const previousOptimizer = projectlessDrafts.transferOptimizer;
-  projectlessDrafts.transferOptimizer = optimizer.transferDraft;
-  ctx.effect(() => () => {
-    if (projectlessDrafts.transferOptimizer === optimizer.transferDraft) projectlessDrafts.transferOptimizer = previousOptimizer;
-  });
+  const optimizer = applyPromptOptimizer(ctx);
   applyModelPanel(ctx, { rememberModel: (id, selected) => projectlessDrafts.rememberModel(id, selected) });
   applySubscriptionFast(ctx);
   applyMemoryPermissions(ctx);

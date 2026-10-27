@@ -5,7 +5,7 @@ import { ProjectlessDrafts, initializeDraft } from '../src/client/projectless-st
 const defaultModel = { provider: 'native', model: 'default', reasoningEffort: 'high' };
 const otherModel = { provider: 'native', model: 'other', reasoningEffort: 'max' };
 function fixture(t, { blocked = false } = {}) {
-  const opened = [], created = [], initialized = [], notices = [], selections = [];
+  const opened = [], created = [], initialized = [], notices = [], selections = [], allocations = [];
   const data = new Map();
   const workspaces = { items: [{ workspaceId: 'A', path: '/A', sessionIds: ['a', 'draft-a'] },
     { workspaceId: 'B', path: '/B', sessionIds: ['b'] }], archivedSessionIds: [] };
@@ -19,7 +19,7 @@ function fixture(t, { blocked = false } = {}) {
     requestDraftInitialization: (target, options) => { initialized.push([target.ctx.id, options]); return blocked ? 'blocked' : 'preserved'; } } };
   let mint = 0, catalogGate;
   const ctx = { get: name => name === 'workspaces' ? { list: { getSnapshot: () => workspaces } } : conversation,
-    remote: { session: {
+    remote: { agentPresets: { select: async (id, preset) => { rows[id].projectionValues.agentPreset = preset; return { ok: true }; } }, session: {
       modelCatalog: async () => { await catalogGate; return { ok: true, value: { default: defaultModel, groups: [{ id: 'native', models: [{ id: 'default' }, { id: 'other' }] }], failures: [] } }; },
       selectModel: async input => { const { sessionId, ...selected } = input; selections.push(input); rows[sessionId].selected = selected; return { ok: true, value: { selected } }; },
     } }, sessions: {
@@ -34,21 +34,29 @@ function fixture(t, { blocked = false } = {}) {
         return id;
       },
     }, layout: { beginNavigation: () => new AbortController().signal }, uiWorkspace: { openSession: id => opened.push(id) } };
-  const drafts = new ProjectlessDrafts(ctx, { storage: { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) } });
-  drafts.drafts.saved = { requestId: 'keep-request', sessionId: 'unsent-target' };
+  const drafts = new ProjectlessDrafts(ctx, { request: async (path, body) => {
+    if (body) { allocations.push(body); return { cwd: '/isolated/' + body.requestId }; }
+    return { managed: decodeURIComponent(path).includes('/isolated/') };
+  }, storage: { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) } });
+  drafts.managed.set('saved', true);
   t.after(() => drafts.dispose());
-  return { drafts, opened, created, initialized, notices, selections, rows, draftsById, workspaces, get minted() { return mint; }, gate: value => { catalogGate = value; } };
+  return { drafts, opened, created, initialized, notices, selections, rows, draftsById, workspaces, allocations, get minted() { return mint; }, gate: value => { catalogGate = value; } };
 }
 
-test('one global draft is reused across presets and after an admitted projectless send', async t => {
+test('one global native draft is reused across presets and a started chat gets a new independent draft', async t => {
   const f = fixture(t), original = structuredClone(f.draftsById.saved);
   await f.drafts.startDraft('current');
-  f.drafts.clear('saved'); // First-message transfer clears its receipt, not its seat.
   await f.drafts.startDraft('current', { agentPreset: 'cordis', prompt: 'Create a plugin', whenDraftExists: 'append' });
   assert.deepEqual(f.opened, ['saved', 'saved']); assert.equal(f.minted, 0);
   assert.equal(f.rows.saved.projectionValues.agentPreset, 'cordis');
   assert.deepEqual(f.draftsById.saved, original);
   assert.equal(f.initialized[0][0], 'saved');
+  f.rows.saved.blank = false;
+  await f.drafts.startDraft('saved');
+  assert.notEqual(f.opened.at(-1), 'saved');
+  assert.equal(f.allocations.length, 1);
+  assert.equal(f.created.at(-1).sessionId, f.opened.at(-1));
+  assert.equal(f.created.at(-1).cwd, '/isolated/' + f.opened.at(-1));
 });
 
 test('each workspace owns one draft and manual preferences without copying the viewed chat', async t => {
@@ -90,12 +98,41 @@ test('a submitting draft keeps its content when initialization is blocked', asyn
   assert.deepEqual(f.opened, []); assert.equal(f.notices.length, 1); assert.equal(f.minted, 0);
 });
 
-test('new global chat cannot allocate another carrier while the one draft is sending', async t => {
-  const f = fixture(t); f.drafts.pending.set('saved', {});
-  await f.drafts.startDraft('current');
-  assert.equal(f.created.length, 0); assert.equal(f.opened.length, 0);
-  assert.equal(f.draftsById.saved.draft, 'keep unsent text');
-  assert.match(f.notices[0][1], /正在发送/);
+test('old unmanaged drafts remain intact instead of being repurposed or copied', async t => {
+  const f = fixture(t), original = structuredClone(f.draftsById.saved);
+  f.drafts.managed.set('saved', false);
+  await f.drafts.startDraft('saved');
+  assert.notEqual(f.opened.at(-1), 'saved');
+  assert.deepEqual(f.draftsById.saved, original);
+  assert.equal(f.allocations.length, 1);
+});
+
+test('workspace drafts keep their separate text and attachment owners when switching directories', async t => {
+  const f = fixture(t);
+  f.draftsById['draft-a'] = { draft: 'Directory A', attachmentIds: ['A-file'], occurrences: [] };
+  await f.drafts.startDraft('a', undefined, 'A');
+  await f.drafts.startDraft('draft-a', undefined, 'B');
+  const b = f.opened.at(-1);
+  f.draftsById[b] = { draft: 'Directory B', attachmentIds: ['B-file'], occurrences: [] };
+  await f.drafts.startDraft(b, undefined, 'A');
+  assert.equal(f.opened.at(-1), 'draft-a');
+  await f.drafts.startDraft('draft-a', undefined, 'B');
+  assert.equal(f.opened.at(-1), b);
+  assert.deepEqual(f.draftsById['draft-a'], { draft: 'Directory A', attachmentIds: ['A-file'], occurrences: [] });
+  assert.deepEqual(f.draftsById[b], { draft: 'Directory B', attachmentIds: ['B-file'], occurrences: [] });
+});
+
+test('adding a projectless directory to a workspace changes draft ownership without moving content', async t => {
+  const f = fixture(t), original = structuredClone(f.draftsById.saved);
+  f.drafts.remember('global', { draft: 'saved' });
+  f.workspaces.items.push({ workspaceId: 'C', path: '/old-carrier', sessionIds: ['saved'] });
+  assert.equal(f.drafts.scopeFor('saved'), 'workspace:C');
+  assert.equal(f.drafts.isManaged('saved'), false);
+  await f.drafts.startDraft('saved');
+  assert.notEqual(f.opened.at(-1), 'saved');
+  await f.drafts.startDraft(f.opened.at(-1), undefined, 'C');
+  assert.equal(f.opened.at(-1), 'saved');
+  assert.deepEqual(f.draftsById.saved, original);
 });
 
 test('draft initialization delegates append, references and attachments to the native owner', () => {

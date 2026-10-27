@@ -73,25 +73,22 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
   const decorate = (name, render) => components.set(name, render);
   decorate('conversation.composer.bar', Original => function Composer(props) {
     useDrafts();
-    const id = props.sessionId, active = drafts.isDraft(id) || drafts.isManaged(id);
+    const id = props.sessionId, active = drafts.isManaged(id);
     useEffect(() => { void drafts.inspect(id).catch(() => {}); }, [id]);
-    useLayoutEffect(() => id ? drafts.installSubmit(id) : undefined, [id]);
     if (drafts.lifetime.signal.aborted) return <Original {...props}/>;
     const next = { ...props };
     if (active && next.onRequestWorkspace) {
       delete next.disabled; delete next.onRequestWorkspace; delete next.workspacePickerOpen; delete next.placeholder;
     }
-    if (drafts.isBusy(id)) next.blocked = { reason: '正在创建独立工作区…' };
     return <Original {...next}/>;
   });
   decorate('conversation.hero.workspace', Original => function Picker(props) {
     useDrafts();
-    const id = drafts.current(), pending = drafts.isDraft(id), managed = drafts.isManaged(id);
+    const id = drafts.current(), managed = drafts.isManaged(id);
     const [open, setOpen] = useState(false), anchor = useRef(null);
     useEffect(() => { setOpen(false); void drafts.inspect(id).catch(() => {}); }, [id]);
     if (drafts.lifetime.signal.aborted) return <Original {...props}/>;
     const pick = workspaceId => {
-      if (drafts.isBusy(id)) return;
       // The native unbound seat applies its staged preset only after a Session
       // exists. Forward the actual selection to first creation so an invalid
       // deployment default cannot block a different, healthy preset.
@@ -105,10 +102,10 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
       setOpen(false); props.onClose();
       void drafts.startDraft(id, undefined, workspaceId).catch(onError);
     };
-    if (pending || managed) return <>
+    if (managed) return <>
       <span className="omd-projectless-picker"/>
       <Button size="sm" variant="ghost" ref={anchor} type="button" className="omd-projectless-trigger" aria-haspopup="menu" aria-expanded={open}
-        disabled={drafts.isBusy(id)} onClick={() => setOpen(value => !value)} title="未选择工作区；发送后使用此聊天的独立文件夹">
+        onClick={() => setOpen(value => !value)} title="未选择工作区；使用此聊天的独立文件夹">
         <Icon name="folder" size={16}/>
         选择工作区
       </Button>

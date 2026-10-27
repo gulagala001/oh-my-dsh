@@ -12,7 +12,7 @@ OMD uses host models/credentials and supplies no account. File tasks need native
 
 ## 2. Choose Conversation, Directory, and Scope
 
-Choose **Oh My DSH** for a new session. Saved sessions keep their preset. Select an existing workspace, or clear its label with **×**. Projectless Chat creates a file directory only on first send, then reuses it; unsent conversations create none.
+Choose **Oh My DSH** for a new session. Saved sessions keep their preset. Select an existing workspace, or clear its label with **×**. Projectless Chat prepares its directory when the chat is created and keeps the same session and directory for every send. Repeated creation reuses the unsent draft.
 
 Choose **Permissions → Memory scope** before sending; it then locks:
 
