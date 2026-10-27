@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { plainReasoning, replayInput, storedReplayMode } from './replay.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const canonical = value => JSON.stringify(sort(value));
@@ -28,12 +29,6 @@ function normalized(item) {
 const hashes = items => items.map(x => sha(canonical(normalized(x))));
 const isPrefix = (all, prefix) => all.length > prefix.length && prefix.every((h, i) => all[i] === h);
 const textInput = text => [{ role: 'user', content: [{ type: 'input_text', text }] }];
-// A stored response ID does not prove that the provider replays its reasoning.
-// Full native replay keeps one authoritative prefix for ordinary calls, retries
-// and background work. Preserve opaque/encrypted reasoning by the same rule.
-const hasReasoningHistory = input => input.some(item => item?.type === 'reasoning'
-  || item?.role === 'assistant' && (item.reasoning_content != null || item.reasoning != null
-    || Array.isArray(item.content) && item.content.some(block => ['reasoning', 'thinking', 'redacted_thinking'].includes(block.type))));
 function inputKinds(input) {
   const kinds = new Set();
   const visit = value => {
@@ -68,24 +63,41 @@ function rejection(status, error) {
 }
 export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
   capabilityTtlMs = 86400000 } = {}) {
-  const capabilities = new Map(), chains = new Map();
-  const stats = { requests: 0, full: 0, continued: 0, fallbacks: 0, probeRequests: 0, last: null };
+  const capabilities = new Map(), chains = new Map(), replayChecks = new Map();
+  const stats = { requests: 0, full: 0, continued: 0, fallbacks: 0, probeRequests: 0, storageReads: 0, last: null };
   let closed = false;
   const prune = (map, limit) => {
     for (const [key, entry] of map) if (entry.expiresAt <= now()) map.delete(key);
     while (map.size > limit) map.delete(map.keys().next().value);
   };
   const inspect = () => ({ version: 1, mode: 'passive-no-probes', pid: process.pid, ...stats,
-    capabilities: [...capabilities.values()].map(({ provider, model, state, reason, checkedAt, expiresAt }) =>
-      ({ provider, model, state, reason, checkedAt, expiresAt })),
+    capabilities: [...capabilities.values()].map(({ provider, model, state, reason, checkedAt, expiresAt, replayMode }) =>
+      ({ provider, model, state, reason, checkedAt, expiresAt, replayMode })),
     activeChains: chains.size, updatedAt: new Date(now()).toISOString() });
   const persist = () => {
     prune(capabilities, 512); prune(chains, 256);
   };
   const capability = (scope, meta, state, reason, ttl = capabilityTtlMs) => {
-    capabilities.set(scope, { provider: meta.provider, model: meta.model, state, reason,
+    capabilities.set(scope, { ...capabilities.get(scope), provider: meta.provider, model: meta.model, state, reason,
       checkedAt: now(), expiresAt: now() + ttl }); persist();
   };
+  async function resolveReplay(key, meta, request, sample, baseFetch) {
+    const checked = capabilities.get(key);
+    if (checked?.replayMode) return checked.replayMode;
+    if (!sample || checked?.replayCheckedAt > now() - 60000) return null;
+    if (replayChecks.has(key)) return replayChecks.get(key);
+    const pending = (async () => {
+      stats.storageReads++;
+      const mode = await storedReplayMode(request, sample, baseFetch);
+      if (!closed) {
+        capability(key, meta, capabilities.get(key)?.state ?? 'unconfirmed', capabilities.get(key)?.reason ?? 'storage-readback');
+        Object.assign(capabilities.get(key), { replayCheckedAt: now(), ...(mode ? { replayMode: mode } : {}) });
+      }
+      return mode;
+    })();
+    replayChecks.set(key, pending);
+    try { return await pending; } finally { if (replayChecks.get(key) === pending) replayChecks.delete(key); }
+  }
   function observe(response, commit, finish, onPartial) {
     const headers = new Headers(response.headers); headers.delete('content-length');
     const reader = response.body?.getReader();
@@ -97,7 +109,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         try {
           const { value, done } = await reader.read();
           if (done) {
-            if (!sse) { try { commit(JSON.parse(buffer)); complete = true; } catch {} }
+            if (!sse) { try { await commit(JSON.parse(buffer)); complete = true; } catch {} }
             if (!complete) onPartial(); finish(); controller.close(); return;
           }
           buffer += decoder.decode(value, { stream: true });
@@ -108,7 +120,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
               const line = buffer.slice(0, pos); buffer = buffer.slice(pos + 1);
               if (!line.startsWith('data:')) continue;
               let event; try { event = JSON.parse(line.slice(5)); } catch { continue; }
-              if (event.type === 'response.completed') { commit(event.response); complete = true; }
+              if (event.type === 'response.completed') { await commit(event.response); complete = true; }
               if (['response.failed', 'response.incomplete', 'error'].includes(event.type)) onPartial();
             }
           }
@@ -143,18 +155,21 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       const checked = capabilities.get(capabilityKey);
       const disabled = checked?.expiresAt > now() && checked.state === 'unsupported';
       stats.requests++;
-      const reasoningHistory = hasReasoningHistory(allInput);
-      if (disabled || reasoningHistory) {
+      let replayMode = await resolveReplay(capabilityKey, meta, request, meta.replayHistory?.sample, baseFetch);
+      const effectiveInput = replayInput(allInput, meta.replayHistory, replayMode);
+      const effectiveBody = effectiveInput === allInput ? originalBody : { ...originalBody, input: effectiveInput };
+      if (disabled) {
         stats.full++;
-        const response = await baseFetch(input, init);
-        stats.last = { provider: meta.provider, model: meta.model, mode: 'full',
-          reason: reasoningHistory ? 'reasoning-history-requires-full-replay' : checked.reason,
+        const fullHeaders = new Headers(headers); fullHeaders.delete('content-length');
+        const response = effectiveBody === originalBody ? await baseFetch(input, init)
+          : await baseFetch(new Request(request, { headers: fullHeaders, body: JSON.stringify(effectiveBody) }));
+        stats.last = { provider: meta.provider, model: meta.model, mode: 'full', reason: checked.reason,
           inputItems: body.input.length, inputBytes: Buffer.byteLength(originalText) };
         persist(); return response;
       }
       const vendor = policy(url);
       const chainKey = sha(canonical({ scope, session, parameters }));
-      const inputHashes = hashes(allInput);
+      const inputHashes = hashes(effectiveInput);
       persist();
       let prior, priorKey;
       for (const [key, candidate] of chains) {
@@ -165,7 +180,8 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       // Response IDs name immutable history, not single-use tokens. Retain the
       // confirmed parent across failed attempts and concurrent continuations.
       // Only a definitive provider rejection invalidates that parent.
-      const wire = { ...body, store: true, ...(useId ? { input: allInput.slice(prior.prefix.length), previous_response_id: prior.id } : {}) };
+      const wire = { ...body, input: effectiveInput, store: true,
+        ...(useId ? { input: effectiveInput.slice(prior.prefix.length), previous_response_id: prior.id } : {}) };
       if (vendor.cmd) delete wire.prompt_cache_key;
       const h = new Headers(headers); h.delete('content-length');
       if (vendor.bailian) h.set('x-dashscope-session-cache', 'enable');
@@ -175,7 +191,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         sentBytes: Buffer.byteLength(wireText), fallback: null };
       let eligible = true, fallback = false;
       const finish = () => { stats.last = row; persist(); };
-      const commit = output => {
+      const commit = async output => {
         if (closed || !eligible || request.signal.aborted || row.committed
             || output?.status !== 'completed') return;
         if (typeof output.id !== 'string' || !output.id || output.id.length > 262144 || output.store !== true || !Array.isArray(output.output)) {
@@ -183,7 +199,12 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
           // reject storage for later requests or invalidate other chains.
           capability(capabilityKey, meta, 'unconfirmed', 'normal-response-not-stored'); return;
         }
-        const prefix = [...inputHashes, ...hashes(output.output)];
+        const reasoningIds = output.output.filter(plainReasoning).map(item => item.id).filter(id => typeof id === 'string');
+        if (reasoningIds.length && output.output.some(item => item.type !== 'reasoning'))
+          replayMode = await resolveReplay(capabilityKey, meta, request, { id: output.id, reasoningIds }, baseFetch);
+        if (closed || !eligible || request.signal.aborted || row.committed) return;
+        const replayedOutput = replayMode === 'omit-plain' ? output.output.filter(item => !plainReasoning(item)) : output.output;
+        const prefix = [...hashes(replayInput(allInput, meta.replayHistory, replayMode)), ...hashes(replayedOutput)];
         const candidateKey = chainKey + ':' + sha(prefix.join(':'));
         chains.delete(candidateKey);
         chains.set(candidateKey, { chainKey, id: output.id, prefix, expiresAt: now() + vendor.chainTtl });
@@ -198,10 +219,11 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
           let error; try { error = await response.clone().json(); } catch {}
           const why = rejection(response.status, error);
           if (why && (useId || why === 'unsupported')) {
-            if (priorKey) chains.delete(priorKey);
+            if (priorKey) for (const [key, candidate] of chains)
+              if (candidate.chainKey === chainKey && candidate.id === prior.id) chains.delete(key);
             await response.body?.cancel();
             fallback = true; row.fallback = why; row.mode = 'full-fallback'; stats.fallbacks++;
-            const payload = { ...originalBody, store: why === 'invalid-id' };
+            const payload = { ...effectiveBody, store: why === 'invalid-id' };
             delete payload.previous_response_id;
             eligible = why === 'invalid-id';
             // A stale ID only invalidates this chain. Cache a negative
@@ -210,7 +232,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
               why === 'unsupported' ? 'provider-rejected-state' : 'provider-rejected-id');
             if (eligible && vendor.cmd) delete payload.prompt_cache_key;
             const fallbackText = JSON.stringify(payload);
-            row.sentItems = allInput.length; row.sentBytes = Buffer.byteLength(fallbackText);
+            row.sentItems = effectiveInput.length; row.sentBytes = Buffer.byteLength(fallbackText);
             const retryHeaders = eligible ? h : new Headers(headers); retryHeaders.delete('content-length');
             response = await send(fallbackText, retryHeaders);
           }
@@ -226,7 +248,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
   return { fetchFor, inspect,
     async flush() {},
     async close() {
-      closed = true; capabilities.clear(); chains.clear();
+      closed = true; capabilities.clear(); chains.clear(); replayChecks.clear();
     },
   };
 }

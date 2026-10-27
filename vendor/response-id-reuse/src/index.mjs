@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { acquireShared } from './shared.mjs';
 import { createResponsesAuto } from './engine.mjs';
+import { nativeReplayHistory } from './replay.mjs';
 
 export const name = 'dsh-response-id-reuse';
 export const inject = ['llm'];
@@ -25,7 +26,8 @@ export async function install(ctx) {
   });
   ctx.on('llm/stream', function(options, next) {
     const context = { provider: String(options.provider), model: String(options.model),
-      sessionId: options.sessionId === undefined ? undefined : String(options.sessionId) };
+      sessionId: options.sessionId === undefined ? undefined : String(options.sessionId),
+      replayHistory: nativeReplayHistory(options) };
     return {
       async *[Symbol.asyncIterator]() {
         const iterator = calls.run(context, () => next()[Symbol.asyncIterator]());
@@ -45,4 +47,4 @@ export async function install(ctx) {
 }
 
 export const apply = (ctx, config = {}) => config.enabled === false ? undefined
-  : acquireShared(ctx, 'transport', { name: 'dsh-response-id-reuse-runtime', runtimeRevision: 4, inject, apply: install });
+  : acquireShared(ctx, 'transport', { name: 'dsh-response-id-reuse-runtime', runtimeRevision: 5, inject, apply: install });
