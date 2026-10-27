@@ -1,4 +1,4 @@
-// Real locked rc.2 SDK lifecycle integration with synthetic package-manager I/O.
+// Real locked rc.3 SDK lifecycle integration with synthetic package-manager I/O.
 // No real install, download, archive extraction, desktop, or user profile is exercised.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,9 +17,10 @@ import { writeAddon } from './recommended-native-package-manager.mjs';
 // Missing/wrong SDK fails the test; there is deliberately no skip or fake-manager fallback.
 const require = createRequire(import.meta.url);
 const host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
-assert.equal(host('./package.json').version, '0.2.1-rc.2');
+const hostVersion = require('../../package.json').engines.dsh;
+assert.equal(host('./package.json').version, hostVersion);
 for (const name of ['dsh-plugin-manager', 'dsh-app-boot', 'dsh-hmr']) {
-  assert.equal(host(`@deepseek-ai/${name}/package.json`).version, '0.2.1-rc.2');
+  assert.equal(host(`@deepseek-ai/${name}/package.json`).version, hostVersion);
 }
 assert.equal(host('@deepseek-ai/cordis/package.json').version, '4.0.5');
 const sdk = spec => import(pathToFileURL(host.resolve(spec)).href);
@@ -89,7 +90,7 @@ async function fixture(t, { enabled = true, live = true } = {}) {
   assert.ok(manager instanceof PluginManager);
   const createService = () => {
     const service = new RecommendedPluginManager({
-      manager, catalog, hostVersion: '0.2.1-rc.2',
+      manager, catalog, hostVersion,
       getConfig: () => ({ recommendedPluginsAutoUpdate: false }), saveConfig: async () => {},
       packageDirectory: join(root, 'reviewed'),
       preparePackage: async () => 'file:' + join(root, 'addon-2.tgz'),
@@ -119,7 +120,7 @@ function assertActive(f, version) {
 async function preflightFixture(t) {
   const f = await fixture(t), entered = Promise.withResolvers(), release = Promise.withResolvers();
   const preflight = new PluginPreflight({ manager: f.manager, profile: { dir: f.dir }, directory: join(f.root, 'preflight'),
-    cli: '/unused', hostVersion: '0.2.1-rc.2', getEnabled: () => true,
+    cli: '/unused', hostVersion, getEnabled: () => true,
     async probe() { entered.resolve(); await release.promise; return { ok: true }; },
   }).bind();
   t.after(async () => { release.resolve(); await preflight.close(); });

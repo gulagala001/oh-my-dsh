@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-test('native rc.2 feature and update lifecycle (twelve SDK cases)', { timeout: 125000 }, () => {
+test('native rc.3 feature and update lifecycle (twelve SDK cases)', { timeout: 125000 }, () => {
   const suite = fileURLToPath(new URL('./fixtures/recommended-native-lifecycle.mjs', import.meta.url));
   const env = { ...process.env, NO_COLOR: '1' };
   // A nested runner must not inherit the outer node:test worker context.
