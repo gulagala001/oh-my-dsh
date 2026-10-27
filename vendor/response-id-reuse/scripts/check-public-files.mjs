@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url)).replace(/\/$/, '');
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
-const allowed = /^(?:src\/(?:index|engine|shared)\.mjs|test\/continuation\.test\.mjs|scripts\/(?:check-docs|check-public-files)\.mjs|docs\/(?:documentation\.md|structure\.json)|README(?:_EN)?\.md|CHANGELOG\.md|CONTRIBUTING\.md|LICENSE|package(?:-lock)?\.json|cordis\.patch\.yml|\.gitignore|\.github\/workflows\/ci\.yml)$/;
+const allowed = /^(?:src\/(?:index|engine|replay|shared)\.mjs|test\/continuation\.test\.mjs|scripts\/(?:check-docs|check-public-files)\.mjs|docs\/(?:documentation\.md|structure\.json)|README(?:_EN)?\.md|CHANGELOG\.md|CONTRIBUTING\.md|LICENSE|package(?:-lock)?\.json|cordis\.patch\.yml|\.gitignore|\.github\/workflows\/ci\.yml)$/;
 
 const forbidden = path => /(?:^|\/)(?:AGENTS|CLAUDE|AI_README|PLAN|REFERENCE|COMPONENT-ALLOCATION|.*HANDOFF.*|PROMPT_(?:MAINTENANCE|CHANGES))\.md$/i.test(path)
   || /(?:^|\/)[^/]*(?:raw[-_ ](?:research|review|audit)|prompt[-_ ]maintenance|agent[-_ ](?:allocation|handoff)|session[-_ ](?:transcript|archive))[^/]*$/i.test(path)

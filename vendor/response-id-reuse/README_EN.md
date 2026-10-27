@@ -13,6 +13,8 @@ Automatic ID continuation for Responses API providers. Reuse server-stored conte
 - Replaces an expired ID during the full-context fallback and matches reusable history prefixes exactly.
 - Restores native behavior when disabled or uninstalled.
 
+Stored response receipts verify reasoning replay automatically, keeping continuation, full fallback and cold recovery consistent without a provider allowlist. Unconfirmed and encrypted reasoning keep native replay, and original conversation logs remain intact. Storage readback does not generate additional model output. Network retries and background branches retain their usable parent IDs.
+
 ## Install
 
 **DSH 0.2.1-rc.3** · Node 22.19+
@@ -20,10 +22,10 @@ Automatic ID continuation for Responses API providers. Reuse server-stored conte
 Paste this URL into **Plugins → Add plugin**:
 
 ```text
-https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.2-dsh.0.2.1-rc.3/gulagala001-dsh-response-id-reuse-0.1.2-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.3-dsh.0.2.1-rc.3/gulagala001-dsh-response-id-reuse-0.1.3-dsh.0.2.1-rc.3.tgz
 ```
 
-[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.2-dsh.0.2.1-rc.3/SHA256SUMS)
+[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.3-dsh.0.2.1-rc.3/SHA256SUMS)
 
 ## Uninstall
 

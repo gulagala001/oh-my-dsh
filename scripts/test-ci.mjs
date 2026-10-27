@@ -42,20 +42,30 @@ core.push('test/persona-settings-api.test.mjs');
 core.push('test/monitor-import.test.mjs', 'test/monitor-aggregate-cache.test.mjs');
 core.push('test/ptc-lifecycle.test.mjs', 'test/preset-projection.test.mjs');
 core.push('test/reasoning-replay.test.mjs');
+core.push(...[
+  'desktop-deny-contract', 'task-sdk-schema',
+  'auto-compact-surface-index', 'auto-compact-native-session', 'auto-compact-coordinate',
+  'auto-compact-retry', 'auto-compact-native-boundaries', 'recommended-update-native',
+  'build-opencu-imports', 'conversation-controller-readiness',
+].map(name => `test/${name}.test.mjs`));
+const builtChecks = ['test/opencu-delivery.test.mjs', 'test/titlebar-clearance.test.mjs'];
 
-const [command = 'run', suite = 'core', shard = '1/1'] = process.argv.slice(2);
-if (command === 'matrix') {
-  console.log(JSON.stringify({ include: [{ os: 'ubuntu-latest', node: '24', suite: 'core', shard: '1/1' }] }));
-} else {
-  const files = ['core', 'all', 'general', 'compatibility', 'windows'].includes(suite) ? core : null;
-  if (!files || !/^[1-9]\d*\/[1-9]\d*$/.test(shard)) throw new Error('Unknown suite or invalid shard');
+const prebuilt = process.argv.includes('--built');
+const [command = 'run', suite = 'core', ...extra] = process.argv.slice(2).filter(arg => arg !== '--built');
+{
+  const files = suite === 'core' ? prebuilt ? [...core, ...builtChecks] : core : null;
+  if (!files || extra.length) throw new Error('Unknown suite or arguments');
   if (new Set(files).size !== files.length || files.some(file => !existsSync(file))) throw new Error('Suite contains duplicate or missing tests');
   if (command === 'list') console.log(JSON.stringify(files));
   else if (command === 'run') {
-    const built=spawnSync(process.execPath,['scripts/build-metering.mjs'],{stdio:'inherit'});
-    if(built.status!==0)throw Error('Metering build failed');
-    const result = spawnSync(process.execPath, ['--test', '--test-concurrency=2', `--test-shard=${shard}`, ...files], { stdio: 'inherit' });
+    if (prebuilt) {
+      if (!existsSync('lib/host/metering-version.mjs') || !existsSync('lib/client.js')) throw Error('Run npm run build before using --built');
+    } else {
+      const built=spawnSync(process.execPath,['scripts/build-metering.mjs'],{stdio:'inherit'});
+      if(built.status!==0)throw Error('Metering build failed');
+    }
+    const result = spawnSync(process.execPath, ['--test', '--test-concurrency=2', ...files], { stdio: 'inherit' });
     if (result.error) throw result.error;
     process.exitCode = result.status ?? 1;
-  } else throw new Error('Usage: test-ci.mjs run/list [core|all] [shard], or matrix');
+  } else throw new Error('Usage: test-ci.mjs run/list core [--built]');
 }

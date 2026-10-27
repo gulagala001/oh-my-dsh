@@ -10,7 +10,7 @@
 ## 开发
 
 - OMD 自有代码采用根目录 MIT；第三方材料遵守原许可证。修改许可时同步包元数据、双语首页和来源说明；公开文件门禁核对声明及包内 LICENSE。
-- 工作过程标题的结构布局统一维护在 `scripts/chat-style-adapter.mjs`，经原生 Chat 样式归属生效，不放回皮肤开关内。`test/process-header-layout.test.mjs` 用原生标题渲染器和固定 CSS 在现有 Chromium 中检查原生／主题、窄宽、中英文及大字体，接入文档 CI 的已有浏览器环境。
+- 工作过程标题的结构布局统一维护在 `scripts/chat-style-adapter.mjs`，经原生 Chat 样式归属生效，不放回皮肤开关内。`test/process-header-layout.test.mjs` 用原生标题渲染器和固定 CSS 在现有 Chromium 中检查原生／主题、窄宽、中英文及大字体，仅在相关 UI／样式／宿主源码或依赖锁发生变化的 PR 中运行；手动 CI 可勾选 `layout`。纯文档与版本更新不安装 Chromium。
 
 - 优先使用宿主公共 SDK 和扩展点，不手改 SDK、生成文件或 `vendor/opencu/` 发行快照。
 - OpenCU、Workflow、Rewind、Persona 与 BTW 在各自独立仓库维护；通过对应 `scripts/sync-*.mjs` 同步快照和来源清单，不直接手改 vendor 或 `plugins/persona` 文件。同步包含公开文档、文档清单和检查脚本的输入，按独立包的实际分发清单维护。OpenCU 同版本的直接服务端模块、宿主源码与文档可用 `sync-opencu.mjs <source> --files <paths...>` 同步已提交文件，保留原构建产物；清单记录来源提交与实际文件摘要，不继续声称对应旧整包摘要。文件集合、版本、前端或生成输入变化仍走完整构建／包同步。前端／宿主构建只针对受影响部分执行。
@@ -37,6 +37,10 @@
 - `main` 不跟踪构建产物：发版提交在完整构建后用 `git add -f lib plugins/*/lib` 带上产物，再打 tag 并上传 Release 包；应用内更新安装的是 Release 包。
 - 发行准备页和 CHANGELOG 明示未发布，发行清单使用 `unpublished: true`，既有公开安装入口保持可用；公开发布时同步更新状态、当前导航、徽章和固定安装入口。尚未发布的修复记入更新日志“未发布”部分；来源与许可见[第三方声明](THIRD_PARTY_NOTICES.md)。
 
+CI 只构建一次，并用 `node scripts/test-ci.mjs run core --built` 汇总受维护的回归检查；单独执行 `npm test` 仍会准备计量模块。Auto Compact、原生插件生命周期和标题栏检查共用这个入口，OPS 不重复运行。公开文件与文档结构共用快速门禁；文档站在 main 的相关变更通过检查后自动发布，不重复手动构建。实际安装包检查与发布附件校验继续保留。
+
 文档结构、语言对应和页面变更流程见[文档维护规范](docs/documentation.md)，检查命令：`npm run docs:check`。
 
 发行上传前执行 `node scripts/check-release-assets.mjs --dir <待发目录>`，核对当前包的实际 SHA256、`metadata.json`（schema、包名、完整版本、hostVersion、file／filename、sourceCommit）与 `SHA256SUMS`。OMAA 还需同内容的 `<包名>.tgz.metadata.json` 和 `<包名>.tgz.sha256`；当前发行的 CI 使用同一契约检查，历史附件保留。
+
+旧桌面／rc.2 热安装验收报告验证器不再随每次 PR 自动运行，真实宿主验收时按需调用；实际源码的 OpenCU 导入和会话控制器就绪检查已合并进 core。Release 附件工作流仅在发布／编辑 Release 或手动触发时核对对应 tag，不随无关源码推送重复下载旧包。

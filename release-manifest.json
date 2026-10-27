@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.1.1.1",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 1.1.1 · DSH 0.2.1-rc.3",
+      "notes": [
+        "统一 Responses 续传、全量回放和冷恢复的历史思考表示，修复缓存用量跳变。",
+        "保留可复用的父响应 ID，修复重试、后台预处理和并发分支的不必要全量回传。",
+        "合并检查流程，复用一次构建，文档发布不再重复安装浏览器。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.1.1.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.1.1.0",
       "severity": "normal",
       "unpublished": false,

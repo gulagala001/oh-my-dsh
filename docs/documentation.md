@@ -13,6 +13,7 @@
 - 来源与许可保留原作者、维护者、固定版本及适配说明。历史版本和跳转页有安装、回退或外部引用时继续保留。
 - 增删、移动或改变页面职责时，同步修改清单、中英文入口、首页／目录／站点导航、素材引用和打包配置。生成器或规则改变时，同步本脚本中的公开规范。
 - 运行 `node scripts/check-docs.mjs --write` 更新本页，再运行 `npm run docs:check`。CI 与 prepack 运行同一检查，未登记页面、失效路径／锚点、错误翻译对应或过期生成页均阻止通过。
+- 公开文件和文档结构共用快速 CI 门禁；源码构建后统一运行回归，复用产物，不重复运行计量构建和 OPS。浏览器布局检查仅跟随相关 UI／宿主／依赖变更，main 文档变更检查后自动部署 Pages。旧桌面报告验证按需手动执行；实际安装包与对应 tag 的发行附件检查保留。
 - 纯措辞修改不用修改结构清单。旧路径有外部引用时保留简短跳转，避免仅为统一命名造成断链。
 - 版本说明按完整版本与精确宿主命名，分中文／English 两区，按实际内容列新增功能、体验优化、问题修复和其他变更，省略空分类；末尾提供统一安装区、固定包、安装指南与 SHA256SUMS。
 
@@ -25,6 +26,7 @@
 - Preserve authorship, maintainers, pinned sources, licenses and adaptation notes. Keep historical versions and redirects needed by installation, rollback or external links.
 - Add, move or remove pages together with inventory entries, translations, homepages, indexes, website navigation, assets and packaging configuration. Update this script's public policy when changing the generator or its rules.
 - Run `node scripts/check-docs.mjs --write`, then `npm run docs:check`. CI and prepack use the same check for unregistered pages, missing paths or anchors, invalid translation pairs and stale generated documentation.
+- Public-file and documentation checks share one fast CI gate. Source regressions reuse one build; metering and OPS checks are not repeated. Browser layout checks follow relevant UI, host and dependency changes. Checked documentation changes on main deploy to Pages automatically. Legacy desktop report validation is manual; archive checks and checks of the released tag remain required.
 - Wording-only edits do not require inventory changes. Preserve short redirects where old paths have external consumers.
 - Release notes name the full version and exact host, separate Chinese and English sections, omit empty categories, and finish with fixed packages, installation guides and SHA256SUMS.
 
@@ -84,6 +86,7 @@ Roles: home · index · guide · development · sources · release · redirect. 
 | [docs/release-1.0.1.md](release-1.0.1.md) | release | bilingual | — |
 | [docs/release-1.0.2.md](release-1.0.2.md) | release | bilingual | — |
 | [docs/release-1.1.0.md](release-1.1.0.md) | release | bilingual | — |
+| [docs/release-1.1.1.md](release-1.1.1.md) | release | bilingual | — |
 | [docs/releases.md](releases.md) | release | zh | — |
 | [docs/runtime-state-background.md](runtime-state-background.md) | guide | zh | — |
 | [docs/showcase_EN.md](showcase_EN.md) | guide | zh | — |

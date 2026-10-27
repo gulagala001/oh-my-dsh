@@ -10,6 +10,9 @@
 - 根据正常请求回执启用续传，无需配置渠道名单或发送探测消息。
 - 主请求、后台请求和并发分支分别保持各自可用的续传历史。
 - 临时未存储时，后续正常请求可自动重新建立续传。
+- 网络重试、后台整理与并发分支复用各自匹配的历史 ID，不提前消耗父 ID。
+- 读取已保存的响应，自动核对历史思考的回放表示，让续传、全量回退和冷恢复保持一致；不按渠道名单切换。
+- 未能确认的内容及加密思考保持原生回传，原始会话日志不改写；回读不会启动额外模型推理。
 - ID 失效时在当次完整请求中重建续传；历史变化时准确匹配可复用的前缀。
 - 禁用或卸载后恢复原生行为。
 
@@ -20,10 +23,10 @@
 在 **插件 → 添加插件** 中粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.2-dsh.0.2.1-rc.3/gulagala001-dsh-response-id-reuse-0.1.2-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.3-dsh.0.2.1-rc.3/gulagala001-dsh-response-id-reuse-0.1.3-dsh.0.2.1-rc.3.tgz
 ```
 
-[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.2-dsh.0.2.1-rc.3/SHA256SUMS)
+[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.3-dsh.0.2.1-rc.3/SHA256SUMS)
 
 ## 卸载
 

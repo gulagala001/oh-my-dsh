@@ -9,16 +9,16 @@ on:
         default: false
   push:
     branches: ['main']
-    paths: ['README*.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'pnpm-lock.yaml', 'vendor/opencu.json', 'vendor/dsh.json', 'vendor/dsh/ui-chat.json', 'scripts/check-public-files.mjs', 'scripts/build-docs.mjs', 'scripts/check-docs.mjs', 'scripts/build-credits.mjs', 'src/project*.json', 'src/recommended-plugin-catalog.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', 'LICENSE', 'scripts/chat-style-adapter.mjs', 'src/client/skins/layout-base.css', 'test/process-header-layout.test.mjs', '.github/workflows/docs.yml']
+    paths: ['README*.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'pnpm-lock.yaml', 'vendor/opencu.json', 'vendor/dsh.json', 'vendor/dsh/ui-chat.json', 'scripts/check-public-files.mjs', 'scripts/build-docs.mjs', 'scripts/check-docs.mjs', 'scripts/build-credits.mjs', 'src/project*.json', 'src/recommended-plugin-catalog.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', 'LICENSE', '.github/workflows/docs.yml']
   pull_request:
-    paths: ['README*.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'pnpm-lock.yaml', 'vendor/opencu.json', 'vendor/dsh.json', 'vendor/dsh/ui-chat.json', 'scripts/check-public-files.mjs', 'scripts/build-docs.mjs', 'scripts/check-docs.mjs', 'scripts/build-credits.mjs', 'src/project*.json', 'src/recommended-plugin-catalog.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', 'LICENSE', 'scripts/chat-style-adapter.mjs', 'src/client/skins/layout-base.css', 'test/process-header-layout.test.mjs', '.github/workflows/docs.yml']
+    paths: ['README*.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md', 'docs/**', 'package.json', 'pnpm-lock.yaml', 'vendor/opencu.json', 'vendor/dsh.json', 'vendor/dsh/ui-chat.json', 'scripts/check-public-files.mjs', 'scripts/build-docs.mjs', 'scripts/check-docs.mjs', 'scripts/build-credits.mjs', 'src/project*.json', 'src/recommended-plugin-catalog.mjs', '.github/ISSUE_TEMPLATE/**', '.github/PULL_REQUEST_TEMPLATE.md', 'LICENSE', '.github/workflows/docs.yml']
 
 permissions:
   contents: read
 
 concurrency:
-  group: docs-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: docs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   documentation:
@@ -28,25 +28,23 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+          cache: pnpm
       # CI skips README/docs-only PRs; check public files before building or deploying docs.
       - run: node scripts/check-public-files.mjs
-      - uses: pnpm/action-setup@v6
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Native process header layout
-        run: node --test test/process-header-layout.test.mjs
       - run: pnpm docs:check
       - run: pnpm docs:build
       - uses: actions/upload-pages-artifact@v4
-        if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.deploy)
         with:
           path: dist/site
 
   deploy:
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.deploy)
     needs: documentation
     runs-on: ubuntu-latest
     timeout-minutes: 10

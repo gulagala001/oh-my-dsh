@@ -131,3 +131,9 @@ CodeGraph 目录探测与原生 MCP 适配器由运行时的同一个 catalog �
 `node scripts/build-metering.mjs` 只构建受影响的宿主计量与摘要适配。原生函数来源固定于 `src/metering/native/source.json`；工厂通过原有 Loader 解析 SDK，原注册项由 bundle 暂停，卸载后恢复。投影版本由计量源码和原生来源摘要生成，避免算法更新后继续读取旧缓存。`pnpm metering:check` 检查估算／回执解析归属、原生来源摘要和内置 Workflow 同源清单，已接入宿主构建、CI 与 prepack；`test/metering-contract.test.mjs` 覆盖部分回执、实测基准失效、原生日志重放、小窗口及分段摘要。改动后先执行上述受影响构建，再运行定点测试。
 
 插件预检的页面适配位于 `src/plugin-preflight/page.mjs`，按原生加载清单和实际可交互页面判断，不把可选账号引导作为必经步骤。改动此处可定点运行 `test/plugin-preflight-page.test.mjs`（已有浏览器，`OMD_TEST_BROWSER` 指定路径）；通常无需重复完整宿主矩阵。第三方适配包使用固定输入构建器，保持精确宿主声明、完整功能与来源许可。
+
+## 检查与发布流程
+
+源码 CI 先执行 `npm run build`，再执行 `node scripts/test-ci.mjs run core --built`，复用同一份产物并一次汇总回归失败；独立 `npm test` 会准备计量模块。真实安装包仍单独核验。Chromium 布局检查仅跟随相关 UI、宿主源码和依赖锁变更，手动 CI 可用 `layout` 开启。公开文件与文档结构共用快速工作流；main 的文档变更检查、构建并自动发布到 Pages。
+
+旧桌面／rc.2 热安装验收报告验证器不再随每次 PR 自动运行，真实宿主验收时按需调用；实际源码的 OpenCU 导入和会话控制器就绪检查已合并进 core。Release 附件工作流仅在发布／编辑 Release 或手动触发时核对对应 tag，不随无关源码推送重复下载旧包。

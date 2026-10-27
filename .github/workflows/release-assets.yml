@@ -1,7 +1,5 @@
 name: Release attachments
 on:
-  push:
-    branches: [main]
   release:
     types: [published, edited]
   workflow_dispatch:
@@ -13,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: main
+          ref: ${{ github.event.release.tag_name || github.ref }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'

@@ -4,6 +4,11 @@ on:
   pull_request:
     paths-ignore: ['README*.md', 'docs/**']
   workflow_dispatch:
+    inputs:
+      layout:
+        description: Run Chromium layout checks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,18 +31,34 @@ jobs:
           node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Synthetic Deny contracts with real OpenCU controller and ToolRuntime
-        run: node --test test/desktop-deny-contract.test.mjs test/task-sdk-schema.test.mjs
       - run: node scripts/check-public-files.mjs
-      - run: pnpm metering:check
-      - run: pnpm tools:check
       - run: pnpm build
-      - name: Verify rebuilt client and actual OpenCU package delivery
+      - name: Run maintained regressions once against this build
+        run: node scripts/test-ci.mjs run core --built
+      - name: Select affected browser checks
+        id: layout
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          FORCE_LAYOUT: ${{ inputs.layout }}
         run: |
-          node --test test/opencu-delivery.test.mjs
           node --input-type=module - <<'NODE'
           import { execFileSync } from 'node:child_process';
-          import { appendFileSync, copyFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+          import { appendFileSync } from 'node:fs';
+          const changed = process.env.BASE_SHA
+            ? execFileSync('git', ['diff', '--name-only', process.env.BASE_SHA, 'HEAD'], { encoding: 'utf8' }).split('\n') : [];
+          const relevant = /^(?:src\/client\/|plugins\/glyph-theme\/src\/|vendor\/dsh(?:\/|\.json)|scripts\/(?:chat-style-adapter|build-host)\.mjs|test\/process-header-layout\.test\.mjs|pnpm-lock\.yaml|\.github\/workflows\/ci\.yml)/;
+          appendFileSync(process.env.GITHUB_OUTPUT, `run=${process.env.FORCE_LAYOUT === 'true' || changed.some(file => relevant.test(file))}\n`);
+          NODE
+      - name: Native process header layout
+        if: steps.layout.outputs.run == 'true'
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          node --test test/process-header-layout.test.mjs
+      - name: Verify rebuilt client and actual OpenCU package delivery
+        run: |
+          node --input-type=module - <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
           import { createHash } from 'node:crypto';
           import { join } from 'node:path';
           import { nativePackageModes } from './scripts/native-package-modes.mjs';
@@ -46,32 +67,15 @@ jobs:
           const packed = JSON.parse(execFileSync('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', root], { encoding: 'utf8' }));
           if (packed.length !== 1) throw Error('Expected exactly one final OMD archive');
           const archive = join(root, packed[0].filename);
-          const rawArchive = join(root, 'raw-' + packed[0].filename);
-          copyFileSync(archive, rawArchive);
           const sha256 = file => createHash('sha256').update(readFileSync(file)).digest('hex');
-          const rawSha256 = sha256(rawArchive);
+          const rawSha256 = sha256(archive);
           await nativePackageModes(archive);
-          const evidence = { rawArchive, rawSha256, archive, sha256: sha256(archive) };
+          const evidence = { rawSha256, archive, sha256: sha256(archive) };
           writeFileSync(join(root, 'package-evidence.json'), JSON.stringify(evidence, null, 2));
           console.log(JSON.stringify(evidence));
           execFileSync(process.execPath, ['scripts/check-opencu-delivery.mjs', archive], { stdio: 'inherit' });
           execFileSync(process.execPath, ['--test', 'test/opencu-static-zip-delivery.test.mjs'], { stdio: 'inherit', env: { ...process.env, OMD_DELIVERY_ARCHIVE: archive } });
           NODE
-      - run: pnpm test
-      - name: Auto Compact surface-index regression
-        run: node --test test/auto-compact-surface-index.test.mjs test/auto-compact-native-session.test.mjs
-      - name: Auto Compact native SDK boundary regression
-        run: |
-          pnpm list @deepseek-ai/dsh @deepseek-ai/dsh-session @deepseek-ai/dsh-compaction @deepseek-ai/cordis --depth 0
-          node --test test/auto-compact-coordinate.test.mjs test/auto-compact-retry.test.mjs test/auto-compact-native-boundaries.test.mjs
-      - name: Recommended plugin native SDK lifecycle regression
-        run: |
-          pnpm list @deepseek-ai/dsh @deepseek-ai/cordis --depth 0
-          node --test test/recommended-update-native.test.mjs
-      - name: Fixed OPS versions and PTC presentation contract
-        run: node --test test/dsh-ops-compat.test.mjs
-      - name: Titlebar clearance source and bundled CSS regression
-        run: node --test test/titlebar-clearance.test.mjs
       - uses: actions/upload-artifact@v7
         if: always()
         with:

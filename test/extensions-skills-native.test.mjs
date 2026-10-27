@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -14,7 +14,7 @@ const filesystem = await import(native.resolve('@deepseek-ai/dsh-skill-filesyste
 const { createScope } = await import(native.resolve('@deepseek-ai/dsh-scope'));
 
 async function fixture(t, config = {}) {
-  const directory = await mkdtemp(join(process.env.DSHX_TEST_TMPDIR || tmpdir(), 'skills-native-'));
+  const directory = await realpath(await mkdtemp(join(process.env.DSHX_TEST_TMPDIR || tmpdir(), 'skills-native-')));
   const ctx = new Context(), agents = [];
   t.after(async () => { await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }); });
   await ctx.plugin(SkillRegistry);

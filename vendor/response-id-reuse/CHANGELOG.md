@@ -1,3 +1,51 @@
+# Response ID Reuse 0.1.3 · DSH 0.2.1-rc.3
+
+[中文](#zh-013) | [English](#en-013)
+
+<a id="zh-013"></a>
+
+## 中文
+
+### 问题修复
+
+- 根据实际存储回执核对历史思考的回放表示，统一 ID 续传、全量回退与冷恢复，修复切换路径时旧思考重新计入输入、缓存前缀突变的问题。
+- 保留可重复使用的父响应 ID，网络重试、后台整理与并发分支不再提前消耗彼此的续传历史；明确失效时仅清理对应 ID。
+- 历史匹配保留消息的其他有效字段，避免不同内容误用同一续传前缀。
+
+### 体验优化
+
+- 自动回读已存储响应，无需渠道名单或新增设置，不启动额外模型推理。
+- 未能核验的内容、未知来源和加密思考保持原生回传；原始会话日志保持完整。
+
+<a id="en-013"></a>
+
+## English
+
+### Bug Fixes
+
+- Verify reasoning replay against stored response receipts so ID continuation, full fallback and cold recovery use consistent history, avoiding reintroduced reasoning and unexpected cache-prefix changes.
+- Keep reusable parent response IDs across network retries, background preparation and concurrent branches. Explicit invalidation removes only the rejected ID.
+- Preserve additional meaningful message fields when matching history prefixes.
+
+### Improvements
+
+- Read stored responses automatically without a provider allowlist, new settings or additional model inference.
+- Preserve native replay for unverified content, unknown origins and encrypted reasoning. Original conversation logs remain intact.
+
+## 安装 / Installation
+
+适用于 DSH **0.2.1-rc.3**。在 **插件 → 添加插件** 中粘贴固定包地址。更新保留 profile、配置和会话；按宿主提示在当前任务结束后重新加载。
+
+For DSH **0.2.1-rc.3**. Paste the fixed package URL into **Plugins → Add plugin**. Profiles, configuration and conversations are preserved; reload after active tasks finish if requested by the host.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.1-rc.3 | [Response ID Reuse 0.1.3](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.3-dsh.0.2.1-rc.3/gulagala001-dsh-response-id-reuse-0.1.3-dsh.0.2.1-rc.3.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.3-dsh.0.2.1-rc.3/SHA256SUMS) |
+
+[安装指南](https://github.com/gulagala001/dsh-response-id-reuse/blob/v0.1.3-dsh.0.2.1-rc.3/README.md#安装) · [Installation guide](https://github.com/gulagala001/dsh-response-id-reuse/blob/v0.1.3-dsh.0.2.1-rc.3/README_EN.md#install)
+
+---
+
 # Response ID Reuse 0.1.2 · DSH 0.2.1-rc.3
 
 [中文](#zh-012) | [English](#en-012)

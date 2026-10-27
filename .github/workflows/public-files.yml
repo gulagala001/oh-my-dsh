@@ -1,4 +1,4 @@
-name: Public distribution files
+name: Public files and documentation structure
 on:
   push:
     branches: [main]
@@ -17,3 +17,4 @@ jobs:
         with:
           node-version: "24"
       - run: node scripts/check-public-files.mjs
+      - run: node scripts/check-docs.mjs

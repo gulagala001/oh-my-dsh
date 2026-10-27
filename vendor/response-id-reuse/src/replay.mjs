@@ -1,19 +1,23 @@
 export const plainReasoning = item => item?.type === 'reasoning' && !item.encrypted_content
-  && [...item.content ?? [], ...item.summary ?? []].some(block => typeof block.text === 'string' && block.text.length);
+  && [...(Array.isArray(item.content) ? item.content : []), ...(Array.isArray(item.summary) ? item.summary : [])]
+    .some(block => typeof block?.text === 'string' && block.text.length);
 
 // Only native model history may be projected. User text, encrypted state and
 // reasoning introduced by another adapter are not evidence about this route.
 export function nativeReplayHistory(options) {
   const ids = [];
   let sample;
-  for (const message of options.messages ?? []) {
+  for (const message of Array.isArray(options.messages) ? options.messages : []) {
+    if (!message || typeof message !== 'object') continue;
     const state = message.source?.replayState, source = state?.response;
-    if (message.role !== 'assistant' || source?.api !== 'openai-responses'
+    if (message.role !== 'assistant' || source?.kind !== 'pi-ai' || source.version !== 2 || source.api !== 'openai-responses'
       || source.provider !== options.provider || source.model !== options.model
+      || message.source.provider !== options.provider || message.source.model !== options.model
+      || !Array.isArray(message.content) || !Array.isArray(state.blocks) || state.blocks.length !== message.content.length
       || !['stop', 'toolUse'].includes(source.stopReason)) continue;
     const current = [];
-    for (const block of state.blocks ?? []) {
-      if (block.type !== 'reasoning' || !block.thinkingSignature) continue;
+    for (const [index, block] of state.blocks.entries()) {
+      if (block?.type !== 'reasoning' || message.content[index]?.type !== 'reasoning' || !block.thinkingSignature) continue;
       try {
         const item = JSON.parse(block.thinkingSignature);
         if (plainReasoning(item) && typeof item.id === 'string') { ids.push(item.id); current.push(item.id); }
@@ -35,7 +39,8 @@ export function replayInput(input, history, mode) {
 // Read back an actual completed response, never infer storage semantics from
 // a host name or token count. No inference call or durable conversation edit.
 export async function storedReplayMode(request, sample, baseFetch) {
-  if (!sample?.id || !sample.reasoningIds?.length || request.signal.aborted) return null;
+  if (typeof sample?.id !== 'string' || !sample.id.length || sample.id.length > 262144
+    || !Array.isArray(sample.reasoningIds) || !sample.reasoningIds.length || request.signal.aborted) return null;
   const url = new URL(request.url);
   url.pathname = url.pathname.replace(/\/$/, '') + '/' + encodeURIComponent(sample.id);
   url.searchParams.append('include[]', 'reasoning.encrypted_content');
