@@ -87,7 +87,8 @@ test('native model decoration preserves entry identity and its child render auth
 test('only successful latest native UI choices update preferences and hooks release their session', async () => {
   const remembered = [], lifetime = [], sessionCleanup = [], pending = [];
   const select = () => { const reply = Promise.withResolvers(); pending.push(reply); return reply.promise; };
-  const directory = { select }, original = () => directory, models = { directoryFor: original };
+  let current;
+  const directory = { select, store: { getSnapshot: () => ({ current }) } }, original = () => directory, models = { directoryFor: original };
   const ctx = { effect() {}, slots: { inject() {} }, sessions: { scope: () => ({ effect: run => sessionCleanup.push(run()) }) },
     inject(_deps, run) { run({ modelDirectories: models, effect: callback => lifetime.push(callback()) }); } };
   load('model').applyModelPanel(ctx, { rememberModel: (...args) => remembered.push(args) });
@@ -99,6 +100,10 @@ test('only successful latest native UI choices update preferences and hooks rele
   const failed = directory.select({ provider: 'native', model: 'missing' });
   pending[2].resolve({ ok: false }); await failed;
   assert.equal(remembered.length, 1);
+  const stale = directory.select({ provider: 'native', model: 'late' });
+  current = { provider: 'native', model: 'newer-omd-choice' };
+  pending[3].resolve({ ok: true }); await stale;
+  assert.equal(remembered.length, 1, 'another control owns the newer native choice');
   sessionCleanup.forEach(cleanup => cleanup()); assert.equal(directory.select, select);
   lifetime.forEach(cleanup => cleanup()); assert.equal(models.directoryFor, original);
 });
@@ -127,8 +132,10 @@ test('model saves reconcile native changes skipped during the write and let conf
     const directory = { current: initial.selected, groups: [{ id: 'local', name: 'Local', models: [
       { id: 'old', name: 'Old model' }, { id: 'new', name: 'New model', reasoning: { defaultEffort: 'high' } },
     ] }], pending: null, failures: [] };
+    const remembered = [];
     const props = { ctx: { sessions: { binding: () => ({ session: { projections: { faceOf: key => key === 'omdUltracode' ? projection : undefined } } }) } },
-      sessionId: 'one', available: true, load() {}, directory: { getSnapshot: () => directory, subscribe: () => () => {} } };
+      sessionId: 'one', available: true, load() {}, rememberModel: (...args) => remembered.push(args),
+      directory: { getSnapshot: () => directory, subscribe: () => () => {} } };
     root = createRoot(dom.window.document.getElementById('root'));
     await act(async () => root.render(React.createElement(ModelPanel, props)));
     const click = async selector => act(async () => dom.window.document.querySelector(selector).click());
@@ -153,6 +160,13 @@ test('model saves reconcile native changes skipped during the write and let conf
     assert.match(dom.window.document.querySelector('[aria-haspopup="dialog"]').textContent, /Old model/,
       'a successful but older receipt cannot hide the newer native selection');
     assert.equal(posts.length, 2);
+    assert.equal(remembered.length, 0, 'an outdated successful receipt must not replace the newer model preference');
+    answer = Promise.withResolvers();
+    await click('[aria-label="恢复默认思考强度"]');
+    const currentChoice = { ...server, revision: 4 };
+    await act(async () => { server = currentChoice; answer.resolve({ ok: true, json: async () => currentChoice }); });
+    assert.equal(remembered.length, 1);
+    assert.equal(remembered[0][1].model, currentChoice.selected.model, 'the current successful choice is still remembered');
   } finally {
     if (root) await act(async () => root.unmount());
     dom.window.close();

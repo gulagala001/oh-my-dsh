@@ -133,6 +133,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
       focusAfterSave.current = document.activeElement; panel.current.focus({ preventScroll: true });
     }
     setSaving(true); setError('');
+    let reconciled = false;
     try {
       if (nextMode === 'ultra' && reasoningEffort === undefined && (activeMode !== 'ultra' || !sameRoute(route, selected))) {
         const nextModel = state.groups.find(group => group.id === route.provider)?.models.find(model => model.id === route.model);
@@ -140,18 +141,30 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
       }
       let revision = mode.revision;
       while (true) {
+        reconciled = false;
         const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, submode: nextSubmode, expectedRevision: revision });
-        rememberModel?.(sessionId, next.selected, next);
-        if (!live.current) return false;
-        setMode(next);
-        if (next.mode === 'ultra' && (remember || readUltraSubmode() === undefined)) rememberUltraSubmode(next.savedSubmode ?? next.submode);
+        if (live.current) setMode(next);
+        // A successful receipt can arrive after a newer native choice. Confirm
+        // its ownership before updating the preferences used by future chats.
+        const confirmed = await modeApi(sessionId);
+        reconciled = !(faces.mode.getSnapshot()?.revision > confirmed.revision);
+        if (live.current && reconciled) setMode(confirmed);
+        const current = reconciled && confirmed.revision === next.revision && sameRoute(confirmed.selected, next.selected)
+          && confirmed.selected?.reasoningEffort === next.selected?.reasoningEffort && confirmed.mode === next.mode
+          && confirmed.savedSubmode === next.savedSubmode;
         const queued = pendingSubmode.current; pendingSubmode.current = null;
-        if (queued === null || next.mode === 'ultra' && queued === next.submode) break;
-        // A submode click made while Ultra is saving follows that write, using
-        // its returned revision instead of racing it with the stale selection.
-        nextMode = 'ultra'; reasoningEffort = undefined; nextSubmode = queued; revision = next.revision; remember = true;
+        if (current && queued !== null && (confirmed.mode !== 'ultra' || queued !== confirmed.submode)) {
+          // Include clicks queued during confirmation without replaying over
+          // a newer native selection from another control.
+          nextMode = 'ultra'; reasoningEffort = undefined; nextSubmode = queued; revision = confirmed.revision; remember = true;
+          continue;
+        }
+        if (current) {
+          rememberModel?.(sessionId, confirmed.selected, confirmed);
+          if (confirmed.mode === 'ultra' && (remember || readUltraSubmode() === undefined)) rememberUltraSubmode(confirmed.savedSubmode ?? confirmed.submode);
+        }
+        return true;
       }
-      return true;
     } catch (e) { if (live.current) setError(e.message); return false; }
     finally {
       writing.current = false; pendingSubmode.current = null;
@@ -160,7 +173,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
         // Projection refreshes were skipped during this write. Reconcile
         // once with the native state, including a conflict or a lost response,
         // while retaining the save error until the user retries.
-        void refresh(true);
+        if (!reconciled) void refresh(true);
       }
     }
   };
@@ -290,7 +303,9 @@ export function applyModelPanel(ctx, { rememberModel, preferredUltraEffort } = {
         async function choose(selection) {
           const ticket = ++revision;
           const result = await select.call(this, selection);
-          if (result.ok && ticket === revision) rememberModel?.(id, selection);
+          const current = directory.store?.getSnapshot().current;
+          if (result.ok && ticket === revision && (!current || sameRoute(current, selection)
+            && current.reasoningEffort === selection.reasoningEffort)) rememberModel?.(id, selection);
           return result;
         }
         const restore = () => { if (directory.select === choose) directory.select = select; restores.delete(directory); };
