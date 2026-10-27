@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.1.1.2",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 1.1.2 · DSH 0.2.1-rc.3",
+      "notes": [
+        "首次工作目录初始化静默完成，修复额外触发一次模型调用的问题。",
+        "保留原生当前目录快照、权限根、会话身份、持久化和后续目录切换机制。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.1.2.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.1.1.1",
       "severity": "normal",
       "unpublished": false,

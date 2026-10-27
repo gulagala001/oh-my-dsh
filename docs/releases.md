@@ -2,13 +2,17 @@
 
 **安装步骤：[复制给 AI 安装](install.md#ai) · [在“添加插件”中安装](install.md#gui) · [English guide](install_EN.md)**
 
-OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 1.1.1 的 rc.3 正式安装入口，旧宿主沿用原固定版本；选择与你正在运行的 DSH **完整版本**相同的一行。OMD includes OpenCU. The newest build is 1.1.1 for rc.3; older hosts retain their fixed releases. Match the complete DSH version.
+OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 1.1.2 的 rc.3 正式安装入口，旧宿主沿用原固定版本；选择与你正在运行的 DSH **完整版本**相同的一行。OMD includes OpenCU. The newest build is 1.1.2 for rc.3; older hosts retain their fixed releases. Match the complete DSH version.
 
 | DSH 宿主 / Host | OMD 插件 / Plugin | 可粘贴安装的包 / Package |
 | --- | --- | --- |
-| 0.2.1-rc.3 | 0.2.1-rc.3.omd.1.1.1 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.1/oh-my-dsh-0.2.1-rc.3.omd.1.1.1.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.1.1) |
+| 0.2.1-rc.3 | 0.2.1-rc.3.omd.1.1.2 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.2/oh-my-dsh-0.2.1-rc.3.omd.1.1.2.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.1.2) |
 | 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100.0/oh-my-dsh-0.2.1-rc.2.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0) |
 | 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.100.0/oh-my-dsh-0.2.1-rc.1.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0) |
+
+## OMD 1.1.2
+
+[中文更新说明](release-1.1.2.md#zh-112) · [English release notes](release-1.1.2.md#en-112)
 
 ## OMD 1.1.1
 
@@ -24,11 +28,11 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 
 
 ## 当前公开版本 / Current public version
 
-当前 rc.3 正式版本为 **1.1.1**；此前 0.19.0 草稿不作为安装入口。Current rc.3 formal version: **1.1.1**; the earlier 0.19.0 drafts are not installation targets.
+当前 rc.3 正式版本为 **1.1.2**；此前 0.19.0 草稿不作为安装入口。Current rc.3 formal version: **1.1.2**; the earlier 0.19.0 drafts are not installation targets.
 
 | 完整宿主 / Exact host | 公开安装入口 / Public installation |
 | --- | --- |
-| DSH 0.2.1-rc.3 | [OMD 1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.1.1) |
+| DSH 0.2.1-rc.3 | [OMD 1.1.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.1.2) |
 | DSH 0.2.1-rc.2 | [OMD 0.100.0](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0) |
 | DSH 0.2.1-rc.1 | [OMD 0.100.0](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0) |
 
@@ -67,10 +71,10 @@ For older hosts, use the matching tag's documentation. Do not choose a package s
 
 已有目录条目继续沿用，不重复投稿；当前版本的固定安装包见上表。市场收录与版本同步由各目录独立处理，不能以源码推送或 GitHub Release 代替市场回执。自动发现所需 topics 已配置；共用 Awesome 数据源的下游不重复投稿。
 
-| 独立数据源 | 当前回执 | OMD 1.1.1 |
+| 独立数据源 | 当前回执 | OMD 1.1.2 |
 | --- | --- | --- |
-| Awesome DSH Plugin | 已有条目已收录；[1.1.1 更新 PR](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9819) | 同一条目的固定包更新待审 |
-| TYEclipse DSH Plugins Hub | [原投稿仍开放](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 已更新 1.1.1、MIT 与宿主／权限说明；既有审核意见待复审 |
-| coderPerseus DSH Hub | [原投稿已完成](https://github.com/coderPerseus/dsh-hub/issues/57)，此前目录已找到条目 | 原投稿已更新 1.1.1；最近已见快照仍旧；本轮目录查询返回 403，未确认新版同步 |
+| Awesome DSH Plugin | 已有条目已收录；[1.1.1 更新已合并](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9819) | [1.1.2 同条目更新](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9934)待审 |
+| TYEclipse DSH Plugins Hub | [原投稿仍开放](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 已更新 1.1.2、MIT 与宿主／权限说明；既有审核意见待复审 |
+| coderPerseus DSH Hub | [原投稿已完成](https://github.com/coderPerseus/dsh-hub/issues/57)，此前目录已找到条目 | 原投稿已更新 1.1.2；最近已见快照仍旧；本轮目录查询返回 403，未确认新版同步 |
 
 自动索引：chnjames 已有条目仍指向 `main`，固定版本与许可待同步；ZASENJC、NanmiCoder 尚未找到条目；aust24lzy 索引返回 404。以上状态核对于 2026-10-27，不将待审／待同步视为新版已收录。
