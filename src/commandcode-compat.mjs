@@ -3,66 +3,13 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { installRequestProjection, providerProfile } from './llm-request-projection.mjs';
 import { freezeMessage, isAgentLoopRequest, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 
-// CommandCode (api.commandcode.ai) gateway compatibility: Responses reasoning
-// replay, Chat replay of old Responses tool turns and
+// CommandCode (api.commandcode.ai) gateway compatibility: Chat replay of old Responses tool turns and
 // zero-usage context rejections. Every projection leaves the durable log intact.
 const DEEPSEEK = /(?:^|\/)deepseek(?:-|\/)/i;
 function commandCode(profile, api) {
   if (profile?.api !== api) return false;
   try { return new URL(profile.baseURL).hostname === 'api.commandcode.ai'; }
   catch { return false; }
-}
-
-// CommandCode can route DeepSeek through two Responses serializers: one puts
-// the exposed reasoning in summary, while the other requires reasoning_text.
-// Keep the original item and add its exact text only for this verified gateway.
-const commandCodeResponses = profile => commandCode(profile, 'openai-responses');
-function reasoningSignature(signature, block) {
-  if (typeof signature !== 'string') return signature;
-  let item;
-  try { item = JSON.parse(signature); } catch { return signature; }
-  if (item?.type !== 'reasoning' || item.encrypted_content
-    || (item.content !== undefined && (!Array.isArray(item.content) || item.content.length))
-    || !Array.isArray(item.summary) || !item.summary.length
-    || item.summary.some(part => part?.type !== 'summary_text' || typeof part.text !== 'string')
-    || item.summary.map(part => part.text).join('\n\n') !== block.text) return signature;
-  return JSON.stringify({ ...item, content: item.summary.map(part => ({ type: 'reasoning_text', text: part.text })) });
-}
-
-export function normalizeResponsesReasoning(options, profile) {
-  if (!DEEPSEEK.test(options.model || '')) return options;
-  const normalizeSummary = commandCodeResponses(profile);
-  let changed = false;
-  const messages = options.messages.map(message => {
-    const source = message.source, replay = source?.replayState, response = replay?.response;
-    if (message.role !== 'assistant' || source?.kind !== 'model'
-      || source.provider !== options.provider || source.model !== options.model
-      || response?.kind !== 'pi-ai' || response.version !== 2 || response.api !== 'openai-responses'
-      || response.provider !== source.provider || response.model !== source.model
-      || !['stop', 'toolUse'].includes(response.stopReason)
-      || !Array.isArray(replay.blocks) || replay.blocks.length !== message.content.length
-      || replay.blocks.some((block, index) => block?.type !== message.content[index].type)) return message;
-    let content = message.content, touched = false;
-    let blocks = replay.blocks.map((metadata, index) => {
-      if (!normalizeSummary || metadata.type !== 'reasoning') return metadata;
-      const thinkingSignature = reasoningSignature(metadata.thinkingSignature, content[index]);
-      if (thinkingSignature === metadata.thinkingSignature) return metadata;
-      touched = true;
-      return { ...metadata, thinkingSignature };
-    });
-    // A genuine tool-only turn has empty reasoning, never invented text.
-    if (!content.some(block => block.type === 'reasoning') && content.some(block => block.type === 'tool-call')) {
-      content = [{ type: 'reasoning', text: '' }, ...content];
-      blocks = [{ type: 'reasoning', thinkingSignature: JSON.stringify({ type: 'reasoning', summary: [], content: [{ type: 'reasoning_text', text: '' }] }) }, ...blocks];
-      touched = true;
-    }
-    if (!touched) return message;
-    changed = true;
-    return freezeMessage({ ...message, content, source: { ...source, replayState: { ...replay, blocks } } });
-  });
-  if (!changed) return options;
-  const projected = Object.freeze({ ...options, messages: Object.freeze(messages) });
-  return isAgentLoopRequest(options) ? markAgentLoopRequest(projected) : projected;
 }
 
 const TOOL_CALL_LABEL = '[Historical tool call; context only]';
@@ -207,9 +154,6 @@ function installRetry(ctx) {
 
 export function installCommandCodeCompatibility(ctx) {
   installRetry(ctx);
-  // Image delivery is owned by the shared image budget; retain protocol compatibility.
-  installRequestProjection(ctx, options => DEEPSEEK.test(options.model || '')
-    ? normalizeResponsesReasoning(options, providerProfile(ctx, options.provider)) : options);
   installRequestProjection(ctx, options => isAgentLoopRequest(options) && DEEPSEEK.test(options.model || '')
     ? projectResponsesToolsForCommandCodeChat(options, providerProfile(ctx, options.provider)) : options);
 }

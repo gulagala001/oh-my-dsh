@@ -29,6 +29,7 @@
 
 ### 其他变更
 
+- 思考内容由 DSH 原生模型适配器回传，移除 OMD 额外补空思考块和改写思考回传格式的兼容处理。
 - 明确 OMD 自有代码采用 MIT 许可证；第三方代码、组件、提示词和素材继续保留各自原许可证。
 
 <a id="en-110"></a>
@@ -58,6 +59,7 @@ This version is prepared for release and has not been published. It includes the
 
 ### Other Changes
 
+- Leaves reasoning replay to the native DSH model adapter, removing OMD's extra empty reasoning blocks and reasoning-format rewrites.
 - Declares MIT licensing for OMD-owned code. Third-party code, components, prompts and materials retain their original licenses.
 
 ## 安装 / Installation
