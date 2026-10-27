@@ -4,7 +4,7 @@
   "version": "0.1.2-dsh.0.2.1-rc.3",
   "host": "0.2.1-rc.3",
   "source": "../dsh-response-id-reuse",
-  "sourceCommit": "cc7245875842a35dd2652ba1b4a380342966c3b4",
+  "sourceCommit": "159a6ad5fa33361e613fb47259124bc3364111b4",
   "files": {
     "CHANGELOG.md": "45bc44d648b10b042f35808487b0b367e4e28c1e1fbae0b3e799c9f45fd90a2f",
     "CONTRIBUTING.md": "9d807ab4e720444c509ee9bc1c5cb244bc574e4aa5fd67796568d41f1460fe85",
@@ -17,8 +17,8 @@
     "package.json": "193b4cabdba8afea057458a983325b58798b9a8dcafd626e6e3bcb7c19e9eb71",
     "scripts/check-docs.mjs": "221543f62b4c35a78d714fa29aadd3eeeaec8ed2546d12637b059b35bc53e33f",
     "scripts/check-public-files.mjs": "a6902a929f621f967a16ca483dcccc513b38d33d8fde2b18c7fe84e81cf6e3ea",
-    "src/engine.mjs": "e4e1f86b9b5a199ef0c0e2ac7c142201033abbe2e24ed9b118f79ea8e5319f48",
-    "src/index.mjs": "31c5a3786bd660542354736f9722ca5ffca1eefd47096a0c6351c39ccdc9ba73",
+    "src/engine.mjs": "76f8abc42e1df5da05663fa3528e814b8cd9dddc6865936a9f340bc0ebd92776",
+    "src/index.mjs": "98249113286bc3674b373418ed2548f2e081a00521001a37bdbd2534001918ab",
     "src/shared.mjs": "a3b45d8942c370d9e41bcb21e0e879e71a761e142f49ea9da43ea96f60439be1"
   }
 }

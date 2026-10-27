@@ -9,9 +9,12 @@ function sort(value) {
 }
 function normalized(item) {
   if (!item || typeof item !== 'object') return item;
-  if (item.role) return { role: item.role, ...(item.phase === undefined ? {} : { phase: item.phase }), content: typeof item.content === 'string'
-    ? [{ type: 'text', text: item.content }]
-    : (item.content ?? []).map(b => ['text', 'input_text', 'output_text'].includes(b.type) ? { type: 'text', text: b.text ?? '' } : b) };
+  if (item.role) {
+    const { id, status, type, content, ...fields } = item;
+    return { ...fields, ...(type && type !== 'message' ? { type } : {}), content: typeof content === 'string'
+      ? [{ type: 'text', text: content }]
+      : (content ?? []).map(b => ['text', 'input_text', 'output_text'].includes(b.type) ? { type: 'text', text: b.text ?? '' } : b) };
+  }
   if (item.type === 'reasoning') return { type: item.type, encrypted_content: item.encrypted_content,
     text: (item.content?.length ? item.content : item.summary ?? []).map(b => b.text ?? '').join('') };
   if (item.type === 'function_call') {
@@ -25,6 +28,12 @@ function normalized(item) {
 const hashes = items => items.map(x => sha(canonical(normalized(x))));
 const isPrefix = (all, prefix) => all.length > prefix.length && prefix.every((h, i) => all[i] === h);
 const textInput = text => [{ role: 'user', content: [{ type: 'input_text', text }] }];
+// A stored response ID does not prove that the provider replays its reasoning.
+// Full native replay keeps one authoritative prefix for ordinary calls, retries
+// and background work. Preserve opaque/encrypted reasoning by the same rule.
+const hasReasoningHistory = input => input.some(item => item?.type === 'reasoning'
+  || item?.role === 'assistant' && (item.reasoning_content != null || item.reasoning != null
+    || Array.isArray(item.content) && item.content.some(block => ['reasoning', 'thinking', 'redacted_thinking'].includes(block.type))));
 function inputKinds(input) {
   const kinds = new Set();
   const visit = value => {
@@ -134,10 +143,12 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       const checked = capabilities.get(capabilityKey);
       const disabled = checked?.expiresAt > now() && checked.state === 'unsupported';
       stats.requests++;
-      if (disabled) {
+      const reasoningHistory = hasReasoningHistory(allInput);
+      if (disabled || reasoningHistory) {
         stats.full++;
         const response = await baseFetch(input, init);
-        stats.last = { provider: meta.provider, model: meta.model, mode: 'full', reason: checked.reason,
+        stats.last = { provider: meta.provider, model: meta.model, mode: 'full',
+          reason: reasoningHistory ? 'reasoning-history-requires-full-replay' : checked.reason,
           inputItems: body.input.length, inputBytes: Buffer.byteLength(originalText) };
         persist(); return response;
       }
@@ -151,9 +162,9 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
             && isPrefix(inputHashes, candidate.prefix)) { prior = candidate; priorKey = key; }
       }
       const useId = Boolean(prior);
-      // Reserve only the selected ID before the next await. Independent or
-      // concurrent histories retain their candidates; no ID is sent twice.
-      if (priorKey) chains.delete(priorKey);
+      // Response IDs name immutable history, not single-use tokens. Retain the
+      // confirmed parent across failed attempts and concurrent continuations.
+      // Only a definitive provider rejection invalidates that parent.
       const wire = { ...body, store: true, ...(useId ? { input: allInput.slice(prior.prefix.length), previous_response_id: prior.id } : {}) };
       if (vendor.cmd) delete wire.prompt_cache_key;
       const h = new Headers(headers); h.delete('content-length');
@@ -187,6 +198,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
           let error; try { error = await response.clone().json(); } catch {}
           const why = rejection(response.status, error);
           if (why && (useId || why === 'unsupported')) {
+            if (priorKey) chains.delete(priorKey);
             await response.body?.cancel();
             fallback = true; row.fallback = why; row.mode = 'full-fallback'; stats.fallbacks++;
             const payload = { ...originalBody, store: why === 'invalid-id' };
