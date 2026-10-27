@@ -10,6 +10,10 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 
 | 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100.0/oh-my-dsh-0.2.1-rc.2.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0) |
 | 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.100.0/oh-my-dsh-0.2.1-rc.1.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0) |
 
+## OMD 1.1.0 · 发行准备 / Prepared
+
+[中文更新说明](release-1.1.0.md#zh-110) · [English release notes](release-1.1.0.md#en-110)。尚未公开发布，现有公开安装入口保持。Not published yet; existing public installation links remain current.
+
 ## OMD 1.0.2
 
 [中文更新说明](release-1.0.2.md#zh-102) · [English release notes](release-1.0.2.md#en-102) · [dsh-ops 使用指南](dsh-ops.md)
@@ -55,6 +59,12 @@ OMD 0.18.8：[DSH rc.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0
 
 For older hosts, use the matching tag's documentation. Do not choose a package solely from GitHub's Latest label.
 
-## 市场同步记录（2026-10-19）
+## 市场同步记录（2026-10-27）
 
 已有目录条目继续沿用，不重复投稿；当前版本的固定安装包见上表。市场收录与版本同步由各目录独立处理，不能以源码推送或 GitHub Release 代替市场回执。自动发现所需 topics 已配置；共用 Awesome 数据源的下游不重复投稿。
+
+| 独立数据源 | 当前回执 | OMD 1.1.0 |
+| --- | --- | --- |
+| Awesome DSH Plugin | [1.0.2 更新已合并](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9688) | 待正式发布后更新同一条目 |
+| TYEclipse DSH Plugins Hub | [投稿仍开放，待审](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 待正式发布后更新同一投稿 |
+| coderPerseus DSH Hub | [投稿仍开放，待审](https://github.com/coderPerseus/dsh-hub/issues/57) | 待正式发布后更新同一投稿 |

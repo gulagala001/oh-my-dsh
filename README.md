@@ -15,6 +15,8 @@
 
 <p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="docs/README.md">完整文档</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈</a></p>
 
+发行准备：[OMD 1.1.0](docs/release-1.1.0.md)（尚未公开发布；下方安装地址仍为当前正式版）。
+
 <p align="center"><a href="docs/images/omd-hero-zh.png"><img src="docs/images/omd-hero-zh.png" alt="Oh My DSH · 从对话到交付" width="880"></a></p>
 
 <p align="center"><a href="docs/images/glyph-animation.gif"><img src="docs/images/glyph-animation.gif" alt="Glyph 动态字符鲸鱼与界面交互演示" width="600" height="438"></a></p>
@@ -73,7 +75,7 @@ OMD 组合 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench**�
 
 会话总览集中展示产出、来源、后台进程、Workflow 和子智能体，点开成员即可继续侧栏对话。**Ultra** 提供 Workflow、Agent Team、自由三种协作方式；**Better Todo** 将原始需求、任务与验证结果关联，保留已完成检查和真实执行回执。
 
-没有项目也能开始：首次发送时创建独立文件目录，后续对话继续复用。输入框的 **✨** 提供轻润色、结构化和步骤规划，可保存要求预设、比较版本、撤销或重做。
+没有项目也能开始：新聊天提前准备独立目录，首条消息命名工作子目录，后续对话继续复用。输入框的 **✨** 提供轻润色、结构化和步骤规划，可保存要求预设、比较版本、撤销或重做。
 
 [日常使用](docs/usage.md) · [Ultra 与 Workflow](docs/workflow.md)
 

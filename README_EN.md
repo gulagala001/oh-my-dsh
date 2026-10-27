@@ -15,6 +15,8 @@
 
 <p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="docs/README_EN.md">Docs</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">Report an issue</a></p>
 
+Prepared for release: [OMD 1.1.0](docs/release-1.1.0.md), not yet published. Installation below still uses the current public release.
+
 <p align="center"><a href="docs/images/omd-hero-en.png"><img src="docs/images/omd-hero-en.png" alt="Oh My DSH · From conversation to delivery" width="880"></a></p>
 
 <p align="center"><a href="docs/images/glyph-animation.gif"><img src="docs/images/glyph-animation.gif" alt="Glyph animated character whale and interface interactions" width="600" height="438"></a></p>
@@ -73,7 +75,7 @@ Workflow handles execution and resumption; Rewind restores conversations and fil
 
 The session overview brings outputs, sources, background processes, Workflow and subagents together. Open a member to continue its sidebar conversation. **Ultra** offers Workflow, Agent Team and Free collaboration modes. **Better Todo** connects original requirements, tasks and verification results, retaining completed checks and actual execution receipts.
 
-Start without a project: the first message creates a dedicated file directory that subsequent turns reuse. The **✨** composer control offers light polish, structured rewriting and step planning, with saved requirements, versions, undo and redo.
+Start without a project: a new chat prepares its own directory, and the first message names the working subdirectory that subsequent turns reuse. The **✨** composer control offers light polish, structured rewriting and step planning, with saved requirements, versions, undo and redo.
 
 [Everyday usage](docs/usage_EN.md) · [Ultra and Workflow](docs/workflow.md)
 

@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.1.1.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "OMD 1.1.0 · DSH 0.2.1-rc.3",
+      "notes": [
+        "Ultra 新增思考强度，默认 xhigh，与模型偏好一起记住并在新聊天恢复。",
+        "新聊天首次发送保持同一会话，首条消息命名独立工作子目录，Finder 跟随实际目录。",
+        "修复首发设置丢失、旧目录串用、模型偏好竞争、CU 恢复与 Codex 存储回退。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.1.0.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.1.0.2",
       "severity": "normal",
       "unpublished": false,

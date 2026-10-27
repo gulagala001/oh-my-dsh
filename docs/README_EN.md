@@ -8,7 +8,7 @@ Start with what you want to do. OMD retains your DSH models, conversations, tool
 
 **[Install and match versions](install_EN.md) → [First steps](getting-started_EN.md) → [Everyday usage](usage_EN.md)**
 
-Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. These docs cover OMD 1.0.2 with OpenCU 2.2.1. The current package targets DSH rc.3 exactly; older hosts retain their fixed releases. [Downloads and release scope](releases.md).
+Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. [OMD 1.1.0 is prepared](release-1.1.0.md) but not published; the current public package remains OMD 1.0.2 with OpenCU 2.2.1. The current package targets DSH rc.3 exactly; older hosts retain their fixed releases. [Downloads and release scope](releases.md).
 
 ## Find your topic
 
