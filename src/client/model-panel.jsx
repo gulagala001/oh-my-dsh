@@ -77,6 +77,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
     ...modeReady && mode?.eligible ? [{ id: 'omd:ultra', label: 'Ultra', mode: 'ultra' }] : [],
   ], [model, modeReady, mode?.eligible]);
   const effective = selected?.reasoningEffort ?? model?.reasoning?.defaultEffort;
+  const ultraEfforts = choices.filter(choice => !choice.mode && choice.id !== undefined);
   const activeMode = modeReady ? mode.mode : 'off';
   const submodes = ultraSubmodes.filter(item => item.id !== 'team' || mode?.teamAvailable === true);
   const submode = submodes.find(item => item.id === (submodeDraft ?? mode?.submode)) ?? ultraSubmodes[2];
@@ -175,6 +176,15 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
     if (writing.current) { pendingSubmode.current = next; return; }
     void save({ provider: selected.provider, model: selected.model }, 'ultra', undefined, next, true);
   };
+  const chooseUltraOption = next => {
+    if (!next.startsWith('effort:')) return chooseSubmode(next);
+    const effort = next.slice('effort:'.length);
+    if (busy || locked || !modeReady || !ultraEfforts.some(choice => choice.id === effort)) return;
+    setSubmodeOpen(false);
+    clearTimeout(commitTimer.current); gestureRevision.current = null;
+    draggingRef.current = false; setDragging(false);
+    void save({ provider: selected.provider, model: selected.model }, 'ultra', effort);
+  };
   const commit = index => {
     clearTimeout(commitTimer.current);
     const revision = gestureRevision.current; gestureRevision.current = null;
@@ -188,7 +198,8 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   };
   const change = index => { gestureRevision.current ??= mode?.revision; draftRef.current = index; setDraft(index); };
   const chooseModel = async (provider, next) => {
-    const effort = sameRoute(selected, {provider, model:next.id}) ? selected.reasoningEffort : next.reasoning?.defaultEffort;
+    const effort = activeMode === 'ultra' ? undefined
+      : sameRoute(selected, {provider, model:next.id}) ? selected.reasoningEffort : next.reasoning?.defaultEffort;
     const origin = document.activeElement;
     if (await save({provider,model:next.id}, activeMode, effort)
       && panel.current && (document.activeElement === panel.current || document.activeElement === origin)) setPane('effort');
@@ -225,13 +236,16 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
         <header className="omd-effort-heading">
           <h2 key={label} className={level?.mode === 'ultra' ? 'omd-effort-ultra' : ''}>
             {level?.mode === 'ultra' ? <Menu open={submodeOpen} onClose={() => setSubmodeOpen(false)}
-              portal side="top" align="center" autoFocus selectedId={submode.id}
-              items={submodes.map(item => ({id:item.id,disabled:busy || locked,
-                label:<span className="omd-ultra-menu-option" data-omd-ultra-option={item.id}><strong>{item.label}</strong><small>{item.description}</small></span>}))}
-              onSelect={chooseSubmode}
+              portal side="top" align="center" autoFocus selectedIds={[submode.id, `effort:${effective}`]}
+              items={[...submodes.map(item => ({id:item.id,disabled:busy || locked,
+                label:<span className="omd-ultra-menu-option" data-omd-ultra-option={item.id}><strong>{item.label}</strong><small>{item.description}</small></span>})),
+                { type:'separator', id:'effort:separator' }, { type:'label', id:'effort:title', text:'思考强度' },
+                ...ultraEfforts.length ? ultraEfforts.map(choice => ({ id:`effort:${choice.id}`, disabled:busy || locked || !modeReady,
+                  label:`${choice.label}（${choice.id}）` })) : [{ type:'label', id:'effort:default', text:'由模型提供方决定' }]]}
+              onSelect={chooseUltraOption}
               anchor={<Button type="button" variant="ghost" size="sm" className="omd-ultra-mode-button"
-                disabled={locked || !mode || !selected || state.pending !== null} aria-label={`Ultra 协作方式：${submode.label}`}
-                aria-haspopup="menu" aria-expanded={submodeOpen} title={`当前：${submode.label} · 点击选择协作方式`}
+                disabled={locked || !mode || !selected || state.pending !== null} aria-label={`Ultra 协作方式与思考强度：${submode.label} · ${effective ?? '默认'}`}
+                aria-haspopup="menu" aria-expanded={submodeOpen} title={`当前：${submode.label} · ${effective ?? '默认'} · 点击选择协作方式与思考强度`}
                 onClick={() => setSubmodeOpen(value => !value)}>Ultra<Icon name="down" size={12}/></Button>}/>
               : label}
           </h2>

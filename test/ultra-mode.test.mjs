@@ -50,7 +50,7 @@ test('consumed model choices follow later native request routes while pending ch
   assert.equal(f.control.view(f.session).selected.model, 'pending-model', 'an older in-flight request cannot consume a different pending choice');
 });
 
-test('all Ultra strategies keep the Pro effort rule and remember selection while off', async () => {
+test('all Ultra strategies default to xhigh and remember selection while off', async () => {
   const f = fixture(undefined, true);
   for (const submode of ['workflow', 'team', 'free']) {
     const value = await f.select('ultra', submode);
@@ -62,6 +62,31 @@ test('all Ultra strategies keep the Pro effort rule and remember selection while
   assert.equal(off.mode, 'off'); assert.equal(off.submode, 'team');
   assert.equal((await f.select('ultra')).submode, 'team');
   await assert.rejects(f.select('ultra', 'invented'), /无效/);
+});
+
+test('Ultra accepts supported efforts, preserves them across strategies and reloads, and falls back for another model', async () => {
+  const f = fixture(undefined, true);
+  const levels = ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
+  f.ctx.llm.resolveModelInfo = async () => ({ reasoning: { efforts: levels.map(id => ({ id })) } });
+  assert.equal((await f.select('ultra', 'free')).selected.reasoningEffort, 'xhigh');
+  for (const reasoningEffort of levels) {
+    const value = await f.control.select(f.session.id, { provider: 'local', model: 'main', mode: 'ultra', reasoningEffort });
+    assert.equal(value.mode, 'ultra');
+    assert.equal(value.selected.reasoningEffort, reasoningEffort);
+    assert.equal(f.events.at(-1).data.reasoningEffort, reasoningEffort);
+  }
+  assert.equal((await f.select('ultra', 'workflow')).selected.reasoningEffort, 'ultra');
+  const reloaded = new UltracodeControl(f.ctx, () => true, { peek: () => f.state });
+  assert.equal(reloaded.view(f.session).selected.reasoningEffort, 'ultra');
+  const count = f.events.length;
+  await assert.rejects(f.control.select(f.session.id, { provider: 'local', model: 'main', mode: 'ultra', reasoningEffort: 'invalid' }), /不支持/);
+  assert.equal(f.events.length, count);
+  f.ctx.llm.resolveModelInfo = async () => ({ reasoning: { efforts: [{ id: 'high' }, { id: 'xhigh' }] } });
+  assert.equal((await f.control.select(f.session.id, { provider: 'local', model: 'other', mode: 'ultra' })).selected.reasoningEffort, 'xhigh');
+  f.ctx.llm.resolveModelInfo = async () => ({ reasoning: { efforts: [{ id: 'high' }] } });
+  assert.equal((await f.select('ultra', 'team')).selected.reasoningEffort, 'high');
+  f.ctx.llm.resolveModelInfo = async () => ({});
+  assert.equal((await f.select('ultra', 'free')).selected.reasoningEffort, undefined);
 });
 
 test('Team availability follows existing DSH tools and does not activate or replace them', async () => {

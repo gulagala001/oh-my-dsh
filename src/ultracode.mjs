@@ -231,9 +231,12 @@ export class UltracodeControl {
       if (mode === 'ultra' && submode === 'team' && !before.teamAvailable && !restoring) throw new Error('请先在 DSH 中启用 Agent Team');
       const controller = this.ctx.get('sessionController');
       if (!controller) throw new Error('当前宿主未提供模型选择服务');
-      const effort = mode === 'ultra' && info.reasoning?.efforts?.some(level => level.id === 'xhigh')
-        ? 'xhigh'
-        : mode !== 'off' ? highestEffort(info.reasoning) : input.reasoningEffort;
+      const supports = effort => info.reasoning?.efforts?.some(level => level.id === effort);
+      if (mode === 'ultra' && input.reasoningEffort !== undefined && !supports(input.reasoningEffort)) throw new Error('当前模型不支持所选思考强度');
+      const preferred = input.reasoningEffort ?? (before.mode === 'ultra' ? before.selected?.reasoningEffort : undefined);
+      const effort = mode === 'ultra'
+        ? supports(preferred) ? preferred : supports('xhigh') ? 'xhigh' : highestEffort(info.reasoning)
+        : input.reasoningEffort;
       const result = await controller.selectModel({ sessionId, provider: input.provider, model: input.model, ...(effort === undefined ? {} : { reasoningEffort: effort }) });
       const model = this.fold(session).model;
       if (!model || !same(model, result.selected)) throw new Error('模型在保存时再次变更，请重试');
