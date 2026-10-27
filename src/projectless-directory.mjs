@@ -1,10 +1,12 @@
 import { actualUser, textBlocks } from './context/core.mjs';
+import { emitAgentEvent } from '@deepseek-ai/dsh-agent';
 
 /** Complete a draft through the native cwd projection, never a second Session. */
 export function installProjectlessDirectory(ctx, workspaces) {
   const completed = new WeakSet();
   const pending = new WeakMap();
   const claimed = new WeakMap();
+  const notices = new WeakMap();
   // The native loop claims inbox input before assembling its first request,
   // and commits user/message only afterwards. Capture, then await in assembly.
   ctx.on('agent/inbox/claimed', ({ agent, message }) => {
@@ -26,14 +28,14 @@ export function installProjectlessDirectory(ctx, workspaces) {
     signal?.throwIfAborted();
     const cwd = await workspaces.nameDraft({ requestId: session.id, cwd: session.header.cwd, prompt: textBlocks(first.content), firstSend: !events.some(actualUser) });
     if (cwd) {
-      // rc.3 set() commits the native projection, then injects a next-step
-      // notice. This first request already includes the new cwd, so that
-      // notice would cause a redundant model call after the user's reply.
-      // Scope the notice sink to this initialization call; never replace the
-      // live agent's inject or silence manual changes/recovery elsewhere.
+      // Keep the native durable notice; identify only this initialization's
+      // message so admission can include it in the already assembling step.
+      // Never replace the live agent's inject or consume unrelated input.
       const initializingAgent = Object.create(agent);
       initializingAgent.inject = message => {
-        if (message.source?.kind !== 'working-directory') return agent.inject(message);
+        const result = agent.inject(message);
+        if (message.source?.kind === 'working-directory') notices.set(session, message.id);
+        return result;
       };
       await agent.ctx.get('workingDirectory').set(initializingAgent, cwd, signal);
     }
@@ -50,5 +52,24 @@ export function installProjectlessDirectory(ctx, workspaces) {
       try { await task; } finally { if (pending.get(agent.session) === task) pending.delete(agent.session); }
     }
     return next();
+  }, { global: true, prepend: true });
+  ctx.on('agent/pre-step', async ({ agent, turn, signal }, next) => {
+    const decision = await next();
+    if (decision.kind !== 'enter') return decision;
+    const id = notices.get(agent.session);
+    if (!id) return decision;
+    signal?.throwIfAborted();
+    const index = agent.inbox.nextStep.findIndex(message => message.id === id);
+    notices.delete(agent.session);
+    if (index < 0) return decision; // A native cancellation/claim already consumed it.
+    const message = agent.inbox.nextStep[index];
+    // Use the native durable claim event (no canceled outcome), followed by
+    // its scoped notification. Inbox.remove/splice would report a discard.
+    agent.session.append('agent/inbox/spliced', { target: 'next-step', start: index, removedCount: 1, inserted: [] });
+    emitAgentEvent(agent.ctx, agent, 'agent/inbox/claimed', { message, turn });
+    const messages = [...decision.messages];
+    const contextIndex = messages.findIndex(item => item.source?.kind === 'runtime-context');
+    messages.splice(contextIndex < 0 ? messages.length : contextIndex, 0, message);
+    return { ...decision, messages };
   }, { global: true, prepend: true });
 }

@@ -84,6 +84,9 @@ importers:
       '@deepseek-ai/dsh':
         specifier: 0.2.1-rc.3
         version: 0.2.1-rc.3(bdf88ee60cd68236b065ffde338f12b4)
+      '@deepseek-ai/dsh-agent':
+        specifier: 0.2.1-rc.3
+        version: 0.2.1-rc.3(02d0f40b432df75e85918e266882ca13)
       '@deepseek-ai/dsh-attachment':
         specifier: 0.2.1-rc.3
         version: 0.2.1-rc.3(@deepseek-ai/cordis@4.0.5)(@deepseek-ai/dsh-brand@0.2.1-rc.3(@deepseek-ai/cordis@4.0.5))
