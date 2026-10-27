@@ -33,6 +33,13 @@ test('compiled CSS retains the platform/state gates and skin precedence', () => 
   assert.match(compiled.code, /html\[data-omd-layout\]\[data-platform=darwin\] \[data-sidebar-collapsed\] \.wSkVaW_header\[data-window-drag\] \.wSkVaW_titleRow\{padding-inline-start:0!important\}/);
 });
 
+test('the built client includes both shared titlebar clearance rules', async () => {
+  const bundle = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8');
+  for (const name of ['header', 'titleRow']) {
+    assert.ok(bundle.includes(rule(name)), `Built client is missing shared ${name} clearance`);
+  }
+});
+
 test('the vendored host still exposes the titleRow and native drag contract', async () => {
   const root = new URL('../vendor/dsh/ui-conversation/src/client/skeleton/', import.meta.url);
   const css = await readFile(new URL('ConversationRoot.module.css', root), 'utf8');
