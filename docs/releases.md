@@ -67,10 +67,10 @@ For older hosts, use the matching tag's documentation. Do not choose a package s
 
 已有目录条目继续沿用，不重复投稿；当前版本的固定安装包见上表。市场收录与版本同步由各目录独立处理，不能以源码推送或 GitHub Release 代替市场回执。自动发现所需 topics 已配置；共用 Awesome 数据源的下游不重复投稿。
 
-| 独立数据源 | 当前回执 | OMD 1.1.0 |
+| 独立数据源 | 当前回执 | OMD 1.1.1 |
 | --- | --- | --- |
-| Awesome DSH Plugin | 已有条目已收录；[1.1.0 更新 PR](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9819) | 同一条目的固定包更新待审 |
-| TYEclipse DSH Plugins Hub | [原投稿仍开放](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 已更新 1.1.0、MIT 与宿主／权限说明；既有审核意见待复审 |
-| coderPerseus DSH Hub | [原投稿已完成](https://github.com/coderPerseus/dsh-hub/issues/57)，当前目录已找到条目 | 原投稿已更新 1.1.0；目录仍为此前快照，待同步 |
+| Awesome DSH Plugin | 已有条目已收录；[1.1.1 更新 PR](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9819) | 同一条目的固定包更新待审 |
+| TYEclipse DSH Plugins Hub | [原投稿仍开放](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 已更新 1.1.1、MIT 与宿主／权限说明；既有审核意见待复审 |
+| coderPerseus DSH Hub | [原投稿已完成](https://github.com/coderPerseus/dsh-hub/issues/57)，此前目录已找到条目 | 原投稿已更新 1.1.1；最近已见快照仍旧；本轮目录查询返回 403，未确认新版同步 |
 
 自动索引：chnjames 已有条目仍指向 `main`，固定版本与许可待同步；ZASENJC、NanmiCoder 尚未找到条目；aust24lzy 索引返回 404。以上状态核对于 2026-10-27，不将待审／待同步视为新版已收录。

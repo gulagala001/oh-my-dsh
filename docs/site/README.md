@@ -14,7 +14,7 @@ pnpm exec playwright install chromium
 pnpm docs:build
 ```
 
-Linux CI 使用 `pnpm exec playwright install --with-deps chromium`，安装浏览器所需的系统库与字体。仓库的 Documentation CI 按此顺序构建并运行浏览器验证；合并到 main 后，只部署验证通过的 `dist/site` 到 [GitHub Pages](https://gulagala001.github.io/oh-my-dsh/)。PR 仅构建和验证，不部署。
+已有 Chrome／Chromium 时，可用 `OMD_DOCS_CHROMIUM=/path/to/browser pnpm docs:build` 复用，无需下载。Documentation CI 使用 runner 预装的 Chrome 生成静态图示并核对站点链接；合并到 main 后，只部署构建通过的 `dist/site` 到 [GitHub Pages](https://gulagala001.github.io/oh-my-dsh/)。PR 仅构建和验证，不部署；产品 UI 布局检查由源码 CI 按相关变更触发。
 
 将 **`dist/site`** 作为静态站点根目录托管。根入口进入 `docs/index.html`，公开 Markdown 转成对应的 `.html`，并保留仓库的相对目录结构。因此 `docs/README.html` 中的项目介绍会正确进入根目录 `README.html`；页内片段、图片和产品页中的文档入口也会保持有效。可部署在域名根目录或子路径，服务端无需 Markdown 中间件。
 

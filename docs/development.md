@@ -136,4 +136,4 @@ CodeGraph 目录探测与原生 MCP 适配器由运行时的同一个 catalog �
 
 源码 CI 先执行 `npm run build`，再执行 `node scripts/test-ci.mjs run core --built`，复用同一份产物并一次汇总回归失败；独立 `npm test` 会准备计量模块。真实安装包仍单独核验。Chromium 布局检查仅跟随相关 UI、宿主源码和依赖锁变更，手动 CI 可用 `layout` 开启。公开文件与文档结构共用快速工作流；main 的文档变更检查、构建并自动发布到 Pages。
 
-旧桌面／rc.2 热安装验收报告验证器不再随每次 PR 自动运行，真实宿主验收时按需调用；实际源码的 OpenCU 导入和会话控制器就绪检查已合并进 core。Release 附件工作流仅在发布／编辑 Release 或手动触发时核对对应 tag，不随无关源码推送重复下载旧包。
+文档构建通过 `OMD_DOCS_CHROMIUM` 复用 runner 预装的 Chrome 渲染静态 Mermaid，不下载另一份浏览器。旧桌面／rc.2 热安装验收报告验证器不再随每次 PR 自动运行，真实宿主验收时按需调用；实际源码的 OpenCU 导入和会话控制器就绪检查已合并进 core。Release 附件工作流仅在发布／编辑 Release 或手动触发时核对对应 tag，不随无关源码推送重复下载旧包。

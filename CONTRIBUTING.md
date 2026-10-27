@@ -43,4 +43,4 @@ CI 只构建一次，并用 `node scripts/test-ci.mjs run core --built` 汇总�
 
 发行上传前执行 `node scripts/check-release-assets.mjs --dir <待发目录>`，核对当前包的实际 SHA256、`metadata.json`（schema、包名、完整版本、hostVersion、file／filename、sourceCommit）与 `SHA256SUMS`。OMAA 还需同内容的 `<包名>.tgz.metadata.json` 和 `<包名>.tgz.sha256`；当前发行的 CI 使用同一契约检查，历史附件保留。
 
-旧桌面／rc.2 热安装验收报告验证器不再随每次 PR 自动运行，真实宿主验收时按需调用；实际源码的 OpenCU 导入和会话控制器就绪检查已合并进 core。Release 附件工作流仅在发布／编辑 Release 或手动触发时核对对应 tag，不随无关源码推送重复下载旧包。
+文档构建仍生成静态 Mermaid 图示，CI 通过 `OMD_DOCS_CHROMIUM` 复用 runner 预装的 Chrome，不下载另一份浏览器。旧桌面／rc.2 热安装验收报告验证器不再随每次 PR 自动运行，真实宿主验收时按需调用；实际源码的 OpenCU 导入和会话控制器就绪检查已合并进 core。Release 附件工作流仅在发布／编辑 Release 或手动触发时核对对应 tag，不随无关源码推送重复下载旧包。

@@ -209,7 +209,7 @@ async function renderDiagrams(diagrams, output, chromiumExecutablePath) {
     catch (error) { throw new Error('缺少 Mermaid 构建依赖，请执行 pnpm install --frozen-lockfile', { cause: error }); }
     const { chromium } = await import('playwright');
     try { browser = await chromium.launch({ headless: true, executablePath: chromiumExecutablePath, args: ['--use-mock-keychain', '--password-store=basic'] }); }
-    catch (error) { throw new Error('Mermaid 图示需要本地 Chromium。请执行 pnpm exec playwright install chromium；Linux CI 使用 --with-deps chromium。旧站点保留。', { cause: error }); }
+    catch (error) { throw new Error('Mermaid 图示需要可用的 Chromium。可设置 OMD_DOCS_CHROMIUM 指向现有 Chrome／Chromium，或执行 pnpm exec playwright install chromium。旧站点保留。', { cause: error }); }
     const page = await browser.newPage(), blockedRequests = [];
     await page.route('**/*', route => { blockedRequests.push(route.request().url()); return route.abort(); });
     await page.addScriptTag({ path: runtime });
@@ -388,6 +388,6 @@ export async function buildDocs({ root = projectRoot, outDir = path.join(root, '
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const result = await buildDocs();
+  const result = await buildDocs({ chromiumExecutablePath: process.env.OMD_DOCS_CHROMIUM || undefined });
   console.log(`Built ${result.documents} documents / ${result.diagrams} static diagrams / ${result.files} files: ${result.outDir}`);
 }

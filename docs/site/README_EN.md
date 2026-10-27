@@ -14,7 +14,7 @@ pnpm exec playwright install chromium
 pnpm docs:build
 ```
 
-Linux CI uses `pnpm exec playwright install --with-deps chromium`. Documentation CI builds and checks the output before deploying `dist/site` to [GitHub Pages](https://gulagala001.github.io/oh-my-dsh/). Pull requests build and check the site without deploying it.
+If Chrome or Chromium is already installed, reuse it with `OMD_DOCS_CHROMIUM=/path/to/browser pnpm docs:build` without downloading another browser. Documentation CI renders static diagrams with the runner's preinstalled Chrome and checks site links before deploying `dist/site` to [GitHub Pages](https://gulagala001.github.io/oh-my-dsh/). Pull requests build and check the site without deploying it. Product UI layout checks run in source CI for relevant changes.
 
 Host **`dist/site`** as the static root. Its root entry opens `docs/index.html`; the language switch opens `docs/index_EN.html`. Public Markdown becomes matching HTML while preserving the directory structure, relative links, fragments, and images. The output can be hosted at a domain root or subpath without a Markdown server.
 
