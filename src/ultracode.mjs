@@ -57,7 +57,9 @@ function modeView(state, route, mode, eligible, teamAvailable = false) {
   const remembered = savedUltraMode(mode);
   const saved = state.model && mode?.selectionSeq === state.model.seq ? remembered.mode : 'off';
   const submode = remembered.submode === 'team' && !teamAvailable ? 'free' : remembered.submode;
-  return { selected, mode: eligible ? saved : 'off', submode, savedSubmode: remembered.submode, teamAvailable, savedMode: saved, enabled: saved !== 'off' && eligible, savedEnabled: saved !== 'off', eligible, revision: state.model?.seq ?? -1 };
+  return { selected, mode: eligible ? saved : 'off', submode, savedSubmode: remembered.submode,
+    savedReasoningEffort: mode?.reasoningEffort ?? (saved === 'ultra' ? selected?.reasoningEffort : undefined),
+    teamAvailable, savedMode: saved, enabled: saved !== 'off' && eligible, savedEnabled: saved !== 'off', eligible, revision: state.model?.seq ?? -1 };
 }
 export function installUltracodeProjection(ctx) {
   const schema = z.object({ revision: z.number() });
@@ -233,7 +235,7 @@ export class UltracodeControl {
       if (!controller) throw new Error('当前宿主未提供模型选择服务');
       const supports = effort => info.reasoning?.efforts?.some(level => level.id === effort);
       if (mode === 'ultra' && input.reasoningEffort !== undefined && !supports(input.reasoningEffort)) throw new Error('当前模型不支持所选思考强度');
-      const preferred = input.reasoningEffort ?? (before.mode === 'ultra' ? before.selected?.reasoningEffort : undefined);
+      const preferred = input.reasoningEffort ?? (before.mode === 'ultra' ? before.selected?.reasoningEffort : undefined) ?? before.savedReasoningEffort;
       const effort = mode === 'ultra'
         ? supports(preferred) ? preferred : supports('xhigh') ? 'xhigh' : highestEffort(info.reasoning)
         : input.reasoningEffort;
@@ -244,7 +246,7 @@ export class UltracodeControl {
       // Flush the native selection first. A crash before the plugin save then
       // leaves an ordinary selection, never a mode tied to an uncommitted route.
       if (this.fold(session).model?.seq !== model.seq) throw new Error('模型在保存时再次变更，请重试');
-      this.persist(session, { mode, submode, enabled: false, selectionSeq: model.seq });
+      this.persist(session, { mode, submode, reasoningEffort: mode === 'ultra' ? effort : before.savedReasoningEffort, enabled: false, selectionSeq: model.seq });
       if (agent.status !== 'running') this.prepare(agent, true);
       return this.view(session, agent);
     });

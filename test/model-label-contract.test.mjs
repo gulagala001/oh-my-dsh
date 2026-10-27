@@ -13,6 +13,7 @@ const require = createRequire(import.meta.url), React = require('react');
 const { transformSync } = require('esbuild');
 const source = await readFile(new URL('../src/client/model-panel.jsx', import.meta.url), 'utf8');
 const { code } = transformSync(source + '\nexport { ModelPanel };', { loader: 'jsx', format: 'cjs', target: 'es2022' });
+const projectlessCode = transformSync(await readFile(new URL('../src/client/projectless-state.mjs', import.meta.url), 'utf8'), { format: 'cjs', target: 'es2022' }).code;
 function load(pane, runtime = {}) {
   const hooks = { ...React, useCallback: fn => fn, useEffect() {}, useLayoutEffect() {}, useMemo: fn => fn(),
     useSyncExternalStore: (_subscribe, get) => get(), useRef: value => ({ current: value }), useId: () => 'test',
@@ -29,6 +30,11 @@ function load(pane, runtime = {}) {
     if (name.includes('main-conversation')) return { useMainConversation: () => true };
     if (name.includes('slot-decoration')) return { decorateSlotComponent };
     if (name === './ultra-submode-preference.mjs') return ultraSubmodePreference;
+    if (name === './projectless-state.mjs') {
+      const dependency = { exports: {} };
+      runInNewContext(projectlessCode, { module: dependency, exports: dependency.exports, ...runtime.globals });
+      return dependency.exports;
+    }
     throw Error(name);
   }, document: { body: {} }, ...runtime.globals });
   return module.exports;

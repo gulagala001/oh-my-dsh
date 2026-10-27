@@ -151,7 +151,8 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
     } };
   }, report);
   const optimizer = applyPromptOptimizer(ctx);
-  applyModelPanel(ctx, { rememberModel: (id, selected) => projectlessDrafts.rememberModel(id, selected) });
+  applyModelPanel(ctx, { rememberModel: (id, selected, mode) => projectlessDrafts.rememberModel(id, selected, mode),
+    preferredUltraEffort: (id, route, model) => projectlessDrafts.preferredUltraEffort(id, route, model) });
   applySubscriptionFast(ctx);
   applyMemoryPermissions(ctx);
   applyPromptStylePermissions(ctx);

@@ -2,6 +2,17 @@ const PREFERENCES_KEY = 'omd.draft-preferences.v1';
 const validModel = value => value && typeof value.provider === 'string' && value.provider
   && typeof value.model === 'string' && value.model;
 const sameModel = (a, b) => a?.provider === b?.provider && a?.model === b?.model && a?.reasoningEffort === b?.reasoningEffort;
+const modelKey = value => JSON.stringify([value.provider, value.model]);
+const validSubmode = value => ['workflow', 'team', 'free'].includes(value);
+
+export async function modelModeApi(sessionId, body, signal) {
+  const response = await fetch(`oh-my-dsh/api/model-mode?session=${encodeURIComponent(sessionId)}`, {
+    signal, ...(body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
+  });
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error || `HTTP ${response.status}`);
+  return value;
+}
 
 export function initializeDraft(conversation, binding, options) {
   if (conversation.input.requestDraftInitialization) return conversation.input.requestDraftInitialization(binding, options);
@@ -28,8 +39,8 @@ export async function projectlessApi(path = '', body, signal) {
 // composer is shown. Submission, attachments and every plugin's session state
 // stay with that same identity; OMD never substitutes a Session on first send.
 export class ProjectlessDrafts {
-  constructor(ctx, { request = projectlessApi, storage = globalThis.localStorage } = {}) {
-    this.ctx = ctx; this.request = request; this.storage = storage;
+  constructor(ctx, { request = projectlessApi, modeRequest = modelModeApi, storage = globalThis.localStorage } = {}) {
+    this.ctx = ctx; this.request = request; this.modeRequest = modeRequest; this.storage = storage;
     this.listeners = new Set(); this.managed = new Map(); this.inspections = new Map();
     this.lifetime = new AbortController(); this.revision = 0;
     this.subscribe = fn => { this.listeners.add(fn); return () => this.listeners.delete(fn); };
@@ -55,10 +66,22 @@ export class ProjectlessDrafts {
   }
   // Called by user-facing model controls only, never by projection replay or
   // the native RPC used to restore a draft.
-  rememberModel(id, selected) {
+  rememberModel(id, selected, mode) {
     if (this.lifetime.signal.aborted || !validModel(selected)) return;
-    this.remember(this.scopeFor(id), { model: { provider: selected.provider, model: selected.model,
-      ...(selected.reasoningEffort === undefined ? {} : { reasoningEffort: selected.reasoningEffort }) } });
+    const scope = this.scopeFor(id), previous = this.preferences()[scope];
+    const ultra = mode?.mode === 'ultra';
+    this.remember(scope, { model: { provider: selected.provider, model: selected.model,
+      ...(selected.reasoningEffort === undefined ? {} : { reasoningEffort: selected.reasoningEffort }) },
+      modelMode: { mode: ultra ? 'ultra' : 'off', submode: validSubmode(mode?.savedSubmode ?? mode?.submode) ? mode.savedSubmode ?? mode.submode : 'free' },
+      ...(ultra && typeof selected.reasoningEffort === 'string' ? { ultraEfforts: {
+        ...previous?.ultraEfforts, [modelKey(selected)]: selected.reasoningEffort,
+      } } : {}),
+    });
+  }
+  preferredUltraEffort(id, route, model) {
+    const preferences = this.preferences(), scope = preferences[this.scopeFor(id)];
+    const remembered = (validModel(scope?.model) ? scope : preferences.global)?.ultraEfforts?.[modelKey(route)];
+    return model?.reasoning?.efforts?.some(level => level.id === remembered) ? remembered : undefined;
   }
   async applyModelPreference(id, scope, signal) {
     const catalog = checked(await this.ctx.remote.session.modelCatalog());
@@ -66,9 +89,11 @@ export class ProjectlessDrafts {
     // Snapshot the host default once. Automatic native selection also saves
     // the host-wide default; it must not leak one workspace into another.
     if (!validModel(this.preferences().global?.model)) this.remember('global', { model: catalog.default });
-    const preference = this.preferences()[scope]?.model ?? this.preferences().global?.model;
+    const saved = this.preferences()[scope], global = this.preferences().global;
+    const settings = validModel(saved?.model) ? saved : global;
+    const preference = settings?.model;
     if (!validModel(preference)) return;
-    if (!validModel(this.preferences()[scope]?.model)) this.remember(scope, { model: preference });
+    if (!validModel(saved?.model)) this.remember(scope, { model: preference, modelMode: settings.modelMode, ultraEfforts: settings.ultraEfforts });
     const available = catalog.groups.some(group => group.id === preference.provider && group.models.some(model => model.id === preference.model));
     if (!available) {
       this.shell(id).notify('error', `记住的模型渠道 ${preference.provider} / ${preference.model} 当前不可选，请重新选择；草稿已保留`);
@@ -77,6 +102,25 @@ export class ProjectlessDrafts {
     const session = this.ctx.sessions.binding(id).session;
     const blank = session.getSnapshot?.().blank ?? this.ctx.sessions.list.getSnapshot().byId[id]?.blank;
     if (blank !== true || !sameModel(this.preferences()[scope]?.model, preference)) return;
+    if (['ultra', 'off'].includes(settings.modelMode?.mode)) {
+      const before = await this.modeRequest(id, undefined, signal);
+      signal.throwIfAborted();
+      const latest = this.preferences()[scope];
+      if ((session.getSnapshot?.().blank ?? this.ctx.sessions.list.getSnapshot().byId[id]?.blank) !== true
+        || !sameModel(latest?.model, preference) || JSON.stringify(latest?.modelMode) !== JSON.stringify(settings.modelMode)) return;
+      if (settings.modelMode.mode === 'off' || before.eligible) {
+        const mode = settings.modelMode.mode;
+        const submode = settings.modelMode.submode === 'team' && !before.teamAvailable ? 'free'
+          : validSubmode(settings.modelMode.submode) ? settings.modelMode.submode : 'free';
+        if (before.revision < 0 || before.mode !== mode || mode === 'ultra' && before.submode !== submode || !sameModel(before.selected, preference)) {
+          const model = catalog.groups.find(group => group.id === preference.provider).models.find(model => model.id === preference.model);
+          const reasoningEffort = mode === 'off' || model.reasoning?.efforts?.some(level => level.id === preference.reasoningEffort) ? preference.reasoningEffort : undefined;
+          await this.modeRequest(id, { ...preference, reasoningEffort, mode, submode, expectedRevision: before.revision }, signal);
+          signal.throwIfAborted();
+        }
+        return;
+      }
+    }
     const projection = session.projections.faceOf('modelSelection').getSnapshot();
     // Pin even an unchanged default on this draft: another workspace's native
     // selection must not later move a still-unselected draft with the global default.

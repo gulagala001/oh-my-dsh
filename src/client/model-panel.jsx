@@ -8,6 +8,7 @@ import css from './model-panel.css';
 import { useMainConversation } from './main-conversation.mjs';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import { preferredUltraSubmode, readUltraSubmode, rememberUltraSubmode } from './ultra-submode-preference.mjs';
+import { modelModeApi as modeApi } from './projectless-state.mjs';
 
 const emptyStore = { subscribe: () => () => {}, getSnapshot: () => undefined };
 const useStore = store => useSyncExternalStore(fn => store.subscribe(fn), () => store.getSnapshot());
@@ -24,18 +25,10 @@ const ultraSubmodes = [
 ];
 const sameRoute = (a, b) => a?.provider === b?.provider && a?.model === b?.model;
 const inUltraMenu = target => Boolean(target?.closest?.('[role="menu"]')?.querySelector('[data-omd-ultra-option]'));
-async function modeApi(sessionId, body, signal) {
-  const response = await fetch(`oh-my-dsh/api/model-mode?session=${encodeURIComponent(sessionId)}`, {
-    signal, ...(body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
-  });
-  const value = await response.json();
-  if (!response.ok) throw new Error(value.error || `HTTP ${response.status}`);
-  return value;
-}
 function Chevron({ back = false }) { return <Icon name="chevron" size={14} className={back ? 'omd-model-back' : undefined}/>; }
 function Reset() { return <Icon name="refresh" size={16}/>; }
 
-function ModelPanel({ ctx, sessionId, locked, available, directory, load, renderSlot, rememberModel, additive = false }) {
+function ModelPanel({ ctx, sessionId, locked, available, directory, load, renderSlot, rememberModel, preferredUltraEffort, additive = false }) {
   const state = useStore(directory);
   const faces = useMemo(() => {
     const projections = ctx.sessions.binding(sessionId)?.session.projections;
@@ -141,10 +134,14 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
     }
     setSaving(true); setError('');
     try {
+      if (nextMode === 'ultra' && reasoningEffort === undefined && (activeMode !== 'ultra' || !sameRoute(route, selected))) {
+        const nextModel = state.groups.find(group => group.id === route.provider)?.models.find(model => model.id === route.model);
+        reasoningEffort = preferredUltraEffort?.(sessionId, route, nextModel);
+      }
       let revision = mode.revision;
       while (true) {
         const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, submode: nextSubmode, expectedRevision: revision });
-        rememberModel?.(sessionId, next.selected);
+        rememberModel?.(sessionId, next.selected, next);
         if (!live.current) return false;
         setMode(next);
         if (next.mode === 'ultra' && (remember || readUltraSubmode() === undefined)) rememberUltraSubmode(next.savedSubmode ?? next.submode);
@@ -280,7 +277,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   </>;
 }
 
-export function applyModelPanel(ctx, { rememberModel } = {}) {
+export function applyModelPanel(ctx, { rememberModel, preferredUltraEffort } = {}) {
   // Native /model and other native selectors use directory.select; automatic
   // transfers use remote.session.selectModel and never enter this UI boundary.
   ctx.inject?.(['modelDirectories'], scope => {
@@ -329,7 +326,7 @@ export function applyModelPanel(ctx, { rememberModel } = {}) {
       nativeEntries.add(original);
       return function Panel(props) {
         const main = useMainConversation(props);
-        return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} rememberModel={rememberModel}/> : null;
+        return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} rememberModel={rememberModel} preferredUltraEffort={preferredUltraEffort}/> : null;
       };
     });
     const reconcile = () => {
@@ -353,6 +350,6 @@ export function applyModelPanel(ctx, { rememberModel } = {}) {
     const main = useMainConversation(props);
     const shown = useSyncExternalStore(subscribe, () => additive);
     const removed = props.useSession(s => s.removed) ?? false;
-    return main && shown && props.available ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} locked={removed} rememberModel={rememberModel} additive/> : null;
+    return main && shown && props.available ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} locked={removed} rememberModel={rememberModel} preferredUltraEffort={preferredUltraEffort} additive/> : null;
   }));
 }

@@ -5,7 +5,8 @@ import { ProjectlessDrafts, initializeDraft } from '../src/client/projectless-st
 const defaultModel = { provider: 'native', model: 'default', reasoningEffort: 'high' };
 const otherModel = { provider: 'native', model: 'other', reasoningEffort: 'max' };
 function fixture(t, { blocked = false } = {}) {
-  const opened = [], created = [], initialized = [], notices = [], selections = [], allocations = [];
+  const opened = [], created = [], initialized = [], notices = [], selections = [], allocations = [], modeSelections = [];
+  const models = [{ id: 'default' }, { id: 'other' }].map(model => ({ ...model, reasoning: { efforts: ['low', 'high', 'xhigh', 'max'].map(id => ({ id })) } }));
   const data = new Map();
   const workspaces = { items: [{ workspaceId: 'A', path: '/A', sessionIds: ['a', 'draft-a'] },
     { workspaceId: 'B', path: '/B', sessionIds: ['b'] }], archivedSessionIds: [] };
@@ -20,7 +21,7 @@ function fixture(t, { blocked = false } = {}) {
   let mint = 0, catalogGate;
   const ctx = { get: name => name === 'workspaces' ? { list: { getSnapshot: () => workspaces } } : conversation,
     remote: { agentPresets: { select: async (id, preset) => { rows[id].projectionValues.agentPreset = preset; return { ok: true }; } }, session: {
-      modelCatalog: async () => { await catalogGate; return { ok: true, value: { default: defaultModel, groups: [{ id: 'native', models: [{ id: 'default' }, { id: 'other' }] }], failures: [] } }; },
+      modelCatalog: async () => { await catalogGate; return { ok: true, value: { default: defaultModel, groups: [{ id: 'native', models }], failures: [] } }; },
       selectModel: async input => { const { sessionId, ...selected } = input; selections.push(input); rows[sessionId].selected = selected; return { ok: true, value: { selected } }; },
     } }, sessions: {
       list: { getSnapshot: () => ({ ids: Object.keys(rows), byId: rows }) }, binding,
@@ -37,11 +38,54 @@ function fixture(t, { blocked = false } = {}) {
   const drafts = new ProjectlessDrafts(ctx, { request: async (path, body) => {
     if (body) { allocations.push(body); return { cwd: '/isolated/' + body.requestId }; }
     return { managed: decodeURIComponent(path).includes('/isolated/') };
+  }, modeRequest: async (id, input) => {
+    if (input) {
+      modeSelections.push(input);
+      await ctx.remote.session.selectModel({ sessionId: id, provider: input.provider, model: input.model, reasoningEffort: input.reasoningEffort });
+      rows[id].mode = input.mode; rows[id].submode = input.submode;
+    }
+    return { mode: rows[id].mode ?? 'off', submode: rows[id].submode ?? 'free', eligible: true, teamAvailable: false, selected: rows[id].selected, revision: selections.length };
   }, storage: { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) } });
   drafts.managed.set('saved', true);
   t.after(() => drafts.dispose());
-  return { drafts, opened, created, initialized, notices, selections, rows, draftsById, workspaces, allocations, get minted() { return mint; }, gate: value => { catalogGate = value; } };
+  return { drafts, opened, created, initialized, notices, selections, modeSelections, models, rows, draftsById, workspaces, allocations, get minted() { return mint; }, gate: value => { catalogGate = value; } };
 }
+
+test('Ultra effort is remembered with model and workspace, survives reload and ordinary choices', async t => {
+  const f = fixture(t), ultra = { mode: 'ultra', submode: 'workflow' };
+  f.drafts.rememberModel('a', otherModel, ultra);
+  f.drafts.rememberModel('a', { ...defaultModel, reasoningEffort: 'low' }, ultra);
+  f.drafts.rememberModel('b', { ...otherModel, reasoningEffort: 'high' }, ultra);
+  f.drafts.rememberModel('a', { ...otherModel, reasoningEffort: 'low' });
+  const reloaded = new ProjectlessDrafts(f.drafts.ctx, { storage: f.drafts.storage });
+  t.after(() => reloaded.dispose());
+  assert.equal(reloaded.preferredUltraEffort('a', otherModel, f.models[1]), 'max');
+  assert.equal(reloaded.preferredUltraEffort('a', defaultModel, f.models[0]), 'low');
+  assert.equal(reloaded.preferredUltraEffort('b', otherModel, f.models[1]), 'high');
+  assert.equal(reloaded.preferredUltraEffort('current', otherModel, f.models[1]), undefined);
+  assert.equal(reloaded.preferredUltraEffort('a', otherModel, { reasoning: { efforts: [{ id: 'high' }] } }), undefined);
+});
+
+test('new drafts restore Ultra with the model and effort, while another workspace keeps its own mode', async t => {
+  const f = fixture(t);
+  f.drafts.rememberModel('current', otherModel, { mode: 'ultra', submode: 'workflow' });
+  f.drafts.rememberModel('b', defaultModel);
+  await f.drafts.startDraft('current');
+  assert.equal(f.rows.saved.mode, 'ultra'); assert.equal(f.rows.saved.submode, 'workflow');
+  assert.deepEqual(f.rows.saved.selected, otherModel);
+  const count = f.modeSelections.length;
+  await f.drafts.startDraft('current');
+  assert.equal(f.modeSelections.length, count, 'reopening unchanged draft does not rewrite model/mode');
+  f.rows.saved.blank = false;
+  await f.drafts.startDraft('saved');
+  assert.equal(f.rows[f.opened.at(-1)].mode, 'ultra');
+  assert.deepEqual(f.rows[f.opened.at(-1)].selected, otherModel);
+  await f.drafts.startDraft('b', undefined, 'B');
+  assert.equal(f.rows[f.opened.at(-1)].mode, 'off');
+  f.drafts.rememberModel('current', otherModel);
+  await f.drafts.startDraft('current');
+  assert.equal(f.rows[f.opened.at(-1)].mode, 'off', 'ordinary preference clears Ultra even if raw effort matches');
+});
 
 test('one global native draft is reused across presets and a started chat gets a new independent draft', async t => {
   const f = fixture(t), original = structuredClone(f.draftsById.saved);

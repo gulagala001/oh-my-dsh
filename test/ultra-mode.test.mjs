@@ -78,6 +78,9 @@ test('Ultra accepts supported efforts, preserves them across strategies and relo
   assert.equal((await f.select('ultra', 'workflow')).selected.reasoningEffort, 'ultra');
   const reloaded = new UltracodeControl(f.ctx, () => true, { peek: () => f.state });
   assert.equal(reloaded.view(f.session).selected.reasoningEffort, 'ultra');
+  await f.control.select(f.session.id, { provider: 'local', model: 'main', mode: 'off', reasoningEffort: 'low' });
+  assert.equal(f.control.view(f.session).savedReasoningEffort, 'ultra');
+  assert.equal((await f.select('ultra')).selected.reasoningEffort, 'ultra', 'ordinary effort never replaces saved Ultra effort');
   const count = f.events.length;
   await assert.rejects(f.control.select(f.session.id, { provider: 'local', model: 'main', mode: 'ultra', reasoningEffort: 'invalid' }), /不支持/);
   assert.equal(f.events.length, count);
