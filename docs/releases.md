@@ -65,6 +65,8 @@ For older hosts, use the matching tag's documentation. Do not choose a package s
 
 | 独立数据源 | 当前回执 | OMD 1.1.0 |
 | --- | --- | --- |
-| Awesome DSH Plugin | [1.0.2 更新已合并](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9688) | 待同步至 1.1.0 |
-| TYEclipse DSH Plugins Hub | [投稿仍开放，待审](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 待同步原投稿至 1.1.0 |
-| coderPerseus DSH Hub | [投稿已关闭，收录状态待核实](https://github.com/coderPerseus/dsh-hub/issues/57) | 待同步原投稿至 1.1.0 |
+| Awesome DSH Plugin | 已有条目已收录；[1.1.0 更新 PR](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9819) | 同一条目的固定包更新待审 |
+| TYEclipse DSH Plugins Hub | [原投稿仍开放](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 已更新 1.1.0、MIT 与宿主／权限说明；既有审核意见待复审 |
+| coderPerseus DSH Hub | [原投稿已完成](https://github.com/coderPerseus/dsh-hub/issues/57)，当前目录已找到条目 | 原投稿已更新 1.1.0；目录仍为此前快照，待同步 |
+
+自动索引：chnjames 已有条目仍指向 `main`，固定版本与许可待同步；ZASENJC、NanmiCoder 尚未找到条目；aust24lzy 索引返回 404。以上状态核对于 2026-10-27，不将待审／待同步视为新版已收录。
