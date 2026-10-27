@@ -50,9 +50,9 @@ function privateOnly(headers) {
 function rejection(status, error) {
   if (![400, 404, 409, 422].includes(status)) return null;
   const e = error?.error ?? error ?? {};
-  const text = [e.code, e.type, e.param, e.message].filter(x => typeof x === 'string').join(' ').toLowerCase();
+  const text = [e.code, e.type, e.param, e.message, e.detail, error?.detail].filter(x => typeof x === 'string').join(' ').toLowerCase();
   if (/(previous_response_id|previous response|response[_ -]?id|store)/.test(text)
-      && /(unsupported|not supported|unrecognized|unknown parameter|not allowed|not permitted|not implemented|does not support|must be false|only false)/.test(text)) return 'unsupported';
+      && /(unsupported|not supported|unrecognized|unknown parameter|not allowed|not permitted|not implemented|does not support|must be (?:set to )?false|only false)/.test(text)) return 'unsupported';
   if (/(previous_response_id|previous response|response[_ -]?id)/.test(text)
       && /(not found|invalid|expired|does not exist|no longer|deleted|missing)/.test(text)) return 'invalid-id';
   return null;
