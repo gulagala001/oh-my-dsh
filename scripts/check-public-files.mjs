@@ -1,6 +1,10 @@
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {readFileSync} from 'node:fs';
 const root=fileURLToPath(new URL('../',import.meta.url));
+const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
+const license=readFileSync(new URL('../LICENSE',import.meta.url),'utf8');
+if(pkg.license!=='MIT'||!license.startsWith('MIT License\n'))throw Error('OMD-owned code must retain its declared MIT license');
 const forbidden=p=> /(?:^|\/)(?:AGENTS|CLAUDE|AI_README|PLAN|REFERENCE|COMPONENT-ALLOCATION|.*HANDOFF|PROMPT_(?:MAINTENANCE|CHANGES))\.md$/i.test(p) || /(?:^|\/)(?:\.local|\.codegraph|work|data|test-results|playwright-report|vendor\/rea)(?:\/|$)/.test(p) || /(?:^|\/)(?:codegraph\.json|\.env(?:\.[^/]*)?|[^/]+\.log)$/.test(p)&&!p.endsWith('.env.example');
 const check=(paths,label)=>{const bad=paths.filter(forbidden);if(bad.length)throw Error(label+': '+bad.join('\n'));};
 const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024});
@@ -9,4 +13,5 @@ const base=git(['rev-parse','origin/main']).trim();
 for(const ref of git(['rev-list',`${base}..HEAD`]).trim().split('\n').filter(Boolean)) check(git(['ls-tree','-r','--name-only','-z',ref]).split('\0').filter(Boolean),'New history '+ref);
 const packed=JSON.parse(execFileSync('npm',['pack','--ignore-scripts','--dry-run','--json'],{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024,stdio:['ignore','pipe','pipe']}))[0];
 check(packed.files.map(f=>f.path),'Actual npm package');
+if(!packed.files.some(f=>f.path==='LICENSE'))throw Error('Actual package is missing the OMD license');
 console.log(`Public files/history/package passed (${packed.files.length} package files).`);

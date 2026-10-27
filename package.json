@@ -139,7 +139,8 @@
     "!vendor/opencu/lib/client.js",
     "!vendor/opencu/lib/client.factory.mjs",
     "release-manifest.json",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
@@ -204,5 +205,6 @@
   "imports": {
     "#opencu/integration": "./vendor/opencu/src/dsh/index.mjs",
     "#opencu/*": "./vendor/opencu/*"
-  }
+  },
+  "license": "MIT"
 }

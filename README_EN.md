@@ -167,7 +167,7 @@ Finish active tasks and back up first. Install the fixed package matching the sa
 
 Reproducible reports, documentation improvements and practical examples are welcome. [Contributing](CONTRIBUTING.md) · [Development](docs/development_EN.md)
 
-The repository contains code and materials from multiple sources; a blanket MIT claim does not cover them all. Consult individual files and [third-party notices](THIRD_PARTY_NOTICES.md). This is a community project with no official affiliation or endorsement from the referenced brands.
+OMD-owned code is licensed under [MIT](LICENSE). Third-party code, components and materials retain their original licenses; see [third-party notices](THIRD_PARTY_NOTICES.md). This is a community project with no official affiliation or endorsement from the referenced brands.
 
 ## Documentation and support
 

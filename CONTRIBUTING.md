@@ -9,6 +9,9 @@
 
 ## 开发
 
+- OMD 自有代码采用根目录 MIT；第三方材料遵守原许可证。修改许可时同步包元数据、双语首页和来源说明；公开文件门禁核对声明及包内 LICENSE。
+- 工作过程标题的结构布局统一维护在 `scripts/chat-style-adapter.mjs`，经原生 Chat 样式归属生效，不放回皮肤开关内。`test/process-header-layout.test.mjs` 用原生标题渲染器和固定 CSS 在现有 Chromium 中检查原生／主题、窄宽、中英文及大字体，接入文档 CI 的已有浏览器环境。
+
 - 优先使用宿主公共 SDK 和扩展点，不手改 SDK、生成文件或 `vendor/opencu/` 发行快照。
 - OpenCU、Workflow、Rewind、Persona 与 BTW 在各自独立仓库维护；通过对应 `scripts/sync-*.mjs` 同步快照和来源清单，不直接手改 vendor 或 `plugins/persona` 文件。同步包含公开文档、文档清单和检查脚本的输入，按独立包的实际分发清单维护。OpenCU 同版本的直接服务端模块、宿主源码与文档可用 `sync-opencu.mjs <source> --files <paths...>` 同步已提交文件，保留原构建产物；清单记录来源提交与实际文件摘要，不继续声称对应旧整包摘要。文件集合、版本、前端或生成输入变化仍走完整构建／包同步。前端／宿主构建只针对受影响部分执行。
 - 组件及价格同步命令会自动重新生成设置页与公开来源清单。手工修改其他来源输入后运行 `npm run credits:write`，并用 `npm run docs:check` 检查一致性。

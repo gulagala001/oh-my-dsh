@@ -29,7 +29,7 @@ const englishNavigation = [
   ['Develop', [['docs/development_EN.md', 'Development Guide'], ['CONTRIBUTING.md', 'Contributing'], ['docs/site/README_EN.md', 'Documentation Site']]],
 ];
 const privateDocument = /^(?:AGENTS|CLAUDE|AI_README|PLAN|OMAA_HANDOFF|PROMPT_MAINTENANCE|PROMPT_CHANGES|COMPUTER_USE_(?:HANDOFF|BASELINE|ASSESSMENT)|WINDOWS_HANDOFF|claude-cli-skin-research|google-material-expressive-research|rea-development|dsh-0\.2-preparation)\.md$/i;
-const sourceDocuments = new Set();
+const sourceDocuments = new Set(['LICENSE']);
 const privateTree = /(?:^|\/)(?:work|data|cu-artifacts|test-results|playwright-report|native\/browser-engine)(?:\/|$)/;
 const isEnglish = file => /_EN\.(?:md|html)$/i.test(file);
 const counterpart = file => isEnglish(file) ? file.replace(/_EN\.md$/i, '.md') : file.replace(/\.md$/i, '_EN.md');

@@ -10,6 +10,23 @@ const empty = '.EvIC1a_flowItem:is(:empty,:has(>[data-slot="conversation.chat.no
 const count = (source, text) => source.split(text).length - 1;
 const gate = (condition, message) => { if (!condition) throw new Error(`Chat style adapter format gate: ${message}`); };
 
+function adaptProcessHeader(client) {
+  const pattern = /^(\s*const css(?:\$\d+)? = )("(?:[^"\\]|\\.)*")(?=;\n\s*const tagId(?:\$\d+)? = "@deepseek-ai\/dsh-client-ui-chat\/ChatGroupSeat\.module\.css";)/gm;
+  const matches = [...client.matchAll(pattern)];
+  gate(matches.length === 1, 'expected one native process-header CSS owner');
+  for (const marker of ['count', 'failures', 'stopped']) gate(count(client, `"data-process-${marker}": true`) === 1, `unexpected process ${marker} marker`);
+  const match = matches[0], css = JSON.parse(match[2]);
+  // This is structural layout, not a skin. Put it in the native component's
+  // stylesheet so default theme and optional-enhancement failures also get it.
+  // At narrow widths badges move as whole units instead of breaking words.
+  const layout = '.tx-cu-group-toggle{width:100%;min-width:0;flex-wrap:wrap;row-gap:4px}'
+    + '.tx-cu-group-toggle>:nth-child(2){flex:1;min-width:0;overflow:hidden}'
+    + '.tx-cu-group-toggle>:is([data-process-count],[data-process-failures],[data-process-stopped]){flex:none;white-space:nowrap}';
+  gate(!css.includes('.tx-cu-group-toggle'), 'process header layout is already adapted');
+  const start = match.index + match[1].length;
+  return client.slice(0, start) + JSON.stringify(css + layout) + client.slice(start + match[2].length);
+}
+
 /**
  * ChatView renders its optional older button before its only flow slot. Use
  * that sibling relationship to avoid column-wide :has() invalidations while
@@ -36,7 +53,7 @@ export function adaptChatStyleFactory(client) {
   const adaptedLiteral = JSON.stringify(adaptedCSS);
   const code = client.slice(0, literalStart) + adaptedLiteral + client.slice(literalStart + match[3].length);
   gate(code.slice(0, literalStart) + match[3] + code.slice(literalStart + adaptedLiteral.length) === client, 'factory changed outside the ChatView CSS literal');
-  return { code, stats: { cssStrings: 1, selectorReplacements: 1, emptyPredicates: 7 } };
+  return { code: adaptProcessHeader(code), stats: { cssStrings: 2, selectorReplacements: 1, emptyPredicates: 7, processHeaderLayouts: 1 } };
 }
 
 /** Shared by the host build and an isolated ui-chat factory rebuild. */

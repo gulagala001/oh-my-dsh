@@ -20,10 +20,16 @@
 
 ### 问题修复
 
+- 修复原生主题下工作过程右侧“失败／已停止”标签被长标题挤成竖排的问题；统一公共布局，窄窗口按完整标签换行，保留原生控件与其他主题行为。
+
 - 修复首次发送时人格、Fast、提示词风格等会话设置丢失，以及历史空白聊天错误复用其他会话目录的问题。已有聊天、草稿、附件和文件保持原位。Fast 的跨宿主重启行为仍由订阅插件负责。
 - 修复模型保存的旧成功回执覆盖新模型偏好的竞争问题；核对当前选择后再保存记忆，跨控件的新选择不会被迟到回执覆盖。
 - 修复 CU 将超时、重置或自动清理误当成用户明确停止的问题。单个浏览器目标故障单独恢复，健康页面继续可用；已连接的空浏览器也可恢复，保留输入释放与停止保护。
 - 修复 CU 原生工具与 PTC 错误信息遗漏恢复诊断，以及 Codex 返回 `Store must be set to false` 时未触发完整历史回退的问题。回退仅重试一次，不重放无关失败。
+
+### 其他变更
+
+- 明确 OMD 自有代码采用 MIT 许可证；第三方代码、组件、提示词和素材继续保留各自原许可证。
 
 <a id="en-110"></a>
 
@@ -43,10 +49,16 @@ This version is prepared for release and has not been published. It includes the
 
 ### Bug Fixes
 
+- Fixes failure/stopped badges wrapping vertically beside long process titles in the native theme. Shared layout keeps labels whole and moves them between rows in narrow windows while retaining native controls and other themes.
+
 - Preserves persona, Fast, prompt style and other session settings on first send, and prevents historical blank chats from adopting another session's directory. Existing chats, drafts, attachments and files stay in place. Fast persistence across host restarts remains the subscription plugin's responsibility.
 - Prevents a delayed successful model-save receipt from overwriting a newer model preference. Preferences are saved after confirming the current selection, including changes from another control.
 - Stops CU timeouts, resets and lifecycle cleanup from being treated as explicit user stops. Browser-target failures are isolated so healthy pages remain usable. Connected empty browsers can recover while input-release and explicit-stop protections remain enforced.
 - Preserves recovery diagnostics through native CU tools and PTC errors. Codex storage rejections such as `Store must be set to false` now trigger one full-history fallback; unrelated failures are not replayed.
+
+### Other Changes
+
+- Declares MIT licensing for OMD-owned code. Third-party code, components, prompts and materials retain their original licenses.
 
 ## 安装 / Installation
 

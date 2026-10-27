@@ -167,7 +167,7 @@ OMD 组合 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench**�
 
 欢迎提交最小复现、文档修订与实际使用示例。[贡献说明](CONTRIBUTING.md) · [开发与构建](docs/development.md)
 
-本仓库包含不同来源的代码与材料，不以统一 MIT 声明覆盖全部文件。请按具体文件和[第三方声明](THIRD_PARTY_NOTICES.md)确认许可。OMD 是社区项目，与界面中提及的产品品牌无官方隶属或背书关系。
+OMD 自有代码采用 [MIT 许可证](LICENSE)。第三方代码、组件和素材继续遵循各自原许可证，详见[第三方声明](THIRD_PARTY_NOTICES.md)。OMD 是社区项目，与界面中提及的产品品牌无官方隶属或背书关系。
 
 ## 文档与支持
 
