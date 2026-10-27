@@ -99,6 +99,8 @@ Skill 管理同样在独立 Extensions 维护。固定 rc.2 的 `SkillRegistry.l
 
 独立聊天的工作目录由 `src/projectless-workspaces.mjs` 分配。请求记录只有 `ready` 才确认路径；`pending` 只保留请求、日期和候选名称。首次分配和恢复共用排他 `mkdir`，已有目录、文件或符号链接均不接管；失败留下的未确认目录保留，改选编号后只清理本请求放弃的占名记录。既有跨进程锁、原子元数据写入与已确认路径的重试语义保留，磁盘错误直接返回，不自动重发消息。
 
+首次命名由 `src/projectless-directory.mjs` 在原生请求组装前完成。rc.3 的 `workingDirectory.set` 会提交目录事件并注入下一步通知；此时当前请求已包含新目录，该通知会重复触发模型。因此仅在这次初始化调用使用独立的 Agent 通知适配对象，保留原生目录验证、串行化、取消与持久投影，吸收来源为 `working-directory` 的重复通知，其他通知仍转交真实 Agent。真实 Agent 及共享服务不改写，手动切换和目录失效恢复继续使用原生通知。`test/projectless-directory-native.test.mjs` 通过真实 rc.3 循环、目录服务及本地模型适配器检查请求次数、并发、冷投影恢复和取消重试，已接入 core CI。
+
 宿主构建通过 [`host-const-enums.mjs`](../scripts/host-const-enums.mjs)，使用根 `devDependencies` 显式锁定、经来源清单核验的 TypeScript `6.0.3`，按 AST 与真实符号绑定内联官方 `const enum` 成员并消除运行时枚举引用。DSH／Cordis 复用宿主 SDK 单例，不打包第二份；官方来源提交、SHA-256 与完整枚举声明／成员按[枚举 manifest](../scripts/host-const-enums.json)校验。默认构建不依赖桌面 SDK 路径中的未声明编译器 fallback。
 
 CodeGraph 的 `codegraph.json` 排除规则只作用于当前项目根，不会自动继承到独立子仓库。工作区与各子仓库分别排除隔离宿主、构建产物和 REA 提取包，查询保留手写适配层；调查提取包原件用定点文件读取。索引异常膨胀时先确认无活动写入者，再清理可重建的 `.codegraph` 数据库，执行 `codegraph_index` 并以实际查询确认；不得删除用户数据或源文件。

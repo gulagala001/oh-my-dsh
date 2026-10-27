@@ -25,7 +25,18 @@ export function installProjectlessDirectory(ctx, workspaces) {
     }
     signal?.throwIfAborted();
     const cwd = await workspaces.nameDraft({ requestId: session.id, cwd: session.header.cwd, prompt: textBlocks(first.content), firstSend: !events.some(actualUser) });
-    if (cwd) await agent.ctx.get('workingDirectory').set(agent, cwd, signal);
+    if (cwd) {
+      // rc.3 set() commits the native projection, then injects a next-step
+      // notice. This first request already includes the new cwd, so that
+      // notice would cause a redundant model call after the user's reply.
+      // Scope the notice sink to this initialization call; never replace the
+      // live agent's inject or silence manual changes/recovery elsewhere.
+      const initializingAgent = Object.create(agent);
+      initializingAgent.inject = message => {
+        if (message.source?.kind !== 'working-directory') return agent.inject(message);
+      };
+      await agent.ctx.get('workingDirectory').set(initializingAgent, cwd, signal);
+    }
     completed.add(session);
     claimed.delete(session);
   }
