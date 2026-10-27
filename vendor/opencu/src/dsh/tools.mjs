@@ -2,6 +2,7 @@ import { computerDescription, resetDescription } from './computer-docs.mjs';
 import { modelResult } from './model-output.mjs';
 import { createObservationProjector } from './observation-output.mjs';
 import { controlFailure } from '../protocol.mjs';
+import { toolReplError } from './repl-output.mjs';
 
 export const TOOLS = [
   { name: 'opencu_connectBrowser', description: 'Request a local Chrome / Edge connection. On first use the installed extension automatically asks the user to Allow once; pairing persists across normal restarts and updates. Use browser from discovered candidates (extension:<id>), Chrome, Edge, or external. Does not select a tab or replay input.', inputSchema: { type: 'object', properties: { browser: { type: 'string' } } } },
@@ -19,7 +20,7 @@ export const TOOLS = [
     locator: {type:'array', items:{type:'object'}}, method: {type:'string'}, args: {type:'object'},
   }, required: ['action'], additionalProperties: true } },
   { name: 'opencu_stop', description: 'Stop control and release held input. Do not assume success when release fails.', inputSchema: { type: 'object', properties: {} } },
-  { name: 'opencu_resume', description: 'Resume after verifying the selected target identity.', inputSchema: { type: 'object', properties: { targetId: { type: 'string' } } } },
+  { name: 'opencu_resume', description: 'Resume one verified target, or one connected browser by browserId even when it has no tabs. Native input must release and old browser targets stay quarantined. After explicit stop, resume only when the user requests continuation.', inputSchema: { type: 'object', properties: { targetId: { type: 'string' }, browserId: { type: 'string' } } } },
   { name: 'opencu_deliveries', description: 'List persistent downloaded files.', inputSchema: { type: 'object', properties: {} } },
   { name: 'opencu_focus', description: 'Explicitly bring a verified target window or tab to the foreground, without starting control. Do not use as an automatic fallback from unavailable background input.', inputSchema: { type: 'object', properties: { targetId: { type: 'string' }, reference: { type: 'object' } } } },
   { name: 'opencu_openTarget', description: 'Open a browser tab through a real selected browser target. Native app launching is not synthesized.', inputSchema: { type: 'object', properties: { browserId: { type: 'string' }, targetId: { type: 'string' }, url: { type: 'string' } } } },
@@ -63,7 +64,7 @@ export function installToolDefinitions(ctx, lease, sessionKey) {
           const result = await lease.request(endpoint, args, { signal: exec.signal, attachments: ctx.attachments, sessionKey: id, modelProjection: endpoint === 'state' || endpoint === 'targets' });
           if (result.ok === false) throw controlFailure(result);
           return modelResult(projector.project(result, args), args);
-        } catch (error) { projector.reset(); throw error; }
+        } catch (error) { projector.reset(); throw toolReplError(error); }
       },
     }), `opencu: ${tool.name}`);
   }

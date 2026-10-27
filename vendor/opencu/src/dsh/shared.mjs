@@ -18,7 +18,7 @@ import { createBrowserHistory } from './browser-history.mjs';
 const key = Symbol.for('opencu.shared-root.v1');
 const roots = globalThis[key] ??= new WeakMap();
 const mutating = new Set(['select', 'observe', 'act', 'focus', 'openTarget', 'resume', 'computer_use']);
-const interruptsControl = endpoint => mutating.has(endpoint) && endpoint !== 'observe';
+const interruptsControl = endpoint => mutating.has(endpoint) && !['observe','computer_use'].includes(endpoint);
 const handBackTools = new Set(['ask_user_question']);
 
 // A turn that ends has finished with the desktop, so the window, the view and the control
@@ -95,7 +95,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     entry.request = async (endpoint, args = {}, { signal, attachments, sessionKey, modelProjection = false, onApprovalWait } = {}) => {
       signal?.throwIfAborted();
       if (endpoint.startsWith('recovery/')) throw new Error('Recovery confirmation is available only in browser connection settings');
-      if (entry.retiring && !['stop', 'browser/poll', 'browser/result', 'browser/disconnect'].includes(endpoint)) throw new Error('OpenCU is releasing the last lease; retry after cleanup');
+      if (entry.retiring && !['stop', 'interrupt', 'browser/poll', 'browser/result', 'browser/disconnect'].includes(endpoint)) throw new Error('OpenCU is releasing the last lease; retry after cleanup');
       if (endpoint === 'settings/read') return { ok: true, settings: await entry.preferences.read() };
       if (endpoint === 'settings/write') return { ok: true, settings: await entry.preferences.write(args.key, args.value) };
       if (endpoint.startsWith('history/')) return { ok: true, value: await entry.history.handle(endpoint.slice(8), args) };
@@ -115,7 +115,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       let release, outcome, failure;
       // Input release remains global; only the aborted owner's approvals are cancelled.
       // Anonymous API requests have no approval owner, so use a non-null root sentinel.
-      const onAbort = () => { release ??= entry.runtime.request('stop', {}, { sessionKey: sessionKey ?? root }); };
+      const onAbort = () => { release ??= entry.runtime.request('interrupt', {}, { sessionKey: sessionKey ?? root }); };
       if (interruptsControl(endpoint)) signal?.addEventListener('abort', onAbort, { once: true });
       try {
         if (signal?.aborted) { if (interruptsControl(endpoint)) onAbort(); signal.throwIfAborted(); }
@@ -123,7 +123,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
         if (endpoint === 'computer_use' || endpoint === 'computer_use_reset') {
           const id = sessionKey ?? root;
           let computer = entry.computers.get(id);
-          if (!computer) { computer = createComputerSession((method, payload, waiting) => entry.request(method, payload, { signal: method === 'stop' ? undefined : computer.signal, attachments: computer.attachments, sessionKey: id, modelProjection: true, onApprovalWait: waiting?.onApprovalWait })); entry.computers.set(id, computer); }
+          if (!computer) { computer = createComputerSession((method, payload, waiting) => entry.request(method, payload, { signal: ['stop','interrupt'].includes(method) ? undefined : computer.signal, attachments: computer.attachments, sessionKey: id, modelProjection: true, onApprovalWait: waiting?.onApprovalWait })); entry.computers.set(id, computer); }
           computer.attachments = attachments;
           result = endpoint === 'computer_use_reset' ? await computer.reset() : await computer.run(args, signal);
         } else if (endpoint === 'openTarget' && String(args.browserId).startsWith('dsh:')) {

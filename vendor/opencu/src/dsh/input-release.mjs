@@ -4,6 +4,7 @@ import {inputReleased} from '../protocol.mjs';
 export function createInputReleaseState() {
   const held = new Set();
   const pendingDown = new Set(), targetReleases = new Map();
+  const activeControls = new Set();
   let required = false, releaseEpoch = 0;
   const clear = () => { required = false; held.clear(); releaseEpoch++; targetReleases.clear(); };
   const clearTarget = targetId => {
@@ -17,8 +18,10 @@ export function createInputReleaseState() {
     return true;
   };
   return {
-    get pending() { return required || held.size > 0 || pendingDown.size > 0; },
+    get pending() { return required || held.size > 0 || pendingDown.size > 0 || activeControls.size > 0; },
     async request(endpoint, args, dispatch) {
+      const control = ['select','act','focus','openTarget','resume'].includes(endpoint) ? {} : null;
+      if (control) activeControls.add(control);
       const action = endpoint === 'act' ? args?.action : null;
       const key = ['keyDown', 'key_down', 'keyUp', 'key_up'].includes(action) ? JSON.stringify([args.targetId, 'key', args.key])
         : ['mouseDown', 'mouse_down', 'mouseUp', 'mouse_up'].includes(action) ? JSON.stringify([args.targetId, 'button', args.button ?? 'left']) : null;
@@ -29,19 +32,20 @@ export function createInputReleaseState() {
       const retain = details => {
         if (down && details?.inputDispatched !== false && epoch === releaseEpoch && targetEpoch === targetReleases.get(args?.targetId)) held.add(key);
       };
-      if (endpoint === 'stop') required = true;
+      const releasesAll = endpoint === 'stop' || endpoint === 'interrupt';
+      if (releasesAll) required = true;
       try {
         const result = await dispatch();
         if (result?.ok === false) {
           const state = result.state;
-          if (['faulted', 'stopped'].includes(state?.mode) && state.releasePending === false && !state.releaseErrors?.length) clear();
+          if (['faulted', 'stopped', 'recovery_required'].includes(state?.mode) && state.releasePending === false && !state.releaseErrors?.length) clear();
           else if (!acceptedRelease(result.error?.details)) retain(result.error?.details);
           if (result.error?.code === 'RELEASE_FAILED') required = true;
           return result;
         }
         retain();
         if (['keyUp', 'key_up', 'mouseUp', 'mouse_up'].includes(action)) held.delete(key);
-        if (endpoint === 'stop') clear();
+        if (releasesAll) clear();
         const outcome = result?.result ?? result;
         if (inputReleased(outcome?.release)) clearTarget(args?.targetId);
         if (outcome?.releasePending === true || outcome?.pendingDialog && outcome.inputDispatched === true)
@@ -52,11 +56,11 @@ export function createInputReleaseState() {
         return result;
       } catch (error) {
         const state = error?.details?.control;
-        if (['faulted','stopped'].includes(state?.mode) && state.releasePending === false && !state.releaseErrors?.length) clear();
+        if (['faulted','stopped','recovery_required'].includes(state?.mode) && state.releasePending === false && !state.releaseErrors?.length) clear();
         else if (!acceptedRelease(error?.details)) retain(error?.details);
         if (error?.code === 'RELEASE_FAILED') required = true;
         throw error;
-      } finally { if (attempt) pendingDown.delete(attempt); }
+      } finally { if (attempt) pendingDown.delete(attempt); if (control) activeControls.delete(control); }
     },
   };
 }

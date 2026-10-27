@@ -12,6 +12,27 @@ export function deserializeReplError(value) {
   return Object.assign(error, value, value.cause ? { cause: deserializeReplError(value.cause) } : {});
 }
 
+/** The native tools/PTC error channel renders only message, not custom fields. */
+export function toolReplError(error) {
+  const details = error?.details ?? {}, control = details.control;
+  const diagnostic = Object.fromEntries(['targetId', 'inputDispatched', 'observationRequired', 'recoveryRequired', 'created', 'launched', 'stage', 'notice']
+    .filter(key => details[key] !== undefined).map(key => [key, details[key]]));
+  if (details.target?.id) diagnostic.targetId = details.target.id;
+  if (details.pendingRequests) diagnostic.pendingRequests = details.pendingRequests.slice(0, 8);
+  if (control) {
+    const {releaseErrors, ...state} = control;
+    diagnostic.control = state;
+    if (releaseErrors?.length) diagnostic.control.releaseFailureCount = releaseErrors.length;
+  }
+  if (!error?.code && !Object.keys(diagnostic).length) return error;
+  const message = `${error?.code ? `[${error.code}] ` : ''}${error?.message ?? String(error)}${Object.keys(diagnostic).length
+    ? `\nOpenCU diagnostics: ${JSON.stringify(diagnostic)}` : ''}`;
+  const failure = new Error(message, {cause:error});
+  if (error && typeof error === 'object') { Object.setPrototypeOf(failure, Object.getPrototypeOf(error)); Object.assign(failure, error); }
+  failure.message = message;
+  return failure;
+}
+
 /** Display text only: API values stay unchanged, and every outputs entry is a string. */
 export function replOutput(value) {
   if (typeof value === 'string') return value;

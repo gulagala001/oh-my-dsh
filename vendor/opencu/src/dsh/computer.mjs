@@ -38,7 +38,7 @@ function updateDeadline(run) {
 export function createComputerSession(request) {
   let context, current, closing, closed = false, releaseOnClose = false, generation = 0, sequence = 0, tail = Promise.resolve();
   const pending = new Set(), inputRelease = createInputReleaseState();
-  const stop = async () => checked(await inputRelease.request('stop', undefined, () => request('stop')));
+  const interrupt = async () => checked(await inputRelease.request('interrupt', undefined, () => request('interrupt')));
   function initialize() {
     // This plain ESM runtime needs no Host preload, eval or process-only flags.
     const record = { worker: new Worker(new URL('./computer-worker.mjs', import.meta.url), { execArgv: [] }), retired: false };
@@ -90,7 +90,7 @@ export function createComputerSession(request) {
       record.retirement = record.worker.terminate();
     }
     // Release runs on the Host even when the worker cannot process messages.
-    const results = await Promise.allSettled([...(release ? [stop()] : []), ...pending, ...(record ? [record.retirement] : [])]);
+    const results = await Promise.allSettled([...(release ? [interrupt()] : []), ...pending, ...(record ? [record.retirement] : [])]);
     const rejected = release && results[0].status === 'rejected' ? results[0]
       : results.find(result => result.status === 'rejected' && result.reason?.code === 'RELEASE_FAILED');
     if (rejected) throw rejected.reason;
@@ -100,15 +100,16 @@ export function createComputerSession(request) {
     async reset() {
       generation++;
       const record = context;
+      const release = inputRelease.pending;
       current?.aborter.abort(new Error('Computer session reset'));
-      await retire(record, true);
+      await retire(record, release);
       await tail;
       return { ok: true, reset: true };
     },
     close() {
       if (closing) return closing;
       closed = true; generation++;
-      releaseOnClose ||= Boolean(current || pending.size || inputRelease.pending);
+      releaseOnClose ||= inputRelease.pending;
       const record = context;
       current?.aborter.abort(new Error('Computer session disposed'));
       closing = (async () => {
@@ -146,7 +147,7 @@ export function createComputerSession(request) {
           });
         } catch (error) {
           const result = error?.details?.partialResult ? error : partialReplError(error, run.partial);
-          if (run.signal.aborted || record.failed) await retire(record, !closed && !record.retired);
+          if (run.signal.aborted || record.failed) await retire(record, !closed && !record.retired && inputRelease.pending);
           throw result;
         } finally {
           run.finished = true; clearTimeout(run.timer);

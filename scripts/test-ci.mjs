@@ -14,6 +14,7 @@ const core = [
   'session-migration-cache', 'host-component-reload', 'loader-lifecycle-retention', 'codegraph-lifecycle', 'projectless-allocation',
 ].map(name => `test/${name}.test.mjs`);
 core.push('test/opencu-browser-generation.test.mjs');
+core.push('test/opencu-control-continuity.test.mjs');
 core.push('test/opencu-app-approval-session-cancel.test.mjs');
 core.push('test/opencu-source-sync.test.mjs');
 core.push('test/prompt-adaptation.test.mjs');

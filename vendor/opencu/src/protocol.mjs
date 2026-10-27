@@ -93,17 +93,20 @@ export function recoverableActionError(error, action) {
 export function controlFailure(result) {
   const error = result.error, state = result.state;
   return Object.assign(new Error(error.message), error, state ? {details: {...error.details, control: {
-    mode: state.mode, activeTargetId: state.activeTargetId, releasePending: state.releasePending,
+    mode: state.mode, activeTargetId: state.activeTargetId, releasePending: state.releasePending, explicitlyStopped: state.explicitlyStopped === true,
     ...(state.recoveryIsolated ? {recoveryIsolated:true} : {}),
     ...(state.releaseErrors?.length ? {releaseErrors: state.releaseErrors} : {}),
-    recovery: state.mode === 'active' ? error.details?.observationRequired
+    recovery: state.explicitlyStopped || state.mode === 'stopped'
+      ? 'Explicitly stopped. When the user requests continuation, use cua.resume(targetId) for a verified live target, or cua.resume({browserId}) for a connected browser even when it has no tabs. Then observe before input; never replay uncertain actions.'
+      : state.mode === 'active' ? error.details?.recoveryRequired
+      ? 'This target is quarantined; other verified browser targets remain usable. Rebind the live target or use cua.resume(targetId), then observe it before continuing. Do not replay uncertain input.'
+      : error.details?.observationRequired
       ? 'The view changed and the same binding is retained. Observe the current UI before continuing; do not replay uncertain input.'
       : ['RECOVERY_REQUIRED','RELEASE_FAILED'].includes(error.code)
       ? 'Keep the existing binding. Reconnect and verify this same target with cua.resume(targetId) before continuing.'
       : 'Keep the existing binding. Refresh the relevant observation or correct the rejected action.'
-      : state.mode === 'stopped' ? 'Explicitly stopped. Resume only when the user requests continuation.'
-      : state.releasePending ? 'Input release is unconfirmed for the recorded targets. A different browser target can be explicitly selected and resumed independently; never replay uncertain input or bypass native input release.'
-      : 'Bindings are retained. Inspect the current target, then use cua.resume(targetId) after verifying it. Do not reset the REPL or replay uncertain input.',
+      : state.releasePending ? 'Input release is unconfirmed for the recorded targets. Resume a live target with cua.resume(targetId), or a connected empty browser with cua.resume({browserId}); old browser targets remain quarantined and native input must release. Never replay uncertain input.'
+      : 'Inspect the current target, then use cua.resume(targetId), or cua.resume({browserId}) for a connected browser. Automatic cleanup requires recovery, not user-stop approval. Do not replay uncertain input.',
   }}} : {});
 }
 

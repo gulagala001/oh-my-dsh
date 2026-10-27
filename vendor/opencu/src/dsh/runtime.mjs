@@ -17,8 +17,8 @@ import { createBrowserPairing } from '../extension/pairing.mjs';
 import { listenExtension } from '../extension/listen.mjs';
 import { referenceMatches, sameIdentity, checkExpected, json } from '../protocol.mjs';
 
-const methods = { state: 'getState', targets: 'listTargets', select: 'selectTarget', observe: 'observe', act: 'act', away: 'away', stop: 'stop', userActivity: 'notifyUserActivity', resume: 'resume', deliveries: 'deliveries', permissions: 'permissions', openPermissionSettings: 'openPermissionSettings', requestPermission: 'requestPermission', revealPermissionHelper: 'revealPermissionHelper' };
-const active = new Set(['select', 'observe', 'act', 'focus', 'openTarget', 'stop', 'resume']);
+const methods = { state: 'getState', targets: 'listTargets', select: 'selectTarget', observe: 'observe', act: 'act', away: 'away', stop: 'stop', interrupt: 'interrupt', userActivity: 'notifyUserActivity', resume: 'resume', deliveries: 'deliveries', permissions: 'permissions', openPermissionSettings: 'openPermissionSettings', requestPermission: 'requestPermission', revealPermissionHelper: 'revealPermissionHelper' };
+const active = new Set(['select', 'observe', 'act', 'focus', 'openTarget', 'stop', 'interrupt', 'resume']);
 
 function error(code, message) { return Object.assign(new Error(message), { code }); }
 function stripPaths(value) {
@@ -204,6 +204,7 @@ export function createPluginRuntime(options = {}) {
   }
   async function authorizeApplication(runtime, endpoint, args, sessionKey, signal, onApprovalWait) {
     if (!['select', 'observe', 'act', 'focus', 'resume', 'preview'].includes(endpoint)) return {args};
+    if (endpoint === 'resume' && args.browserId !== undefined) return {args};
     const bindingReference = endpoint === 'select' || endpoint === 'focus' && args.reference !== undefined;
     let target;
     if (bindingReference) {
@@ -240,7 +241,7 @@ export function createPluginRuntime(options = {}) {
     if (endpoint === 'appApprovals/remove') return { ok: true, approvals: await appApprovals.remove(args.bundleIdentifier) };
     if (endpoint === 'appApprovals/pending') return { ok: true, requests: appApprovals.pending(args.conversationId) };
     if (endpoint === 'appApprovals/respond') return { ok: true, ...await appApprovals.respond(args) };
-    if (endpoint === 'stop') appApprovals.cancel(sessionKey);
+    if (endpoint === 'stop' || endpoint === 'interrupt') appApprovals.cancel(sessionKey);
     if (endpoint === 'browserSettings/status') return { ok: true, connections: controller?.extensionConnections() ?? [] };
     if (endpoint === 'extensionFiles') return { ok: true, path: fileURLToPath(new URL('../../extension/', import.meta.url)) };
     if (endpoint === 'browserResources/status') return { ok: true, resources: await browserResources.status() };

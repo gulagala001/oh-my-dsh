@@ -56,7 +56,8 @@ async function fixture(t) {
       const selected = targets.find(value => value.id === (typeof reference === 'string' ? reference : reference.id));
       calls.selected.push(selected.id); return { ok: true, target: selected };
     },
-    stop: async () => { calls.stop++; return { ok: true }; },
+    interrupt: async () => { calls.stop++; return { ok: true }; },
+    stop: async () => controller.interrupt(),
     close: async () => { calls.close++; return { ok: true }; },
   };
   controllers.set(directory, controller);
@@ -150,7 +151,7 @@ test('explicit unscoped stop retains global cancellation semantics', async t => 
 
 test('abort still awaits the global input-release acknowledgement', async t => {
   const f = await fixture(t), aborter = new AbortController(), release = Promise.withResolvers();
-  f.controller.stop = async () => { f.calls.stop++; return release.promise; };
+  f.controller.interrupt = async () => { f.calls.stop++; return release.promise; };
   t.after(() => release.resolve({ ok: true }));
   const a = f.select('A', 0, aborter.signal), b = f.select('B', 1);
   await f.waitPending('A'); await f.waitPending('B');
@@ -166,7 +167,7 @@ test('abort still awaits the global input-release acknowledgement', async t => {
 
 test('failed input release remains an error and can be explicitly retried without cancelling peers', async t => {
   const f = await fixture(t), aborter = new AbortController();
-  f.controller.stop = async () => { f.calls.stop++; return f.calls.stop === 1 ? { ok: false, error: { code: 'RELEASE_FAILED', message: 'Synthetic held input release failed' } } : { ok: true }; };
+  f.controller.interrupt = async () => { f.calls.stop++; return f.calls.stop === 1 ? { ok: false, error: { code: 'RELEASE_FAILED', message: 'Synthetic held input release failed' } } : { ok: true }; };
   const a = f.select('A', 0, aborter.signal), b = f.select('B', 1);
   await f.waitPending('A'); await f.waitPending('B');
   aborter.abort(new Error('Synthetic cancellation')); await a.done; await tick();
@@ -203,7 +204,7 @@ test('another session still publishes its approval when its metadata arrives aft
 
 test('rejected input release preserves its error without cancelling another approval', async t => {
   const f = await fixture(t), aborter = new AbortController(), failure = new Error('Synthetic transport rejection');
-  f.controller.stop = async () => { f.calls.stop++; throw failure; };
+  f.controller.interrupt = async () => { f.calls.stop++; throw failure; };
   const a = f.select('A', 0, aborter.signal), b = f.select('B', 1);
   await f.waitPending('A'); await f.waitPending('B'); aborter.abort(new Error('Synthetic cancellation')); await a.done; await tick();
   assert.equal(a.error, failure); assert.equal(f.calls.stop, 1);

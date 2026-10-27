@@ -26,7 +26,7 @@ function checked(result) {
 export function createComputerRepl(request, report = () => {}) {
   let repl, current, closing, closed = false, releaseOnClose = false, generation = 0, tail = Promise.resolve();
   const pending = new Set(), inputRelease = createInputReleaseState(), execution = new AsyncLocalStorage();
-  const stop = () => inputRelease.request('stop', undefined, () => request('stop')).then(checked);
+  const interrupt = () => inputRelease.request('interrupt', undefined, () => request('interrupt')).then(checked);
   const outputs = [], images = [], deliveries = [];
   const returned = new Set(), documentationLoaded = new Set(), documentationSeen = new Set(), documentationInCell = new Set();
   const observations = createObservationProjector();
@@ -415,7 +415,13 @@ export function createComputerRepl(request, report = () => {}) {
         if (options.emit !== false) { emit(result.deliveries); deliveries.push(...result.deliveries.filter(item => item.file?.attachmentId)); progress(); }
         return displayed(result.deliveries);
       } },
-      stop: async () => { observations.reset(); return call('stop'); }, resume: async targetId => { observations.reset(); return call('resume', { targetId }); },
+      stop: async () => { observations.reset(); return call('stop'); },
+      resume: async reference => {
+        if (reference !== undefined && typeof reference !== 'string' && (!reference || typeof reference !== 'object' || Array.isArray(reference)))
+          throw new TypeError('resume takes a target ID or {browserId}');
+        observations.reset();
+        return call('resume', typeof reference === 'object' ? reference : {targetId: reference});
+      },
       documentation: (topic = 'core') => documentation(topic, true),
       rewriteDocumentation: () => { observations.reset(); const topics = [...documentationLoaded]; for (const topic of topics.length ? topics : ['core']) documentation(topic, true); },
     };
@@ -433,9 +439,9 @@ export function createComputerRepl(request, report = () => {}) {
   }
   async function reset() {
     generation++;
+    const release = inputRelease.pending;
     current?.aborter.abort(new Error('Computer session reset'));
-    const stopping = stop();
-    const results = await Promise.allSettled([...pending, stopping]);
+    const results = await Promise.allSettled([...pending, ...(release ? [interrupt()] : [])]);
     clearContext();
     if (results.some(result => result.status === 'rejected' && result.reason?.code === 'RELEASE_FAILED')) throw results.find(result => result.status === 'rejected' && result.reason?.code === 'RELEASE_FAILED').reason;
     return { ok: true, reset: true };
@@ -445,10 +451,10 @@ export function createComputerRepl(request, report = () => {}) {
     close() {
       if (closing) return closing;
       closed = true; generation++;
-      releaseOnClose ||= Boolean(current || pending.size || inputRelease.pending);
+      releaseOnClose ||= inputRelease.pending;
       current?.aborter.abort(new Error('Computer session disposed'));
       closing = (async () => {
-        const results = await Promise.allSettled([...(releaseOnClose ? [stop()] : []), ...pending]);
+        const results = await Promise.allSettled([...(releaseOnClose ? [interrupt()] : []), ...pending]);
         await tail;
         clearContext(); execution.disable(); session.attachments = undefined;
         const failure = releaseOnClose && results[0]?.status === 'rejected' ? results[0]
@@ -520,7 +526,7 @@ export function createComputerRepl(request, report = () => {}) {
           // topics for recovery, and replay only those emitted in that failed cell.
           for (const topic of documentationInCell) documentationSeen.delete(topic);
           observations.reset();
-          if (aborter.signal.aborted && !closed) { await stop(); await reset(); }
+          if (aborter.signal.aborted && !closed) await reset();
           throw failure;
         } finally {
           evaluationRepl._domain.removeListener('error', evaluationError); current?.signal.removeEventListener('abort', cancel); signal?.removeEventListener('abort', onAbort); current = undefined;
