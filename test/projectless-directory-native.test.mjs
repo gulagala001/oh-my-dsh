@@ -66,9 +66,8 @@ test('first-message naming uses one native model request and persists the direct
   assertModelDirectory(f.requests[0], named);
   assert.equal(agent.session.snapshotEvents().filter(e => e.type === 'working-directory/change').length, 1);
   const notices = f.requests[0].messages.filter(message => message.source?.kind === 'working-directory');
-  assert.equal(notices.length, 1, 'the original native notice joins the first request');
-  assert.equal(notices[0].content[0].text, `The working directory changed from ${JSON.stringify(cwd)} to ${JSON.stringify(named)}.`);
-  assert.equal(agent.session.snapshotEvents().filter(e => e.type === 'user/message' && e.data.source?.kind === 'working-directory').length, 1);
+  assert.equal(notices.length, 0, 'initialization is silent; the current-directory snapshot is sufficient');
+  assert.equal(agent.session.snapshotEvents().filter(e => e.type === 'user/message' && e.data.source?.kind === 'working-directory').length, 0);
   const restored = Session.create(agent.session.id, agent.session.snapshotEvents(), agent.session.header);
   assert.equal(f.ctx.workingDirectory.get(restored), named, 'cold projection uses the durable native event');
   await f.send(agent, 'Continue');
@@ -122,7 +121,7 @@ test('cancelled initialization retries without suppressing unrelated live input'
   assert.ok(JSON.stringify(f.requests[0].messages).includes('Retain this plugin input'));
 });
 
-test('coalescing claims only the initialization notice and preserves other queued input', { timeout: 5000 }, async t => {
+test('silent initialization preserves the native schedule of other queued input', { timeout: 5000 }, async t => {
   const f = await fixture(t), { agent } = await f.create('queued-input');
   const inserted = [], claimed = [], discarded = [];
   for (const [name, rows] of [['inserted', inserted], ['claimed', claimed], ['discarded', discarded]]) {
@@ -140,30 +139,29 @@ test('coalescing claims only the initialization notice and preserves other queue
   assert.equal(f.requests.length, 2, 'the extra step belongs to the separate plugin input');
   assert.equal(f.requests[0].messages.some(message => message.source.kind === 'plugin:fixture'), false);
   assert.equal(f.requests[1].messages.filter(message => message.source.kind === 'plugin:fixture').length, 1);
-  assert.equal(f.requests[0].messages.filter(message => message.source.kind === 'working-directory').length, 1);
-  assert.equal(f.requests[1].messages.filter(message => message.source.kind === 'working-directory').length, 1);
-  assert.equal(inserted.length, 1);
-  assert.deepEqual(claimed, inserted, 'the original notice is claimed with its original identity and content');
-  assert.deepEqual(discarded, [], 'coalescing is consumption, not cancellation');
+  assert.equal(f.requests[0].messages.filter(message => message.source.kind === 'working-directory').length, 0);
+  assert.equal(f.requests[1].messages.filter(message => message.source.kind === 'working-directory').length, 0);
+  assert.deepEqual(inserted, [], 'no initialization notice enters the inbox');
+  assert.deepEqual(claimed, []);
+  assert.deepEqual(discarded, [], 'initialization does not remove or cancel inbox messages');
 });
 
-test('a rejected first step retains the native notice across cold restoration', { timeout: 5000 }, async t => {
+test('a rejected first step retains the directory across cold restoration without a notice', { timeout: 5000 }, async t => {
   const f = await fixture(t), { agent, cwd } = await f.create('rejected-input');
   f.ctx.on('agent/pre-step', () => ({ kind: 'reject' }), { global: true });
   agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Retained name' }] }));
   await agent.activityDone;
   assert.equal(f.requests.length, 0);
-  const notice = agent.inbox.nextStep[0];
-  assert.equal(notice.source.kind, 'working-directory');
+  assert.equal(agent.inbox.nextStep.length, 0);
   const cold = await fixture(t);
   const handle = await cold.ctx.agentLoop.createAgent(cold.ctx, {
     sessionId: agent.session.id, seed: structuredClone(agent.session.snapshotEvents()), meta: agent.session.header,
     agentOptions: { provider: 'fixture', model: 'fixture' },
   });
-  assert.equal(handle.agent.inbox.nextStep[0].id, notice.id);
+  assert.equal(handle.agent.inbox.nextStep.length, 0);
   await cold.send(handle.agent, 'Retry the first input');
   assert.equal(cold.requests.length, 1);
-  assert.deepEqual(cold.requests[0].messages.filter(message => message.source.kind === 'working-directory'), [notice]);
+  assert.deepEqual(cold.requests[0].messages.filter(message => message.source.kind === 'working-directory'), []);
   assertModelDirectory(cold.requests[0], join(cwd, 'Retained name'));
 });
 
