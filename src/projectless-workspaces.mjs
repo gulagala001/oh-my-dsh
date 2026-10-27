@@ -167,7 +167,12 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
   async function owns(cwd, { requireDirectory = true, sessionId } = {}) {
     if (typeof cwd !== 'string' || !path.isAbsolute(cwd) || path.normalize(cwd) !== cwd) return false;
     if (!await safeDirectory(claimsDir) || !await safeDirectory(requestsDir)) return false;
-    const claim = await readJson(path.join(claimsDir, `${hash(cwd)}.json`));
+    let claimedCwd = cwd;
+    let claim = await readJson(path.join(claimsDir, `${hash(cwd)}.json`));
+    if (!claim) {
+      claimedCwd = path.dirname(cwd);
+      claim = await readJson(path.join(claimsDir, `${hash(claimedCwd)}.json`));
+    }
     if (!claim) return false;
     if (!/^[a-f0-9]{64}$/.test(claim.requestHash || '')) throw fail('invalid workspace name metadata');
     const record = await readJson(path.join(requestsDir, `${claim.requestHash}.json`));
@@ -181,7 +186,8 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
     // Claims outlive changes to the configured root. Verify the original
     // allocation rather than treating old Chat directories as new projects.
     const allocationRoot = absolute(record.root, 'stored root');
-    if (keyFor(id, allocationRoot) !== claim.requestHash || result(record, id, allocationRoot).cwd !== cwd) return false;
+    if (keyFor(id, allocationRoot) !== claim.requestHash || result(record, id, allocationRoot).cwd !== claimedCwd) return false;
+    if (claimedCwd !== cwd && (!validStoredName(record.workingName) || path.join(claimedCwd, record.workingName) !== cwd)) return false;
     // Saved allocation provenance remains private after its files are removed.
     // UI and file operations still require the original safe directory.
     return requireDirectory ? await safeDirectory(cwd) : true;
@@ -247,5 +253,37 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
     });
   }
 
-  return { root, resolve, prepare, owns };
+  // Keep the immutable native permission root. The effective working directory
+  // is an exclusively allocated child, published before the native cwd event.
+  async function nameDraft({ requestId, cwd, prompt, firstSend = false } = {}) {
+    const id = requestKey(requestId);
+    if (!await owns(cwd, { sessionId: id })) return null;
+    return serialize(storeDir, () => withLock(storeDir, async () => {
+      const claim = await readJson(path.join(claimsDir, `${hash(cwd)}.json`));
+      if (!claim) return null; // Only an allocation root can be named.
+      if (!await safeDirectory(cwd)) throw fail(`workspace is missing: ${cwd}`);
+      const file = path.join(requestsDir, `${claim.requestHash}.json`);
+      const record = await readJson(file);
+      if (!Object.hasOwn(record, 'workingName') && !firstSend) return null; // Started chats stay in place.
+      if (Object.hasOwn(record, 'workingName')) {
+        if (!validStoredName(record.workingName)) throw fail('invalid working directory metadata');
+        const named = path.join(cwd, record.workingName);
+        if (!await safeDirectory(named)) throw fail(`working directory is missing: ${named}`);
+        return named;
+      }
+      const base = chatName(prompt);
+      for (let suffix = 1; suffix <= 100_000; suffix++) {
+        const name = suffix === 1 ? base : `${base}-${suffix}`;
+        const named = path.join(cwd, name);
+        try { await fs.mkdir(named, { mode: 0o700 }); }
+        catch (error) { if (error.code === 'EEXIST') continue; throw error; }
+        await safeDirectory(named);
+        await writeJson(file, { ...record, workingName: name });
+        return named;
+      }
+      throw fail('too many working directories with the same name');
+    }));
+  }
+
+  return { root, resolve, prepare, owns, nameDraft };
 }

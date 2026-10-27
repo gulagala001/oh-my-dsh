@@ -60,6 +60,9 @@
 - id: ui-chat
   disabled: true
 
+- id: ui-open-in-app
+  disabled: true
+
 - insert:
     - id: omd-ui-conversation
       name: oh-my-dsh/host/ui-conversation

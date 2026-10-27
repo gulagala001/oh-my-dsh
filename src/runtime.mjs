@@ -65,6 +65,7 @@ import * as btwPlugin from '../vendor/btw/src/index.mjs';
 import { isBtwSession } from './dream/side-question.mjs';
 import { TemporaryChats, handleTemporaryChatApi } from './temporary-chat.mjs';
 import { createProjectlessWorkspaceService } from './projectless-workspaces.mjs';
+import { installProjectlessDirectory } from './projectless-directory.mjs';
 import { closeToolComputations } from './compute.mjs';
 import { clearOriginalSearchCache } from './context/original-search.mjs';
 import { installWebFetchPooling } from './web-fetch-pool.mjs';
@@ -90,6 +91,7 @@ export async function apply(ctx, config) {
     storeDir: join(await realpath(hub.store.dir), 'projectless-workspaces'),
   });
   hub.projectless = projectless;
+  installProjectlessDirectory(ctx, projectless);
   const liveConfig = hub.getConfig;
   let importing = true;
   hub.getConfig = () => ({ ...liveConfig(), ...(importing ? legacy.current() : {}) });

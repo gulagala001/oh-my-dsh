@@ -132,3 +132,63 @@ test('directory provenance does not authorize a leftover blank Session to reuse 
   assert.equal(await f.reopen().owns(allocated.cwd, { sessionId: 'leftover-blank-session' }), false);
   assert.equal(await fs.readFile(path.join(allocated.cwd, 'original.txt'), 'utf8'), 'original project');
 });
+
+test('first-message directory stays inside its permission root, survives restart and cannot belong to another session', async t => {
+  const f = await fixture(t);
+  const draft = await f.service.prepare({ requestId: 'stable-id' });
+  const input = { requestId: 'stable-id', cwd: draft.cwd, prompt: 'Build railway', firstSend: true };
+  const [first, retry] = await Promise.all([f.service.nameDraft(input), f.reopen().nameDraft(input)]);
+  assert.equal(first, path.join(draft.cwd, 'Build railway'));
+  assert.equal(retry, first);
+  await fs.writeFile(path.join(first, 'index.html'), 'keep me');
+  assert.equal(await f.reopen().nameDraft({ ...input, prompt: 'Different message' }), first);
+  assert.equal(await f.service.owns(first, { sessionId: input.requestId }), true);
+  assert.equal(await f.service.owns(first, { sessionId: 'another-chat' }), false);
+  assert.equal(await f.service.nameDraft({ ...input, requestId: 'another-chat' }), null);
+  const legacy = await f.service.prepare(f.input);
+  assert.equal(await f.service.nameDraft({ ...f.input, cwd: legacy.cwd }), null);
+  await fs.rm(first, { recursive: true });
+  await assert.rejects(f.reopen().nameDraft(input), /working directory is missing/);
+});
+
+test('interrupted naming never adopts pre-existing user files or symlinks', async t => {
+  const f = await fixture(t);
+  const draft = await f.service.prepare({ requestId: f.requestId });
+  const input = { ...f.input, cwd: draft.cwd, firstSend: true };
+  const named = path.join(draft.cwd, f.prompt);
+  await fs.symlink(f.root, named);
+  const rename = fs.rename;
+  const injected = t.mock.method(fs, 'rename', async (from, to) => {
+    if (to === f.requestFile && JSON.parse(await fs.readFile(from, 'utf8')).workingName)
+      throw Object.assign(Error('synthetic naming publication failure'), { code: 'EIO' });
+    return rename(from, to);
+  });
+  await assert.rejects(f.service.nameDraft(input), /synthetic naming publication/);
+  injected.mock.restore();
+  await fs.writeFile(path.join(named + '-2', 'user.txt'), 'untouched');
+  assert.equal(await f.reopen().nameDraft(input), named + '-3');
+  assert.equal(await fs.readFile(path.join(named + '-2', 'user.txt'), 'utf8'), 'untouched');
+  assert.equal(await fs.readlink(named), f.root);
+});
+
+test('the claimed first message selects cwd before request assembly even before user/message is durable', async t => {
+  const { installProjectlessDirectory } = await import('../src/projectless-directory.mjs');
+  const f = await fixture(t), id = 'claimed-first-message';
+  const draft = await f.service.prepare({ requestId: id });
+  const events = [], hooks = new Map(), order = [];
+  const session = { id, header: { cwd: draft.cwd }, snapshotEvents: () => events };
+  const agent = { session, ctx: { get: () => ({ async set(_agent, cwd) {
+    order.push(cwd); events.push({ type: 'working-directory/change', data: { cwd } });
+  } }) } };
+  installProjectlessDirectory({ on: (type, handler) => hooks.set(type, handler) }, f.service);
+  hooks.get('agent/inbox/claimed')({ agent, message: { source: { kind: 'user' }, content: [{ type: 'text', text: 'First actual message' }] } });
+  const context = { agent, signal: new AbortController().signal };
+  await hooks.get('system-prompt/assemble')({}, context, () => order.push('assemble'));
+  assert.deepEqual(order, [path.join(draft.cwd, 'First actual message'), 'assemble']);
+  // A fresh runtime respects durable cwd changes, including a later manual cd.
+  events.push({ type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'First actual message' }] } });
+  events.push({ type: 'working-directory/change', data: { cwd: path.join(draft.cwd, 'manual') } });
+  installProjectlessDirectory({ on: (type, handler) => hooks.set(type, handler) }, f.service);
+  await hooks.get('system-prompt/assemble')({}, context, () => order.push('resume'));
+  assert.deepEqual(order, [path.join(draft.cwd, 'First actual message'), 'assemble', 'resume']);
+});

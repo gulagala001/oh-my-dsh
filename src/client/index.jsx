@@ -16,6 +16,7 @@ import css from './style.css';
 import workbenchCss from './workbench.css';
 import shellCss from './shell.css';
 import { createOpenCU } from '../../vendor/opencu/lib/client.factory.mjs';
+import { createOpenInApp } from '../../lib/host/open-in-app.factory.mjs';
 import { createChat } from '../../lib/host/ui-chat.factory.mjs';
 import { createChatSettings } from './chat-settings.mjs';
 import { installConversationLifecycle } from './conversation-lifecycle.mjs';
@@ -134,6 +135,7 @@ export async function apply(ctx) {
 async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report }) {
   applyPluginPreflight(ctx);
   const persona = acquirePersonaClient(ctx, { embedded: true });
+  await mountOptionalClient(ctx, '打开工作目录', async () => createOpenInApp(require), report);
   applySessionTimeZone(ctx);
   applyFeatureClients(ctx, { 'dsh-deepseek-workbench': applyDeepSeekWorkbench, 'dsh-extensions': { apply: applyExtensions, inject: extensionsInject } });
   ctx.inject(['commandUi', 'sidebarRight', 'sidebarRightTabs'], installTemporaryChat);

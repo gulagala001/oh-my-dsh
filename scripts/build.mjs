@@ -4,6 +4,7 @@ import './check-prompt-styles.mjs';
 import './build-deepseek-workbench.mjs';
 import './build-overview-native.mjs';
 import './build-permission-native.mjs';
+import './build-open-in-app.mjs';
 import './build-persona.mjs';
 import './build-dsh-extensions.mjs';
 import { build } from 'esbuild';

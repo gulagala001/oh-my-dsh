@@ -142,7 +142,7 @@ export class ProjectlessDrafts {
             let reserved = this.preferences().global?.pendingDraft;
             if (typeof reserved !== 'string' || !/^[a-zA-Z0-9_-]{1,256}$/.test(reserved)) reserved = crypto.randomUUID();
             this.remember(scope, { pendingDraft: reserved });
-            const workspace = await this.request('', { requestId: reserved, prompt: options?.prompt }, signal);
+            const workspace = await this.request('', { requestId: reserved }, signal);
             signal.throwIfAborted();
             id = await this.ctx.sessions.create({ cwd: workspace.cwd, sessionId: reserved, ...(agentPreset ? { agentPreset } : {}) });
             if (id !== reserved) {
