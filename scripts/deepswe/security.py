@@ -67,7 +67,9 @@ def prepare_gateway(trial_dir, bundle, session_id):
                         'import socket,ssl; c=ssl._create_unverified_context().wrap_socket(socket.create_connection(("127.0.0.1",443),timeout=2),server_hostname="localhost"); c.close()'],
                         'interval': '2s', 'timeout': '3s', 'retries': 30}},
         },
-        'networks': {'pier-egress-internal': {'internal': True, 'ipam': {'config': [{'subnet': subnet + '.0/24'}]}}, 'default': {}},
+        'networks': {'pier-egress-internal': {'internal': True,
+            'driver_opts': {'com.docker.network.bridge.name': 'ev' + hashlib.sha256(session_id.encode()).hexdigest()[:10]},
+            'ipam': {'config': [{'subnet': subnet + '.0/24'}]}}, 'default': {}},
     }
     path = trial_dir / 'docker-compose-inference-gateway.json'
     path.write_text(json.dumps(compose, indent=2))

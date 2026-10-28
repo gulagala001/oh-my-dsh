@@ -55,7 +55,19 @@ def main():
         if args.command == 'start' and settings.get('emulation') == 'qemu':
             subprocess.run(['colima', '-p', settings['colima_profile'], 'ssh', '--', 'sudo', 'sh', '-c',
                             'if [ -f /proc/sys/fs/binfmt_misc/rosetta ]; then echo 0 > /proc/sys/fs/binfmt_misc/rosetta; fi; '
-                            'echo 1 > /proc/sys/fs/binfmt_misc/qemu-x86_64'], env=env, check=True)
+                            'echo 1 > /proc/sys/fs/binfmt_misc/qemu-x86_64; '
+                            'iptables -C INPUT -i ev+ -j DROP 2>/dev/null || iptables -I INPUT -i ev+ -j DROP; '
+                            'ip6tables -C INPUT -i ev+ -j DROP 2>/dev/null || ip6tables -I INPUT -i ev+ -j DROP'], env=env, check=True)
+            # Lima's automatic DNS listener forwarding is not needed by evals.
+            # Cancel only this VM's forwarding; retain its Docker Unix socket.
+            instance = Path(env['LIMA_HOME']) / ('colima-' + settings['colima_profile'])
+            ssh_config = (instance / 'ssh.config').read_text()
+            port = re.search(r'^\s*Port\s+(\d+)', ssh_config, re.MULTILINE)
+            user = re.search(r'^\s*User\s+(\S+)', ssh_config, re.MULTILINE)
+            if port and user:
+                subprocess.run(['ssh', '-F', '/dev/null', '-S', str(instance / 'ssh.sock'), '-O', 'cancel',
+                                '-L', '0.0.0.0:53:0.0.0.0:53', '-p', port[1], user[1] + '@127.0.0.1'],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return
     if args.command == 'report':
         results = []
@@ -90,6 +102,8 @@ def main():
         subprocess.run(['colima', '-p', settings['colima_profile'], 'ssh', '--', 'sh', '-c',
                         'grep -q "^enabled$" /proc/sys/fs/binfmt_misc/qemu-x86_64 && '
                         '! grep -q "^enabled$" /proc/sys/fs/binfmt_misc/rosetta 2>/dev/null'], env=env, check=True)
+        subprocess.run(['colima', '-p', settings['colima_profile'], 'ssh', '--', 'sudo', 'sh', '-c',
+                        'iptables -C INPUT -i ev+ -j DROP && ip6tables -C INPUT -i ev+ -j DROP'], env=env, check=True)
     from pier.models.task.task import Task
     tasks = sorted((root / 'upstream/deep-swe/tasks').iterdir())
     tasks = [t for t in tasks if (t / 'task.toml').is_file()]
