@@ -17,9 +17,9 @@
 
 Current release: [OMD 1.1.2](docs/release-1.1.2.md).
 
-<p align="center"><a href="docs/images/omd-hero-en.png"><img src="docs/images/omd-hero-en.png" alt="Oh My DSH · From conversation to delivery" width="880"></a></p>
+<p align="center"><a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/omd-hero-en.png"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/omd-hero-en.png" alt="Oh My DSH · From conversation to delivery" width="880"></a></p>
 
-<p align="center"><a href="docs/images/glyph-animation.gif"><img src="docs/images/glyph-animation.gif" alt="Glyph animated character whale and interface interactions" width="600" height="438"></a></p>
+<p align="center"><a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/glyph-animation.gif"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/glyph-animation.gif" alt="Glyph animated character whale and interface interactions" width="600" height="438"></a></p>
 
 <a id="quickstart"></a>
 <a id="desktop"></a>
@@ -103,13 +103,13 @@ Choose between two built-in personality presets for the task:
 - **Overclock**: aims for greater depth, completeness and polish, investing more effort in reasoning and detail for complex tasks.
 
 <p align="center">
-  <a href="docs/images/economical-token-usage.png"><img src="docs/images/economical-token-usage.png" alt="Economical test: token usage and cache hits" width="320"></a>
-  <a href="docs/images/economical-yellow-crane-tower.png"><img src="docs/images/economical-yellow-crane-tower.png" alt="Economical test result: a voxel Yellow Crane Tower" width="320"></a>
+  <a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-token-usage.png"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-token-usage.png" alt="Economical test: token usage and cache hits" width="320"></a>
+  <a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-yellow-crane-tower.png"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-yellow-crane-tower.png" alt="Economical test result: a voxel Yellow Crane Tower" width="320"></a>
 </p>
 
 <p align="center">Economical test showcase: usage and the resulting creation</p>
 
-![Appearance examples](docs/images/release/themes.jpg)
+![Appearance examples](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/themes.jpg)
 
 [Appearance](docs/skins.md) · [Personalities and settings](docs/usage_EN.md#personalities)
 

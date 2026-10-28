@@ -67,7 +67,7 @@ The right-sidebar guide offers one **OMD Console** entry with overview, context,
 | **BT** | Change task/verification reminders or open task evidence. |
 | Model / Fast | Native effort, Ultra and its three submodes, and a bolt when matching Subscriptions supports it. |
 
-[![OMD Console overview](images/release/monitor.jpg)](monitoring.md)
+[![OMD Console overview](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/monitor.jpg)](monitoring.md)
 
 Native sidebar search, menus, and third-party row actions remain. Use arrows, Home/End, Enter, Escape, and Shift+F10. Narrow windows dismiss with backdrop, selection, or Escape. Composer responsiveness follows the actual conversation column, not the whole viewport. System/manual reduced motion retains static state. Theme attributes and registrations respect third-party takeover; uninstall withdraws owned contributions only.
 

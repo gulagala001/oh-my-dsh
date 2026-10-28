@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
+import { assertPackageScope } from './package-policy.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -59,6 +60,7 @@ function packageFiles(archive) {
 
 export function verifyDeliveryArchive(archive, baseline) {
   const files = packageFiles(archive);
+  assertPackageScope([...files.keys()].map(name => name.slice('package/'.length)));
   assert(files.get('package/lib/client.js')?.bytes.equals(baseline.client), 'Packed lib/client.js differs from the rebuilt HEAD runtime');
   assert(files.get('package/vendor/opencu.json')?.bytes.equals(baseline.manifest), 'Packed vendor/opencu.json differs from HEAD');
   const manifest = JSON.parse(baseline.manifest), expected = new Map(Object.entries(manifest.files));

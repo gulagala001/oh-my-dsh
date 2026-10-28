@@ -19,24 +19,24 @@ Workflow, Rewind, Persona, Extensions, Workbench, OpenCU, theme management and G
 
 ## Make the workspace yours
 
-![Five themes](images/release/themes.jpg)
+![Five themes](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/themes.jpg)
 
 [Appearance and palettes (Chinese)](skins.md)
 
 ## Put feedback where it belongs
 
-![Browser annotations](images/release/computer-use.jpg)
+![Browser annotations](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/computer-use.jpg)
 
 [Computer and browser guide (Chinese)](computer-use.md)
 
 ## See the work behind every call
 
-![Usage overview](images/release/monitor.jpg)
+![Usage overview](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/monitor.jpg)
 
 [Call logs and accounting (Chinese)](monitoring.md)
 
 ## Keep long work moving
 
-![Context management](images/release/context.jpg)
+![Context management](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/context.jpg)
 
 [Context and Auto Compact (Chinese)](context-workflow.md) · [Dream memory (Chinese)](dream-memory.md)

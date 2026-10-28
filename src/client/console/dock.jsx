@@ -107,16 +107,7 @@ function createStats(readMode) {
     const mode = useMode(), { usage } = useStats(props.useProjection);
     return usage ? <UsagePill usage={usage} mode={mode} sessionId={props.sessionId} main={main}/> : null;
   });
-  // rc.2 ships both pills inside one `stats` entry.
-  const CombinedStat = memo(function CombinedStat(props) {
-    const main = useMainConversation(props);
-    const mode = useMode(), { stats, usage } = useStats(props.useProjection);
-    if (!stats && !usage) return null;
-    return <span className="omc-pill-group" data-composer-stats="">
-      {stats && <ActivityPill stats={stats} usage={usage} mode={mode} main={main}/>}{usage && <UsagePill usage={usage} mode={mode} sessionId={props.sessionId} main={main}/>}
-    </span>;
-  });
-  return { activity: ActivityStat, usage: UsageStat, stats: CombinedStat };
+  return { activity: ActivityStat, usage: UsageStat };
 }
 
 /** OMD context pipeline: preparing pulse, replaceable segments and savings. */

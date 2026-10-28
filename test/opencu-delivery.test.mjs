@@ -64,6 +64,14 @@ test('actual tgz matches every vendor hash with only the classic client excluded
   assert.deepEqual(result.helpers, [{ file: helper, mode: '0755' }]);
 });
 
+test('actual runtime archive rejects website media and maintainer-only tools', async t => {
+  for (const name of ['docs/images/hero.png', 'scripts/deepswe/run.py']) {
+    const files = entries(); files.set('package/' + name, Buffer.from('not a runtime resource'));
+    const packed = await archive(t, files);
+    assert.throws(() => verifyDeliveryArchive(packed, baseline), /Non-runtime files in OMD package/);
+  }
+});
+
 for (const mode of [0o644, 0o700]) test(`actual tgz helper mode ${mode.toString(8)} fails despite matching bytes`, async t => {
   const packed = await archive(t, entries(), mode);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed macOS helper must be 0755/);

@@ -67,14 +67,15 @@ OMD 0.18.8：[DSH rc.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0
 
 For older hosts, use the matching tag's documentation. Do not choose a package solely from GitHub's Latest label.
 
-## 市场同步记录（2026-10-27）
+## 市场同步记录（2026-10-28）
 
-已有目录条目继续沿用，不重复投稿；当前版本的固定安装包见上表。市场收录与版本同步由各目录独立处理，不能以源码推送或 GitHub Release 代替市场回执。自动发现所需 topics 已配置；共用 Awesome 数据源的下游不重复投稿。
+按各市场当前规则与实际需要维护原条目，正常必要更新保留；不把每次发行等同于全市场改帖或催审。首次投稿按独立数据源去重；自动刷新目录不逐版通知。外部写入前重新核对最新指南、模板、原申请反馈、必填字段、仓库／npm 归属、固定安装地址、完整宿主版本、许可、展示和权限要求。当前安装包见上表，不能以源码推送、Release 或 Issue 关闭代替实际收录证据。
 
-| 独立数据源 | 当前回执 | OMD 1.1.2 |
+| 独立数据源与规则 | 2026-10-28 核对结果 | 后续触发条件 |
 | --- | --- | --- |
-| Awesome DSH Plugin | 已有条目已收录；[1.1.1 更新已合并](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9819) | [1.1.2 同条目更新](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9934)待审 |
-| TYEclipse DSH Plugins Hub | [原投稿仍开放](https://github.com/TYEclipse/dsh-plugins-hub/issues/51) | 已更新 1.1.2、MIT 与宿主／权限说明；既有审核意见待复审 |
-| coderPerseus DSH Hub | [原投稿已完成](https://github.com/coderPerseus/dsh-hub/issues/57)，此前目录已找到条目 | 原投稿已更新 1.1.2；最近已见快照仍旧；本轮目录查询返回 403，未确认新版同步 |
+| [Awesome DSH Plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/contributing.md) | [1.1.2 更新 #9934](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9934)已合并；[当前条目](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/blob/main/data/plugins/gulagala001__oh-my-dsh.yml)指向固定 1.1.2 包 | 规则或实际安装需要变更时改原 YAML 条目；不要求每个补丁都更新。已有待审 PR 复用原分支。截图从项目自身文件、npm 映射从 registry 采集，不为它们重复投稿 |
+| [TYEclipse DSH Plugins Hub](https://github.com/TYEclipse/dsh-plugins-hub#how-to-submit-a-plugin) | [#51 的明确审核阻塞](https://github.com/TYEclipse/dsh-plugins-hub/issues/51#issuecomment-6278223429)仍涉及默认权限策略、宿主 UI 替换等；已有 MIT 不能视为全部解决，目前未收录 | 仅在阻塞实质解决且有证据时按维护者要求在原 Issue 请求复审；不因版本号变化改帖，不擅改产品方向换取收录 |
+| [coderPerseus DSH Hub](https://github.com/coderPerseus/dsh-hub/blob/main/README.zh-CN.md) | [#57](https://github.com/coderPerseus/dsh-hub/issues/57)关闭；目录按规则每日自动发现／刷新。历史已有条目证据保留，本次未确认在线目录的 1.1.2 安装目标 | 未发现或存在具体错误时依当前模板反馈；不逐版编辑旧 Issue，关闭状态本身不等于新版同步 |
+| [chnjames Market](https://github.com/chnjames/dsh-plugin-market/blob/main/README.md) | 定时刷新目录；2026-10-27 历史快照已发现仓库但安装目标为 main，本次不将旧证据描述为当前固定包同步 | topic／元数据按规则维护；确认安装目标错误时再按该项目入口反馈，不逐版通知 |
 
-自动索引：chnjames 已有条目仍指向 `main`，固定版本与许可待同步；ZASENJC、NanmiCoder 尚未找到条目；aust24lzy 索引返回 404。以上状态核对于 2026-10-27，不将待审／待同步视为新版已收录。
+ZASENJC、NanmiCoder 未找到条目及 aust24lzy 索引 404 均为 **2026-10-27 历史观察**，不是自动重投／催审待办。需要处理具体问题时重新核对各自规则与现状，共用上游的下游展示站不重复提交。市场同步不是一般源码合并或发行的统一前置；不改变用户通知设置。

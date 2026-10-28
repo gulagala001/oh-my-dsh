@@ -1,3 +1,57 @@
+# OMD 未发布 / Unreleased · DSH 0.2.1-rc.3
+
+[中文](#zh-unreleased) | [English](#en-unreleased)
+
+<a id="zh-unreleased"></a>
+
+## 中文
+
+### 体验优化
+
+- 运行安装包移除网站图片、站点静态资源和维护专用评测／性能工具；完整展示保留在仓库与网站，包内文档使用公开插图链接。
+- 清理无引用的根目录演示和当前固定宿主不再使用的合并统计控件。
+
+### 问题修复
+
+- composer 统计槽位从通过摘要验证的原始宿主代码进行结构解析并直接导出，支持空白、引号与字段顺序变化；缺失、重复、未知或动态声明会阻止构建，避免增强控件静默缺失。
+
+### 其他变更
+
+- 市场维护按各目录当前规则和实际需要执行，保留正常更新，取消无实质变化的逐版改帖、重复投稿与催审。
+- 安装包范围检查接入现有公开文件、prepack 和实际归档交付流程。
+
+<a id="en-unreleased"></a>
+
+## English
+
+### Improvements
+
+- Omit website media, static site assets and maintainer-only benchmark/performance tools from runtime archives. Full presentations remain in the repository and website; packaged documentation links to public illustrations.
+- Remove an unreferenced root demo and the combined statistics component unused by the reviewed host snapshots.
+
+### Bug Fixes
+
+- Parse composer registrations structurally from fingerprint-verified upstream code and export their metadata directly. Whitespace, quotes and property order may vary; missing, duplicate, unknown or dynamic declarations fail the build instead of silently losing enhancements.
+
+### Other Changes
+
+- Follow each marketplace’s current rules and actual need, retaining normal updates while avoiding no-op per-release edits, duplicate submissions and reminders.
+- Enforce runtime package scope in existing public-file, prepack and actual archive delivery checks.
+
+## 安装 / Installation
+
+以上改动仅在源码中，尚未发布或部署。当前正式版仍为 OMD **1.1.2**，精确匹配 DSH **0.2.1-rc.3**；以下固定包不包含本节改动。
+
+These changes are source-only and have not been released or deployed. The current release is OMD **1.1.2** for DSH **0.2.1-rc.3** exactly; the fixed package below does not include this section’s changes.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.1-rc.3 | [OMD 1.1.2](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.2/oh-my-dsh-0.2.1-rc.3.omd.1.1.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.2/SHA256SUMS) |
+
+[安装指南](docs/install.md) · [Installation guide](docs/install_EN.md)
+
+---
+
 # OMD 1.1.2 · DSH 0.2.1-rc.3
 
 [中文](#zh-112) | [English](#en-112)

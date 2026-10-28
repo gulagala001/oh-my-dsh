@@ -1,5 +1,7 @@
 # Development and Source Runs
 
+Runtime archives retain source, pinned vendor snapshots, build/offline preparation and diagnostics. Website media, static site HTML/CSS/JS, documentation-site builds and benchmark/performance tools remain in the source repository; documentation illustrations use public asset URLs. `scripts/package-policy.mjs` checks both npm file lists and actual archives through public-file CI, prepack and delivery checks. After verifying the upstream hash, `scripts/chat-style-adapter.mjs` reads composer metadata from the AST and exports it with the factory for direct client imports. Missing, duplicate, unknown or dynamic registrations fail the build; `test/chat-style-adapter.test.mjs` runs in core.
+
 [简体中文](development.md) · [Documentation (Chinese)](README.md) · [Usage](usage_EN.md) · [Contributing](../CONTRIBUTING.md)
 
 For source trials and contributors. Ordinary users should install a [installation guide](install_EN.md), without running engineering tests.

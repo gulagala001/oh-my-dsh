@@ -59,13 +59,8 @@ await writeFile(new URL('../vendor/opencu/lib/client.factory.mjs', import.meta.u
 const logo = new URL('../docs/images/logo.svg', import.meta.url);
 await mkdir(new URL('./', logo), { recursive: true });
 await writeFile(logo, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="img" aria-label="Oh My DSH"'));
-// Capability detection on the bundled host chat: the composer statistics
-// entries are read from the host build instead of being hard-coded. OMD
-// shadows exactly the ids its host ships, by the documented same-id rule.
-const hostChat = await readFile(new URL('../lib/host/ui-chat.factory.mjs', import.meta.url), 'utf8');
-const composerStats = [...hostChat.matchAll(/name: "conversation\.composer\.dock",\s*id: "(\w+)",\s*order: (\d+)/g)].map(m => ({ id: m[1], order: Number(m[2]) }));
 await build({
-  define: { ...pageScriptDefines, __OMD_COMPOSER_STATS__: JSON.stringify(JSON.stringify(composerStats)) },
+  define: pageScriptDefines,
   entryPoints: [fileURLToPath(new URL('../src/client/index.jsx', import.meta.url))],
   outfile: fileURLToPath(new URL('../lib/client.js', import.meta.url)),
   bundle: true, platform: 'browser', format: 'cjs', target: 'es2022',

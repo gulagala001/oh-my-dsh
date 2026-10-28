@@ -17,9 +17,9 @@
 
 当前版本：[OMD 1.1.2](docs/release-1.1.2.md)。
 
-<p align="center"><a href="docs/images/omd-hero-zh.png"><img src="docs/images/omd-hero-zh.png" alt="Oh My DSH · 从对话到交付" width="880"></a></p>
+<p align="center"><a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/omd-hero-zh.png"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/omd-hero-zh.png" alt="Oh My DSH · 从对话到交付" width="880"></a></p>
 
-<p align="center"><a href="docs/images/glyph-animation.gif"><img src="docs/images/glyph-animation.gif" alt="Glyph 动态字符鲸鱼与界面交互演示" width="600" height="438"></a></p>
+<p align="center"><a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/glyph-animation.gif"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/glyph-animation.gif" alt="Glyph 动态字符鲸鱼与界面交互演示" width="600" height="438"></a></p>
 
 <a id="quickstart"></a>
 <a id="desktop"></a>
@@ -103,13 +103,13 @@ OMD 组合 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench**�
 - **超频**：追求更深入、完整的回答和交付，愿意为复杂问题投入更多推敲与细节，适合需要充分分析和打磨的任务。
 
 <p align="center">
-  <a href="docs/images/economical-token-usage.png"><img src="docs/images/economical-token-usage.png" alt="精算实测：Token 用量与缓存命中" width="320"></a>
-  <a href="docs/images/economical-yellow-crane-tower.png"><img src="docs/images/economical-yellow-crane-tower.png" alt="精算实测作品：黄鹤楼体素场景" width="320"></a>
+  <a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-token-usage.png"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-token-usage.png" alt="精算实测：Token 用量与缓存命中" width="320"></a>
+  <a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-yellow-crane-tower.png"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-yellow-crane-tower.png" alt="精算实测作品：黄鹤楼体素场景" width="320"></a>
 </p>
 
 <p align="center">精算实测展示：用量统计与作品效果</p>
 
-![外观示例](docs/images/release/themes.jpg)
+![外观示例](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/themes.jpg)
 
 [外观设置](docs/skins.md) · [人格与设置](docs/usage.md#人格预设与自定义身份)
 

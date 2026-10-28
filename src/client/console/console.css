@@ -286,7 +286,6 @@ html[data-omd-skin] .omc-icon-btn{ width: 28px; padding: 0; border-color: transp
 .omc-pill-sep { color: var(--dsw-alias-separator-primary, var(--omc-line)); margin: 0 6px; }
 .omc-pill-green { color: var(--omc-green); } .omc-pill-red { color: var(--omc-red); }
 .omc-pill-plain { cursor: default; } .omc-pill-plain:hover { background: transparent; color: var(--dsw-alias-label-tertiary); }
-.omc-pill-group { display: flex; justify-content: center; gap: 12px; min-width: 0; max-width: 100%; }
 .omc-pop { position: fixed; z-index: 1100; width: max-content; min-width: min(300px, calc(100vw - 24px)); max-width: min(400px, calc(100vw - 24px)); padding: 14px 16px; border-radius: var(--dsw-radius-lg, 12px); background: var(--dsw-specific-menu, var(--omc-bg)); backdrop-filter: var(--dsw-menu-backdrop-filter); --dsw-elevation-stroke-color: var(--dsw-alias-border-l1); box-shadow: var(--dsw-elevation-prominent, 0 8px 30px rgb(0 0 0 / .18)); font-size: 12px; line-height: 18px; color: var(--omc-text2); }
 .omc-pop-title { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 8px; margin-bottom: 10px; border-bottom: .5px solid var(--omc-line); color: var(--omc-text); font-weight: 500; }
 .omc-pop-title span { display: inline-flex; align-items: center; gap: 6px; } .omc-pop-title svg { width: 14px; height: 14px; }

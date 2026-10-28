@@ -6,7 +6,7 @@
 
 全新外观配置默认使用 Glyph；已有明确保存的主题选择保持不变。DSH 原生选项直接使用宿主的主题、组件与样式。
 
-![五套外观](images/release/themes.jpg)
+![五套外观](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/themes.jpg)
 
 | 主题 | 设计特点 |
 | --- | --- |

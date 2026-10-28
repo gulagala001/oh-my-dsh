@@ -17,7 +17,7 @@ import workbenchCss from './workbench.css';
 import shellCss from './shell.css';
 import { createOpenCU } from '../../vendor/opencu/lib/client.factory.mjs';
 import { createOpenInApp } from '../../lib/host/open-in-app.factory.mjs';
-import { createChat } from '../../lib/host/ui-chat.factory.mjs';
+import { createChat, composerStats } from '../../lib/host/ui-chat.factory.mjs';
 import { createChatSettings } from './chat-settings.mjs';
 import { installConversationLifecycle } from './conversation-lifecycle.mjs';
 
@@ -175,7 +175,7 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
   ctx.effect(() => bindSettingsNavigation(ctx));
   ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({ name: 'conversation.session.header.utilities', id: 'omd-running', order: 25 }, RunningMarker));
   ctx.slots.inject('conversation.input.right', () => ctx.slots.register({ name: 'conversation.input.right', id: 'omd-better-todo', order: 100 }, BetterTodoChip));
-  applyConsole(ctx, { composerStats: JSON.parse(__OMD_COMPOSER_STATS__),
+  applyConsole(ctx, { composerStats,
     performanceMode: { get: () => chatSettings.getSnapshot()?.value?.performanceUsage, subscribe: listener => chatSettings.subscribe(listener) } });
   applyConversationRecords(ctx);
   applyEvidenceRecords(ctx);

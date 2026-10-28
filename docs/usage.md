@@ -67,7 +67,7 @@ npx --yes @deepseek-ai/dsh@0.2.1-rc.2 plugin --profile web remove oh-my-dsh
 | **BT** | 随时调整待办／验证提醒，或打开任务证据。 |
 | 模型与 Fast | 原生推理档、Ultra 及其三种子模式；有匹配 Subscriptions 能力时显示闪电。 |
 
-[![OMD 控制台概览](images/release/monitor.jpg)](monitoring.md)
+[![OMD 控制台概览](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/monitor.jpg)](monitoring.md)
 
 侧栏保留原生搜索、菜单及插件行内操作，支持方向键、Home／End、Enter、Escape、Shift+F10。窄窗通过遮罩、选择会话或 Escape 收起；输入区按实际对话列宽适配，不用整个窗口宽度误判。系统或手动减少动态效果保留静态状态；主题属性与注册尊重第三方接管，卸载只撤回 OMD 自有贡献。
 

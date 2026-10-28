@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { parse } from 'acorn';
 
 const reviewedSource = {
   commits: ['1600d8a1e140dcde43a1a0941940a0480712c011', '687f282e8625c6b8d11ff58211a90524be2e4317', '1f81c047fc48fa190a683e469daa699857e9afe8'],
@@ -9,6 +10,46 @@ const after = '.EvIC1a_column>.EvIC1a_older~[data-slot="conversation.chat.flow"]
 const empty = '.EvIC1a_flowItem:is(:empty,:has(>[data-slot="conversation.chat.node"]:empty))';
 const count = (source, text) => source.split(text).length - 1;
 const gate = (condition, message) => { if (!condition) throw new Error(`Chat style adapter format gate: ${message}`); };
+
+// Read actual registrations, not text that happens to resemble a slot. Keep
+// the supported UI contract explicit when reviewing a new upstream snapshot.
+export function readComposerStats(client) {
+  const ast = parse(client, { ecmaVersion: 'latest', sourceType: 'script' });
+  const entries = [], key = node => node?.type === 'Identifier' ? node.name : node?.value;
+  const member = (node, name) => node?.type === 'MemberExpression'
+    && (!node.computed || node.property.type === 'Literal') && key(node.property) === name;
+  const walk = node => {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 'CallExpression' && member(node.callee, 'register') && member(node.callee.object, 'slots')) {
+      const object = node.arguments[0];
+      if (object?.type === 'ObjectExpression' && object.properties.some(p => key(p.key) === 'name' && p.value?.value === 'conversation.composer.dock')) {
+        gate(object.properties.every(p => p.type === 'Property' && !p.method && p.kind === 'init'
+          && (!p.computed || p.key.type === 'Literal')), 'unsupported composer registration properties');
+        const field = name => {
+          const values = object.properties.filter(p => key(p.key) === name);
+          gate(values.length === 1, `expected one composer ${name} property`);
+          return values[0].value;
+        };
+        const name = field('name'), id = field('id'), order = field('order');
+        gate(name.type === 'Literal' && name.value === 'conversation.composer.dock', 'invalid composer slot name');
+        gate(id.type === 'Literal' && ['activity', 'usage'].includes(id.value), 'unsupported composer statistic id');
+        const value = order.type === 'Literal' ? order.value : order.type === 'UnaryExpression'
+          && ['-', '+'].includes(order.operator) && order.argument.type === 'Literal'
+          && typeof order.argument.value === 'number' ? (order.operator === '-' ? -1 : 1) * order.argument.value : undefined;
+        gate(Number.isSafeInteger(value), `invalid composer order for ${id.value}`);
+        entries.push({ id: id.value, order: value });
+      }
+    }
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) value.forEach(walk);
+      else if (value && typeof value === 'object') walk(value);
+    }
+  };
+  walk(ast);
+  gate(entries.length === 2 && new Set(entries.map(entry => entry.id)).size === 2,
+    'expected exactly one activity and one usage composer registration');
+  return entries;
+}
 
 function adaptProcessHeader(client) {
   const pattern = /^(\s*const css(?:\$\d+)? = )("(?:[^"\\]|\\.)*")(?=;\n\s*const tagId(?:\$\d+)? = "@deepseek-ai\/dsh-client-ui-chat\/ChatGroupSeat\.module\.css";)/gm;
@@ -60,6 +101,7 @@ export function adaptChatStyleFactory(client) {
 export function buildChatStyleFactory(rawClient, source) {
   gate(reviewedSource.commits.includes(source?.commit) && source?.sha256 === reviewedSource.sha256, 'unsupported upstream source; only the reviewed rc.1 / rc.2 / rc.3 factory is supported');
   gate(createHash('sha256').update(rawClient).digest('hex') === source.sha256, 'upstream ui-chat lib SHA-256 differs from the snapshot');
+  const composerStats = readComposerStats(rawClient);
   const adapted = adaptChatStyleFactory(rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''));
   const tagPattern = /(const tagId(?:\$\d+)? = )"@deepseek-ai\/dsh-client-ui-chat\//g;
   const dataset = 'tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-chat"';
@@ -68,6 +110,6 @@ export function buildChatStyleFactory(rawClient, source) {
   const owned = adapted.code.replace(tagPattern, '$1"oh-my-dsh/chat/').replaceAll(dataset, 'tag.dataset.plugin = "oh-my-dsh/chat"')
     .replace(/^([ \t]*\/\/#region \\0dsh-css:)[^\r\n]*?\/(packages\/[^\r\n]+)$/gm, '$1$2');
   const registration = owned.trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
-  const code = registration + `\nexport function createChat(require) { const component = registration.factory(require); Object.defineProperty(component, Symbol.for('omd.ui-chat.source.v1'), { value: ${JSON.stringify(source)} }); return component; }\n`;
+  const code = registration + `\nexport const composerStats = ${JSON.stringify(composerStats)};\nexport function createChat(require) { const component = registration.factory(require); Object.defineProperty(component, Symbol.for('omd.ui-chat.source.v1'), { value: ${JSON.stringify(source)} }); return component; }\n`;
   return { code, stats: { ...adapted.stats, styleOwnerTags: tags, styleOwnerDatasets: datasets } };
 }

@@ -20,7 +20,7 @@
 
 ## 调用日志实景
 
-![调用日志：筛选、缓存、首字、耗时与费用](images/release/calls.jpg)
+![调用日志：筛选、缓存、首字、耗时与费用](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/calls.jpg)
 
 ## 统计口径：完整、部分、未知不混为一谈
 

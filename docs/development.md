@@ -1,5 +1,7 @@
 # 开发与源码运行
 
+运行安装包保留源码、固定 vendor、构建／离线准备与诊断入口；网站图片、站点 HTML／CSS／JS、文档站构建及评测／性能工具只在源码仓库维护，文档插图通过公开资源链接查看。`scripts/package-policy.mjs` 同时校验 npm 清单与实际归档，已接入公开文件 CI、prepack 和交付检查。composer 统计元数据在 `scripts/chat-style-adapter.mjs` 校验上游摘要后由 AST 读取并随 factory 导出，前端直接导入；缺失、重复、未知 ID 或动态顺序会阻止构建，`test/chat-style-adapter.test.mjs` 纳入 core。
+
 [English](development_EN.md) · [目录](README.md) · [用户指南](usage.md) · [贡献说明](../CONTRIBUTING.md)
 
 供源码试用和贡献者使用。普通用户用[安装指南](install.md)，无需跑工程测试。
