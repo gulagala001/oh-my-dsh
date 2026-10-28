@@ -33,8 +33,8 @@ export async function createController({dataDir, browser, native} = {}) {
   let activeTargetId = saved?.activeTargetId ?? null;
   let releasePending = saved?.releasePending ?? false;
   let releaseErrors = saved?.releaseErrors ?? [];
-  // Only an explicit, successful target recovery can enable independent browser
-  // input while historical obligations remain. Never restore this authority cold.
+  // Successful scoped recovery permits verified targets while old browser
+  // occurrences stay quarantined. Never restore this authority cold.
   let recoveryIsolated = false;
   let closed = false;
   let closing;
@@ -71,9 +71,9 @@ export async function createController({dataDir, browser, native} = {}) {
     if (mode === 'closing') fail('CONTROLLER_CLOSING', 'Controller is closing');
     if (mode === 'close_failed' || closedBackends.size) fail('CLOSE_FAILED', 'Retry close before using this controller');
   }
-  function controlAllowed(target) {
+  function controlAllowed() {
     alive();
-    if (mode !== 'active' || releasePending && (!recoveryIsolated || target?.backend !== 'browser')) fail('CONTROL_STOPPED', `Control is blocked (${mode})`);
+    if (mode !== 'active' || releasePending && !recoveryIsolated) fail('CONTROL_STOPPED', `Control is blocked (${mode})`);
   }
   function checkOperation(operationEpoch) {
     if (operationEpoch !== epoch) fail('CONTROL_STOPPED', 'Operation interrupted by cancellation or shutdown');
@@ -180,10 +180,14 @@ export async function createController({dataDir, browser, native} = {}) {
       notice:'This browser target requires recovery. Other verified browser targets remain usable. Observe before continuing; do not replay uncertain input.'};
     if (!target.releaseAcknowledged) fail('RELEASE_FAILED', 'This browser target has unconfirmed input release; it remains quarantined', error.details);
   }
-  async function recoverBrowser(target) {
+  async function recoverControl(target) {
     const backend = backends.get('browser');
-    if (typeof backend?.releaseTarget !== 'function') return releaseAll();
+    if (target?.backend !== 'native' && typeof backend?.releaseTarget !== 'function') {
+      await releaseAll();
+      return {release:{released:true},releasedTargetIds:[...selected.keys()]};
+    }
     const operationEpoch = epoch;
+    const releasedTargetIds = [];
     // Native helpers share hardware input across applications. Browser isolation
     // must never turn an unresolved native key/button into permission to continue.
     const native = backends.get('native');
@@ -203,10 +207,12 @@ export async function createController({dataDir, browser, native} = {}) {
         }
         throw error;
       }
-      for (const item of selected.values()) if (item.backend === 'native') item.releaseAcknowledged = true;
+      for (const item of selected.values()) if (item.backend === 'native') {
+        item.releaseAcknowledged = true; releasedTargetIds.push(item.id);
+      }
       releaseErrors = releaseErrors.filter(item => item.backend !== 'native');
     }
-    if (target) {
+    if (target?.backend === 'browser') {
       target.verified = false;
       let result;
       try {
@@ -223,6 +229,7 @@ export async function createController({dataDir, browser, native} = {}) {
       }
       if (result.retired === true) { forgetTarget(target.id); await persist(); fail('TARGET_NOT_FOUND','The original browser target is closed; discover a live target'); }
       target.releaseAcknowledged = true;
+      releasedTargetIds.push(target.id);
     }
     // Keep unconfirmed legacy targets visible and unverified, without asking
     // unrelated renderers/profiles to recover before this target can be used.
@@ -233,6 +240,7 @@ export async function createController({dataDir, browser, native} = {}) {
     releasePending = releaseErrors.length > 0;
     recoveryIsolated = true;
     await persist(); checkOperation(operationEpoch);
+    return {release:{released:true},releasedTargetIds};
   }
   function block(nextMode) {
     alive();
@@ -285,20 +293,27 @@ export async function createController({dataDir, browser, native} = {}) {
     },
     openTarget: (request = {}) => response(() => serial(async () => {
       alive();
-      // Recover cold state only for an explicit new tab after all prior release
-      // obligations are acknowledged. An explicit stop remains stopped.
-      if (!explicitlyStopped && ['recovery_required','faulted','release_failed'].includes(mode) && request.backend !== 'native') {
-        const operationEpoch = epoch, {browsers} = await inventory();
-        if (!request.browserId || browsers.filter(item => item.id === request.browserId).length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected browser ID');
-        await recoverBrowser(); checkOperation(operationEpoch);
-        aborter = new AbortController(); mode = 'active'; await persist();
-      }
-      controlAllowed({backend:request.backend === 'native' ? 'native' : 'browser'});
-      if (request.backend==='native') {
-        const operationEpoch=epoch, backend=backends.get('native');
+      let recovered;
+      const nativeLaunch = request.backend === 'native';
+      if (nativeLaunch) {
         if (request.launch!==true || ['id','targetId','identity','pid','windowId'].some(key=>request[key]!==undefined)) fail('INVALID_TARGET','Native launch requires a fresh app path or bundleId and launch:true');
         if (request.path!==undefined && !(typeof request.path==='string'&&request.path.startsWith('/')&&request.path.endsWith('.app')) || request.path===undefined && !(typeof request.bundleId==='string'&&request.bundleId)) fail('INVALID_TARGET','Native launch requires an absolute .app path or explicit bundleId');
-        if (typeof backend?.openApplication!=='function') fail('UNSUPPORTED_OPERATION','This native backend cannot explicitly launch an application');
+        if (typeof backends.get('native')?.openApplication!=='function') fail('UNSUPPORTED_OPERATION','This native backend cannot explicitly launch an application');
+      }
+      // An explicit new target may recover its input scope. An explicit stop
+      // still needs resume; unrelated old browser obligations stay quarantined.
+      if (!explicitlyStopped && ['recovery_required','faulted','release_failed'].includes(mode)) {
+        const operationEpoch = epoch;
+        if (!nativeLaunch) {
+          const {browsers} = await inventory();
+          if (!request.browserId || browsers.filter(item => item.id === request.browserId).length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected browser ID');
+        }
+        recovered = await recoverControl(nativeLaunch ? {backend:'native'} : undefined); checkOperation(operationEpoch);
+        aborter = new AbortController(); mode = 'active'; await persist();
+      }
+      controlAllowed();
+      if (nativeLaunch) {
+        const operationEpoch=epoch, backend=backends.get('native');
         let target;
         try {
           target=assertTarget(await backend.openApplication(request),'native');
@@ -307,7 +322,7 @@ export async function createController({dataDir, browser, native} = {}) {
           checkOperation(operationEpoch);
           // Launch discovers a process; selection and application authorization
           // remain separate. Never activate, select, observe or persist it here.
-          return {target,launched:true};
+          return {target,launched:true,...recovered};
         } catch(error) {
           if(target)error.details={...error.details,launched:true,target,notice:'The app was launched. Rediscover its windows; do not automatically repeat launch.'};
           throw error;
@@ -332,7 +347,7 @@ export async function createController({dataDir, browser, native} = {}) {
         activeTargetId = target.id;
         await persist();
         checkOperation(operationEpoch);
-        return {target: selected.get(target.id)};
+        return {target: selected.get(target.id), ...recovered};
       } catch (error) {
         if (target) error.details = {...error.details, created: true, target,
           notice: 'A tab was created. Select this target after recovery; do not create another tab.'};
@@ -355,7 +370,7 @@ export async function createController({dataDir, browser, native} = {}) {
       if (reference?.identity && !sameIdentity(reference.identity, candidate.identity)) fail('TARGET_IDENTITY_CHANGED', 'Reference identity does not match the live occurrence');
       checkExpected(candidate, reference?.expected);
       const backend = backends.get(candidate.backend);
-      const controlling = mode === 'active' && !previous?.cold && (!releasePending || recoveryIsolated && candidate.backend === 'browser' && previous?.verified);
+      const controlling = mode === 'active' && !previous?.cold && (!releasePending || recoveryIsolated && previous?.verified);
       try {
         const target = assertTarget(controlling ? await backend.select(candidate, {signal: aborter.signal}) : candidate, candidate.backend);
         checkOperation(operationEpoch);
@@ -558,11 +573,11 @@ export async function createController({dataDir, browser, native} = {}) {
         await connected();
         // No target is needed to recover an empty browser. Native hardware must
         // still release; unresolved old browser occurrences stay quarantined.
-        await recoverBrowser(); checkOperation(operationEpoch);
+        const recovered = await recoverControl(); checkOperation(operationEpoch);
         const browser = await connected(); checkOperation(operationEpoch);
         aborter = new AbortController(); mode = 'active'; explicitlyStopped = false;
         await persist(); checkOperation(operationEpoch);
-        return {browser, state: snapshot()};
+        return {browser, state: snapshot(), ...recovered};
       }
       const {target, backend} = targetFor(request.targetId, request.targetIdentity);
       let selecting = false;
@@ -570,9 +585,9 @@ export async function createController({dataDir, browser, native} = {}) {
       if (recovery) recoveryOperations.add(recovery);
       const signal = recovery?.signal ?? aborter.signal;
       try {
+        let recovered;
         if (releasePending || mode === 'recovery_required') {
-          if (target.backend === 'browser') await recoverBrowser(target);
-          else await releaseAll();
+          recovered = await recoverControl(target);
           checkOperation(operationEpoch);
         }
         await verify(target, backend, target.cold, operationEpoch, signal);
@@ -592,7 +607,7 @@ export async function createController({dataDir, browser, native} = {}) {
         explicitlyStopped = false;
         await persist();
         checkOperation(operationEpoch);
-        return {target, state: snapshot()};
+        return {target, state: snapshot(), ...recovered};
       } catch (error) {
         if (selecting && operationEpoch === epoch) await containTargetFailure(target, error);
         throw error;
