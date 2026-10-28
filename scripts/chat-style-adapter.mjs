@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
+import { ownClientStyles, clientRegistration } from './host-build-contracts.mjs';
 
 const reviewedSource = {
   commits: ['1600d8a1e140dcde43a1a0941940a0480712c011', '687f282e8625c6b8d11ff58211a90524be2e4317', '1f81c047fc48fa190a683e469daa699857e9afe8'],
@@ -103,13 +104,9 @@ export function buildChatStyleFactory(rawClient, source) {
   gate(createHash('sha256').update(rawClient).digest('hex') === source.sha256, 'upstream ui-chat lib SHA-256 differs from the snapshot');
   const composerStats = readComposerStats(rawClient);
   const adapted = adaptChatStyleFactory(rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''));
-  const tagPattern = /(const tagId(?:\$\d+)? = )"@deepseek-ai\/dsh-client-ui-chat\//g;
-  const dataset = 'tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-chat"';
-  const tags = [...adapted.code.matchAll(tagPattern)].length, datasets = count(adapted.code, dataset);
-  gate(tags === 18 && datasets === 18, `expected 18 style-owner tags/datasets, found ${tags}/${datasets}`);
-  const owned = adapted.code.replace(tagPattern, '$1"oh-my-dsh/chat/').replaceAll(dataset, 'tag.dataset.plugin = "oh-my-dsh/chat"')
+  const owned = ownClientStyles(adapted.code, { moduleId: '@deepseek-ai/dsh-client-ui-chat', owner: 'oh-my-dsh/chat', namespace: 'oh-my-dsh/chat', count: 18 })
     .replace(/^([ \t]*\/\/#region \\0dsh-css:)[^\r\n]*?\/(packages\/[^\r\n]+)$/gm, '$1$2');
-  const registration = owned.trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
+  const registration = clientRegistration(owned, '@deepseek-ai/dsh-client-ui-chat');
   const code = registration + `\nexport const composerStats = ${JSON.stringify(composerStats)};\nexport function createChat(require) { const component = registration.factory(require); Object.defineProperty(component, Symbol.for('omd.ui-chat.source.v1'), { value: ${JSON.stringify(source)} }); return component; }\n`;
-  return { code, stats: { ...adapted.stats, styleOwnerTags: tags, styleOwnerDatasets: datasets } };
+  return { code, stats: { ...adapted.stats, styleOwnerTags: 18, styleOwnerDatasets: 18 } };
 }

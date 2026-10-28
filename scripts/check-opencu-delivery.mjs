@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
-import { assertPackageScope } from './package-policy.mjs';
+import { assertPackageScope, assertPackageEntrypoints, assertPackageDocumentation } from './package-policy.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -21,7 +21,7 @@ export async function deliveryBaseline(directory = root) {
   if (tracked('lib/client.js')) assert(client.equals(committed('lib/client.js')), 'Rebuilt lib/client.js differs from HEAD; rebuild and commit the actual runtime bytes');
   const manifest = committed('vendor/opencu.json');
   assert(manifest.equals(await readFile(join(directory, 'vendor/opencu.json'))), 'vendor/opencu.json differs from HEAD');
-  return { client, manifest };
+  return { client, manifest, packageJson: await readFile(join(directory, 'package.json')) };
 }
 
 // npm pack emits regular-file USTAR entries. Read them once, without extracting
@@ -60,7 +60,11 @@ function packageFiles(archive) {
 
 export function verifyDeliveryArchive(archive, baseline) {
   const files = packageFiles(archive);
-  assertPackageScope([...files.keys()].map(name => name.slice('package/'.length)));
+  const paths = [...files.keys()].map(name => name.slice('package/'.length));
+  assertPackageScope(paths);
+  assert(files.get('package/package.json')?.bytes.equals(baseline.packageJson), 'Packed package.json differs from the source manifest');
+  assertPackageEntrypoints(paths, JSON.parse(baseline.packageJson));
+  assertPackageDocumentation(paths, name => files.get('package/' + name).bytes);
   assert(files.get('package/lib/client.js')?.bytes.equals(baseline.client), 'Packed lib/client.js differs from the rebuilt HEAD runtime');
   assert(files.get('package/vendor/opencu.json')?.bytes.equals(baseline.manifest), 'Packed vendor/opencu.json differs from HEAD');
   const manifest = JSON.parse(baseline.manifest), expected = new Map(Object.entries(manifest.files));

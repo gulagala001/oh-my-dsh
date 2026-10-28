@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [Documentation index (Chinese)](../README.md)
 
-The site starts at the [English product page](../index_EN.html) or [Chinese product page](../index.html). Product pages use plain HTML, CSS, and JavaScript without external scripts or fonts. Markdown remains the authored source for documentation and can be read directly on GitHub. Build HTML before hosting it on a regular static server.
+The site starts at the [English product page](https://gulagala001.github.io/oh-my-dsh/docs/index_EN.html) or [Chinese product page](https://gulagala001.github.io/oh-my-dsh/docs/index.html). Product pages use plain HTML, CSS, and JavaScript without external scripts or fonts. Markdown remains the authored source for documentation and can be read directly on GitHub. Build HTML before hosting it on a regular static server.
 
 ## Build and Host
 
@@ -44,4 +44,4 @@ The README and product page share the Oh My DSH character-whale hero image.
 
 Installation distinguishes new candidates from fixed historical releases. Do not select across hosts using GitHub latest. See [installation](../install_EN.md) for version matching and host-adapter requirements.
 
-Update host pairings, tags, assets, and text in both languages together. Documentation, static-site, and product-preview checks live in `test/documentation.test.mjs`, `test/docs-site.test.mjs`, and `test/site-preview-ui.test.mjs`. Report validation from the actual run.
+Update host pairings, tags, assets, and text in both languages together. `scripts/check-docs.mjs` checks document structure and links; `scripts/build-docs.mjs` validates rendering, diagrams and generated pages. Existing documentation CI uses these entrypoints. Archive delivery checks validate packaged links separately. Report validation from the actual run.

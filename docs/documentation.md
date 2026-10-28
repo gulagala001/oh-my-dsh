@@ -108,5 +108,5 @@ Roles: home · index · guide · development · sources · release · redirect. 
 | [docs/workflow.md](workflow.md) | guide | zh | — |
 | [README_EN.md](../README_EN.md) | home | zh | — |
 | [README.md](../README.md) | home | zh | — |
-| [scripts/simulator/README.md](../scripts/simulator/README.md) | development | zh | — |
+| [scripts/simulator/README.md](https://github.com/gulagala001/oh-my-dsh/blob/main/scripts/simulator/README.md) | development | zh | — |
 | [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) | sources | zh | — |

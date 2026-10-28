@@ -14,6 +14,9 @@
 ### 问题修复
 
 - composer 统计槽位从通过摘要验证的原始宿主代码进行结构解析并直接导出，支持空白、引号与字段顺序变化；缺失、重复、未知或动态声明会阻止构建，避免增强控件静默缺失。
+- 修复离线平铺依赖布局下的原生总览构建；宿主组件通过实际 SDK 解析，保留精确版本与摘要验证。
+- 原生组件注册、样式归属和关键替换点统一检查身份、数量及结构；总览源码编辑不再依赖函数在上游文件中的先后顺序。
+- 修复精简安装包中的文档失效链接，并校验实际归档的声明入口、安装补丁、清单及文档目标，避免只在源码目录中检查通过。
 
 ### 其他变更
 
@@ -32,6 +35,9 @@
 ### Bug Fixes
 
 - Parse composer registrations structurally from fingerprint-verified upstream code and export their metadata directly. Whitespace, quotes and property order may vary; missing, duplicate, unknown or dynamic declarations fail the build instead of silently losing enhancements.
+- Fix native overview builds with hoisted offline dependencies by resolving components through the actual SDK while retaining exact version and hash checks.
+- Validate native module identity, registration shape, style ownership and replacement counts consistently; overview edits no longer depend on upstream function ordering.
+- Repair links in trimmed archives and verify declared entrypoints, install patches, package metadata and documentation targets against the actual package inventory.
 
 ### Other Changes
 

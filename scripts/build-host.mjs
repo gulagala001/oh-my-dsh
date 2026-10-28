@@ -9,6 +9,7 @@ import { createHostConstEnums } from './host-const-enums.mjs';
 import { hostTarget } from './host-targets.mjs';
 import { checkMacHelperDistribution } from './check-opencu-native.mjs';
 import { buildChatStyleFactory } from './chat-style-adapter.mjs';
+import { ownClientStyles, clientRegistration } from './host-build-contracts.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (process.platform === 'darwin') await checkMacHelperDistribution(join(root, 'vendor/opencu'));
@@ -128,15 +129,10 @@ for (const [name, create, styleOwner] of [['ui-conversation', 'createConversatio
     await writeFile(`${root}lib/host/${name}.factory.mjs`, code);
     continue;
   }
-  const client = rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, '');
-  if (!client.startsWith('window.__ModuleLoader__.load({') || !client.trimEnd().endsWith('});')) throw new Error(`Unexpected DSH ${name} browser factory format`);
-  if (!client.slice(0, 150).includes(`id: "@deepseek-ai/dsh-client-${name}"`)) throw new Error(`Unexpected DSH ${name} module identity`);
-  const stylePrefix = name === 'ui-chat' ? styleOwner : 'oh-my-dsh/conversation';
-  const ownedClient = client.replace(new RegExp(`(const tagId(?:\\$\\d+)? = )"@deepseek-ai/dsh-client-${name}/`, 'g'), `$1"${stylePrefix}/`)
-    .replaceAll(`tag.dataset.plugin = "@deepseek-ai/dsh-client-${name}"`, `tag.dataset.plugin = "${styleOwner}"`);
-  const registration = ownedClient.trimEnd().replace('window.__ModuleLoader__.load(', 'const registration = ').replace(/\);$/, ';');
-  const origin = name === 'ui-chat' ? ` Object.defineProperty(component, Symbol.for('omd.ui-chat.source.v1'), { value: ${JSON.stringify({ commit: snapshot.commit, sha256: chatSnapshot.files['lib/client.js'] })} });` : '';
-  await writeFile(`${root}lib/host/${name}.factory.mjs`, registration + `\nexport function ${create}(require) { const component = registration.factory(require);${origin} return component; }\n`);
+  const moduleId = '@deepseek-ai/dsh-client-' + name;
+  const owned = ownClientStyles(rawClient, { moduleId, owner: styleOwner, namespace: 'oh-my-dsh/conversation', count: 10 });
+  const registration = clientRegistration(owned, moduleId);
+  await writeFile(`${root}lib/host/${name}.factory.mjs`, registration + `\nexport function ${create}(require) { return registration.factory(require); }\n`);
 }
 
 const support = await build({ entryPoints: [`${root}src/session-migration-support.ts`], outfile: `${root}lib/host/session-migration.factory.mjs`,

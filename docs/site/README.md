@@ -2,7 +2,7 @@
 
 [English](README_EN.md) · [文档目录](../README.md)
 
-入口为 [中文产品页](../index.html) 与 [英文产品页](../index_EN.html)。产品页使用纯 HTML、CSS 与 JavaScript，无第三方字体或外部脚本依赖。Markdown 是文档的唯一作者源，GitHub 可直接阅读；普通静态服务需要先生成可读的 HTML 文档。
+入口为 [中文产品页](https://gulagala001.github.io/oh-my-dsh/docs/index.html) 与 [英文产品页](https://gulagala001.github.io/oh-my-dsh/docs/index_EN.html)。产品页使用纯 HTML、CSS 与 JavaScript，无第三方字体或外部脚本依赖。Markdown 是文档的唯一作者源，GitHub 可直接阅读；普通静态服务需要先生成可读的 HTML 文档。
 
 ## 构建与托管
 
@@ -41,4 +41,4 @@ README 与产品页共用 OMD 宣传主图，并提供工作台截图。移动�
 
 安装入口区分新版候选与历史固定发行，不用 GitHub latest 跨宿主选包。版本、安装条件和完整界面所需的宿主适配见[安装指南](../install.md)。
 
-更新版本时同步两种语言的安装来源、宿主版本与下载链接。文档、静态站点与产品预览检查分别位于 `test/documentation.test.mjs`、`test/docs-site.test.mjs` 和 `test/site-preview-ui.test.mjs`；实际通过情况以本次运行结果为准。
+更新版本时同步两种语言的安装来源、宿主版本与下载链接。文档结构／链接检查由 `scripts/check-docs.mjs` 执行；站点渲染、图示与生成页面检查由 `scripts/build-docs.mjs` 执行，现有文档 CI 使用这些入口。安装包内链接由实际归档交付检查另行核对；实际通过情况以本次运行结果为准。

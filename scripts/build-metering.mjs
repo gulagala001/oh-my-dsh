@@ -4,6 +4,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { hostTarget } from './host-targets.mjs';
+import { replaceExactly } from './host-build-contracts.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 await mkdir(root+'lib/host',{recursive:true});
 await writeFile(root+'lib/host/metering-version.mjs',`export const ESTIMATOR_VERSION = ${await meteringVersion()};\n`);
@@ -27,7 +28,7 @@ for(const [name,entry,reference] of [['token-meter','service','token-meter'],['c
     banner:{js:'export function createModule(require) { const module={exports:{}}; const exports=module.exports;'},
     footer:{js:'return module.exports; }'},legalComments:'eof',
     plugins:[{name:'native-summary-export',setup(build){
-      build.onLoad({filter:/metering\/native\/summarizer\.ts$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('const COMPACTION_INSTRUCTION =','export const COMPACTION_INSTRUCTION ='),loader:'ts'}));
+      build.onLoad({filter:/metering\/native\/summarizer\.ts$/},async args=>({contents:replaceExactly(await readFile(args.path,'utf8'),'const COMPACTION_INSTRUCTION =','export const COMPACTION_INSTRUCTION =','Native compaction instruction export'),loader:'ts'}));
     }}]});
   const dependencies=[...new Set(Object.values(result.metafile.outputs).flatMap(o=>o.imports.filter(i=>i.external).map(i=>i.path)))];
   const {writeFile}=await import('node:fs/promises');

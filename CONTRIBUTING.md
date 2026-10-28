@@ -48,3 +48,5 @@ CI 只构建一次，并用 `node scripts/test-ci.mjs run core --built` 汇总�
 市场投稿与更新遵循[文档维护规范](docs/documentation.md)和[当前市场记录](docs/releases.md#市场同步记录2026-10-28)：依各市场规则与实际需要维护同一条目，禁止无实质变化的逐版改帖、重复投稿与催审。自动索引不逐版通知；先核对最新模板和审核意见再写入外部系统。
 
 运行包排除网站媒体、站点静态资源、文档站构建和评测／性能工具；源码与网站保留完整内容，包内文档插图链接到公开资源。`scripts/package-policy.mjs` 由公开文件／prepack 和实际包交付检查共同执行。保留离线准备、启动诊断、构建输入和 vendor 原始快照；源码目录是开发入口。composer 槽位由 `scripts/chat-style-adapter.mjs` 在指纹验证后进行 AST 提取并直接导出，缺失、重复、未知 ID 或动态顺序均阻止构建；变更运行 `node --test test/chat-style-adapter.test.mjs`，受影响客户端需重建。
+
+宿主浏览器组件统一使用 `scripts/host-build-contracts.mjs` 校验 SDK／组件身份、ModuleLoader 注册结构、样式归属数量和唯一替换锚点；通过宿主解析依赖，不能扫描 `.pnpm` 布局选副本，离线平铺布局须能生成相同产物。源码位置编辑按原始 AST 从后向前应用。`host-build-contracts` 与现有实际包交付回归接入 core；归档检查同时核对源 package.json、声明入口和安装补丁及包内文档链接，源码链接可用不能代替安装包检查。仅存在于源码仓库的文档入口链接到公开源码，站点指南链接到线上产品页。

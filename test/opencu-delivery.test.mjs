@@ -18,9 +18,11 @@ const vendor = {
   [helper]: Buffer.from('synthetic helper bytes; never executed\n'),
 };
 const manifest = Buffer.from(JSON.stringify({ files: Object.fromEntries(Object.entries(vendor).map(([name, bytes]) => [name, hash(bytes)])) }) + '\n');
-const baseline = { client, manifest };
+const packageJson = Buffer.from(JSON.stringify({ main: 'src/index.mjs', exports: { './client': './lib/client.js' } }));
+const baseline = { client, manifest, packageJson };
 const entries = () => new Map([
   ['package/lib/client.js', client], ['package/vendor/opencu.json', manifest],
+  ['package/package.json', packageJson], ['package/src/index.mjs', Buffer.from('export const synthetic = true;')], ['package/LICENSE', Buffer.from('Synthetic license fixture')],
   ...Object.entries(vendor).filter(([name]) => name !== 'lib/client.js').map(([name, bytes]) => ['package/vendor/opencu/' + name, bytes]),
 ]);
 
@@ -44,7 +46,7 @@ async function archive(t, files = entries(), helperMode = 0o755, ordinaryMode = 
 
 test('rebuilt root runtime must equal HEAD even for a whitespace-only change', async t => {
   const path = await directory(t);
-  for (const [name, bytes] of [['lib/client.js', client], ['vendor/opencu.json', manifest]]) {
+  for (const [name, bytes] of [['lib/client.js', client], ['vendor/opencu.json', manifest], ['package.json', packageJson]]) {
     await mkdir(dirname(join(path, name)), { recursive: true });
     await writeFile(join(path, name), bytes);
   }
@@ -70,6 +72,23 @@ test('actual runtime archive rejects website media and maintainer-only tools', a
     const packed = await archive(t, files);
     assert.throws(() => verifyDeliveryArchive(packed, baseline), /Non-runtime files in OMD package/);
   }
+});
+
+test('actual archive cannot drop an entrypoint or rewrite its manifest to hide it', async t => {
+  const files = entries(); files.delete('package/src/index.mjs');
+  const missing = await archive(t, files);
+  assert.throws(() => verifyDeliveryArchive(missing, baseline), /Missing package entrypoint: src\/index.mjs/);
+  files.set('package/package.json', Buffer.from(JSON.stringify({ main: 'lib/client.js' })));
+  const disguised = await archive(t, files);
+  assert.throws(() => verifyDeliveryArchive(disguised, baseline), /package.json differs/);
+});
+
+test('packaged documentation checks final inventory and ignores fenced examples', async t => {
+  const files = entries(); files.set('package/README.md', Buffer.from('[site](docs/index.html)'));
+  const broken = await archive(t, files);
+  assert.throws(() => verifyDeliveryArchive(broken, baseline), /Missing packaged documentation targets/);
+  files.set('package/README.md', Buffer.from('[site](https://example.invalid/)\n```md\n[example](not-shipped)\n```\n'));
+  verifyDeliveryArchive(await archive(t, files), baseline);
 });
 
 for (const mode of [0o644, 0o700]) test(`actual tgz helper mode ${mode.toString(8)} fails despite matching bytes`, async t => {
@@ -129,8 +148,9 @@ for (const mode of [0o644, 0o700]) test(`production pack normalizes ${mode.toStr
     actualVendor[name] = await readFile(new URL('../vendor/opencu/' + name, import.meta.url));
   }
   const actualManifest = Buffer.from(JSON.stringify({ files: Object.fromEntries(Object.entries(actualVendor).map(([name, bytes]) => [name, hash(bytes)])) }) + '\n');
-  const actualBaseline = { client, manifest: actualManifest };
+  const actualBaseline = { ...baseline, manifest: actualManifest };
   const files = new Map([
+    ...entries(),
     ['package/lib/client.js', client], ['package/vendor/opencu.json', actualManifest],
     ...Object.entries(actualVendor).filter(([name]) => name !== 'lib/client.js').map(([name, bytes]) => ['package/vendor/opencu/' + name, bytes]),
   ]);

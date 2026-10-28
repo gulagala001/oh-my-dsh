@@ -1,7 +1,7 @@
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {readFileSync} from 'node:fs';
-import {assertPackageScope} from './package-policy.mjs';
+import {assertPackageScope,assertPackageDocumentation} from './package-policy.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 const license=readFileSync(new URL('../LICENSE',import.meta.url),'utf8');
@@ -15,5 +15,6 @@ for(const ref of git(['rev-list',`${base}..HEAD`]).trim().split('\n').filter(Boo
 const packed=JSON.parse(execFileSync('npm',['pack','--ignore-scripts','--dry-run','--json'],{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024,stdio:['ignore','pipe','pipe']}))[0];
 check(packed.files.map(f=>f.path),'Actual npm package');
 assertPackageScope(packed.files.map(f=>f.path));
+assertPackageDocumentation(packed.files.map(f=>f.path),file=>readFileSync(new URL('../'+file,import.meta.url)));
 if(!packed.files.some(f=>f.path==='LICENSE'))throw Error('Actual package is missing the OMD license');
 console.log(`Public files/history/package passed (${packed.files.length} package files).`);
