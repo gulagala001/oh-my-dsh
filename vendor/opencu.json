@@ -4,7 +4,7 @@
   "source": "opencu@2.2.2-dsh.0.2.1-rc.3",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.3",
-  "archiveSha256": "0645c53c30e75cbbd7a6dc510373a0df23f100b86d54a6c5961f1e6e25381b3f",
+  "archiveSha256": "50296bcfc85f824e5a194048c16d04196b94a6550b4123c904aeafea8535db8e",
   "files": {
     "CHANGELOG.md": "e4afe133043f93f55b9822d884f1f3e654d234de6bfe41a8b1d54ca2a2205bd1",
     "DEVELOPMENT.md": "aaf2f98d0a20e7319014877fa3bf23dd78c172d145fd33bb26990afab0cdf123",
@@ -102,7 +102,6 @@
     "lib/client.js": "b76f8b4cb4580f72f8c2f66ae19d1cb84bd206283776df435aec290b225f501d",
     "lib/cursor.html": "4cb6dc405d432fb54a6b21ea18a5ef6617f1d3793e40928b0705b508f8736261",
     "lib/extension.zip": "2d2b0dd32ea9090fe41929122144d88adde85e67ed3c40a4cb7d9c5c79417f63",
-    "lib/host-build.json": "0c9ed4b966c49938abfea7a021f6702c5f1bc98f294fef06b446799f4af1e80c",
     "lib/page-annotations.js": "5d188c13da117bbff3498791df73bae67fe4619cae3c26264be2e9b5a35e6799",
     "lib/page-cursor.js": "f6ca26cc5dfe7f9d8d42685f254b7e23bbeea83eda50f0159aaf8553a4f0cd45",
     "lib/presentation.html": "4e31f907fe0172debdccf6532537f1d150818d359245fac494b032b5820f69f6",
@@ -779,5 +778,5 @@
     "src/runtime.mjs": "be6481fb738d40420f96cba8be1ab45b2b6566e721d053810464455050300a86",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
   },
-  "sourceCommit": "ff01e1a802d2dceb0fe6873e6ae56c6283daf763"
+  "sourceCommit": "64f289140b263111d60783d9814861e12c1cc51f"
 }
