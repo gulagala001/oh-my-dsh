@@ -32,7 +32,7 @@
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "check": "node --check src/index.mjs && node --check src/engine.mjs && node --check src/replay.mjs && node --check src/shared.mjs",
+    "check": "node --check src/index.mjs && node --check src/engine.mjs && node --check src/replay.mjs && node --check src/recovery.mjs && node --check src/shared.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "docs:write": "node scripts/check-docs.mjs --write",
     "check:public": "node scripts/check-public-files.mjs",

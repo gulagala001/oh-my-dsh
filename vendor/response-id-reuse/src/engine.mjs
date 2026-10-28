@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { plainReasoning, replayInput, storedReplayMode } from './replay.mjs';
+import { ContinuationHealth, FirstOutputTimeout, boundedErrorBody, errorDetails, outputEvent, sendAttempt } from './recovery.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const canonical = value => JSON.stringify(sort(value));
@@ -63,8 +64,9 @@ function rejection(status, error) {
   return null;
 }
 export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
-  capabilityTtlMs = 86400000 } = {}) {
+  capabilityTtlMs = 86400000, recovery = {} } = {}) {
   const capabilities = new Map(), chains = new Map(), replayChecks = new Map();
+  const health = new ContinuationHealth({ ...recovery, now });
   const stats = { requests: 0, full: 0, continued: 0, fallbacks: 0, probeRequests: 0, storageReads: 0, last: null };
   let closed = false;
   const prune = (map, limit) => {
@@ -74,7 +76,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
   const inspect = () => ({ version: 1, mode: 'passive-no-probes', pid: process.pid, ...stats,
     capabilities: [...capabilities.values()].map(({ provider, model, state, reason, checkedAt, expiresAt, replayMode }) =>
       ({ provider, model, state, reason, checkedAt, expiresAt, replayMode })),
-    activeChains: chains.size, updatedAt: new Date(now()).toISOString() });
+    activeChains: chains.size, continuationHealth: health.inspect(), updatedAt: new Date(now()).toISOString() });
   const persist = () => {
     prune(capabilities, 512); prune(chains, 256);
   };
@@ -99,7 +101,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
     replayChecks.set(key, pending);
     try { return await pending; } finally { if (replayChecks.get(key) === pending) replayChecks.delete(key); }
   }
-  function observe(response, commit, finish, onPartial) {
+  function observe(response, commit, finish, onPartial, onOutput) {
     const headers = new Headers(response.headers); headers.delete('content-length');
     const reader = response.body?.getReader();
     if (!reader) { finish(); return response; }
@@ -110,7 +112,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         try {
           const { value, done } = await reader.read();
           if (done) {
-            if (!sse) { try { await commit(JSON.parse(buffer)); complete = true; } catch {} }
+            if (!sse) { try { onOutput(); await commit(JSON.parse(buffer)); complete = true; } catch {} }
             if (!complete) onPartial(); finish(); controller.close(); return;
           }
           buffer += decoder.decode(value, { stream: true });
@@ -121,6 +123,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
               const line = buffer.slice(0, pos); buffer = buffer.slice(pos + 1);
               if (!line.startsWith('data:')) continue;
               let event; try { event = JSON.parse(line.slice(5)); } catch { continue; }
+              if (outputEvent(event)) onOutput();
               if (event.type === 'response.completed') { await commit(event.response); complete = true; }
               if (['response.failed', 'response.incomplete', 'error'].includes(event.type)) onPartial();
             }
@@ -155,6 +158,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       const capabilityKey = sha(canonical({ scope, parameters, kinds: inputKinds(allInput) }));
       const checked = capabilities.get(capabilityKey);
       const disabled = checked?.expiresAt > now() && checked.state === 'unsupported';
+      const route = health.route(capabilityKey, meta);
       stats.requests++;
       let replayMode = await resolveReplay(capabilityKey, meta, request, meta.replayHistory?.sample, baseFetch);
       const effectiveInput = replayInput(allInput, meta.replayHistory, replayMode);
@@ -177,7 +181,10 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         if (candidate.chainKey === chainKey && (!prior || candidate.prefix.length >= prior.prefix.length)
             && isPrefix(inputHashes, candidate.prefix)) { prior = candidate; priorKey = key; }
       }
-      const useId = Boolean(prior);
+      const lease = prior ? health.enter(route) : null;
+      const useId = Boolean(prior && lease);
+      const releaseLease = () => health.release(lease);
+      if (lease) request.signal.addEventListener('abort', releaseLease, { once: true });
       // Response IDs name immutable history, not single-use tokens. Retain the
       // confirmed parent across failed attempts and concurrent continuations.
       // Only a definitive provider rejection invalidates that parent.
@@ -187,14 +194,22 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       const h = new Headers(headers); h.delete('content-length');
       if (vendor.bailian) h.set('x-dashscope-session-cache', 'enable');
       const wireText = JSON.stringify(wire);
-      const row = { provider: meta.provider, model: meta.model, mode: useId ? 'continued' : 'stored-full',
+      const row = { provider: meta.provider, model: meta.model, mode: useId ? 'continued' : prior ? 'cooldown-full' : 'stored-full',
         inputItems: allInput.length, sentItems: wire.input.length, inputBytes: Buffer.byteLength(originalText),
-        sentBytes: Buffer.byteLength(wireText), fallback: null };
+        sentBytes: Buffer.byteLength(wireText), fallback: null, attempts: [] };
       let eligible = true, fallback = false;
-      const finish = () => { stats.last = row; persist(); };
+      let cancelAttempt, attempt;
+      const markOutput = () => { if (attempt && attempt.firstOutputMs == null) attempt.firstOutputMs = performance.now() - attempt.startedAt; };
+      const endAttempt = () => { if (attempt && attempt.durationMs == null) attempt.durationMs = performance.now() - attempt.startedAt; };
+      const finish = () => {
+        endAttempt(); health.release(lease); request.signal.removeEventListener('abort', releaseLease);
+        stats.last = row; persist();
+      };
       const commit = async output => {
         if (closed || !eligible || request.signal.aborted || row.committed
             || output?.status !== 'completed') return;
+        if (!fallback) health.success(lease);
+        if (body.stream === true) health.sample(route, attempt?.firstOutputMs);
         if (typeof output.id !== 'string' || !output.id || output.id.length > 262144 || output.store !== true || !Array.isArray(output.output)) {
           // One unstored response cannot establish a chain, but it does not
           // reject storage for later requests or invalidate other chains.
@@ -212,20 +227,36 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         capability(capabilityKey, meta, useId && !fallback ? 'supported' : 'stored', useId && !fallback ? 'normal-continuation-accepted' : 'normal-response-storage-confirmed');
         row.committed = true; persist();
       };
-      const send = (text, outgoingHeaders) => baseFetch(new Request(request, { headers: outgoingHeaders,
-        body: text, redirect: 'error' }));
+      const replaySafe = !body.tools?.some(tool => tool.type !== 'function');
+      const send = async (text, outgoingHeaders) => {
+        attempt = { mode: fallback ? 'full-fallback' : useId ? 'continued' : 'full', startedAt: performance.now(), firstOutputMs: null };
+        row.attempts.push(attempt);
+        try {
+          const result = await sendAttempt(baseFetch, request, text, outgoingHeaders,
+            useId && replaySafe && body.stream === true
+              ? Math.max(fallback ? health.defaultWaitMs : 0, health.budget(route)) : null, markOutput);
+          cancelAttempt = result.cancel;
+          attempt.status = result.response.status;
+          return result.response;
+        } catch (error) { attempt.error = error.name; endAttempt(); throw error; }
+      };
       try {
-        let response = await send(wireText, h);
-        if (!response.ok) {
-          let error; try { error = await response.clone().json(); } catch {}
-          const why = rejection(response.status, error);
-          if (why && (useId || why === 'unsupported') && !request.signal.aborted) {
-            const temporary = why === 'server-error';
+        let response, why;
+        try { response = await send(wireText, h); }
+        catch (error) {
+          if (error instanceof FirstOutputTimeout && useId && !request.signal.aborted) why = 'first-output-timeout';
+          else throw error;
+        }
+        if (response && !response.ok) why = rejection(response.status, await errorDetails(response));
+        if (why && (useId || why === 'unsupported') && !request.signal.aborted
+            && (replaySafe || !['server-error', 'first-output-timeout'].includes(why))) {
+            const temporary = why === 'server-error' || why === 'first-output-timeout';
             // An upstream failure does not invalidate an immutable parent or
-            // establish that storage is unsupported. Retry this request only.
+            // establish that storage is unsupported. Temporarily avoid this path.
+            if (temporary) health.fail(lease);
             if (!temporary && priorKey) for (const [key, candidate] of chains)
               if (candidate.chainKey === chainKey && candidate.id === prior.id) chains.delete(key);
-            await response.body?.cancel();
+            cancelAttempt?.(); endAttempt();
             fallback = true; row.fallback = why; row.mode = 'full-fallback'; stats.fallbacks++;
             const payload = { ...effectiveBody, store: why !== 'unsupported' };
             delete payload.previous_response_id;
@@ -239,12 +270,14 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
             row.sentItems = effectiveInput.length; row.sentBytes = Buffer.byteLength(fallbackText);
             const retryHeaders = eligible ? h : new Headers(headers); retryHeaders.delete('content-length');
             response = await send(fallbackText, retryHeaders);
-          }
         }
         row.status = response.status;
         if (useId && !fallback && response.ok) stats.continued++; else stats.full++;
-        if (!response.ok) { eligible = false; finish(); return response; }
-        return observe(response, commit, finish, () => { eligible = false; });
+        if (!response.ok) {
+          eligible = false; finish();
+          return useId ? boundedErrorBody(response, cancelAttempt, recovery.errorBodyWaitMs) : response;
+        }
+        return observe(response, commit, finish, () => { eligible = false; }, markOutput);
       } catch (error) { eligible = false; row.error = request.signal.aborted ? 'cancelled' : 'network'; finish(); throw error; }
     };
   }
@@ -252,7 +285,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
   return { fetchFor, inspect,
     async flush() {},
     async close() {
-      closed = true; capabilities.clear(); chains.clear(); replayChecks.clear();
+      closed = true; capabilities.clear(); chains.clear(); replayChecks.clear(); health.routes.clear();
     },
   };
 }
