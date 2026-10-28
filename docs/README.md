@@ -1,5 +1,7 @@
 # Oh My DSH 使用文档
 
+准备中的版本：[OMD 1.2.0（未发布）](release-1.2.0.md)。
+
 [English](README_EN.md) · [项目介绍](../README.md) · [下载与版本](releases.md)
 
 从你现在要做的事开始，无需读完全部文档。OMD 继续使用 DSH 原有模型、会话、工具与技能。

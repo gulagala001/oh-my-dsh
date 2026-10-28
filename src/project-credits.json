@@ -17,8 +17,8 @@
       "source": "vendor/opencu/package.json",
       "license": "See component notices",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
-      "version": "2.2.1-dsh.0.2.1-rc.3",
-      "sourceSha256": "35de0b695f1f87cc9e224930bfda1af887c6f8da986ea4016f412b31074efbd8",
+      "version": "2.2.2-dsh.0.2.1-rc.3",
+      "sourceSha256": "effa3f264ce26874acebd32660e4b08bcf33b7351e4a2704038b7a7f6fea1c1f",
       "group": "products"
     },
     {
@@ -218,8 +218,8 @@
       "license": "Original upstream rights apply",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
       "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json",
-      "version": "SHA256:b139f75d7bc1b3552212cadb5436c920690b89493de8e1af3b2d05524331fb4e",
-      "sourceSha256": "b139f75d7bc1b3552212cadb5436c920690b89493de8e1af3b2d05524331fb4e",
+      "version": "SHA256:b09aa51dad7d5ddeb8d13410a8c878dea0e88b3e9593d4809e3f710f63d83c82",
+      "sourceSha256": "b09aa51dad7d5ddeb8d13410a8c878dea0e88b3e9593d4809e3f710f63d83c82",
       "group": "sources"
     },
     {
@@ -498,8 +498,8 @@
       "source": "vendor/response-id-reuse/package.json",
       "license": "MIT",
       "notice": "vendor/response-id-reuse/LICENSE",
-      "version": "0.1.3-dsh.0.2.1-rc.3",
-      "sourceSha256": "44dde5759ab3c294b9d3cae55c514264ca88a0a61ff1bb0a0caaddadf3e1cc9a",
+      "version": "0.1.4-dsh.0.2.1-rc.3",
+      "sourceSha256": "8baa90a123de6fb7cd09c90582ec2ad8c33f9de4722eb9c381d6c48f23a5456d",
       "group": "products"
     },
     {

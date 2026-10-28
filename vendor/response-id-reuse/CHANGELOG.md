@@ -1,3 +1,53 @@
+# Response ID Reuse 0.1.4 · DSH 0.2.1-rc.3 · 未发布 / Unreleased
+
+[中文](#zh-014) | [English](#en-014)
+
+<a id="zh-014"></a>
+
+## 中文
+
+本版正在准备，尚未公开发布。
+
+### 问题修复
+
+- 为流式 ID 续传设置自适应首个有效输出等待时间；超时或临时服务端错误时仅完整回退一次，不再因心跳或空消息无限等待。
+- 临时故障保留父响应 ID，自动冷却后放行一条正常请求试恢复，避免长时间全量回传或并发请求相互清除故障状态。
+- 限制失败正文的读取时间和大小，避免重试后的错误处理再次卡住。
+
+### 体验优化
+
+- 沿用实际请求的模型、参数、历史与取消语义，不增加设置或额外模型探测。
+
+<a id="en-014"></a>
+
+## English
+
+This release is being prepared and has not been published.
+
+### Bug Fixes
+
+- Bound the first useful output of streamed ID continuation with an adaptive deadline. Timeouts and transient server errors allow one full replay; heartbeats and empty messages do not extend the wait indefinitely.
+- Retain parent response IDs during transient failures, then allow one normal request after cooldown to test recovery without cross-request health-state resets.
+- Bound error-body reads by time and size so failed fallback handling cannot hang again.
+
+### Improvements
+
+- Preserve the model, parameters, history and cancellation semantics of the real request, without new settings or extra model probes.
+
+## 安装 / Installation
+
+精确宿主为 **DSH 0.2.1-rc.3**。待发布包名为 `gulagala001-dsh-response-id-reuse-0.1.4-dsh.0.2.1-rc.3.tgz`；当前公开安装入口继续使用下方已发布版本。保留 profile、配置与会话，按宿主提示在任务结束后重新加载。
+
+The exact host is **DSH 0.2.1-rc.3**. The prepared package is `gulagala001-dsh-response-id-reuse-0.1.4-dsh.0.2.1-rc.3.tgz`; use the existing published package below until this release is available. Preserve profiles, configuration and conversations, and reload after active tasks finish if requested.
+
+| DSH | 当前公开安装包 / Current published package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.1-rc.3 | [Response ID Reuse 0.1.3-dsh.0.2.1-rc.3](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.3-dsh.0.2.1-rc.3/gulagala001-dsh-response-id-reuse-0.1.3-dsh.0.2.1-rc.3.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.3-dsh.0.2.1-rc.3/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-response-id-reuse/blob/main/README.md)
+
+---
+
 # Response ID Reuse 0.1.3 · DSH 0.2.1-rc.3
 
 [中文](#zh-013) | [English](#en-013)

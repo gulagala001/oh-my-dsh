@@ -2,6 +2,19 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.1.2.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "OMD 1.2.0 · DSH 0.2.1-rc.3",
+      "notes": [
+        "新增 Claude Desktop 外观，完善消息、输入、模型选择、附件、权限与工作台交互。",
+        "集成 OpenCU 2.2.2，修复浏览器、原生助手、审批、输入释放和冷恢复之间的阻塞与取消竞争；单个标签故障不再拖住其他标签。",
+        "聊天创建时即固定独立目录，首次及后续发送保持同一会话与目录；历史文件链接按消息当时的目录打开。",
+        "集成 Response ID Reuse 0.1.4，续传首个输出自动限时，临时错误只完整回退一次，冷却后自动尝试恢复。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.2.0.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.1.1.2",
       "severity": "normal",
       "unpublished": false,

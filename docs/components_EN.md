@@ -12,7 +12,7 @@ This catalog covers independently maintained products, optional integrations, ho
 
 Computer and browser observation, interaction, annotations and previews Bundled plugin; also distributed independently。
 
-- Pinned source / version: [2.2.1-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- Pinned source / version: [2.2.2-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - License / attribution: See component notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -93,7 +93,7 @@ Animated character interface and whale visuals Theme component distributed with 
 
 Automatic Responses ID continuation and full-request fallback Bundled backend plugin with shared runtime ownership。
 
-- Pinned source / version: [0.1.3-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
+- Pinned source / version: [0.1.4-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
 
 ## Optional integrations and recommendations
@@ -223,7 +223,7 @@ Host, sessions, tools and UI components Host, source or asset; scope documented 
 
 Original frontend assets used by OpenCU and provenance Host, source or asset; scope documented in provenance。
 
-- Pinned source / version: [SHA256:b139f75d7bc1b3552212cadb5436c920690b89493de8e1af3b2d05524331fb4e](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- Pinned source / version: [SHA256:b09aa51dad7d5ddeb8d13410a8c878dea0e88b3e9593d4809e3f710f63d83c82](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

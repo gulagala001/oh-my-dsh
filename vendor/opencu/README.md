@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.2.1-dsh.0.2.1-rc.3"><img alt="OpenCU 2.2.1" src="https://img.shields.io/badge/release-OpenCU%202.1.0-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.2.1-dsh.0.2.1-rc.3"><img alt="OpenCU 2.2.1" src="https://img.shields.io/badge/release-OpenCU%202.2.1-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub 累计下载量" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.1-rc.3" src="https://img.shields.io/badge/DSH-0.2.1--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>

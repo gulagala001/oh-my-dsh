@@ -1,5 +1,7 @@
 # Oh My DSH Documentation
 
+Prepared release: [OMD 1.2.0 (unreleased)](release-1.2.0.md).
+
 [简体中文](README.md) · [Project overview](../README_EN.md) · [Downloads and versions](releases.md)
 
 Start with what you want to do. OMD retains your DSH models, conversations, tools and skills.

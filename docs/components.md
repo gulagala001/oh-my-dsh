@@ -12,7 +12,7 @@
 
 电脑与浏览器观察、操作、批注和预览 内置插件；支持独立安装与共装。
 
-- 固定来源／版本: [2.2.1-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- 固定来源／版本: [2.2.2-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - 许可／归属: See component notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -93,7 +93,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共装时共享一份运行实例。
 
-- 固定来源／版本: [0.1.3-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
+- 固定来源／版本: [0.1.4-dsh.0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
 
 ## 可选集成与推荐
@@ -223,7 +223,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 OpenCU 使用的原始界面组件及来源记录 宿主／来源／素材，具体使用范围见来源记录。
 
-- 固定来源／版本: [SHA256:b139f75d7bc1b3552212cadb5436c920690b89493de8e1af3b2d05524331fb4e](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- 固定来源／版本: [SHA256:b09aa51dad7d5ddeb8d13410a8c878dea0e88b3e9593d4809e3f710f63d83c82](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev
