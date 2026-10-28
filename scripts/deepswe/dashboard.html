@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeepSWE · OMD 评测监控</title>
+<style>
+:root{color-scheme:light;--bg:#f5f6fa;--text:#17213a;--muted:#67738c;--blue:#3865f6;--border:#e5e9f2;--green:#17856b}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1480px;margin:auto;padding:30px 34px}header{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:23px}h1{margin:0;font-size:29px;letter-spacing:-1px}h2{font-size:16px;margin:0 0 15px}p{margin:6px 0;color:var(--muted)}.eyebrow{font-size:11px;letter-spacing:2px;color:var(--blue);font-weight:700}.badge{display:inline-block;padding:4px 11px;border-radius:20px;background:#eaf0ff;color:#315bd7;font-size:12px}.live{background:#e6f5ef;color:var(--green)}.topright{text-align:right}.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between}.toolbar a,button,select{font:inherit;background:white;border:1px solid var(--border);border-radius:8px;padding:6px 11px;color:var(--text);text-decoration:none;cursor:pointer}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin:18px 0}.card,.panel{background:white;border:1px solid var(--border);border-radius:13px;padding:20px}.label{color:var(--muted);font-size:12px}.value{font-size:28px;font-weight:650;margin:7px 0 4px;font-variant-numeric:tabular-nums}.sub{font-size:12px;color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}.wide{grid-column:1/-1}.panel svg{width:100%;height:245px;display:block}.empty{height:245px;display:flex;align-items:center;justify-content:center;color:var(--muted);background:#fafbfe;border-radius:8px}.progress{height:5px;background:#eaf0fa;border-radius:5px;overflow:hidden;margin-top:14px}.progress i{height:100%;display:block;background:var(--blue)}.notice{padding:12px 16px;background:#edf2ff;border-radius:9px;color:#3b5192;overflow-wrap:anywhere}.warn{background:#fff4df;color:#875d15}.good{color:var(--green)}.scroll{overflow:auto;max-height:425px}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th{text-align:left;color:var(--muted);font-weight:500;position:sticky;top:0;background:#fff}td,th{padding:10px 12px;border-bottom:1px solid var(--border)}td:first-child,th:first-child{padding-left:0}.name{max-width:380px;overflow:hidden;text-overflow:ellipsis}.dim{color:var(--muted)}.foot{font-size:12px;color:var(--muted);margin:12px 0}a{color:var(--blue)}.legend{font-size:12px;display:flex;gap:20px;color:var(--muted)}.legend b{color:var(--blue)}.hidden{display:none}details{margin-top:12px}summary{cursor:pointer;font-size:13px;color:var(--muted)}#err{display:none}svg text{font:11px system-ui;fill:var(--muted)}@media(max-width:950px){main{padding:20px 16px}.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}header{align-items:start}.value{font-size:25px}}@media(max-width:550px){h1{font-size:23px}.cards{gap:8px}.card{padding:14px}.topright{display:none}}
+</style>
+<main>
+<header><div><div class="eyebrow">LOCAL EVALUATION / DEEPSWE V1.1</div><h1>OMD 的这一轮，跑得怎么样？</h1><p>OMD PTC · 百炼 DeepSeek V4.1 Flash 1017 · max</p></div><div class="topright"><span id="live" class="badge">连接中</span><p id="updated" class="sub">每 5 秒自动更新</p></div></header>
+<div class="toolbar"><div><span class="badge">单轮 · 每题一次 · 零重跑</span> <span class="badge">难 / 易交替</span></div><a href="/report.json" download="deepswe-report.json">导出数据 ↓</a></div>
+<p id="err" class="notice warn">看板连接中断，当前展示的是最后一次数据。</p>
+<div class="cards">
+<div class="card"><div class="label">正式进度</div><div id="progressValue" class="value">—</div><div id="progressText" class="sub">等待读取</div><div class="progress"><i id="bar"></i></div></div>
+<div class="card"><div class="label">可信通过率 · 当前已结束题目</div><div id="rate" class="value">—</div><div id="rateSub" class="sub">官方 max 参考 77.0%</div></div>
+<div class="card"><div class="label">本轮费用估算 · 百炼人民币</div><div id="cost" class="value">—</div><div id="costSub" class="sub">按回执与峰谷单价计算</div></div>
+<div class="card"><div class="label">本轮累计 Token</div><div id="tokens" class="value">—</div><div id="tokenSub" class="sub">缓存属于输入，思考属于输出</div></div>
+<div class="card"><div class="label">缓存命中 / 输入 Token</div><div id="cache" class="value">—</div><div id="calls" class="sub">等待首条回执</div></div>
+</div>
+<div id="current" class="notice">正在读取运行状态…</div>
+<div class="grid">
+<section class="panel"><h2>通过率趋势</h2><div class="legend"><span><b>━━</b> OMD 当前可信通过率</span><span>┄┄ 官方 1017 max · 77.0%</span></div><div id="passChart"></div><p class="foot">横轴为已结束题数。异常与待审题不计通过；未结束题不冒充失败。完整 113 题结束前为阶段读数。</p></section>
+<section class="panel"><div class="toolbar"><h2>累计消耗趋势</h2><select id="metric" aria-label="消耗指标"><option value="cny">费用估算（¥）</option><option value="tokens">Token</option></select></div><div id="usageChart"></div><p class="foot">横轴为请求完成时间；随真实网关回执更新，正在生成但尚无 usage 的请求暂未计入。</p></section>
+<section class="panel"><h2>通过率 × 每题成本</h2><div id="scatter"></div><p class="foot">OMD 按 DeepSeek 当前忙时美元单价重算，百炼实用渠道费用另列。官方横坐标约 $0.20 来自图读数，不能据此声称精确节省比例。</p></section>
+<section class="panel"><h2>与原版 max 对照</h2><div class="scroll"><table><thead><tr><th>指标</th><th>本轮 OMD PTC</th><th>官方 mini_swe_v2</th></tr></thead><tbody id="compare"></tbody></table></div><p class="foot">模型与强度相同；宿主、渠道和运行条件不同。官方未公开的 Token、精确成本与逐题成绩显示为未披露，不另跑第二轮。</p><div id="coverage" class="notice"></div></section>
+<section class="panel wide"><div class="toolbar"><h2>任务队列与结果</h2><select id="filter" aria-label="任务筛选"><option value="all">全部任务</option><option value="started">已开始</option><option value="pending">未开始</option></select></div><div class="scroll"><table><thead><tr><th>顺序</th><th>题目</th><th>难度</th><th>状态</th><th>耗时</th><th>调用 / 已计量</th><th>Token</th><th>费用 ¥</th><th>原始 / 可信</th></tr></thead><tbody id="tasks"></tbody></table></div><p id="orderNote" class="foot"></p></section>
+</div>
+<details><summary id="historyTitle">环境验收与历史试跑消耗（不计正式成绩）</summary><div class="panel"><div class="scroll"><table><thead><tr><th>记录</th><th>分类</th><th>Token</th><th>费用估算 ¥</th><th>计量来源</th></tr></thead><tbody id="history"></tbody></table></div></div></details>
+<details><summary>计费与参考来源</summary><p class="foot">费用为公开按量价估算，不是账户实扣，未扣免费额度或优惠。北京时区 08:00–22:00：输入 / 缓存 / 输出每百万 Token ¥2 / ¥0.2 / ¥8；其他时间 ¥1 / ¥0.1 / ¥4。按请求开始时间估算时段，跨边界账单可能不同。计量缺失不当作零，缓存拆分缺失时显示上下界；思考不重复加到输出。美元归一价为 $0.30 / $0.006 / $1.20，未做汇率换算。</p><p><a href="https://help.aliyun.com/zh/model-studio/model-pricing" target="_blank" rel="noreferrer">百炼价格</a> · <a href="https://help.aliyun.com/zh/model-studio/context-cache" target="_blank" rel="noreferrer">缓存规则</a> · <a href="https://api-docs.deepseek.com/quick_start/pricing/" target="_blank" rel="noreferrer">美元参考价格</a> · <a href="https://api-docs.deepseek.com/news/news261017/" target="_blank" rel="noreferrer">官方 1017 图表</a> · <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017" target="_blank" rel="noreferrer">官方 77.0% 模型卡</a></p></details>
+<p class="foot">本地只读看板 · 隐藏测试独立评分 · 每题完成后自动审计 · 更新日期 2026-10-28</p>
+</main>
+<script>
+const el=id=>document.getElementById(id), esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=n=>n==null?'—':new Intl.NumberFormat('zh-CN',{maximumFractionDigits:0}).format(n), pct=n=>n==null?'—':(n*100).toFixed(1)+'%', compact=n=>n==null?'—':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'k':num(n), money=n=>n==null?'—':n.toFixed(3), cost=b=>!b?'—':Math.abs(b[0]-b[1])<1e-8?money(b[0]):money(b[0])+'–'+money(b[1]), duration=n=>n==null?'—':Math.floor(n/3600)+'h '+Math.floor(n%3600/60)+'m';
+let data;
+function chart(target,points,{ref=null,ymax=null,xlabel='',yformat=compact,xformat=compact,scatter=false}={}){
+ const W=620,H=245,L=57,R=20,T=22,B=35;let xp=points.map(p=>p.x);if(scatter)xp.push(.2);const mx=Math.max(...xp,1e-3)*1.08,my=ymax??Math.max(...points.map(p=>p.y),1)*1.1;
+ if(!points.length&&ref==null&&!scatter){el(target).innerHTML='<div class="empty">正式开跑后，首条回执将在这里形成趋势</div>';return}
+ const x=v=>L+v/mx*(W-L-R),y=v=>H-B-v/my*(H-T-B);let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(target)}">`;
+ for(let i=0;i<=4;i++){let v=my*i/4;s+=`<line x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}" stroke="#edf0f6"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${esc(yformat(v))}</text>`;let u=mx*i/4;s+=`<text x="${x(u)}" y="${H-15}" text-anchor="middle">${esc(xformat(u))}</text>`}
+ if(ref!=null)s+=`<line x1="${L}" y1="${y(ref)}" x2="${W-R}" y2="${y(ref)}" stroke="#94a4d0" stroke-dasharray="5 5"/>`;
+ if(points.length&&!scatter)s+=`<polyline points="${points.map(p=>x(p.x)+','+y(p.y)).join(' ')}" fill="none" stroke="#3865f6" stroke-width="2.5"/>`;
+ for(const p of points)s+=`<circle cx="${x(p.x)}" cy="${y(p.y)}" r="${scatter?5:2.5}" fill="#3865f6"><title>${esc(p.tip??yformat(p.y))}</title></circle>`;
+ if(scatter)s+=`<circle cx="${x(.2)}" cy="${y(.77)}" r="7" fill="#e3a04b"/><text x="${x(.2)+10}" y="${y(.77)-10}">官方 max · 77.0% / ≈$0.20</text>`;
+ if(!points.length)s+=`<text x="${W/2}" y="${H/2}" text-anchor="middle">等待正式评分</text>`;
+ s+='</svg>';el(target).innerHTML=s;
+}
+function render(){if(!data)return;const d=data,u=d.usage;
+ el('live').textContent=d.current?'● 正式运行中':'● 看板在线';el('live').className='badge live';el('updated').textContent='更新于 '+new Date(d.generated_at*1000).toLocaleTimeString()+' · 每 5 秒';
+ el('progressValue').textContent=`${d.completed} / ${d.total}`;el('progressText').textContent=`已评分 ${d.scored} · 可信通过 ${d.passes}`;el('bar').style.width=pct(d.coverage);
+ el('rate').textContent=pct(d.pass_rate);el('rateSub').textContent=d.pass_rate==null?'待正式评分 · 官方参考 77.0%':`距官方参考 ${((d.pass_rate-.77)*100).toFixed(1)} 个百分点`;
+ el('cost').textContent='¥ '+cost(u.cny);el('costSub').textContent=u.missing?`${u.missing} 次请求尚无用量 · 已记录部分`:'输入 + 缓存 + 输出 · 非账单实扣';
+ el('tokens').textContent=compact(u.tokens);el('tokenSub').textContent=`输入 ${compact(u.input)} / 输出 ${compact(u.output)}`;el('cache').textContent=u.input?pct(u.cached/u.input):'—';el('calls').textContent=`${u.calls} 次调用 · ${u.measured} 次已计量`+(u.cache_unknown?' · 缓存部分未知':'');
+ el('current').textContent=d.current?`正在执行 #${d.current.position} · ${d.current.id} · ${d.current.difficulty} · 已用时 ${duration(d.current.elapsed)} · ${d.current.usage.calls} 次请求`:`当前无运行中的题目。${d.completed?'已结束的结果保留在下方。':'正式队列已准备，等待启动。'}`;
+ chart('passChart',d.outcomes.map(p=>({x:p.n,y:p.rate,tip:p.task+' · '+pct(p.rate)})),{ref:.77,ymax:1,yformat:pct,xformat:v=>String(Math.round(v))});
+ const field=el('metric').value,t0=d.trend[0]?.at||0;chart('usageChart',d.trend.map(p=>({x:(p.at-t0)/60,y:p[field]})),{yformat:field==='cny'?v=>'¥'+v.toFixed(2):compact,xformat:v=>Math.round(v)+'m'});
+ chart('scatter',d.pass_rate==null||d.average_completed_reference_usd==null?[]:[{x:d.average_completed_reference_usd,y:d.pass_rate,tip:'OMD · '+pct(d.pass_rate)+' / $'+money(d.average_completed_reference_usd)}],{ymax:1,yformat:pct,xformat:v=>'$'+v.toFixed(2),scatter:true});
+ const compare=[['通过率',pct(d.pass_rate),'77.0%'],['每题成本（美元归一）',d.average_completed_reference_usd==null?'等待评分':'$'+money(d.average_completed_reference_usd),'≈$0.20（图读数）'],['本轮百炼费用','¥'+cost(u.cny),'渠道不同'],['累计输入 / 输出',compact(u.input)+' / '+compact(u.output),'未披露'],['思考 Token（输出子集）',u.reasoning_measured?compact(u.reasoning)+'（已记录）':'未披露','未披露'],['已结束 / 全量',d.completed+' / '+d.total,'113 题']];
+ el('compare').innerHTML=compare.map(r=>'<tr>'+r.map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('');
+ el('coverage').textContent=`用量覆盖：${u.measured}/${u.calls} 次请求。${u.missing?'费用和 Token 暂未包含未回报的请求。':'已回报用量按独立网关原始回执计算。'}`;
+ let rows=[...d.rows,...d.pending.map(r=>({...r,status:'未开始'}))].sort((a,b)=>a.position-b.position);if(el('filter').value==='started')rows=rows.filter(r=>r.status!=='未开始');if(el('filter').value==='pending')rows=rows.filter(r=>r.status==='未开始');
+ el('tasks').innerHTML=rows.map(r=>`<tr><td>${r.position}</td><td class="name" title="${esc(r.title??r.id)}">${esc(r.id)}</td><td>${esc(r.difficulty)}</td><td class="${r.status==='通过'?'good':'dim'}">${esc(r.status)}</td><td>${duration(r.elapsed)}</td><td>${r.usage?r.usage.calls+' / '+r.usage.measured:'—'}</td><td>${r.usage?compact(r.usage.tokens):'—'}</td><td>${cost(r.usage?.cny)}</td><td>${r.raw??'—'} / ${r.accepted??'—'}</td></tr>`).join('');
+ el('orderNote').textContent=d.schedule_method+' 顺序开跑前冻结，失败与中断不自动重跑。';
+ el('historyTitle').textContent=`环境验收与历史试跑消耗：¥${cost(d.history_usage.cny)} / ${compact(d.history_usage.tokens)} Token（不计正式成绩）`;
+ el('history').innerHTML=d.history.map(r=>`<tr><td>${esc(r.job)}</td><td>${esc(r.status)}</td><td>${compact(r.usage.tokens)}</td><td>${cost(r.usage.cny)}</td><td>${r.source==='gateway'?'独立网关回执':'原生日志·历史参考'}</td></tr>`).join('');
+}
+async function refresh(){try{const r=await fetch('/api/status');if(!r.ok)throw Error(r.status);data=await r.json();el('err').style.display='none';render()}catch{el('err').style.display='block';el('live').textContent='连接中断'}}
+el('metric').onchange=render;el('filter').onchange=render;refresh();setInterval(refresh,5000);
+</script></html>

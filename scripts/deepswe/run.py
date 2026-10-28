@@ -25,6 +25,9 @@ def main():
     sub.add_parser('report')
     sub.add_parser('start')
     sub.add_parser('stop')
+    sub.add_parser('order')
+    monitor = sub.add_parser('monitor')
+    monitor.add_argument('--port', type=int, default=8765)
     run = sub.add_parser('run')
     group = run.add_mutually_exclusive_group(required=True)
     group.add_argument('--task')
@@ -34,6 +37,15 @@ def main():
     run.add_argument('--job-name')
     args = parser.parse_args()
     root = args.root.resolve()
+    if args.command == 'monitor':
+        from monitor import start
+        print(start(root, args.port))
+        return
+    if args.command == 'order':
+        from schedule import schedule
+        order = schedule(root)
+        print(json.dumps(order, ensure_ascii=False, indent=2))
+        return
     settings = json.loads((root / 'config/local.json').read_text())
     (root / 'tmp').mkdir(exist_ok=True)
     env = {**os.environ, **settings['environment'],
@@ -70,22 +82,8 @@ def main():
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return
     if args.command == 'report':
-        results = []
-        for file in sorted((root / 'jobs').glob('*/result.json')):
-            result = json.loads(file.read_text())
-            stats = result.get('stats', {})
-            results.append({'job': file.parent.name, 'result': str(file),
-                            'status': 'running' if not result.get('finished_at') else 'error' if stats.get('n_errored_trials') else 'completed',
-                            'total': result.get('n_total_trials'), 'completed': stats.get('n_completed_trials'),
-                            'errors': stats.get('n_errored_trials'),
-                            'evaluations': [{ 'trials': value.get('n_trials'),
-                                              'metrics': value.get('metrics') if value.get('n_trials') else None }
-                                            for value in stats.get('evals', {}).values()]})
-            if (file.parent / 'audit.json').exists():
-                audit = json.loads((file.parent / 'audit.json').read_text())
-                results[-1]['trusted_pass_rate'] = audit['trusted_pass_rate']
-                results[-1]['review_required'] = audit['review_required']
-        print(json.dumps(results, ensure_ascii=False, indent=2))
+        from monitor import snapshot
+        print(json.dumps(snapshot(root), ensure_ascii=False, indent=2))
         return
     for repo, commit in settings['upstream_commits'].items():
         current = subprocess.check_output(['git', '-C', str(root / 'upstream' / repo), 'rev-parse', 'HEAD'], text=True).strip()
@@ -126,11 +124,14 @@ def main():
     if args.task and args.task not in {t.name for t in tasks}:
         raise SystemExit('Unknown task; use an exact directory name in upstream/deep-swe/tasks')
     selection = manifest['selection']['model']
-    dataset = {'path': str(root / 'upstream/deep-swe/tasks'), 'sample_seed': args.seed}
+    from schedule import schedule
+    ordered = schedule(root)['tasks']
     if args.task:
-        dataset['task_names'] = [args.task]
-    if args.sample:
-        dataset['n_tasks'] = args.sample
+        ordered = [row for row in ordered if row['id'] == args.task]
+    elif args.sample:
+        import random
+        selected = set(random.Random(args.seed).sample([r['id'] for r in ordered], args.sample))
+        ordered = [row for row in ordered if row['id'] in selected]
     name = args.job_name or datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,100}', name):
         raise SystemExit('Job name must be a simple identifier, not a path')
@@ -140,27 +141,28 @@ def main():
         'environment': {'import_path': 'environment:EvaluationDockerEnvironment', 'delete': True},
         'agents': [{'import_path': 'agent:OMDAgent', 'model_name': f"{selection['provider']}/{selection['model']}",
                     'override_setup_timeout_sec': 900, 'kwargs': {'bundle_dir': str(bundle)}}],
-        'datasets': [dataset],
+        'quiet': True,
+        'tasks': [{'path': str(root / 'upstream/deep-swe/tasks' / row['id'])} for row in ordered],
     }
     from pier.models.job.config import JobConfig
     JobConfig.model_validate(config)
     config_path = root / 'config' / f'job-{name}.json'
     if config_path.exists() or (root / 'jobs' / name).exists():
-        raise SystemExit('Job already exists; choose a new job name or use pier job resume')
-    config_path.write_text(json.dumps(config, indent=2))
+        raise SystemExit('Job already exists; automatic resume/rerun is disabled')
     import fcntl
-    from audit import audit_job
     with (root / '.run.lock').open('a') as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise SystemExit('Another evaluation is already running in this environment')
-        result = subprocess.run([str(root / '.venv/bin/pier'), 'run', '-c', str(config_path), '--yes'], env=env)
-        if not (root / 'jobs' / name / 'result.json').exists():
-            raise SystemExit(result.returncode or 1)
-        audited = audit_job(root, root / 'jobs' / name)
-        print(json.dumps({key: audited[key] for key in ['requested_trials', 'trusted_passes', 'trusted_pass_rate', 'review_required']}, indent=2))
-        raise SystemExit(result.returncode or int(not audited['completed'] or audited['review_required'] > 0))
+        overlaps = [row['id'] for row in ordered if (root / 'attempts' / (row['id'] + '.json')).exists()]
+        if overlaps:
+            raise SystemExit('Single-pass task already attempted: ' + ', '.join(overlaps))
+        config_path.write_text(json.dumps(config, indent=2))
+        # The child retains the lock if this launcher is interrupted.
+        result = subprocess.run([str(root / '.venv/bin/python'), str(Path(__file__).with_name('runner.py')),
+                                 str(root), str(config_path)], env=env, pass_fds=(lock.fileno(),))
+        raise SystemExit(result.returncode)
 
 
 if __name__ == '__main__':

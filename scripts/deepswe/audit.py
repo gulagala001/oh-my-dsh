@@ -99,7 +99,7 @@ def regrade(root, task, trial, raw, settings, env):
     return verified
 
 
-def audit_job(root, job_dir):
+def audit_job(root, job_dir, only_trial=None):
     root, job_dir = Path(root).resolve(), Path(job_dir).resolve()
     settings = json.loads((root / 'config/local.json').read_text())
     env = {**os.environ, **settings['environment'], 'TMPDIR': str(root / 'tmp')}
@@ -107,8 +107,14 @@ def audit_job(root, job_dir):
     dirty = subprocess.check_output(['git', '-C', str(dataset), 'status', '--porcelain'], text=True).strip()
     commit = subprocess.check_output(['git', '-C', str(dataset), 'rev-parse', 'HEAD'], text=True).strip()
     source_ok = not dirty and commit == settings['upstream_commits']['deep-swe']
+    previous = {}
+    if only_trial and (job_dir / 'audit.json').exists():
+        previous = {row['trial']: row for row in json.loads((job_dir / 'audit.json').read_text())['trials']}
     rows = []
     for file in sorted(job_dir.glob('*/result.json')):
+        if only_trial and file.parent.name != only_trial and file.parent.name in previous:
+            rows.append(previous[file.parent.name])
+            continue
         detail = json.loads(file.read_text())
         trial = file.parent
         row = {'trial': trial.name, 'official_reward': (detail.get('verifier_result') or {}).get('rewards', {}).get('reward'),
@@ -153,7 +159,9 @@ def audit_job(root, job_dir):
               'trusted_passes': passed, 'trusted_pass_rate': passed / total if total else None,
               'review_required': sum(row['status'] != 'verified' for row in rows), 'trials': rows,
               'scope': 'Isolation, transport policy, patch screening and independent report recomputation; not a proof against every possible runtime test exploit.'}
-    (job_dir / 'audit.json').write_text(json.dumps(report, ensure_ascii=False, indent=2))
+    temporary = job_dir / 'audit.tmp'
+    temporary.write_text(json.dumps(report, ensure_ascii=False, indent=2))
+    temporary.replace(job_dir / 'audit.json')
     return report
 
 

@@ -1,0 +1,42 @@
+{
+  "model": "bailian-responses/deepseek-v4.1-flash-1017/max",
+  "baseline": {
+    "name": "DeepSeek V4.1 Flash 1017 · max · mini_swe_v2",
+    "pass_rate": 0.77,
+    "average_cost_usd_approx": 0.2,
+    "cost_precision": "chart-read approximate; exact value unavailable",
+    "tokens": null,
+    "source": "https://api-docs.deepseek.com/news/news261017/",
+    "model_card": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  },
+  "pricing": {
+    "verified_at": "2026-10-28",
+    "bailian": {
+      "region": "cn-beijing",
+      "currency": "CNY",
+      "peak": {
+        "input": 2,
+        "cached": 0.2,
+        "output": 8
+      },
+      "off_peak": {
+        "input": 1,
+        "cached": 0.1,
+        "output": 4
+      },
+      "peak_hours_beijing": [
+        8,
+        22
+      ],
+      "source": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "cache_source": "https://help.aliyun.com/zh/model-studio/context-cache"
+    },
+    "reference_peak_usd": {
+      "input": 0.3,
+      "cached": 0.006,
+      "output": 1.2
+    },
+    "reference_source": "https://api-docs.deepseek.com/quick_start/pricing/",
+    "note": "Public rate estimate, not account debit. USD is fixed peak repricing, not FX conversion; historical benchmark pricing not established."
+  }
+}
