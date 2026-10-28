@@ -15,7 +15,7 @@ import { whaleSvg } from '../src/client/brand.mjs';
 import { packSkin } from './pack-skin.mjs';
 import { pageScriptDefines } from '../plugins/deepseek-workbench/scripts/page-script-defines.mjs';
 
-for (const skin of ['google-material-expressive', 'ios-liquid-glass', 'codex-desktop', 'claude-cli-terminal']) {
+for (const skin of ['google-material-expressive', 'ios-liquid-glass', 'codex-desktop', 'claude-desktop', 'claude-cli-terminal']) {
   await packSkin(fileURLToPath(new URL(`../src/client/skins/${skin}/`, import.meta.url)),
     fileURLToPath(new URL(`../src/client/skins/bundled/${skin}.json`, import.meta.url)));
 }

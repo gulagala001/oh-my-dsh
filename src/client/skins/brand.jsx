@@ -1,8 +1,9 @@
 import React, { useSyncExternalStore } from 'react';
 import { GlyphBrand } from '../../../plugins/glyph-theme/src/theme/brand.jsx';
 import { TerminalMark } from './claude-cli-terminal/presentation.jsx';
+import { ClaudeDesktopMark } from './claude-desktop/presentation.jsx';
 
-const presentations = { 'glyph-motion': GlyphBrand, 'claude-cli-terminal': TerminalMark };
+const presentations = { 'glyph-motion': GlyphBrand, 'claude-cli-terminal': TerminalMark, 'claude-desktop': ClaudeDesktopMark };
 const presentation = state => state.active !== false && state.advanced.brand.logo === 'theme'
   && presentations[state.skins.find(skin => skin.id === state.selected)?.layout];
 

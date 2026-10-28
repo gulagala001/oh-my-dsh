@@ -75,7 +75,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 主题、配色、背景、字体和外观管理 独立产品；OMD 与它共用外观源码。
 
-- 固定来源／版本: [SHA256:488c7edba1648a1eae208f09bf5bb419aefbe9bc1d2511b9bc04168538cf8042](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
+- 固定来源／版本: [SHA256:2214ef2aab7ebc7b67a602a1d45afdd066a2d9f05744c7d50db0fc392da37c3d](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
 
 ### Glyph
@@ -342,6 +342,15 @@ Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源�
 
 - 固定来源／版本: [3.16.2 (source)](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/zcode/source.json)
 - 许可／归属: Apache-2.0 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### Open Claude UI
+
+[项目](https://github.com/Caho1/open-claude-ui) · Caho1 and contributors
+
+Claude Desktop 主题的设计令牌与组件视觉规范 固定版本的 CDS 样式适配；交互由 DSH 原生组件提供。
+
+- 固定来源／版本: [1.0.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/claude-desktop/source.json)
+- 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#open-claude-ui)
 
 ## 完整锁定依赖清单
 

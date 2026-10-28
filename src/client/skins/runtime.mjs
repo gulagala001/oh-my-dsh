@@ -171,7 +171,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   window.addEventListener('storage', onStorage);
   // The phone layout presents navigation as a full sheet. Use the host action
   // after its own row handler; never move React nodes or simulate button clicks.
-  const hasNavigationSheet = () => state.active && ['ios-liquid', 'codex-desktop', 'claude-cli-terminal'].includes(prepared.get(state.selected)?.skin.layout);
+  const hasNavigationSheet = () => state.active && ['ios-liquid', 'codex-desktop', 'claude-desktop', 'claude-cli-terminal'].includes(prepared.get(state.selected)?.skin.layout);
   const onNavigation = event => {
     if (!hasNavigationSheet() || !matchMedia('(max-width: 600px)').matches) return;
     const target = event.target instanceof Element ? event.target : null;

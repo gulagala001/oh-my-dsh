@@ -43,7 +43,7 @@ export function validateSkin(value, supports) {
   }
   if (typeof (value.css ?? '') !== 'string') throw new Error('css 必须是文本');
   // Layouts are shipped, tested host adapters; imported skins cannot inject layout CSS.
-  if (value.layout !== undefined && !['ios-liquid', 'codex-desktop', 'claude-cli-terminal', 'google-material-expressive', 'glyph-motion'].includes(value.layout)) throw new Error('不支持的皮肤布局');
+  if (value.layout !== undefined && !['ios-liquid', 'codex-desktop', 'claude-desktop', 'claude-cli-terminal', 'google-material-expressive', 'glyph-motion'].includes(value.layout)) throw new Error('不支持的皮肤布局');
   const result = { schemaVersion: SKIN_VERSION, id: value.id, name: value.name.trim(), version: value.version.trim(), tokens, css: value.css || '' };
   if (value.layout) result.layout = value.layout;
   if (new TextEncoder().encode(JSON.stringify(result)).length > MAX_SKIN_BYTES) throw new Error('皮肤包不能超过 1 MB');

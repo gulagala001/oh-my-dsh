@@ -92,7 +92,7 @@ Tool calls are more efficient, with less repeated work in code search, article r
 
 ### Choose your workspace and voice
 
-**Glyph** combines a three-dimensional character whale, local ripples and character controls. Choose from Glyph, native DSH, Codex Desktop, iOS Liquid Glass, Claude CLI and Google Material, with **29 palettes**, backgrounds, fonts and region colors. Existing appearance choices remain saved.
+**Glyph** combines a three-dimensional character whale, local ripples and character controls. Choose from Glyph, native DSH, Codex Desktop, iOS Liquid Glass, Claude Desktop, Claude CLI and Google Material, with **30 palettes**, backgrounds, fonts and region colors. Existing appearance choices remain saved.
 
 **Personality management** separates identity, language style, communication and answer presentation. Manage multiple presets, duplicate and edit them, import/export JSON, or use the supplied creation prompt with an AI. Optional session personalities let each main conversation inherit the global preset, select its own, or disable personality guidance.
 

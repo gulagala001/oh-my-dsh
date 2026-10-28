@@ -181,6 +181,10 @@ The Google Material Expressive skin embeds subsets of Google Sans Flex, Google S
 
 Sources: https://github.com/googlefonts/googlesans-flex, https://github.com/googlefonts/googlesans-code, https://github.com/google/fonts/tree/main/ofl/notosanssc, and https://github.com/google/material-design-icons
 
+# Open Claude UI
+
+The Claude Desktop theme adapts design tokens, composer elevation and message styling from [Caho1/open-claude-ui](https://github.com/Caho1/open-claude-ui/tree/c1f923ae0051a871941b98a0e2e3183a545e6a85), commit `c1f923ae0051a871941b98a0e2e3183a545e6a85`, under the MIT License, copyright (c) 2026 Caho1. The [source record](src/client/skins/claude-desktop/source.json) lists the reference files and host adaptation. The [complete license](vendor/licenses/Open-Claude-UI-MIT.txt) accompanies this distribution. Existing DSH components supply editing, IME, messaging, tools, scrolling and window controls. No proprietary fonts, recordings or upstream application binaries are included.
+
 # Other bundled skin fonts
 
 The Claude CLI skin embeds JetBrains Mono under SIL Open Font License 1.1. Its complete license is included in `docs/skin-font-licenses/` and alongside the source font files. Apple and other operating-system fonts are referenced through system font stacks and are not redistributed.

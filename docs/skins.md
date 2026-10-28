@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [排障](troubleshooting.md)
 
-在「设置 → 外观」选择 **Glyph 字符主题、DSH 原生主题或另外四套主题**，搭配独立配色与背景：
+在「设置 → 外观」选择 **Glyph 字符主题、DSH 原生主题或另外五套主题**，搭配独立配色与背景：
 
 全新外观配置默认使用 Glyph；已有明确保存的主题选择保持不变。DSH 原生选项直接使用宿主的主题、组件与样式。
 
@@ -14,9 +14,10 @@
 | [Codex Desktop](codex-desktop.md) | 黑白强调、冷灰侧栏、悬浮工作台、系统字体与贯通顶栏 |
 | [iOS Liquid Glass](ios-liquid-glass.md) | 圆角玻璃面板、分组设置、悬浮输入区与窄屏导航 |
 | [Claude CLI](claude-cli-terminal.md) | 暖黑与纸白、陶土橙、等宽字体、终端式输入和目录导航 |
+| [Claude Desktop](#claude-desktop) | 温润灰白与深色表面、陶土强调、衬线正文、居中版心和圆角输入框 |
 | [Google Material](google-material-expressive.md) | Android / Google 风格的导航与设置，本地打包 Google Sans、Noto Sans SC 和 Material Symbols |
 
-五套主题均覆盖侧栏、对话、输入区、设置与工作台，并适配明暗和窄屏。Codex Desktop 版本为 1.0.1，其他四套为 1.0.0。早期五套视觉皮肤已移除；浏览器若仍选中已移除的内置 id，会恢复默认外观。
+六套主题均覆盖侧栏、对话、输入区、设置与工作台，并适配明暗和窄屏。Codex Desktop 版本为 1.0.1，其他五套为 1.0.0。早期五套视觉皮肤已移除；浏览器若仍选中已移除的内置 id，会恢复默认外观。
 
 也可以导入 `.omd-skin.json`。导入同一 id 会更新原有皮肤；文件读取期间关闭外观页、改选文件或切换主题后，旧读取不会迟到替换当前选择。皮肤与降低特效选项保存在当前浏览器、当前站点；明暗模式使用 DSH 的设置，可选浅色、深色、跟随系统。皮肤包不执行 JavaScript、不需要网络。
 
@@ -26,13 +27,24 @@
 
 **设置 → Oh My DSH → 高级 → 其他** 中的「每次加载历史」提供 50、200、500 条，默认 200。初次打开对话及「加载更早」使用这个数量；不改变模型上下文，也不自动展开操作记录。插件通过客户端适配原生分页请求，卸载后恢复宿主默认数量。
 
+## Claude Desktop
+
+在外观主题列表选择 **Claude Desktop · 温润桌面**。桌面主题和 Claude CLI 分别保存为独立主题，已有选择不变。
+
+桌面主题采用柔和灰白／深灰层级、陶土色按钮、系统衬线正文与无衬线控件。用户消息靠右，回答采用居中阅读版心，输入框使用圆角与悬浮阴影；侧栏、设置、代码块、键盘焦点和窄屏导航同步适配。输入、中文输入法、附件、模型选择、停止、工具操作及折叠仍沿用 DSH 原生组件。可独立选择「陶土」配色或其他配色，并使用既有背景、字体和降低动态效果设置。
+
+![Claude Desktop 浅色](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/site/media/theme-claude-light.jpg)
+![Claude Desktop 深色](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/site/media/theme-claude-dark.jpg)
+
+设计令牌与组件样式参考 [Open Claude UI](https://github.com/Caho1/open-claude-ui)，固定提交、适配范围和 MIT 许可见[来源记录](../src/client/skins/claude-desktop/source.json)及[第三方声明](../THIRD_PARTY_NOTICES.md#open-claude-ui)。字体使用系统回退栈。
+
 ## 独立选择配色与背景
 
-主题负责布局、字体、圆角、间距与材质；配色负责底色、文字和强调色。配色可选「主题默认配色」或 29 套内置配色，按色系分组；导入主题的颜色也会进入同一列表。选择其它配色不会切换布局，玻璃透明度仍由当前主题决定。浅色、深色和跟随系统继续使用 DSH 原生设置。
+主题负责布局、字体、圆角、间距与材质；配色负责底色、文字和强调色。配色可选「主题默认配色」或 30 套内置配色，按色系分组；导入主题的颜色也会进入同一列表。选择其它配色不会切换布局，玻璃透明度仍由当前主题决定。浅色、深色和跟随系统继续使用 DSH 原生设置。
 
 | 配色分组 | 内置选择 |
 | --- | --- |
-| 经典 | 黑白灰、冰蓝、暖砂、晴空蓝、字符黑白 |
+| 经典 | 黑白灰、冰蓝、暖砂、陶土、晴空蓝、字符黑白 |
 | 自然绿 | 薄荷、森林、抹茶、橄榄、翡翠、竹影 |
 | 青蓝 | 青瓷、海盐、深海、靛青、极地 |
 | 紫粉 | 薰衣草、葡萄、暮紫、丁香、樱花、玫瑰、莓果 |

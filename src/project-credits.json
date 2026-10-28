@@ -157,8 +157,8 @@
       "source": "src/client/skins/runtime.mjs",
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
-      "version": "SHA256:488c7edba1648a1eae208f09bf5bb419aefbe9bc1d2511b9bc04168538cf8042",
-      "sourceSha256": "488c7edba1648a1eae208f09bf5bb419aefbe9bc1d2511b9bc04168538cf8042",
+      "version": "SHA256:2214ef2aab7ebc7b67a602a1d45afdd066a2d9f05744c7d50db0fc392da37c3d",
+      "sourceSha256": "2214ef2aab7ebc7b67a602a1d45afdd066a2d9f05744c7d50db0fc392da37c3d",
       "group": "products"
     },
     {
@@ -501,6 +501,26 @@
       "version": "0.1.3-dsh.0.2.1-rc.3",
       "sourceSha256": "b1612ceb3310cf8b411c9357c26f70a7a46aadf4a259de8b7b97ee724d3ba1bd",
       "group": "products"
+    },
+    {
+      "id": "open-claude-ui",
+      "name": "Open Claude UI",
+      "url": "https://github.com/Caho1/open-claude-ui",
+      "authors": "Caho1 and contributors",
+      "purpose": {
+        "zh": "Claude Desktop 主题的设计令牌与组件视觉规范",
+        "en": "Design tokens and component styling for the Claude Desktop theme"
+      },
+      "relationship": {
+        "zh": "固定版本的 CDS 样式适配；交互由 DSH 原生组件提供",
+        "en": "Pinned CDS visual adaptation on native DSH components"
+      },
+      "source": "src/client/skins/claude-desktop/source.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md#open-claude-ui",
+      "version": "1.0.0",
+      "sourceSha256": "aae7026b5d609c1efd245276bd6565d27fed120202fcfd69ab944342c162aefc",
+      "group": "sources"
     },
     {
       "id": "billion-context",

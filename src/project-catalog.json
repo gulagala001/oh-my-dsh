@@ -426,6 +426,23 @@
       "source": "vendor/response-id-reuse/package.json",
       "license": "MIT",
       "notice": "vendor/response-id-reuse/LICENSE"
+    },
+    {
+      "id": "open-claude-ui",
+      "name": "Open Claude UI",
+      "url": "https://github.com/Caho1/open-claude-ui",
+      "authors": "Caho1 and contributors",
+      "purpose": {
+        "zh": "Claude Desktop 主题的设计令牌与组件视觉规范",
+        "en": "Design tokens and component styling for the Claude Desktop theme"
+      },
+      "relationship": {
+        "zh": "固定版本的 CDS 样式适配；交互由 DSH 原生组件提供",
+        "en": "Pinned CDS visual adaptation on native DSH components"
+      },
+      "source": "src/client/skins/claude-desktop/source.json",
+      "license": "MIT",
+      "notice": "THIRD_PARTY_NOTICES.md#open-claude-ui"
     }
   ]
 }

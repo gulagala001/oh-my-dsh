@@ -178,7 +178,7 @@ Use **Copy creation prompt**, give it to an AI with your character idea, and ask
 
 Global background is user-maintained. On conflict, **Read latest version**, compare, merge/adopt, then save; reading does not overwrite a draft. Dream does not edit this background.
 
-Choose native DSH or five themes including Glyph, with 29 palettes, backgrounds, section colors, fonts, logos/titles and reduced motion. [Appearance (Chinese)](skins.md)
+Choose native DSH or six themes including Glyph and Claude Desktop, with 30 palettes, backgrounds, section colors, fonts, logos/titles and reduced motion. [Appearance (Chinese)](skins.md)
 
 <a id="runtime-state-and-blockers"></a>
 

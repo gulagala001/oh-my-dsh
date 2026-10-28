@@ -10,6 +10,7 @@
 ## 开发
 
 - OMD 自有代码采用根目录 MIT；第三方材料遵守原许可证。修改许可时同步包元数据、双语首页和来源说明；公开文件门禁核对声明及包内 LICENSE。
+- Claude Desktop 的固定 CDS 来源与适配范围维护于 `src/client/skins/claude-desktop/source.json`，原许可在 `vendor/licenses/Open-Claude-UI-MIT.txt`。主题用法和截图沿用 `docs/skins.md` 与 `docs/site/media/`，来源加入项目目录后重新生成双语清单；主题与配色增减须同步双语入口、主题基座及网站预览。现有文档／打包检查核对路径与来源清单，视觉效果与窄屏交互仍需隔离浏览器核验。
 - 工作过程标题的结构布局统一维护在 `scripts/chat-style-adapter.mjs`，经原生 Chat 样式归属生效，不放回皮肤开关内。`test/process-header-layout.test.mjs` 用原生标题渲染器和固定 CSS 在现有 Chromium 中检查原生／主题、窄宽、中英文及大字体，仅在相关 UI／样式／宿主源码或依赖锁发生变化的 PR 中运行；手动 CI 可勾选 `layout`。纯文档与版本更新不安装 Chromium。
 
 - 优先使用宿主公共 SDK 和扩展点，不手改 SDK、生成文件或 `vendor/opencu/` 发行快照。

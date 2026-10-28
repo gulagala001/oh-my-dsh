@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "project": "open-claude-ui",
+  "repository": "https://github.com/Caho1/open-claude-ui",
+  "commit": "c1f923ae0051a871941b98a0e2e3183a545e6a85",
+  "version": "1.0.0",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2026 Caho1",
+  "files": [
+    "code-examples/cds-theme.css",
+    "code-examples/ChatComposer.tsx",
+    "code-examples/ChatMessageBubbles.tsx"
+  ],
+  "adaptation": {
+    "tokens": "CDS surfaces, clay, borders, radii, shadows and system font fallbacks mapped to --omd-*; readable secondary/status colors and native font sizing retained.",
+    "layout": "Visual adaptation on existing DSH REA components. Native editors, IME, attachment, sending, tool execution, disclosures, scrolling, window controls and accessibility remain host-owned.",
+    "assets": "No proprietary fonts, audio or upstream application binaries included."
+  }
+}

@@ -14,6 +14,7 @@ import materialLayout from './google-material-expressive/layout.css';
 import { MaterialAppearance } from './google-material-expressive/appearance.jsx';
 import { applyMaterialIntegration, MATERIAL_LAYOUT } from './google-material-expressive/integration.jsx';
 import claudeTerminalLayout from './claude-cli-terminal/layout.css';
+import claudeDesktopLayout from './claude-desktop/layout.css';
 import { applySkinBrands } from './brand.jsx';
 import glyphLayout from '../../../plugins/glyph-theme/src/theme/layout.css';
 import { applyGlyphIntegration } from './glyph-motion/integration.jsx';
@@ -83,7 +84,7 @@ export function applySkins(ctx) {
   });
   applySidebarPresentation(ctx);
   let runtime;
-  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-cli-terminal': claudeTerminalLayout, 'glyph-motion': glyphLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, surfaces, layoutBaseCss); return () => runtime.dispose(); });
+  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-desktop': claudeDesktopLayout, 'claude-cli-terminal': claudeTerminalLayout, 'glyph-motion': glyphLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, surfaces, layoutBaseCss); return () => runtime.dispose(); });
   applyMaterialIntegration(ctx, () => runtime);
   applyCodexIntegration(ctx, () => runtime);
   applySkinBrands(ctx, () => runtime);

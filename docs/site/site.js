@@ -143,6 +143,7 @@
     codex: { name: 'Codex Desktop', description: '冷灰侧栏、系统字体与清晰的内容层级。' },
     glass: { name: 'iOS Liquid Glass', description: '通透材质、圆角面板与柔和的空间层次。' },
     terminal: { name: 'Claude CLI', description: '暖黑与纸白、陶土橙与等宽终端布局。' },
+    claude: { name: 'Claude Desktop', description: '温润表面、陶土强调、衬线正文与圆角输入框。' },
     material: { name: 'Google Material', description: 'Material 配色与舒展的导航、输入和设置。' },
     omd: { name: 'DSH 原生', description: '直接使用 DSH 原生主题与组件。' },
   };
@@ -150,6 +151,7 @@
     themes.codex.description = 'A cool gray sidebar, system fonts, and clear content hierarchy.';
     themes.glass.description = 'Translucent surfaces, rounded panels, and gentle depth.';
     themes.terminal.description = 'Dark and paper-white surfaces, terracotta accents, and a monospace layout.';
+    themes.claude.description = 'Warm surfaces, terracotta accents, serif prose, and a rounded composer.';
     themes.material.description = 'Material colors with spacious navigation, input, and settings.';
     themes.omd = { name: 'DSH Native', description: 'Uses the original DSH theme and components.' };
   }

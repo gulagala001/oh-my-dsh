@@ -75,7 +75,7 @@ Side chats, local history, follow-ups and independent cancellation Bundled side-
 
 Themes, colors, backgrounds, fonts and appearance management Independent product sharing appearance source with OMD。
 
-- Pinned source / version: [SHA256:488c7edba1648a1eae208f09bf5bb419aefbe9bc1d2511b9bc04168538cf8042](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
+- Pinned source / version: [SHA256:2214ef2aab7ebc7b67a602a1d45afdd066a2d9f05744c7d50db0fc392da37c3d](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
 
 ### Glyph
@@ -342,6 +342,15 @@ Pinned system prompt text and text construction Necessary host adaptations; orig
 
 - Pinned source / version: [3.16.2 (source)](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/zcode/source.json)
 - License / attribution: Apache-2.0 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
+
+### Open Claude UI
+
+[Project](https://github.com/Caho1/open-claude-ui) · Caho1 and contributors
+
+Design tokens and component styling for the Claude Desktop theme Pinned CDS visual adaptation on native DSH components。
+
+- Pinned source / version: [1.0.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/claude-desktop/source.json)
+- License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#open-claude-ui)
 
 ## Locked dependency inventory
 

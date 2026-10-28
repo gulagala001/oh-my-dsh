@@ -3,7 +3,7 @@ import { extraPalettes } from './palettes.mjs';
 
 // Existing theme colors stay available alongside the color-only catalog.
 export const paletteNames = {
-  'codex-desktop': '黑白灰', 'claude-cli-terminal': '暖砂',
+  'codex-desktop': '黑白灰', 'claude-cli-terminal': '暖砂', 'claude-desktop': '陶土',
   'ios-liquid-glass': '冰蓝', 'google-material-expressive': '晴空蓝',
   'glyph-motion': '字符黑白',
 };
