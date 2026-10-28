@@ -52,6 +52,10 @@ This release is being prepared and has not been published.
 
 The exact host is **DSH 0.2.1-rc.3**. The prepared package is `oh-my-dsh-0.2.1-rc.3.omd.1.2.0.tgz`; use the existing published package below until this release is available. Preserve profiles, configuration and conversations, and reload after active tasks finish if requested.
 
+桌面侧栏的输入与关闭修复还需使用本版附带的 `vendor/opencu/host/` 适配源码重建匹配的桌面宿主，并在任务结束后完整重启。
+
+The desktop sidebar input and closure fixes also require rebuilding the matching desktop host with this release’s `vendor/opencu/host/` adapter sources, followed by a full restart after active tasks finish.
+
 | DSH | 当前公开安装包 / Current published package | SHA256SUMS |
 | --- | --- | --- |
 | 0.2.1-rc.3 | [OMD 0.2.1-rc.3.omd.1.1.2](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.2/oh-my-dsh-0.2.1-rc.3.omd.1.1.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.2/SHA256SUMS) |
