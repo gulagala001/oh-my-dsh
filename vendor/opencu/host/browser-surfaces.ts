@@ -147,9 +147,9 @@ export class OpenCUBrowserSurfaces {
     }
   }
   private fault(record: Surface, error: unknown): void {
+    if (record.dead) return
     const reason = failure(error)
     console.error('OpenCU browser surface failed', record.key, reason)
-    if (record.dead) return
     try { this.send(record.owner, record, { type: 'fault', error: reason.message }) }
     catch (notifyError) { console.error('OpenCU browser surface fault notification failed', notifyError) }
     void this.close(record, reason).catch(cleanupError => console.error('OpenCU browser surface cleanup failed', cleanupError))
@@ -272,7 +272,12 @@ export class OpenCUBrowserSurfaces {
     }
     // Guest input/leases are released before either the child renderer or its window is destroyed.
     record.closing = Promise.resolve().then(async () => {
-      try { await this.release(record.view.webContents) } catch (error) { errors.push(error) }
+      try { await this.release(record.view.webContents) }
+      catch (error) {
+        // Retain the original owner and guest while its release is unconfirmed.
+        // Destroying and forgetting it would turn the next close into false proof.
+        errors.push(error); throw new AggregateError(errors, 'Browser surface release failed')
+      }
       try { this.move(record, undefined) } catch (error) { errors.push(error) }
       if (!record.view.webContents.isDestroyed()) {
         try {
@@ -287,15 +292,15 @@ export class OpenCUBrowserSurfaces {
         } catch (error) { errors.push(error) }
       }
       try { if (record.detached && !record.detached.isDestroyed()) record.detached.destroy() } catch (error) { errors.push(error) }
+      if (errors.length) throw new AggregateError(errors, 'Browser surface release failed')
+      if (![...this.records.values()].some(value => value !== record && value.owner === record.owner)) {
+        const window = this.backgroundWindows.get(record.owner)
+        if (window && !window.isDestroyed()) window.destroy()
+        this.backgroundWindows.delete(record.owner)
+      }
       surfaces.delete(record.view.webContents); placementListeners.delete(record.view.webContents)
       if (this.records.get(record.key) === record) this.records.delete(record.key)
-      if (![...this.records.values()].some(value => value.owner === record.owner)) {
-        const window = this.backgroundWindows.get(record.owner)
-        this.backgroundWindows.delete(record.owner)
-        try { if (window && !window.isDestroyed()) window.destroy() } catch (error) { errors.push(error) }
-      }
-      if (errors.length) throw new AggregateError(errors, 'Browser surface release failed')
-    })
+    }).catch(error => { record.closing = undefined; throw error })
     return record.closing
   }
   private request(record: Surface, recipient: WebContents, args: Record<string, unknown>): Promise<unknown> {

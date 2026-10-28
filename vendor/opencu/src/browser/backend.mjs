@@ -556,6 +556,15 @@ export async function createBrowserBackend(options = {}) {
         return {...result, target: await descriptor(record),...(!record.keys.size && !record.buttons.size ? {release:{released:true}} : {})};
       } catch (error) {
         error.details = {...error.details, inputDispatched: error.details?.inputDispatched === true || (record.inputDispatchSequence ?? 0) !== inputSequence};
+        // Ownership follows actual dispatch, independently of the error class.
+        // An unavailable monitor or transport preflight must not cause cleanup
+        // to release a key/button that only the human may have pressed.
+        if (!error.details.inputDispatched) {
+          let changed = false;
+          for (const key of record.keys) if (!heldKeys.has(key)) { record.keys.delete(key); changed = true; }
+          for (const button of record.buttons) if (!heldButtons.has(button)) { record.buttons.delete(button); changed = true; }
+          if (changed) await inputState.persist();
+        }
         // Site handlers may destroy their page during mouse-up/key-up. This
         // exact Page proves closure, unlike a crash or an unverifiable identity.
         // Preserve cancellation and never turn an uncertain crash into success.
@@ -567,12 +576,6 @@ export async function createBrowserBackend(options = {}) {
         }
         if (['JS_DIALOG_OPEN','STALE_DIALOG'].includes(error.code)) throw error;
         if (recoverableActionError(error, request.action)) {
-          // A preflight can fail after journaling intent but before sending input.
-          // Discard only this attempt's intent; never release another held chord.
-          let changed = false;
-          for (const key of record.keys) if (!heldKeys.has(key)) { record.keys.delete(key); changed = true; }
-          for (const button of record.buttons) if (!heldButtons.has(button)) { record.buttons.delete(button); changed = true; }
-          if (changed) await inputState.persist();
           throw error;
         }
         if (request.action === 'locator' && error.details.inputDispatched !== true && ['FRAME_NOT_FOUND', 'FRAME_DETACHED', 'LOCATOR_NOT_STABLE', 'STALE_ELEMENT', 'STALE_OBSERVATION'].includes(error.code)) throw error;

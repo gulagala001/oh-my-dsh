@@ -402,18 +402,25 @@ def away(relinquish=False):
     result = release()
     if not result['released']:
         fail('RELEASE_FAILED', 'Held input could not be released before handing back the desktop', dict(release=result))
-    if relinquish:
-        handed = hand_back_view() or bool(isolated)
-        restore_isolation()
-        stop_indicator()
-        report('会话暂停，桌面已交还')
-        notify('OpenCU 已暂停，桌面已交还')
-        return handed
-    if not hand_back_view():
-        return False
-    report('已交还桌面 · 等待你的回复')
-    notify('模型在等你回答，桌面已交还')
-    return True
+    try:
+        if relinquish:
+            handed = hand_back_view() or bool(isolated)
+            restore_isolation()
+            stop_indicator()
+            report('会话暂停，桌面已交还')
+            notify('OpenCU 已暂停，桌面已交还')
+            return handed
+        if not hand_back_view():
+            return False
+        report('已交还桌面 · 等待你的回复')
+        notify('模型在等你回答，桌面已交还')
+        return True
+    except Exception as error:
+        # Workspace ownership can change independently of hardware input.
+        # Preserve the completed release even when the view cannot be returned.
+        details = dict(getattr(error, 'details', None) or {})
+        details['release'] = result
+        fail(getattr(error, 'code', 'NATIVE_FAILURE'), str(error), details)
 
 
 def isolate(t):
@@ -1290,10 +1297,15 @@ def perform(method, args, expected):
         with input_lock:
             result = release()
             if result['released']:
-                restore_isolation()
-                report('会话结束，桌面已交还')
-                notify('OpenCU 已结束操作，桌面已交还')
-                stop_indicator()
+                try:
+                    restore_isolation()
+                    report('会话结束，桌面已交还')
+                    notify('OpenCU 已结束操作，桌面已交还')
+                    stop_indicator()
+                except Exception as error:
+                    details = dict(getattr(error, 'details', None) or {})
+                    details['release'] = result
+                    fail(getattr(error, 'code', 'NATIVE_FAILURE'), str(error), details)
         if method == 'close':
             if not result['released']:
                 fail('RELEASE_FAILED', 'Held input could not be released')
@@ -1310,7 +1322,9 @@ def perform(method, args, expected):
         except Exception as error:
             return dict(valid=False, reason=str(error))
     if method == 'away':
-        return dict(away=away(args.get('relinquish') is True))
+        # away() returns only after its hardware release succeeded, including
+        # when the user already moved away and no workspace change is needed.
+        return dict(away=away(args.get('relinquish') is True), release=dict(released=True))
     t = resolve(args['reference'] if method in ('select', 'focus') else args['target'])
     if method == 'select':
         return t

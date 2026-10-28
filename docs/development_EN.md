@@ -89,6 +89,8 @@ Instruction management imports the host's `dsh-agent-instructions` and `dsh-scop
 
 For same-version server ESM, host source and documentation changes, use `node scripts/sync-opencu.mjs ../opencu --files src/dsh/downloads.mjs host/downloads.ts DEVELOPMENT.md docs/install.md docs/install_EN.md`. This copies only the listed committed distribution files and preserves existing built assets. That mode rejects dirty source, mismatched destination digests, generated assets and new package members. For same-version client changes, finish the affected build, update extension hashes and commit the source, then run `node scripts/sync-opencu.mjs ../opencu --client`. It synchronizes client output, content-hashed chunks and the extension cursor/ZIP, validates resource hashes and removes superseded chunks without repacking the entire plugin. Both modes record `sourceCommit` and actual file hashes in `vendor/opencu.json`, removing the old `archiveSha256` because it no longer describes the snapshot. Other membership, version or build-input changes still require a matching full package. Synchronizing source or client output does not rebuild or update the desktop.
 
+Full-package synchronization preserves the native helper's executable mode and signed bytes and checks the exact host and peers. `archiveSha256` identifies the archive actually extracted after restoring executable modes; per-file hashes identify the embedded snapshot. It does not identify the original incoming tgz or prove a Git source commit. Verify the source commit against the actual build provenance. The OMD build derives `client.factory.mjs` from the checked OpenCU registration bundle and compiles it into the root client; host adapters, extensions and content-hashed chunks use the same snapshot.
+
 `pnpm build` builds the frontend and generates the standard and OMD-PTC presets from `presets/oh-my-dsh/agent.cordis.yml`. Edit source configuration, not generated files.
 
 Temporary chat history comes from complete turns held in server memory. Native messages and model replay information are reused unchanged in the next request. Request numbers increase within each tab: a `done` receipt confirms commitment, while `stop` cancels only that request, fences its late arrival, and waits for real producer cleanup. After a disconnect, the client reconciles that turn and preserves the draft with sending paused until confirmation; recovery never repeats the model call. Tab entries own frontend state and components subscribe to their views. Closing erases history, and removing a tab stops its keepalive.
@@ -106,6 +108,18 @@ CodeGraph's runtime catalog job owns both metadata discovery and the native MCP 
 **Runtime boundaries:** core Chat/Conversation and optional UI enhancements mount separately behind a lightweight backend entry, retaining errors and recovery controls when dependencies fail. Tasks restore from native events; result shortening projects requests while preserving originals. Shared model-reply handling retains cancellation, failure and actual receipts. CommandCode compatibility centralizes the specific gateway's reasoning/tool-history replay without rewriting durable sessions or changing other providers' requests.
 
 ## Tests on Demand
+
+Run the maintained CU/BU machine with `npm run cu:verify` in the standalone OpenCU source checkout (`full` by default). Its [development guide](https://github.com/gulagala001/opencu/blob/main/DEVELOPMENT.md) describes replay and coverage limits. Prepare the affected build and matching Playwright Chromium first; do not rebuild current artifacts unnecessarily. After synchronization, run the matching source verifier against the actual embedded copy from the OMD checkout:
+
+```sh
+node ../opencu/scripts/cu-liveness.mjs check --root ./vendor/opencu
+node ../opencu/scripts/cu-liveness.mjs verify --root ./vendor/opencu --profile matrix
+node ../opencu/scripts/cu-liveness.mjs verify --root ./vendor/opencu --profile browser
+```
+
+Embedded `--root` runs support `matrix` and `browser`; run the complete source adapter suite once in the standalone checkout. Reports identify both the consumed source and verifier and remain in the verifier checkout's `.local/cu-liveness/`. Inventory drift, source changes during execution, watchdog timeouts, cancellation and missing receipts are failures or incomplete runs. Finite schedules and real-browser results do not prove arbitrary websites or operating systems error-free. Check OMD's own thin adapters through the affected `test/opencu-*.test.mjs` files.
+
+After building OMD and committing the embedded source manifest, run `node scripts/check-opencu-delivery.mjs /absolute/path/to/actual-package.tgz` against the package to be installed. It reads source bytes and hashes, native executable modes, root-client bytes, entrypoints and documentation without repairing the supplied archive. With no argument it restores helper executable modes only in its own temporary package before checking; that does not verify an actual installation package. Archive checks do not replace embedded dynamic verification or loaded-host checks.
 
 Focus on implementation and delivery; keep testing minimal. Run minimal build/startup checks as needed, and use targeted verification (including CU) only for a concrete issue or an explicit user request. Improve the experience from user feedback. See [Contributing](../CONTRIBUTING.md).
 

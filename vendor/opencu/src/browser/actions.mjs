@@ -10,7 +10,7 @@ import {clickParameters, locatorClickParameters, checkClickHeld, holdClick} from
 import {pressParameters, checkPressHeld} from '../../extension/key-options.js';
 import {dragPath} from '../../extension/pointer-path.js';
 import {scrollDeltas,readElementScrollGeometry,checkScrollGeometry} from '../../extension/scroll.js';
-import {playwrightKeyIdentity} from './playwright-keyboard.mjs';
+import {playwrightKeyIdentity,playwrightKeyCode} from './playwright-keyboard.mjs';
 import {actOnClipboard,restoreClipboardPermissions} from './clipboard.mjs';
 import {withCDPFrameGuard} from '../../extension/frame-router.js';
 import {sequentialTextKey, checkSequentialDeadline, guestKeySpec, keyEventParameters, keyboardInputTypes} from '../../extension/keyboard.js';
@@ -154,9 +154,14 @@ export async function actOnPage(record, request, options) {
   };
   const keyUp = async key => {
     key = keyName(key);
-    playwrightKeyIdentity(key);
+    const code = playwrightKeyCode(key);
+    const owned = [...record.keys].filter(value => playwrightKeyCode(value) === code);
+    // An unmatched release must not lift a human-held key. Use the original
+    // automation spelling so aliases cannot leave a phantom held entry.
+    if (!owned.length) return;
+    key = owned[0];
     await step(() => { record.inputDispatchSequence = (record.inputDispatchSequence ?? 0) + 1; return page.keyboard.up(key); });
-    record.keys.delete(key);
+    for (const value of owned) record.keys.delete(value);
   };
   const mouseDown = async button => {
     button = buttonName(button);
@@ -166,6 +171,7 @@ export async function actOnPage(record, request, options) {
   };
   const mouseUp = async button => {
     button = buttonName(button);
+    if (!record.buttons.has(button)) return;
     await input([{type:'pointerup',...record.pointer}],() => page.mouse.up({button}));
     record.buttons.delete(button);
   };

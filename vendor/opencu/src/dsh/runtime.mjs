@@ -157,7 +157,7 @@ export function createPluginRuntime(options = {}) {
     return { ...result, observation: { ...result.observation, screenshot: { ...metadata, image } }, image };
   }
   async function deliveries(runtime, attachments, signal, { emit = true, id } = {}) {
-    const result = await runtime.deliveries();
+    const result = await runtime.deliveries({signal});
     if (result.ok === false) return result;
     const records = [];
     try {
@@ -275,7 +275,7 @@ export function createPluginRuntime(options = {}) {
     if (endpoint === 'reconfigure') return { ok: true, config: publicConfig(getConfig()) };
     if (endpoint === 'presentationContrast') return { ok: true, ...await runtime.presentationContrast(args) };
     if (endpoint === 'capabilities') return { ok: true, ...runtime.runtimeInfo, config: publicConfig(getConfig()),
-      native: await runtime.permissions(), browserResources: await browserResources.status(), connections: runtime.extensionConnections(), pairings: await runtime.browserPairings() };
+      native: await runtime.permissions({signal}), browserResources: await browserResources.status(), connections: runtime.extensionConnections(), pairings: await runtime.browserPairings() };
     if (endpoint === 'connectBrowser') {
       const requested = await runtime.connectBrowser({...args, signal, onApprovalWait});
       return {ok: true, ...requested, browsers: [...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(requested.browsers ?? [])]};
@@ -388,7 +388,7 @@ export function createPluginRuntime(options = {}) {
             if (!acceptingCaptures) throw error('INVALID_SCREENSHOT', 'Screenshot delivery is no longer active');
             if (!Buffer.isBuffer(bytes) || !bytes.length) throw error('INVALID_SCREENSHOT', 'Screenshot encoded bytes are invalid');
             const id = randomUUID(); captures.set(id, bytes); return id;
-          } } : args);
+          } } : endpoint === 'permissions' ? {...args,signal} : args);
       }
       if (result.ok === false) return stripPaths(result);
       if (endpoint === 'targets' || endpoint === 'state') result.browsers = [...new Map([...(result.browsers ?? []), ...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(browserConnection?.browsers ?? [])].map(item => [item.id, item])).values()];

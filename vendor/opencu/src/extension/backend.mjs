@@ -206,8 +206,17 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
           cancelControlRequests(session,error,scope);
           reject(error); return;
         }
-        // Never replay an input after an unknown outcome. Fail closed and let the extension watchdog release input.
-        expire(session, 'Command timed out; outcome is unknown. Reconnect explicitly before retrying.');
+        // An unknown action belongs to its target, not every tab on this bridge.
+        // Do not replay it. A priority release cancels stalled read preflights in
+        // the worker and keeps this target blocked until release is acknowledged.
+        if (scope !== undefined) {
+          const error = new ExtensionError('RELEASE_FAILED', `${method} timed out; this tab requires acknowledged input release.`, {method,tabId:params.identity.tabId});
+          (session.targetReleaseErrors ??= new Map()).set(scope,error);
+          cancelControlRequests(session,error,scope);
+          void request(session,'release',{identity:params.identity}).catch(() => {});
+        }
+        // Unscoped reads have no input outcome to certify. The worker abandons
+        // their read reply at the same deadline so its command lane can continue.
         reject(failure('COMMAND_TIMEOUT', `${method} timed out; action outcome may be unknown.`));
       }, timeout);
       pending.set(id, { session, method, scope, fullRelease: !params.identity, timer, resolve: resolveResult, reject });

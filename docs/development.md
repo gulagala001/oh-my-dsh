@@ -85,6 +85,8 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 
 OpenCU 同版本的服务端 ESM、宿主源码与文档可运行 `node scripts/sync-opencu.mjs ../opencu --files src/dsh/downloads.mjs host/downloads.ts DEVELOPMENT.md docs/install.md docs/install_EN.md`，只替换列出的已提交、已分发文件并保留现有构建产物。该模式拒绝未提交源文件、目标摘要不符、生成产物和新增文件。同版本客户端修改在完成受影响构建、更新扩展摘要并提交源码后，可用 `node scripts/sync-opencu.mjs ../opencu --client` 同步客户端、内容哈希分块和扩展光标／ZIP，校验资源摘要并清理被替代的分块，无需重新打完整包。两种模式均在 `vendor/opencu.json` 记录 `sourceCommit` 与逐文件摘要，并移除已不代表当前快照的 `archiveSha256`。其他文件成员、版本或构建输入变更仍同步匹配宿主的完整包。同步源码或客户端不等于已经重建或更新桌面。
 
+完整包同步保留 native helper 的执行位与签名字节，并核对精确宿主／peer。`archiveSha256` 对应同步脚本恢复执行位后的实际解包归档，逐文件摘要对应内置快照；它不等于传入 tgz 的原始摘要，也不证明 Git 来源提交。打包源码提交须从实际构建来源核实。OMD 构建从已核验的 OpenCU 注册包生成 `client.factory.mjs`，再编入根客户端；宿主适配器、扩展和内容哈希分块仍使用同一快照。
+
 Persona 在独立仓库维护，`node scripts/sync-persona.mjs` 按实际 npm 分发清单同步至 `plugins/persona/`，包含公开文档与检查输入。人格设置写入仅使用 `/api/dsh-persona/settings`：GET 返回配置和 `ETag`，POST 通过 `If-Match` 提交读取时的标记；冲突返回 409 和当前配置，缺少标记返回 428。旧 OMD `/settings` 不再接受人格字段，已有配置字段仍用于迁移和读取。
 
 Extensions 自定义命令在独立仓库维护，经 `scripts/sync-dsh-extensions.mjs` 同步。每代原生命令服务拥有自己的文件操作队列和注册记录，个人与项目命令按同一规则增量同步；原生 `definitionId` 区分自身注册和其他插件的同名命令，不借用无关会话判断冲突。注册表只保留菜单元数据，发送时读取当前文件并再次检查取消及注册归属；读取或解析失败不能使用旧模板。停用撤销全部所属注册，宿主重启从文件恢复。独立仓库检查模板与取消，OMD core 检查真实 rc.2 注册器的作用域、并发、启停与恢复。
@@ -118,6 +120,18 @@ CodeGraph 目录探测与原生 MCP 适配器由运行时的同一个 catalog �
 ## 按需测试
 
 专注实现和交付，尽量少做测试。按需做最小构建／启动检查，仅为具体问题或用户明确要求做定点验证（含 CU）。依据用户实际使用反馈改进体验。贡献与发行要点见[贡献说明](../CONTRIBUTING.md)。
+
+CU／BU 的长期验证机在独立 OpenCU 源码 checkout 运行 `npm run cu:verify`（默认 `full`），操作、故障重放及覆盖边界见[独立开发说明](https://github.com/gulagala001/opencu/blob/main/DEVELOPMENT.md)。先完成受影响构建并准备匹配的 Playwright Chromium；已生成当前产物时无需重复构建。OMD 同步后，在 OMD checkout 用同一版本的源码验证机检查实际内置副本：
+
+```sh
+node ../opencu/scripts/cu-liveness.mjs check --root ./vendor/opencu
+node ../opencu/scripts/cu-liveness.mjs verify --root ./vendor/opencu --profile matrix
+node ../opencu/scripts/cu-liveness.mjs verify --root ./vendor/opencu --profile browser
+```
+
+`--root` 的内置副本只运行 `matrix`／`browser`；源码的完整适配测试在独立 checkout 运行一次。检查同时记录被消费源码与验证机身份，报告留在验证机 checkout 的 `.local/cu-liveness/`。登记漂移、运行中源码变化、外部监督超时、取消或缺失回执均不能算通过；有限场景及真实浏览器通过不证明任意网页或操作系统永无错误。OMD 自有薄适配仍按受影响的 `test/opencu-*.test.mjs` 定点检查。
+
+完成 OMD 构建并提交内置来源清单后，对将实际安装的包运行 `node scripts/check-opencu-delivery.mjs /absolute/path/to/actual-package.tgz`。该入口只读核对包内源码与逐文件摘要、native 执行位、根客户端字节、入口及文档；不会修复传入的包。无参模式仅为自建临时包恢复 helper 执行位后自检，不能代替实际安装包校验。包检查不替代嵌入副本的动态验证或真实宿主生效检查。
 
 DeepSWE 的本地适配器位于 `scripts/deepswe/`，通过固定版本的 [Pier](https://github.com/datacurve-ai/pier) 在官方 Linux 任务环境中运行实际 DSH／OMD PTC。`snapshot.mjs <已安装 profile> <本地私有 bundle 目录>` 保存模型、插件和配置快照，不复制聊天或记忆；`run.py <评测目录> doctor` 核对环境，`run --task <任务名>`、`run --sample 10 --seed 0` 或 `run --all` 选择范围，`report` 查看回执。评测目录须包含固定的任务集、Pier 虚拟环境、Linux 运行包和 `config/local.json`；凭据、任务原文、参考答案、镜像与运行结果全部留在工作区 `.local/`。每题独立配置与数据，模型运行前比对实际 OMD 配置，官方评分器只在独立干净容器中验证提交的补丁。保留插件配置，但 Linux 环境不提供 macOS 桌面或 Blender 服务；网络遵循任务隔离规则，仅放行已选推理端点。Apple Silicon 上的本地 Colima 环境使用 QEMU，避免 Rosetta 执行宿主原生扩展时卡住；`start`／`stop` 管理专用评测虚拟机。默认串行、一次尝试，失败单列；真实调用消耗所选渠道额度，单题结果不代表全量成绩。该流程按需运行，不接入日常 CI。
 

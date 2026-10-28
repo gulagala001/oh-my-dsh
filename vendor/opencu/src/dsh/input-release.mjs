@@ -5,23 +5,39 @@ export function createInputReleaseState() {
   const held = new Set();
   const uncertainTargets = new Set();
   const pendingDown = new Set(), targetReleases = new Map();
+  const targetInputs = new Map();
   const activeControls = new Set();
-  let required = false, releaseEpoch = 0;
-  const clear = () => { required = false; held.clear(); uncertainTargets.clear(); releaseEpoch++; targetReleases.clear(); };
+  let required = false, releaseEpoch = 0, sequence = 0;
+  const clear = () => { required = false; held.clear(); uncertainTargets.clear(); releaseEpoch++; targetReleases.clear(); targetInputs.clear(); };
   const clearTarget = targetId => {
     targetReleases.set(targetId, (targetReleases.get(targetId) ?? 0) + 1);
     uncertainTargets.delete(targetId);
     for (const item of held) if (JSON.parse(item)[0] === targetId) held.delete(item);
   };
-  const acceptedRelease = details => {
+  const acceptedRelease = (details, checkpoint) => {
+    if (checkpoint && (checkpoint.epoch !== releaseEpoch || !Number.isSafeInteger(checkpoint.sequence) || checkpoint.sequence > sequence)) return false;
+    // A completed controller shutdown is stronger than a per-target receipt.
+    // Accept it only at the captured frontier, never after another request.
+    if (checkpoint?.sequence === sequence && inputReleased(details?.release) && details.state?.closed === true &&
+        details.state.mode === 'closed' && details.state.releasePending === false && Array.isArray(details.state.releaseErrors) && !details.state.releaseErrors.length) {
+      clear(); return true;
+    }
     const ids = details?.releasedTargetIds;
     if (!Array.isArray(ids) || !ids.length || ids.some(id => typeof id !== 'string') || !inputReleased(details.release)) return false;
-    for (const id of ids) clearTarget(id);
-    return true;
+    let accepted = false;
+    for (const id of ids) {
+      if (checkpoint && (targetInputs.get(id) ?? 0) > checkpoint.sequence) continue;
+      clearTarget(id); accepted = true;
+    }
+    return accepted;
   };
   return {
     get pending() { return required || held.size > 0 || uncertainTargets.size > 0 || pendingDown.size > 0 || activeControls.size > 0; },
+    checkpoint: () => ({epoch: releaseEpoch, sequence}),
+    acceptRelease: (details, checkpoint) => checkpoint ? acceptedRelease(details, checkpoint) : false,
     async request(endpoint, args, dispatch) {
+      sequence++;
+      if (endpoint === 'act' && typeof args?.targetId === 'string') targetInputs.set(args.targetId, sequence);
       const control = ['select','act','focus','openTarget','resume'].includes(endpoint) ? {} : null;
       if (control) activeControls.add(control);
       const action = endpoint === 'act' ? args?.action : null;

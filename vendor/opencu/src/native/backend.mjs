@@ -19,20 +19,31 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
   const directory = resolve(dataDir, 'native');
   await mkdir(directory, {recursive: true, mode: 0o700});
   // The helper owns an OS flock; process death releases ownership, not its durable held-input journal.
-  let transport, installationLease, macCommand, closed = false, closing, cursorTarget, cursorTimer, cursorVerifying = false, cursorError;
+  let transport, launchTransport, installationLease, macCommand, closed = false, closing, cursorTarget, cursorTimer, cursorVerifying = false, cursorError;
   let permissionProbe, refreshing;
   const inFlight = new Set();
   let cursorDispatch = value => onCursor?.(value), cursorPending, cursorWork, actionCursorTarget, actionCursorDispatch;
   function publishCursor(value) {
     if (!onCursor) return;
     cursorPending = { value, dispatch: cursorDispatch };
-    if (!cursorWork) cursorWork = (async () => {
+    flushCursor();
+  }
+  function flushCursor() {
+    if (cursorWork) return;
+    cursorWork = (async () => {
       while (cursorPending) {
         const {value, dispatch} = cursorPending; cursorPending = undefined;
-        try { await dispatch(value); cursorError = undefined; }
-        catch (error) { cursorError = error.message; }
+        let timer;
+        try {
+          await Promise.race([Promise.resolve().then(() => dispatch(value)), new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Native cursor display timed out.')), 2000);
+            timer.unref?.();
+          })]);
+          cursorError = undefined;
+        } catch (error) { cursorError = error.message; }
+        finally { clearTimeout(timer); }
       }
-    })().finally(() => { cursorWork = undefined; });
+    })().finally(() => { cursorWork = undefined; if (cursorPending) flushCursor(); });
   }
   function hideCursor() {
     clearInterval(cursorTimer); cursorTimer = undefined; cursorTarget = undefined;
@@ -59,27 +70,38 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     }
   }
   const transportOptions = { onEvent: cursorEvent, onExit: hideCursor };
+  async function initializeTransport(current) {
+    try {
+      const hello = await current.request('hello');
+      if (hello?.protocol !== 1) throw new NativeBackendError('HELPER_PROTOCOL', 'Native helper did not confirm the supported input protocol.');
+      if (process.platform === 'darwin') await current.request('configureCursor', {path: fileURLToPath(new URL('../../lib/cursor.html', import.meta.url))});
+    } catch (error) {
+      await current.close().catch(() => {});
+      throw error;
+    }
+  }
   let handBack = false;
   try {
     if (process.platform === 'linux') {
       const helper = linuxHelper();
       handBack = helper === 'hyprland.py';
-      transport = createHelperTransport(helperPath || '/usr/bin/python3', [fileURLToPath(new URL(`../../native/linux/${helper}`, import.meta.url)), '--data-dir', directory], transportOptions);
+      launchTransport = () => createHelperTransport(helperPath || '/usr/bin/python3', [fileURLToPath(new URL(`../../native/linux/${helper}`, import.meta.url)), '--data-dir', directory], transportOptions);
     } else if (process.platform === 'win32') {
       const script = fileURLToPath(new URL('../../native/windows/helper.ps1', import.meta.url));
       const literal = value => `'${value.replaceAll("'", "''")}'`;
       const command = helperPath || resolve(process.env.SystemRoot || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
-      transport = createHelperTransport(command, ['-NoProfile', '-NonInteractive', '-Mta', '-Command', `& { ${await readFile(script, 'utf8')} } -DataDir ${literal(directory)}`], { ...transportOptions, env: { ...process.env, OPENCU_HELPER_SOURCE: resolve(script, '..') } });
+      const source = await readFile(script, 'utf8');
+      launchTransport = () => createHelperTransport(command, ['-NoProfile', '-NonInteractive', '-Mta', '-Command', `& { ${source} } -DataDir ${literal(directory)}`], { ...transportOptions, env: { ...process.env, OPENCU_HELPER_SOURCE: resolve(script, '..') } });
     } else {
       const packaged = await buildMacHelper(directory, {helperPath, compile: compileHelper});
       await checkMacHelperIdentity(resolve(packaged, '../../..'));
       installationLease = createHelperTransport(packaged, ['--installation-lock', directory]);
       await installationLease.request('hello');
       macCommand = await installMacHelper(packaged, directory);
-      transport = createHelperTransport(macCommand, ['--data-dir', directory], transportOptions);
+      launchTransport = () => createHelperTransport(macCommand, ['--data-dir', directory], transportOptions);
     }
-    await transport.request('hello');
-    if (process.platform === 'darwin') await transport.request('configureCursor', {path: fileURLToPath(new URL('../../lib/cursor.html', import.meta.url))});
+    transport = launchTransport();
+    await initializeTransport(transport);
   } catch (error) {
     if (transport) await transport.close().catch(() => {});
     await installationLease?.close().catch(() => {});
@@ -96,7 +118,7 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
       let fresh;
       try { fresh = await probe.request('permissions'); }
       finally { await probe.close(); }
-      if (fresh.permissionOwner !== 'helper') throw new NativeBackendError('NATIVE_PERMISSION_PROBE_FAILED', 'Could not read the helper permissions in a fresh macOS process.');
+      if (fresh?.permissionOwner !== 'helper') throw new NativeBackendError('NATIVE_PERMISSION_PROBE_FAILED', 'Could not read the helper permissions in a fresh macOS process.');
       if (!closing && !closed && permissionNames.some(name => fresh[name] === true && current[name] !== true)) {
         refreshing = (async () => {
           // Gate new work; never interrupt an active request or a held key/button sequence.
@@ -105,9 +127,9 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
           if (closing || closed || status.input?.heldKeys?.length || status.input?.heldButtons?.length || status.recoveryRequired) return;
           hideCursor();
           await transport.close();
-          transport = createHelperTransport(macCommand, ['--data-dir', directory], transportOptions);
-          await transport.request('hello');
-          await transport.request('configureCursor', {path: fileURLToPath(new URL('../../lib/cursor.html', import.meta.url))});
+          if (closing || closed) return;
+          transport = launchTransport();
+          await initializeTransport(transport);
         })();
         try { await refreshing; }
         finally { refreshing = undefined; }
@@ -115,6 +137,22 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
       return fresh;
     })().finally(() => { permissionProbe = undefined; });
     return permissionProbe;
+  }
+  async function recoverTransport() {
+    if (refreshing) await refreshing;
+    if (closed || closing) throw new NativeBackendError('NATIVE_CLOSED', 'Native backend is closed.');
+    if (!transport.ended) return;
+    refreshing = (async () => {
+      // Recovery never repeats the uncertain action. Wait for the old process to
+      // exit, then let the fresh helper recover its durable journal under its lock.
+      await transport.disconnect();
+      if (closing || closed) throw new NativeBackendError('NATIVE_CLOSED', 'Native backend is closed.');
+      hideCursor();
+      transport = launchTransport();
+      await initializeTransport(transport);
+    })();
+    try { await refreshing; }
+    finally { refreshing = undefined; }
   }
   const known = new Map();
   async function request(method, params, options) {
@@ -160,7 +198,7 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     },
     // Giving the view back is a Hyprland concept: the other helpers never take it away,
     // so they do not offer the method and the controller treats the request as a no-op.
-    ...(handBack ? {async away(_target, options = {}) { return (await request('away', {relinquish: options.relinquish === true})).away === true; }} : {}),
+    ...(handBack ? {async away(_target, options = {}) { return request('away', {relinquish: options.relinquish === true}); }} : {}),
     async permissions() { return {...await currentPermissions(), ...(onCursor ? {cursor: {host: process.platform === 'darwin' ? 'REA-native' : 'REA-desktop', error: cursorError ?? null}} : {})}; },
     async getPermissions() { return backend.permissions(); },
     async applicationMetadata(target) {
@@ -231,19 +269,20 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     releaseTarget: () => backend.release(),
     async release() {
       actionCursorTarget = undefined; hideCursor();
-      try { return await request('release'); }
-      finally { await cursorWork; }
+      // Cursor delivery is advisory: a disconnected view cannot delay hardware release.
+      await recoverTransport();
+      return request('release');
     },
     async verify(target, options = {}) { return request('verify', {target: reference(target), options}, {monitoring: options.monitoring === true}); },
     async close() {
       if (closed) return;
       actionCursorTarget = undefined; hideCursor();
       if (!closing) closing = (async () => {
-        try {
-          await permissionProbe?.catch(() => {});
-          await transport.close();
-          await installationLease?.close(); closed = true;
-        } finally { await cursorWork; }
+        // Send close immediately, including while a fresh permission probe is pending.
+        // The probe may finish for UI feedback, but must not hold native keys down.
+        const release = transport.close();
+        await Promise.all([release, permissionProbe?.catch(() => {})]);
+        await installationLease?.close(); closed = true;
       })().finally(() => { closing = undefined; });
       return closing;
     },

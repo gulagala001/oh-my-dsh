@@ -48,11 +48,15 @@ export function errorJSON(error) {
 }
 
 export function inputReleased(result) {
-  const acknowledged = item => item?.released === true && !item.failures?.length && !item.errors?.length &&
-    (!Array.isArray(item.tabs) || item.tabs.every(acknowledged));
-  return Array.isArray(result?.released)
-    ? result.released.length > 0 && result.released.every(acknowledged)
-    : acknowledged(result);
+  const empty = value => value == null || Array.isArray(value) && value.length === 0;
+  const acknowledged = item => {
+    if (!item || !empty(item.failures) || !empty(item.errors) || !empty(item.heldKeys) || !empty(item.heldButtons)) return false;
+    if (item.tabs != null && (!Array.isArray(item.tabs) || !item.tabs.every(acknowledged))) return false;
+    return Array.isArray(item.released)
+      ? item.released.length > 0 && item.released.every(acknowledged)
+      : item.released === true;
+  };
+  return acknowledged(result);
 }
 
 const recoverableActionErrors = new Set([

@@ -15,8 +15,8 @@ const tabEpochs = new Map();
 const readOperations = new Set();
 const controlToken = tabId => ({ connection, epoch: controlEpoch, tabId, tabEpoch: tabEpochs.get(tabId) ?? 0,
   commandEpoch: tabEpochs.get(undefined) ?? 0 });
-function cancelReads(tabId) {
-  for (const read of readOperations) if (tabId === undefined || !read.monitoring || read.tabId === tabId) {
+function cancelReads(tabId, {targetOnly = false} = {}) {
+  for (const read of readOperations) if (tabId === undefined || !targetOnly && !read.monitoring || read.tabId === tabId) {
     read.controller.abort(Object.assign(new Error('Read operation was cancelled.'), { code: 'CONTROL_STOPPED', details: { inputDispatched: false } }));
   }
 }
@@ -56,8 +56,9 @@ async function readOperation(token, work) {
   };
   read.check = check;
   readOperations.add(operation);
+  const timer = Number.isFinite(token.deadline) ? setTimeout(() => operation.controller.abort(Object.assign(new Error('Read operation exceeded its command deadline.'), {code:'COMMAND_TIMEOUT'})), Math.max(0, token.deadline - Date.now())) : undefined;
   try { const result = await work(read); check(); return result; }
-  finally { readOperations.delete(operation); }
+  finally { clearTimeout(timer); readOperations.delete(operation); }
 }
 
 function allowed(url) {
@@ -132,6 +133,7 @@ async function attach(identity, read = directRead) {
   if (attached.get(identity.tabId)?.released) await releaseTab(identity.tabId);
   if (attached.has(identity.tabId)) {
     const state = attached.get(identity.tabId);
+    if (state.detached || state.quarantined) fail('RELEASE_REQUIRED', 'This tab has unconfirmed input from its original owner. Recover this tab before binding or sending more input.', {inputDispatched:false,tabId:identity.tabId});
     if (state.error) throw state.error;
     return;
   }
@@ -140,7 +142,7 @@ async function attach(identity, read = directRead) {
   read.check?.();
   try { await chrome.debugger.attach({ tabId: identity.tabId }, '1.3'); }
   catch (error) { fail('DEBUGGER_ATTACH_FAILED', 'Chrome denied debugger access or another client owns this tab: ' + error.message); }
-  const state = { keys: new Map(), buttons: new Set(), x: 0, y: 0 };
+  const state = { keys: new Map(), buttons: new Set(), x: 0, y: 0, identity:{...identity} };
   attached.set(identity.tabId, state);
   state.frameRouter = createCDPFrameRouter((method, params) => cdp(identity.tabId, method, params), listener => {
     const receive = (source, method, params) => {if (source.tabId === identity.tabId) listener(method, params, source.sessionId);};
@@ -166,10 +168,16 @@ async function attach(identity, read = directRead) {
     throw error;
   }
 }
-async function saveAttached() {
-  const active = [...attached].filter(([, state]) => !state.released);
-  await chrome.storage.session.set({ attachedTabs: active.map(([tabId]) => tabId), heldInputs: active.map(([tabId, state]) => ({ tabId,
-    keys: [...state.keys.values()], buttons: [...state.buttons], x: state.x, y: state.y })) });
+let journalWork = Promise.resolve();
+function saveAttached() {
+  const work = journalWork.catch(() => {}).then(() => {
+    const active = [...attached].filter(([, state]) => !state.released);
+    return chrome.storage.session.set({ attachedTabs: active.map(([tabId]) => tabId), heldInputs: active.map(([tabId, state]) => ({ tabId,
+      keys: [...state.keys.values()], buttons: [...state.buttons], x: state.x, y: state.y,
+      ...(state.identity ? {identity:state.identity} : {}), ...(state.detached ? {detached:true,recoveryAttached:state.recoveryAttached === true} : {}),
+      ...(state.quarantined ? {quarantined:true,releaseError:state.releaseError} : {}) })) });
+  });
+  journalWork = work.catch(() => {});return work;
 }
 
 async function frameContent(tabId, route, method, input = {}, backendNodeId) {
@@ -220,20 +228,34 @@ const modifiers = state => [...state.keys.keys()].reduce((n, key) => n | ({ Alt:
 async function keyEvent(tabId, spec, down, epoch, beforeDispatch, keyboardEditable = false) {
   checkControl(epoch);
   const state = attached.get(tabId);
-  if (down) { state.keys.set(spec.key, spec); await saveAttached(); }
-  checkControl(epoch);
-  const event = keyEventParameters(spec, down, modifiers(state), /Mac/u.test(navigator.platform),keyboardEditable);
-  let marker, failure;
+  const owned = down ? [] : [...state.keys].filter(([,value]) => value.code === spec.code);
+  if (!down) {
+    if (!owned.length) return;
+    spec = owned[0][1];
+  }
+  const previous = state.keys.get(spec.key);
+  let marker, failure, submitted = false;
   try {
+    if (down) { state.keys.set(spec.key, spec); await saveAttached(); }
+    checkControl(epoch);
+    const event = keyEventParameters(spec, down, modifiers(state), /Mac/u.test(navigator.platform),keyboardEditable);
     if (down) {
       const inputTypes = keyboardInputTypes(spec.code,modifiers(state),/Mac/u.test(navigator.platform));
       marker = await inputMarker(tabId,'expectInput',{targetActive:true,events:[{type:'keydown',key:event.key,...(inputTypes.length ? {inputTypes} : {})}]});
     }
     checkControl(epoch);
     if (down && beforeDispatch) {await beforeDispatch();checkControl(epoch);}
+    submitted = true;
     await cdp(tabId,'Input.dispatchKeyEvent',event);
-    if (!down) {state.keys.delete(spec.key);await saveAttached();}
-  } catch (error) {failure=error;throw error;}
+    if (!down) {for (const [key] of owned) state.keys.delete(key);await saveAttached();}
+  } catch (error) {
+    failure=error;
+    if (down && !submitted) {
+      if (previous) state.keys.set(spec.key,previous); else state.keys.delete(spec.key);
+      try {await saveAttached();} catch (rollback) {error.details={...error.details,inputJournalError:errorJSON(rollback)};}
+    }
+    throw error;
+  }
   finally {
     if (marker && failure?.code !== 'JS_DIALOG_OPEN') try {
       await finishMarker(tabId,marker);
@@ -247,11 +269,13 @@ const buttonMask = state => [...state.buttons].reduce((n, button) => n | ({ left
 async function mouse(tabId, type, point, button = 'none', count = 0, extra = {}, epoch, beforeDispatch) {
   checkControl(epoch);
   const state = attached.get(tabId);
+  if (type === 'mouseReleased' && !state.buttons.has(button)) return;
   state.x = point.x; state.y = point.y;
-  if (type === 'mousePressed') { state.buttons.add(button); await saveAttached(); }
-  checkControl(epoch);
+  const held = state.buttons.has(button);
   let marker, captureMarker, submitted = false, failure;
   try {
+    if (type === 'mousePressed') { state.buttons.add(button); await saveAttached(); }
+    checkControl(epoch);
     if (epoch && ['mousePressed','mouseMoved','mouseReleased','mouseWheel'].includes(type)) {
       const hit=await state.frameRouter?.atPoint(point);
       const events=[{type:({mousePressed:'pointerdown',mouseMoved:'pointermove',mouseReleased:'pointerup',mouseWheel:'wheel'})[type],
@@ -268,7 +292,14 @@ async function mouse(tabId, type, point, button = 'none', count = 0, extra = {},
     await cdp(tabId, 'Input.dispatchMouseEvent', { type, x: point.x, y: point.y, button, buttons: buttonMask(state), clickCount: count, modifiers: modifiers(state), ...extra });
     if(type==='mousePressed'&&marker)(state.pointerMarkers??=new Map()).set(button,marker);
     if (type === 'mouseReleased') { state.buttons.delete(button); await saveAttached(); }
-  } catch (error) { failure = error; throw error; }
+  } catch (error) {
+    failure = error;
+    if (type === 'mousePressed' && !submitted && !held) {
+      state.buttons.delete(button);
+      try {await saveAttached();} catch (rollback) {error.details={...error.details,inputJournalError:errorJSON(rollback)};}
+    }
+    throw error;
+  }
   finally {
     const completed=type==='mouseReleased'||type==='mouseMoved'||type==='mouseWheel'||!submitted ? [marker,captureMarker].filter(Boolean) : [];
     try {
@@ -286,22 +317,53 @@ async function mouse(tabId, type, point, button = 'none', count = 0, extra = {},
 }
 async function releaseTab(tabId) {
   cancelReads(tabId);
+  // Bound renderer/debugger reads without abandoning attach, input-up, detach,
+  // or journal acknowledgements whose physical outcome must remain ordered.
+  return readOperation({...controlToken(tabId),monitoring:true,deadline:Date.now()+10000},read => releaseTabInputs(tabId,read));
+}
+async function releaseTabInputs(tabId,read) {
   const state = attached.get(tabId); observations.delete(tabId); invalidateElements(tabId);
   if (!state) return { tabId, released: true };
+  if ((state.detached || state.keys.size || state.buttons.size) && !state.released) {
+    // Detachment is not an input-release receipt. Reacquire only the same
+    // document for key/button-up recovery, never another debugger's session.
+    if (state.identity?.tabId !== tabId || typeof state.identity.documentId !== 'string')
+      fail('RELEASE_FAILED', 'The detached input journal has no original document identity; close the original tab to retire it.', {tabId,heldKeys:[...state.keys.keys()],heldButtons:[...state.buttons]});
+    const tab = await read(() => chrome.tabs.get(tabId)), current = allowed(tab.url) && await content(tabId, 'identity', {}, undefined, read);
+    if (!current || current.documentId !== state.identity.documentId)
+      fail('RELEASE_FAILED', 'The detached tab document changed; its input release remains unconfirmed.', {tabId,heldKeys:[...state.keys.keys()],heldButtons:[...state.buttons]});
+  }
+  if (state.detached && !state.released) {
+    const targets = await read(() => chrome.debugger.getTargets());
+    if (targets.some(target => target.tabId === tabId && target.attached)) {
+      if (!state.recoveryAttached) fail('RELEASE_FAILED', 'Another debugger owns the detached tab; OpenCU will not steal it to release input.', {tabId,heldKeys:[...state.keys.keys()],heldButtons:[...state.buttons]});
+    } else {
+      await chrome.debugger.attach({tabId}, '1.3');
+      state.recoveryAttached = true;
+      await saveAttached();
+    }
+    // A persisted flag is not proof that Chrome still grants this extension
+    // debugger access. A harmless command must succeed before any key/button-up.
+    await read(() => cdp(tabId, 'Runtime.evaluate', {expression:'void 0',returnByValue:true}));
+    // Recheck after asynchronous attachment before releasing anything.
+    const latest = await content(tabId, 'identity', {}, undefined, read);
+    if (attached.get(tabId) !== state || !state.recoveryAttached || latest.documentId !== state.identity.documentId)
+      fail('RELEASE_FAILED', 'The original detached tab changed during input recovery.', {tabId});
+  }
   if (!state.released) {
     state.cursor = null;
     const errors = [];
     for (const button of [...state.buttons]) try { await mouse(tabId, 'mouseReleased', state, button, 1); } catch (error) { errors.push(errorJSON(error)); }
     // Preserve modifiers while a mouse-up remains unacknowledged for retry.
     if (!state.buttons.size) for (const key of [...state.keys.values()].reverse()) try { await keyEvent(tabId, key, false); } catch (error) { errors.push(errorJSON(error)); }
-    try { await content(tabId, 'release'); } catch (error) { if (allowed((await chrome.tabs.get(tabId).catch(() => ({}))).url)) errors.push(errorJSON(error)); }
-    for(const[frameId,route]of state.frameRoutes??[])try{await frameContent(tabId,route,'release');}
+    try { await content(tabId, 'release', {}, undefined, read); } catch (error) { errors.push(errorJSON(error)); }
+    for(const[frameId,route]of state.frameRoutes??[])try{await read(() => frameContent(tabId,route,'release'));}
     catch(error){if(error.code!=='FRAME_DETACHED')errors.push(errorJSON(error));else state.frameRoutes.delete(frameId);}
     if (!errors.length) try { await cdp(tabId, 'Emulation.setFocusEmulationEnabled', { enabled: false }); } catch (error) { errors.push(errorJSON(error)); }
     if (!errors.length) {
       releasing.add(tabId);
       try { await state.frameRouter?.close(); await chrome.debugger.detach({ tabId }); }
-      catch (error) { if ((await chrome.debugger.getTargets()).some(t => t.tabId === tabId && t.attached)) errors.push(errorJSON(error)); }
+      catch (error) { if ((await read(() => chrome.debugger.getTargets())).some(t => t.tabId === tabId && t.attached)) errors.push(errorJSON(error)); }
       finally { releasing.delete(tabId); }
     }
     if (errors.length) fail('RELEASE_FAILED', 'Input release could not be fully acknowledged; state is retained for retry.', { tabId, errors });
@@ -309,10 +371,21 @@ async function releaseTab(tabId) {
   }
   await saveAttached(); attached.delete(tabId); return { tabId, released: true };
 }
-async function releaseAll() {
+async function releaseAll({isolate = false} = {}) {
   const results = [], errors = [];
-  for (const tabId of [...attached.keys()]) try { results.push(await releaseTab(tabId)); } catch (error) { errors.push(errorJSON(error)); }
-  if (errors.length) fail('RELEASE_FAILED', 'Some tabs did not release.', { results, errors });
+  const tabs = [...attached.keys()], settled = await Promise.allSettled(tabs.map(tabId => releaseTab(tabId)));
+  for (const [index,result] of settled.entries()) {
+    if (result.status === 'fulfilled') {results.push(result.value);continue;}
+    const tabId = tabs[index], error = result.reason;
+    const state = attached.get(tabId);
+    if (state) {state.quarantined = true;state.releaseError = errorJSON(error);}
+    errors.push({...errorJSON(error),tabId});
+  }
+  // Persist the original debt before allowing a new owner to use healthy tabs.
+  // A storage failure remains fatal; it cannot be downgraded to target isolation.
+  if (errors.length) await saveAttached();
+  if (errors.length && !isolate) fail('RELEASE_FAILED', 'Some tabs did not release.', { results, errors });
+  if (errors.length) return {released:false,tabs:results,errors};
   return { released: true, tabs: results };
 }
 function pngSize(base64) {
@@ -776,10 +849,20 @@ chrome.tabs.onRemoved.addListener(tabId => { attached.delete(tabId); observation
 chrome.debugger.onDetach.addListener(({ tabId }, reason) => {
   observations.delete(tabId); invalidateElements(tabId);
   if (releasing.has(tabId)) return;
+  // A lost debugger invalidates only this target. Human interaction must not
+  // disconnect the bridge, release other tabs, or cancel their pending reads.
+  tabEpochs.set(tabId, (tabEpochs.get(tabId) ?? 0) + 1);
+  cancelReads(tabId, {targetOnly:true});
   void content(tabId, 'release').catch(error => { status.cursorError = errorJSON(error); });
-  attached.delete(tabId); void saveAttached();
+  const state = attached.get(tabId);
+  if (state) {
+    state.detached = true; state.recoveryAttached = false; state.cursor = null;
+    const router = state.frameRouter; state.frameRouter = undefined;
+    state.frameRoutes?.clear(); state.pointerMarkers?.clear();
+    void router?.close().catch(error => { status.cursorError = errorJSON(error); });
+  }
+  void saveAttached().catch(error => { status.releaseError = errorJSON(error); });
   status.lastDetach = { tabId, reason, at: new Date().toISOString() };
-  if (connection && reason === 'canceled_by_user') void disconnect('Chrome debugger control was canceled. Reconnect explicitly.').catch(error => { status.releaseError = errorJSON(error); });
 });
 
 function cleanupFailure(errors) {
@@ -787,19 +870,37 @@ function cleanupFailure(errors) {
   if (errors.length) fail('DISCONNECT_FAILED', errors.map(error => error.message).join('; '), { errors: errors.map(errorJSON) });
 }
 const receiptKey = owner => JSON.stringify([owner.instanceId, owner.browserInstanceId, owner.epoch]);
+const releaseOwnerRecord = ({instanceId,browserInstanceId,epoch,releaseTicket,receiptScope}) => ({instanceId,browserInstanceId,epoch,releaseTicket,receiptScope});
 async function receiptScope(c) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${c.hostId || c.endpoint}|${c.token}`));
   return [...new Uint8Array(bytes)].map(n => n.toString(16).padStart(2, '0')).join('');
 }
+let ownerWork = Promise.resolve();
+function updateReleaseOwners(work) {
+  const result = ownerWork.catch(() => {}).then(async () => {
+    const saved = await chrome.storage.local.get(['releaseReceipts','releaseOwners','releaseOwner']);
+    const owners = new Map((saved.releaseOwners || []).map(owner => [receiptKey(owner),releaseOwnerRecord(owner)]));
+    if (saved.releaseOwner) owners.set(receiptKey(saved.releaseOwner),releaseOwnerRecord(saved.releaseOwner));
+    await work(saved,owners);
+    await chrome.storage.local.set({releaseOwners:[...owners.values()],releaseReceipts:saved.releaseReceipts || []});
+    if (saved.releaseOwner) await chrome.storage.local.remove('releaseOwner');
+  });
+  ownerWork = result.catch(() => {});return result;
+}
 async function rememberReleased(owner) {
-  if (!owner?.releaseTicket) return;
-  const saved = await chrome.storage.local.get(['releaseReceipts', 'releaseOwner']);
-  const receipts = saved.releaseReceipts || [];
-  const receipt = { instanceId: owner.instanceId, browserInstanceId: owner.browserInstanceId, epoch: owner.epoch,
-    ticket: owner.releaseTicket, scope: owner.receiptScope };
-  if (!receipts.some(item => item.scope === receipt.scope && receiptKey(item) === receiptKey(receipt))) receipts.push(receipt);
-  await chrome.storage.local.set({ releaseReceipts: receipts });
-  if (saved.releaseOwner && receiptKey(saved.releaseOwner) === receiptKey(owner)) await chrome.storage.local.remove('releaseOwner');
+  return updateReleaseOwners(async (saved,owners) => {
+    if (owner?.releaseTicket) owners.set(receiptKey(owner),releaseOwnerRecord(owner));
+    const receipts = saved.releaseReceipts ??= [];
+    for (const [key,current] of owners) {
+      // A new epoch cannot certify an older owner. Unknown journal identity
+      // conservatively retains every ticket until the journal is resolved.
+      if ([...attached.values()].some(state => !state.identity || receiptKey(state.identity) === key)) continue;
+      const receipt = {instanceId:current.instanceId,browserInstanceId:current.browserInstanceId,epoch:current.epoch,
+        ticket:current.releaseTicket,scope:current.receiptScope};
+      if (!receipts.some(item => item.scope === receipt.scope && receiptKey(item) === key)) receipts.push(receipt);
+      owners.delete(key);
+    }
+  });
 }
 async function disconnect(reason = 'User disconnected', cause, temporary = false) {
   const c = connection, errors = [];
@@ -847,7 +948,7 @@ async function loop(c) {
           void Promise.allSettled((tabId === undefined ? [...attached.keys()] : [tabId]).map(id => content(id, 'release')));
         }
         const monitoring = message.monitoring === true && ['preview', 'verify'].includes(message.method);
-        const token = { ...controlToken(message.params?.identity?.tabId), monitoring };
+        const token = { ...controlToken(message.params?.identity?.tabId), monitoring, deadline:message.deadline };
         const lane = monitoring ? Promise.resolve() : commandChain;
         const work = lane.then(async () => {
           if (connection !== c) return;
@@ -887,7 +988,7 @@ async function loop(c) {
   } finally {
     await commandChain.catch(() => {}); running = false; commandChain = Promise.resolve();
     if (connection && connection !== c) void loop(connection);
-    else if (!connection && !status.releaseError) void watchPairing();
+    else if (!connection) void watchPairing();
   }
 }
 async function connect(input, restoring = false) {
@@ -897,8 +998,8 @@ async function connect(input, restoring = false) {
   connecting = true;
   const epoch = controlEpoch;
   try {
-    await releaseAll();
-    await rememberReleased((await chrome.storage.local.get('releaseOwner')).releaseOwner);
+    await releaseAll({isolate:true});
+    await rememberReleased();
     const local = await chrome.storage.local.get('instanceId'), session = await chrome.storage.session.get('browserInstanceId');
     const instanceId = local.instanceId || crypto.randomUUID(), browserInstanceId = session.browserInstanceId || crypto.randomUUID();
     await chrome.storage.local.set({ instanceId, port: Number(input.port) }); await chrome.storage.session.set({ browserInstanceId });
@@ -911,17 +1012,19 @@ async function connect(input, restoring = false) {
     c.sessionId = result.sessionId; c.releaseTicket = result.releaseTicket; connection = c;
     try {
     if (c.releaseTicket) {
-      const savedReceipts = (await chrome.storage.local.get('releaseReceipts')).releaseReceipts || [];
       const acknowledged = new Set(result.acknowledgedReleases || []);
-      await chrome.storage.local.set({ releaseOwner: { instanceId, browserInstanceId, epoch: c.epoch, releaseTicket: c.releaseTicket, receiptScope: c.receiptScope },
-        releaseReceipts: savedReceipts.filter(item => item.scope !== c.receiptScope || !acknowledged.has(receiptKey(item))) });
+      await updateReleaseOwners(async (saved,owners) => {
+        owners.set(receiptKey(c),{instanceId,browserInstanceId,epoch:c.epoch,releaseTicket:c.releaseTicket,receiptScope:c.receiptScope});
+        saved.releaseReceipts = (saved.releaseReceipts || []).filter(item => item.scope !== c.receiptScope || !acknowledged.has(receiptKey(item)));
+      });
     }
       if (epoch !== controlEpoch) fail('CONTROL_STOPPED', 'Connection was cancelled.');
       await chrome.storage.session.set({ authorization: { port: Number(input.port), token: input.token, ...(input.hostId ? {hostId: input.hostId} : {}), consent: true, durableDownloadConsent: c.durableDownloadConsent } });
       await chrome.action.setBadgeBackgroundColor({ color: '#2477ff' }); await chrome.action.setBadgeText({ text: 'ON' });
       if (epoch !== controlEpoch) fail('CONTROL_STOPPED', 'Connection was cancelled.');
       reconnectDisabled = false;
-      status = { connected: true, endpoint: c.endpoint, instanceId, browserInstanceId, epoch: c.epoch };
+      status = { connected: true, endpoint: c.endpoint, instanceId, browserInstanceId, epoch: c.epoch,
+        isolatedTabs:[...attached].filter(([,state])=>state.quarantined).map(([tabId,state])=>({tabId,error:state.releaseError})) };
       void loop(c); return status;
     } catch (error) {
       try { await disconnect(error.message); }
@@ -945,19 +1048,16 @@ async function restore() {
   if (connection || connecting || reconnectDisabled) return;
   const saved = await chrome.storage.session.get(['authorization', 'attachedTabs', 'heldInputs']);
   // A terminated worker releases persisted inputs before detaching; it never restores control references.
-  const releaseError = status.releaseError;
   for (const tabId of saved.attachedTabs || []) {
     if (attached.has(tabId)) continue;
     const held = (saved.heldInputs || []).find(state => state.tabId === tabId) || { keys: [], buttons: [], x: 0, y: 0 };
-    attached.set(tabId, { keys: new Map(held.keys.map(key => [key.key, key])), buttons: new Set(held.buttons), x: held.x, y: held.y });
+    attached.set(tabId, { keys: new Map(held.keys.map(key => [key.key, key])), buttons: new Set(held.buttons), x: held.x, y: held.y,
+      identity:held.identity, detached:true, recoveryAttached:held.detached ? held.recoveryAttached === true : true,
+      quarantined:held.quarantined === true, releaseError:held.releaseError });
   }
-  for (const tabId of [...attached.keys()]) {
-    try { await releaseTab(tabId); }
-    catch (error) { status.releaseError = errorJSON(error); await chrome.storage.session.remove('authorization'); return; }
-  }
-  await chrome.storage.session.set({ attachedTabs: [], heldInputs: [] });
-  await rememberReleased((await chrome.storage.local.get('releaseOwner')).releaseOwner);
-  if (status.releaseError === releaseError) delete status.releaseError;
+  await releaseAll({isolate:true});
+  await rememberReleased();
+  delete status.releaseError;
   if (saved.authorization && !saved.authorization.hostId) {
     try { await connect(saved.authorization, true); }
     catch (error) { await chrome.storage.session.remove('authorization'); status = { connected: false, error: errorJSON(error) }; }
@@ -966,7 +1066,6 @@ async function restore() {
 const pairing = createPairingClient({connect, connected: () => !!connection || connecting, error: error => {status.error = errorJSON(error);} });
 let watchingPairing;
 function watchPairing() {
-  if (status.releaseError) return Promise.resolve();
   watchingPairing ??= pairing.start().catch(error => {status.pairingError = errorJSON(error);}).finally(() => {watchingPairing = undefined;});
   return watchingPairing;
 }

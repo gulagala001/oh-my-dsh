@@ -12,7 +12,6 @@ export function createBrowserHost() {
     if (clients.get(client.id) === client) clients.delete(client.id);
     client.wake?.();
     for (const [id, task] of pending) if (task.client === client) {
-      clearTimeout(task.timer); pending.delete(id);
       task.reject(Object.assign(new Error(reason), { code: 'BROWSER_HOST_DISCONNECTED' }));
     }
   }
@@ -23,6 +22,8 @@ export function createBrowserHost() {
     return [...clients.values()];
   }
   function clientFor(target) {
+    if (sameIdentity(retired.get(target.id)?.identity, target.identity)) fail('TARGET_CLOSED', 'The original sidebar target was already retired',
+      { inputDispatched: false, release: { released: true, retired: true } });
     liveClients();
     const client = clients.get(target.identity?.rendererId);
     if (!client) fail('BROWSER_HOST_DISCONNECTED', 'The original sidebar renderer is no longer connected');
@@ -32,31 +33,94 @@ export function createBrowserHost() {
     // verifies the retained guest occurrence before executing a bound command.
     return client;
   }
-  async function request(client, method, params = {}, monitoring = false) {
+  async function request(client, method, params = {}, monitoring = false, signal, id = randomUUID()) {
+    signal?.throwIfAborted();
     if (closed || clients.get(client.id) !== client) fail('BROWSER_HOST_DISCONNECTED', 'The DSH browser renderer is disconnected');
-    const id = randomUUID();
     return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        clearTimeout(timer); pending.delete(id);
+        client.commands = client.commands.filter(command => command.id !== id);
+        signal?.removeEventListener('abort', abort);
+      };
+      const abort = () => { cleanup(); reject(signal.reason); };
       const timer = setTimeout(() => {
         if (!monitoring && method !== 'presentation' && method !== 'preview') {
           disconnect(client, `${method} timed out; its outcome is unknown`);
           return;
         }
         // Monitoring cannot invalidate the independent input-release channel.
-        pending.delete(id);
-        client.commands = client.commands.filter(command => command.id !== id);
+        cleanup();
         reject(Object.assign(new Error(`${method} timed out; monitoring is unavailable`), { code: 'PRESENTATION_TIMEOUT' }));
       }, 30000);
-      pending.set(id, { client, resolve, reject, timer });
-      client.commands.push({ id, method, params: json(params) });
-      client.wake?.();
+      pending.set(id, { client, method, target: params.target && json(params.target), action: params.action?.action, monitoring, dispatched: false, resolve: value => { cleanup(); resolve(value); }, reject: error => { cleanup(); reject(error); } });
+      client.commands.push({ id, sequence: ++client.commandSequence, method, params: json(params) });
+      signal?.addEventListener('abort', abort, { once: true });
+      if (signal?.aborted) abort(); else client.wake?.();
     });
   }
-  function retire(target) {
+  async function creation(client, method, params, signal) {
+    signal?.throwIfAborted();
+    const id = randomUUID(), completion = new AbortController();
+    let interruption;
+    const abort = () => {
+      const task = pending.get(id); if (task) task.cancelling = true;
+      if (client.commands.some(command => command.id === id)) {
+        interruption ??= Promise.resolve({ released: true, notCreated: true }); completion.abort(signal.reason); return;
+      }
+      interruption ??= request(client, 'cancelCreation', { commandId: id })
+        .catch(error => ({ released: false, error: error.message }))
+        .then(result => { completion.abort(signal.reason); return result; });
+    };
+    signal?.addEventListener('abort', abort, { once: true });
+    try {
+      const result = await request(client, method, params, false, completion.signal, id);
+      signal?.throwIfAborted();
+      return result;
+    } catch (error) {
+      const target = error.details?.target;
+      if (error.details?.cleanup && target?.identity?.rendererId === client.id)
+        bindings.set(target.id, { target: json(target), client, needsRelease: true });
+      throw error;
+    } finally {
+      signal?.removeEventListener('abort', abort);
+      try {
+        if (interruption) {
+          const release = await interruption;
+          if (!inputReleased(release)) {
+            const target = release.target;
+            if (target?.identity?.rendererId === client.id) bindings.set(target.id, { target: json(target), client, needsRelease: true });
+            fail('RELEASE_FAILED', 'Cancelled tab creation was not closed by its owning window', release);
+          }
+        }
+      } finally {
+        // This one-way receipt follows cancellation, so its handle cannot be
+        // collected before an already queued cancel reaches the renderer.
+        if (clients.get(client.id) === client) {
+          client.commands.push({ id: randomUUID(), sequence: ++client.commandSequence, method: 'completeCreation', params: { commandId: id } });
+          client.wake?.();
+        }
+      }
+    }
+  }
+  function retire(target, sourceClient = clients.get(target.identity?.rendererId), release = { released: true, retired: true }) {
     retired.set(target.id, json(target));
     if (sameIdentity(bindings.get(target.id)?.target.identity, target.identity)) bindings.delete(target.id);
+    // Retirement is a receipt for this occurrence, not proof of an unfinished
+    // action's business effect. Settle its missing reply without poisoning peers.
+    for (const task of pending.values()) {
+      if (task.client !== sourceClient || task.target?.id !== target.id || !sameIdentity(task.target.identity, target.identity)
+        || task.method === 'act' && task.action === 'newTab') continue;
+      if (task.method === 'release') task.resolve(release);
+      else if (task.method === 'act' && task.action === 'closeTab') task.resolve({ action: 'closeTab', closedTargetId: target.id, release });
+      else task.reject(Object.assign(new Error('The original sidebar target was retired before its operation result arrived; do not replay uncertain input'), {
+        code: 'TARGET_CLOSED', details: { targetId: target.id, closedTargetId: target.id,
+          inputDispatched: task.dispatched && (task.method === 'focus' || task.method === 'act' && !task.monitoring),
+          effectVerified: false, release },
+      }));
+    }
   }
   function presentationOwner(target, sessionId) {
-    const available = liveClients().filter(client => client.presentation);
+    const available = liveClients().filter(client => client.presentation && (!sessionId || client.sessionIds.includes(sessionId)));
     const ownerId = target.identity?.rendererId ?? sessionOwners.get(sessionId);
     const owner = ownerId ? available.find(client => client.id === ownerId) : available.length === 1 ? available[0] : null;
     if (!owner) fail('PRESENTATION_HOST_UNAVAILABLE', 'The owning DSH window needs the OpenCU presentation adapter');
@@ -69,7 +133,7 @@ export function createBrowserHost() {
       signal?.throwIfAborted();
       const client = liveClients().find(client => browserId === `dsh:${client.id}`);
       if (!client) fail('BROWSER_HOST_DISCONNECTED', 'Choose one connected sidebar browser');
-      const result = await request(client, 'openTab', {sessionId, url});
+      const result = await creation(client, 'openTab', {sessionId, url}, signal);
       return result.target;
     },
     getDiagnostics() {
@@ -100,7 +164,7 @@ export function createBrowserHost() {
     },
     async verify(target, options = {}) {
       try {
-        const current = await request(clientFor(target), 'verify', { target }, options.monitoring === true);
+        const current = await request(clientFor(target), 'verify', { target }, options.monitoring === true, options.signal);
         return { valid: current.id === target.id && sameIdentity(current.identity, target.identity), target: current };
       } catch (error) { return { valid: false, reason: error.message }; }
     },
@@ -109,7 +173,7 @@ export function createBrowserHost() {
     async observe(target, options = {}) {
       const { signal, ...requestOptions } = options;
       signal?.throwIfAborted();
-      return request(clientFor(target), 'observe', { target, options: requestOptions });
+      return request(clientFor(target), 'observe', { target, options: requestOptions }, true, signal);
     },
     async act(target, options) {
       const { signal, ...action } = options;
@@ -125,11 +189,20 @@ export function createBrowserHost() {
       const owedBefore = binding.needsRelease;
       if (!reading) { binding.needsRelease = true; bindings.set(target.id, binding); }
       let interruption;
-      const abort = () => { interruption ??= request(client, 'release', { target }).catch(error => ({ released: false, error: error.message })); };
+      const completion = new AbortController();
+      const abort = () => {
+        if (reading) { completion.abort(signal.reason); return; }
+        // Releasing the target is the execution barrier. Once it completes, a
+        // lost original reply cannot hold cancellation open or time out the host.
+        interruption ??= request(client, 'release', { target }).catch(error => ({ released: false, error: error.message }))
+          .then(result => { completion.abort(signal.reason); return result; });
+      };
       signal?.addEventListener('abort', abort, { once: true });
       try {
         signal?.throwIfAborted();
-        const result = await request(client, 'act', { target, action });
+        const result = action.action === 'newTab'
+          ? await creation(client, 'act', { target, action }, signal)
+          : await request(client, 'act', { target, action }, reading, completion.signal);
         signal?.throwIfAborted();
         if (inputReleased(result?.release)) binding.needsRelease = false;
         if (result?.closedTargetId === target.id) retire(target);
@@ -250,10 +323,10 @@ export function createBrowserHost() {
         resetPresentationImages(client); return request(client, 'presentation', { operation: 'close', payload: {} });
       }));
     }, 
-    async openTab({ browserId, sessionId, url }) {
+    async openTab({ browserId, sessionId, url, signal }) {
       const matches = liveClients().filter(client => !browserId || browserId === `dsh:${client.id}`);
       if (matches.length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected sidebar browser');
-      const result = await request(matches[0], 'openTab', { sessionId, url });
+      const result = await creation(matches[0], 'openTab', { sessionId, url }, signal);
       return result.target;
     },
     async handle(method, args, signal) {
@@ -266,7 +339,7 @@ export function createBrowserHost() {
         const connectionId = randomUUID();
         clients.set(id, { id, connectionId, presentation: args.presentation === true, presentationImages: args.presentationImages === 1, presentationFrames: [], presentationSequence: 0,
           sessionIds: Array.isArray(args.sessionIds) ? args.sessionIds.filter(id => typeof id === 'string') : [],
-          targets: [], commands: [], wake: null, lastSeen: Date.now() });
+          targets: [], commands: [], commandSequence: 0, wake: null, lastSeen: Date.now() });
         for (const sessionId of clients.get(id).sessionIds) sessionOwners.set(sessionId, id);
         return { ok: true, rendererId: id, connectionId };
       }
@@ -277,7 +350,7 @@ export function createBrowserHost() {
         if (inputReleased(args)) for (const binding of bindings.values())
           if (binding.target.identity.rendererId === args.rendererId && binding.client?.connectionId === args.connectionId) {
             if (client?.targets.some(target => target.id === binding.target.id && sameIdentity(target.identity,binding.target.identity))) binding.needsRelease = false;
-            else retire(binding.target);
+            else retire(binding.target, binding.client);
           }
         return {ok: true, ignored: true};
       }
@@ -295,6 +368,8 @@ export function createBrowserHost() {
         if (!Array.isArray(args.targets)) fail('INVALID_TARGET', 'Expected the live sidebar target list');
         const validate = target => {
           if (typeof target.id !== 'string' || typeof target.identity?.guestId !== 'string' || target.identity.rendererId !== client.id) fail('INVALID_TARGET', 'Invalid sidebar guest identity');
+          const current = client.targets.find(item => item.id === target.id);
+          if (current && !sameIdentity(current.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'A sidebar publication cannot replace another guest occurrence');
           const bound = bindings.get(target.id)?.target;
           if (bound && !sameIdentity(bound.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'A sidebar target ID cannot replace another occurrence');
           return { ...target, backend: 'browser', provider: 'dsh', kind: 'tab', browserId: `dsh:${client.id}` };
@@ -303,17 +378,36 @@ export function createBrowserHost() {
         if (args.retiredTargets !== undefined && !Array.isArray(args.retiredTargets)) fail('INVALID_TARGET', 'Expected released sidebar targets');
         const released = (args.retiredTargets ?? []).map(validate);
         if (released.some(target => targets.some(live => live.id === target.id))) fail('INVALID_TARGET', 'A live sidebar target cannot be retired');
-        for (const target of released) retire(target);
+        if (args.retiredReceipts !== undefined && !Array.isArray(args.retiredReceipts)) fail('INVALID_TARGET', 'Expected retired-target release receipts');
+        const receipts = new Map();
+        for (const receipt of args.retiredReceipts ?? []) {
+          const target = released.find(target => target.id === receipt.target?.id && sameIdentity(target.identity, receipt.target.identity));
+          if (!target || receipts.has(target.id) || !inputReleased(receipt.release) || receipt.release.retired !== true)
+            fail('INVALID_TARGET', 'Retirement requires the exact target release receipt');
+          receipts.set(target.id, json(receipt.release));
+        }
+        if (args.retiredResults !== undefined && !Array.isArray(args.retiredResults)) fail('INVALID_TARGET', 'Expected completed retired-target results');
+        const results = (args.retiredResults ?? []).map(receipt => {
+          const target = released.find(target => target.id === receipt.target?.id && sameIdentity(target.identity, receipt.target.identity));
+          if (!target || typeof receipt.id !== 'string' || receipt.result?.closedTargetId !== target.id
+            || !inputReleased(receipt.result?.release) || receipt.result.release.retired !== true)
+            fail('INVALID_TARGET', 'Retired results require the exact target and release receipt');
+          return { receipt, target };
+        });
+        for (const { receipt, target } of results) {
+          const task = pending.get(receipt.id);
+          if (task?.client === client && task.method === 'act' && task.target?.id === target.id && sameIdentity(task.target.identity, target.identity)) task.resolve(receipt.result);
+        }
+        for (const target of released) retire(target, client, receipts.get(target.id));
         client.targets = targets.filter(target => !sameIdentity(retired.get(target.id)?.identity, target.identity));
         return { ok: true };
       }
       if (method === 'browser/result') {
         const task = pending.get(args.id);
         if (!task || task.client !== client) return { ok: true, ignored: true };
-        clearTimeout(task.timer); pending.delete(args.id);
         if (args.error) task.reject(Object.assign(new Error(args.error.message), { code: args.error.code ?? 'BROWSER_GUEST_ERROR', ...(args.error.details === undefined ? {} : {details: args.error.details}) }));
         else task.resolve(args.result);
-        return { ok: true };
+        return { ok: true, ...(task.cancelling ? { cancelRequested: true } : {}) };
       }
       if (method === 'browser/poll') {
         signal?.throwIfAborted();
@@ -327,7 +421,9 @@ export function createBrowserHost() {
           if (signal?.aborted) abort();
         });
         const connected = clients.get(client.id) === client;
-        return { ok: true, commands: connected ? client.commands.splice(0) : [], connected };
+        const commands = connected ? client.commands.splice(0) : [];
+        for (const command of commands) { const task = pending.get(command.id); if (task) task.dispatched = true; }
+        return { ok: true, commands, connected };
       }
       if (method === 'browser/disconnect') {
         if (inputReleased(args)) {

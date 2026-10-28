@@ -59,35 +59,50 @@ export function createAppApprovals(getDirectory, onChange = () => {}) {
       if (typeof sessionId !== 'string' || !sessionId) throw failure('APP_SESSION_REQUIRED', 'Application access requires a conversation');
       const app = identity(target), existing = grants(sessionId).get(app.bundleIdentifier);
       if (existing && sameApp(existing, app)) return;
-      const attempt = { sessionId, cancelled: false }; authorizing.add(attempt);
+      const cancellation = new AbortController();
+      const attempt = { sessionId, cancel: reason => cancellation.abort(reason) }; authorizing.add(attempt);
+      const abortPreparation = () => attempt.cancel(signal.reason);
+      signal?.addEventListener('abort', abortPreparation, { once: true });
+      const wait = work => new Promise((resolve, reject) => {
+        const abort = () => { cleanup(); reject(cancellation.signal.reason); };
+        const cleanup = () => cancellation.signal.removeEventListener('abort', abort);
+        Promise.resolve(work).then(value => { cleanup(); resolve(value); }, error => { cleanup(); reject(error); });
+        cancellation.signal.addEventListener('abort', abort, { once: true });
+        if (cancellation.signal.aborted) abort();
+      });
       const check = () => {
         signal?.throwIfAborted();
         if (closed) throw new Error('Application approvals are closed');
-        if (attempt.cancelled) throw failure('APP_APPROVAL_CANCELLED', 'The computer task was cancelled');
+        cancellation.signal.throwIfAborted();
       };
-      let request;
+      let request, created = false;
       try {
-        await tail; check();
-        const approved = (await read()).approvedApps.find(value => sameApp(value, app));
+        await wait(tail); check();
+        const approved = (await wait(read())).approvedApps.find(value => sameApp(value, app));
         check();
         if (approved) { grants(sessionId).set(app.bundleIdentifier, app); return; }
         request = [...pending.values()].find(value => value.conversationId === sessionId && sameApp(value.app, app));
         if (!request) {
-          const metadata = await readMetadata?.();
+          const metadata = await wait(readMetadata?.());
           check();
           if (sameApp(grants(sessionId).get(app.bundleIdentifier) ?? {}, app)) return;
           request = [...pending.values()].find(value => value.conversationId === sessionId && sameApp(value.app, app));
           if (!request) {
             const display = metadata ? { ...app, displayName: metadata.displayName || app.displayName, iconDataURL: metadata.iconDataURL ?? null } : app;
             request = { id: randomUUID(), conversationId: sessionId, app: display, targetId: target.id, waiters: new Set() };
-            pending.set(request.id, request); changed();
+            pending.set(request.id, request); created = true;
           }
         }
-      } finally { authorizing.delete(attempt); }
+      } finally { authorizing.delete(attempt); signal?.removeEventListener('abort', abortPreparation); }
       return new Promise((resolve, reject) => {
-        let endWaiting;
-        const waiter = { resolve, reject, cleanup: () => { signal?.removeEventListener('abort', abort); const finish = endWaiting; endWaiting = undefined; finish?.(); } };
+        let endWaiting, settled = false;
+        const finishWaiting = finish => { try { finish?.(); } catch { console.error('OpenCU approval waiting cleanup failed'); } };
+        const waiter = { resolve, reject, cleanup: () => {
+          settled = true; signal?.removeEventListener('abort', abort);
+          const finish = endWaiting; endWaiting = undefined; finishWaiting(finish);
+        } };
         const cancel = reason => {
+          if (settled) return;
           waiter.cleanup(); request.waiters.delete(waiter);
           if (!request.waiters.size && pending.delete(request.id)) changed();
           reject(reason);
@@ -95,9 +110,13 @@ export function createAppApprovals(getDirectory, onChange = () => {}) {
         const abort = () => cancel(signal.reason ?? failure('APP_APPROVAL_CANCELLED', 'Application request was cancelled'));
         request.waiters.add(waiter);
         signal?.addEventListener('abort', abort, { once: true });
-        try { endWaiting = onWaiting?.({requestId: request.id, targetId: target.id, appDisplayName: request.app.displayName}); }
+        try {
+          const finish = onWaiting?.({requestId: request.id, targetId: target.id, appDisplayName: request.app.displayName});
+          if (settled) finishWaiting(finish); else endWaiting = finish;
+        }
         catch (error) { cancel(error); return; }
         if (signal?.aborted) abort();
+        if (created && pending.get(request.id) === request) changed();
       });
     },
     snapshot() { return [...pending.values()].map(publicRequest); },
@@ -126,7 +145,8 @@ export function createAppApprovals(getDirectory, onChange = () => {}) {
       } finally { request.responding = false; }
     },
     cancel(sessionId) {
-      for (const attempt of authorizing) if (sessionId == null || attempt.sessionId === sessionId) attempt.cancelled = true;
+      for (const attempt of authorizing) if (sessionId == null || attempt.sessionId === sessionId)
+        attempt.cancel(closed ? new Error('Application approvals are closed') : failure('APP_APPROVAL_CANCELLED', 'The computer task was cancelled'));
       for (const request of pending.values()) if (sessionId == null || request.conversationId === sessionId) {
         pending.delete(request.id); changed();
         for (const waiter of request.waiters) { waiter.cleanup(); waiter.reject(failure('APP_APPROVAL_CANCELLED', 'The computer task was cancelled')); }

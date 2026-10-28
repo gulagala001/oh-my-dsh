@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import { assertPackageScope, assertPackageEntrypoints, assertPackageDocumentation } from './package-policy.mjs';
+import { nativePackageModes } from './native-package-modes.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -102,6 +103,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       temporary = await mkdtemp(join(tmpdir(), 'omd-delivery-'));
       const [packed] = JSON.parse(execFileSync('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', temporary], { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }));
       archive = join(temporary, packed.filename);
+      // Match pack-local for this owned temporary package. Supplied archives
+      // remain read-only and must already carry the correct executable modes.
+      await nativePackageModes(archive);
     }
     console.log(JSON.stringify(verifyDeliveryArchive(await readFile(resolve(archive)), baseline), null, 2));
   } finally {

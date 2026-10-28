@@ -253,6 +253,20 @@ export async function createController({dataDir, browser, native} = {}) {
     for (const recovery of recoveryOperations) recovery.abort();
     for (const target of selected.values()) target.verified = false;
   }
+  // Permission/history reads own no input and must not occupy the input lane.
+  // They remain readable after a stop, while a newer stop still cancels them.
+  async function passiveRead(work, callerSignal, operationEpoch) {
+    alive();
+    checkOperation(operationEpoch);
+    const recovery = new AbortController();
+    recoveryOperations.add(recovery);
+    const signal = callerSignal ? AbortSignal.any([recovery.signal, callerSignal]) : recovery.signal;
+    try {
+      const result = await readOperation(() => work(signal), signal);
+      checkOperation(operationEpoch);
+      return result;
+    } finally { recoveryOperations.delete(recovery); }
+  }
   async function inventory(operationEpoch = epoch, callerSignal) {
     alive();
     checkOperation(operationEpoch);
@@ -703,34 +717,64 @@ export async function createController({dataDir, browser, native} = {}) {
       // would report on every turn end.
       if (typeof backend.away !== 'function') return {away: false, state: snapshot()};
       const relinquish = request.relinquish === true;
+      const operationEpoch = epoch;
+      const acknowledge = async release => {
+        if (!inputReleased(release)) return {};
+        checkOperation(operationEpoch);
+        // The native helper releases its one hardware stream. A hand-back does
+        // not establish anything about unrelated browser occurrences.
+        const releasedTargetIds = target.backend === 'native'
+          ? [...selected.values()].filter(item => item.backend === 'native').map(item => item.id) : [target.id];
+        for (const id of releasedTargetIds) selected.get(id).releaseAcknowledged = true;
+        if (target.backend === 'native') releaseErrors = releaseErrors.filter(item => item.backend !== 'native');
+        refreshBrowserReleases();
+        await persist(); checkOperation(operationEpoch);
+        return {release, releasedTargetIds};
+      };
       try {
-        return {targetId: target.id, relinquish, away: await backend.away(json(target), {relinquish}), state: snapshot()};
+        const result = await backend.away(json(target), {relinquish});
+        checkOperation(operationEpoch);
+        if (result?.release !== undefined && !inputReleased(result.release))
+          fail('RELEASE_FAILED', 'Hand-back did not confirm input release', {release:result.release});
+        const receipt = await acknowledge(result?.release);
+        return {targetId: target.id, relinquish, away: typeof result === 'boolean' ? result : result?.away === true, ...receipt, state: snapshot()};
       } catch (error) {
+        if (operationEpoch !== epoch) throw error;
+        if (inputReleased(error.details?.release) && !persistenceFailures.has(error)) {
+          try { error.details = {...error.details, ...await acknowledge(error.details.release)}; }
+          catch (failure) { if (operationEpoch === epoch) { block('faulted'); await releaseAll(); } throw failure; }
+          throw error;
+        }
         block('faulted');
         await releaseAll();
         throw error;
       }
     })),
-    permissions: () => response(() => serial(async () => {
-      alive();
+    permissions: ({signal} = {}) => {
+      const operationEpoch = epoch;
+      return response(() => passiveRead(async readSignal => {
       const backend = backends.get('native');
       if (!backend || typeof backend.permissions !== 'function') return {permissions: {available: false, platform: process.platform}};
-      return {permissions: {available: true, ...await backend.permissions()}};
-    })),
+      return {permissions: {available: true, ...await backend.permissions({signal:readSignal})}};
+      }, signal, operationEpoch));
+    },
     openPermissionSettings: (request = {}) => response(() => serial(async () => {
       alive();
       const backend = backends.get('native');
       if (!backend || typeof backend.openPermissionSettings !== 'function') fail('BACKEND_UNAVAILABLE', 'Native permission settings are unavailable');
       return {result: await backend.openPermissionSettings(request.permission)};
     })),
-    deliveries: () => response(() => serial(async () => {
-      alive();
+    deliveries: ({signal} = {}) => {
+      const operationEpoch = epoch;
+      return response(() => passiveRead(async readSignal => {
       const records = [];
       for (const backend of backends.values()) {
-        if (typeof backend.deliveries === 'function') records.push(...await backend.deliveries());
+        readSignal.throwIfAborted();
+        if (typeof backend.deliveries === 'function') records.push(...await backend.deliveries({signal:readSignal}));
       }
       return {deliveries: records};
-    })),
+      }, signal, operationEpoch));
+    },
     close: () => {
       if (closed) return response(async () => ({state: snapshot()}));
       if (closing) return closing;

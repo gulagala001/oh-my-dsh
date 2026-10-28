@@ -254,7 +254,7 @@ final class InputStore {
         if !releasing { try check() }
         try requireInput()
         if down && IsSecureEventInputEnabled() { throw NativeFailure("SECURE_INPUT_ACTIVE", "macOS Secure Event Input is active; keyboard input was not posted.") }
-        if down && (keys.contains(code) || !background && CGEventSource.keyState(.combinedSessionState, key: code)) {
+        if down && (keys.contains(code) || CGEventSource.keyState(.combinedSessionState, key: code)) {
             throw NativeFailure("INPUT_ALREADY_HELD", "Key is already held by OpenCU or the user; it was not acquired.", ["keyCode": code])
         }
         if !down && !keys.contains(code) { return }
@@ -280,7 +280,7 @@ final class InputStore {
         if !releasing { try check() }
         try requireInput()
         guard button >= 0 && button <= 2 else { throw NativeFailure("INVALID_ACTION", "Mouse button must be left, right or middle.") }
-        if down && (buttons.contains(button) || !background && CGEventSource.buttonState(.combinedSessionState, button: CGMouseButton(rawValue: UInt32(button))!)) {
+        if down && (buttons.contains(button) || CGEventSource.buttonState(.combinedSessionState, button: CGMouseButton(rawValue: UInt32(button))!)) {
             throw NativeFailure("INPUT_ALREADY_HELD", "Mouse button is already held by OpenCU or the user; it was not acquired.")
         }
         if !down && !buttons.contains(button) { return }
@@ -349,7 +349,7 @@ final class InputStore {
             if (0xD800...0xDBFF).contains(units[index]) && end < units.count &&
                 (0xDC00...0xDFFF).contains(units[end]) { end += 1 }
             let chunk = Array(units[index..<end])
-            if !background && CGEventSource.keyState(.combinedSessionState, key: 0) {
+            if CGEventSource.keyState(.combinedSessionState, key: 0) {
                 throw NativeFailure("INPUT_ALREADY_HELD", "The user already holds the Unicode event key; it was not acquired.", ["keyCode": 0])
             }
             guard let down = CGEvent(keyboardEventSource: eventSource, virtualKey: 0, keyDown: true),

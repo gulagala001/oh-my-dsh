@@ -52,7 +52,7 @@ Chrome / Edge 扩展的 loopback bridge 由插件自动管理，监听本机 193
 
 ## 能力与边界
 
-工具提供真实目标发现、选择、观察、操作、文件交付和持久 JavaScript。浏览器键盘输入按实际按键、编辑目标与输入类型标记，剪贴板编辑及原生表单控件的默认输入也属于本次操作；派发结束立即清理标记，不用延时窗口屏蔽真实人工输入。已删除强制 takeover 协议；用户活动通过 userActivity 通知，不停止控制、不要求用户点恢复。stop 用于明确任务取消并确认输入释放；故障／冷恢复的 resume 核验身份，不能清状态绕过。截图保存到真实 DSH attachments 并返回持久 ImageAttachmentRef。普通批注保存不标记为 AI 操作，也不取消工具。macOS 人工活动通知使用已授权的只读输入监听，只保存所选目标的活动种类、时间与序号，不保存按键内容、不请求权限或改变控制权；缺少输入监听权限时明确报告不可检测。产品鼠标使用同一 REA 原件，承载层透明且点击穿透；可见浏览器页面和 macOS 等待到达回执后发送对应输入，隐藏页面明确延后视觉回执而不阻塞后台输入，Windows/Linux 的原生移动通过独立显示通道传给所属 DSH 窗口，不以动画回执冒充输入成功。取消会隐藏鼠标并释放实际按键。内置浏览器鼠标的位置／可见性独立于单次动作活动状态；macOS 原生鼠标不再 1.5 秒超时隐藏，在动作间隙保留最后位置，取消／释放／目标失效时移除。托管浏览器和扩展页面沿用同一 REA 鼠标，在页面存续期间不按空闲时间隐藏。Windows/Linux 显式前台输入保留系统指针，同时把真实位置接到同一 REA 鼠标；后台无障碍动作不移动系统指针；Windows 物理像素由宿主换算为 DIP，Linux X11 单屏按真实比例换算，Wayland 使用 portal 逻辑坐标与显示器原点。鼠标在动作间隙保持，取消／目标失效／helper 或所属窗口退出时清理；用户鼠标不被覆盖层捕获。
+工具提供真实目标发现、选择、观察、操作、文件交付和持久 JavaScript。浏览器键盘输入按实际按键、编辑目标与输入类型标记，剪贴板编辑及原生表单控件的默认输入也属于本次操作；派发结束立即清理标记，不用延时窗口屏蔽真实人工输入。已删除强制 takeover 协议；人类鼠标、键盘、滚动、焦点与页面变化通过 userActivity 等观察信息交给 AI，由 AI 决定是否继续、重新观察或中断。程序不因 human／userActivity 标记暂停、拒绝输入或触发全局停止；人类明确停止任务或停止 LLM 时才按取消流程终止。stop 用于明确任务取消并确认输入释放；故障／冷恢复的 resume 核验身份，不能清状态绕过。截图保存到真实 DSH attachments 并返回持久 ImageAttachmentRef。普通批注保存不标记为 AI 操作，也不取消工具。macOS 人工活动通知使用已授权的只读输入监听，只保存所选目标的活动种类、时间与序号，不保存按键内容、不请求权限或改变控制权；缺少输入监听权限时明确报告不可检测。产品鼠标使用同一 REA 原件，承载层透明且点击穿透；可见浏览器页面和 macOS 等待到达回执后发送对应输入，隐藏页面明确延后视觉回执而不阻塞后台输入，Windows/Linux 的原生移动通过独立显示通道传给所属 DSH 窗口，不以动画回执冒充输入成功。取消会隐藏鼠标并释放实际按键。内置浏览器鼠标的位置／可见性独立于单次动作活动状态；macOS 原生鼠标不再 1.5 秒超时隐藏，在动作间隙保留最后位置，取消／释放／目标失效时移除。托管浏览器和扩展页面沿用同一 REA 鼠标，在页面存续期间不按空闲时间隐藏。Windows/Linux 显式前台输入保留系统指针，同时把真实位置接到同一 REA 鼠标；后台无障碍动作不移动系统指针；Windows 物理像素由宿主换算为 DIP，Linux X11 单屏按真实比例换算，Wayland 使用 portal 逻辑坐标与显示器原点。鼠标在动作间隙保持，取消／目标失效／helper 或所属窗口退出时清理；用户鼠标不被覆盖层捕获。
 
 浏览器 action 支持 navigate/back/forward/reload/newTab/closeTab/activate/click/doubleClick/move/mouseDown/mouseUp/scroll/drag/keyDown/keyUp/press/type/fill/selectOption/upload/download。元素 ID 只使用最新观察；坐标遵循观察声明的坐标空间。
 
@@ -138,13 +138,61 @@ npm ci
 打包前运行 `node scripts/check-desktop-build.mjs /absolute/extracted/app`，用当前客户端兼容检查核验实际主窗口及浏览子窗口 preload；缺少能力时拒绝打包。此检查只核验编译后的桥接接口，宿主操作及前端启动仍须用匹配安装包定点验证。
 
 
-包只带有效 Host 核心／后端、浏览器扩展、必要 native 来源／helper 和说明。REA 研究原件留在仓库，不把整份研究材料、开发依赖、隔离数据、token、Node 或浏览器塞进发行包。`npm test` 在构建后运行全部回归，与 CI 相同；真实隔离 DSH smoke 可选执行：
+包只带有效 Host 核心／后端、浏览器扩展、必要 native 来源／helper 和说明。REA 研究原件留在仓库，不把整份研究材料、开发依赖、隔离数据、token、Node 或浏览器塞进发行包。`npm test` 在构建后执行源码登记检查和现有全部 `test/*.test.mjs`；CI 使用下述 `cu:verify -- --profile full` 统一执行生成场景、全部测试与真实 Chromium，不再另跑一次 `npm test`。单独运行真实隔离 DSH smoke：
 
 ```sh
 OPENCU_DSH_SMOKE=1 node --test test/dsh.test.mjs
 ```
 
 该检查通过真实 DSH profile launcher、ToolRuntime 和 LocalAttachmentStore 调用插件；不连接预先启动的 OpenCU 服务，不修改当前工作 DSH。本仓库不执行公开发布或日常部署。
+
+### CU／BU 故障验证
+
+长期入口为 `scripts/cu-liveness.mjs`。先在源码 checkout 安装冻结依赖、生成当前客户端产物，并安装匹配的 Playwright Chromium；验证机消费这些产物，不替代构建。已完成当前产物构建时无需重复构建。
+
+```sh
+npm ci
+npm run build
+npx playwright install chromium
+npm run cu:check
+npm run cu:verify
+```
+
+`cu:verify` 默认选择 `full`，自动启用真实隔离 DSH smoke。SDK 从显式 `OPENCU_DSH_INSTALL`、本地 `.local/cu-dsh-sdk`、当前包或相邻 OMD 安装锚点发现，版本必须与包声明精确一致；缺少 SDK 时报告未完成。独立环境可运行 `npm install --prefix .local/cu-dsh-sdk --no-audit --no-fund --save-exact @deepseek-ai/dsh@0.2.1-rc.3 @deepseek-ai/dsh-attachment-local@0.2.1-rc.3 @deepseek-ai/dsh-system-prompt@0.2.1-rc.3 @deepseek-ai/dsh-tools@0.2.1-rc.3` 准备。`node scripts/cu-liveness.mjs help` 可查看命令入口。Linux CI 使用 `npx playwright install --with-deps chromium`；现有构建／归档及产物一致性检查保持，随后执行一次 `npm run cu:verify -- --profile full`。`cu:check` 已接入 `pretest` 与 `prepack`，打包时仍执行原文档、扩展分发和公开文件门禁；不会在打包前自动运行完整验证机。宿主变体 staging 通过 `OPENCU_SOURCE_ROOT` 指向原源码，`check` 据此核对原源码登记，避免把有意生成的宿主变体误认为未经审查的源码修改。
+
+| 命令或范围 | 实际执行内容 |
+| --- | --- |
+| `npm run cu:check` | 核对受管源码、等待点、契约和适配测试登记；源码摘要或登记漂移即失败，不启动浏览器 |
+| `node scripts/cu-liveness.mjs catalog` | 查看当前源码登记统计；审查修改的归属、等待、取消、释放及迟到续体后，用 `catalog --write` 原位更新登记 |
+| `node scripts/cu-liveness.mjs list` | 列出生成场景与不变量，取得可供 `--case` 使用的准确 ID |
+| `npm run cu:verify -- --profile matrix` | 执行状态模型生成的有限因果场景及故障交错 |
+| `npm run cu:verify -- --profile adapters` | 执行已登记契约对应的现有适配测试 |
+| `npm run cu:verify -- --profile browser` | 用隔离的真实 Chromium 执行后端、runtime 和 Worker 的连续交互 |
+| `npm run cu:verify -- --profile full` | 生成场景、全部现有 `test/*.test.mjs` 各一次（含真实 DSH 和本机原生检查），以及真实 Chromium |
+
+生成场景覆盖取消、排队、超时、断连、代次更换、重复／迟到回执、输入释放、审批等待、故障恢复、重置及下一会话等已登记关系。`--seed N` 固定场景执行顺序；`--case ID` 只执行该生成场景，不顺带执行适配测试和 Chromium。`--timeout-ms N` 设置单个生成场景的外部监督时限；增大时限不能把死等、未释放输入或错误回执视为通过。
+
+`check` 是源码等待点登记的漂移门禁，不是动态分支全覆盖或所有执行序列的证明。更新 `catalog --write` 只是记录已审查源码；需用受影响动态范围验证修复，不能为了通过检查直接刷新摘要。有限模型和真实浏览器结果也不证明任意网页、应用、驱动或操作系统永无错误。
+
+每轮仅在本 checkout 的 `.local/cu-liveness/run-*` 保存结果：`input.json` 记录执行范围、seed 与源码身份，`summary.json` 汇总真实结果，适配测试输出保存在该轮报告内。生成场景的失败文件位于 `failures/*.json`，保存准确场景与故障回执，可单独重放：
+
+```sh
+npm run cu:replay -- --replay .local/cu-liveness/run-EXAMPLE/failures/CASE.json
+# 修复源码并完成登记复核后，显式允许使用新源码检验原来的同一场景。
+npm run cu:replay -- --replay .local/cu-liveness/run-EXAMPLE/failures/CASE.json --allow-source-change
+```
+
+重放默认拒绝源码身份变化，也拒绝不属于当前场景语法的失败记录；`--allow-source-change` 只放开源码身份比较，不放宽断言或篡改原场景。适配测试与 Chromium 失败按报告中的文件、用例及检查点重新执行相应范围，不能把 `summary.json` 当作生成场景的重放文件。这里重放的是隔离合成输入，不会重放用户任务中结果不明的输入。
+
+退出码 `0` 表示本次指定范围通过；`1` 表示检查或验证失败；`2` 表示验证被取消或未完成。退出后同时检查报告的 `profile`、`complete`、`ok` 和覆盖排除项：窄范围成功不等于 `full` 通过。SIGINT／SIGTERM、外部监督超时、缺失／重复回执、未完成等待或残留子进程均不能记成成功；退出码为零但缺少有效检查回执也不是验收依据。源码或生成产物在验证期间变化会使当前结论失效，应验证最终源码。
+
+验证使用本轮私有源码与生成产物副本、独立数据／附件目录、合成夹具和隔离浏览器 profile；依赖按锁文件复用，依赖本身被外部任意修改不属于副本隔离的保证。外部监督只终止本轮进程组及已识别的后代，完成后删除 scratch，保留失败和汇总回执。报告、日志与临时数据不提交、不打包；不访问日常 DSH 的 profile、真实会话、用户浏览器资料或系统剪贴板，不以重启工作宿主获得通过。
+
+运行器目前依赖 POSIX 进程组及进程清单核验，macOS／Linux 可运行；Windows 尚未接通等价的进程树监督，不能把该平台的运行拒绝记作通过。macOS 全量检查还会编译并打开独立测试窗口，以现有签名助手和已授权的 Accessibility／输入／截图权限验证真实输入、应用侧编辑、窗口变化、活动通知、释放、停止与重启。测试不请求或重置系统权限；缺少权限真实报错，不能跳过记作通过。该窗口短暂取得焦点，测试结束即关闭；应用侧编辑和注入的活动通知不冒充物理键鼠事件识别。Windows／Linux 原生硬件及真实 Electron 宿主仍按受影响平台定点验证，合成后端不等于跨平台硬件矩阵。
+
+测试统计按实际请求的每个文件及完整用例名核对。平台或可选宿主排除必须登记准确文件、用例名和理由，并在报告中列明；已登记的 skip 仍是未验证范围，不能加进通过数。未登记的 skip、TODO、未登记排除却整份测试无有效执行，或缺少文件／最终汇总回执，都会失败。人类活动场景验证的是“信息可被 AI 观察，AI 自行决定后续动作”；只有人类明确停止或停止 LLM 才终止执行，不能靠自动暂停、全局 stop 或削减功能消除场景失败。
+
+### 直接调用与采样
 
 源码 checkout 还可用 `scripts/cu-direct.mjs` 直接调用生产 runtime 和持久 Worker REPL。先安装开发依赖并运行 `npm run build:client`，再显式指定隔离数据和附件目录；默认只启用独立无头浏览器，应用许可不会自动批准。该开发入口不启动 DSH 页面，不覆盖宿主工具调度、附件规范化或浮窗交互验证。
 

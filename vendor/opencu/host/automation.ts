@@ -252,15 +252,17 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
       current.ownsDebugger = true
     }
     current.debuggerUsers++
-    const send = (method: string, params: object = {}, sessionId?: string): Promise<any> => {
+    const send = (method: string, params: object = {}, sessionId?: string, acquireInput?: () => void): Promise<any> => {
       if (current.rendererExited || guest.isCrashed()) return Promise.reject(guestExited())
       // Resuming a freshly attached target is cleanup, even if its originating
       // action was cancelled or opened a modal while frame setup was pending.
       if (method === 'Runtime.runIfWaitingForDebugger') return guest.debugger.sendCommand(method, params, sessionId)
       const active = operations.getStore()
       const dispatch = () => (active?.fence ?? dialogs).guard(() => {
+        active?.signal.throwIfAborted()
         const data = params as Record<string, unknown>
-        const releasedKey = method === 'Input.dispatchKeyEvent' && data.type === 'keyUp' ? String(data.key) : undefined
+        const releasedKey = method === 'Input.dispatchKeyEvent' && data.type === 'keyUp' ? String(data.code ?? data.key) : undefined
+        const releasedKeys = releasedKey ? [...current.inputKeys].filter(([,spec]) => spec.code === releasedKey || !data.code && spec.key === releasedKey) : []
         const releasedButton = method === 'Input.dispatchMouseEvent' && data.type === 'mouseReleased' ? String(data.button) : undefined
         const releaseId = releasedKey ? `key:${releasedKey}` : releasedButton ? `button:${releasedButton}` : undefined
         if (releaseId && current.releasingInputs.has(releaseId)) return current.releasingInputs.get(releaseId)!
@@ -270,17 +272,20 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
         const finish = (): void => { guest.off('render-process-gone', gone); active?.signal.removeEventListener('abort', cancelled) }
         guest.once('render-process-gone', gone)
         active?.signal.addEventListener('abort', cancelled, { once: true })
-        if (dispatchesInput(method, data, active?.operation)) {
-          if (active) active.inputDispatched = true
+        try {
+          // Acquire only after every asynchronous cancellation/dialog fence.
+          // A rejected preflight never creates input for cleanup to release.
+          acquireInput?.()
+          if (active && dispatchesInput(method, data, active.operation)) active.inputDispatched = true
+          void guest.debugger.sendCommand(method, params, sessionId).then(value => { finish(); resolve(value) }, error => { finish(); reject(error) })
         }
-        try { void guest.debugger.sendCommand(method, params, sessionId).then(value => { finish(); resolve(value) }, error => { finish(); reject(error) }) }
         catch (error) { finish(); reject(error) }
         })
         if (releaseId) {
           current.releasingInputs.set(releaseId, ack)
           const forget = (): void => { if (current.releasingInputs.get(releaseId) === ack) current.releasingInputs.delete(releaseId) }
           void ack.then(() => {
-            if (releasedKey) current.inputKeys.delete(releasedKey)
+            for (const [key,spec] of releasedKeys) if (current.inputKeys.get(key) === spec) current.inputKeys.delete(key)
             if (releasedButton) {current.inputButtons.delete(releasedButton);current.pointerRoutes?.delete(releasedButton)}
             forget()
           }, forget)
@@ -562,16 +567,21 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           const modifierNames = Array.isArray(args.modifiers) ? args.modifiers : []
           const modifiers = modifierNames.reduce<number>((bits, name) => bits | ({ alt: 1, control: 2, meta: 4, shift: 8 }[String(name)] ?? 0), 0)
           if (args.type === 'keyDown' || args.type === 'keyUp') {
-            const spec = inputKey(args.keyCode), down = args.type === 'keyDown'
+            const requested = inputKey(args.keyCode), down = args.type === 'keyDown'
+            const owned = down ? [] : [...current.inputKeys].filter(([,spec]) => spec.code === requested.code)
+            if (!down && !owned.length) return { dispatched: false, delivery: 'target-cdp', effectVerified: false }
+            const spec = down ? requested : owned[0]![1]
             const parameters = keyEventParameters(spec, down, modifiers, process.platform === 'darwin', args.keyboardEditable === true)
             const marker = down && current.monitoringActive ? await markInput(await frameRouter().focused(), [{type:'keydown',key:parameters.key,
               inputTypes:keyboardInputTypes(spec.code, modifiers, process.platform === 'darwin')}]) : undefined
             await dispatchMarked(marker, async () => {
               await checkOccurrence()
-              if (down) current.inputKeys.set(spec.key, spec)
-              return send('Input.dispatchKeyEvent', parameters)
+              return send('Input.dispatchKeyEvent', parameters, undefined, down ? () => {
+                if (current.documentGeneration !== generation) throw Object.assign(new Error('The document changed before key dispatch'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
+                current.inputKeys.set(spec.key, spec)
+              } : undefined)
             })
-            if (!down) current.inputKeys.delete(spec.key)
+            if (!down) for (const [key,ownedSpec] of owned) if (current.inputKeys.get(key) === ownedSpec) current.inputKeys.delete(key)
           } else {
             const types: Record<string, string> = { mouseMove: 'mouseMoved', mouseDown: 'mousePressed', mouseUp: 'mouseReleased', mouseWheel: 'mouseWheel' }
             const type = types[String(args.type)]
@@ -579,6 +589,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
             let wheel = type === 'mouseWheel' ? scrollDeltas(scrollRequest) : undefined
             if (!type || !Number.isFinite(args.x) || !Number.isFinite(args.y)) throw new Error('Input requires a mouse event and finite coordinates')
             if (!['none', 'left', 'middle', 'right'].includes(String(args.button ?? 'none'))) throw new Error('Invalid mouse button')
+            if (type === 'mouseReleased' && !current.inputButtons.has(String(args.button))) return { dispatched: false, delivery: 'target-cdp', effectVerified: false }
             current.inputPosition = { x: Number(args.x), y: Number(args.y) }
             if (type === 'mousePressed' && inputElement?.route) await current.frameRouter!.checkPoint(inputElement as FrameElement & {route:NonNullable<FrameElement['route']>}, current.inputPosition)
             if (type === 'mouseWheel' && inputElement?.route) await current.frameRouter!.checkPoint(inputElement as FrameElement & {route:NonNullable<FrameElement['route']>}, current.inputPosition)
@@ -605,12 +616,12 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
             }
             await dispatchMarked(captureMarker, () => dispatchMarked(marker, async () => {
               await checkOccurrence()
-              if (type === 'mousePressed') {
+              return send('Input.dispatchMouseEvent', { type, x: args.x, y: args.y, button: args.button ?? 'none', buttons: args.buttons ?? 0, clickCount: args.clickCount ?? 0, modifiers,
+                ...(type === 'mouseWheel' ? wheel : {}) }, undefined, type === 'mousePressed' ? () => {
+                if (current.documentGeneration !== generation) throw Object.assign(new Error('The document changed before pointer dispatch'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
                 current.inputButtons.add(String(args.button))
                 if(pointerRoute)(current.pointerRoutes??=new Map()).set(String(args.button),pointerRoute)
-              }
-              return send('Input.dispatchMouseEvent', { type, x: args.x, y: args.y, button: args.button ?? 'none', buttons: args.buttons ?? 0, clickCount: args.clickCount ?? 0, modifiers,
-                ...(type === 'mouseWheel' ? wheel : {}) })
+              } : undefined)
             }))
             if (type === 'mouseReleased') {current.inputButtons.delete(String(args.button));current.pointerRoutes?.delete(String(args.button))}
           }

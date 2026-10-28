@@ -65,8 +65,13 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     entry.handBack = async (session, {endpoint, args}) => {
       const driver = entry.driver;
       if (!entry.runtime.started() || driver?.sessionId !== session.id) return;
-      const result = await entry.runtime.request(endpoint, { ...args, targetId: driver.target.id, targetIdentity: driver.target.identity },
-        { sessionKey: session.id, handBackGuard: () => entry.driver === driver });
+      const computer = entry.computers.get(session.id), checkpoint = computer?.captureRelease();
+      let result;
+      try {
+        result = await entry.runtime.request(endpoint, { ...args, targetId: driver.target.id, targetIdentity: driver.target.identity },
+          { sessionKey: session.id, handBackGuard: () => entry.driver === driver });
+      } catch (error) { computer?.acceptRelease(error.details, checkpoint); throw error; }
+      computer?.acceptRelease(result.ok === false ? result.error?.details : result, checkpoint);
       if (result.ok === false) throw Object.assign(new Error(result.error.message), result.error);
       if (args.relinquish && entry.driver === driver) entry.driver = undefined;
     };
@@ -216,13 +221,26 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       entry.retiring = true;
       if (!entry.closing) entry.closing = (async () => {
         const failures = [];
-        const release = async work => { try { await work(); } catch (error) { failures.push(error); } };
-        const resets = await Promise.allSettled([...entry.computers.values()].map(computer => computer.close()));
+        const release = async work => { try { return await work(); } catch (error) { failures.push(error); } };
+        const computers = [...entry.computers.values()];
+        const resets = await Promise.allSettled(computers.map(computer => computer.close()));
+        let shutdown;
+        await Promise.all([
+          release(() => entry.presentation.close()), release(async () => { shutdown = await entry.runtime.close(); }),
+          release(() => entry.preferences.close()), release(() => entry.history.close()),
+        ]);
+        if (shutdown?.ok === true && shutdown.state?.closed === true && shutdown.state.mode === 'closed' &&
+            shutdown.state.releasePending === false && Array.isArray(shutdown.state.releaseErrors) && !shutdown.state.releaseErrors.length) {
+          // A failed session release may have succeeded during the subsequent
+          // full shutdown. Finish that session without interrupting a closed runtime.
+          for (let index = 0; index < computers.length; index++) if (resets[index].status === 'rejected') {
+            const computer = computers[index];
+            if (!computer.acceptRelease({...shutdown, release:{released:true}}, computer.captureRelease())) continue;
+            try { await computer.close(); resets[index] = {status:'fulfilled'}; }
+            catch (reason) { resets[index] = {status:'rejected', reason}; }
+          }
+        }
         failures.push(...resets.filter(result => result.status === 'rejected').map(result => result.reason));
-        await release(() => entry.presentation.close());
-        await release(() => entry.runtime.close());
-        await release(() => entry.preferences.close());
-        await release(() => entry.history.close());
         // A failed input release keeps the transport and owner available for a retry.
         if (failures.length) throw new AggregateError(failures, 'OpenCU unload could not finish releasing resources');
         entry.offSessionEvent(); entry.offSessionDisposed(); entry.activity.close();

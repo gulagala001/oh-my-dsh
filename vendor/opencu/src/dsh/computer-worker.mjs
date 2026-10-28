@@ -4,10 +4,10 @@ import { serializeReplError, deserializeReplError } from './repl-output.mjs';
 
 const pending = new Map();
 let sequence = 0, cell, outputCount = 0;
-const computer = createComputerRepl((endpoint, args) => new Promise((resolve, reject) => {
+const computer = createComputerRepl((endpoint, args, {releaseCheckpoint} = {}) => new Promise((resolve, reject) => {
   const id = ++sequence;
   pending.set(id, { resolve, reject });
-  parentPort.postMessage({ type: 'request', cell, id, endpoint, args });
+  parentPort.postMessage({ type: 'request', cell, id, endpoint, args, releaseCheckpoint });
 }), partial => {
   // Display strings are immutable and append-only within a cell. Keep the
   // attachment/documentation snapshots, but never resend earlier AX/text.
@@ -17,6 +17,10 @@ const computer = createComputerRepl((endpoint, args) => new Promise((resolve, re
 });
 
 parentPort.on('message', async message => {
+  if (message.type === 'external-release') {
+    computer.acceptRelease(message.receipt, message.checkpoint);
+    return;
+  }
   if (message.type === 'response') {
     const work = pending.get(message.id);
     if (!work) return;

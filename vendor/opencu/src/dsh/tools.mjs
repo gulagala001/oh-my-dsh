@@ -64,7 +64,14 @@ export function installToolDefinitions(ctx, lease, sessionKey) {
           const result = await lease.request(endpoint, args, { signal: exec.signal, attachments: ctx.attachments, sessionKey: id, modelProjection: endpoint === 'state' || endpoint === 'targets' });
           if (result.ok === false) throw controlFailure(result);
           return modelResult(projector.project(result, args), args);
-        } catch (error) { projector.reset(); throw toolReplError(error); }
+        } catch (error) {
+          projector.reset();
+          // The host uses the exact caller reason to recognize cancellation.
+          // A release failure or partial output is a different error and still
+          // carries the diagnostics needed before any later input.
+          if (exec.signal?.aborted && error === exec.signal.reason) throw error;
+          throw toolReplError(error);
+        }
       },
     }), `opencu: ${tool.name}`);
   }

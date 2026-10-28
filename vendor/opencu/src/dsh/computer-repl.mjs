@@ -26,7 +26,9 @@ function checked(result) {
 export function createComputerRepl(request, report = () => {}) {
   let repl, current, closing, closed = false, releaseOnClose = false, generation = 0, tail = Promise.resolve();
   const pending = new Set(), inputRelease = createInputReleaseState(), execution = new AsyncLocalStorage();
-  const interrupt = () => inputRelease.request('interrupt', undefined, () => request('interrupt')).then(checked);
+  const checkpoint = () => ({generation, input:inputRelease.checkpoint()});
+  const dispatch = (endpoint, args) => request(endpoint, args, {releaseCheckpoint:checkpoint()});
+  const interrupt = () => inputRelease.request('interrupt', undefined, () => dispatch('interrupt')).then(checked);
   const outputs = [], images = [], deliveries = [];
   const returned = new Set(), documentationLoaded = new Set(), documentationSeen = new Set(), documentationInCell = new Set();
   const observations = createObservationProjector();
@@ -39,7 +41,7 @@ export function createComputerRepl(request, report = () => {}) {
   }
   async function call(endpoint, args) {
     const run = activeExecution();
-    const work = inputRelease.request(endpoint, args, () => request(endpoint, args)).then(checked).then(result => {
+    const work = inputRelease.request(endpoint, args, () => dispatch(endpoint, args)).then(checked).then(result => {
       const projected = endpoint === 'observe' ? result : modelResult(result, args);
       const outcome = result.result ?? result;
       if (outcome.pendingDialog) {
@@ -448,6 +450,12 @@ export function createComputerRepl(request, report = () => {}) {
   }
   const session = {
     get signal() { return current?.signal; }, reset,
+    captureRelease: checkpoint,
+    acceptRelease(receipt, token) {
+      const accepted = token?.generation === generation && inputRelease.acceptRelease(receipt, token.input);
+      if (accepted && closed && !inputRelease.pending) releaseOnClose = false;
+      return accepted;
+    },
     close() {
       if (closing) return closing;
       closed = true; generation++;

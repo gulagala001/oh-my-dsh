@@ -56,6 +56,7 @@ export function createComputerSession(request) {
         return;
       }
       if (message.type !== 'request' || run.signal.aborted) return;
+      record.releaseCheckpoint = message.releaseCheckpoint;
       const { endpoint, args } = message;
       const stage = {endpoint, targetId: args?.targetId ?? args?.reference?.id, stage: 'backend-request'};
       run.requests.set(message.id, stage);
@@ -97,6 +98,15 @@ export function createComputerSession(request) {
   }
   const session = {
     get signal() { return current?.signal; },
+    captureRelease: () => ({generation, context, input:inputRelease.checkpoint(), worker:context?.releaseCheckpoint}),
+    acceptRelease(receipt, token) {
+      if (!token || token.generation !== generation || token.context !== context) return false;
+      const accepted = inputRelease.acceptRelease(receipt, token.input);
+      if (accepted && closed && !inputRelease.pending) releaseOnClose = false;
+      if (token.worker && context && !context.retired)
+        context.worker.postMessage({type:'external-release', receipt, checkpoint:token.worker});
+      return accepted;
+    },
     async reset() {
       generation++;
       const record = context;

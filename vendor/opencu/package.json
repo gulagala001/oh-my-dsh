@@ -68,10 +68,14 @@
     "build:targets": "node scripts/build-targets.mjs",
     "pack": "node scripts/pack.mjs",
     "test": "node --experimental-vm-modules --test test/*.test.mjs",
-    "prepack": "node scripts/check-docs.mjs && node scripts/build.mjs && node scripts/check-extension-distribution.mjs && node scripts/check-public-files.mjs",
+    "prepack": "npm run cu:check && node scripts/check-docs.mjs && node scripts/build.mjs && node scripts/check-extension-distribution.mjs && node scripts/check-public-files.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "docs:write": "node scripts/check-docs.mjs --write",
-    "release:check": "node scripts/check-release-assets.mjs"
+    "release:check": "node scripts/check-release-assets.mjs",
+    "pretest": "npm run cu:check",
+    "cu:check": "node scripts/cu-liveness.mjs check",
+    "cu:verify": "node scripts/cu-liveness.mjs verify",
+    "cu:replay": "node scripts/cu-liveness.mjs replay"
   },
   "dependencies": {
     "playwright": "1.63.0",

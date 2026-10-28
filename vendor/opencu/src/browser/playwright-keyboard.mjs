@@ -180,12 +180,17 @@ function buildLayoutClosure(layout) {
 }
 
 const layout = buildLayoutClosure(USKeyboardLayout);
-export function playwrightKeyIdentity(value) {
+function descriptionFor(value) {
   const key = value === 'ControlOrMeta' ? process.platform === 'darwin' ? 'Meta' : 'Control' : value;
   const description = layout.get(key);
   if (!description) throw Object.assign(new Error(`Unsupported Playwright key: ${String(value)}`), {
     code:'UNSUPPORTED_KEY',details:{inputDispatched:false,retryable:false},
   });
+  return description;
+}
+export function playwrightKeyCode(value) { return descriptionFor(value).code; }
+export function playwrightKeyIdentity(value) {
+  const description = descriptionFor(value);
   // Playwright holds physical codes, but its modifier state is a shared set of
   // logical names. Either modifier side must retain that same held ownership.
   return ['Shift','Control','Alt','Meta'].includes(description.key) ? `modifier:${description.key}` : description.code;
