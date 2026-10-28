@@ -114,6 +114,11 @@ CodeGraph 目录探测与原生 MCP 适配器由运行时的同一个 catalog �
 ## 按需测试
 
 专注实现和交付，尽量少做测试。按需做最小构建／启动检查，仅为具体问题或用户明确要求做定点验证（含 CU）。依据用户实际使用反馈改进体验。贡献与发行要点见[贡献说明](../CONTRIBUTING.md)。
+
+DeepSWE 的本地适配器位于 `scripts/deepswe/`，通过固定版本的 [Pier](https://github.com/datacurve-ai/pier) 在官方 Linux 任务环境中运行实际 DSH／OMD PTC。`snapshot.mjs <已安装 profile> <本地私有 bundle 目录>` 保存模型、插件和配置快照，不复制聊天或记忆；`run.py <评测目录> doctor` 核对环境，`run --task <任务名>`、`run --sample 10 --seed 0` 或 `run --all` 选择范围，`report` 查看回执。评测目录须包含固定的任务集、Pier 虚拟环境、Linux 运行包和 `config/local.json`；凭据、任务原文、参考答案、镜像与运行结果全部留在工作区 `.local/`。每题独立配置与数据，模型运行前比对实际 OMD 配置，官方评分器只在独立干净容器中验证提交的补丁。保留插件配置，但 Linux 环境不提供 macOS 桌面或 Blender 服务；网络遵循任务隔离规则，仅放行已选推理端点。Apple Silicon 上的本地 Colima 环境使用 QEMU，避免 Rosetta 执行宿主原生扩展时卡住；`start`／`stop` 管理专用评测虚拟机。默认串行、一次尝试，失败单列；真实调用消耗所选渠道额度，单题结果不代表全量成绩。该流程按需运行，不接入日常 CI。
+
+防作弊边界位于独立 TLS 网关和容器层：真实凭据不进入任务容器，只放行指定模型的 Responses 请求与本题响应回读；阻止托管搜索、远程媒体、跨题响应、更换主 PTC 强度及普通外网／DNS 出站。任务不能访问控制器、参考答案或 Docker 接口。配置与插件文件在结束时再次核验；官方测试报告在另一个无网络、只读容器中复算，可疑补丁、分数不一致和缺失证据单列待复核，不计可信通过，原始结果保留。可信通过率以请求的全部任务为分母。`probe.py <评测目录>`、`--positive`、`--scoring` 分别验证攻击边界、真实 OMD 调用及评分审计。此流程不保证识别所有运行时测试取巧。
+
 - `pnpm test`（或 `pnpm test:smoke`）：运行 `scripts/test-ci.mjs` 列出的核心回归，不反复安装宿主、不启动完整桌面。
 - 单项回归：`node --test test/<name>.test.mjs`，仅指定实际保留的文件。
 - `pnpm test:all`：兼容入口，运行同一组最小检查，不再另设重型全量套件；结果只说明这些检查的有限范围。
