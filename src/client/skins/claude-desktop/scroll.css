@@ -1,0 +1,133 @@
+/* Open Claude UI, MIT (c) 2026 Caho1. Pinned reference: source.json.
+   Original CDS scroll timelines and nonlinear alpha stops, namespaced and
+   mapped to existing scrollports. No scroll interception or position writes;
+   the conversation's sticky composer is intentionally outside these masks. */
+@property --omd-cds-scroll-fade-size       { syntax: "<length>"; inherits: false; initial-value: 28px; }
+@property --omd-cds-scroll-fade-top-raw    { syntax: "<length>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-bottom-raw { syntax: "<length>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-left-raw   { syntax: "<length>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-right-raw  { syntax: "<length>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-top-on     { syntax: "<number>"; inherits: false; initial-value: 1; }
+@property --omd-cds-scroll-fade-bottom-on  { syntax: "<number>"; inherits: false; initial-value: 1; }
+@property --omd-cds-scroll-fade-left-on    { syntax: "<number>"; inherits: false; initial-value: 1; }
+@property --omd-cds-scroll-fade-right-on   { syntax: "<number>"; inherits: false; initial-value: 1; }
+@property --omd-cds-scroll-fade-x-active   { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-y-active   { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-top        { syntax: "<length>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-bottom     { syntax: "<length>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-left       { syntax: "<length>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-right      { syntax: "<length>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-strip-raw    { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --omd-cds-scroll-fade-strip-active { syntax: "<number>"; inherits: false; initial-value: 0; }
+
+/* 只推进几何进度，不决定可见性 */
+@keyframes omd-cds-scroll-fade-top     { 0% { --omd-cds-scroll-fade-top-raw: 0px; }                      to { --omd-cds-scroll-fade-top-raw: var(--omd-cds-scroll-fade-size); } }
+@keyframes omd-cds-scroll-fade-bottom  { 0% { --omd-cds-scroll-fade-bottom-raw: var(--omd-cds-scroll-fade-size); } to { --omd-cds-scroll-fade-bottom-raw: 0px; } }
+@keyframes omd-cds-scroll-fade-left    { 0% { --omd-cds-scroll-fade-left-raw: 0px; }                     to { --omd-cds-scroll-fade-left-raw: var(--omd-cds-scroll-fade-size); } }
+@keyframes omd-cds-scroll-fade-right   { 0% { --omd-cds-scroll-fade-right-raw: var(--omd-cds-scroll-fade-size); } to { --omd-cds-scroll-fade-right-raw: 0px; } }
+/* 仅用于把 *-active 抬到 1，本身不产生视觉变化 */
+@keyframes omd-cds-scroll-fade-y-active { 0%, to { --omd-cds-scroll-fade-y-active: 1; } }
+@keyframes omd-cds-scroll-fade-x-active { 0%, to { --omd-cds-scroll-fade-x-active: 1; } }
+
+/* 无滚动时间线支持时的静态兜底：保留 scroll-padding，不做遮罩 */
+html.omd[data-omd-layout="claude-desktop"] :is([data-input-scroll],[data-step-process-body],._7KE1Ra_groups,.VOzbGW_options,[data-omd-surface="sidebar"] [role="tree"],[role="menu"] > [role="presentation"]) {
+  scroll-padding-block:
+    calc(var(--omd-cds-scroll-fade-size) * var(--omd-cds-scroll-fade-top-on))
+    calc(var(--omd-cds-scroll-fade-size) * var(--omd-cds-scroll-fade-bottom-on));
+}
+html.omd[data-omd-layout="claude-desktop"] :is(.JVDQca_rail,.VOzbGW_navList) {
+  scroll-padding-inline:
+    calc(var(--omd-cds-scroll-fade-size) * var(--omd-cds-scroll-fade-left-on))
+    calc(var(--omd-cds-scroll-fade-size) * var(--omd-cds-scroll-fade-right-on));
+}
+
+@supports (animation-timeline: scroll()) {
+  html.omd[data-omd-layout="claude-desktop"] :is([data-input-scroll],[data-step-process-body],._7KE1Ra_groups,.VOzbGW_options,[data-omd-surface="sidebar"] [role="tree"],[role="menu"] > [role="presentation"]) {
+    --omd-cds-scroll-fade-top:    calc(var(--omd-cds-scroll-fade-top-raw)    * var(--omd-cds-scroll-fade-y-active) * var(--omd-cds-scroll-fade-top-on));
+    --omd-cds-scroll-fade-bottom: calc(var(--omd-cds-scroll-fade-bottom-raw) * var(--omd-cds-scroll-fade-y-active) * var(--omd-cds-scroll-fade-bottom-on));
+    animation-name: omd-cds-scroll-fade-top, omd-cds-scroll-fade-bottom, omd-cds-scroll-fade-y-active;
+    animation-duration: auto;
+    animation-timing-function: linear;
+    animation-fill-mode: both, both, none;
+    animation-timeline: scroll(self);
+    /* 15 段遮罩：顶部按 0.15/0.30/0.45/0.60/0.75/0.87 递减，底部对称 */
+    -webkit-mask-image: linear-gradient(to bottom,
+      transparent,
+      #0000000d calc(var(--omd-cds-scroll-fade-top) * .15),
+      #00000026 calc(var(--omd-cds-scroll-fade-top) * .3),
+      #0000004d calc(var(--omd-cds-scroll-fade-top) * .45),
+      #00000080 calc(var(--omd-cds-scroll-fade-top) * .6),
+      #000000b3 calc(var(--omd-cds-scroll-fade-top) * .75),
+      #000000d9 calc(var(--omd-cds-scroll-fade-top) * .87),
+      #000 var(--omd-cds-scroll-fade-top),
+      #000 calc(100% - var(--omd-cds-scroll-fade-bottom)),
+      #000000d9 calc(100% - var(--omd-cds-scroll-fade-bottom) * .87),
+      #000000b3 calc(100% - var(--omd-cds-scroll-fade-bottom) * .75),
+      #00000080 calc(100% - var(--omd-cds-scroll-fade-bottom) * .6),
+      #0000004d calc(100% - var(--omd-cds-scroll-fade-bottom) * .45),
+      #00000026 calc(100% - var(--omd-cds-scroll-fade-bottom) * .3),
+      #0000000d calc(100% - var(--omd-cds-scroll-fade-bottom) * .15),
+      transparent);
+    mask-image: linear-gradient(to bottom,
+      transparent,
+      #0000000d calc(var(--omd-cds-scroll-fade-top) * .15),
+      #00000026 calc(var(--omd-cds-scroll-fade-top) * .3),
+      #0000004d calc(var(--omd-cds-scroll-fade-top) * .45),
+      #00000080 calc(var(--omd-cds-scroll-fade-top) * .6),
+      #000000b3 calc(var(--omd-cds-scroll-fade-top) * .75),
+      #000000d9 calc(var(--omd-cds-scroll-fade-top) * .87),
+      #000 var(--omd-cds-scroll-fade-top),
+      #000 calc(100% - var(--omd-cds-scroll-fade-bottom)),
+      #000000d9 calc(100% - var(--omd-cds-scroll-fade-bottom) * .87),
+      #000000b3 calc(100% - var(--omd-cds-scroll-fade-bottom) * .75),
+      #00000080 calc(100% - var(--omd-cds-scroll-fade-bottom) * .6),
+      #0000004d calc(100% - var(--omd-cds-scroll-fade-bottom) * .45),
+      #00000026 calc(100% - var(--omd-cds-scroll-fade-bottom) * .3),
+      #0000000d calc(100% - var(--omd-cds-scroll-fade-bottom) * .15),
+      transparent);
+  }
+
+  html.omd[data-omd-layout="claude-desktop"] :is(.JVDQca_rail,.VOzbGW_navList) {
+    --omd-cds-scroll-fade-left:  calc(var(--omd-cds-scroll-fade-left-raw)  * var(--omd-cds-scroll-fade-x-active) * var(--omd-cds-scroll-fade-left-on));
+    --omd-cds-scroll-fade-right: calc(var(--omd-cds-scroll-fade-right-raw) * var(--omd-cds-scroll-fade-x-active) * var(--omd-cds-scroll-fade-right-on));
+    animation-name: omd-cds-scroll-fade-left, omd-cds-scroll-fade-right, omd-cds-scroll-fade-x-active;
+    animation-duration: auto;
+    animation-timing-function: linear;
+    animation-fill-mode: both, both, none;
+    animation-timeline: scroll(self inline);
+    -webkit-mask-image: linear-gradient(to right,
+      transparent,
+      #0000000d calc(var(--omd-cds-scroll-fade-left) * .15),
+      #00000026 calc(var(--omd-cds-scroll-fade-left) * .3),
+      #0000004d calc(var(--omd-cds-scroll-fade-left) * .45),
+      #00000080 calc(var(--omd-cds-scroll-fade-left) * .6),
+      #000000b3 calc(var(--omd-cds-scroll-fade-left) * .75),
+      #000000d9 calc(var(--omd-cds-scroll-fade-left) * .87),
+      #000 var(--omd-cds-scroll-fade-left),
+      #000 calc(100% - var(--omd-cds-scroll-fade-right)),
+      #000000d9 calc(100% - var(--omd-cds-scroll-fade-right) * .87),
+      #000000b3 calc(100% - var(--omd-cds-scroll-fade-right) * .75),
+      #00000080 calc(100% - var(--omd-cds-scroll-fade-right) * .6),
+      #0000004d calc(100% - var(--omd-cds-scroll-fade-right) * .45),
+      #00000026 calc(100% - var(--omd-cds-scroll-fade-right) * .3),
+      #0000000d calc(100% - var(--omd-cds-scroll-fade-right) * .15),
+      transparent);
+    mask-image: linear-gradient(to right,
+      transparent,
+      #0000000d calc(var(--omd-cds-scroll-fade-left) * .15),
+      #00000026 calc(var(--omd-cds-scroll-fade-left) * .3),
+      #0000004d calc(var(--omd-cds-scroll-fade-left) * .45),
+      #00000080 calc(var(--omd-cds-scroll-fade-left) * .6),
+      #000000b3 calc(var(--omd-cds-scroll-fade-left) * .75),
+      #000000d9 calc(var(--omd-cds-scroll-fade-left) * .87),
+      #000 var(--omd-cds-scroll-fade-left),
+      #000 calc(100% - var(--omd-cds-scroll-fade-right)),
+      #000000d9 calc(100% - var(--omd-cds-scroll-fade-right) * .87),
+      #000000b3 calc(100% - var(--omd-cds-scroll-fade-right) * .75),
+      #00000080 calc(100% - var(--omd-cds-scroll-fade-right) * .6),
+      #0000004d calc(100% - var(--omd-cds-scroll-fade-right) * .45),
+      #00000026 calc(100% - var(--omd-cds-scroll-fade-right) * .3),
+      #0000000d calc(100% - var(--omd-cds-scroll-fade-right) * .15),
+      transparent);
+  }
+}

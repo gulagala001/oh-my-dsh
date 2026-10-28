@@ -180,6 +180,8 @@ Global background is user-maintained. On conflict, **Read latest version**, comp
 
 Choose native DSH or six themes including Glyph and Claude Desktop, with 30 palettes, backgrounds, section colors, fonts, logos/titles and reduced motion. [Appearance (Chinese)](skins.md)
 
+Claude Desktop adds responsive controls and menus, model/effort styling, attachment upload states, live activity dots and scroll-edge fading. Splitters support a 4px drag threshold, Escape rollback, keyboard adjustment and double-click reset/balanced panes. Image previews support pointer-anchored zoom, bounded panning, Ctrl-wheel/pinch and + / − / 0 shortcuts. Existing IME, model choices, Ultra, permissions, reasoning disclosure and native actions remain available; reduced motion and theme changes release the added effects and interactions.
+
 <a id="runtime-state-and-blockers"></a>
 
 Runtime/budget hints default off, background optimization on, CoT placement on, CFR off. They affect the next request, not permissions. [Background options (Chinese)](runtime-state-background.md)

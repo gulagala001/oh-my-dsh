@@ -7,13 +7,54 @@
   "license": "MIT",
   "copyright": "Copyright (c) 2026 Caho1",
   "files": [
-    "code-examples/cds-theme.css",
+    "code-examples/ArtifactsSplitPaneResizer.tsx",
+    "code-examples/AttachmentCard.tsx",
+    "code-examples/CdsButton.tsx",
     "code-examples/ChatComposer.tsx",
-    "code-examples/ChatMessageBubbles.tsx"
+    "code-examples/ChatMessageBubbles.tsx",
+    "code-examples/ClaudeMotionPresets.ts",
+    "code-examples/CodeBlock.tsx",
+    "code-examples/ConfirmationDialog.tsx",
+    "code-examples/McpToolDecisionCard.tsx",
+    "code-examples/MediaLightboxViewer.tsx",
+    "code-examples/ModelSelectorEffort.tsx",
+    "code-examples/ModelSwitcherWithTokenGauge.tsx",
+    "code-examples/ReasoningAmbientGlow.tsx",
+    "code-examples/ScrollFadeContainer.tsx",
+    "code-examples/SegmentedControl.tsx",
+    "code-examples/ThinkingAccordion.tsx",
+    "code-examples/cds-theme.css",
+    "code-examples/useClaudeScrollPinning.ts"
   ],
   "adaptation": {
     "tokens": "CDS surfaces, clay, borders, radii, shadows and system font fallbacks mapped to --omd-*; readable secondary/status colors and native font sizing retained.",
     "layout": "Visual adaptation on existing DSH REA components. Native editors, IME, attachment, sending, tool execution, disclosures, scrolling, window controls and accessibility remain host-owned.",
-    "assets": "No proprietary fonts, audio or upstream application binaries included."
+    "assets": "No proprietary fonts, audio or upstream application binaries included.",
+    "interaction": "CDS button spring, control sizes, menu/dialog elevation, model and effort presentation, attachments, reasoning and tool/approval styling. DSH owns actual models, upload/retry, permissions, range values, disclosure choices and underlying actions.",
+    "scroll": "CDS scroll timeline/property and nonlinear mask rules are namespaced in scroll.css on existing input, process, model, settings and attachment scrollports; conversation pinning and virtualized transcript geometry stay native.",
+    "split": "Native pointer capture and width solver plus a 4px dead zone, Escape rollback, double-click balanced right pane/default sidebar, keyboard adjustment and iframe shielding. Native width constraints and docking policy remain.",
+    "media": "Affine cursor-anchor zoom, natural-size upper bound (at least 2x), 1.05 snap, 1.25 controls and 0.01 wheel sensitivity adapted onto the authorized native single-image lightbox. Untransformed base geometry and fixed drag origin avoid compounded scale/translation. Native close, loader and focus remain; no cross-session gallery aggregation.",
+    "lifecycle": "Active appearance owner only. Gesture listeners, Resize/MutationObservers, media transforms, pointer capture, inert state and attributes release on theme change/unload.",
+    "retained": "DSH IME/composer, message rendering and copy confirmation, reasoning folding, tool/approval semantics, original text, scheduling, model/Ultra state, scroll following and desktop titlebar. No Claude account quotas, hardcoded model tiers, Cowork backend, voice/audio or proprietary variable fonts are introduced."
+  },
+  "referenceGitBlobs": {
+    "code-examples/ArtifactsSplitPaneResizer.tsx": "376caaf3323d39a14f7104fc3867eb97b07a0f6d",
+    "code-examples/AttachmentCard.tsx": "0c228dadee9e659a4dff86b06039596b01370f55",
+    "code-examples/CdsButton.tsx": "6ffbfb4f0e3e95adab2ddb88252fc8713036638e",
+    "code-examples/ChatComposer.tsx": "88c1cf81dca2af8c3eef3e87b7642e538cf6f974",
+    "code-examples/ChatMessageBubbles.tsx": "4a73af4a9d0e013a69b3b287626d3862716020c7",
+    "code-examples/ClaudeMotionPresets.ts": "969d6f17c422530749f5e0b761b39ee447ef7e52",
+    "code-examples/CodeBlock.tsx": "bc8ef0363528981769723147380e67f334e6d070",
+    "code-examples/ConfirmationDialog.tsx": "0b313da92569b16787fb71793726ae865650ba07",
+    "code-examples/McpToolDecisionCard.tsx": "c3fcb3c5ca2f7644b1b0874d9a478f0abf98596c",
+    "code-examples/MediaLightboxViewer.tsx": "8c5b103985dd62869428faea111c7580aaef304f",
+    "code-examples/ModelSelectorEffort.tsx": "dc1b36c367a2fcde1d769bb8d56a63b522e7376e",
+    "code-examples/ModelSwitcherWithTokenGauge.tsx": "a1b863f33d8d2adf36fb1439749d41f21a99e23d",
+    "code-examples/ReasoningAmbientGlow.tsx": "b6866541a185f162a447fda5bbe5f8ea75385db5",
+    "code-examples/ScrollFadeContainer.tsx": "2e66071d7fac929f97e26ad8fee8a64e99a1c624",
+    "code-examples/SegmentedControl.tsx": "9ddd60a2e4f0e938a74c9a59b810b4f66c335e4f",
+    "code-examples/ThinkingAccordion.tsx": "83e20f373df58a58040397b76384dd637f26d272",
+    "code-examples/cds-theme.css": "95e9be938979fdce6ab6553a3f4881507723b7b2",
+    "code-examples/useClaudeScrollPinning.ts": "9c132e0975af485900d0395b4caa72693872651f"
   }
 }

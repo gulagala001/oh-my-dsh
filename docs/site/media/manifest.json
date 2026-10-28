@@ -221,9 +221,9 @@
       "capturedDate": "2026-10-28",
       "width": 1280,
       "height": 960,
-      "bytes": 78175,
-      "sha256": "ab1804d191cf6d8a41dd539ae0e3bb6ab68054ebda0b6a376a92d0d22d8a69dc",
-      "case": "Claude Desktop conversation",
+      "bytes": 74442,
+      "sha256": "075141a0bf40b388e750704877ae94e8264931679ef816918bb123b650eb051e",
+      "case": "Claude Desktop controls and attachments",
       "mimeType": "image/jpeg"
     },
     {
@@ -232,9 +232,9 @@
       "capturedDate": "2026-10-28",
       "width": 1280,
       "height": 960,
-      "bytes": 77647,
-      "sha256": "e1bf296d434681a2f0e7ef1bb2d31a4c4a21e437c97a57b80838810ed28b9efd",
-      "case": "Claude Desktop conversation",
+      "bytes": 75441,
+      "sha256": "08713c577a19a36454dc39b4c77e5312fe11a7314e6850a84309c1dff9bc2011",
+      "case": "Claude Desktop controls and attachments",
       "mimeType": "image/jpeg"
     }
   ],

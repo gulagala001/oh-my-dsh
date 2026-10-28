@@ -183,7 +183,7 @@ Sources: https://github.com/googlefonts/googlesans-flex, https://github.com/goog
 
 # Open Claude UI
 
-The Claude Desktop theme adapts design tokens, composer elevation and message styling from [Caho1/open-claude-ui](https://github.com/Caho1/open-claude-ui/tree/c1f923ae0051a871941b98a0e2e3183a545e6a85), commit `c1f923ae0051a871941b98a0e2e3183a545e6a85`, under the MIT License, copyright (c) 2026 Caho1. The [source record](src/client/skins/claude-desktop/source.json) lists the reference files and host adaptation. The [complete license](vendor/licenses/Open-Claude-UI-MIT.txt) accompanies this distribution. Existing DSH components supply editing, IME, messaging, tools, scrolling and window controls. No proprietary fonts, recordings or upstream application binaries are included.
+The Claude Desktop theme adapts design tokens, composer elevation, control and message styling, scroll masks, splitter gestures and image pan/zoom geometry from [Caho1/open-claude-ui](https://github.com/Caho1/open-claude-ui/tree/c1f923ae0051a871941b98a0e2e3183a545e6a85), commit `c1f923ae0051a871941b98a0e2e3183a545e6a85`, under the MIT License, copyright (c) 2026 Caho1. The [source record](src/client/skins/claude-desktop/source.json) lists the reference files and host adaptation. The [complete license](vendor/licenses/Open-Claude-UI-MIT.txt) accompanies this distribution. Existing DSH components supply editing, IME, messaging, tools, scrolling and window controls. No proprietary fonts, recordings or upstream application binaries are included.
 
 # Other bundled skin fonts
 
