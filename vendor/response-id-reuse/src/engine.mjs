@@ -52,6 +52,7 @@ function privateOnly(headers) {
   return ['x-cmd-zdr', 'x-zdr', 'x-zero-data-retention'].some(k => /^(1|true|enabled?)$/i.test(headers.get(k) ?? ''));
 }
 function rejection(status, error) {
+  if (status >= 500 && status < 600) return 'server-error';
   if (![400, 404, 409, 422].includes(status)) return null;
   const e = error?.error ?? error ?? {};
   const text = [e.code, e.type, e.param, e.message, e.detail, error?.detail].filter(x => typeof x === 'string').join(' ').toLowerCase();
@@ -218,17 +219,20 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         if (!response.ok) {
           let error; try { error = await response.clone().json(); } catch {}
           const why = rejection(response.status, error);
-          if (why && (useId || why === 'unsupported')) {
-            if (priorKey) for (const [key, candidate] of chains)
+          if (why && (useId || why === 'unsupported') && !request.signal.aborted) {
+            const temporary = why === 'server-error';
+            // An upstream failure does not invalidate an immutable parent or
+            // establish that storage is unsupported. Retry this request only.
+            if (!temporary && priorKey) for (const [key, candidate] of chains)
               if (candidate.chainKey === chainKey && candidate.id === prior.id) chains.delete(key);
             await response.body?.cancel();
             fallback = true; row.fallback = why; row.mode = 'full-fallback'; stats.fallbacks++;
-            const payload = { ...effectiveBody, store: why === 'invalid-id' };
+            const payload = { ...effectiveBody, store: why !== 'unsupported' };
             delete payload.previous_response_id;
-            eligible = why === 'invalid-id';
+            eligible = why !== 'unsupported';
             // A stale ID only invalidates this chain. Cache a negative
             // capability solely when the provider explicitly rejects state.
-            capability(capabilityKey, meta, why === 'unsupported' ? 'unsupported' : 'unconfirmed',
+            if (!temporary) capability(capabilityKey, meta, why === 'unsupported' ? 'unsupported' : 'unconfirmed',
               why === 'unsupported' ? 'provider-rejected-state' : 'provider-rejected-id');
             if (eligible && vendor.cmd) delete payload.prompt_cache_key;
             const fallbackText = JSON.stringify(payload);
