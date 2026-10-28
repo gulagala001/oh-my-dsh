@@ -247,6 +247,7 @@ def snapshot(root):
     formal_calls = sorted([c for c in calls if c['formal']], key=lambda c: c['at'] or 0)
     historical_calls = [c for c in calls if not c['formal']]
     cleared_usage = read(root / 'config/cleared-spend.json', {}).get('usage')
+    prior_usage = read(root / 'config/prior-spend.json', {}).get('usage')
     completed = [r for r in rows if r['finished_at'] or r['status'] == '已中断']
     verified = [r for r in completed if r['accepted'] in (0, 1)]
     passes = sum(r['accepted'] == 1 for r in verified)
@@ -275,6 +276,7 @@ def snapshot(root):
             'final_pass_rate': passes / len(order['tasks']) if len(verified) == len(order['tasks']) and verified else None,
             'coverage': len(completed) / len(order['tasks']) if order['tasks'] else 0,
             'current': current, 'currents': currents, 'usage': totals, 'cleared_usage': cleared_usage,
+            'prior_usage': prior_usage, 'total_usage': add_usage(totals, prior_usage),
             'validation': validation,
             'history_usage': add_usage(aggregate(historical_calls, cfg['pricing']),
                                        read(root / 'config/cleared-probe-spend.json', {}).get('usage')),
