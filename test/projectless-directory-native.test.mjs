@@ -4,7 +4,6 @@ import { createRequire } from 'node:module';
 import { mkdtemp, mkdir, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { installProjectlessDirectory } from '../src/projectless-directory.mjs';
 import { createProjectlessWorkspaceService } from '../src/projectless-workspaces.mjs';
 import { protectedEvent } from '../src/context/core.mjs';
 import { protectBcContext } from '../src/context/bc.mjs';
@@ -33,7 +32,6 @@ async function fixture(t) {
   ctx.llm.registerAdapter(['fixture'], new Adapter());
   ctx.on('agent/error', ({ error }) => errors.push(error), { global: true });
   const workspaces = createProjectlessWorkspaceService({ root: join(root, 'chats'), storeDir: join(root, 'metadata') });
-  await ctx.plugin({ apply(scope) { installProjectlessDirectory(scope, workspaces); } });
   const send = async (agent, text) => {
     agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }));
     await agent.activityDone;
@@ -56,15 +54,15 @@ function assertModelDirectory(request, expected) {
   assert.ok(snapshot.content.some(block => block.type === 'text' && block.text.includes(directories[0].text)));
 }
 
-test('first-message naming uses one native model request and persists the directory', { timeout: 5000 }, async t => {
+test('first send keeps its original session directory with one native model request', { timeout: 5000 }, async t => {
   const f = await fixture(t), { agent, cwd } = await f.create('first-chat');
   await f.send(agent, 'Build railway');
   assert.equal(f.requests.length, 1, 'directory initialization must not enqueue another model step');
-  const named = join(cwd, 'Build railway');
+  const named = cwd;
   assert.equal(f.ctx.workingDirectory.get(agent.session), named);
   assert.equal(agent.session.header.cwd, cwd, 'immutable permission root is preserved');
   assertModelDirectory(f.requests[0], named);
-  assert.equal(agent.session.snapshotEvents().filter(e => e.type === 'working-directory/change').length, 1);
+  assert.equal(agent.session.snapshotEvents().filter(e => e.type === 'working-directory/change').length, 0);
   const notices = f.requests[0].messages.filter(message => message.source?.kind === 'working-directory');
   assert.equal(notices.length, 0, 'initialization is silent; the current-directory snapshot is sufficient');
   assert.equal(agent.session.snapshotEvents().filter(e => e.type === 'user/message' && e.data.source?.kind === 'working-directory').length, 0);
@@ -95,33 +93,7 @@ test('manual directory changes and concurrent chat input retain native notificat
   assert.equal(first.agent.inbox.nextStep[0].source.kind, 'working-directory', 'native missing-directory recovery still notifies');
 });
 
-test('cancelled initialization retries without suppressing unrelated live input', { timeout: 5000 }, async t => {
-  const f = await fixture(t), { agent, cwd } = await f.create('cancelled');
-  const entered = Promise.withResolvers(), release = Promise.withResolvers();
-  const nameDraft = f.workspaces.nameDraft;
-  const mocked = t.mock.method(f.workspaces, 'nameDraft', async input => {
-    const named = await nameDraft(input);
-    entered.resolve(); await release.promise;
-    return named;
-  });
-  t.after(() => release.resolve());
-  const inject = agent.inject;
-  agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Original name' }] }));
-  await entered.promise;
-  agent.cancel({ kind: 'user' }); release.resolve();
-  await agent.activityDone;
-  mocked.mock.restore();
-  assert.equal(f.requests.length, 0);
-  assert.equal(f.ctx.workingDirectory.get(agent.session), cwd);
-  assert.equal(agent.inject, inject);
-  agent.inject(createUserMessage({ source: { kind: 'plugin:fixture' }, content: [{ type: 'text', text: 'Retain this plugin input' }] }));
-  await f.send(agent, 'Retry');
-  assert.equal(f.requests.length, 1);
-  assert.equal(f.ctx.workingDirectory.get(agent.session), join(cwd, 'Original name'));
-  assert.ok(JSON.stringify(f.requests[0].messages).includes('Retain this plugin input'));
-});
-
-test('silent initialization preserves the native schedule of other queued input', { timeout: 5000 }, async t => {
+test('fixed directories preserve the native schedule of other queued input', { timeout: 5000 }, async t => {
   const f = await fixture(t), { agent } = await f.create('queued-input');
   const inserted = [], claimed = [], discarded = [];
   for (const [name, rows] of [['inserted', inserted], ['claimed', claimed], ['discarded', discarded]]) {
@@ -162,7 +134,7 @@ test('a rejected first step retains the directory across cold restoration withou
   await cold.send(handle.agent, 'Retry the first input');
   assert.equal(cold.requests.length, 1);
   assert.deepEqual(cold.requests[0].messages.filter(message => message.source.kind === 'working-directory'), []);
-  assertModelDirectory(cold.requests[0], join(cwd, 'Retained name'));
+  assertModelDirectory(cold.requests[0], cwd);
 });
 
 test('required cwd survives context suppression, tool execution and cold loop restoration', { timeout: 10000 }, async t => {
@@ -176,14 +148,13 @@ test('required cwd survives context suppression, tool execution and cold loop re
     await f.ctx.plugin(module.default ?? module);
   }
   await f.send(agent, 'Named workspace');
-  const named = join(cwd, 'Named workspace');
+  const named = cwd;
   assert.equal(f.requests.length, 1);
   assertModelDirectory(f.requests[0], named);
   const execute = (name, args) => f.ctx.tools.execute({ agent, name, arguments: args, callId: 'probe-' + name, signal: new AbortController().signal });
   const written = await execute('write', { file_path: 'location.txt', content: 'written in the effective cwd' });
   assert.equal(written.isError, false, JSON.stringify(written));
   assert.equal(await readFile(join(named, 'location.txt'), 'utf8'), 'written in the effective cwd');
-  await assert.rejects(readFile(join(cwd, 'location.txt')), { code: 'ENOENT' });
   const shell = await execute('bash', { command: 'pwd -P', description: 'Check the effective working directory' });
   assert.equal(shell.isError, false, JSON.stringify(shell));
   assert.equal(shell.value.cwd, named);
@@ -200,5 +171,20 @@ test('required cwd survives context suppression, tool execution and cold loop re
   await cold.send(handle.agent, 'Continue after restore');
   assert.equal(cold.requests.length, 1);
   assertModelDirectory(cold.requests[0], named);
+  assert.equal(cold.ctx.workingDirectory.get(handle.agent.session), named);
+});
+
+test('existing directory events restore legacy and manually selected locations unchanged', async t => {
+  const f = await fixture(t), { agent, cwd } = await f.create('legacy');
+  const named = join(cwd, 'Existing named directory'); await mkdir(named);
+  agent.session.append('working-directory/change', { cwd: named });
+  const cold = await fixture(t);
+  const handle = await cold.ctx.agentLoop.createAgent(cold.ctx, {
+    sessionId: agent.session.id, seed: structuredClone(agent.session.snapshotEvents()), meta: agent.session.header,
+    agentOptions: { provider: 'fixture', model: 'fixture' },
+  });
+  await cold.send(handle.agent, 'Continue');
+  assertModelDirectory(cold.requests[0], named);
+  assert.equal(handle.agent.session.header.cwd, cwd);
   assert.equal(cold.ctx.workingDirectory.get(handle.agent.session), named);
 });

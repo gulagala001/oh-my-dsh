@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 
 // A few known regressions only; no host installation, browser or build matrix.
 const core = [
-  'chat-style-adapter', 'host-build-contracts',
+  'chat-style-adapter', 'host-build-contracts', 'file-context',
   'startup-isolation', 'metering-contract',
   'start', 'monitor-partial', 'monitor-read-cache', 'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget', 'task-budget-persistence',
   'file-upload-compat', 'search-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update', 'dsh-ops-compat',

@@ -11,7 +11,7 @@ async function fixture(t) {
   const base = await fs.mkdtemp(path.join(await fs.realpath(tmpdir()), 'omd-allocation-'));
   t.after(() => fs.rm(base, { recursive: true, force: true }));
   const options = { root: path.join(base, 'chats'), storeDir: path.join(base, 'metadata'), now: () => new Date(2026, 9, 23) };
-  const requestId = 'first-message', prompt = 'A separate chat', cwd = path.join(options.root, '2026-10-23', prompt);
+  const requestId = 'first-message', prompt = '新聊天', cwd = path.join(options.root, '2026-10-23', prompt);
   const requestFile = path.join(options.storeDir, 'requests', hash(`${options.root}\0${requestId}`) + '.json');
   const claimFile = path.join(options.storeDir, 'names', hash(cwd) + '.json');
   return { ...options, service: createProjectlessWorkspaceService(options), reopen: () => createProjectlessWorkspaceService(options),
@@ -133,62 +133,17 @@ test('directory provenance does not authorize a leftover blank Session to reuse 
   assert.equal(await fs.readFile(path.join(allocated.cwd, 'original.txt'), 'utf8'), 'original project');
 });
 
-test('first-message directory stays inside its permission root, survives restart and cannot belong to another session', async t => {
-  const f = await fixture(t);
-  const draft = await f.service.prepare({ requestId: 'stable-id' });
-  const input = { requestId: 'stable-id', cwd: draft.cwd, prompt: 'Build railway', firstSend: true };
-  const [first, retry] = await Promise.all([f.service.nameDraft(input), f.reopen().nameDraft(input)]);
-  assert.equal(first, path.join(draft.cwd, 'Build railway'));
-  assert.equal(retry, first);
-  await fs.writeFile(path.join(first, 'index.html'), 'keep me');
-  assert.equal(await f.reopen().nameDraft({ ...input, prompt: 'Different message' }), first);
-  assert.equal(await f.service.owns(first, { sessionId: input.requestId }), true);
-  assert.equal(await f.service.owns(first, { sessionId: 'another-chat' }), false);
-  assert.equal(await f.service.nameDraft({ ...input, requestId: 'another-chat' }), null);
-  const legacy = await f.service.prepare(f.input);
-  assert.equal(await f.service.nameDraft({ ...f.input, cwd: legacy.cwd }), null);
-  await fs.rm(first, { recursive: true });
-  await assert.rejects(f.reopen().nameDraft(input), /working directory is missing/);
-});
-
-test('interrupted naming never adopts pre-existing user files or symlinks', async t => {
-  const f = await fixture(t);
-  const draft = await f.service.prepare({ requestId: f.requestId });
-  const input = { ...f.input, cwd: draft.cwd, firstSend: true };
-  const named = path.join(draft.cwd, f.prompt);
-  await fs.symlink(f.root, named);
-  const rename = fs.rename;
-  const injected = t.mock.method(fs, 'rename', async (from, to) => {
-    if (to === f.requestFile && JSON.parse(await fs.readFile(from, 'utf8')).workingName)
-      throw Object.assign(Error('synthetic naming publication failure'), { code: 'EIO' });
-    return rename(from, to);
-  });
-  await assert.rejects(f.service.nameDraft(input), /synthetic naming publication/);
-  injected.mock.restore();
-  await fs.writeFile(path.join(named + '-2', 'user.txt'), 'untouched');
-  assert.equal(await f.reopen().nameDraft(input), named + '-3');
-  assert.equal(await fs.readFile(path.join(named + '-2', 'user.txt'), 'utf8'), 'untouched');
-  assert.equal(await fs.readlink(named), f.root);
-});
-
-test('the claimed first message selects cwd before request assembly even before user/message is durable', async t => {
-  const { installProjectlessDirectory } = await import('../src/projectless-directory.mjs');
-  const f = await fixture(t), id = 'claimed-first-message';
-  const draft = await f.service.prepare({ requestId: id });
-  const events = [], hooks = new Map(), order = [];
-  const session = { id, header: { cwd: draft.cwd }, snapshotEvents: () => events };
-  const agent = { session, ctx: { get: () => ({ async set(_agent, cwd) {
-    order.push(cwd); events.push({ type: 'working-directory/change', data: { cwd } });
-  } }) } };
-  installProjectlessDirectory({ on: (type, handler) => hooks.set(type, handler) }, f.service);
-  hooks.get('agent/inbox/claimed')({ agent, message: { source: { kind: 'user' }, content: [{ type: 'text', text: 'First actual message' }] } });
-  const context = { agent, signal: new AbortController().signal };
-  await hooks.get('system-prompt/assemble')({}, context, () => order.push('assemble'));
-  assert.deepEqual(order, [path.join(draft.cwd, 'First actual message'), 'assemble']);
-  // A fresh runtime respects durable cwd changes, including a later manual cd.
-  events.push({ type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'First actual message' }] } });
-  events.push({ type: 'working-directory/change', data: { cwd: path.join(draft.cwd, 'manual') } });
-  installProjectlessDirectory({ on: (type, handler) => hooks.set(type, handler) }, f.service);
-  await hooks.get('system-prompt/assemble')({}, context, () => order.push('resume'));
-  assert.deepEqual(order, [path.join(draft.cwd, 'First actual message'), 'assemble', 'resume']);
+test('legacy named directories retain provenance without a naming operation', async t => {
+  const f = await fixture(t), allocated = await f.service.prepare(f.input);
+  const workingName = 'Existing result', named = path.join(allocated.cwd, workingName);
+  await fs.mkdir(named); await fs.writeFile(path.join(named, 'result.txt'), 'keep');
+  const record = JSON.parse(await fs.readFile(f.requestFile, 'utf8'));
+  await fs.writeFile(f.requestFile, JSON.stringify({ ...record, workingName }));
+  const reopened = f.reopen();
+  assert.equal(reopened.nameDraft, undefined);
+  assert.equal(await reopened.owns(named), true);
+  assert.equal(await reopened.owns(named, { sessionId: f.requestId }), true);
+  assert.equal(await reopened.owns(named, { sessionId: 'other' }), false);
+  assert.deepEqual(await reopened.prepare({ ...f.input, prompt: 'New title' }), allocated);
+  assert.equal(await fs.readFile(path.join(named, 'result.txt'), 'utf8'), 'keep');
 });

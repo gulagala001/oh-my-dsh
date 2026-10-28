@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { directoryAt, resolveFilePath } from './file-paths.mjs';
 
 const pathValue = value => typeof value === 'string' && value.trim() ? value : null;
 const absolute = value => /^(?:\/|[A-Za-z]:[\\/]|\\\\)/.test(value);
@@ -17,6 +18,8 @@ function mutationPath(name, raw) {
 const merge = (items, added) => [...new Map([...items, ...added].map(item => [item.id, item])).values()];
 export function foldOverview(state, event) {
   const data = event.data;
+  if (event.type === 'working-directory/change') return { ...state,
+    directories: [...(state.directories ?? []), { seq: event.seq, cwd: data.cwd }] };
   if (event.type === 'turn/start') return { ...state, turn: data.turn, outcome: null };
   if (event.type === 'user/message' && event.surfaceOp === 'append') {
     const sources = [];
@@ -37,7 +40,7 @@ export function foldOverview(state, event) {
   if (event.type === 'tool/call') {
     const labels = { read: '读取文件', write: '写入文件', edit: '编辑文件', bash: '运行命令', workflow: '执行工作流', send_message: '发送消息', team_send_message: '发送消息' };
     state = { ...state, activity: labels[data.name] || `使用 ${data.name}` };
-    const path = mutationPath(data.name, data.arguments);
+    const path = resolveFilePath(directoryAt(state.directories), mutationPath(data.name, data.arguments));
     return path ? { ...state, calls: { ...state.calls, [data.callId]: path } } : state;
   }
   if (event.type === 'tool/result' && event.surfaceOp === 'append') {
@@ -49,7 +52,10 @@ export function foldOverview(state, event) {
     return { ...state, calls, outputs: path ? merge(state.outputs, [{ id: path, path, label: path.split(/[\\/]/).at(-1) }]) : state.outputs };
   }
   if (event.type === 'deliverables/presented') {
-    const files = (data.files ?? []).filter(file => pathValue(file.path)).map(file => ({ ...file, id: file.path, label: file.title || file.path.split(/[\\/]/).at(-1) }));
+    const files = (data.files ?? []).filter(file => pathValue(file.path)).map(file => {
+      const path = resolveFilePath(directoryAt(state.directories), file.path);
+      return { ...file, path, id: path, label: file.title || path.split(/[\\/]/).at(-1) };
+    });
     return files.length ? { ...state, outputs: merge(state.outputs, files) } : state;
   }
   if (event.type === 'turn/end') {
@@ -82,10 +88,12 @@ export function foldOverview(state, event) {
   return state;
 }
 export function installOverviewProjection(ctx) {
-  const view = z.object({ sources: z.array(z.any()), outputs: z.array(z.any()), workflows: z.array(z.any()), activity: z.string().optional(), outcome: z.string().nullable().optional() });
+  const view = z.object({ sources: z.array(z.any()), outputs: z.array(z.any()), workflows: z.array(z.any()),
+    directories: z.array(z.object({ seq: z.number().int(), cwd: z.string() })), activity: z.string().optional(), outcome: z.string().nullable().optional() });
   const schema = view.extend({ inheritedEventCount: z.number(), turn: z.number().optional(), calls: z.record(z.string(), z.string()) });
-  ctx.sessionProjections.register({ key: 'omdOverview', stateVersion: 2, stateSchema: schema,
-    init: (_header, inheritedEventCount) => ({ inheritedEventCount, sources: [], outputs: [], workflows: [], calls: {} }), apply: foldOverview,
-    wire: { viewSchema: view, view: ({ sources, outputs, workflows, activity, outcome }) => ({ sources, outputs, workflows, ...(activity ? { activity } : {}), ...(outcome !== undefined ? { outcome } : {}) }) },
+  ctx.sessionProjections.register({ key: 'omdOverview', stateVersion: 3, stateSchema: schema,
+    init: (header, inheritedEventCount) => ({ inheritedEventCount, sources: [], outputs: [], workflows: [], calls: {},
+      directories: header.cwd ? [{ seq: -1, cwd: header.cwd }] : [] }), apply: foldOverview,
+    wire: { viewSchema: view, view: ({ sources, outputs, workflows, directories, activity, outcome }) => ({ sources, outputs, workflows, directories, ...(activity ? { activity } : {}), ...(outcome !== undefined ? { outcome } : {}) }) },
   });
 }

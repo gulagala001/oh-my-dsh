@@ -75,7 +75,7 @@ Workflow handles execution and resumption; Rewind restores conversations and fil
 
 The session overview brings outputs, sources, background processes, Workflow and subagents together. Open a member to continue its sidebar conversation. **Ultra** offers Workflow, Agent Team and Free collaboration modes. **Better Todo** connects original requirements, tasks and verification results, retaining completed checks and actual execution receipts.
 
-Start without a project: a new chat prepares its own directory, and the first message names the working subdirectory that subsequent turns reuse. The **✨** composer control offers light polish, structured rewriting and step planning, with saved requirements, versions, undo and redo.
+Start without a project: a new chat prepares its own directory and reuses it from the first send onward. Chat titles are independent of file locations. The **✨** composer control offers light polish, structured rewriting and step planning, with saved requirements, versions, undo and redo.
 
 [Everyday usage](docs/usage_EN.md) · [Ultra and Workflow](docs/workflow.md)
 
