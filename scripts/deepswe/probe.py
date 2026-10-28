@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 import json
+import hashlib
 import os
 from pathlib import Path
 import shlex
@@ -148,19 +149,29 @@ timeout_sec = 60
     return task
 
 
-async def run_probe(root, positive):
+async def run_probe(root, positive, continuation=False):
     from pier.job import Job
     from pier.models.job.config import JobConfig
     manifest = json.loads((root / 'private/bundle/manifest.json').read_text())
     selected = manifest['selection']['model']
-    name = ('positive' if positive else 'negative') + '-' + datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
+    name = ('continuation' if continuation else 'positive' if positive else 'negative') + '-' + datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
+    task = prepare_task(root, 'continuation' if continuation else 'positive' if positive else 'negative')
+    if continuation:
+        (task / 'instruction.md').write_text(
+            'This is a synthetic transport validation. Perform 4 separate run_code calls, one at a time. '
+            'For each call use bash to run printf with a different number from 1 through 4. '
+            'Wait for each result before making the next call; do not combine calls or use a loop. '
+            'After all 4 results, use run_code to write exactly good followed by a newline to '
+            '/app/probe-answer.txt and commit that file. Do not edit other files.\n')
+        config_text = (task / 'task.toml').read_text().replace('timeout_sec = 600', 'timeout_sec = 1200')
+        (task / 'task.toml').write_text(config_text)
     config = JobConfig.model_validate({
         'job_name': name, 'jobs_dir': str(root / 'probe-jobs'), 'n_concurrent_trials': 1,
         'environment': {'import_path': 'environment:EvaluationDockerEnvironment', 'delete': True},
         'agents': [{'import_path': 'agent:OMDAgent' if positive else 'probe:AttackAgent',
                     'model_name': f"{selected['provider']}/{selected['model']}",
                     'override_setup_timeout_sec': 900, 'kwargs': {'bundle_dir': str(root / 'private/bundle')}}],
-        'tasks': [{'path': str(prepare_task(root, 'positive' if positive else 'negative'))}],
+        'tasks': [{'path': str(task)}],
     })
     job = await Job.create(config)
     result = await job.run()
@@ -174,9 +185,27 @@ async def run_probe(root, positive):
         checks = json.loads((trial.parent / 'agent/attack-checks.json').read_text())
         if not checks.get('all_passed'):
             raise RuntimeError('Attack checks did not all pass')
+    if continuation:
+        ledger = [json.loads(line) for line in (trial.parent / 'gateway-audit/requests.jsonl').read_text().splitlines()]
+        requests = [e for e in ledger if e.get('kind') == 'request' and e.get('method') == 'POST' and 'run_code' in e.get('tools', [])]
+        by_id = {e['id']: e for e in ledger if e.get('kind') == 'response'}
+        continued = [e for e in requests if e.get('previous_response_id')]
+        fallbacks = {e['previous_request_id']: e for e in ledger if e.get('kind') == 'fallback'}
+        confirmed = [e for e in continued if e.get('session_cache') == 'enable' and
+                     (by_id.get(e['id'], {}).get('status') == 200 or
+                      (e['id'] in fallbacks and by_id.get(fallbacks[e['id']]['id'], {}).get('status') == 200))]
+        errors = [e for e in ledger if e.get('kind') == 'response' and e.get('status', 0) >= 500 and e['id'] not in fallbacks]
+        recovered = [e for e in continued if e['id'] in fallbacks and by_id.get(fallbacks[e['id']]['id'], {}).get('status') == 200]
+        if len(confirmed) < 3 or errors or not recovered:
+            raise RuntimeError(f'Continuation validation incomplete: {len(confirmed)} successful continuations, {len(recovered)} recovered 500s, {len(errors)} unrecovered server errors; see {trial}')
     receipt = {'probe': name, 'passed': True, 'expected_reward': expected, 'actual_reward': reward,
                'result': str(trial), 'strict_gateway': True}
-    (root / 'config' / ('security-positive.json' if positive else 'security-negative.json')).write_text(json.dumps(receipt, indent=2))
+    if continuation:
+        built_gateway = trial.parent / 'gateway-build/gateway.py'
+        receipt.update({'confirmed_cached_continuations': len(confirmed), 'recovered_500': len(recovered),
+                        'server_errors': len(errors), 'gateway_sha256': hashlib.sha256(built_gateway.read_bytes()).hexdigest(),
+                        'gateway_state_sha256': hashlib.sha256((built_gateway.parent / 'gateway_state.py').read_bytes()).hexdigest()})
+    (root / 'config' / ('continuation-validation.json' if continuation else 'security-positive.json' if positive else 'security-negative.json')).write_text(json.dumps(receipt, indent=2))
     print(json.dumps(receipt, indent=2))
 
 
@@ -230,6 +259,7 @@ if __name__ == '__main__':
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--positive', action='store_true')
     mode.add_argument('--scoring', action='store_true')
+    mode.add_argument('--continuation', action='store_true')
     args = parser.parse_args()
     root = args.root.resolve()
     settings = json.loads((root / 'config/local.json').read_text())
@@ -243,4 +273,4 @@ if __name__ == '__main__':
     if args.scoring:
         scoring_probe(root)
     else:
-        asyncio.run(run_probe(root, args.positive))
+        asyncio.run(run_probe(root, args.positive or args.continuation, args.continuation))

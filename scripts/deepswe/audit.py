@@ -112,8 +112,9 @@ def audit_job(root, job_dir, only_trial=None):
         previous = {row['trial']: row for row in json.loads((job_dir / 'audit.json').read_text())['trials']}
     rows = []
     for file in sorted(job_dir.glob('*/result.json')):
-        if only_trial and file.parent.name != only_trial and file.parent.name in previous:
-            rows.append(previous[file.parent.name])
+        if only_trial and file.parent.name != only_trial:
+            if file.parent.name in previous:
+                rows.append(previous[file.parent.name])
             continue
         detail = json.loads(file.read_text())
         trial = file.parent

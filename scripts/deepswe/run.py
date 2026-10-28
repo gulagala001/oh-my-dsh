@@ -35,6 +35,8 @@ def main():
     group.add_argument('--all', action='store_true')
     run.add_argument('--seed', type=int, default=0)
     run.add_argument('--job-name')
+    run.add_argument('--concurrency', type=int, choices=(1, 2), default=1)
+    run.add_argument('--retry-errors', action='store_true', help='Retry only unscored execution errors and cancellations')
     args = parser.parse_args()
     root = args.root.resolve()
     if args.command == 'monitor':
@@ -69,7 +71,9 @@ def main():
                             'if [ -f /proc/sys/fs/binfmt_misc/rosetta ]; then echo 0 > /proc/sys/fs/binfmt_misc/rosetta; fi; '
                             'echo 1 > /proc/sys/fs/binfmt_misc/qemu-x86_64; '
                             'iptables -C INPUT -i ev+ -j DROP 2>/dev/null || iptables -I INPUT -i ev+ -j DROP; '
-                            'ip6tables -C INPUT -i ev+ -j DROP 2>/dev/null || ip6tables -I INPUT -i ev+ -j DROP'], env=env, check=True)
+                            'ip6tables -C INPUT -i ev+ -j DROP 2>/dev/null || ip6tables -I INPUT -i ev+ -j DROP; '
+                            'if [ -f /var/lib/omd-deepswe.swap ]; then '
+                            'swapon --show=NAME --noheadings | grep -Fxq /var/lib/omd-deepswe.swap || swapon /var/lib/omd-deepswe.swap; fi'], env=env, check=True)
             # Lima's automatic DNS listener forwarding is not needed by evals.
             # Cancel only this VM's forwarding; retain its Docker Unix socket.
             instance = Path(env['LIMA_HOME']) / ('colima-' + settings['colima_profile'])
@@ -137,7 +141,7 @@ def main():
         raise SystemExit('Job name must be a simple identifier, not a path')
     config = {
         'job_name': name, 'jobs_dir': str(root / 'jobs'), 'n_attempts': 1,
-        'n_concurrent_trials': 1, 'retry': {'max_retries': 0},
+        'n_concurrent_trials': args.concurrency, 'retry': {'max_retries': 0},
         'environment': {'import_path': 'environment:EvaluationDockerEnvironment', 'delete': True},
         'agents': [{'import_path': 'agent:OMDAgent', 'model_name': f"{selection['provider']}/{selection['model']}",
                     'override_setup_timeout_sec': 900, 'kwargs': {'bundle_dir': str(bundle)}}],
@@ -146,6 +150,17 @@ def main():
     }
     from pier.models.job.config import JobConfig
     JobConfig.model_validate(config)
+    if args.concurrency == 2 or args.retry_errors:
+        proof_path = root / 'config/continuation-validation.json'
+        proof = json.loads(proof_path.read_text()) if proof_path.exists() else {}
+        if (not proof.get('passed') or proof.get('confirmed_cached_continuations', 0) < 3
+                or proof.get('recovered_500', 0) < 1 or proof.get('server_errors') != 0
+                or proof.get('gateway_sha256') != sha(Path(__file__).with_name('gateway.py'))
+                or proof.get('gateway_state_sha256') != sha(Path(__file__).with_name('gateway_state.py'))):
+            raise SystemExit('The current gateway has not passed the real cached-continuation validation')
+    if args.concurrency == 2 and settings.get('emulation') == 'qemu':
+        subprocess.run(['colima', '-p', settings['colima_profile'], 'ssh', '--', 'sh', '-c',
+                        "swapon --show=NAME --noheadings | grep -Fxq /var/lib/omd-deepswe.swap"], env=env, check=True)
     config_path = root / 'config' / f'job-{name}.json'
     if config_path.exists() or (root / 'jobs' / name).exists():
         raise SystemExit('Job already exists; automatic resume/rerun is disabled')
@@ -155,10 +170,12 @@ def main():
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise SystemExit('Another evaluation is already running in this environment')
-        overlaps = [row['id'] for row in ordered if (root / 'attempts' / (row['id'] + '.json')).exists()]
-        if overlaps:
-            raise SystemExit('Single-pass task already attempted: ' + ', '.join(overlaps))
+        from runner import claim_path
+        for row in ordered:
+            claim_path(root, row['id'], args.retry_errors)
         config_path.write_text(json.dumps(config, indent=2))
+        env.update({'OMD_EVAL_CONCURRENCY': str(args.concurrency),
+                    'OMD_EVAL_RETRY_ERRORS': '1' if args.retry_errors else '0'})
         # The child retains the lock if this launcher is interrupted.
         result = subprocess.run([str(root / '.venv/bin/python'), str(Path(__file__).with_name('runner.py')),
                                  str(root), str(config_path)], env=env, pass_fds=(lock.fileno(),))

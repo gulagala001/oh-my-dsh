@@ -141,6 +141,18 @@ def aggregate(calls, pricing):
     return data
 
 
+def add_usage(current, previous):
+    if not isinstance(previous, dict):
+        return current
+    combined = dict(current)
+    for key in ('calls', 'measured', 'input', 'cached', 'output', 'reasoning', 'tokens',
+                'cache_unknown', 'reasoning_measured', 'missing'):
+        combined[key] += previous.get(key, 0)
+    for key in ('cny', 'reference_usd'):
+        combined[key] = [a + b for a, b in zip(combined[key], previous.get(key, [0, 0]))]
+    return combined
+
+
 def alive(pid):
     try:
         os.kill(int(pid), 0)
@@ -177,10 +189,17 @@ def snapshot(root):
                 verified = audit_rows.get(trial.name, {})
                 accepted = verified.get('accepted_reward')
                 start_at = stamp(detail.get('started_at')) or (receipt[0]['at'] if receipt else None)
-                claim = read(root / 'attempts' / (name + '.json'), {})
+                claim = {}
+                for suffix in ('.retry.json', '.json'):
+                    candidate = read(root / 'attempts' / (name + suffix), {})
+                    if candidate.get('trial') == trial.name and candidate.get('job') == job.name:
+                        claim = candidate
+                        break
                 start_at = start_at or stamp(claim.get('started_at'))
                 finished = stamp(detail.get('finished_at'))
+                exception_type = (detail.get('exception_info') or {}).get('exception_type')
                 state = ('通过' if accepted == 1 else '未通过' if accepted == 0 else
+                         '已中断' if exception_type == 'CancelledError' else
                          '执行异常' if detail.get('exception_info') else '待审计' if finished else
                          '运行中' if is_running else '已中断')
                 if not formal:
@@ -195,15 +214,27 @@ def snapshot(root):
                 (rows if formal else extra).append(item)
                 for call in receipt:
                     calls.append({**call, 'task': name, 'formal': formal})
-    rows.sort(key=lambda r: r['position'] or 999)
+    # Preserve all receipts in the cost ledger, but only the latest explicitly
+    # retried attempt represents a task in the score and queue.
+    rows.sort(key=lambda r: (r['id'], r['started_at'] or 0))
+    latest, superseded = {}, []
+    for row in rows:
+        prior = latest.get(row['id'])
+        if prior:
+            prior['status'] = '已重跑·旧记录'
+            superseded.append(prior)
+        latest[row['id']] = row
+    rows = sorted(latest.values(), key=lambda r: r['position'] or 999)
     seen = {row['id'] for row in rows}
     pending = [r for r in order['tasks'] if r['id'] not in seen]
     formal_calls = sorted([c for c in calls if c['formal']], key=lambda c: c['at'] or 0)
     historical_calls = [c for c in calls if not c['formal']]
+    cleared_usage = read(root / 'config/cleared-spend.json', {}).get('usage')
     completed = [r for r in rows if r['finished_at'] or r['status'] == '已中断']
-    passes = sum(r['accepted'] == 1 for r in completed)
+    verified = [r for r in completed if r['accepted'] in (0, 1)]
+    passes = sum(r['accepted'] == 1 for r in verified)
     scored = sum(r['raw'] in (0, 1) for r in completed)
-    trend, cost, tokens = [], 0., 0
+    trend, cost, tokens = [], (cleared_usage or {}).get('cny', [0, 0])[1], (cleared_usage or {}).get('tokens', 0)
     for call in formal_calls:
         price = priced(call, cfg['pricing'])
         if price:
@@ -211,22 +242,25 @@ def snapshot(root):
             tokens += call['usage']['tokens']
             trend.append({'at': call['finished'] or call['at'], 'cny': cost, 'tokens': tokens})
     outcomes, passed = [], 0
-    for i, row in enumerate(sorted(completed, key=lambda r: r['finished_at'] or time.time()), 1):
+    for i, row in enumerate(sorted(verified, key=lambda r: r['finished_at'] or time.time()), 1):
         passed += row['accepted'] == 1
         outcomes.append({'n': i, 'rate': passed / i, 'task': row['id']})
-    current = next((r for r in rows if r['status'] == '运行中'), None)
-    totals = aggregate(formal_calls, cfg['pricing'])
-    done_usage = [r['usage'] for r in completed]
-    avg = sum(u['reference_usd'][1] for u in done_usage) / len(completed) if completed else None
+    currents = [r for r in rows if r['status'] == '运行中']
+    current = currents[0] if currents else None
+    totals = add_usage(aggregate(formal_calls, cfg['pricing']), cleared_usage)
+    scored_ids = {r['id'] for r in verified}
+    scored_calls = [c for c in formal_calls if c['task'] in scored_ids]
+    avg = aggregate(scored_calls, cfg['pricing'])['reference_usd'][1] / len(verified) if verified else None
     return {'service': 'omd-deepswe-monitor', 'root_id': root.name, 'generated_at': time.time(),
             'model': cfg['model'], 'baseline': cfg['baseline'], 'pricing': cfg['pricing'],
             'schedule_method': order.get('method'), 'total': len(order['tasks']), 'completed': len(completed),
-            'scored': scored, 'passes': passes, 'pass_rate': passes / len(completed) if completed else None,
-            'final_pass_rate': passes / len(order['tasks']) if len(completed) == len(order['tasks']) and completed else None,
+            'scored': scored, 'verified': len(verified), 'passes': passes, 'pass_rate': passes / len(verified) if verified else None,
+            'final_pass_rate': passes / len(order['tasks']) if len(verified) == len(order['tasks']) and verified else None,
             'coverage': len(completed) / len(order['tasks']) if order['tasks'] else 0,
-            'current': current, 'usage': totals, 'history_usage': aggregate(historical_calls, cfg['pricing']),
+            'current': current, 'currents': currents, 'usage': totals, 'cleared_usage': cleared_usage,
+            'history_usage': aggregate(historical_calls, cfg['pricing']),
             'average_completed_reference_usd': avg, 'trend': trend, 'outcomes': outcomes,
-            'rows': rows, 'pending': pending, 'history': extra}
+            'rows': rows, 'pending': pending, 'history': extra, 'superseded': superseded}
 
 
 def serve(root, port):

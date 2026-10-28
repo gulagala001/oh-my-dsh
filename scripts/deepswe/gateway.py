@@ -10,12 +10,14 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qsl, unquote, urlsplit
+from gateway_state import ResponseHistory, known_bailian_continuation_error
 
 POLICY = json.loads(Path('/policy/policy.json').read_text())
 LOCK = threading.Lock()
 IDS = set()
 ITEM_IDS = set()
 SLOTS = threading.BoundedSemaphore(8)
+HISTORY = ResponseHistory()
 FIELDS = set('model input instructions tools tool_choice parallel_tool_calls reasoning max_output_tokens temperature top_p text truncation store stream previous_response_id metadata include service_tier user safety_identifier prompt_cache_key prompt_cache_retention'.split())
 
 
@@ -125,14 +127,45 @@ class Handler(BaseHTTPRequestHandler):
         connection = http.client.HTTPSConnection(POLICY['host'], timeout=330, context=ssl.create_default_context())
         try:
             headers = {key: value for key, value in self.headers.items()
-                       if key.lower() in {'content-type', 'accept', 'user-agent', 'openai-beta'}}
+                       if key.lower() in {'content-type', 'accept', 'user-agent', 'openai-beta',
+                                          'x-dashscope-session-cache'}}
             headers.update({'Authorization': 'Bearer ' + POLICY['api_key'], 'Accept-Encoding': 'identity'})
             audit('request', id=request_id, method=self.command, model=data.get('model') if data else None,
                   reasoning=data.get('reasoning') if data else None,
                   tools=[tool.get('name') for tool in data.get('tools', [])] if data else [],
-                  body_sha256=hashlib.sha256(body).hexdigest(), previous_response_id=data.get('previous_response_id') if data else None)
+                  body_sha256=hashlib.sha256(body).hexdigest(), previous_response_id=data.get('previous_response_id') if data else None,
+                  session_cache=headers.get('x-dashscope-session-cache'))
+            full_input = HISTORY.input_for(data)
             connection.request(self.command, self.path, body=body or None, headers=headers)
             response = connection.getresponse()
+            buffered = None
+            if response.status == 500:
+                buffered = response.read()
+                try:
+                    failure = json.loads(buffered) if len(buffered) <= 65536 else None
+                except ValueError:
+                    failure = None
+                if (data and data.get('previous_response_id') and full_input is not None
+                        and known_bailian_continuation_error(response.status, failure)):
+                    fallback = {**data, 'input': full_input}
+                    del fallback['previous_response_id']
+                    fallback_body = json.dumps(fallback, ensure_ascii=False, separators=(',', ':')).encode()
+                    if len(fallback_body) <= 64 * 1024 * 1024:
+                        validate_request(self.command, self.path, fallback_body)
+                        audit('response', id=request_id, status=500, response_id=None, usage=None)
+                        previous_id = request_id
+                        request_id = str(uuid.uuid4())
+                        audit('fallback', id=request_id, previous_request_id=previous_id,
+                              reason='bailian-invalid-parameter-stored-continuation', mode='full-history')
+                        audit('request', id=request_id, method=self.command, model=fallback['model'],
+                              reasoning=fallback.get('reasoning'), tools=[t.get('name') for t in fallback.get('tools', [])],
+                              body_sha256=hashlib.sha256(fallback_body).hexdigest(), previous_response_id=None,
+                              session_cache=headers.get('x-dashscope-session-cache'), fallback_of=previous_id)
+                        connection.close()
+                        connection = http.client.HTTPSConnection(POLICY['host'], timeout=330, context=ssl.create_default_context())
+                        connection.request(self.command, self.path, body=fallback_body, headers=headers)
+                        response = connection.getresponse()
+                        buffered = None
             self.send_response(response.status)
             for key, value in response.getheaders():
                 if key.lower() in {'content-type', 'cache-control', 'retry-after', 'x-request-id'}:
@@ -160,8 +193,14 @@ class Handler(BaseHTTPRequestHandler):
                         IDS.add(response_id)
                 if isinstance(value, dict) and isinstance(value.get('usage'), dict):
                     usage = value['usage']
+                if isinstance(value, dict):
+                    if self.command == 'GET':
+                        HISTORY.observe_readback(value)
+                    HISTORY.remember(value, full_input)
 
-            while chunk := response.read1(65536):
+            while chunk := (buffered if buffered is not None else response.read1(65536)):
+                if buffered is not None:
+                    buffered = b''
                 pending += chunk
                 if sse:
                     while b'\n' in pending:

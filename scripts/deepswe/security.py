@@ -9,9 +9,26 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import threading
 from urllib.parse import urlsplit
 
 import yaml
+
+_subnet_lock = threading.Lock()
+_subnets = {}
+
+
+def subnet_octet(session_id):
+    """Avoid collisions between concurrent trials on the dedicated daemon."""
+    with _subnet_lock:
+        if session_id not in _subnets:
+            first = int(hashlib.sha256(session_id.encode()).hexdigest()[:2], 16)
+            used = set(_subnets.values())
+            available = next((n for offset in range(256) if (n := (first + offset) % 256) not in used), None)
+            if available is None:
+                raise RuntimeError('No isolated inference subnets remain in this evaluation run')
+            _subnets[session_id] = available
+        return _subnets[session_id]
 
 
 def prepare_gateway(trial_dir, bundle, session_id):
@@ -44,9 +61,10 @@ def prepare_gateway(trial_dir, bundle, session_id):
     build = trial_dir / 'gateway-build'
     build.mkdir(exist_ok=True)
     shutil.copyfile(Path(__file__).with_name('gateway.py'), build / 'gateway.py')
+    shutil.copyfile(Path(__file__).with_name('gateway_state.py'), build / 'gateway_state.py')
     image = os.environ.get('OMD_EVAL_PROXY_IMAGE', 'python:3.12-slim')
-    (build / 'Dockerfile').write_text(f'FROM {image}\nCOPY gateway.py /gateway.py\nENV PYTHONDONTWRITEBYTECODE=1\nCMD ["python", "/gateway.py"]\n')
-    octet = int(hashlib.sha256(session_id.encode()).hexdigest()[:2], 16)
+    (build / 'Dockerfile').write_text(f'FROM {image}\nCOPY gateway.py gateway_state.py /\nENV PYTHONDONTWRITEBYTECODE=1\nCMD ["python", "/gateway.py"]\n')
+    octet = subnet_octet(session_id)
     subnet = f'172.29.{octet}'
     proxy = 'pier-egress-proxy'
     compose = {

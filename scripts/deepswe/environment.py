@@ -37,9 +37,10 @@ class EvaluationDockerEnvironment(DockerEnvironment):
             await child.wait()
             # BuildKit otherwise retains old verifier base layers even after
             # their image tags are removed. This daemon belongs only to evals.
-            child = await asyncio.create_subprocess_exec('docker', 'buildx', 'prune', '--force', '--max-used-space', '8GB',
-                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
-            await child.wait()
+            if os.environ.get('OMD_EVAL_CONCURRENCY', '1') == '1':
+                child = await asyncio.create_subprocess_exec('docker', 'buildx', 'prune', '--force', '--max-used-space', '8GB',
+                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+                await child.wait()
 
     async def start(self, force_build):
         if os.environ.get('OMD_DEEPSWE_MANAGED_DOCKER') != '1':
@@ -52,7 +53,8 @@ class EvaluationDockerEnvironment(DockerEnvironment):
         stdout, _ = await process.communicate()
         # Never force-remove a referenced image or prune unrelated Docker data.
         for name in set(stdout.decode().splitlines()):
-            if current and name.startswith('public.ecr.aws/d3j8x8q7/swe-bench-202605:') and name != current:
+            if (os.environ.get('OMD_EVAL_CONCURRENCY', '1') == '1' and current
+                    and name.startswith('public.ecr.aws/d3j8x8q7/swe-bench-202605:') and name != current):
                 child = await asyncio.create_subprocess_exec('docker', 'image', 'rm', name,
                     stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
                 await child.wait()
