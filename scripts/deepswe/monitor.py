@@ -258,7 +258,8 @@ def snapshot(root):
             'final_pass_rate': passes / len(order['tasks']) if len(verified) == len(order['tasks']) and verified else None,
             'coverage': len(completed) / len(order['tasks']) if order['tasks'] else 0,
             'current': current, 'currents': currents, 'usage': totals, 'cleared_usage': cleared_usage,
-            'history_usage': aggregate(historical_calls, cfg['pricing']),
+            'history_usage': add_usage(aggregate(historical_calls, cfg['pricing']),
+                                       read(root / 'config/cleared-probe-spend.json', {}).get('usage')),
             'average_completed_reference_usd': avg, 'trend': trend, 'outcomes': outcomes,
             'rows': rows, 'pending': pending, 'history': extra, 'superseded': superseded}
 
