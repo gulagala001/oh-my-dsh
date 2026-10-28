@@ -4,22 +4,22 @@
   "source": "opencu@2.2.2-dsh.0.2.1-rc.3",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.3",
-  "archiveSha256": "59b2c34bc42d9d9baa981dffced54501c0274bb69673c0a20d8a5186747fcf66",
+  "archiveSha256": "001092e9185991a9a5cb112fa72ee6827019968f7fd277c41ef2b20342df059e",
   "files": {
-    "CHANGELOG.md": "d9fee818e6a8262e748dbef15e2e6830118b70bfe99402c96e0d844f80e6eb97",
+    "CHANGELOG.md": "ad3a8a1d8909a20ed88490e447d409e09c981b5db58261b5cdb514038ee3a6c0",
     "DEVELOPMENT.md": "aaf2f98d0a20e7319014877fa3bf23dd78c172d145fd33bb26990afab0cdf123",
-    "README.md": "d8c3051ef7c10053230dd8a7996d9acfb034afe7b39fd6cc6a708e1a5c2d0b45",
-    "README_EN.md": "06615180540a590d6af2b74cb18fb732d79bbd99bed6af4115a151536d36939d",
+    "README.md": "162834c0ab50d42bd66e0f75a630613dce207dd0842270c3e751a760a94c0283",
+    "README_EN.md": "fede098ee9512fa2b048b7e927a7bfef210fdbdb3c308e1847c8b2cc8f639ecd",
     "THIRD_PARTY_NOTICES.md": "e4ab08236d3fc27da96af6aa6ba40871c498f81ea890abbd873a905ecd8644b0",
     "cordis.patch.yml": "efdcd5965609d1549c9032b176d17d452fa979423e9a13ba99ce9340c3055ead",
     "docs/documentation.md": "c8b20158e7bee2b0fc2f7f25df1327344ec6f7c9846d6f1a3cd5a736d5157472",
     "docs/images/browser-annotations.jpg": "4af796a459d906657ad848f308bd2d6e7a02f204303e89b65376c7a49d7be9ef",
     "docs/images/opencu-hero-en.jpg": "05845682c2f5b3fe5497e64873832e4a3c559165adbc06fcc73a80e8de3fe3d8",
     "docs/images/opencu-hero-zh.jpg": "f279d4d69e3f9feac9620acb24a3b26eddd332dc9e6a382f2c0942f923a3602f",
-    "docs/install.md": "4463015cfcef7309dfb16cb91d899c205fd5fbce962963ce589448fc8d9b8057",
-    "docs/install_EN.md": "06a7cb29bf4f06b958f6db918f10999e3adcee7e133359c92797142ff01b284e",
+    "docs/install.md": "a38eb805a9b65776216b4e4e47ad0e2062ecd762191dcc8e610680f6b1d24003",
+    "docs/install_EN.md": "ac2c412255d561e48be6fe8a3746d9cbe6539cf5a47e8ffc7810635d69cae20b",
     "docs/licenses/playwright-keyboard.txt": "45873d00a0dd243596deb4aa23b2493b3d1f0671921bf2538ea431d7380220eb",
-    "docs/releases.md": "09ce9b847519c97d58be8ab8c5c08430e9e1231e91b2bd08db1748ca52a010c5",
+    "docs/releases.md": "a0cdd443cb3022013540b48064410a9220f589606e9e1374dd7a0647f2a90b80",
     "docs/structure.json": "e912503564f7165f5acc328bb18ac63d779c2fcc5a6683e19812ac0e7445b326",
     "docs/visuals.md": "ac27d2daceeb4f2ce413c4e7990e66ecd0b4e7e9d165023c91ddabdb4edfc41d",
     "extension/README.md": "4cecaba117af2e7d500b8cbfed6f1d456b2f6a246e70c80aad2c4c997d1350d0",
@@ -778,5 +778,5 @@
     "src/runtime.mjs": "be6481fb738d40420f96cba8be1ab45b2b6566e721d053810464455050300a86",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
   },
-  "sourceCommit": "7ee9743d08d6cb64dd7cb803bee8d2f30238f807"
+  "sourceCommit": "d12462ccca81f7f166fd76ba925bc36e26048776"
 }

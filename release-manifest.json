@@ -4,7 +4,7 @@
     {
       "version": "0.2.1-rc.3.omd.1.2.0",
       "severity": "normal",
-      "unpublished": true,
+      "unpublished": false,
       "title": "OMD 1.2.0 · DSH 0.2.1-rc.3",
       "notes": [
         "新增 Claude Desktop 外观，完善消息、输入、模型选择、附件、权限与工作台交互。",

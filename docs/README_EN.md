@@ -1,7 +1,5 @@
 # Oh My DSH Documentation
 
-Prepared release: [OMD 1.2.0 (unreleased)](release-1.2.0.md).
-
 [简体中文](README.md) · [Project overview](../README_EN.md) · [Downloads and versions](releases.md)
 
 Start with what you want to do. OMD retains your DSH models, conversations, tools and skills.
@@ -10,7 +8,7 @@ Start with what you want to do. OMD retains your DSH models, conversations, tool
 
 **[Install and match versions](install_EN.md) → [First steps](getting-started_EN.md) → [Everyday usage](usage_EN.md)**
 
-Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. The current public release is [OMD 1.1.2](release-1.1.2.md), with OpenCU 2.2.1 included. The current package targets DSH rc.3 exactly; older hosts retain their fixed releases. [Downloads and release scope](releases.md).
+Installation offers two routes: **[give an AI the instructions](install_EN.md#ai)** or **[paste a URL into Add Plugin](install_EN.md#gui)**. The current public release is [OMD 1.2.0](release-1.2.0.md), with OpenCU 2.2.2 included. The current package targets DSH rc.3 exactly; older hosts retain their fixed releases. [Downloads and release scope](releases.md).
 
 ## Find your topic
 

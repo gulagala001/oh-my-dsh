@@ -1,12 +1,10 @@
-# OpenCU 2.2.2 · DSH 0.2.1-rc.3 · 未发布 / Unreleased
+# OpenCU 2.2.2 · DSH 0.2.1-rc.3
 
 [中文](#zh-222) | [English](#en-222)
 
 <a id="zh-222"></a>
 
 ## 中文
-
-本版正在准备，尚未公开发布。
 
 ### 问题修复
 
@@ -24,8 +22,6 @@
 
 ## English
 
-This release is being prepared and has not been published.
-
 ### Bug Fixes
 
 - Prevent permissions, download history, approval and presentation waits from blocking input release and subsequent operations.
@@ -40,16 +36,16 @@ This release is being prepared and has not been published.
 
 ## 安装 / Installation
 
-精确宿主为 **DSH 0.2.1-rc.3**。待发布包名为 `opencu-2.2.2-dsh.0.2.1-rc.3.tgz`；当前公开安装入口继续使用下方已发布版本。保留 profile、配置与会话，按宿主提示在任务结束后重新加载。
+精确宿主为 **DSH 0.2.1-rc.3**。在 **插件 → 添加插件** 中粘贴下方固定包地址。保留 profile、配置与会话，按宿主提示在任务结束后重新加载。
 
-The exact host is **DSH 0.2.1-rc.3**. The prepared package is `opencu-2.2.2-dsh.0.2.1-rc.3.tgz`; use the existing published package below until this release is available. Preserve profiles, configuration and conversations, and reload after active tasks finish if requested.
+The exact host is **DSH 0.2.1-rc.3**. Paste the fixed package URL below into **Plugins → Add plugin**. Preserve profiles, configuration and conversations, and reload after active tasks finish if requested.
 
 桌面侧栏的输入与关闭修复还需使用本版附带的 `host/` 适配源码重建匹配的桌面宿主，并在任务结束后完整重启。
 
 The desktop sidebar input and closure fixes also require rebuilding the matching desktop host with this release’s `host/` adapter sources, followed by a full restart after active tasks finish.
 
-| DSH | 当前公开安装包 / Current published package | SHA256SUMS |
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
 | --- | --- | --- |
-| 0.2.1-rc.3 | [OpenCU 2.2.1-dsh.0.2.1-rc.3](https://github.com/gulagala001/opencu/releases/download/v2.2.1-dsh.0.2.1-rc.3/opencu-2.2.1-dsh.0.2.1-rc.3.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.1-dsh.0.2.1-rc.3/SHA256SUMS) |
+| 0.2.1-rc.3 | [OpenCU 2.2.2-dsh.0.2.1-rc.3](https://github.com/gulagala001/opencu/releases/download/v2.2.2-dsh.0.2.1-rc.3/opencu-2.2.2-dsh.0.2.1-rc.3.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.2-dsh.0.2.1-rc.3/SHA256SUMS) |
 
 [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md)

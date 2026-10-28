@@ -1,7 +1,5 @@
 # Oh My DSH 使用文档
 
-准备中的版本：[OMD 1.2.0（未发布）](release-1.2.0.md)。
-
 [English](README_EN.md) · [项目介绍](../README.md) · [下载与版本](releases.md)
 
 从你现在要做的事开始，无需读完全部文档。OMD 继续使用 DSH 原有模型、会话、工具与技能。
@@ -10,7 +8,7 @@
 
 **[安装与版本配对](install.md) → [第一次使用](getting-started.md) → [日常使用](usage.md)**
 
-安装有两种方式：**[复制指令给 AI](install.md#ai)** 或 **[在“添加插件”中粘贴地址](install.md#gui)**。当前公开版本为 [OMD 1.1.2](release-1.1.2.md)，内置 OpenCU 2.2.1；当前正式安装包精确匹配 DSH rc.3，旧宿主使用对应历史发行。[下载与发行范围](releases.md)。
+安装有两种方式：**[复制指令给 AI](install.md#ai)** 或 **[在“添加插件”中粘贴地址](install.md#gui)**。当前公开版本为 [OMD 1.2.0](release-1.2.0.md)，内置 OpenCU 2.2.2；当前正式安装包精确匹配 DSH rc.3，旧宿主使用对应历史发行。[下载与发行范围](releases.md)。
 
 <a id="版本与文档范围"></a>
 <a id="按需查阅"></a>
