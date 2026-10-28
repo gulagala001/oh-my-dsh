@@ -78,8 +78,10 @@ async function fixture(t) {
   const calls = [], refs = [], errors = [], nativeOpen = (path, options) => { calls.push({ path, options }); return Promise.resolve(); };
   const originalReference = function(source, ref) { refs.push({ source, ...ref }); return true; };
   const controller = { openReference: originalReference };
+  const binding = { ctx: {}, session: { projections: { faceOf: key => ({ getSnapshot: () => projections.getSnapshot()[key] }) } } };
+  const composers = store(2);
   const ctx = { slots, effect(fn) { const off = fn(); if (typeof off === 'function') cleanups.push(off); },
-    sessions: { binding: () => ({ ctx: {} }) }, get: name => name === 'inputTriggers' ? { sessionOf: () => controller } : undefined };
+    sessions: { list: identity, binding: () => binding }, get: name => name === 'inputTriggers' ? { sessionOf: () => controller } : undefined };
   const standard = { sessionId: 'one',
     useSessions: select => select(useSyncExternalStore(identity.subscribe, identity.getSnapshot)),
     useProjection: (key, select = value => value) => select(useSyncExternalStore(projections.subscribe, projections.getSnapshot)[key]),
@@ -96,13 +98,14 @@ async function fixture(t) {
   slots.register({ name: 'conversation.composer.bar' }, () => null);
   slots.register({ name: 'conversation.view', id: 'chat' }, props => {
     view = props;
+    const count = useSyncExternalStore(composers.subscribe, composers.getSnapshot);
     const Node = slots.entries('conversation.chat.node')[0].component;
     const Composer = slots.entries('conversation.composer.bar')[0].component;
     // The pinned native ChatView catches opener failures and owns its dialog.
     const openFile = (path, options) => Promise.resolve(props.openFile(path, options)).catch(error => errors.push(error.message));
     return React.createElement(React.Fragment, null,
       React.createElement(Node, { ...standard, openFile, node: { anchorSeq: 5 } }),
-      React.createElement(Composer, standard));
+      ...Array.from({ length: count }, (_, index) => React.createElement(Composer, { ...standard, key: index })));
   });
   module.exports.applyFileContext(ctx);
   const View = slots.entries('conversation.view')[0].component;
@@ -113,7 +116,7 @@ async function fixture(t) {
     dom.window.close(); for (const [key, descriptor] of globals) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; }
   });
   await act(() => root.render(React.createElement(View, { ...standard, openFile: nativeOpen })));
-  return { calls, refs, errors, identity, projections, controller, get view() { return view; }, get node() { return node; }, get markdown() { return markdown; }, dom };
+  return { calls, refs, errors, identity, projections, controller, composers, originalReference, get view() { return view; }, get node() { return node; }, get markdown() { return markdown; }, dom };
 }
 
 test('inline image, click, @file and composer use their owners without changing session identity', async t => {
@@ -132,12 +135,17 @@ test('inline image, click, @file and composer use their owners without changing 
   assert.equal(f.calls.pop().path, '/chat/second/new.js');
   f.controller.openReference('reference', { appearance: 'file', ref: '@"draft.txt"' });
   assert.equal(f.refs.pop().ref, '@"/chat/second/draft.txt"');
+  const shared = f.controller.openReference;
+  await act(() => f.composers.set(1));
+  assert.equal(f.controller.openReference, shared, 'another view still owns the same controller bridge');
   f.controller.openReference('third-party', { appearance: 'file', ref: '@"draft.txt"' });
   assert.equal(f.refs.pop().ref, '@"draft.txt"');
   f.markdown.openExternalLink('https://example.com/');
   assert.equal(f.calls.pop().external, 'https://example.com/');
   assert.equal(f.identity.getSnapshot().byId.one.cwd, '/chat');
   assert.equal(f.identity.getSnapshot().byId.two.cwd, '/other');
+  await act(() => f.composers.set(0));
+  assert.equal(f.controller.openReference, f.originalReference, 'the final view restores the native method');
 });
 
 test('missing historical directory metadata goes through the native error path instead of opening a wrong same-name file', async t => {

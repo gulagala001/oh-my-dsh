@@ -32,6 +32,7 @@ function useFileActions(props, cwd, historical = false) {
 
 /** Resolve relative paths at their owner; never change the shared Session list. */
 export function applyFileContext(ctx) {
+  const inputBindings = new WeakMap();
   const decorate = (name, accepts, wrap) => ctx.effect(() => decorateSlotComponent(ctx.slots, name, accepts,
     entry => wrap(entry.component)));
   decorate('conversation.view', (_key, entry) => entry.options.id === 'chat', Original => function Chat(props) {
@@ -65,23 +66,33 @@ export function applyFileContext(ctx) {
   // The input controller is session-owned. Normalize only the native file
   // reference before its existing handler; third-party sources stay intact.
   decorate('conversation.composer.bar', () => true, Original => function Composer(props) {
-    const cwd = useDirectory(props);
+    const binding = props.sessionId && ctx.sessions.binding(props.sessionId);
     useEffect(() => {
-      if (!props.sessionId) return;
-      const binding = ctx.sessions.binding(props.sessionId);
       const controller = binding && ctx.get('inputTriggers')?.sessionOf(binding.ctx);
       if (!controller) return;
-      const original = controller.openReference;
-      function open(source, reference) {
-        if (source === 'reference' && reference.appearance === 'file' && reference.ref.startsWith('@')) {
-          const path = reference.ref.startsWith('@"') ? reference.ref.slice(2, -1) : reference.ref.slice(1);
-          reference = { ...reference, ref: '@"' + resolveFilePath(cwd, path) + '"' };
-        }
-        return original.call(this, source, reference);
+      let owner = inputBindings.get(controller);
+      if (!owner) {
+        owner = { users: 0, active: true, original: controller.openReference };
+        owner.open = function(source, reference) {
+          if (owner.active && source === 'reference' && reference.appearance === 'file' && reference.ref.startsWith('@')) {
+            const cwd = binding.session.projections.faceOf('workingDirectory').getSnapshot()
+              ?? ctx.sessions.list.getSnapshot().byId[props.sessionId]?.cwd;
+            const path = reference.ref.startsWith('@"') ? reference.ref.slice(2, -1) : reference.ref.slice(1);
+            reference = { ...reference, ref: '@"' + resolveFilePath(cwd, path) + '"' };
+          }
+          return owner.original.call(this, source, reference);
+        };
+        controller.openReference = owner.open;
+        inputBindings.set(controller, owner);
       }
-      controller.openReference = open;
-      return () => { if (controller.openReference === open) controller.openReference = original; };
-    }, [props.sessionId, cwd]);
+      owner.users++;
+      return () => {
+        if (--owner.users === 0) {
+          owner.active = false; inputBindings.delete(controller);
+          if (controller.openReference === owner.open) controller.openReference = owner.original;
+        }
+      };
+    }, [binding, props.sessionId]);
     return <Original {...props}/>;
   });
 }
