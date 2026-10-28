@@ -59,7 +59,13 @@ export function createInputReleaseState() {
         if (releasesAll) clear();
         if (inputReleased(result?.release)) {
           if (result.state?.releasePending === false && !result.state.releaseErrors?.length) clear();
-          else acceptedRelease(result);
+          else {
+            acceptedRelease(result);
+            // Explicit recovery supersedes this session's failed global-stop
+            // retry. The controller keeps unrelated browser debts quarantined;
+            // held/uncertain inputs on other owned targets remain pending here.
+            if (result.state?.mode === 'active' && result.state.recoveryIsolated === true) required = false;
+          }
         }
         const outcome = result?.result ?? result;
         if (inputReleased(outcome?.release)) clearTarget(args?.targetId);
