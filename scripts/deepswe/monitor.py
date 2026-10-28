@@ -165,6 +165,23 @@ def snapshot(root):
     root = Path(root)
     cfg = read(root / 'config/monitor.json') or read(Path(__file__).with_name('monitor-defaults.json'))
     order = read(root / 'config/order.json', {'tasks': []})
+    launch = read(root / 'autostart-status.json', {})
+    validation = {'status': launch.get('status'), 'recovered': 0}
+    probe = launch.get('probe')
+    if launch.get('status') == 'awaiting-validation' and isinstance(probe, str) and Path(probe).name == probe:
+        for ledger in (root / 'probe-jobs' / probe).glob('*/gateway-audit/requests.jsonl'):
+            try:
+                events = []
+                for line in ledger.open():
+                    try:
+                        events.append(json.loads(line))
+                    except ValueError:
+                        continue
+                responses = {event.get('id'): event for event in events if event.get('kind') == 'response'}
+                validation['recovered'] += sum(responses.get(event.get('id'), {}).get('status') == 200
+                                               for event in events if event.get('kind') == 'fallback')
+            except OSError:
+                pass
     rows, extra, calls = [], [], []
     schedule_map = {r['id']: r for r in order['tasks']}
     for scope in ('jobs', 'probe-jobs'):
@@ -258,6 +275,7 @@ def snapshot(root):
             'final_pass_rate': passes / len(order['tasks']) if len(verified) == len(order['tasks']) and verified else None,
             'coverage': len(completed) / len(order['tasks']) if order['tasks'] else 0,
             'current': current, 'currents': currents, 'usage': totals, 'cleared_usage': cleared_usage,
+            'validation': validation,
             'history_usage': add_usage(aggregate(historical_calls, cfg['pricing']),
                                        read(root / 'config/cleared-probe-spend.json', {}).get('usage')),
             'average_completed_reference_usd': avg, 'trend': trend, 'outcomes': outcomes,
