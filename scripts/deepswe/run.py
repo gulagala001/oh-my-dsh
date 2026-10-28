@@ -27,7 +27,7 @@ def main():
     sub.add_parser('stop')
     sub.add_parser('order')
     monitor = sub.add_parser('monitor')
-    monitor.add_argument('--port', type=int, default=8765)
+    monitor.add_argument('--port', type=int)
     run = sub.add_parser('run')
     group = run.add_mutually_exclusive_group(required=True)
     group.add_argument('--task')
@@ -41,7 +41,11 @@ def main():
     root = args.root.resolve()
     if args.command == 'monitor':
         from monitor import start
-        print(start(root, args.port))
+        previous = root / 'monitor-process.json'
+        saved = json.loads(previous.read_text()) if previous.exists() else {}
+        from urllib.parse import urlsplit
+        port = args.port or urlsplit(saved.get('url', '')).port or 8765
+        print(start(root, port))
         return
     if args.command == 'order':
         from schedule import schedule
