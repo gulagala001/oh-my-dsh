@@ -2,6 +2,16 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.3.omd.1.2.1",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 1.2.1 · DSH 0.2.1-rc.3",
+      "notes": [
+        "集成 OpenCU 2.2.3，修复 Linux CU／BU 验证机的进程查询与清理误报，并完善失败诊断。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.2.1.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.1.2.0",
       "severity": "normal",
       "unpublished": false,
