@@ -15,6 +15,7 @@
 
 ### 其他变更
 
+- 现有 `context_view` 新增 DOCX、PDF 文本层、CSV／TSV 和 XLSX 读取；PTC 原文回查精简重复展示，保留工具参数和程序返回值。
 - 精确适配 DSH **0.2.1-rc.5**，同步匹配的 SDK、构建输入和完整依赖锁。每份安装包仅用于对应宿主。
 
 <a id="en-122"></a>
@@ -30,6 +31,7 @@ This adaptation is under validation and has not been published.
 
 ### Other Changes
 
+- Add DOCX, PDF text-layer, CSV/TSV and XLSX reading through `context_view`; simplify duplicate PTC recall display while preserving tool arguments and program return values.
 - Target DSH **0.2.1-rc.5** exactly with matching SDK, build inputs and complete dependency locks. Each package is specific to its host.
 
 ## 安装 / Installation
