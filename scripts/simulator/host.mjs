@@ -86,6 +86,12 @@ export class SimulationHost {
         ...this.omd },
     }));
     await writeFile(join(this.home, '.credentials.yaml'), JSON.stringify({ version: 1, refs: { OMD_SIMULATION_KEY: 'local-simulation-only' } }), { mode: 0o600 });
+    // Exercise the real console against the bundled price catalog without an
+    // unrelated live price refresh. The enforcing network fence stays active.
+    const priceData = JSON.parse(await readFile(join(repoRoot, 'src/monitor-prices.json'), 'utf8'));
+    const fetchedAt = Date.now(); priceData.fetchedAt = new Date(fetchedAt).toISOString();
+    await mkdir(join(this.home, 'oh-my-dsh'), { recursive: true });
+    await writeFile(join(this.home, 'oh-my-dsh/monitor-prices-cache.json'), JSON.stringify({ fetchedAt, data: priceData }), { mode: 0o600 });
     await writeFile(join(this.workspace, 'AGENTS.md'), 'Simulation workspace: keep all generated files here.\n');
     await mkdir(join(this.workspace, '.git'));
     await writeFile(this.hostTrace, ''); await writeFile(join(this.root, 'network.jsonl'), '');
