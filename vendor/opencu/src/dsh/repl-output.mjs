@@ -1,5 +1,28 @@
 import { inspect } from 'node:util';
 
+function releaseDiagnostic(errors) {
+  const failures = new Map(), seen = new Set();
+  const visit = (value, inherited = {}) => {
+    if (!value || typeof value !== 'object' || seen.has(value)) return false;
+    seen.add(value);
+    if (Array.isArray(value)) { let found = false; for (const item of value) found = visit(item, inherited) || found; return found; }
+    const context = {...inherited, ...Object.fromEntries(['backend','targetId'].filter(key => typeof value[key] === 'string').map(key => [key,value[key]]))};
+    const children = ['failures','errors','result','error','details','cause'].filter(key => value[key] && typeof value[key] === 'object');
+    let childFailure = false;
+    for (const key of children) childFailure = visit(value[key], context) || childFailure;
+    if (childFailure) return true;
+    if (typeof value.code !== 'string' && typeof value.message !== 'string') return false;
+    const failure = {...context, ...(typeof value.code === 'string' ? {code:value.code} : {}),
+      ...(typeof value.message === 'string' ? {message:value.message.slice(0,240)} : {})};
+    failures.set(JSON.stringify(failure), failure);
+    return true;
+  };
+  visit(errors);
+  const all = [...failures.values()];
+  return {releaseFailureCount:all.length || errors.length, releaseFailures:all.slice(0,6),
+    ...(all.length > 6 ? {releaseFailuresOmitted:all.length - 6} : {})};
+}
+
 // Structured-cloned Errors omit custom fields such as code, details and cause.
 export function serializeReplError(error, depth = 0) {
   return { name: error?.name, message: error?.message ?? String(error), code: error?.code, details: error?.details,
@@ -22,7 +45,7 @@ export function toolReplError(error) {
   if (control) {
     const {releaseErrors, ...state} = control;
     diagnostic.control = state;
-    if (releaseErrors?.length) diagnostic.control.releaseFailureCount = releaseErrors.length;
+    if (releaseErrors?.length) Object.assign(diagnostic.control, releaseDiagnostic(releaseErrors));
   }
   if (!error?.code && !Object.keys(diagnostic).length) return error;
   const message = `${error?.code ? `[${error.code}] ` : ''}${error?.message ?? String(error)}${Object.keys(diagnostic).length

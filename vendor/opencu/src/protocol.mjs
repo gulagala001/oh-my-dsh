@@ -98,6 +98,7 @@ export function controlFailure(result) {
   const error = result.error, state = result.state;
   return Object.assign(new Error(error.message), error, state ? {details: {...error.details, control: {
     mode: state.mode, activeTargetId: state.activeTargetId, releasePending: state.releasePending, explicitlyStopped: state.explicitlyStopped === true,
+    ...(state.explicitlyStopped && state.stopInfo ? {stopInfo: state.stopInfo} : {}),
     ...(state.recoveryIsolated ? {recoveryIsolated:true} : {}),
     ...(state.releaseErrors?.length ? {releaseErrors: state.releaseErrors} : {}),
     recovery: state.explicitlyStopped || state.mode === 'stopped'

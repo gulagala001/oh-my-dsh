@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { realpathSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { installPtcLifecycle } from '../src/ptc-lifecycle.mjs';
+import { installToolCancellationPresentation } from '../src/tool-cancellation.mjs';
 
 const anchor = createRequire(realpathSync(process.env.OMD_PTC_TEST_HOST
   ?? createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json')));
@@ -88,6 +89,18 @@ test('a stalled process cleanup returns an error even after the program deadline
   gate.resolve({ logs: [], value: 'late worker completion' });
   assert.notEqual(result, 'hung'); assert.equal(result.isError, true);
   assert.equal(result.error.info.code, 'OMD_PTC_TIMEOUT');
+});
+
+test('structured cancellation retains useful output without an opaque object error prefix', async t => {
+  const f=await fixture(t),entered=Promise.withResolvers(),stop=new AbortController();
+  await f.ctx.plugin({inject:['tools'],apply(scope){installToolCancellationPresentation(scope);}});
+  f.register('cancel_object',async(_args,exec)=>{
+    entered.resolve();return new Promise((_,reject)=>exec.signal.addEventListener('abort',()=>reject(exec.signal.reason),{once:true}));
+  });
+  const pending=f.call('cancel_object',stop.signal);await entered.promise;stop.abort({kind:'user'});
+  const result=await deadline(pending);assert.notEqual(result,'hung');assert.equal(result.isError,true);
+  const dispatch=f.events.find(event=>event.type==='tool/ptc-dispatch');
+  assert.match(JSON.stringify(dispatch),/cancelled by user/);assert.doesNotMatch(JSON.stringify(dispatch),/\[object Object\]/);
 });
 
 test('cancel wakes a stalled nested prepare and prevents its late allow from running the body', async t => {

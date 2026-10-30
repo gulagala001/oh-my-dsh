@@ -3,6 +3,7 @@ import { resolve, join } from 'node:path';
 import { targetFor, adapterRevision, browserCapabilities } from './compatibility.mjs';
 import { applyComposerReferences } from './composer-references.mjs';
 import { applyToolVisibility } from './tool-visibility.mjs';
+import { applyRuntimeLifecycle } from './runtime-lifecycle.mjs';
 
 // Only an explicitly named source checkout; never an installed app or the read-only source cache.
 if (!process.argv[2]) throw new Error('Usage: node host/apply.mjs /absolute/owned/dsh-source');
@@ -469,6 +470,7 @@ await patch(sidebar + 'stores.ts', [
             ? planned.ops.filter(op => op.type !== 'focusTab').map(op => op.type === 'openTab' ? { ...op, type: 'insertTab' as const } : op)
             : planned.ops))`],
 ], 'Background opens cannot replace');
+await applyRuntimeLifecycle(patch, target);
 // Validate every edit before writing any source. Reapplication updates owned adapter modules without duplicating hooks.
 for (const [file, value] of pending) {
   let current;

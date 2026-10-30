@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
 import { resolve, join } from 'node:path';
+import { readOperation } from './protocol.mjs';
 
 export const DEFAULT_DATA_DIR = join(homedir(), '.opencu');
 
@@ -79,8 +80,8 @@ export async function createRuntime(options = {}) {
       return extension.disconnect(instanceId);
     };
     if (extension) controller.extensionRequest = createExtensionMountHook(extension);
-    controller.permissions = async () => ({ ok: true, permissions: typeof native?.permissions === 'function' ? await native.permissions() : null,
-      supported: typeof native?.permissions === 'function', warnings });
+    controller.permissions = ({signal} = {}) => readOperation(async () => ({ ok: true, permissions: typeof native?.permissions === 'function' ? await native.permissions() : null,
+      supported: typeof native?.permissions === 'function', warnings }), signal);
     controller.openPermissionSettings = async args => {
       if (typeof native?.openPermissionSettings !== 'function') throw Object.assign(new Error('Native permission settings are not supported by this backend'), { code: 'UNSUPPORTED_METHOD' });
       return { ok: true, ...await native.openPermissionSettings(args?.permission) };

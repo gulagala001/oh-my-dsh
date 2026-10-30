@@ -29,6 +29,7 @@ export async function createController({dataDir, browser, native} = {}) {
   const observedActivity = new Map();
   const previews = new Map();
   let explicitlyStopped = saved?.closed !== true && (saved?.explicitlyStopped === true || saved?.mode === 'stopped');
+  let stopInfo = saved?.stopInfo ?? null;
   let mode = explicitlyStopped ? 'stopped' : saved ? 'recovery_required' : 'active';
   let activeTargetId = saved?.activeTargetId ?? null;
   let releasePending = saved?.releasePending ?? false;
@@ -46,7 +47,7 @@ export async function createController({dataDir, browser, native} = {}) {
   const persistenceFailures = new WeakSet();
 
   function snapshot() {
-    return json({version: PROTOCOL_VERSION, mode, activeTargetId, releasePending, releaseErrors, recoveryIsolated, explicitlyStopped,
+    return json({version: PROTOCOL_VERSION, mode, activeTargetId, releasePending, releaseErrors, recoveryIsolated, explicitlyStopped, stopInfo,
       targets: [...selected.values()], userActivity: [...userActivity.values()], closed});
   }
   function forgetTarget(id) {
@@ -303,7 +304,9 @@ export async function createController({dataDir, browser, native} = {}) {
   const controller = {
     listTargets: ({signal} = {}) => {
       const operationEpoch = epoch;
-      return response(() => serial(() => inventory(operationEpoch, signal)));
+      // Discovery owns no input. Do not queue a read behind an unrelated input,
+      // release, or discovery; its own cancellation must remain immediately live.
+      return response(() => inventory(operationEpoch, signal));
     },
     openTarget: (request = {}) => response(() => serial(async () => {
       alive();
@@ -406,9 +409,10 @@ export async function createController({dataDir, browser, native} = {}) {
     })),
     observe: (request = {}) => {
       const operationEpoch = epoch;
-      return response(() => serial(async () => {
+      return response(() => passiveRead(callerSignal => serial(async () => {
         alive();
         checkOperation(operationEpoch);
+        callerSignal.throwIfAborted();
         const {target, backend} = targetFor(request.targetId, request.targetIdentity);
         if (target.provider === 'extension' || target.backend === 'extension' || target.id.startsWith('extension:')) controlAllowed(target);
         if (target.cold) fail('RECOVERY_REQUIRED', 'Resume and verify the saved occurrence before observing');
@@ -418,7 +422,7 @@ export async function createController({dataDir, browser, native} = {}) {
         if (recovery) recoveryOperations.add(recovery);
         try {
           const controlSignal = recovery?.signal ?? aborter.signal;
-          const signal = request.signal ? AbortSignal.any([controlSignal, request.signal]) : controlSignal;
+          const signal = AbortSignal.any([controlSignal, callerSignal]);
           await verify(target, backend, false, operationEpoch, signal);
           checkOperation(operationEpoch);
           const activitySequence = userActivity.get(target.id)?.sequence ?? 0;
@@ -449,7 +453,7 @@ export async function createController({dataDir, browser, native} = {}) {
           return {targetId: target.id, observation, userActivity: userActivity.get(target.id) ?? null,
             observedUserActivitySequence: observedActivity.get(target.id) ?? 0};
         } finally { if (recovery) recoveryOperations.delete(recovery); }
-      }));
+      }), request.signal, operationEpoch));
     },
     act: (request = {}) => response(() => serial(async () => {
       const dialogAction = ['getDialog', 'handleDialog'].includes(request.action);
@@ -553,8 +557,10 @@ export async function createController({dataDir, browser, native} = {}) {
       finally { if (recovery) recoveryOperations.delete(recovery); }
 
     })),
-    stop: () => {
+    stop: (request = {}) => {
       try { block('stopped'); } catch (error) { return response(() => { throw error; }); }
+      stopInfo = {at: new Date().toISOString(), source: ['tool','interface','api'].includes(request.source) ? request.source : 'api',
+        ...(typeof request.sessionId === 'string' ? {sessionId: request.sessionId} : {})};
       return response(() => serial(async () => { await releaseAll({dismissDialogs:true}); return {state: snapshot()}; }));
     },
     // Lifecycle cleanup cancels dispatch and releases input, but is not a user

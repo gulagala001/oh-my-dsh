@@ -43,7 +43,10 @@ export function installPtcLifecycle(ctx, { cleanupMs = 5000, adaptiveBudgets = (
     const result = failure(message, typeof reason?.code === 'string' ? reason.code : 'ABORTED', pending);
     // A cooperative provider may have already captured output in its native
     // failure. Keep that evidence while marking the overall call unsuccessful.
-    if (prior?.isError && prior.content?.length) result.content.unshift(...prior.content);
+    if (prior?.isError && prior.content?.length) {
+      const redundant = new Set(['Error: [object Object]', 'Error: tool call aborted', `Error: ${cancellationMessage(reason)}`]);
+      result.content.unshift(...prior.content.filter(block => block.type !== 'text' || !redundant.has(block.text)));
+    }
     return result;
   };
   const blocked = () => failure('A previous PTC call is still cleaning up after cancellation. No new tool was started. Wait for cleanup before retrying.', 'OMD_PTC_CLEANUP_PENDING', true);

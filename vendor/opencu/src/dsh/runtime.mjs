@@ -15,7 +15,7 @@ import { createImageRegistry } from './image-registry.mjs';
 import { createAppApprovals } from './app-approvals.mjs';
 import { createBrowserPairing } from '../extension/pairing.mjs';
 import { listenExtension } from '../extension/listen.mjs';
-import { referenceMatches, sameIdentity, checkExpected, json } from '../protocol.mjs';
+import { referenceMatches, sameIdentity, checkExpected, json, readOperation } from '../protocol.mjs';
 
 const methods = { state: 'getState', targets: 'listTargets', select: 'selectTarget', observe: 'observe', act: 'act', away: 'away', stop: 'stop', interrupt: 'interrupt', userActivity: 'notifyUserActivity', resume: 'resume', deliveries: 'deliveries', permissions: 'permissions', openPermissionSettings: 'openPermissionSettings', requestPermission: 'requestPermission', revealPermissionHelper: 'revealPermissionHelper' };
 const active = new Set(['select', 'observe', 'act', 'focus', 'openTarget', 'stop', 'interrupt', 'resume']);
@@ -232,7 +232,7 @@ export function createPluginRuntime(options = {}) {
     if (target?.backend === 'native') await appApprovals.authorize(target, sessionKey, signal, () => runtime.applicationMetadata(target), onApprovalWait);
     return {args: bound, target};
   }
-  async function request(endpoint, args = {}, { attachments, signal, sessionKey, modelProjection = false, onApprovalWait, handBackGuard, onControlStart } = {}) {
+  async function request(endpoint, args = {}, { attachments, signal, sessionKey, modelProjection = false, onApprovalWait, handBackGuard, onControlStart, requestSource = 'api' } = {}) {
     const captures = new Map();
     let acceptingCaptures = true;
     if (disposed) throw new Error('OpenCU plugin is unloading');
@@ -270,7 +270,9 @@ export function createPluginRuntime(options = {}) {
       return deliveryFiles.resolveAttachment(file, attachments, signal);
     }
     if (endpoint === 'reconfigure' && !starting) return { ok: true, config: publicConfig(getConfig()) };
-    const runtime = await start();
+    // A cancelled caller must not wait for shared lazy initialization to settle.
+    // Initialization remains owned by this runtime, so other sessions can use it.
+    const runtime = await readOperation(start, signal);
     signal?.throwIfAborted();
     if (endpoint === 'reconfigure') return { ok: true, config: publicConfig(getConfig()) };
     if (endpoint === 'presentationContrast') return { ok: true, ...await runtime.presentationContrast(args) };
@@ -382,7 +384,7 @@ export function createPluginRuntime(options = {}) {
       else {
         const method = methods[endpoint];
         if (!method || typeof runtime[method] !== 'function') throw error('UNSUPPORTED_METHOD', 'Unknown or unsupported OpenCU operation');
-        result = targetInventory ?? await runtime[method](endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, signal, includeBase64: false,
+        result = targetInventory ?? await runtime[method](endpoint === 'stop' ? {source:requestSource, ...(typeof sessionKey === 'string' ? {sessionId:sessionKey} : {})} : endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, signal, includeBase64: false,
           captureImage(bytes) {
             signal?.throwIfAborted();
             if (!acceptingCaptures) throw error('INVALID_SCREENSHOT', 'Screenshot delivery is no longer active');

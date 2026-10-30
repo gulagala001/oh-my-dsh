@@ -97,7 +97,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       }).catch(error => console.error('OpenCU computer session cleanup', error));
     }, { global: true });
     entry.presentation = createPresentationHost({ runtime: entry.runtime, activity: entry.activity, browserHost: entry.browserHost });
-    entry.request = async (endpoint, args = {}, { signal, attachments, sessionKey, modelProjection = false, onApprovalWait } = {}) => {
+    entry.request = async (endpoint, args = {}, { signal, attachments, sessionKey, modelProjection = false, onApprovalWait, requestSource = 'interface' } = {}) => {
       signal?.throwIfAborted();
       if (endpoint.startsWith('recovery/')) throw new Error('Recovery confirmation is available only in browser connection settings');
       if (entry.retiring && !['stop', 'interrupt', 'browser/poll', 'browser/result', 'browser/disconnect'].includes(endpoint)) throw new Error('OpenCU is releasing the last lease; retry after cleanup');
@@ -128,7 +128,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
         if (endpoint === 'computer_use' || endpoint === 'computer_use_reset') {
           const id = sessionKey ?? root;
           let computer = entry.computers.get(id);
-          if (!computer) { computer = createComputerSession((method, payload, waiting) => entry.request(method, payload, { signal: ['stop','interrupt'].includes(method) ? undefined : computer.signal, attachments: computer.attachments, sessionKey: id, modelProjection: true, onApprovalWait: waiting?.onApprovalWait })); entry.computers.set(id, computer); }
+          if (!computer) { computer = createComputerSession((method, payload, waiting) => entry.request(method, payload, { signal: ['stop','interrupt'].includes(method) ? undefined : computer.signal, attachments: computer.attachments, sessionKey: id, modelProjection: true, requestSource:'tool', onApprovalWait: waiting?.onApprovalWait })); entry.computers.set(id, computer); }
           computer.attachments = attachments;
           result = endpoint === 'computer_use_reset' ? await computer.reset() : await computer.run(args, signal);
         } else if (endpoint === 'openTarget' && String(args.browserId).startsWith('dsh:')) {
@@ -140,7 +140,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
             // dispatch. Queued hand-backs recheck this token in the input lane.
             onControlStart = target => { if (target?.backend === 'native') entry.driver = {sessionId: sessionKey, target}; };
           }
-          result = await entry.runtime.request(endpoint, args, { attachments, signal, sessionKey, modelProjection, onApprovalWait, onControlStart });
+          result = await entry.runtime.request(endpoint, args, { attachments, signal, sessionKey, modelProjection, onApprovalWait, onControlStart, requestSource });
           if (endpoint === 'state' || endpoint === 'targets') result = { ...result, browsers: result.browsers ?? entry.browserHost.listBrowsers(),
             ...(!modelProjection ? { presentation: entry.presentation.snapshot() } : {}) };
         }

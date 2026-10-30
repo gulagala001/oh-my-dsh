@@ -172,7 +172,7 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
   const backend = {
     async listTargets({signal} = {}) {
       checkSignal(signal);
-      const values = await request('listTargets');
+      const values = await request('listTargets', {}, {signal});
       checkSignal(signal);
       known.clear();
       for (const target of values) known.set(target.id, target);
@@ -217,7 +217,7 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     async observe(target, options = {}) {
       const {signal, ...payload} = options;
       checkSignal(signal);
-      const value = await request('observe', {target: reference(target), options: payload});
+      const value = await request('observe', {target: reference(target), options: payload}, {signal});
       checkSignal(signal);
       if (value.screenshot && options.includeBase64) value.screenshot.base64 = (await readFile(value.screenshot.path)).toString('base64');
       checkSignal(signal);
@@ -273,7 +273,10 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
       await recoverTransport();
       return request('release');
     },
-    async verify(target, options = {}) { return request('verify', {target: reference(target), options}, {monitoring: options.monitoring === true}); },
+    async verify(target, options = {}) {
+      const {signal, ...payload} = options;
+      return request('verify', {target: reference(target), options:payload}, {monitoring: options.monitoring === true,signal});
+    },
     async close() {
       if (closed) return;
       actionCursorTarget = undefined; hideCursor();

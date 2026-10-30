@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { NativeBackendError } from './protocol.mjs';
 
+const readMethods = new Set(['listTargets','verify','observe','permissions','applicationMetadata','presentationContrast']);
+
 export function createHelperTransport(command, args, { env, timeout = 30000, exitTimeout = 5000, onEvent, onExit } = {}) {
   const child = spawn(command, args, { env: env ?? process.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   let nextId = 1, ended = false, stderr = '', terminalError, exitResult, closing, closeRequested = false;
@@ -22,7 +24,7 @@ export function createHelperTransport(command, args, { env, timeout = 30000, exi
   function fail(error) {
     ended = true;
     terminalError ??= error;
-    for (const entry of pending.values()) { clearTimeout(entry.timer); entry.reject(error); }
+    for (const entry of pending.values()) { clearTimeout(entry.timer); entry.cleanup(); entry.reject(error); }
     pending.clear();
     // Every terminal stream failure asks the helper to drain its held-input journal.
     // Process death is not a substitute for a confirmed release.
@@ -58,27 +60,38 @@ export function createHelperTransport(command, args, { env, timeout = 30000, exi
       if (value.ok === false && value.id === 0) fail(new NativeBackendError(value.error?.code ?? 'HELPER_START_FAILED', value.error?.message ?? 'Native helper startup failed.', value.error?.details));
       return;
     }
-    pending.delete(value.id); clearTimeout(entry.timer);
+    pending.delete(value.id); clearTimeout(entry.timer); entry.cleanup();
     if (value.ok) entry.resolve(value.result);
     else entry.reject(new NativeBackendError(value.error?.code ?? 'NATIVE_FAILURE', value.error?.message ?? 'Native operation failed.', value.error?.details));
   });
-  function request(method, params = {}, { monitoring = false, timeoutMs = timeout } = {}, internalClose = false) {
+  function request(method, params = {}, { monitoring = false, timeoutMs = timeout, signal } = {}, internalClose = false) {
     if (closeRequested && !internalClose) return Promise.reject(new NativeBackendError('HELPER_CLOSING', 'Native helper is closing; no new request was dispatched.', {inputDispatched: false}));
     if (ended) return Promise.reject(terminalError ?? new NativeBackendError('HELPER_EXITED', 'Native helper is not running.', { stderr }));
+    const readOnly = readMethods.has(method) || monitoring;
+    const cancelled = () => new NativeBackendError('CONTROL_STOPPED', `Native ${method} read was cancelled.`, {method,inputDispatched:false});
+    if (readOnly && signal?.aborted) return Promise.reject(cancelled());
     const id = nextId++;
     let payload;
     try { payload = JSON.stringify({id, method, params}) + '\n'; }
     catch (error) { return Promise.reject(new NativeBackendError('INVALID_REQUEST', error.message, {inputDispatched: false})); }
     return new Promise((resolve, reject) => {
+      let abort;
+      const cleanup = () => { if (abort) signal.removeEventListener('abort', abort); };
       const timer = setTimeout(() => {
-        if (monitoring) {
+        if (readOnly) {
           pending.delete(id);
-          reject(new NativeBackendError('PRESENTATION_TIMEOUT', `Native ${method} timed out; monitoring is unavailable.`, { method }));
+          cleanup();
+          reject(new NativeBackendError(monitoring ? 'PRESENTATION_TIMEOUT' : 'NATIVE_READ_TIMEOUT', `Native ${method} timed out; other operations remain available.`, { method,inputDispatched:false }));
           return;
         }
         fail(new NativeBackendError('HELPER_TIMEOUT', `Native ${method} timed out; input outcome is unknown and release was requested.`, { method }));
       }, timeoutMs);
-      pending.set(id, { resolve, reject, timer });
+      pending.set(id, { resolve, reject, timer, cleanup });
+      if (readOnly && signal) {
+        abort = () => { if (!pending.delete(id)) return; clearTimeout(timer); cleanup(); reject(cancelled()); };
+        signal.addEventListener('abort', abort, {once:true});
+        if (signal.aborted) { abort(); return; }
+      }
       try {
         child.stdin.write(payload, error => {
           if (error) fail(new NativeBackendError('HELPER_WRITE_FAILED', error.message));

@@ -316,11 +316,12 @@ export class ContextPipeline {
     s.failures[kind] = { count: (s.failures[kind]?.count || 0) + 1, at: Date.now(), message: error.message,
       recoverable: providerFailure && transientFailure(error), providerFailure,
       ...(typeof error.code === 'string' ? { code: error.code } : {}),
+      ...(validationFailure && error.code === 'PREPARE_VALIDATION' ? {details:error.details} : {}),
       ...(validationFailure ? { validation: true, newEvents: 0, lastEventSeq: agent.session.snapshotEvents().findLast(preparationEvent)?.seq ?? -1 } : {}) };
     this.store.notice(s, `${kind}：${error.message}`);
     this.hub.action(agent.session, `context${kind}Errors`, 1);
     this.hub.event?.(agent.session, { kind, status: 'error', title: { prepare: '预处理失败', coordinate: '中枢判断失败' }[kind] || '失败', detail: error.message,
-      data: { count: s.failures[kind].count, recoverable: s.failures[kind].recoverable, code: s.failures[kind].code } });
+      data: { count: s.failures[kind].count, recoverable: s.failures[kind].recoverable, code: s.failures[kind].code, ...(s.failures[kind].details ? {details:s.failures[kind].details} : {}) } });
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
   }
   async prepare(agent, force = false, { retry = false, mainSuccess, handoff = false } = {}) {
@@ -367,7 +368,10 @@ export class ContextPipeline {
         if (!events) { this.cachedPreparation.clearWaiting(session); this.store.touch(s); break; }
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
-        if (s.failures.prepare) inputs.previous_rejection = s.failures.prepare.message;
+        if (s.failures.prepare) {
+          inputs.previous_rejection = s.failures.prepare.message;
+          if (s.failures.prepare.details) inputs.previous_rejection_details = s.failures.prepare.details;
+        }
         const cached = cfg.memoryCacheEnabled ? this.cachedPreparation.build(agent, events, inputs, { force, retry }) : null;
         // A reusable prefix is optional; cold or over-budget sessions use the same bounded segment.
         const admit = () => this.admitMainSuccess(agent, 'prepare', mainSuccess, controller);
@@ -382,7 +386,8 @@ export class ContextPipeline {
         let prepared;
         try {
           prepared = validatePrepared(cached ? decodeCachedPreparation(result) : decodeResult(result, PREPARE_TOOL.name), inputs.decision_sources);
-          if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Error('基础摘要超过目标长度两倍；原文保留，重试时请缩短摘要而非截断');
+          if (prepared.summary.length > cfg.summaryTargetChars * 2) throw Object.assign(Error(`基础摘要长度 ${prepared.summary.length} 超过上限 ${cfg.summaryTargetChars * 2}；原文保留，重试时请缩短摘要而非截断`),
+            {code:'PREPARE_VALIDATION',details:{field:'summary',reason:'too-long',actual:prepared.summary.length,limit:cfg.summaryTargetChars * 2}});
         } catch (error) { validationFailure = true; throw error; }
         const record = newRecord(session, events, prepared, s.binding, { state: s });
         record.summaryFormatVersion = 2; record.summaryPromptVersion = SUMMARY_PROMPT_VERSION;

@@ -61,7 +61,7 @@ export function installToolDefinitions(ctx, lease, sessionKey) {
         if (endpoint === 'observe') args = {format:'ax', ...args};
         else if (['select','resume','stop','computer_use','computer_use_reset','openTarget'].includes(endpoint) || endpoint === 'act' && ['navigate','back','forward','reload','closeTab','domSnapshot'].includes(args.action)) projector.reset();
         try {
-          const result = await lease.request(endpoint, args, { signal: exec.signal, attachments: ctx.attachments, sessionKey: id, modelProjection: endpoint === 'state' || endpoint === 'targets' });
+          const result = await lease.request(endpoint, args, { signal: exec.signal, attachments: ctx.attachments, sessionKey: id, requestSource:'tool', modelProjection: endpoint === 'state' || endpoint === 'targets' });
           if (result.ok === false) throw controlFailure(result);
           return modelResult(projector.project(result, args), args);
         } catch (error) {
