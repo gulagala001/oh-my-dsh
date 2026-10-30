@@ -4,10 +4,9 @@
   "source": "../opencu",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.1-rc.5",
-  "archiveSha256": "8755e758c4a07d6a39aabda2ee729508adf572e1269786ca580fce4d3d082744",
   "files": {
     "CHANGELOG.md": "9c451bb3b55808844d67460fd7c33dfd0ba0312fa8a58781192918fb1e96daba",
-    "DEVELOPMENT.md": "c95d917706dc9cf5c995fb970f6a37f4623fd899da1f5224c04188edd53ae033",
+    "DEVELOPMENT.md": "56b3a564579285b0ad8d9ccfffd386fd3ad13baf5ad7ce5943fb43edf891d17c",
     "README.md": "47edfcc00ee1e1f93803dfb280978a9c6ca34f1ba260ced693bdcb65c15b997c",
     "README_EN.md": "f517e0b430426474605f73e7e7a76ab6495764c04b4ff1fbf0c9c9c93dffff56",
     "THIRD_PARTY_NOTICES.md": "e4ab08236d3fc27da96af6aa6ba40871c498f81ea890abbd873a905ecd8644b0",
@@ -98,7 +97,7 @@
     "host/profile.ts": "dc5d13a1089ccfbda33d9aa8e4bb9e93fbdf0e7c4802a323245756d50ccf610d",
     "host/rea-context-menu.d.ts": "d76a600fa8cf607b4d059295e12599690da84aad8f1d9b7cccce766e574d146f",
     "host/rea-context-menu.js": "394586bd3a25dabe038d836cb552103c977d80f121631628b069b18ff150578f",
-    "host/runtime-lifecycle.mjs": "48704bb306e42da7daeeb06d7d04ffa274b30b836977431ef90aaa7b3a5f8ebf",
+    "host/runtime-lifecycle.mjs": "2f45e1d53b8eb387dc9971906ab268cc367c3cd630f31bb9fef32b13c959c854",
     "host/site-tools.ts": "3cec3bd3bdb17aab8d1cd0ec0f071294c734a6991eca5a7c1d33f174103a8f71",
     "host/tab-close-guards.ts": "1725c5929921fac9108116203e61bb4e8a4e3c8f1bde5b7fd341a9088cfc4289",
     "host/tool-visibility.mjs": "42229e426bba736a0a876a8ef84cb84995c2b0fa2afdbe7f707e73271645ec7b",
@@ -783,5 +782,5 @@
     "src/runtime.mjs": "e2300107196b9a24d167c214cec506036a3e557f73cb92e78e40a79963f76854",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
   },
-  "sourceCommit": "08e0f73c21e9a99e1fd4aa672b7e814497fa77ee"
+  "sourceCommit": "983dd0159783b9d8c33a16a9dbc28b881d9907e4"
 }
