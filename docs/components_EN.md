@@ -354,7 +354,7 @@ Design tokens and component styling for the Claude Desktop theme Pinned CDS visu
 
 ## Locked dependency inventory
 
-All 849 distinct package versions in the OMD and embedded OpenCU host/frontend lockfiles are listed below, including direct, transitive, build and optional platform dependencies. These are dependency inputs, not a claim that every package is loaded at runtime. Package pages provide original maintainers and license metadata; distributed licenses remain authoritative. [Machine-readable inventory](dependencies.json).
+All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend lockfiles are listed below, including direct, transitive, build and optional platform dependencies. These are dependency inputs, not a claim that every package is loaded at runtime. Package pages provide original maintainers and license metadata; distributed licenses remain authoritative. [Machine-readable inventory](dependencies.json).
 
 | Package | Version | Lockfile sources |
 | --- | --- | --- |
@@ -794,6 +794,8 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [@esbuild/win32-ia32](https://www.npmjs.com/package/@esbuild/win32-ia32/v/0.25.12) | 0.25.12 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [@esbuild/win32-x64](https://www.npmjs.com/package/@esbuild/win32-x64/v/0.25.12) | 0.25.12 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [@eslint-community/regexpp](https://www.npmjs.com/package/@eslint-community/regexpp/v/4.12.2) | 4.12.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@fast-csv/format](https://www.npmjs.com/package/@fast-csv/format/v/4.3.5) | 4.3.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@fast-csv/parse](https://www.npmjs.com/package/@fast-csv/parse/v/4.3.6) | 4.3.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@google/genai](https://www.npmjs.com/package/@google/genai/v/2.21.0) | 2.21.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@hono/node-server](https://www.npmjs.com/package/@hono/node-server/v/2.1.1) | 2.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@img/colour](https://www.npmjs.com/package/@img/colour/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
@@ -851,6 +853,18 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [@modelcontextprotocol/core](https://www.npmjs.com/package/@modelcontextprotocol/core/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk/v/1.30.0) | 1.30.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@mozilla/readability](https://www.npmjs.com/package/@mozilla/readability/v/0.6.0) | 0.6.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-android-arm64](https://www.npmjs.com/package/@napi-rs/canvas-android-arm64/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-darwin-arm64](https://www.npmjs.com/package/@napi-rs/canvas-darwin-arm64/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-darwin-x64](https://www.npmjs.com/package/@napi-rs/canvas-darwin-x64/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-linux-arm-gnueabihf](https://www.npmjs.com/package/@napi-rs/canvas-linux-arm-gnueabihf/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-linux-arm64-gnu](https://www.npmjs.com/package/@napi-rs/canvas-linux-arm64-gnu/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-linux-arm64-musl](https://www.npmjs.com/package/@napi-rs/canvas-linux-arm64-musl/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-linux-riscv64-gnu](https://www.npmjs.com/package/@napi-rs/canvas-linux-riscv64-gnu/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-linux-x64-gnu](https://www.npmjs.com/package/@napi-rs/canvas-linux-x64-gnu/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-linux-x64-musl](https://www.npmjs.com/package/@napi-rs/canvas-linux-x64-musl/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-win32-arm64-msvc](https://www.npmjs.com/package/@napi-rs/canvas-win32-arm64-msvc/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas-win32-x64-msvc](https://www.npmjs.com/package/@napi-rs/canvas-win32-x64-msvc/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@napi-rs/canvas](https://www.npmjs.com/package/@napi-rs/canvas/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@opentelemetry/api-logs](https://www.npmjs.com/package/@opentelemetry/api-logs/v/0.222.0) | 0.222.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@opentelemetry/api](https://www.npmjs.com/package/@opentelemetry/api/v/1.9.1) | 1.9.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@opentelemetry/core](https://www.npmjs.com/package/@opentelemetry/core/v/2.11.0) | 2.11.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -885,6 +899,7 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [@swc/helpers](https://www.npmjs.com/package/@swc/helpers/v/0.5.23) | 0.5.23 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@toon-format/toon](https://www.npmjs.com/package/@toon-format/toon/v/4.4.0) | 4.4.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@types/http-cache-semantics](https://www.npmjs.com/package/@types/http-cache-semantics/v/4.2.0) | 4.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@types/node](https://www.npmjs.com/package/@types/node/v/14.18.63) | 14.18.63 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@types/node](https://www.npmjs.com/package/@types/node/v/22.20.1) | 22.20.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [@types/node](https://www.npmjs.com/package/@types/node/v/24.19.2) | 24.19.2 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [@types/node](https://www.npmjs.com/package/@types/node/v/26.5.0) | 26.5.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -903,6 +918,7 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [@vscode/ripgrep-win32-x64](https://www.npmjs.com/package/@vscode/ripgrep-win32-x64/v/1.18.0) | 1.18.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@vscode/ripgrep](https://www.npmjs.com/package/@vscode/ripgrep/v/1.18.0) | 1.18.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@vscode/tree-sitter-wasm](https://www.npmjs.com/package/@vscode/tree-sitter-wasm/v/0.3.1) | 0.3.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@xmldom/xmldom](https://www.npmjs.com/package/@xmldom/xmldom/v/0.8.15) | 0.8.15 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@xterm/addon-serialize](https://www.npmjs.com/package/@xterm/addon-serialize/v/0.14.0) | 0.14.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@xterm/headless](https://www.npmjs.com/package/@xterm/headless/v/6.0.0) | 6.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [accepts](https://www.npmjs.com/package/accepts/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -911,35 +927,67 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [agent-base](https://www.npmjs.com/package/agent-base/v/9.0.0) | 9.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ajv-formats](https://www.npmjs.com/package/ajv-formats/v/3.0.1) | 3.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ajv](https://www.npmjs.com/package/ajv/v/8.20.0) | 8.20.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [archiver-utils](https://www.npmjs.com/package/archiver-utils/v/2.1.0) | 2.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [archiver-utils](https://www.npmjs.com/package/archiver-utils/v/3.0.4) | 3.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [archiver](https://www.npmjs.com/package/archiver/v/5.3.2) | 5.3.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [argparse](https://www.npmjs.com/package/argparse/v/1.0.10) | 1.0.10 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [argparse](https://www.npmjs.com/package/argparse/v/2.0.1) | 2.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [array-buffer-byte-length](https://www.npmjs.com/package/array-buffer-byte-length/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [arraybuffer.prototype.slice](https://www.npmjs.com/package/arraybuffer.prototype.slice/v/1.0.4) | 1.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [async-function](https://www.npmjs.com/package/async-function/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [async](https://www.npmjs.com/package/async/v/3.2.6) | 3.2.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [available-typed-arrays](https://www.npmjs.com/package/available-typed-arrays/v/1.0.7) | 1.0.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [balanced-match](https://www.npmjs.com/package/balanced-match/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [base64-js](https://www.npmjs.com/package/base64-js/v/1.5.1) | 1.5.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [big-integer](https://www.npmjs.com/package/big-integer/v/1.6.52) | 1.6.52 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [bignumber.js](https://www.npmjs.com/package/bignumber.js/v/9.3.1) | 9.3.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [binary](https://www.npmjs.com/package/binary/v/0.3.0) | 0.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [bl](https://www.npmjs.com/package/bl/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [bluebird](https://www.npmjs.com/package/bluebird/v/3.4.7) | 3.4.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [body-parser](https://www.npmjs.com/package/body-parser/v/2.3.0) | 2.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [bowser](https://www.npmjs.com/package/bowser/v/2.14.1) | 2.14.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [brace-expansion](https://www.npmjs.com/package/brace-expansion/v/1.1.21) | 1.1.21 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [brace-expansion](https://www.npmjs.com/package/brace-expansion/v/2.1.7) | 2.1.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [brotli](https://www.npmjs.com/package/brotli/v/1.3.3) | 1.3.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [buffer-crc32](https://www.npmjs.com/package/buffer-crc32/v/0.2.13) | 0.2.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [buffer-equal-constant-time](https://www.npmjs.com/package/buffer-equal-constant-time/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [buffer-indexof-polyfill](https://www.npmjs.com/package/buffer-indexof-polyfill/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [buffer](https://www.npmjs.com/package/buffer/v/5.7.1) | 5.7.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [buffers](https://www.npmjs.com/package/buffers/v/0.1.1) | 0.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [bundle-name](https://www.npmjs.com/package/bundle-name/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [byte-counter](https://www.npmjs.com/package/byte-counter/v/0.1.0) | 0.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [bytes](https://www.npmjs.com/package/bytes/v/3.1.2) | 3.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [cacheable-lookup](https://www.npmjs.com/package/cacheable-lookup/v/7.0.0) | 7.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [cacheable-request](https://www.npmjs.com/package/cacheable-request/v/13.0.19) | 13.0.19 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [call-bind-apply-helpers](https://www.npmjs.com/package/call-bind-apply-helpers/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [call-bind](https://www.npmjs.com/package/call-bind/v/1.0.9) | 1.0.9 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [call-bound](https://www.npmjs.com/package/call-bound/v/1.0.4) | 1.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [chainsaw](https://www.npmjs.com/package/chainsaw/v/0.1.0) | 0.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [chokidar](https://www.npmjs.com/package/chokidar/v/5.0.0) | 5.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [clone](https://www.npmjs.com/package/clone/v/2.1.2) | 2.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [commander](https://www.npmjs.com/package/commander/v/15.0.0) | 15.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [compress-commons](https://www.npmjs.com/package/compress-commons/v/4.1.2) | 4.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [compressible](https://www.npmjs.com/package/compressible/v/2.0.18) | 2.0.18 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [compression](https://www.npmjs.com/package/compression/v/1.8.1) | 1.8.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [concat-map](https://www.npmjs.com/package/concat-map/v/0.0.1) | 0.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [content-disposition](https://www.npmjs.com/package/content-disposition/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [content-type](https://www.npmjs.com/package/content-type/v/1.0.5) | 1.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [content-type](https://www.npmjs.com/package/content-type/v/2.1.0) | 2.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [cookie-signature](https://www.npmjs.com/package/cookie-signature/v/1.2.2) | 1.2.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [cookie](https://www.npmjs.com/package/cookie/v/0.7.2) | 0.7.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [core-util-is](https://www.npmjs.com/package/core-util-is/v/1.0.3) | 1.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [cors](https://www.npmjs.com/package/cors/v/2.8.6) | 2.8.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [crc-32](https://www.npmjs.com/package/crc-32/v/1.2.2) | 1.2.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [crc32-stream](https://www.npmjs.com/package/crc32-stream/v/4.0.3) | 4.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [cross-spawn](https://www.npmjs.com/package/cross-spawn/v/7.0.6) | 7.0.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [cssstyle](https://www.npmjs.com/package/cssstyle/v/4.6.0) | 4.6.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [csv-parse](https://www.npmjs.com/package/csv-parse/v/7.0.3) | 7.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [data-uri-to-buffer](https://www.npmjs.com/package/data-uri-to-buffer/v/4.0.1) | 4.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [data-urls](https://www.npmjs.com/package/data-urls/v/5.0.0) | 5.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [data-view-buffer](https://www.npmjs.com/package/data-view-buffer/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [data-view-byte-length](https://www.npmjs.com/package/data-view-byte-length/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [data-view-byte-offset](https://www.npmjs.com/package/data-view-byte-offset/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [dayjs](https://www.npmjs.com/package/dayjs/v/1.11.23) | 1.11.23 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [debug](https://www.npmjs.com/package/debug/v/2.6.9) | 2.6.9 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [debug](https://www.npmjs.com/package/debug/v/4.4.3) | 4.4.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [decimal.js](https://www.npmjs.com/package/decimal.js/v/10.6.0) | 10.6.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -947,37 +995,49 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [deepmerge-ts](https://www.npmjs.com/package/deepmerge-ts/v/8.0.2) | 8.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [default-browser-id](https://www.npmjs.com/package/default-browser-id/v/5.0.1) | 5.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [default-browser](https://www.npmjs.com/package/default-browser/v/5.5.1) | 5.5.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [define-data-property](https://www.npmjs.com/package/define-data-property/v/1.1.4) | 1.1.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [define-lazy-prop](https://www.npmjs.com/package/define-lazy-prop/v/3.0.0) | 3.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [define-properties](https://www.npmjs.com/package/define-properties/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [depd](https://www.npmjs.com/package/depd/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [detect-libc](https://www.npmjs.com/package/detect-libc/v/2.1.2) | 2.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [dfa](https://www.npmjs.com/package/dfa/v/1.2.0) | 1.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [diff](https://www.npmjs.com/package/diff/v/9.0.0) | 9.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [dingbat-to-unicode](https://www.npmjs.com/package/dingbat-to-unicode/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [dom-serializer](https://www.npmjs.com/package/dom-serializer/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [domelementtype](https://www.npmjs.com/package/domelementtype/v/2.3.0) | 2.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [domhandler](https://www.npmjs.com/package/domhandler/v/5.0.3) | 5.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [domutils](https://www.npmjs.com/package/domutils/v/3.2.2) | 3.2.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [duck](https://www.npmjs.com/package/duck/v/0.1.12) | 0.1.12 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [dunder-proto](https://www.npmjs.com/package/dunder-proto/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [duplexer2](https://www.npmjs.com/package/duplexer2/v/0.1.4) | 0.1.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ecdsa-sig-formatter](https://www.npmjs.com/package/ecdsa-sig-formatter/v/1.0.11) | 1.0.11 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ee-first](https://www.npmjs.com/package/ee-first/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [electron-chrome-extensions](https://www.npmjs.com/package/electron-chrome-extensions/v/4.9.0) | 4.9.0 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [electron](https://www.npmjs.com/package/electron/v/44.7.0) | 44.7.0 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [encodeurl](https://www.npmjs.com/package/encodeurl/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [end-of-stream](https://www.npmjs.com/package/end-of-stream/v/1.4.5) | 1.4.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [entities](https://www.npmjs.com/package/entities/v/4.5.0) | 4.5.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [entities](https://www.npmjs.com/package/entities/v/6.0.1) | 6.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [entities](https://www.npmjs.com/package/entities/v/7.0.1) | 7.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [env-paths](https://www.npmjs.com/package/env-paths/v/3.0.0) | 3.0.0 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
+| [es-abstract-get](https://www.npmjs.com/package/es-abstract-get/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [es-abstract](https://www.npmjs.com/package/es-abstract/v/1.24.2) | 1.24.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [es-define-property](https://www.npmjs.com/package/es-define-property/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [es-errors](https://www.npmjs.com/package/es-errors/v/1.3.0) | 1.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [es-object-atoms](https://www.npmjs.com/package/es-object-atoms/v/1.1.2) | 1.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [es-set-tostringtag](https://www.npmjs.com/package/es-set-tostringtag/v/2.1.0) | 2.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [es-to-primitive](https://www.npmjs.com/package/es-to-primitive/v/1.3.4) | 1.3.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [esbuild](https://www.npmjs.com/package/esbuild/v/0.25.12) | 0.25.12 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [escape-html](https://www.npmjs.com/package/escape-html/v/1.0.3) | 1.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [etag](https://www.npmjs.com/package/etag/v/1.8.1) | 1.8.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [eventsource-parser](https://www.npmjs.com/package/eventsource-parser/v/3.1.1) | 3.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [eventsource](https://www.npmjs.com/package/eventsource/v/3.0.7) | 3.0.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [exceljs](https://www.npmjs.com/package/exceljs/v/4.4.0) | 4.4.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [execa](https://www.npmjs.com/package/execa/v/10.0.1) | 10.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [express-rate-limit](https://www.npmjs.com/package/express-rate-limit/v/8.7.0) | 8.7.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [express](https://www.npmjs.com/package/express/v/5.2.1) | 5.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [extend](https://www.npmjs.com/package/extend/v/3.0.2) | 3.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [fast-csv](https://www.npmjs.com/package/fast-csv/v/4.3.6) | 4.3.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fast-deep-equal](https://www.npmjs.com/package/fast-deep-equal/v/3.1.3) | 3.1.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fast-sha256](https://www.npmjs.com/package/fast-sha256/v/1.3.0) | 1.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fast-uri](https://www.npmjs.com/package/fast-uri/v/3.1.7) | 3.1.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -986,22 +1046,36 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [figures](https://www.npmjs.com/package/figures/v/6.1.0) | 6.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [finalhandler](https://www.npmjs.com/package/finalhandler/v/2.1.1) | 2.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fontkit](https://www.npmjs.com/package/fontkit/v/2.0.4) | 2.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [for-each](https://www.npmjs.com/package/for-each/v/0.3.5) | 0.3.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [form-data-encoder](https://www.npmjs.com/package/form-data-encoder/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [formdata-polyfill](https://www.npmjs.com/package/formdata-polyfill/v/4.0.10) | 4.0.10 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [forwarded](https://www.npmjs.com/package/forwarded/v/0.2.0) | 0.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fresh](https://www.npmjs.com/package/fresh/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [fs-constants](https://www.npmjs.com/package/fs-constants/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [fs.realpath](https://www.npmjs.com/package/fs.realpath/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [fstream](https://www.npmjs.com/package/fstream/v/1.0.12) | 1.0.12 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [function-bind](https://www.npmjs.com/package/function-bind/v/1.1.2) | 1.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [function.prototype.name](https://www.npmjs.com/package/function.prototype.name/v/1.2.0) | 1.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [functions-have-names](https://www.npmjs.com/package/functions-have-names/v/1.2.3) | 1.2.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [gaxios](https://www.npmjs.com/package/gaxios/v/7.3.1) | 7.3.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [gcp-metadata](https://www.npmjs.com/package/gcp-metadata/v/8.1.2) | 8.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [generator-function](https://www.npmjs.com/package/generator-function/v/2.0.1) | 2.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [get-intrinsic](https://www.npmjs.com/package/get-intrinsic/v/1.3.0) | 1.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [get-proto](https://www.npmjs.com/package/get-proto/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [get-stream](https://www.npmjs.com/package/get-stream/v/9.0.1) | 9.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [get-symbol-description](https://www.npmjs.com/package/get-symbol-description/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [glob](https://www.npmjs.com/package/glob/v/7.2.3) | 7.2.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [globalthis](https://www.npmjs.com/package/globalthis/v/1.0.4) | 1.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [google-auth-library](https://www.npmjs.com/package/google-auth-library/v/10.9.1) | 10.9.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [google-logging-utils](https://www.npmjs.com/package/google-logging-utils/v/1.1.3) | 1.1.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [gopd](https://www.npmjs.com/package/gopd/v/1.2.0) | 1.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [got](https://www.npmjs.com/package/got/v/14.6.6) | 14.6.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [graceful-fs](https://www.npmjs.com/package/graceful-fs/v/4.2.11) | 4.2.11 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
+| [graceful-fs](https://www.npmjs.com/package/graceful-fs/v/4.2.11) | 4.2.11 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
+| [has-bigints](https://www.npmjs.com/package/has-bigints/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [has-property-descriptors](https://www.npmjs.com/package/has-property-descriptors/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [has-proto](https://www.npmjs.com/package/has-proto/v/1.2.0) | 1.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [has-symbols](https://www.npmjs.com/package/has-symbols/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [has-tostringtag](https://www.npmjs.com/package/has-tostringtag/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [hasown](https://www.npmjs.com/package/hasown/v/2.0.4) | 2.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [hono](https://www.npmjs.com/package/hono/v/4.13.7) | 4.13.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [html-encoding-sniffer](https://www.npmjs.com/package/html-encoding-sniffer/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1017,19 +1091,47 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [human-signals](https://www.npmjs.com/package/human-signals/v/8.0.1) | 8.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [iconv-lite](https://www.npmjs.com/package/iconv-lite/v/0.6.3) | 0.6.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [iconv-lite](https://www.npmjs.com/package/iconv-lite/v/0.7.3) | 0.7.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [ieee754](https://www.npmjs.com/package/ieee754/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [immediate](https://www.npmjs.com/package/immediate/v/3.0.6) | 3.0.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [inflight](https://www.npmjs.com/package/inflight/v/1.0.6) | 1.0.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [inherits](https://www.npmjs.com/package/inherits/v/2.0.4) | 2.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [internal-slot](https://www.npmjs.com/package/internal-slot/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ip-address](https://www.npmjs.com/package/ip-address/v/10.7.0) | 10.7.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ipaddr.js](https://www.npmjs.com/package/ipaddr.js/v/1.9.1) | 1.9.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ipaddr.js](https://www.npmjs.com/package/ipaddr.js/v/2.5.0) | 2.5.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-array-buffer](https://www.npmjs.com/package/is-array-buffer/v/3.0.5) | 3.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-async-function](https://www.npmjs.com/package/is-async-function/v/2.1.1) | 2.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-bigint](https://www.npmjs.com/package/is-bigint/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-boolean-object](https://www.npmjs.com/package/is-boolean-object/v/1.2.2) | 1.2.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-callable](https://www.npmjs.com/package/is-callable/v/1.2.7) | 1.2.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-data-view](https://www.npmjs.com/package/is-data-view/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-date-object](https://www.npmjs.com/package/is-date-object/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-docker](https://www.npmjs.com/package/is-docker/v/3.0.0) | 3.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-document.all](https://www.npmjs.com/package/is-document.all/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-finalizationregistry](https://www.npmjs.com/package/is-finalizationregistry/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-generator-function](https://www.npmjs.com/package/is-generator-function/v/1.1.2) | 1.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-in-ssh](https://www.npmjs.com/package/is-in-ssh/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-inside-container](https://www.npmjs.com/package/is-inside-container/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-map](https://www.npmjs.com/package/is-map/v/2.0.3) | 2.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-negative-zero](https://www.npmjs.com/package/is-negative-zero/v/2.0.3) | 2.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-number-object](https://www.npmjs.com/package/is-number-object/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-plain-obj](https://www.npmjs.com/package/is-plain-obj/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-potential-custom-element-name](https://www.npmjs.com/package/is-potential-custom-element-name/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-promise](https://www.npmjs.com/package/is-promise/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-regex](https://www.npmjs.com/package/is-regex/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-set](https://www.npmjs.com/package/is-set/v/2.0.3) | 2.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-shared-array-buffer](https://www.npmjs.com/package/is-shared-array-buffer/v/1.0.4) | 1.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-stream](https://www.npmjs.com/package/is-stream/v/4.0.1) | 4.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-string](https://www.npmjs.com/package/is-string/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-symbol](https://www.npmjs.com/package/is-symbol/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-typed-array](https://www.npmjs.com/package/is-typed-array/v/1.1.15) | 1.1.15 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-unicode-supported](https://www.npmjs.com/package/is-unicode-supported/v/2.1.0) | 2.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-weakmap](https://www.npmjs.com/package/is-weakmap/v/2.0.2) | 2.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-weakref](https://www.npmjs.com/package/is-weakref/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [is-weakset](https://www.npmjs.com/package/is-weakset/v/2.0.4) | 2.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-wsl](https://www.npmjs.com/package/is-wsl/v/3.1.1) | 3.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [isarray](https://www.npmjs.com/package/isarray/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [isarray](https://www.npmjs.com/package/isarray/v/2.0.5) | 2.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [isexe](https://www.npmjs.com/package/isexe/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [jose](https://www.npmjs.com/package/jose/v/6.2.12) | 6.2.12 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [js-tokens](https://www.npmjs.com/package/js-tokens/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
@@ -1041,15 +1143,34 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [json-schema-to-ts](https://www.npmjs.com/package/json-schema-to-ts/v/3.1.1) | 3.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [json-schema-traverse](https://www.npmjs.com/package/json-schema-traverse/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [json-schema-typed](https://www.npmjs.com/package/json-schema-typed/v/8.0.2) | 8.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [jszip](https://www.npmjs.com/package/jszip/v/3.10.2) | 3.10.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [jwa](https://www.npmjs.com/package/jwa/v/2.0.1) | 2.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [jws](https://www.npmjs.com/package/jws/v/4.0.1) | 4.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [keyv](https://www.npmjs.com/package/keyv/v/5.6.0) | 5.6.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [koffi](https://www.npmjs.com/package/koffi/v/3.1.1) | 3.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lazystream](https://www.npmjs.com/package/lazystream/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [leac](https://www.npmjs.com/package/leac/v/0.7.0) | 0.7.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lie](https://www.npmjs.com/package/lie/v/3.3.0) | 3.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [listenercount](https://www.npmjs.com/package/listenercount/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.defaults](https://www.npmjs.com/package/lodash.defaults/v/4.2.0) | 4.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.difference](https://www.npmjs.com/package/lodash.difference/v/4.5.0) | 4.5.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.escaperegexp](https://www.npmjs.com/package/lodash.escaperegexp/v/4.1.2) | 4.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.flatten](https://www.npmjs.com/package/lodash.flatten/v/4.4.0) | 4.4.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.groupby](https://www.npmjs.com/package/lodash.groupby/v/4.6.0) | 4.6.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.isboolean](https://www.npmjs.com/package/lodash.isboolean/v/3.0.3) | 3.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.isequal](https://www.npmjs.com/package/lodash.isequal/v/4.5.0) | 4.5.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.isfunction](https://www.npmjs.com/package/lodash.isfunction/v/3.0.9) | 3.0.9 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.isnil](https://www.npmjs.com/package/lodash.isnil/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.isplainobject](https://www.npmjs.com/package/lodash.isplainobject/v/4.0.6) | 4.0.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.isundefined](https://www.npmjs.com/package/lodash.isundefined/v/3.0.1) | 3.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.union](https://www.npmjs.com/package/lodash.union/v/4.6.0) | 4.6.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lodash.uniq](https://www.npmjs.com/package/lodash.uniq/v/4.5.0) | 4.5.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [long](https://www.npmjs.com/package/long/v/5.3.2) | 5.3.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [loose-envify](https://www.npmjs.com/package/loose-envify/v/1.4.0) | 1.4.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lop](https://www.npmjs.com/package/lop/v/0.4.2) | 0.4.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [lowercase-keys](https://www.npmjs.com/package/lowercase-keys/v/3.0.0) | 3.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [lru-cache](https://www.npmjs.com/package/lru-cache/v/10.4.3) | 10.4.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [mammoth](https://www.npmjs.com/package/mammoth/v/1.13.0) | 1.13.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [marked](https://www.npmjs.com/package/marked/v/18.0.12) | 18.0.12 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [math-intrinsics](https://www.npmjs.com/package/math-intrinsics/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [media-typer](https://www.npmjs.com/package/media-typer/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1057,7 +1178,11 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [mime-db](https://www.npmjs.com/package/mime-db/v/1.54.0) | 1.54.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [mime-types](https://www.npmjs.com/package/mime-types/v/3.0.2) | 3.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [mimic-response](https://www.npmjs.com/package/mimic-response/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [minimatch](https://www.npmjs.com/package/minimatch/v/3.1.5) | 3.1.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [minimatch](https://www.npmjs.com/package/minimatch/v/5.1.9) | 5.1.9 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [minimist](https://www.npmjs.com/package/minimist/v/1.2.8) | 1.2.8 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [minisearch](https://www.npmjs.com/package/minisearch/v/7.2.0) | 7.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [mkdirp](https://www.npmjs.com/package/mkdirp/v/0.5.6) | 0.5.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ms](https://www.npmjs.com/package/ms/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ms](https://www.npmjs.com/package/ms/v/2.1.3) | 2.1.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [negotiator](https://www.npmjs.com/package/negotiator/v/0.6.4) | 0.6.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1077,37 +1202,47 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [node-domexception](https://www.npmjs.com/package/node-domexception/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [node-fetch](https://www.npmjs.com/package/node-fetch/v/3.3.2) | 3.3.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [node-pty](https://www.npmjs.com/package/node-pty/v/1.2.0-beta.15) | 1.2.0-beta.15 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [normalize-path](https://www.npmjs.com/package/normalize-path/v/3.0.0) | 3.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [normalize-url](https://www.npmjs.com/package/normalize-url/v/8.1.1) | 8.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [npm-run-path](https://www.npmjs.com/package/npm-run-path/v/6.0.0) | 6.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [nwsapi](https://www.npmjs.com/package/nwsapi/v/2.2.28) | 2.2.28 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [object-assign](https://www.npmjs.com/package/object-assign/v/4.1.1) | 4.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [object-inspect](https://www.npmjs.com/package/object-inspect/v/1.13.4) | 1.13.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [object-keys](https://www.npmjs.com/package/object-keys/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [object.assign](https://www.npmjs.com/package/object.assign/v/4.1.7) | 4.1.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [on-finished](https://www.npmjs.com/package/on-finished/v/2.4.1) | 2.4.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [on-headers](https://www.npmjs.com/package/on-headers/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [once](https://www.npmjs.com/package/once/v/1.4.0) | 1.4.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [open](https://www.npmjs.com/package/open/v/11.0.2) | 11.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [openai](https://www.npmjs.com/package/openai/v/7.19.0) | 7.19.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [option](https://www.npmjs.com/package/option/v/0.2.4) | 0.2.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [own-keys](https://www.npmjs.com/package/own-keys/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [p-cancelable](https://www.npmjs.com/package/p-cancelable/v/4.0.1) | 4.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [p-limit](https://www.npmjs.com/package/p-limit/v/7.3.3) | 7.3.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [p-retry](https://www.npmjs.com/package/p-retry/v/4.6.2) | 4.6.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [pako](https://www.npmjs.com/package/pako/v/0.2.9) | 0.2.9 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [pako](https://www.npmjs.com/package/pako/v/1.0.11) | 1.0.11 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [parse-ms](https://www.npmjs.com/package/parse-ms/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [parse5](https://www.npmjs.com/package/parse5/v/7.3.0) | 7.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [parseley](https://www.npmjs.com/package/parseley/v/0.13.1) | 0.13.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [parseurl](https://www.npmjs.com/package/parseurl/v/1.3.3) | 1.3.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [partial-json](https://www.npmjs.com/package/partial-json/v/0.1.7) | 0.1.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [path-is-absolute](https://www.npmjs.com/package/path-is-absolute/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [path-key](https://www.npmjs.com/package/path-key/v/3.1.1) | 3.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [path-key](https://www.npmjs.com/package/path-key/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [path-to-regexp](https://www.npmjs.com/package/path-to-regexp/v/8.4.2) | 8.4.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [pdfjs-dist](https://www.npmjs.com/package/pdfjs-dist/v/6.4.299) | 6.4.299 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [peberminta](https://www.npmjs.com/package/peberminta/v/0.10.0) | 0.10.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [picocolors](https://www.npmjs.com/package/picocolors/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [picomatch](https://www.npmjs.com/package/picomatch/v/4.0.7) | 4.0.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [pkce-challenge](https://www.npmjs.com/package/pkce-challenge/v/5.0.1) | 5.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [playwright-core](https://www.npmjs.com/package/playwright-core/v/1.63.0) | 1.63.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [playwright](https://www.npmjs.com/package/playwright/v/1.63.0) | 1.63.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
+| [possible-typed-array-names](https://www.npmjs.com/package/possible-typed-array-names/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [powershell-utils](https://www.npmjs.com/package/powershell-utils/v/0.1.0) | 0.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [powershell-utils](https://www.npmjs.com/package/powershell-utils/v/0.2.1) | 0.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [pretty-ms](https://www.npmjs.com/package/pretty-ms/v/9.3.1) | 9.3.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [process-nextick-args](https://www.npmjs.com/package/process-nextick-args/v/2.0.1) | 2.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [progress](https://www.npmjs.com/package/progress/v/2.0.3) | 2.0.3 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [protobufjs](https://www.npmjs.com/package/protobufjs/v/7.6.6) | 7.6.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [proxy-addr](https://www.npmjs.com/package/proxy-addr/v/2.0.7) | 2.0.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1122,18 +1257,29 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [react-dom](https://www.npmjs.com/package/react-dom/v/19.2.7) | 19.2.7 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [react](https://www.npmjs.com/package/react/v/18.3.1) | 18.3.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [react](https://www.npmjs.com/package/react/v/19.2.7) | 19.2.7 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
+| [readable-stream](https://www.npmjs.com/package/readable-stream/v/2.3.8) | 2.3.8 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [readable-stream](https://www.npmjs.com/package/readable-stream/v/3.6.2) | 3.6.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [readdir-glob](https://www.npmjs.com/package/readdir-glob/v/1.1.3) | 1.1.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [readdirp](https://www.npmjs.com/package/readdirp/v/5.1.1) | 5.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [reflect.getprototypeof](https://www.npmjs.com/package/reflect.getprototypeof/v/1.0.10) | 1.0.10 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [regexp.prototype.flags](https://www.npmjs.com/package/regexp.prototype.flags/v/1.5.4) | 1.5.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [require-from-string](https://www.npmjs.com/package/require-from-string/v/2.0.2) | 2.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [resolve-alpn](https://www.npmjs.com/package/resolve-alpn/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [resolve.exports](https://www.npmjs.com/package/resolve.exports/v/2.0.3) | 2.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [responselike](https://www.npmjs.com/package/responselike/v/4.0.2) | 4.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [restructure](https://www.npmjs.com/package/restructure/v/3.0.2) | 3.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [retry](https://www.npmjs.com/package/retry/v/0.13.1) | 0.13.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [rimraf](https://www.npmjs.com/package/rimraf/v/2.7.1) | 2.7.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [router](https://www.npmjs.com/package/router/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [rrweb-cssom](https://www.npmjs.com/package/rrweb-cssom/v/0.8.0) | 0.8.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [run-applescript](https://www.npmjs.com/package/run-applescript/v/7.1.0) | 7.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [safe-array-concat](https://www.npmjs.com/package/safe-array-concat/v/1.1.4) | 1.1.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [safe-buffer](https://www.npmjs.com/package/safe-buffer/v/5.1.2) | 5.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [safe-buffer](https://www.npmjs.com/package/safe-buffer/v/5.2.1) | 5.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [safe-push-apply](https://www.npmjs.com/package/safe-push-apply/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [safe-regex-test](https://www.npmjs.com/package/safe-regex-test/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [safer-buffer](https://www.npmjs.com/package/safer-buffer/v/2.1.2) | 2.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [saxes](https://www.npmjs.com/package/saxes/v/5.0.1) | 5.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [saxes](https://www.npmjs.com/package/saxes/v/6.0.0) | 6.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [scheduler](https://www.npmjs.com/package/scheduler/v/0.23.2) | 0.23.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [scheduler](https://www.npmjs.com/package/scheduler/v/0.27.0) | 0.27.0 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
@@ -1141,6 +1287,10 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [semver](https://www.npmjs.com/package/semver/v/7.8.5) | 7.8.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [send](https://www.npmjs.com/package/send/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [serve-static](https://www.npmjs.com/package/serve-static/v/2.2.1) | 2.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [set-function-length](https://www.npmjs.com/package/set-function-length/v/1.2.2) | 1.2.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [set-function-name](https://www.npmjs.com/package/set-function-name/v/2.0.2) | 2.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [set-proto](https://www.npmjs.com/package/set-proto/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [setimmediate](https://www.npmjs.com/package/setimmediate/v/1.0.5) | 1.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [setprototypeof](https://www.npmjs.com/package/setprototypeof/v/1.2.0) | 1.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [sharp](https://www.npmjs.com/package/sharp/v/0.35.5) | 0.35.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [shebang-command](https://www.npmjs.com/package/shebang-command/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1157,24 +1307,41 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [side-channel-weakmap](https://www.npmjs.com/package/side-channel-weakmap/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [side-channel](https://www.npmjs.com/package/side-channel/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [signal-exit](https://www.npmjs.com/package/signal-exit/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [sprintf-js](https://www.npmjs.com/package/sprintf-js/v/1.0.3) | 1.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [standardwebhooks](https://www.npmjs.com/package/standardwebhooks/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [statuses](https://www.npmjs.com/package/statuses/v/2.0.2) | 2.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [stop-iteration-iterator](https://www.npmjs.com/package/stop-iteration-iterator/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [string_decoder](https://www.npmjs.com/package/string_decoder/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [string_decoder](https://www.npmjs.com/package/string_decoder/v/1.3.0) | 1.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [string.prototype.trim](https://www.npmjs.com/package/string.prototype.trim/v/1.2.11) | 1.2.11 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [string.prototype.trimend](https://www.npmjs.com/package/string.prototype.trimend/v/1.0.10) | 1.0.10 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [string.prototype.trimstart](https://www.npmjs.com/package/string.prototype.trimstart/v/1.0.8) | 1.0.8 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [strip-final-newline](https://www.npmjs.com/package/strip-final-newline/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [sumchecker](https://www.npmjs.com/package/sumchecker/v/3.0.1) | 3.0.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [symbol-tree](https://www.npmjs.com/package/symbol-tree/v/3.2.4) | 3.2.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [tar-stream](https://www.npmjs.com/package/tar-stream/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [tiny-inflate](https://www.npmjs.com/package/tiny-inflate/v/1.0.3) | 1.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [tldts-core](https://www.npmjs.com/package/tldts-core/v/6.1.86) | 6.1.86 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [tldts](https://www.npmjs.com/package/tldts/v/6.1.86) | 6.1.86 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [tmp](https://www.npmjs.com/package/tmp/v/0.2.7) | 0.2.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [toidentifier](https://www.npmjs.com/package/toidentifier/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [tough-cookie](https://www.npmjs.com/package/tough-cookie/v/5.1.2) | 5.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [tr46](https://www.npmjs.com/package/tr46/v/5.1.1) | 5.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [traverse](https://www.npmjs.com/package/traverse/v/0.3.10) | 0.3.10 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ts-algebra](https://www.npmjs.com/package/ts-algebra/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [tslib](https://www.npmjs.com/package/tslib/v/2.8.1) | 2.8.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [turndown](https://www.npmjs.com/package/turndown/v/7.2.4) | 7.2.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [type-fest](https://www.npmjs.com/package/type-fest/v/4.41.0) | 4.41.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [type-is](https://www.npmjs.com/package/type-is/v/2.1.0) | 2.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [typebox](https://www.npmjs.com/package/typebox/v/1.3.27) | 1.3.27 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [typed-array-buffer](https://www.npmjs.com/package/typed-array-buffer/v/1.0.3) | 1.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [typed-array-byte-length](https://www.npmjs.com/package/typed-array-byte-length/v/1.0.3) | 1.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [typed-array-byte-offset](https://www.npmjs.com/package/typed-array-byte-offset/v/1.0.5) | 1.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [typed-array-length](https://www.npmjs.com/package/typed-array-length/v/1.0.8) | 1.0.8 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [typedarray.prototype.slice](https://www.npmjs.com/package/typedarray.prototype.slice/v/1.0.6) | 1.0.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [typescript](https://www.npmjs.com/package/typescript/v/6.0.3) | 6.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
+| [unbox-primitive](https://www.npmjs.com/package/unbox-primitive/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [underscore](https://www.npmjs.com/package/underscore/v/1.13.8) | 1.13.8 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [undici-types](https://www.npmjs.com/package/undici-types/v/6.21.0) | 6.21.0 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [undici-types](https://www.npmjs.com/package/undici-types/v/7.24.6) | 7.24.6 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [undici-types](https://www.npmjs.com/package/undici-types/v/8.9.0) | 8.9.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1184,6 +1351,9 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [unicode-trie](https://www.npmjs.com/package/unicode-trie/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [unicorn-magic](https://www.npmjs.com/package/unicorn-magic/v/0.3.0) | 0.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [unpipe](https://www.npmjs.com/package/unpipe/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [unzipper](https://www.npmjs.com/package/unzipper/v/0.10.14) | 0.10.14 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [util-deprecate](https://www.npmjs.com/package/util-deprecate/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [uuid](https://www.npmjs.com/package/uuid/v/8.3.2) | 8.3.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [vary](https://www.npmjs.com/package/vary/v/1.1.2) | 1.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [w3c-xmlserializer](https://www.npmjs.com/package/w3c-xmlserializer/v/5.0.0) | 5.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [web-streams-polyfill](https://www.npmjs.com/package/web-streams-polyfill/v/3.3.3) | 3.3.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1192,17 +1362,23 @@ All 849 distinct package versions in the OMD and embedded OpenCU host/frontend l
 | [whatwg-encoding](https://www.npmjs.com/package/whatwg-encoding/v/3.1.1) | 3.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [whatwg-mimetype](https://www.npmjs.com/package/whatwg-mimetype/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [whatwg-url](https://www.npmjs.com/package/whatwg-url/v/14.2.0) | 14.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [which-boxed-primitive](https://www.npmjs.com/package/which-boxed-primitive/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [which-builtin-type](https://www.npmjs.com/package/which-builtin-type/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [which-collection](https://www.npmjs.com/package/which-collection/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [which-command](https://www.npmjs.com/package/which-command/v/0.1.0) | 0.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [which-typed-array](https://www.npmjs.com/package/which-typed-array/v/1.1.24) | 1.1.24 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [which](https://www.npmjs.com/package/which/v/2.0.2) | 2.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [wrappy](https://www.npmjs.com/package/wrappy/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ws](https://www.npmjs.com/package/ws/v/8.21.3) | 8.21.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [wsl-utils](https://www.npmjs.com/package/wsl-utils/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [xml-name-validator](https://www.npmjs.com/package/xml-name-validator/v/5.0.0) | 5.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [xmlbuilder](https://www.npmjs.com/package/xmlbuilder/v/10.1.1) | 10.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [xmlchars](https://www.npmjs.com/package/xmlchars/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [yaml](https://www.npmjs.com/package/yaml/v/2.8.1) | 2.8.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [yaml](https://www.npmjs.com/package/yaml/v/2.9.0) | 2.9.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [yocto-queue](https://www.npmjs.com/package/yocto-queue/v/1.2.2) | 1.2.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [yoctocolors](https://www.npmjs.com/package/yoctocolors/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [zip-stream](https://www.npmjs.com/package/zip-stream/v/4.1.1) | 4.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [zod-to-json-schema](https://www.npmjs.com/package/zod-to-json-schema/v/3.25.2) | 3.25.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [zod](https://www.npmjs.com/package/zod/v/4.4.3) | 4.4.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [zod](https://www.npmjs.com/package/zod/v/4.5.4) | 4.5.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |

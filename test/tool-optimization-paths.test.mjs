@@ -58,6 +58,41 @@ async function fixture(t, mode = 'ptc') {
 const definition = (name, value, render = v => JSON.stringify(v, null, 2)) => ({ name, description: 'Authorized synthetic fixture', parameters: { type: 'object', properties: {}, additionalProperties: false },
   output: { schema: { type: 'object' }, render: (_args, value) => text(render(value)) }, execute: () => typeof value === 'function' ? value() : value });
 
+test('PTC recall display unwraps only exact single-call text while preserving values, logs and mixed programs', async t => {
+  const f = await fixture(t), payload = { rawRef: 'omd-raw:fixture', text: 'original "quoted" text\n'.repeat(50), hasMore: false };
+  const content = text(JSON.stringify(payload)), value = JSON.stringify({ content });
+  f.ctx.tools.register({ name: 'recall', description: 'Synthetic evidence recall', parameters: { type: 'object', properties: { rawRef: { type: 'string' } } },
+    output: { schema: { type: 'string' }, render: () => content }, execute: () => value });
+  f.ctx.tools.register(definition('read', { value: 1 }));
+  const folded = await f.program('return await tools.recall({rawRef:"omd-raw:fixture"});');
+  assert.equal(folded.isError, false); assert.equal(folded.value.result, value); assert.deepEqual(folded.content, content);
+  const logs = await f.program('console.log("keep this log");return await tools.recall({rawRef:"omd-raw:fixture"});');
+  assert.match(logs.content[0].text, /keep this log/); assert.ok(logs.content[0].text.includes(value));
+  const mixed = await f.program('await tools.read({});return await tools.recall({rawRef:"omd-raw:fixture"});');
+  assert.equal(mixed.content[0].text, value);
+  f.config.contextOptimizationEnabled = false;
+  assert.equal((await f.program('return await tools.recall({rawRef:"omd-raw:fixture"});')).content[0].text, value);
+});
+
+test('document views and original recall work through the real PTC pipeline without changing the string contract', async t => {
+  const f = await fixture(t), bytes = Buffer.from('name,value\ninvoice,001\n');
+  f.ctx.fs = { processPathFromHostPath: path => path, async resolve() { return { targetKey: '/approved/table.csv', displayPath: '/approved/table.csv' }; },
+    processPath: t => t.displayPath, async stat() { return { type: 'file', size: bytes.length, version: 'v1' }; },
+    async readBytes() { return bytes; }, async readText() { return bytes.toString(); }, async streamText() { return [bytes.toString()]; } };
+  const native = await import(host.resolve('@deepseek-ai/dsh-tool-fs'));
+  native.apply(f.ctx, native.Config({ readImage: false, write: false, edit: false }));
+  registerContextViews(f.ctx, f.hub); registerContextRecall(f.ctx, f.hub);
+  const r = await f.program('return await tools.context_view({file:"table.csv",view:"article"});');
+  assert.equal(r.isError, false, JSON.stringify(r.content)); assert.equal(typeof r.value.result, 'string');
+  const view = JSON.parse(r.value.result); assert.equal(view.document.format, 'csv'); assert.equal(view.rawComplete, false);
+  const recalled = await f.program(`return await tools.recall({rawRef:${JSON.stringify(view.rawRef)},maxChars:48000});`);
+  assert.equal(recalled.isError, false, JSON.stringify(recalled.content));
+  assert.equal(typeof recalled.value.result, 'string'); assert.equal(JSON.parse(recalled.value.result).content[0].text, recalled.content[0].text);
+  assert.deepEqual(JSON.parse(JSON.parse(recalled.content[0].text).text).rows[1], ['invoice', '001']);
+  const raw = await f.program('return await tools.context_view({file:"table.csv",view:"raw"});');
+  assert.equal(JSON.parse(raw.value.result).text, bytes.toString()); assert.equal(JSON.parse(raw.value.result).rawComplete, true);
+});
+
 test('real PTC preserves intermediate values, reduces only emitted JSON, and leaves suppressed output and failed/write receipts intact', async t => {
   const f = await fixture(t), rows = Array.from({ length: 90 }, (_, n) => ({ name: 'resource-' + n, ready: true })), value = { rows };
   const original = JSON.stringify(value, null, 2);

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { appendPluginRecord } from '@deepseek-ai/dsh-session';
-import { ProgramOutputs, programView } from './program.mjs';
+import { ProgramOutputs, programView, recallDisplay } from './program.mjs';
 import { emptyOptimization, addOptimization } from './accounting.mjs';
 import { measureRequest, requestPricing } from '../metering/estimate.mjs';
 import { EvidenceStore, hash } from './evidence.mjs';
@@ -199,8 +199,10 @@ export class ResultReduction {
     if (!this.enabled(session)) return retain('disabled');
     if (decision.kind !== 'accept' || Object.hasOwn(decision, 'value') || result.isError || exec.signal.aborted) return retain('protected');
     if (this.pending.has(exec.token)) return decision;
-    if (protectedTool(exec.name) || program?.blocked) return retain('protected');
     if (this.ctx.tools.get(exec.name, exec.agent)?.finalizeContent) return retain('owner-finalized');
+    const recalled = program && recallDisplay(result, decision, program);
+    if (recalled) { this.decision(session, 'reduced'); return { ...decision, content: recalled }; }
+    if (protectedTool(exec.name) || program?.blocked) return retain('protected');
     const content = decision.content ?? result.content, text = textOf(content);
     if (text === null || text.length < 768 || text.length > 32 * 1024 * 1024 || /^ops_/.test(exec.name)) return retain('ineligible');
     const output = { ...result, content };

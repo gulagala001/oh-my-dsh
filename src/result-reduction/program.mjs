@@ -1,5 +1,6 @@
 import { hash } from './evidence.mjs';
 import { dataView, repeatedLines, protectedTool, textOf } from './reducers.mjs';
+import { estimateText } from '../metering/estimate.mjs';
 
 // Observe native dispatch ownership, never parse or rewrite user programs.
 // A program's canonical value and nested results are never shortened here.
@@ -9,7 +10,18 @@ export class ProgramOutputs {
     if (!exec.parent || !exec.agent) return;
     const key = exec.agent.session.id + ':' + exec.rootCallId;
     let run = this.runs.get(key);
-    if (!run) { run = { blocked: false, calls: [] }; this.runs.set(key, run); }
+    if (!run) { run = { blocked: false, calls: [], dispatched: 0 }; this.runs.set(key, run); }
+    run.dispatched++;
+    // Keep only one exact, successful text recall. This is a display projection,
+    // not a new program return contract or an additional copy of the evidence.
+    if (run.dispatched === 1 && exec.name === 'recall' && (exec.arguments?.rawRef || exec.arguments?.search === 'evidence')
+      && !result.isError && !exec.signal?.aborted && typeof result.value === 'string' && textOf(result.content) !== null) {
+      try {
+        const envelope = JSON.parse(result.value);
+        if (Object.keys(envelope).length === 1 && Array.isArray(envelope.content)
+          && JSON.stringify(envelope.content) === JSON.stringify(result.content)) run.recall = { value: result.value, content: result.content };
+      } catch { /* An unfamiliar return shape keeps the normal display. */ }
+    } else run.recall = undefined;
     run.blocked ||= result.isError || exec.signal?.aborted || protectedTool(exec.name)
       || result.value?.aborted || result.value?.timedOut || result.value?.sandbox?.denied
       || (typeof result.value?.exitCode === 'number' && result.value.exitCode !== 0);
@@ -24,6 +36,15 @@ export class ProgramOutputs {
     return run;
   }
   release(id) { for (const key of this.runs.keys()) if (id === undefined || key.startsWith(id + ':')) this.runs.delete(key); }
+}
+export function recallDisplay(result, decision, run) {
+  if (!run?.recall || run.dispatched !== 1 || result.isError || result.value?.logs?.length
+    || result.value?.result !== run.recall.value || result.value?.sandbox?.denied
+    || result.value?.sandbox?.enforcement === 'partial') return null;
+  const before = textOf(decision.content ?? result.content), after = textOf(run.recall.content);
+  // Preserve a later owner's message or diagnostics instead of replacing them.
+  if (before !== run.recall.value || after === null || after.length >= before.length || estimateText(after) >= estimateText(before)) return null;
+  return run.recall.content;
 }
 export function programView(exec, result, run) {
   if (run?.blocked || result.isError || result.value?.sandbox?.denied) return null;

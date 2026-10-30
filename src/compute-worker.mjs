@@ -2,7 +2,10 @@ import { parentPort } from 'node:worker_threads';
 parentPort.on('message', async ({ id, operation, input }) => {
   try {
     let value;
-    if (operation === 'ast') {
+    if (operation === 'document') {
+      const { parseDocumentBytes } = await import('./result-reduction/document-parser.mjs');
+      value = await parseDocumentBytes(input);
+    } else if (operation === 'ast') {
       const { structuralSearch } = await import('./result-reduction/ast-engine.mjs');
       value = await structuralSearch(input.text, input.language, input.pattern);
     } else if (operation === 'article') {

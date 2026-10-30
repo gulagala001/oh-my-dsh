@@ -8,6 +8,8 @@ OMD-owned code uses the root [MIT license](LICENSE). Third-party code, component
 
 上下文优化使用直接依赖：[@ast-grep/wasm](https://github.com/ast-grep/ast-grep) 0.51.0（MIT）、[web-tree-sitter](https://github.com/tree-sitter/tree-sitter) 0.26.0（MIT）、[@vscode/tree-sitter-wasm](https://github.com/microsoft/vscode-tree-sitter-wasm) 0.3.1（MIT，语法各自许可随包保留）、[@toon-format/toon](https://github.com/toon-format/toon) 4.4.0（MIT）、[@mozilla/readability](https://github.com/mozilla/readability) 0.6.0（Apache-2.0）和 [jsdom](https://github.com/jsdom/jsdom) 26.1.0（MIT）。依赖原件未修改；OMD 自有代码提供宿主适配、原文权限和结果视图。
 
+文档提取使用未修改的 [Mammoth](https://github.com/mwilliamson/mammoth.js) 1.13.0（BSD-2-Clause）、[PDF.js](https://github.com/mozilla/pdf.js) / pdfjs-dist 6.4.299（Apache-2.0）、[CSV Parse](https://github.com/adaltas/node-csv) 7.0.3（MIT）和 [ExcelJS](https://github.com/exceljs/exceljs) 4.4.0（MIT）。完整许可证及依赖声明随各安装包保留。
+
 | 功能或组件 | 原作者／来源组织 | 原项目 |
 | --- | --- | --- |
 | DSH 宿主与基础组件 | [DeepSeek](https://github.com/deepseek-ai) | [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) |

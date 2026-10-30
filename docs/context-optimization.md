@@ -6,10 +6,12 @@ OMD 的核心功能，默认开启。在 **设置 → Oh My DSH → 上下文与
 
 - 自动精简受支持的只读 JSON、同形表格和完全相同的连续行；只对识别出的成功 Node TAP 日志做概括。未知日志、报错、写入回执、编辑正文与差异保留。
 - PTC 内部工具值、程序变量和未输出的中间结果保持原样；只处理最终发给模型的输出。可识别的 JSON、同形数据和连续重复行使用无损视图，失败、取消和写入回执保留。相同程序及实际分派身份的完整输出可复用本次请求中的完整基线，变化以精确差异呈现。
+- PTC 程序仅原样返回一次原文回查结果时，直接展示已有的原文结果，去掉重复 JSON 包装。程序返回值、参数与工具说明保持原样；日志、混合调用、附件及错误不适用此精简。
 - 整文件写回前，原生文件策略核对当前版本是否已完整读取；仅部分行、字节截断或超长行截断不能作为整文件来源。Native 与 PTC 使用同一写入边界，拒绝时文件保持原样；可通过局部编辑、分段完整读取或完整 raw 快照继续。
 - 原生文件读取仍然真实执行。只有本次模型请求里保留着完整旧结果，才把重复读取改成引用，或把变化改成完整差异；基线消失就重新发送完整结果。使用 BC 时，此类依赖模型可见基线的优化自动保守处理。
 - 可选 MCP 工具通过 `tool_find` 按需发现，返回完整、当前会话有权使用的参数说明。Native 与 PTC 共用同一份按需目录；发现后下一次请求提供完整参数和返回契约。PTC 继续使用宿主 SDK、注册表和权限。
 - `context_view` 对获准的文件、网页或原文引用提供 `raw`、`data`、`article`、`outline`、`query` 视图。正文、提纲和查询片段会明确标注为部分内容。单文件完整快照上限 8 MiB，超限用原生范围读取；不把截断内容冒充完整文件。
+- 同一入口支持 DOCX 段落／表格、PDF 文本层、CSV／TSV 单元格及 XLSX 工作表。用 `article` 看带位置的正文、`outline` 看目录、`query` 查片段、`data` 读提取结构；CSV／TSV 的 `raw` 保持原始文本。文档输入最多 32 MiB、提取结果最多 8 MiB，解析超时／失败明确报错；提取内容另存为可回查资料，并标明原文件哈希和覆盖范围，不作为完整文件写回依据。PDF 保留页码但不做 OCR；DOCX 不保留原版式或图片；XLSX 保留单元格位置及公式的已有缓存值，不重新计算。旧 DOC／XLS 不在支持范围。
 - `code_search` 对选定文件做真实 AST 模式搜索，支持 16 种随包语法。返回文件覆盖情况、解析失败、精确位置与分页。先用 glob 或 CodeGraph 选文件；CodeGraph 保留索引、符号、调用关系、影响范围和按问题探索能力。
 - 每次缩减前先保存获准原文。工具卡片提供 **查看原文**，支持开头、结尾、行号、搜索和下一页；长单行也可继续读取。模型可用 `recall({rawRef, mode, cursor})`，或 `recall({search:"evidence", query})` 搜索。
 - 原文与会话中的真实工具调用绑定，重启和合法分支仍可回查。关闭优化不会删除原文。控制台可导出、导入原文档案；迁移时同时保留原生会话导出和对应原文档案，先恢复会话再导入原文。历史中仍被引用的原文不按时间自动过期。
@@ -26,6 +28,10 @@ Context optimization is built into OMD and enabled by default. Turn it off under
 Native and PTC share one optional-tool catalog with exact input/output contracts available after discovery. Supported read-only data receives reversible whitespace, table or exact-repeat views. Only recognized successful Node TAP output receives a summary. Native whole-file writes reject reconstruction from known incomplete read windows, including byte-capped windows and truncated long lines; exact local edits, complete ranged reads and complete raw snapshots remain available to Native and PTC. Errors, unknown logs, write receipts and exact editing material remain intact. Tools still execute and programmatic return values remain unchanged. PTC optimization occurs only after the program emits its final model-facing output; intermediate values and suppressed output stay untouched. Complete emitted outputs can reuse a visible complete baseline or an exact delta, bound to the program and actual dispatch identities. Repeat reads and complete deltas require a full baseline in the current request; missing baselines and BC use conservative full results.
 
 Use `tool_find` for optional scoped tool schemas, `context_view` for explicit raw/data/article/outline/query views, and `code_search` for AST patterns over selected files using 16 bundled grammars. Partial views and parse failures are identified. Complete file snapshots are limited to 8 MiB; larger files retain the native range-reading path. CodeGraph continues to provide indexed symbols, relationships and question-focused exploration.
+
+The same `context_view` reads DOCX paragraphs/tables, PDF text pages, CSV/TSV cells and XLSX worksheets. Use article/outline/query for located text and data for extracted structures; CSV/TSV raw remains exact text. Inputs are limited to 32 MiB and extracted results to 8 MiB. Extraction is archived for recall with source hashes and explicit coverage; it is not a complete original-file snapshot. PDF does not perform OCR, DOCX does not preserve layout/images, and XLSX formulas retain cached values without recalculation. Legacy DOC/XLS are unsupported. Failed or timed-out parsing does not return a fabricated empty document.
+
+A PTC program returning exactly one successful text evidence-recall value can display its existing Native text directly, without the repeated JSON envelope. Canonical program values, tool parameters and contracts are unchanged. Logs, mixed calls, attachments, errors and later presentation overrides retain their normal output.
 
 Authorized originals are saved before shortening. **View original** and `recall({rawRef, mode, cursor})` support head/tail, lines, search and continuous long-line paging. `recall({search:"evidence", query})` searches saved evidence. References survive restart and legitimate forks; disabling optimization keeps recall available. Export native sessions together with their evidence archives; restore the session before importing evidence. Referenced evidence has no automatic TTL.
 
