@@ -8,8 +8,9 @@ import { fileURLToPath } from 'node:url';
 export const upstream = Object.freeze({ version: '0.3.0',
   url: 'https://github.com/gulagala001/omd-prompt-optimizer/releases/download/v0.3.0/omd-prompt-optimizer-0.3.0.tgz',
   sha256: '8b9eb882ddd57c4098b874628663615858c4a987f49fd6927235d7bd1afdeadf' });
-export const hostVersion = '0.2.1-rc.3';
-export const version = hostVersion + '.intent.0.3.3';
+const packageInfo = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+export const hostVersion = packageInfo.engines.dsh;
+export const version = hostVersion + '.intent.0.3.4';
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const replaceOnce = (source, before, after) => {
   if (source.split(before).length !== 2) throw Error('The fixed Intent Assistant source no longer matches');
@@ -55,7 +56,7 @@ export async function buildIntentCompatibility(archive, output) {
     manifest.version = version;
     manifest.description = '需求理解：发送前梳理需求，保留原话，支持审查、自动发送与只读项目查证。';
     manifest.engines.dsh = hostVersion;
-    manifest.peerDependencies = { '@deepseek-ai/cordis': '4.0.5', '@deepseek-ai/dsh-llm': hostVersion, '@deepseek-ai/dsh-agent-loop': hostVersion };
+    manifest.peerDependencies = { '@deepseek-ai/cordis': packageInfo.peerDependencies['@deepseek-ai/cordis'], '@deepseek-ai/dsh-llm': hostVersion, '@deepseek-ai/dsh-agent-loop': hostVersion };
     manifest.intentCompatibility = { upstreamVersion: upstream.version, upstreamUrl: upstream.url, upstreamSha256: upstream.sha256, hostVersion };
     manifest.files = [...new Set([...manifest.files, 'COMPATIBILITY.md', 'CHANGELOG.md'])];
     await writeFile(join(root, 'package.json'), JSON.stringify(manifest, null, 2) + '\n');
@@ -81,17 +82,17 @@ Fixed input: ${upstream.url}\nSHA-256: ${upstream.sha256}
 
 Reproduction: scripts/build-intent-compat.mjs in https://github.com/gulagala001/oh-my-dsh. The original BSD-3-Clause license and UPSTREAM.json are preserved. Browser/settings validation does not claim authenticated provider or model quality results.
 `);
-    await writeFile(join(root, 'CHANGELOG.md'), `# 需求理解 0.3.3 · DSH ${hostVersion}
+    await writeFile(join(root, 'CHANGELOG.md'), `# 需求理解 0.3.4 · DSH ${hostVersion}
 
-[中文](#zh-033) | [English](#en-033)
+[中文](#zh-034) | [English](#en-034)
 
-<a id="zh-033"></a>
+<a id="zh-034"></a>
 ## 中文
 ### 问题修复
 - 适配 DSH ${hostVersion}，消息构造函数通过宿主 Loader 解析，修复桌面启动路径无法定位 SDK 的问题。
 - 通过原生 profileContext 保存配置，修复桌面或自定义 profile 被误识别为 web 的问题。
 
-<a id="en-033"></a>
+<a id="en-034"></a>
 ## English
 ### Bug Fixes
 - Targets DSH ${hostVersion} and resolves native message constructors through the host Loader, fixing SDK lookup from desktop launch paths.
@@ -105,7 +106,7 @@ Install the fixed package through Plugins on DSH **${hostVersion}**. Keep existi
 
 | DSH | 固定包 / Fixed package | SHA256SUMS |
 | --- | --- | --- |
-| ${hostVersion} | [需求理解 0.3.3](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.0.1/omd-prompt-optimizer-${version}.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.0.1/SHA256SUMS) |
+| ${hostVersion} | [需求理解 0.3.4](https://github.com/gulagala001/oh-my-dsh/releases/download/v${packageInfo.version}/omd-prompt-optimizer-${version}.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v${packageInfo.version}/SHA256SUMS) |
 
 [安装与使用 / Installation and usage](README.md)
 `);

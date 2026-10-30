@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 export const root = fileURLToPath(new URL('../', import.meta.url));
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 export const readJson = async path => JSON.parse(await readFile(path, 'utf8'));
-export const host = Object.freeze({ repository: 'https://github.com/deepseek-ai/deepseek-harness', version: '0.2.1-rc.3', tag: 'dsh-v0.2.1-rc.3', commit: '1f81c047fc48fa190a683e469daa699857e9afe8' });
+export const host = Object.freeze({ repository: 'https://github.com/deepseek-ai/deepseek-harness', version: '0.2.1-rc.5', tag: 'dsh-v0.2.1-rc.5', commit: 'b830ec950faba0a46dda564be3e2d854afed94f1' });
 
 export async function owned(path, directory = false) {
   try {
@@ -30,7 +30,7 @@ export async function outputPath(path) {
 export async function validateInputs() {
   const pkg = await readJson(join(root, 'package.json'));
   const requireBuild = createRequire(join(root, 'package.json'));
-  if (pkg.name !== 'dsh-workflow-plus' || !/^\d+\.\d+\.\d+-dsh\./.test(pkg.version) || !pkg.version.endsWith(`-dsh.${host.version}`) || pkg.engines?.node !== '>=22.19' || pkg.engines?.dsh !== host.version) throw Error('Package metadata must target dsh-workflow-plus and exact DSH 0.2.1-rc.3');
+  if (pkg.name !== 'dsh-workflow-plus' || !/^\d+\.\d+\.\d+-dsh\./.test(pkg.version) || !pkg.version.endsWith(`-dsh.${host.version}`) || pkg.engines?.node !== '>=22.19' || pkg.engines?.dsh !== host.version) throw Error('Package metadata must target dsh-workflow-plus and exact DSH 0.2.1-rc.5');
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 22 || major === 22 && minor < 19) throw Error('Node >=22.19 is required');
   for (const [name, version] of Object.entries({ '@deepseek-ai/dsh': host.version, '@deepseek-ai/cordis': '4.0.5', '@deepseek-ai/schemastery': '3.18.5', typescript: '6.0.3' })) {

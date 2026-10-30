@@ -16293,7 +16293,6 @@ window.__ModuleLoader__.load({
 			"hero.chooseWorkspace": "选择工作区",
 			"session.hierarchy": "会话层级",
 			"session.moreViews": "更多会话视图",
-			"session.moreViewsCurrent": "更多会话视图 · {name}",
 			"todo.title": "任务",
 			"todo.progress.done": "{done} 已完成",
 			"todo.progress.active": "{active} 进行中",
@@ -16672,7 +16671,6 @@ window.__ModuleLoader__.load({
 			"hero.chooseWorkspace": "Choose workspace",
 			"session.hierarchy": "Session hierarchy",
 			"session.moreViews": "More conversation views",
-			"session.moreViewsCurrent": "More conversation views · {name}",
 			"todo.title": "To-dos",
 			"todo.progress.done": "{done} completed",
 			"todo.progress.active": "{active} in progress",
@@ -18230,6 +18228,30 @@ window.__ModuleLoader__.load({
 				})
 			});
 		}
+		/** Approximate 13px text advance: full-width glyphs take one em, other glyphs about half. */
+		const WIDE_GLYPH = /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]/u;
+		const WIDE_GLYPH_WIDTH = 13;
+		const NARROW_GLYPH_WIDTH = 7;
+		/** Mirrors the `.tabLabel` max-width in `ConversationRoot.module.css`. */
+		const TAB_LABEL_MAX_WIDTH = 88;
+		/** Estimate whether a View tab label exceeds its 88px cell. */
+		function labelNeedsTooltip(label) {
+			let width = 0;
+			for (const glyph of label) width += WIDE_GLYPH.test(glyph) ? WIDE_GLYPH_WIDTH : NARROW_GLYPH_WIDTH;
+			return width > TAB_LABEL_MAX_WIDTH;
+		}
+		/** One View tab label; its full-name tooltip is offered only when the text is expected to overflow. */
+		function ViewTabLabel({ label }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label,
+				portal: true,
+				disabled: !labelNeedsTooltip(label),
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: ConversationRoot_module_css_default.tabLabel,
+					children: label
+				})
+			});
+		}
 		function deriveAncestry(list, id) {
 			const chain = [];
 			const seen = /* @__PURE__ */ new Set();
@@ -18364,17 +18386,10 @@ window.__ModuleLoader__.load({
 						onClick: () => {
 							selectView(viewTab.id);
 						},
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-							label: viewTab.label,
-							portal: true,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: ConversationRoot_module_css_default.tabLabel,
-								children: viewTab.label
-							})
-						})
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ViewTabLabel, { label: viewTab.label })
 					}, viewTab.id))
 				}), hasEntryActions && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ViewsMoreMenu, {
-					label: currentInMore && active !== void 0 ? t("session.moreViewsCurrent", { name: active.label }) : t("session.moreViews"),
+					label: t("session.moreViews"),
 					current: currentInMore,
 					entries: moreTabs.map((viewTab) => ({
 						id: viewTab.id,

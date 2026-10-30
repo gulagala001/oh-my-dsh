@@ -6123,6 +6123,29 @@ window.__ModuleLoader__.load({
 			"clock.ymd": "{y}-{m}-{d}"
 		};
 		//#endregion
+		//#region src/client/reasoning-text.ts
+		/** Display text preparation for model reasoning. */
+		/**
+		* Prepare complete or streaming reasoning for display.
+		* @param text - original complete or streaming reasoning.
+		* @returns display text, or empty text when no displayable content is available.
+		*/
+		function reasoningText(text) {
+			if (text[0] !== "<") return text;
+			/* v8 ignore start -- Custom rendering behavior is outside unit coverage. */
+			const opening = "<signature>";
+			if (opening.startsWith(text)) return "";
+			if (!text.startsWith(opening)) return text;
+			const end = text.indexOf("</signature>", 11);
+			if (end === -1) return "";
+			let start = end + 12;
+			while (start < text.length) if (text[start] === "\n") start++;
+			else if (text[start] === "\r" && text[start + 1] === "\n") start += 2;
+			else break;
+			return text.slice(start);
+			/* v8 ignore stop */
+		}
+		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/ReasoningRow.module.css.mjs
 		const css$9 = ".lcKema_root{flex-direction:column;display:flex}.lcKema_root:not([data-expanded]){contain:size layout;height:calc(24px + var(--dsh-content-font-delta,0px))}.lcKema_row{overflow:hidden}.lcKema_root[data-expanded] [data-open] [data-disclosure-header]{z-index:1;background:var(--dsw-alias-bg-base);position:sticky;top:0}.lcKema_leading{flex-shrink:0}.lcKema_title{font-weight:400}.lcKema_separator{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.lcKema_summary{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden}.lcKema_summaryText{text-overflow:ellipsis;display:block;overflow:hidden}.lcKema_summary[data-streaming]{mask-image:linear-gradient(90deg,#000 calc(100% - 48px),#0000)}.lcKema_summary[data-streaming] .lcKema_summaryText{text-overflow:clip;overflow:visible}.lcKema_root:not([data-preview]) .lcKema_separator,.lcKema_root:not([data-preview]) .lcKema_summary{display:none}.lcKema_thinkBody{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0}";
 		const tagId$9 = "@deepseek-ai/dsh-client-ui-chat/ReasoningRow.module.css";
@@ -6167,11 +6190,11 @@ window.__ModuleLoader__.load({
 			}
 		}
 		/**
-		* Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
+		* Render one assistant reasoning block collapsed until the reader opens it. The
 		* collapsed summary omits double-asterisk markers; expanded content renders
 		* the complete Markdown with secondary typography. A streaming preview advances
-		* when a paragraph's first line completes, falling back to the first nonempty line
-		* before the first newline arrives. Collapsed summaries remain visible in every mode.
+		* when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
+		* collapsed summaries. The Body Slot receives both original and display-ready text.
 		* @param props.text - complete or streaming reasoning text.
 		* @param props.running - whether this block is the streaming tail.
 		* @param props.usePresentation - live display-policy selector for this reasoning row.
@@ -6180,8 +6203,15 @@ window.__ModuleLoader__.load({
 		* @param props.t - conversation locale seat for the disclosure and running status.
 		* @returns the reasoning disclosure.
 		*/
-		const ReasoningRow = (0, react.memo)(function ReasoningRow({ text, running, usePresentation, useDisclosure, renderSlot, t }) {
+		const ReasoningRow = (0, react.memo)(function ReasoningRow({ text: rawText, running, usePresentation, useDisclosure, renderSlot, t }) {
 			const { expanded, toggle } = useDisclosure();
+			const { text, hidden } = (0, react.useMemo)(() => {
+				const text = reasoningText(rawText);
+				return {
+					text,
+					hidden: text !== rawText && text.trim() === ""
+				};
+			}, [rawText]);
 			const summaryText = (running ? latestCompletedParagraphFirstLine(text) : "") || firstLine(text);
 			const summary = (0, react.useMemo)(() => summaryText.replaceAll("**", ""), [summaryText]);
 			const preview = usePresentation((policy) => !expanded && summary !== "" && (running || policy.settledReasoningPreview));
@@ -6200,6 +6230,7 @@ window.__ModuleLoader__.load({
 			const content = (0, react.useMemo)(() => expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: ReasoningRow_module_css_default.thinkBody,
 				children: renderSlot("conversation.chat.reasoning.body", {
+					rawText,
 					text,
 					running
 				})
@@ -6207,8 +6238,10 @@ window.__ModuleLoader__.load({
 				expanded,
 				renderSlot,
 				running,
+				rawText,
 				text
 			]);
+			if (hidden) return null;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: ReasoningRow_module_css_default.root,
 				"data-variant": "think",
@@ -6570,7 +6603,7 @@ window.__ModuleLoader__.load({
 		});
 		/**
 		* Render the default Body through the same Factory available to third-party wrappers.
-		* @param props - original reasoning and the framework's Factory renderer.
+		* @param props - display-ready reasoning and the framework's Factory renderer.
 		* @returns an occurrence of the official reasoning Content Factory.
 		*/
 		function DefaultReasoningBody({ text, running, renderFactorySlot }) {
@@ -11869,6 +11902,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/conversation-nodes/process-activity.ts
+		/** Tool-category and live-detail interpretation owned by Chat grouping. */
 		function activity(name) {
 			if (/^computer_use(?:_|$)/.test(name.split(/[./]/).at(-1) ?? "")) return "computer";
 			if (name === "read") return "read";
@@ -11979,7 +12013,7 @@ window.__ModuleLoader__.load({
 				for (let blockIndex = node.data.blocks.length - 1; blockIndex >= 0; blockIndex--) {
 					const block = node.data.blocks[blockIndex];
 					if (block?.kind !== "reasoning") continue;
-					const paragraphs = block.text.split(/\r?\n[\t ]*\r?\n/);
+					const paragraphs = reasoningText(block.text).split(/\r?\n[\t ]*\r?\n/);
 					for (let paragraphIndex = paragraphs.length - 1; paragraphIndex >= 0; paragraphIndex--) {
 						const detail = normalizeLiveToolDetail(paragraphs[paragraphIndex]?.replaceAll("**", ""));
 						if (detail !== "") return detail;

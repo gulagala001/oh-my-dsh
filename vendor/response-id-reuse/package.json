@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-response-id-reuse",
-  "version": "0.1.4-dsh.0.2.1-rc.3",
+  "version": "0.1.5-dsh.0.2.1-rc.5",
   "description": "Transparent, no-probe Responses ID continuation for DeepSeek Harness.",
   "type": "module",
   "license": "MIT",
@@ -12,7 +12,7 @@
   },
   "engines": {
     "node": ">=22.19",
-    "dsh": "0.2.1-rc.3"
+    "dsh": "0.2.1-rc.5"
   },
   "dsh": {
     "bundle": {
@@ -40,11 +40,11 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/dsh-llm": "0.2.1-rc.3"
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.5"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/dsh-llm": "0.2.1-rc.3"
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.5"
   },
   "keywords": [
     "dsh-plugin",

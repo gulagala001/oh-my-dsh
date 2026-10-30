@@ -20,8 +20,8 @@ const reviewed = {
 for (const [name, exportName] of [['dsh-experimental-client-ui-agent-team', 'createTeamOverview'], ['dsh-client-ui-jobs', 'createJobsOverview'], ['dsh-client-ui-workflow-run', 'createWorkflowOverview']]) {
   let { source, version } = await hostClientSource(root, '@deepseek-ai/' + name);
   const hash = createHash('sha256').update(source).digest('hex');
-  // The pinned rc.1, rc.2 and rc.3 packages contain byte-identical overview sources.
-  if (!['0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3'].includes(version) || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
+  // These reviewed packages contain byte-identical overview sources.
+  if (!['0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.5'].includes(version) || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
   const ast = parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
   const functions = new Map(), duplicates = new Set();
   walk(ast, node => { if (node.type === 'FunctionDeclaration' && node.id) {

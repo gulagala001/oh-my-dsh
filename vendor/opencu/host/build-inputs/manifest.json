@@ -4,7 +4,7 @@
   "targets": {
     "rc1": {
       "sha256": {
-        "package-lock.json": "4628dc69f46624bf7d825a545006bf7b3157ac1e854994bd2549b3bc90c97638",
+        "package-lock.json": "9f783da1ae5430ececf32a505380b92b86e92371c954328f5154f69107a7d181",
         "package.json": "980968e55779f816978b949c54e883a7eb209bc90d3d95adba77510fd82bf106",
         "pnpm-lock.yaml": "df6e43a1bdc827729275c7e65345ed7c84a671eae787197f3a99c468a14b9113",
         "pnpm-workspace.yaml": "926b63a44b406bb89ccb708ccff957c77053dcd2ab4085ad89c7981789182117"
@@ -12,7 +12,7 @@
     },
     "021rc2": {
       "sha256": {
-        "package-lock.json": "72ee13394b8be81abb0a256c53137ac0d332895305cdfe35903577aea778f181",
+        "package-lock.json": "3856b2b7e834abbb6e1168162cd08f8c8cbccd1f87729521c44525928599fe98",
         "package.json": "50484913eac5bd32203976bcb8cf464898363ba65fe4c05fda5f7490f88d7096",
         "pnpm-lock.yaml": "98aa09fc8a2abd6789fe7b4c18dc12cec0094119d738a0a3f56a186ef1bd316e",
         "pnpm-workspace.yaml": "87d8bf565068239d69c43cfa18b8c74fb95779fddb431b51d0a779e77e70a4bd"
@@ -20,10 +20,18 @@
     },
     "021rc3": {
       "sha256": {
-        "package-lock.json": "7209ad2a30271ef406f522019f291d15da44bd07b59bb1ec56e83ed018488958",
+        "package-lock.json": "d1f5dd78d85bd6a67e9cf6ed58721d4819755c2c5d7bfe9455adf48e0ee72568",
         "package.json": "8289c77ae3fb8f55ae3d1e898ffd63fd74483b72ba281caa1ddd256fd0037f3b",
         "pnpm-lock.yaml": "931d4928357962392205df6cdf7111a53e51edd40d25dbb17a1fec2b379e71f5",
         "pnpm-workspace.yaml": "d03ab3824fab4ed61caaa0ba358165c5ed40dd22113960444024cf2f43c6775d"
+      }
+    },
+    "021rc5": {
+      "sha256": {
+        "package.json": "772b290b8e5defaf286669a886145dfc2eb5d4bab7105804d82d292411eb5eff",
+        "pnpm-workspace.yaml": "5bef0d56edde69ddd553ed4df50382a32eac335e7649de57d21b724c2ad6d551",
+        "pnpm-lock.yaml": "9ab52ae33c8c77aa7384ac760baa3a9e3bb32b8f1dcb9dd7d56470ae7f7ac7ed",
+        "package-lock.json": "75d189f018d31f74e222a36f4d323864a874e5e879f3a9a0c62d2789814e7d14"
       }
     }
   },

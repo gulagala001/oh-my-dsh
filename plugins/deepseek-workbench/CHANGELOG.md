@@ -1,3 +1,37 @@
+# DeepSeek Workbench 0.1.4 · DSH 0.2.1-rc.5 · 未发布 / Unreleased
+
+[中文](#zh-014) | [English](#en-014)
+
+<a id="zh-014"></a>
+
+## 中文
+
+本版适配与验收正在进行，尚未发布。
+
+### 其他变更
+
+- 精确适配 DSH **0.2.1-rc.5**，同步匹配的 SDK、构建输入和完整依赖锁。每份安装包仅用于对应宿主。
+
+<a id="en-014"></a>
+
+## English
+
+This adaptation is under validation and has not been published.
+
+### Other Changes
+
+- Target DSH **0.2.1-rc.5** exactly with matching SDK, build inputs and complete dependency locks. Each package is specific to its host.
+
+## 安装 / Installation
+
+待发布构建精确匹配 **DSH 0.2.1-rc.5**。当前公开安装包仍用于 **DSH 0.2.1-rc.3**，请勿混用。
+
+The unpublished build targets **DSH 0.2.1-rc.5** exactly. The current public package remains for **DSH 0.2.1-rc.3**.
+
+[当前公开包 / Current published package](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.3-dsh.0.2.1-rc.3/dsh-deepseek-workbench-0.1.3-dsh.0.2.1-rc.3.tgz) · [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.3-dsh.0.2.1-rc.3/SHA256SUMS)
+
+---
+
 # DeepSeek Workbench 0.1.3 · DSH 0.2.1-rc.3
 
 [中文](#zh-013) | [English](#en-013)

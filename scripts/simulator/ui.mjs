@@ -36,13 +36,13 @@ export async function checkBrowser({ host, sessionId, checks, directory, trace, 
     const welcome = page.getByRole('button', { name: '继续', exact: true });
     await welcome.waitFor(); await welcome.click(); await welcome.waitFor({ state: 'hidden' });
     await page.getByText('模拟器真实会话验收', { exact: true }).first().click();
-    await page.getByRole('button', { name: '打开工作台', exact: true }).click();
-    await checks.check('真实 Web 会话与工作台点击', async () => {
+    await page.getByRole('button', { name: '打开右侧边栏', exact: true }).click();
+    await checks.check('真实 Web 会话与控制台点击', async () => {
       const guide = page.locator('[data-sidebar-right-guide]:visible');
       await guide.waitFor();
-      await guide.locator('[data-sidebar-right-guide-entry="oh-my-dsh-context"]').click();
-      await page.locator('.tx-workbench[data-section="tasks"]').waitFor({ state: 'visible' });
-      await page.getByRole('button', { name: '用量详情', exact: true }).waitFor();
+      await guide.locator('[data-sidebar-right-guide-entry="omd-console"]').click();
+      await page.locator('.omc-console').waitFor({ state: 'visible' });
+      await page.getByRole('navigation', { name: '控制台分区' }).waitFor();
       await page.locator('[data-composer-input]').fill('模拟器草稿保留检查');
       assert.equal(await page.locator('[data-composer-input]').innerText(), '模拟器草稿保留检查');
       assert.deepEqual(errors, []); assert.deepEqual(denied, []);

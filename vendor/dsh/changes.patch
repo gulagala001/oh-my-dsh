@@ -635,7 +635,7 @@ index 84aa9a4f..9067275b 100644
    }
  
 diff --git a/packages/client/ui-conversation/src/client/locales.ts b/packages/client/ui-conversation/src/client/locales.ts
-index 938326df..3cdb22cf 100644
+index 5a221bc9..28db0d3f 100644
 --- a/packages/client/ui-conversation/src/client/locales.ts
 +++ b/packages/client/ui-conversation/src/client/locales.ts
 @@ -28,6 +28,7 @@ export const zh = {
@@ -646,7 +646,7 @@ index 938326df..3cdb22cf 100644
    'input.send.steer': '插话发送',
    'attachment.pending': '待发送附件',
    'attachment.scrollLeft': '向左滚动附件',
-@@ -410,6 +411,7 @@ export const en = {
+@@ -409,6 +410,7 @@ export const en = {
    'input.stop': 'Stop generating',
    'input.send': 'Send message',
    'input.send.queue': 'Queue message',

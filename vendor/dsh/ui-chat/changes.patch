@@ -271,10 +271,10 @@ index 0d2f4c22..2adc9f8a 100644
  export const ContextMessageNodeView = memo(function ContextMessageNodeView({ node, t }: ChatNodeViewProps<'context'>) {
    const data = node.data
 diff --git a/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx b/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
-index 8bbd738f..df1a1d4f 100644
+index 942dbb84..1f9d6af6 100644
 --- a/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ReasoningRow.tsx
-@@ -9,8 +9,7 @@ import css from './ReasoningRow.module.css'
+@@ -10,8 +10,7 @@ import css from './ReasoningRow.module.css'
  const THINK_ICON = <IconThinkOutlineRegular size={14} />
  
  function firstLine(text: string): string {
@@ -284,25 +284,10 @@ index 8bbd738f..df1a1d4f 100644
  }
  
  function latestCompletedParagraphFirstLine(text: string): string {
-@@ -32,11 +31,11 @@ function latestCompletedParagraphFirstLine(text: string): string {
- }
- 
- /**
-- * Render one assistant reasoning block collapsed until the reader opens it. The
-+ * Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
-  * collapsed summary omits double-asterisk markers; expanded content renders
-  * the complete Markdown with secondary typography. A streaming preview advances
-- * when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
-- * collapsed summaries.
-+ * when a paragraph's first line completes, falling back to the first nonempty line
-+ * before the first newline arrives. Collapsed summaries remain visible in every mode.
-  * @param props.text - complete or streaming reasoning text.
-  * @param props.running - whether this block is the streaming tail.
-  * @param props.usePresentation - live display-policy selector for this reasoning row.
-@@ -53,7 +52,7 @@ export const ReasoningRow = memo(function ReasoningRow({ text, running, usePrese
-   t: ChatViewSlotProps['t']
- } & Pick<PropsRenderSlots<'conversation.chat.reasoning.body'>, 'renderSlot'>) {
-   const { expanded, toggle } = useDisclosure()
+@@ -58,7 +57,7 @@ export const ReasoningRow = memo(function ReasoningRow({ text: rawText, running,
+     const text = reasoningText(rawText)
+     return { text, hidden: text !== rawText && text.trim() === '' }
+   }, [rawText])
 -  const summaryText = running ? latestCompletedParagraphFirstLine(text) : firstLine(text)
 +  const summaryText = (running ? latestCompletedParagraphFirstLine(text) : '') || firstLine(text)
    const summary = useMemo(() => summaryText.replaceAll('**', ''), [summaryText])
@@ -418,10 +403,10 @@ index e121f624..02e9f653 100644
 +
 +组内最后一个步骤的工具全部完成后，组立即显示最终计数和结果标记；步骤状态仍可运行，后续助手回答属于同组。
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
-index 3b82dc2e..968fb55c 100644
+index 785ea85f..b4064210 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
-@@ -6,6 +6,7 @@ import { isRunningTool } from '../contract/chat-nodes.ts'
+@@ -7,6 +7,7 @@ import { isRunningTool } from '../contract/chat-nodes.ts'
  import type { ToolCallBlock } from '../contract/snapshot.ts'
  
  function activity(name: string): ProcessActivity {
@@ -429,7 +414,7 @@ index 3b82dc2e..968fb55c 100644
    if (name === 'read') return 'read'
    if (name === 'read_image') return 'readImage'
    if (name === 'grep' || name === 'glob' || name.endsWith('_inspect')) return 'search'
-@@ -138,9 +139,16 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
+@@ -139,9 +140,16 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
    let runningDetail = ''
    let runningTime = -Infinity
    let preparing: boolean | undefined
@@ -446,7 +431,7 @@ index 3b82dc2e..968fb55c 100644
      const call = isRunningTool(tool) ? tool : tool.call
      if (call !== null) {
        const kind = activity(call.name)
-@@ -159,6 +167,8 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
+@@ -160,6 +168,8 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
    }
    if (running === undefined) runningDetail = liveReasoningDetail(nodes)
    return {

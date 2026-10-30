@@ -2,6 +2,16 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.5.omd.1.2.2",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "OMD 1.2.2 · DSH 0.2.1-rc.5",
+      "notes": [
+        "适配 DSH 0.2.1-rc.5 的原生思考正文与展示，完整同步精确宿主插件和批注显示修复。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.2.2.md"
+    },
+    {
       "version": "0.2.1-rc.3.omd.1.2.1",
       "severity": "normal",
       "unpublished": false,

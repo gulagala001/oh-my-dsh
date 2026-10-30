@@ -6,6 +6,8 @@ const reviewedSource = {
   commits: ['1600d8a1e140dcde43a1a0941940a0480712c011', '687f282e8625c6b8d11ff58211a90524be2e4317', '1f81c047fc48fa190a683e469daa699857e9afe8'],
   sha256: '5345409ad105881250939dbb478f8cb01f5a14dad94b0aa446b4280b80427f55',
 };
+const reviewedFactories = new Map(reviewedSource.commits.map(commit => [commit, reviewedSource.sha256]));
+reviewedFactories.set('b830ec950faba0a46dda564be3e2d854afed94f1', 'a81f19f90a6e3b9fc2d9e32fbad204d165fe854c07fe06555c1d6289d8d3ce5e');
 const before = '.EvIC1a_column:has(>.EvIC1a_older)>[data-slot="conversation.chat.flow"]>';
 const after = '.EvIC1a_column>.EvIC1a_older~[data-slot="conversation.chat.flow"]>';
 const empty = '.EvIC1a_flowItem:is(:empty,:has(>[data-slot="conversation.chat.node"]:empty))';
@@ -100,7 +102,7 @@ export function adaptChatStyleFactory(client) {
 
 /** Shared by the host build and an isolated ui-chat factory rebuild. */
 export function buildChatStyleFactory(rawClient, source) {
-  gate(reviewedSource.commits.includes(source?.commit) && source?.sha256 === reviewedSource.sha256, 'unsupported upstream source; only the reviewed rc.1 / rc.2 / rc.3 factory is supported');
+  gate(reviewedFactories.has(source?.commit) && source?.sha256 === reviewedFactories.get(source.commit), 'unsupported upstream source; use the exact reviewed host factory');
   gate(createHash('sha256').update(rawClient).digest('hex') === source.sha256, 'upstream ui-chat lib SHA-256 differs from the snapshot');
   const composerStats = readComposerStats(rawClient);
   const adapted = adaptChatStyleFactory(rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''));

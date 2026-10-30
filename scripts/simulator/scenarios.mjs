@@ -6,13 +6,15 @@ import { until } from './host.mjs';
 import { assertToolPairs, assertNoLeak } from './assertions.mjs';
 import { ptcControlsScenario } from './ptc-controls.mjs';
 import { usage, textReply, toolReply, toolNames, userText } from './replies.mjs';
+import { CACHED_PREPARE_TASK } from '../../src/context/prompts.mjs';
 export { textReply, toolReply, toolNames, userText } from './replies.mjs';
 const toolResults = payload => payload.messages.filter(message => message.role === 'tool').map(message => message.content).join('\n');
 const containsTool = name => payload => toolNames(payload).includes(name);
 const adaptiveMarker = '[OMD independent asynchronous context check]';
 const contentText = content => typeof content === 'string' ? content : (content ?? []).filter(block => block.type === 'text').map(block => block.text).join('\n');
 const adaptiveMatch = payload => contentText(payload.messages.at(-1)?.content).includes(adaptiveMarker);
-const mainMatch = payload => containsTool('todo_write')(payload) && !adaptiveMatch(payload) && !userText(payload).includes('SIM_CHILD_') && !userText(payload).includes('PRIVATE_SIM_');
+const cachedPrepareMatch = payload => contentText(payload.messages.at(-1)?.content).startsWith(CACHED_PREPARE_TASK + '\n\n');
+const mainMatch = payload => containsTool('todo_write')(payload) && !adaptiveMatch(payload) && !cachedPrepareMatch(payload) && !userText(payload).includes('SIM_CHILD_') && !userText(payload).includes('PRIVATE_SIM_');
 const adaptiveInput = payload => {
   const tail = contentText(payload.messages.at(-1).content);
   return JSON.parse(tail.slice(tail.lastIndexOf('\n\n') + 2));
@@ -31,6 +33,7 @@ function auxiliary() {
     steps: [{ id: 'title-generation', optional: true, repeat: 20, reply: () => textReply('离线会话验收') }] };
 }
 function jsonInput(payload) {
+  if (cachedPrepareMatch(payload)) return adaptiveInput(payload);
   for (const message of payload.messages.filter(message => message.role === 'user').reverse()) {
     try { return JSON.parse(typeof message.content === 'string' ? message.content : message.content.filter(block => block.type === 'text').map(block => block.text).join('\n')); } catch {}
   }
@@ -71,23 +74,25 @@ function fullLifecycle({ trace }) {
   ];
   const model = new ScriptedModel({ trace, lanes: [
     { id: 'main', match: mainMatch, steps: main },
-    { id: 'prepare', match: containsTool('prepare_segment'), steps: [step('prepare-public', payload => {
+    { id: 'prepare', match: payload => containsTool('prepare_segment')(payload) || cachedPrepareMatch(payload), steps: [step('prepare-public', payload => {
       const input = jsonInput(payload), decision = input.decision_sources?.find(item => item.text.includes('保留中文'));
       assert.ok(decision, 'preprocessing input lost the original user decision');
       assert.ok(input.user_messages?.some(item => item.text === prompt), 'preprocessing input lost the verbatim user message');
-      assert.ok(input.segment?.some(item => item.type === 'tool/result' && item.text.includes('SOURCE_ORIGINAL_9007199254740993')), 'preprocessing input lost the actual tool material');
-      return toolReply('prepare_segment', { summary: '已写入、读取和验证 source.txt。', documents: [{ title: '模拟原始资料', text: source }],
-        decisions: [{ seq: decision.seq, text: '保留中文、😀、数字9007199254740993和原话。', quote: '保留中文、😀、数字9007199254740993和原话' }] }, 'full-prepare');
+      assert.ok(input.segment?.some(item => item.type === 'tool/result' && (item.text ?? contentText(payload.messages[item.message_index]?.content)).includes('SOURCE_ORIGINAL_9007199254740993')), 'preprocessing input lost the actual tool material');
+      const result = { summary: '已写入、读取和验证 source.txt。', documents: [{ title: '模拟原始资料', text: source }],
+        decisions: [{ seq: decision.seq, text: '保留中文、😀、数字9007199254740993和原话。', quote: '保留中文、😀、数字9007199254740993和原话' }] };
+      return cachedPrepareMatch(payload) ? textReply(JSON.stringify(result)) : toolReply('prepare_segment', result, 'full-prepare');
     }), step('prepare-projectless', payload => {
       assertNoLeak(payload, 'SOURCE_ORIGINAL');
       assert.match(JSON.stringify(jsonInput(payload)), /PRIVATE_SIM_PROJECTLESS_/);
-      return toolReply('prepare_segment', { summary: 'PRIVATE_SIM_PROJECTLESS_ 非工作区材料仅在本会话保留。', documents: [{ title: '独立 Chat 材料', text: 'PRIVATE_SIM_PROJECTLESS_' }] }, 'projectless-prepare');
+      const result = { summary: 'PRIVATE_SIM_PROJECTLESS_ 非工作区材料仅在本会话保留。', documents: [{ title: '独立 Chat 材料', text: 'PRIVATE_SIM_PROJECTLESS_' }] };
+      return cachedPrepareMatch(payload) ? textReply(JSON.stringify(result)) : toolReply('prepare_segment', result, 'projectless-prepare');
     })] },
     { id: 'dream', match: containsTool('save_memory'), steps: ['session', 'project', 'global'].map(kind => step('dream-' + kind, payload => {
       const input = jsonInput(payload); assert.equal(input.kind, kind); assertNoLeak(input, 'PRIVATE_SIM_');
       return toolReply('save_memory', { summary: kind + '：source.txt 已完成真实工具和证据验收。', references: input.sources.map(item => item.id) }, 'dream-' + kind);
     })) },
-    { id: 'private', match: payload => containsTool('todo_write')(payload) && userText(payload).includes('PRIVATE_SIM_'), steps: [step('private-message', () => textReply('独立会话仅本地保留。')), step('projectless-message', () => textReply('无工作区 Chat 仅本地保留。'))] },
+    { id: 'private', match: payload => containsTool('todo_write')(payload) && !cachedPrepareMatch(payload) && userText(payload).includes('PRIVATE_SIM_'), steps: [step('private-message', () => textReply('独立会话仅本地保留。')), step('projectless-message', () => textReply('无工作区 Chat 仅本地保留。'))] },
     ...['ALPHA', 'BETA'].map(kind => ({ id: 'child-' + kind, match: payload => containsTool('todo_write')(payload) && userText(payload).includes('SIM_CHILD_' + kind),
       steps: [step('child-response', () => textReply('CHILD_' + kind + '_DONE'))] })), auxiliary(),
   ] });
@@ -165,8 +170,15 @@ function fullLifecycle({ trace }) {
       assert.equal(chat.shared, false); assert.equal(chat.mode, 'session'); assert.equal(chatStatus.sessionMemory, null);
       assert(!(await host.control('/workspaces')).some(workspace => workspace.path === chatDirectory.cwd || workspace.sessionIds.includes(projectlessId)));
       assert(!(await host.api('/dream/catalog?kind=project')).entries.some(project => project.id === chatDirectory.cwd));
-      assert.deepEqual((await host.control('/snapshot?session=' + projectlessId)).events, chatBeforeDream.events);
-      assert.deepEqual((await host.durable(projectlessId)).events, chatBeforeDream.events);
+      const live = (await host.control('/snapshot?session=' + projectlessId)).events;
+      const durable = (await host.durable(projectlessId)).events;
+      assert.deepEqual(live, durable);
+      assert.deepEqual(live.slice(0, chatBeforeDream.events.length), chatBeforeDream.events);
+      // Native cold recovery may durably close the restored seed. It must not
+      // create user/assistant work, Dream output, or alter the original events.
+      const suffix = live.slice(chatBeforeDream.events.length);
+      assert.ok(suffix.length <= 1);
+      for (const event of suffix) { assert.equal(event.type, 'session/end-seed'); assert.deepEqual(event.data, {}); }
       for (const request of provider.requests.filter(request => containsTool('save_memory')(request.payload))) assertNoLeak(request.payload, 'PRIVATE_SIM_PROJECTLESS_');
     });
     await host.prompt(publicId, '重启后继续。'); await host.idle(publicId);

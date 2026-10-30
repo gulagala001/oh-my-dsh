@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/deepseek-ai/deepseek-harness",
-  "commit": "1f81c047fc48fa190a683e469daa699857e9afe8",
+  "commit": "b830ec950faba0a46dda564be3e2d854afed94f1",
   "path": "packages/llm/token-meter/src",
   "files": {
     "surface-fold.ts": "686f597a7fdc9d45394c68eb8ef4f472094978d2483b597ee2a1def210dfb878",

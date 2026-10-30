@@ -1,3 +1,49 @@
+# OpenCU 2.2.4 · DSH 0.2.1-rc.5 · 未发布 / Unreleased
+
+[中文](#zh-224) | [English](#en-224)
+
+<a id="zh-224"></a>
+
+## 中文
+
+本版适配与验收正在进行，尚未发布。
+
+### 问题修复
+
+- 修复 Chromium 返回零时区偏移时的发送失败，统一转换为宿主接受的 UTC；独立安装与共装均可使用。
+- 修复图片、网页、文档和文字批注的聊天显示，保留原始消息、附件和模型输入。
+- 修复精确宿主构建中检查工具的依赖定位，避免预打包隐式重装已核验的 SDK。
+
+### 其他变更
+
+- 精确适配 DSH **0.2.1-rc.5**，同步匹配的 SDK、构建输入和完整依赖锁。每份安装包仅用于对应宿主。
+
+<a id="en-224"></a>
+
+## English
+
+This adaptation is under validation and has not been published.
+
+### Bug Fixes
+
+- Normalize Chromium’s zero-offset time zone to the host-supported UTC value, restoring message submission in standalone and shared installations.
+- Fix chat rendering of image, page, document and text annotations while preserving original messages, attachments and model input.
+- Resolve validation dependencies correctly in exact-host builds and prevent prepack from reinstalling the verified SDK.
+
+### Other Changes
+
+- Target DSH **0.2.1-rc.5** exactly with matching SDK, build inputs and complete dependency locks. Each package is specific to its host.
+
+## 安装 / Installation
+
+待发布构建精确匹配 **DSH 0.2.1-rc.5**。当前公开安装包仍用于 **DSH 0.2.1-rc.3**，请勿混用。
+
+The unpublished build targets **DSH 0.2.1-rc.5** exactly. The current public package remains for **DSH 0.2.1-rc.3**.
+
+[当前公开包 / Current published package](https://github.com/gulagala001/opencu/releases/download/v2.2.3-dsh.0.2.1-rc.3/opencu-2.2.3-dsh.0.2.1-rc.3.tgz) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.3-dsh.0.2.1-rc.3/SHA256SUMS)
+
+---
+
 # OpenCU 2.2.3 · DSH 0.2.1-rc.3
 
 [中文](#zh-223) | [English](#en-223)

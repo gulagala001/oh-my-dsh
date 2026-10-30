@@ -1,4 +1,5 @@
 export const hostTargets = Object.freeze({
+  '0.2.1-rc.5': { commit: 'b830ec950faba0a46dda564be3e2d854afed94f1', cordisVersion: '4.0.5', schemaVersion: '3.18.5' },
   '0.2.1-rc.3': { commit: '1f81c047fc48fa190a683e469daa699857e9afe8', cordisVersion: '4.0.5', schemaVersion: '3.18.5' },
   '0.2.1-rc.1': { commit: '1600d8a1e140dcde43a1a0941940a0480712c011', cordisVersion: '4.0.5', schemaVersion: '3.18.5' },
   '0.2.1-rc.2': { commit: '687f282e8625c6b8d11ff58211a90524be2e4317', cordisVersion: '4.0.5', schemaVersion: '3.18.5' },
