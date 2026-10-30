@@ -1,10 +1,10 @@
 # DSH Rewind — Installation and maintenance
 
-Source builds target exactly DSH `0.2.1-rc.3`, with the matching SDK, components and dependency lock.
+Source builds target exactly DSH `0.2.1-rc.5`, with the matching SDK, components and dependency lock.
 
 [简体中文](install.md) · [README](../README_EN.md#readme-install)
 
-**DSH 0.2.1-rc.3 · Node.js ≥22.19 · 0.1.0**
+**DSH 0.2.1-rc.5 · Node.js ≥22.19 · 0.1.0**
 
 File restoration only covers retained checkpoints. Older messages may support conversation-only rewind. External changes are checked before restoration; double Esc during generation retains the host Stop behavior.
 
@@ -13,12 +13,12 @@ File restoration only covers retained checkpoints. Older messages may support co
 Open **Plugins → Add plugin** in the instance you actually use and paste this fixed release address:
 
 ```text
-https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.5-dsh.0.2.1-rc.3/gulagala001-dsh-undo-plugin-0.1.5-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.6-dsh.0.2.1-rc.5/gulagala001-dsh-undo-plugin-0.1.6-dsh.0.2.1-rc.5.tgz
 ```
 
 Finish active tasks, follow the host’s activation/restart prompt, and keep your existing profile, DSH_HOME, model configuration and conversations.
 
-Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.5-dsh.0.2.1-rc.3/SHA256SUMS).
+Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.6-dsh.0.2.1-rc.5/SHA256SUMS).
 
 ### First success check
 
@@ -32,7 +32,7 @@ A rewind list opens above the composer. Selecting an entry shows the affected sc
 Use the CLI belonging to the same DSH instance; replace `web` with its actual profile.
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.5-dsh.0.2.1-rc.3/gulagala001-dsh-undo-plugin-0.1.5-dsh.0.2.1-rc.3.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.6-dsh.0.2.1-rc.5/gulagala001-dsh-undo-plugin-0.1.6-dsh.0.2.1-rc.5.tgz"
 ```
 
 </details>

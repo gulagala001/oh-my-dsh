@@ -2,7 +2,7 @@
 
 [文档目录](README.md) · [首次使用](getting-started.md) · [安装与升级](upgrade.md) · [排障](troubleshooting.md)
 
-Windows 上的任务、上下文、记忆、工作流与主题不以原生桌面控制为前提。当前源码为 **`0.2.1-rc.3.omd.0.101.2` / DSH `0.2.1-rc.3`**；安装与宿主适配见[版本配对](install.md)。原生桌面能力与系统权限条件见[OpenCU 使用指南](computer-use.md)。
+Windows 上的任务、上下文、记忆、工作流与主题不以原生桌面控制为前提。当前源码为 **`0.2.1-rc.3.omd.0.101.2` / DSH `0.2.1-rc.5`**；安装与宿主适配见[版本配对](install.md)。原生桌面能力与系统权限条件见[OpenCU 使用指南](computer-use.md)。
 
 ## 环境与版本
 

@@ -2,11 +2,11 @@
 
 OpenCU 是 DSH 插件：新控制核心、浏览器／原生／扩展后端配合真实 REA 前端组件。AI 像使用其他工具一样调用电脑；页面、活动和监看自然呈现，没有单独的 CU 控制台。
 
-源码默认适配 DSH `0.2.1-rc.3`。`rc1`、`021rc2`、`021rc3` 分别使用精确匹配的 SDK、冻结依赖锁与宿主适配器；每份包只用于自己的完整宿主版本。
+源码默认适配 DSH `0.2.1-rc.5`。`rc1`、`021rc2`、`021rc3` 分别使用精确匹配的 SDK、冻结依赖锁与宿主适配器；每份包只用于自己的完整宿主版本。
 
 ## 加载
 
-各宿主分别精确匹配 SDK 与框架：DSH `0.2.1-rc.1`／`0.2.1-rc.2`／`0.2.1-rc.3` 均使用 Cordis `4.0.5`／Schemastery `3.18.5`。插件包根入口和 `opencu/dsh` 均为 Cordis Host 插件，依赖宿主真实 `tools` 和 `attachments` 服务。不需要另开 OpenCU 服务，也不接受外部 origin/token。由 DSH profile 加载：
+各宿主分别精确匹配 SDK 与框架：DSH `0.2.1-rc.1`／`0.2.1-rc.2`／`0.2.1-rc.5` 均使用 Cordis `4.0.5`／Schemastery `3.18.5`。插件包根入口和 `opencu/dsh` 均为 Cordis Host 插件，依赖宿主真实 `tools` 和 `attachments` 服务。不需要另开 OpenCU 服务，也不接受外部 origin/token。由 DSH profile 加载：
 
 ```yaml
 - insert:
@@ -158,7 +158,7 @@ npm run cu:check
 npm run cu:verify
 ```
 
-`cu:verify` 默认选择 `full`，自动启用真实隔离 DSH smoke。SDK 从显式 `OPENCU_DSH_INSTALL`、本地 `.local/cu-dsh-sdk`、当前包或相邻 OMD 安装锚点发现，版本必须与包声明精确一致；缺少 SDK 时报告未完成。独立环境可运行 `npm install --prefix .local/cu-dsh-sdk --no-audit --no-fund --save-exact @deepseek-ai/dsh@0.2.1-rc.3 @deepseek-ai/dsh-attachment-local@0.2.1-rc.3 @deepseek-ai/dsh-system-prompt@0.2.1-rc.3 @deepseek-ai/dsh-tools@0.2.1-rc.3` 准备。`node scripts/cu-liveness.mjs help` 可查看命令入口。Linux CI 使用 `npx playwright install --with-deps chromium`；现有构建／归档及产物一致性检查保持，随后执行一次 `npm run cu:verify -- --profile full`。`cu:check` 已接入 `pretest` 与 `prepack`，打包时仍执行原文档、扩展分发和公开文件门禁；不会在打包前自动运行完整验证机。宿主变体 staging 通过 `OPENCU_SOURCE_ROOT` 指向原源码，`check` 据此核对原源码登记，避免把有意生成的宿主变体误认为未经审查的源码修改。
+`cu:verify` 默认选择 `full`，自动启用真实隔离 DSH smoke。SDK 从显式 `OPENCU_DSH_INSTALL`、本地 `.local/cu-dsh-sdk`、当前包或相邻 OMD 安装锚点发现，版本必须与包声明精确一致；缺少 SDK 时报告未完成。独立环境可运行 `npm install --prefix .local/cu-dsh-sdk --no-audit --no-fund --save-exact @deepseek-ai/dsh@0.2.1-rc.5 @deepseek-ai/dsh-attachment-local@0.2.1-rc.5 @deepseek-ai/dsh-system-prompt@0.2.1-rc.5 @deepseek-ai/dsh-tools@0.2.1-rc.5` 准备。`node scripts/cu-liveness.mjs help` 可查看命令入口。Linux CI 使用 `npx playwright install --with-deps chromium`；现有构建／归档及产物一致性检查保持，随后执行一次 `npm run cu:verify -- --profile full`。`cu:check` 已接入 `pretest` 与 `prepack`，打包时仍执行原文档、扩展分发和公开文件门禁；不会在打包前自动运行完整验证机。宿主变体 staging 通过 `OPENCU_SOURCE_ROOT` 指向原源码，`check` 据此核对原源码登记，避免把有意生成的宿主变体误认为未经审查的源码修改。
 
 | 命令或范围 | 实际执行内容 |
 | --- | --- |

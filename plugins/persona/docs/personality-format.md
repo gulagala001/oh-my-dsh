@@ -1,6 +1,6 @@
 # 人格文件 / Personality files
 
-源码构建以 `package.json` 的完整宿主版本为准，当前默认 `0.2.1-rc.3`；SDK、组件与依赖锁必须来自同一版本。
+源码构建以 `package.json` 的完整宿主版本为准，当前默认 `0.2.1-rc.5`；SDK、组件与依赖锁必须来自同一版本。
 
 UTF-8 JSON，最大 1 MiB。UTF-8 JSON, up to 1 MiB.
 

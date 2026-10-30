@@ -1,10 +1,10 @@
 # DeepSeek Workbench — Installation and maintenance
 
-Source builds target the exact host in `package.json`, currently `0.2.1-rc.3`. Each build uses its matching SDK, components and dependency lock; choose an installation entry for the host named by the published package.
+Source builds target the exact host in `package.json`, currently `0.2.1-rc.5`. Each build uses its matching SDK, components and dependency lock; choose an installation entry for the host named by the published package.
 
 [简体中文](install.md) · [README](../README_EN.md#readme-install)
 
-**DSH 0.2.1-rc.3 · Node.js ≥22.19 · 0.1.0**
+**DSH 0.2.1-rc.5 · Node.js ≥22.19 · 0.1.0**
 
 Embedded web chat requires DSH Desktop. Persistent login, website downloads and extended platform pages need matching desktop adapters. DSH Web provides external links. Web-chat login and API-platform authorization are separate.
 
@@ -13,12 +13,12 @@ Embedded web chat requires DSH Desktop. Persistent login, website downloads and 
 Open **Plugins → Add plugin** in the instance you actually use and paste this fixed release address:
 
 ```text
-https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.3-dsh.0.2.1-rc.3/dsh-deepseek-workbench-0.1.3-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.4-dsh.0.2.1-rc.5/dsh-deepseek-workbench-0.1.4-dsh.0.2.1-rc.5.tgz
 ```
 
 Finish active tasks, follow the host’s activation/restart prompt, and keep your existing profile, DSH_HOME, model configuration and conversations.
 
-Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.3-dsh.0.2.1-rc.3/SHA256SUMS).
+Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.4-dsh.0.2.1-rc.5/SHA256SUMS).
 
 ### First success check
 
@@ -32,7 +32,7 @@ You can browse web history. “Continue in DSH” creates a native conversation;
 Use the CLI belonging to the same DSH instance; replace `web` with its actual profile.
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.3-dsh.0.2.1-rc.3/dsh-deepseek-workbench-0.1.3-dsh.0.2.1-rc.3.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.4-dsh.0.2.1-rc.5/dsh-deepseek-workbench-0.1.4-dsh.0.2.1-rc.5.tgz"
 ```
 
 </details>

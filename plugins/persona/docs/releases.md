@@ -1,4 +1,4 @@
-# DSH Persona 0.2.1 · DSH 0.2.1-rc.5 · 未发布 / Unreleased
+# DSH Persona 0.2.1 · DSH 0.2.1-rc.5
 
 [中文](#zh-021) | [English](#en-021)
 
@@ -24,11 +24,15 @@ This adaptation is under validation and has not been published.
 
 ## 安装 / Installation
 
-待发布构建精确匹配 **DSH 0.2.1-rc.5**。当前公开安装包仍用于 **DSH 0.2.1-rc.3**，请勿混用。
+精确宿主为 **DSH 0.2.1-rc.5**。在 **插件 → 添加插件** 中使用下方固定包，保留现有 profile、设置与会话；任务结束后按宿主提示重新加载。
 
-The unpublished build targets **DSH 0.2.1-rc.5** exactly. The current public package remains for **DSH 0.2.1-rc.3**.
+The exact host is **DSH 0.2.1-rc.5**. Use the fixed package in **Plugins → Add plugin**, retaining profiles, settings and conversations; reload after active tasks finish if requested.
 
-[当前公开包 / Current published package](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.0-dsh.0.2.1-rc.3/gulagala001-dsh-persona-plugin-0.2.0-dsh.0.2.1-rc.3.tgz) · [SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.0-dsh.0.2.1-rc.3/SHA256SUMS)
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.1-rc.5 | [DSH Persona 0.2.1](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.1-dsh.0.2.1-rc.5/gulagala001-dsh-persona-plugin-0.2.1-dsh.0.2.1-rc.5.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.1-dsh.0.2.1-rc.5/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-persona-plugin/blob/main/README.md)
 
 ---
 

@@ -61,4 +61,4 @@ npm pack
 
 开发时使用隔离的 DSH profile。在安装目录执行 `node scripts/cleanup.mjs` 可预览清理，增加 `--apply` 手动执行。
 
-当前发行精确适配 DSH 0.2.1-rc.3。已在 macOS 验证原生安装、恢复和浏览器交互，Windows／Linux 实机流程尚未验证。
+当前发行精确适配 DSH 0.2.1-rc.5。已在 macOS 验证原生安装、恢复和浏览器交互，Windows／Linux 实机流程尚未验证。

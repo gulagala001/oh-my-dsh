@@ -19,17 +19,17 @@
 在 **插件 → 添加插件** 中粘贴固定安装包地址：
 
 ```text
-https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.0-dsh.0.2.1-rc.3/gulagala001-dsh-persona-plugin-0.2.0-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.1-dsh.0.2.1-rc.5/gulagala001-dsh-persona-plugin-0.2.1-dsh.0.2.1-rc.5.tgz
 ```
 
-[SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.0-dsh.0.2.1-rc.3/SHA256SUMS)
+[SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.1-dsh.0.2.1-rc.5/SHA256SUMS)
 
-当前构建精确适配 **DSH 0.2.1-rc.3**、**Cordis 4.0.5**、**Node.js 22.19+**。
+当前构建精确适配 **DSH 0.2.1-rc.5**、**Cordis 4.0.5**、**Node.js 22.19+**。
 
-取得 `gulagala001-dsh-persona-plugin-0.2.0-dsh.0.2.1-rc.3.tgz` 后，通过 DSH **插件 → 添加插件**安装其本地绝对路径。也可执行：
+取得 `gulagala001-dsh-persona-plugin-0.2.1-dsh.0.2.1-rc.5.tgz` 后，通过 DSH **插件 → 添加插件**安装其本地绝对路径。也可执行：
 
 ```sh
-dsh plugin --profile desktop add /absolute/path/gulagala001-dsh-persona-plugin-0.2.0-dsh.0.2.1-rc.3.tgz
+dsh plugin --profile desktop add /absolute/path/gulagala001-dsh-persona-plugin-0.2.1-dsh.0.2.1-rc.5.tgz
 ```
 
 将 `desktop` 换成目标实例实际使用的 profile，当前任务结束后重启该实例。

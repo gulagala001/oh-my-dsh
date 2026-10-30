@@ -20,7 +20,7 @@ https://github.com/gulagala001/opencu/blob/main/CHANGELOG.md
 Identify the desktop or Web instance I use, its full DSH version, actual profile, DSH_HOME and existing plugins. If OMD is installed, do not install OpenCU again; follow the OMD installation guide instead:
 https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md
 
-If DSH is missing, explain that it must be installed first and follow its official installation instructions; then select the package for the actual installed version. Install only an already published fixed .tgz listed for that exact full DSH version. Do not mix 0.2.1-rc.1, 0.2.1-rc.3 or 0.2.0-rc.*. If no matching package exists, stop and explain; do not substitute main-branch source, latest or a renamed package for a Release.
+If DSH is missing, explain that it must be installed first and follow its official installation instructions; then select the package for the actual installed version. Install only an already published fixed .tgz listed for that exact full DSH version. Do not mix 0.2.1-rc.1, 0.2.1-rc.5 or 0.2.0-rc.*. If no matching package exists, stop and explain; do not substitute main-branch source, latest or a renamed package for a Release.
 
 If tasks are running, tell me before interrupting them. Back up the relevant configuration and data first. Keep the original profile, DSH_HOME and OpenCU data directory, including conversations, model configuration, browser pairing and third-party plugins. Do not recreate or clear configuration. Do not change Host/Client/preload, install across host versions or downgrade DSH without permission; explain any features that require host adapters.
 
@@ -34,10 +34,10 @@ You may install or upgrade the matching plugin and restart the affected DSH inst
 3. Paste the complete matching URL below into the input for a **package name / GitHub repository address / local path**, then click **Install**. Desktop and Web use the same package for a given host version; install in the instance you intend to use.
 4. Wait for success. Fully quit and reopen desktop; for Web, restart the corresponding DSH service and reopen the page. Refreshing a page does not restart the service. Open **Settings → Computer & browser** and follow the prompts for browser resources, OS permissions and any Chrome/Edge extension pairing you need.
 
-**DSH `0.2.1-rc.3`: copy this entire line:**
+**DSH `0.2.1-rc.5`: copy this entire line:**
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.3-dsh.0.2.1-rc.3/opencu-2.2.3-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.2.4-dsh.0.2.1-rc.5/opencu-2.2.4-dsh.0.2.1-rc.5.tgz
 ```
 
 **DSH `0.2.1-rc.1`: copy this entire line:**
@@ -46,7 +46,7 @@ https://github.com/gulagala001/opencu/releases/download/v2.2.3-dsh.0.2.1-rc.3/op
 https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/opencu-2.1.0-dsh.0.2.1-rc.1.tgz
 ```
 
-`0.2.1-rc.3` and `0.2.0-rc.2` are different versions. Do not use these packages with an unlisted host.
+`0.2.1-rc.5` and `0.2.0-rc.2` are different versions. Do not use these packages with an unlisted host.
 
 ## Features and upgrades
 
@@ -61,16 +61,16 @@ https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/op
 
 Use the target DSH's bundled CLI or the same CLI that starts your existing Web service, retaining the original `DSH_HOME`. Run `dsh --version` first. The commands use the standard `desktop`/`web` profiles; use your original name for a custom profile. Do not substitute another global CLI or recreate configuration with `--from-default-profile`.
 
-DSH `0.2.1-rc.3` desktop:
+DSH `0.2.1-rc.5` desktop:
 
 ```sh
-dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.3-dsh.0.2.1-rc.3/opencu-2.2.3-dsh.0.2.1-rc.3.tgz'
+dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.4-dsh.0.2.1-rc.5/opencu-2.2.4-dsh.0.2.1-rc.5.tgz'
 ```
 
-DSH `0.2.1-rc.3` Web:
+DSH `0.2.1-rc.5` Web:
 
 ```sh
-dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.3-dsh.0.2.1-rc.3/opencu-2.2.3-dsh.0.2.1-rc.3.tgz'
+dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.4-dsh.0.2.1-rc.5/opencu-2.2.4-dsh.0.2.1-rc.5.tgz'
 ```
 
 DSH `0.2.1-rc.1` desktop:

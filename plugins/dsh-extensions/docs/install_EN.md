@@ -1,10 +1,10 @@
 # DSH Extensions — Installation and maintenance
 
-Source builds target the exact host in `package.json`, currently `0.2.1-rc.3`. Each build uses its matching SDK, components and dependency lock; choose an installation entry for the host named by the published package.
+Source builds target the exact host in `package.json`, currently `0.2.1-rc.5`. Each build uses its matching SDK, components and dependency lock; choose an installation entry for the host named by the published package.
 
 [简体中文](install.md) · [Back to README](../README_EN.md#install)
 
-**DSH 0.2.1-rc.3 · Node.js ≥22.19 · 0.1.0**
+**DSH 0.2.1-rc.5 · Node.js ≥22.19 · 0.1.0**
 
 ## Install into the current instance
 
@@ -12,12 +12,12 @@ Source builds target the exact host in `package.json`, currently `0.2.1-rc.3`. E
 In the instance you use, open **Plugins → + Add plugin** and paste the pinned release URL:
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.2-dsh.0.2.1-rc.3/dsh-extensions-0.1.2-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.3-dsh.0.2.1-rc.5/dsh-extensions-0.1.3-dsh.0.2.1-rc.5.tgz
 ```
 
 After active tasks finish, enable the plugin or restart as the host asks. The existing profile, DSH_HOME, model settings and conversations are kept.
 
-You can check the download against [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.2-dsh.0.2.1-rc.3/SHA256SUMS) from the same release.
+You can check the download against [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.3-dsh.0.2.1-rc.5/SHA256SUMS) from the same release.
 
 ### First check
 
@@ -29,7 +29,7 @@ The **Plugins** page shows five tabs at the top: Skills, MCP, Instructions, Comm
 Use the CLI of the same DSH instance and replace `web` with your profile.
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.2-dsh.0.2.1-rc.3/dsh-extensions-0.1.2-dsh.0.2.1-rc.3.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.3-dsh.0.2.1-rc.5/dsh-extensions-0.1.3-dsh.0.2.1-rc.5.tgz"
 ```
 
 </details>
@@ -65,4 +65,4 @@ pnpm build
 npm pack
 ```
 
-Add the generated `dsh-extensions-0.1.2-dsh.0.2.1-rc.3.tgz` through **Plugins → Add plugin** using its local absolute path.
+Add the generated `dsh-extensions-0.1.3-dsh.0.2.1-rc.5.tgz` through **Plugins → Add plugin** using its local absolute path.

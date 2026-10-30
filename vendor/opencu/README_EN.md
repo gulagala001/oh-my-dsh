@@ -7,9 +7,9 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.2.3-dsh.0.2.1-rc.3"><img alt="OpenCU 2.2.3" src="https://img.shields.io/badge/release-OpenCU%202.2.3-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.2.4-dsh.0.2.1-rc.5"><img alt="OpenCU 2.2.4" src="https://img.shields.io/badge/release-OpenCU%202.2.4-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.1-rc.3" src="https://img.shields.io/badge/DSH-0.2.1--rc.3-0969da?style=flat-square"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.1-rc.5" src="https://img.shields.io/badge/DSH-0.2.1--rc.5-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>
 </p>
 
@@ -22,7 +22,7 @@
 
 ## Quick start
 
-**Required environment：** DSH **0.2.1-rc.3**, Node.js **22.19+**.
+**Required environment：** DSH **0.2.1-rc.5**, Node.js **22.19+**.
 
 The full in-app browser, sidebar annotations and native monitoring require matching Host/Client/preload adapters. Installing the plugin does not patch the host. Chrome/Edge extensions require pairing; desktop control requires OS permissions.
 
@@ -31,10 +31,10 @@ The full in-app browser, sidebar annotations and native monitoring require match
 Open **Plugins → Add plugin** in the DSH instance you use, then paste:
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.3-dsh.0.2.1-rc.3/opencu-2.2.3-dsh.0.2.1-rc.3.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.2.4-dsh.0.2.1-rc.5/opencu-2.2.4-dsh.0.2.1-rc.5.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.3-dsh.0.2.1-rc.3/SHA256SUMS).
+Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.4-dsh.0.2.1-rc.5/SHA256SUMS).
 
 ### 2. Try this first
 
