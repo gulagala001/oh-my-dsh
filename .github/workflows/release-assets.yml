@@ -18,3 +18,14 @@ jobs:
       - run: node scripts/check-release-assets.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      - name: Check the published market installation entry
+        if: hashFiles('scripts/check-market-release.mjs') != ''
+        run: node scripts/check-market-release.mjs --output .local/market-release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Preserve the market synchronization receipt
+        if: always() && hashFiles('.local/market-release/market-status.json') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: market-release-status
+          path: .local/market-release/

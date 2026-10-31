@@ -38,6 +38,7 @@
     "docs:check": "node scripts/check-docs.mjs && node scripts/build-credits.mjs",
     "docs:write": "node scripts/check-docs.mjs --write",
     "release:check": "node scripts/check-release-assets.mjs",
+    "market:check": "node scripts/check-market-release.mjs",
     "credits:write": "node scripts/build-credits.mjs --write",
     "credits:check": "node scripts/build-credits.mjs",
     "metering:check": "node scripts/check-metering.mjs",

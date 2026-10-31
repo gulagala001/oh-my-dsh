@@ -109,6 +109,8 @@ CodeGraph's runtime catalog job owns both metadata discovery and the native MCP 
 
 ## Tests on Demand
 
+After a public release, run `npm run market:check -- --output .local/market-release`. This read-only check verifies the fixed package, digest, exact host, Awesome entry, existing update PRs and published catalog. It prepares an entry draft only for the same host. `needs-entry-update` requires an update to the existing entry; `awaiting-review` identifies an existing PR; `awaiting-catalog` means the public catalog has not caught up; only `installation-synced` confirms the install URL is effective. Host changes and unknown prior hosts require review. Release CI retains the receipt without treating external review as a source-release prerequisite. Read current market rules and feedback before any external write; the checker never opens PRs or posts comments.
+
 Run the maintained CU/BU machine with `npm run cu:verify` in the standalone OpenCU source checkout (`full` by default). Its [development guide](https://github.com/gulagala001/opencu/blob/main/DEVELOPMENT.md) describes replay and coverage limits. Prepare the affected build and matching Playwright Chromium first; do not rebuild current artifacts unnecessarily. After synchronization, run the matching source verifier against the actual embedded copy from the OMD checkout:
 
 ```sh
