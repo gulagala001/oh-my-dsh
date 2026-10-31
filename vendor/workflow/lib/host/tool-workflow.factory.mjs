@@ -1,4 +1,4 @@
-export function createModule(require) { const module = { exports: {} }; const exports = module.exports;
+export function createModule(require, importHostModule) { const module = { exports: {} }; const exports = module.exports;
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;

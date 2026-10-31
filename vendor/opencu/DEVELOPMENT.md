@@ -143,7 +143,9 @@ npm ci
 
 桌面宿主必须在主代理拥有的匹配源码副本执行 `"$NODE" opencu/host/apply.mjs /absolute/owned/dsh-source`。补丁验证目标版本／框架，预检所有修改，拒绝只读 source cache 和安装目录；新增能力只属于显式 OpenCU lease，普通 DSH guest 权限／下载／导航策略保持原样。然后在该宿主副本安装 `electron-chrome-extensions@4.9.0`，更新自己的锁，重建受影响 Host、Client、Web、desktop main 和对应 sandboxed preloads（含 browser surface preload），再按宿主流程打包。不能只装插件或重建 desktop main：通用 accessory 槽及浏览器桥也需要相应 Client 和 preload 工件。
 
-打包前运行 `node scripts/check-desktop-build.mjs /absolute/extracted/app`，用当前客户端兼容检查核验实际主窗口及浏览子窗口 preload；缺少能力时拒绝打包。此检查只核验编译后的桥接接口，宿主操作及前端启动仍须用匹配安装包定点验证。
+macOS rc.5 的宿主适配还接入 `host/native-runtime.mjs` 和 `host/check-native-runtime.mjs`：在运行时目录生成清单、封装 ASAR 和签名前，隔离 Koffi 的原生符号，修正 node-pty 助手的路径与权限检查，将 Office 原生引擎解析到实际解包目录，并恢复 Mach-O 可执行文件的执行位。正常桌面构建自动执行；重新封装已有 ASAR 时，必须在自己的解包目录手动运行 `node host/native-runtime.mjs /absolute/extracted/app/dsh`，再运行 `node host/check-native-runtime.mjs /absolute/extracted/app/dsh`。后者在独立进程实际验证四种 Koffi 加载入口、终端读写／缩放／退出和原生失败路径。保留已有 unpacked 文件的权限；ASAR 头部没有完整记录它们的执行位，单独比较文件字节不能证明可执行。运行时修复不改原生二进制字节，随后仍须完成原有签名与包完整性校验。
+
+打包前运行 `node scripts/check-desktop-build.mjs /absolute/extracted/app`，核验实际主窗口及浏览子窗口 preload，并检查 macOS rc.5 原生运行时已完成上述准备；缺少能力、助手执行位或原生加载修正时拒绝打包。封装后的真实宿主仍须定点验证终端启动、错误返回及受影响原生程序。
 
 
 包只带有效 Host 核心／后端、浏览器扩展、必要 native 来源／helper 和说明。REA 研究原件留在仓库，不把整份研究材料、开发依赖、隔离数据、token、Node 或浏览器塞进发行包。`npm test` 在构建后执行源码登记检查和现有全部 `test/*.test.mjs`；CI 使用下述 `cu:verify -- --profile full` 统一执行生成场景、全部测试与真实 Chromium，不再另跑一次 `npm test`。单独运行真实隔离 DSH smoke：

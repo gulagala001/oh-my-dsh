@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { hostTarget } from './host-targets.mjs';
 import { replaceExactly } from './host-build-contracts.mjs';
+import { finishHostFactory } from './host-factory-imports.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 await mkdir(root+'lib/host',{recursive:true});
 await writeFile(root+'lib/host/metering-version.mjs',`export const ESTIMATOR_VERSION = ${await meteringVersion()};\n`);
@@ -25,12 +26,12 @@ await build({ entryPoints: [root + 'src/metering/native.mjs'], outfile: root + '
 for(const [name,entry,reference] of [['token-meter','service','token-meter'],['compaction','compaction','compaction-basic']]) {
   const result=await build({entryPoints:[root+`src/metering/${entry}.mjs`],outfile:root+`lib/host/${name}.factory.mjs`,
     bundle:true,platform:'node',target:'node22',format:'cjs',packages:'external',metafile:true,
-    banner:{js:'export function createModule(require) { const module={exports:{}}; const exports=module.exports;'},
+    banner:{js:'export function createModule(require, importHostModule) { const module={exports:{}}; const exports=module.exports;'},
     footer:{js:'return module.exports; }'},legalComments:'eof',
     plugins:[{name:'native-summary-export',setup(build){
       build.onLoad({filter:/metering\/native\/summarizer\.ts$/},async args=>({contents:replaceExactly(await readFile(args.path,'utf8'),'const COMPACTION_INSTRUCTION =','export const COMPACTION_INSTRUCTION =','Native compaction instruction export'),loader:'ts'}));
     }}]});
-  const dependencies=[...new Set(Object.values(result.metafile.outputs).flatMap(o=>o.imports.filter(i=>i.external).map(i=>i.path)))];
+  const dependencies=await finishHostFactory(result,root+`lib/host/${name}.factory.mjs`);
   const {writeFile}=await import('node:fs/promises');
   await writeFile(root+`lib/host/${name}.mjs`,`import { createModule } from './${name}.factory.mjs';\nimport { mountHostComponent } from '../../src/host-component.mjs';\nexport const inject=['loader'];\nexport const apply=(ctx,config)=>mountHostComponent(ctx,${JSON.stringify(reference)},createModule,${JSON.stringify(dependencies)},config);\n`);
 }

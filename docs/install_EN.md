@@ -1,5 +1,7 @@
 # Install Oh My DSH
 
+Repairing terminal, search and Office helper startup in an older desktop package also requires updating the matching desktop host. A plugin update alone does not repair file permissions inside an older app; see the [OMD 1.3.1 release notes](release-1.3.1.md).
+
 [简体中文](install.md) · [Overview](../README_EN.md) · [Upgrade and migration](upgrade_EN.md)
 
 **Choose one method: give an AI the instructions below, or paste a package URL into DSH's Add Plugin dialog.** OMD is a DSH plugin and already includes OpenCU; a second OpenCU installation is unnecessary.
@@ -40,10 +42,10 @@ Read the **complete host version** in DSH's About/version information, for examp
 ### 2. Copy the URL for your host
 
 
-**DSH 0.2.1-rc.5 → OMD 1.3.0:**
+**DSH 0.2.1-rc.5 → OMD 1.3.1:**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.0/oh-my-dsh-0.2.1-rc.5.omd.1.3.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.1/oh-my-dsh-0.2.1-rc.5.omd.1.3.1.tgz
 ```
 
 **DSH 0.2.1-rc.1 → OMD 0.100.0:**
@@ -90,7 +92,7 @@ Existing Web installation: stop the service and use its original CLI. This examp
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.0/oh-my-dsh-0.2.1-rc.5.omd.1.3.0.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.1/oh-my-dsh-0.2.1-rc.5.omd.1.3.1.tgz
 ```
 
 Restart through the original launch method, retaining the data directory and port. For DSH 0.2.1-rc.1, use the rc.1 URL above.
@@ -98,7 +100,7 @@ Restart through the original launch method, retaining the data directory and por
 First-time Web setup requires Node.js ≥22.19; use PowerShell 7 on Windows:
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.5 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.0/oh-my-dsh-0.2.1-rc.5.omd.1.3.0.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-rc.5 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.1/oh-my-dsh-0.2.1-rc.5.omd.1.3.1.tgz
 npx --yes @deepseek-ai/dsh@0.2.1-rc.5 --profile web
 ```
 
@@ -108,11 +110,11 @@ Default macOS desktop CLI example, only for an actual DSH 0.2.1-rc.5 installatio
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.0/oh-my-dsh-0.2.1-rc.5.omd.1.3.0.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.1/oh-my-dsh-0.2.1-rc.5.omd.1.3.1.tgz
 ```
 
 On Windows desktop, the plugin dialog is the simplest route; CLI paths depend on the installation. A Web CLI does not substitute for the desktop CLI.
 
 </details>
 
-**Release scope:** the rc.5 URL installs OMD 1.3.0; rc.3 retains OMD 1.2.1; rc.1 and rc.2 retain OMD 0.100.0. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).
+**Release scope:** the rc.5 URL installs OMD 1.3.1; rc.3 retains OMD 1.2.1; rc.1 and rc.2 retain OMD 0.100.0. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).

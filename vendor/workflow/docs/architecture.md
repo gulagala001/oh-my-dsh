@@ -1,5 +1,9 @@
 # 架构 / Architecture
 
+宿主模块工厂保留动态导入的延迟语义，由原组件 Loader 树在调用时解析；Windows 专用原生依赖不会在其他平台启动时预加载。
+
+Host factories preserve lazy dynamic imports through the original component Loader tree. Windows-only native dependencies are not preloaded at startup on other platforms.
+
 宿主构建以 `package.json` 的完整版本为准，当前源码默认 `0.2.1-rc.5`。每份构建对齐同版本 SDK、组件与依赖锁，安装入口按正式发行包的宿主版本选择。
 
 [中文首页](../README.md) · [English](../README_EN.md)

@@ -14,13 +14,14 @@ export async function loadHostModule(ctx, name, factory, dependencies) {
     ? await tree.ctx.loader.internal.import(specifier, tree.ctx.baseUrl, { type: 'json' })
     : JSON.parse(await readFile(createRequire(tree.ctx.baseUrl).resolve(specifier), 'utf8'));
   if ((pkg.default ?? pkg).version !== metadata.engines.dsh) throw Error(`DSH Workflow requires exactly DSH ${metadata.engines.dsh}`);
+  const importHostModule = async specifier => specifier.startsWith('node:') ? import(specifier) : tree.import(specifier);
   const modules = new Map(await Promise.all(dependencies.map(async specifier =>
-    [specifier, specifier.startsWith('node:') ? await import(specifier) : await tree.import(specifier)])));
+    [specifier, await importHostModule(specifier)])));
   return factory(specifier => {
     if (!modules.has(specifier)) throw Error(`Unresolved workflow dependency: ${specifier}`);
     if (specifier === '@deepseek-ai/schemastery' || specifier === 'koffi') return modules.get(specifier).default;
     return { ...modules.get(specifier), __esModule: true };
-  });
+  }, importHostModule);
 }
 
 export async function mountHostComponent(ctx, name, factory, dependencies, config) {

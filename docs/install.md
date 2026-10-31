@@ -1,5 +1,7 @@
 # 安装 Oh My DSH
 
+修复旧桌面包中终端、搜索和 Office 助手的启动失败，还需同步更新匹配的桌面宿主。仅升级插件不会修复旧应用内的文件权限；具体步骤见 [OMD 1.3.1 更新说明](release-1.3.1.md)。
+
 [English](install_EN.md) · [首页](../README.md) · [升级与迁移](upgrade.md)
 
 **选一种方式即可：复制指令让 AI 安装，或在 DSH 的“添加插件”窗口粘贴安装地址。** OMD 是 DSH 插件，已内置 OpenCU，不用再单独安装 OpenCU。
@@ -40,10 +42,10 @@ OMD 已内置 OpenCU，不重复安装。不要把仓库 main 当成已发布安
 ### 2. 复制与你的 DSH 对应的地址
 
 
-**DSH 0.2.1-rc.5 → OMD 1.3.0：**
+**DSH 0.2.1-rc.5 → OMD 1.3.1：**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.0/oh-my-dsh-0.2.1-rc.5.omd.1.3.0.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.1/oh-my-dsh-0.2.1-rc.5.omd.1.3.1.tgz
 ```
 
 **DSH 0.2.1-rc.1 → OMD 0.100.0：**
@@ -90,7 +92,7 @@ OMD 默认安装配置包含完整文件／命令访问并关闭执行审批；�
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.0/oh-my-dsh-0.2.1-rc.5.omd.1.3.0.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.1/oh-my-dsh-0.2.1-rc.5.omd.1.3.1.tgz
 ```
 
 之后按原方式启动服务，保留原数据目录和端口。DSH 0.2.1-rc.1 使用上面的 rc.1 地址。
@@ -98,7 +100,7 @@ dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/d
 首次使用 Web（需要 Node.js ≥22.19；Windows 使用 PowerShell 7）：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.5 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.0/oh-my-dsh-0.2.1-rc.5.omd.1.3.0.tgz
+npx --yes @deepseek-ai/dsh@0.2.1-rc.5 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.1/oh-my-dsh-0.2.1-rc.5.omd.1.3.1.tgz
 npx --yes @deepseek-ai/dsh@0.2.1-rc.5 --profile web
 ```
 
@@ -108,11 +110,11 @@ macOS 默认桌面安装位置的 CLI 示例（仅适用于实际 DSH 0.2.1-rc.5
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.0/oh-my-dsh-0.2.1-rc.5.omd.1.3.0.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.1/oh-my-dsh-0.2.1-rc.5.omd.1.3.1.tgz
 ```
 
 Windows 桌面建议直接用上面的插件界面；命令行路径以实际安装为准。Web CLI 不代替桌面 CLI。
 
 </details>
 
-**版本说明：** 本页 rc.5 固定地址指向 OMD 1.3.0；rc.3 保留 OMD 1.2.1；rc.1／rc.2 沿用 OMD 0.100.0。固定 Release 不会随 main 后续修改而改变。安装之后看[第一次使用](getting-started.md)。
+**版本说明：** 本页 rc.5 固定地址指向 OMD 1.3.1；rc.3 保留 OMD 1.2.1；rc.1／rc.2 沿用 OMD 0.100.0。固定 Release 不会随 main 后续修改而改变。安装之后看[第一次使用](getting-started.md)。

@@ -1,5 +1,7 @@
 # Development and Source Runs
 
+Host factories preserve lazy dynamic imports and resolve them through the original component’s Loader tree when called. Platform-specific native dependencies must not enter the cross-platform startup preload list. `scripts/host-factory-imports.mjs` and its regression checks cover session migration, tools and metering factories.
+
 Host clients resolve through the installed SDK with exact identity/version checks in `scripts/host-build-contracts.mjs`, for both pnpm and hoisted offline layouts. Reviewed fingerprints remain mandatory; module registration, style-owner counts and semantic replacements fail on ambiguity. Actual archive checks also verify source package metadata, declared entrypoints, install patches and shipped documentation targets; source-only documentation links to the public repository.
 
 Runtime archives retain source, pinned vendor snapshots, build/offline preparation and diagnostics. Website media, static site HTML/CSS/JS, documentation-site builds and benchmark/performance tools remain in the source repository; documentation illustrations use public asset URLs. `scripts/package-policy.mjs` checks both npm file lists and actual archives through public-file CI, prepack and delivery checks. After verifying the upstream hash, `scripts/chat-style-adapter.mjs` reads composer metadata from the AST and exports it with the factory for direct client imports. Missing, duplicate, unknown or dynamic registrations fail the build; `test/chat-style-adapter.test.mjs` runs in core.

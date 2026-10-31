@@ -1,3 +1,45 @@
+# OpenCU 2.2.7 · DSH 0.2.1-rc.5
+
+[中文](#zh-227) | [English](#en-227)
+
+<a id="zh-227"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复 macOS 桌面运行时中 Koffi 原生符号相互干扰引发的终端崩溃，普通与间接加载的 CommonJS／ESM 入口均隔离处理。
+- 修复 ASAR 重打包后终端、搜索和 Office 助手可能丢失执行权限的问题；纠正已解包路径被再次追加 .unpacked，并在启动前返回真实的助手文件错误。
+- 宿主打包增加原生运行时门禁，实际检查终端读写、缩放、退出及原生错误返回。
+
+<a id="en-227"></a>
+
+## English
+
+### Bug Fixes
+
+- Fix macOS terminal crashes caused by Koffi native symbol collisions, covering CommonJS and ESM through both regular and indirect loaders.
+- Restore executable permissions for terminal, search and Office helpers after ASAR repacking; avoid duplicate .unpacked path segments and report helper file errors before spawning.
+- Add a native runtime packaging gate with real terminal input, output, resize, exit and native error checks.
+
+## 安装 / Installation
+
+精确宿主为 **DSH 0.2.1-rc.5**。在 **插件 → 添加插件** 中使用下方固定包，保留原有 profile、设置与会话。
+
+The exact host is **DSH 0.2.1-rc.5**. Use the fixed package in **Plugins → Add plugin**, retaining existing profiles, settings and conversations.
+
+**终端、搜索与 Office 助手的桌面运行时修复需要同时用本版 `host-adapters.zip` 重建并重新封装匹配宿主，完成签名检查后完整重启；仅升级插件不会修复旧应用内的文件权限。**
+
+**The desktop runtime fixes for terminal, search and Office helpers also require rebuilding and repacking the matching host with this release’s `host-adapters.zip`, verifying its signatures and fully restarting it. Updating only the plugin does not repair permissions inside an older app.**
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.1-rc.5 | [OpenCU 2.2.7](https://github.com/gulagala001/opencu/releases/download/v2.2.7-dsh.0.2.1-rc.5/opencu-2.2.7-dsh.0.2.1-rc.5.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.7-dsh.0.2.1-rc.5/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [宿主适配源码 / Host adapter sources](https://github.com/gulagala001/opencu/releases/download/v2.2.7-dsh.0.2.1-rc.5/host-adapters.zip)
+
+---
+
 # OpenCU 2.2.6 · DSH 0.2.1-rc.5
 
 [中文](#zh-226) | [English](#en-226)

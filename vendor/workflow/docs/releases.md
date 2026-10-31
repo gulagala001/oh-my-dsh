@@ -1,3 +1,39 @@
+# DSH Workflow 0.1.7 · DSH 0.2.1-rc.5
+
+[中文](#zh-017) | [English](#en-017)
+
+<a id="zh-017"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复宿主模块工厂将延迟依赖提前加载的问题，避免 macOS 启动时载入 Windows 专用原生模块并干扰终端异常处理。
+- 动态导入继续通过原组件的 Loader 树解析，保留宿主服务身份、按需加载与失败重试。
+
+<a id="en-017"></a>
+
+## English
+
+### Bug Fixes
+
+- Fix host factories eagerly loading deferred dependencies, which loaded Windows-only native modules on macOS and interfered with terminal error handling.
+- Keep dynamic imports on the original component Loader tree, preserving host service identity, on-demand loading and retry after load failures.
+
+## 安装 / Installation
+
+精确宿主为 **DSH 0.2.1-rc.5**。在 **插件 → 添加插件** 中使用下方固定包，保留原有 profile、设置与会话。
+
+The exact host is **DSH 0.2.1-rc.5**. Use the fixed package in **Plugins → Add plugin**, retaining existing profiles, settings and conversations.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.1-rc.5 | [DSH Workflow 0.1.7](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.7-dsh.0.2.1-rc.5/dsh-workflow-plus-0.1.7-dsh.0.2.1-rc.5.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.7-dsh.0.2.1-rc.5/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-workflow/blob/main/docs/install.md)
+
+---
+
 # DSH Workflow 0.1.6 · DSH 0.2.1-rc.5
 
 [中文](#zh-016) | [English](#en-016)
@@ -6,8 +42,6 @@
 
 ## 中文
 
-本版适配与验收正在进行，尚未发布。
-
 ### 其他变更
 
 - 精确适配 DSH **0.2.1-rc.5**，同步匹配的 SDK、构建输入和完整依赖锁。每份安装包仅用于对应宿主。
@@ -15,8 +49,6 @@
 <a id="en-016"></a>
 
 ## English
-
-This adaptation is under validation and has not been published.
 
 ### Other Changes
 

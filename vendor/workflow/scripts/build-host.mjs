@@ -4,6 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHostConstEnums } from './host-const-enums.mjs';
 import { root, outputPath, validateInputs } from './build-inputs.mjs';
+import { finishHostFactory } from './host-factory-imports.mjs';
 
 const { snapshot } = await validateInputs();
 const requireBuild = createRequire(import.meta.url);
@@ -31,15 +32,15 @@ const dependencies = {};
 for (const [name, entry] of Object.entries(modules)) {
   const outfile = await outputPath(join(root, 'lib/host', name + '.factory.mjs'));
   const result = await build({ absWorkingDir: root, entryPoints: [source(entry)], outfile, platform: 'node', target: 'node22', format: 'cjs', bundle: true, packages: 'external', metafile: true,
-    supported: { 'dynamic-import': false }, legalComments: 'eof',
-    banner: { js: 'export function createModule(require) { const module = { exports: {} }; const exports = module.exports;' }, footer: { js: 'return module.exports; }' },
+    legalComments: 'eof',
+    banner: { js: 'export function createModule(require, importHostModule) { const module = { exports: {} }; const exports = module.exports;' }, footer: { js: 'return module.exports; }' },
     plugins: [{ name: 'workflow-host', setup(b) {
       b.onResolve({ filter: /^@deepseek-ai\/dsh-/ }, args => { const path = localImport(args.path); if (path) return { path }; });
       b.onLoad({ filter: /workflow-ptc[\\/]src[\\/]guest-source\.ts$/ }, () => ({ contents: `export const WORKFLOW_GUEST_SOURCE = ${JSON.stringify(guestSource)};`, loader: 'ts' }));
     } }, acorn, hostEnums.plugin] });
   hostEnums.assertExternal(result);
   await hostEnums.assertOutput(result);
-  dependencies[name] = externals(result);
+  dependencies[name] = (await finishHostFactory(result, outfile)).sort();
 }
 await writeFile(await outputPath(join(root, 'lib/host/dependencies.json')), JSON.stringify(dependencies, null, 2) + '\n');
 console.log('Built Workflow host factories and self-contained guest.');

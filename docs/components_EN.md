@@ -12,7 +12,7 @@ This catalog covers independently maintained products, optional integrations, ho
 
 Computer and browser observation, interaction, annotations and previews Bundled plugin; also distributed independently。
 
-- Pinned source / version: [2.2.6-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- Pinned source / version: [2.2.7-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - License / attribution: See component notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -21,7 +21,7 @@ Computer and browser observation, interaction, annotations and previews Bundled 
 
 Task planning, execution, budgets and recovery Bundled workflow plugin。
 
-- Pinned source / version: [0.1.6-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
+- Pinned source / version: [0.1.7-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
 
 ### DSH Rewind

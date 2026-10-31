@@ -1,4 +1,4 @@
-export function createModule(require) { const module = { exports: {} }; const exports = module.exports;
+export function createModule(require, importHostModule) { const module = { exports: {} }; const exports = module.exports;
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -5912,7 +5912,7 @@ var ERROR_ALREADY_EXISTS = 183;
 var bindings;
 async function win32() {
   if (bindings !== void 0) return bindings;
-  const koffi = (await Promise.resolve().then(() => __toESM(require("koffi"), 1))).default;
+  const koffi = (await importHostModule("koffi")).default;
   const kernel32 = koffi.load("kernel32.dll");
   bindings = {
     moveFileExW: kernel32.func("__stdcall", "MoveFileExW", "int", ["str16", "str16", "uint"]),

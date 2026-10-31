@@ -471,6 +471,24 @@ await patch(sidebar + 'stores.ts', [
             : planned.ops))`],
 ], 'Background opens cannot replace');
 await applyRuntimeLifecycle(patch, target);
+if (target.version === '0.2.1-rc.5') {
+  const preparation = 'apps/desktop/scripts/prepare-dsh.ts';
+  await patch(preparation, [
+    ["import { packagingStep } from './packaging-step.mjs'", "import { packagingStep } from './packaging-step.mjs'\nimport { prepareNativeRuntime } from './opencu-native-runtime.mjs'"],
+    ["    writeFileSync(join(DSH_OUTPUT_ROOT, 'package.json')", "    await prepareNativeRuntime(DSH_OUTPUT_ROOT, target)\n    writeFileSync(join(DSH_OUTPUT_ROOT, 'package.json')"],
+  ], 'await prepareNativeRuntime(DSH_OUTPUT_ROOT, target)');
+  await patch(preparation, [[
+    "import { prepareNativeRuntime } from './opencu-native-runtime.mjs'",
+    "import { prepareNativeRuntime } from './opencu-native-runtime.mjs'\nimport { checkNativeRuntime } from './opencu-check-native-runtime.mjs'",
+  ]], "import { checkNativeRuntime }");
+  await patch(preparation, [[
+    '    await prepareNativeRuntime(DSH_OUTPUT_ROOT, target)',
+    "    await prepareNativeRuntime(DSH_OUTPUT_ROOT, target)\n    if (target.platform === 'darwin') await checkNativeRuntime(DSH_OUTPUT_ROOT, { node: NODE })",
+  ]], 'await checkNativeRuntime(DSH_OUTPUT_ROOT');
+  pending.set('apps/desktop/scripts/opencu-native-runtime.mjs', await readFile(new URL('./native-runtime.mjs', import.meta.url), 'utf8'));
+  pending.set('apps/desktop/scripts/opencu-check-native-runtime.mjs', (await readFile(new URL('./check-native-runtime.mjs', import.meta.url), 'utf8')).replace("'./native-runtime.mjs'", "'./opencu-native-runtime.mjs'"));
+  for (const name of ['native-runtime', 'check-native-runtime']) pending.set(`apps/desktop/scripts/opencu-${name}.d.mts`, await readFile(new URL(`./${name}.d.mts`, import.meta.url), 'utf8'));
+}
 // Validate every edit before writing any source. Reapplication updates owned adapter modules without duplicating hooks.
 for (const [file, value] of pending) {
   let current;

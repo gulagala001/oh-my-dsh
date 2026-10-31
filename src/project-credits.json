@@ -17,8 +17,8 @@
       "source": "vendor/opencu/package.json",
       "license": "See component notices",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
-      "version": "2.2.6-dsh.0.2.1-rc.5",
-      "sourceSha256": "657ccde3256b020e9c2bd54986151f79f252e08a0bf32c378ec71159a25fd35a",
+      "version": "2.2.7-dsh.0.2.1-rc.5",
+      "sourceSha256": "a77e4732356ce2ccced2aef6a755d6ecc0ade4aa72eb312879a9618bb078adb5",
       "group": "products"
     },
     {
@@ -37,8 +37,8 @@
       "source": "vendor/workflow/package.json",
       "license": "MIT",
       "notice": "vendor/workflow/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.6-dsh.0.2.1-rc.5",
-      "sourceSha256": "5285b96bae83f12b16719555f0e5602624f79259a943fa6f32b628750c7f7ac3",
+      "version": "0.1.7-dsh.0.2.1-rc.5",
+      "sourceSha256": "0d760414df4ad37387cb86bd0d722e0be0be65cd9608ac96054376238c138fe2",
       "group": "products"
     },
     {

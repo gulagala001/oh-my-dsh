@@ -65,14 +65,15 @@ export async function loadHostModule(ctx, name, createModule, dependencies) {
 
 async function createHostModule(originalEntry, createModule, dependencies) {
   const tree = originalEntry.parent.tree;
+  const importHostModule = async specifier => specifier.startsWith('node:') ? import(specifier) : tree.import(specifier);
   const modules = new Map(await Promise.all(dependencies.map(async specifier => [specifier,
-    specifier.startsWith('node:') ? await import(specifier) : await tree.import(specifier)])));
+    await importHostModule(specifier)])));
   const component = createModule(specifier => {
     if (!modules.has(specifier)) throw new Error(`Unresolved host dependency: ${specifier}`);
     // CommonJS entries keep their default value through the factory's ESM interop.
     if (specifier === '@deepseek-ai/schemastery' || specifier === 'koffi') return modules.get(specifier).default;
     return { ...modules.get(specifier), __esModule: true };
-  });
+  }, importHostModule);
   return component;
 }
 

@@ -1,5 +1,7 @@
 # Install and upgrade OpenCU
 
+The terminal, search and Office helper fixes for older desktop packages require updating the matching host. Installing the plugin alone does not repair permissions inside an older app. See the [2.2.7 release notes](releases.md#en-227).
+
 [简体中文](install.md) · [Home](../README_EN.md)
 
 **Already using OMD? Do not install OpenCU separately.** OMD includes it. Follow the [OMD installation and upgrade guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md).
@@ -37,7 +39,7 @@ You may install or upgrade the matching plugin and restart the affected DSH inst
 **DSH `0.2.1-rc.5`: copy this entire line:**
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.6-dsh.0.2.1-rc.5/opencu-2.2.6-dsh.0.2.1-rc.5.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.2.7-dsh.0.2.1-rc.5/opencu-2.2.7-dsh.0.2.1-rc.5.tgz
 ```
 
 **DSH `0.2.1-rc.1`: copy this entire line:**
@@ -64,13 +66,13 @@ Use the target DSH's bundled CLI or the same CLI that starts your existing Web s
 DSH `0.2.1-rc.5` desktop:
 
 ```sh
-dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.6-dsh.0.2.1-rc.5/opencu-2.2.6-dsh.0.2.1-rc.5.tgz'
+dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.7-dsh.0.2.1-rc.5/opencu-2.2.7-dsh.0.2.1-rc.5.tgz'
 ```
 
 DSH `0.2.1-rc.5` Web:
 
 ```sh
-dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.6-dsh.0.2.1-rc.5/opencu-2.2.6-dsh.0.2.1-rc.5.tgz'
+dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.7-dsh.0.2.1-rc.5/opencu-2.2.7-dsh.0.2.1-rc.5.tgz'
 ```
 
 DSH `0.2.1-rc.1` desktop:

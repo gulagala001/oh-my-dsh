@@ -9,7 +9,6 @@
     "@deepseek-ai/dsh-workflow",
     "@deepseek-ai/node-addon-system/flock",
     "@deepseek-ai/schemastery",
-    "koffi",
     "node:child_process",
     "node:crypto",
     "node:fs",

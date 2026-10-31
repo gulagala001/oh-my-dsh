@@ -1,5 +1,7 @@
 # 开发与源码运行
 
+宿主模块工厂保留动态导入的延迟语义，由原组件的 Loader 树在实际调用时解析。Windows 专用原生依赖不能出现在跨平台启动预加载清单中；`scripts/host-factory-imports.mjs` 与对应回归检查同时覆盖会话迁移、工具及计量工厂。
+
 宿主客户端由 `scripts/host-build-contracts.mjs` 通过实际 SDK 解析并校验身份／版本，同时支持 pnpm 与离线平铺布局；原始摘要验证保持，注册结构、样式归属数量与关键替换有歧义即失败。实际归档检查进一步核对源包清单、声明入口、安装补丁与包内文档目标；仅源码提供的文档链接到公开仓库。
 
 运行安装包保留源码、固定 vendor、构建／离线准备与诊断入口；网站图片、站点 HTML／CSS／JS、文档站构建及评测／性能工具只在源码仓库维护，文档插图通过公开资源链接查看。`scripts/package-policy.mjs` 同时校验 npm 清单与实际归档，已接入公开文件 CI、prepack 和交付检查。composer 统计元数据在 `scripts/chat-style-adapter.mjs` 校验上游摘要后由 AST 读取并随 factory 导出，前端直接导入；缺失、重复、未知 ID 或动态顺序会阻止构建，`test/chat-style-adapter.test.mjs` 纳入 core。

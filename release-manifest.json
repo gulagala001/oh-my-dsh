@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.5.omd.1.3.1",
+      "severity": "required",
+      "unpublished": false,
+      "title": "OMD 1.3.1 · DSH 0.2.1-rc.5",
+      "notes": [
+        "修复 macOS 打开终端时可能导致宿主退出的问题：会话迁移与内置 Workflow 保留原本的延迟导入，避免提前加载 Windows 专用原生模块。",
+        "集成 DSH Workflow 0.1.7 与 OpenCU 2.2.7；匹配的桌面宿主适配隔离原生符号，并修复终端、搜索和 Office 助手在重打包后丢失执行权限的同类问题。",
+        "终端助手路径与启动失败经过显式检查，宿主打包验证实际终端收发、缩放、退出及原生错误返回。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.1.md"
+    },
+    {
       "version": "0.2.1-rc.5.omd.1.3.0",
       "severity": "normal",
       "unpublished": false,

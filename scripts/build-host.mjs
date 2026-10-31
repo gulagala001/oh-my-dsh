@@ -10,6 +10,7 @@ import { hostTarget } from './host-targets.mjs';
 import { checkMacHelperDistribution } from './check-opencu-native.mjs';
 import { buildChatStyleFactory } from './chat-style-adapter.mjs';
 import { ownClientStyles, clientRegistration } from './host-build-contracts.mjs';
+import { finishHostFactory } from './host-factory-imports.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (process.platform === 'darwin') await checkMacHelperDistribution(join(root, 'vendor/opencu'));
@@ -90,8 +91,7 @@ for (const name of modules) {
   const reference = name;
   const result = await build({ entryPoints: [hostEntry(name)], outfile: `${root}lib/host/${name}.factory.mjs`,
     platform: 'node', target: 'node22', format: 'cjs', bundle: true, packages: 'external', metafile: true,
-    supported: { 'dynamic-import': false },
-    banner: { js: 'export function createModule(require) { const module = { exports: {} }; const exports = module.exports;' },
+    banner: { js: 'export function createModule(require, importHostModule) { const module = { exports: {} }; const exports = module.exports;' },
     footer: { js: 'return module.exports; }' },
     sourcemap: false, legalComments: 'eof',
     plugins: [{ name: 'local-host', setup(b) {
@@ -103,7 +103,7 @@ for (const name of modules) {
   });
   hostEnums.assertExternal(result);
   await hostEnums.assertOutput(result);
-  const dependencies = [...new Set(Object.values(result.metafile.outputs).flatMap(o => o.imports.filter(i => i.external).map(i => i.path)))];
+  const dependencies = await finishHostFactory(result, `${root}lib/host/${name}.factory.mjs`);
   await writeFile(`${root}lib/host/${name}.mjs`, `import { createModule } from './${name}.factory.mjs';\nimport { mountHostComponent } from '../../src/host-component.mjs';\nexport const name = 'omd-host-${name}';\nexport const inject = ['loader'];\nexport const apply = (ctx, config) => mountHostComponent(ctx, ${JSON.stringify(reference)}, createModule, ${JSON.stringify(dependencies)}, config);\n`);
 }
 // Workflow is maintained in the independent dsh-workflow-plus module.
@@ -136,14 +136,12 @@ for (const [name, create, styleOwner] of [['ui-conversation', 'createConversatio
 }
 
 const support = await build({ entryPoints: [`${root}src/session-migration-support.ts`], outfile: `${root}lib/host/session-migration.factory.mjs`,
-  // Dynamic native dependencies must use the same host resolver as static ones.
-  supported: { 'dynamic-import': false },
   platform: 'node', target: 'node22', format: 'cjs', bundle: true, packages: 'external', metafile: true,
-  banner: { js: 'export function createModule(require) { const module = { exports: {} }; const exports = module.exports;' },
+  banner: { js: 'export function createModule(require, importHostModule) { const module = { exports: {} }; const exports = module.exports;' },
   footer: { js: 'return module.exports; }' }, sourcemap: false, legalComments: 'eof', plugins: [hostEnums.plugin] });
 hostEnums.assertExternal(support);
 await hostEnums.assertOutput(support);
-const supportDependencies = [...new Set(Object.values(support.metafile.outputs).flatMap(o => o.imports.filter(i => i.external).map(i => i.path)))];
+const supportDependencies = await finishHostFactory(support, `${root}lib/host/session-migration.factory.mjs`);
 await writeFile(`${root}lib/host/session-migration.mjs`, `import { createModule } from './session-migration.factory.mjs';\nimport { loadHostModule } from '../../src/host-component.mjs';\nexport const loadMigrationSupport = ctx => loadHostModule(ctx, 'session-persistence-jsonl', createModule, ${JSON.stringify(supportDependencies)});\n`);
 
 await writeFile(`${root}lib/host/ui-conversation.mjs`, `import { Config, apply as nativeApply } from '../../vendor/dsh/ui-conversation/lib/index.js';
