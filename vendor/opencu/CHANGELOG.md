@@ -1,3 +1,47 @@
+# OpenCU 2.2.6 · DSH 0.2.1-rc.5
+
+[中文](#zh-226) | [English](#en-226)
+
+<a id="zh-226"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复代码和工具输出复制时失败却显示“已复制”的问题；等待实际剪贴板写入完成，并移除不适用于 DSH 的 ChatGPT 焦点提示。
+- 将主窗口和独立浏览器窗口的链接、新标签页与下载操作接入 DSH，遵循浏览器偏好并保留发起会话。
+- 修复文件内容复制、本地图片读取、相对路径与默认打开方式；取消读取后不再继续执行，准备失败或被阻止时停止后续文件操作，并显示真实错误。
+- 补齐文件预览下载动作，移除不可用的云端连接器菜单，统一批注、图片、权限和错误提示中的宿主文案及帮助入口。
+
+<a id="en-226"></a>
+
+## English
+
+### Bug Fixes
+
+- Fix copy actions that showed “Copied” after failure. Wait for the actual clipboard write and remove the ChatGPT focus instruction that does not apply to DSH.
+- Connect links, new tabs and downloads in the main and detached browser windows to DSH, honoring browser preferences and preserving the originating conversation.
+- Fix file-content copying, local image reads, relative paths and default file opening. Stop cancelled reads and blocked or failed preparation before subsequent file actions, and display actual errors.
+- Restore the file-preview download action, hide unavailable cloud connector menus, and align annotation, image, permission and error messages and help links with the host.
+
+## 安装 / Installation
+
+精确宿主为 **DSH 0.2.1-rc.5**。在 **插件 → 添加插件** 中使用下方固定包，保留现有 profile、设置与会话；任务结束后按宿主提示重新加载。
+
+The exact host is **DSH 0.2.1-rc.5**. Use the fixed package in **Plugins → Add plugin**, retaining profiles, settings and conversations; reload after active tasks finish if requested.
+
+完整内置浏览器、桌面文件操作与电脑操作界面需要匹配的桌面宿主适配。已使用匹配适配的安装可直接升级插件；其余安装按安装指南使用 `host-adapters.zip` 构建宿主。
+
+The embedded browser, desktop file actions and full computer-use interface require the matching desktop host adapter. Installations already using that adapter can update the plugin directly; otherwise follow the installation guide and build the host with `host-adapters.zip`.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.1-rc.5 | [OpenCU 2.2.6](https://github.com/gulagala001/opencu/releases/download/v2.2.6-dsh.0.2.1-rc.5/opencu-2.2.6-dsh.0.2.1-rc.5.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.6-dsh.0.2.1-rc.5/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [宿主适配源码 / Host adapter sources](https://github.com/gulagala001/opencu/releases/download/v2.2.6-dsh.0.2.1-rc.5/host-adapters.zip)
+
+---
+
 # OpenCU 2.2.5 · DSH 0.2.1-rc.5
 
 [中文](#zh-225) | [English](#en-225)

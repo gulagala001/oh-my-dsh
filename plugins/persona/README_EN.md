@@ -9,7 +9,7 @@
 ## Features
 
 - Four modules: identity, language style, communication and answer presentation, with default inheritance.
-- Built-in Default, Overclock (超频) and Economical (精算) personalities; create, copy, rename, update and delete your own presets.
+- Built-in Default, Overclock (超频), Economical (精算) and Economical English (精算（英文版）) personalities; create, copy, rename, update and delete your own presets.
 - Copy a creation prompt to an AI, then import its generated JSON file. Export personalities for backup or sharing; duplicate imports receive a new name.
 - A global default and independent conversation choices, enabled by default and available in the permissions drawer and applied to subsequent requests.
 - Detailed controls live under a collapsed Advanced section; failed saves retain editor drafts.

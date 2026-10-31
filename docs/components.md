@@ -12,7 +12,7 @@
 
 电脑与浏览器观察、操作、批注和预览 内置插件；支持独立安装与共装。
 
-- 固定来源／版本: [2.2.5-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- 固定来源／版本: [2.2.6-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - 许可／归属: See component notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
