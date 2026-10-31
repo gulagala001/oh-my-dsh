@@ -2,6 +2,19 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.5.omd.1.2.3",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 1.2.3 · DSH 0.2.1-rc.5",
+      "notes": [
+        "集成 OpenCU 2.2.5，修复目标发现、初始化及原生只读查询的取消与故障隔离，并保留停止来源和输入释放明细。",
+        "改进上下文预处理的摘要与用户决定校验：明确失败字段、长度及原话引用问题，并将具体原因传给重试；保留原始材料与原有恢复机制。",
+        "修复取消错误首行显示为对象或重复笼统错误的问题，保留调用已经产生的有效输出。",
+        "同步匹配桌面宿主的 Office 生命周期、停止期间注册及欢迎页认证 Cookie 衔接修复。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.2.3.md"
+    },
+    {
       "version": "0.2.1-rc.5.omd.1.2.2",
       "severity": "normal",
       "title": "OMD 1.2.2 · DSH 0.2.1-rc.5",

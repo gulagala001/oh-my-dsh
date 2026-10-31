@@ -1,3 +1,47 @@
+# OpenCU 2.2.5 · DSH 0.2.1-rc.5
+
+[中文](#zh-225) | [English](#en-225)
+
+<a id="zh-225"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复目标发现和初始化等待中的取消阻塞；只读查询不再排在无关输入操作之后，取消当前调用仍保留其他会话的共享初始化。
+- 隔离原生只读查询的超时与取消，避免单次读取失败导致其他电脑操作失效；输入结果不明时仍保留释放与恢复保护。
+- 停止状态保留触发来源、时间和输入释放明细；工具、界面与生命周期清理保持各自语义。
+- 修复匹配桌面宿主的 Office 初始化生命周期、停止期间的迟到注册，以及欢迎页对已认证宿主 Cookie 的衔接。
+
+<a id="en-225"></a>
+
+## English
+
+### Bug Fixes
+
+- Keep target discovery and initialization waits cancellable. Read-only discovery no longer queues behind unrelated input, while cancelling one caller preserves shared initialization for other sessions.
+- Contain native read timeouts and cancellation so one failed read does not disable unrelated operations. Preserve release and recovery safeguards when an input outcome is unknown.
+- Retain the source, time and input-release details of stops, preserving the distinct semantics of tools, interface actions and lifecycle cleanup.
+- Fix Office initialization lifetime, late registrations during shutdown and authenticated Host cookie reuse by the matching desktop welcome page.
+
+## 安装 / Installation
+
+精确宿主为 **DSH 0.2.1-rc.5**。在 **插件 → 添加插件** 中使用下方固定包，保留现有 profile、设置与会话；任务结束后按宿主提示重新加载。
+
+The exact host is **DSH 0.2.1-rc.5**. Use the fixed package in **Plugins → Add plugin**, retaining profiles, settings and conversations; reload after active tasks finish if requested.
+
+桌面启动认证、Office 生命周期及完整电脑操作增强需要使用本版 `host-adapters.zip` 重建匹配的桌面宿主后完整重启。
+
+Desktop startup authentication, Office lifecycle and full computer-use enhancements require rebuilding the matching desktop host with this release’s `host-adapters.zip`, then restarting fully.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.1-rc.5 | [OpenCU 2.2.5](https://github.com/gulagala001/opencu/releases/download/v2.2.5-dsh.0.2.1-rc.5/opencu-2.2.5-dsh.0.2.1-rc.5.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.5-dsh.0.2.1-rc.5/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [宿主适配源码 / Host adapter sources](https://github.com/gulagala001/opencu/releases/download/v2.2.5-dsh.0.2.1-rc.5/host-adapters.zip)
+
+---
+
 # OpenCU 2.2.4 · DSH 0.2.1-rc.5
 
 [中文](#zh-224) | [English](#en-224)
@@ -5,8 +49,6 @@
 <a id="zh-224"></a>
 
 ## 中文
-
-本版适配与验收正在进行，尚未发布。
 
 ### 问题修复
 
@@ -21,8 +63,6 @@
 <a id="en-224"></a>
 
 ## English
-
-This adaptation is under validation and has not been published.
 
 ### Bug Fixes
 

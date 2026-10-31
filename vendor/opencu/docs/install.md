@@ -37,7 +37,7 @@ https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md
 **DSH `0.2.1-rc.5`，复制这一整行：**
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.4-dsh.0.2.1-rc.5/opencu-2.2.4-dsh.0.2.1-rc.5.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.2.5-dsh.0.2.1-rc.5/opencu-2.2.5-dsh.0.2.1-rc.5.tgz
 ```
 
 **DSH `0.2.1-rc.1`，复制这一整行：**
@@ -64,13 +64,13 @@ https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/op
 DSH `0.2.1-rc.5` 桌面：
 
 ```sh
-dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.4-dsh.0.2.1-rc.5/opencu-2.2.4-dsh.0.2.1-rc.5.tgz'
+dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.5-dsh.0.2.1-rc.5/opencu-2.2.5-dsh.0.2.1-rc.5.tgz'
 ```
 
 DSH `0.2.1-rc.5` Web：
 
 ```sh
-dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.4-dsh.0.2.1-rc.5/opencu-2.2.4-dsh.0.2.1-rc.5.tgz'
+dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.5-dsh.0.2.1-rc.5/opencu-2.2.5-dsh.0.2.1-rc.5.tgz'
 ```
 
 DSH `0.2.1-rc.1` 桌面：

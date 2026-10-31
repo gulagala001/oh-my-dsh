@@ -1,5 +1,9 @@
 # 下载与版本 / Downloads and versions
 
+## OMD 1.2.3 · DSH 0.2.1-rc.5
+
+[中文更新说明](release-1.2.3.md#zh-123) · [English release notes](release-1.2.3.md#en-123)
+
 ## OMD 1.2.2 · DSH 0.2.1-rc.5
 
 [中文更新说明](release-1.2.2.md#zh-122) · [English release notes](release-1.2.2.md#en-122)
@@ -11,11 +15,11 @@
 
 **安装步骤：[复制给 AI 安装](install.md#ai) · [在“添加插件”中安装](install.md#gui) · [English guide](install_EN.md)**
 
-OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 1.2.2 的 rc.5 正式安装入口，旧宿主沿用原固定版本；选择与你正在运行的 DSH **完整版本**相同的一行。OMD includes OpenCU. The newest build is 1.2.2 for rc.5; older hosts retain their fixed releases. Match the complete DSH version.
+OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 1.2.3 的 rc.5 正式安装入口，旧宿主沿用原固定版本；选择与你正在运行的 DSH **完整版本**相同的一行。OMD includes OpenCU. The newest build is 1.2.3 for rc.5; older hosts retain their fixed releases. Match the complete DSH version.
 
 | DSH 宿主 / Host | OMD 插件 / Plugin | 可粘贴安装的包 / Package |
 | --- | --- | --- |
-| 0.2.1-rc.5 | 0.2.1-rc.5.omd.1.2.2 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.2.2/oh-my-dsh-0.2.1-rc.5.omd.1.2.2.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.2.2) |
+| 0.2.1-rc.5 | 0.2.1-rc.5.omd.1.2.3 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.2.3/oh-my-dsh-0.2.1-rc.5.omd.1.2.3.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.2.3) |
 | 0.2.1-rc.3 | 0.2.1-rc.3.omd.1.2.1 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.2.1/oh-my-dsh-0.2.1-rc.3.omd.1.2.1.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.2.1) |
 | 0.2.1-rc.2 | 0.2.1-rc.2.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.2.omd.0.100.0/oh-my-dsh-0.2.1-rc.2.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0) |
 | 0.2.1-rc.1 | 0.2.1-rc.1.omd.0.100.0 | [下载 .tgz / Download](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.100.0/oh-my-dsh-0.2.1-rc.1.omd.0.100.0.tgz) · [Release](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0) |
@@ -42,11 +46,11 @@ OMD 已内置 OpenCU，不需要再安装一份 OpenCU。下表优先列出 OMD 
 
 ## 当前公开版本 / Current public version
 
-当前 rc.5 正式版本为 **1.2.2**；此前 0.19.0 草稿不作为安装入口。Current rc.5 formal version: **1.2.2**; the earlier 0.19.0 drafts are not installation targets.
+当前 rc.5 正式版本为 **1.2.3**；此前 0.19.0 草稿不作为安装入口。Current rc.5 formal version: **1.2.3**; the earlier 0.19.0 drafts are not installation targets.
 
 | 完整宿主 / Exact host | 公开安装入口 / Public installation |
 | --- | --- |
-| DSH 0.2.1-rc.5 | [OMD 1.2.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.2.2) |
+| DSH 0.2.1-rc.5 | [OMD 1.2.3](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.2.3) |
 | DSH 0.2.1-rc.3 | [OMD 1.2.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.2.1) |
 | DSH 0.2.1-rc.2 | [OMD 0.100.0](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0) |
 | DSH 0.2.1-rc.1 | [OMD 0.100.0](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0) |

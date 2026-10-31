@@ -6,8 +6,6 @@
 
 ## 中文
 
-本版适配与验收正在进行，尚未发布。
-
 ### 问题修复
 
 - 适配新版思考正文的原文／展示文本契约，保留流式预览、连续思考合并与第三方翻译扩展。
@@ -21,8 +19,6 @@
 <a id="en-122"></a>
 
 ## English
-
-This adaptation is under validation and has not been published.
 
 ### Bug Fixes
 

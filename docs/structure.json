@@ -452,6 +452,12 @@
       "role": "release",
       "language": "bilingual",
       "site": true
+    },
+    {
+      "path": "docs/release-1.2.3.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
     }
   ]
 }
