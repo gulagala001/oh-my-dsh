@@ -223,7 +223,7 @@ Host, sessions, tools and UI components Host, source or asset; scope documented 
 
 Original frontend assets used by OpenCU and provenance Host, source or asset; scope documented in provenance。
 
-- Pinned source / version: [SHA256:ee4bc46a83f636703b273d367b62168835fa8820464514e19e61ab91f7051316](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- Pinned source / version: [SHA256:c18c58655f56c04ec393b10bdc4c666654d2fbde6656be2bc4d9618bbbb7c005](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev
