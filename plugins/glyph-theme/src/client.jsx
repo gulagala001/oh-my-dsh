@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useRef, useState, useSyncExternalStore } from '
 import { createPortal } from 'react-dom';
 import { Button, Switch } from '@deepseek-ai/dsh-client-ui-primitives';
 import { glyphOwnership } from './shared/ownership.mjs';
-import { createSurfaceMarkers } from './shared/surfaces.mjs';
+import { observeSurfaces } from './shared/surfaces.mjs';
 import { createAttributeMarkers } from './shared/attribute-markers.mjs';
 import windowChrome from './shared/window-chrome.css';
 import { mountGlyphRenderer } from './theme/renderer.mjs';
@@ -29,11 +29,18 @@ export function apply(ctx) {
     const sync=()=>{root.dataset.appearance=ctx.theme.getTheme().active.colorScheme;};sync();
     const style=document.createElement('style');style.dataset.glyphStyles='standalone';style.textContent=paletteCss+'\n'+nativeCss+'\n'+layout+'\n'+windowChrome;document.head.append(style);
     const disposeTokens=ctx.theme.overrideTokens('dsh-glyph-theme',Object.fromEntries(Object.entries(aliases).map(([alias,key])=>[`--dsw-alias-${alias}`,{light:`var(--omd-${key})`,dark:`var(--omd-${key})`}])));
-    const offTheme=ctx.on('theme/change',sync),surfaces=createSurfaceMarkers(),nav=createAttributeMarkers('data-omd-nav-part');
-    let pending;
-    const refresh=()=>{pending=undefined;const {sidebar}=surfaces.refresh();const parts={logoRow:'brand',newSession:'create',panelList:'panels',panelRow:'panel',sectionLabel:'section-label',footArea:'footer'};const next=new Map();for(const el of sidebar?.querySelectorAll('[class]')||[]){const part=[...el.classList].map(c=>parts[c.slice(c.lastIndexOf('_')+1)]).find(Boolean);if(part)next.set(el,part);}nav.update(next);};
-    const observer=new MutationObserver(()=>{if(pending===undefined)pending=requestAnimationFrame(refresh);});observer.observe(document.body,{childList:true,subtree:true});refresh();
-    return()=>{observer.disconnect();cancelAnimationFrame(pending);nav.dispose();surfaces.dispose();offTheme();style.remove();disposeTokens();for(const[name,value]of previous){if(value===null)root.removeAttribute(name);else root.setAttribute(name,value);}};
+    const offTheme=ctx.on('theme/change',sync),nav=createAttributeMarkers('data-omd-nav-part');
+    let pending, sidebar;
+    const refresh=()=>{pending=undefined;const parts={logoRow:'brand',newSession:'create',panelList:'panels',panelRow:'panel',sectionLabel:'section-label',footArea:'footer'};const next=new Map();for(const el of sidebar?.querySelectorAll('[class]')||[]){const part=[...el.classList].map(c=>parts[c.slice(c.lastIndexOf('_')+1)]).find(Boolean);if(part)next.set(el,part);}nav.update(next);};
+    const schedule = () => { if (pending === undefined) pending = requestAnimationFrame(refresh); };
+    const observer = new MutationObserver(schedule);
+    const unsubscribe = observeSurfaces(regions => {
+      if (sidebar === regions.sidebar) return;
+      observer.disconnect(); sidebar = regions.sidebar;
+      if (sidebar) observer.observe(sidebar, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+      schedule();
+    });
+    return()=>{observer.disconnect();unsubscribe();cancelAnimationFrame(pending);nav.dispose();offTheme();style.remove();disposeTokens();for(const[name,value]of previous){if(value===null)root.removeAttribute(name);else root.setAttribute(name,value);}};
   }
   function reconcile() {const active=preferences.enabled&&!ownership.hasOmd();if(active&&!release)release=mount();else if(!active&&release){release();release=undefined;}emit();}
   const save=next=>{localStorage.setItem(KEY,JSON.stringify(next));preferences=next;reconcile();};

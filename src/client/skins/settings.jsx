@@ -21,7 +21,7 @@ import { applySkinBrands } from './brand.jsx';
 import glyphLayout from '../../../plugins/glyph-theme/src/theme/layout.css';
 import { applyGlyphIntegration } from './glyph-motion/integration.jsx';
 import { applySidebarPresentation } from '../sidebar.jsx';
-import { createSurfaceMarkers } from './surfaces.mjs';
+import { observeSurfaces } from './surfaces.mjs';
 import { AppearanceDrafts, useAppearanceDrafts } from './advanced.jsx';
 import { glyphOwnership } from '../../../plugins/glyph-theme/src/shared/ownership.mjs';
 import { appearanceCoordinator } from './coordinator.mjs';
@@ -72,21 +72,10 @@ export function applySkins(ctx) {
   // Claim before applying OMD tokens, so a standalone installation releases its
   // style/attributes synchronously and cannot clear the new owner's palette.
   ctx.effect(() => glyphOwnership().claimOmd());
-  const surfaces = createSurfaceMarkers();
-  ctx.effect(() => {
-    let frame;
-    const refresh = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => surfaces.refresh());
-    };
-    const observer = new MutationObserver(refresh);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-omd-surface'] });
-    surfaces.refresh();
-    return () => { observer.disconnect(); cancelAnimationFrame(frame); surfaces.dispose(); };
-  });
+  ctx.effect(() => observeSurfaces());
   applySidebarPresentation(ctx);
   let runtime;
-  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-desktop': claudeDesktopLayout + '\n' + claudeDesktopScroll, 'claude-cli-terminal': claudeTerminalLayout, 'glyph-motion': glyphLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, surfaces, layoutBaseCss); return () => runtime.dispose(); });
+  ctx.effect(() => { runtime = createSkinRuntime(ctx, adapterCss, { 'ios-liquid': iosLiquidLayout, 'codex-desktop': codexDesktopLayout, 'claude-desktop': claudeDesktopLayout + '\n' + claudeDesktopScroll, 'claude-cli-terminal': claudeTerminalLayout, 'glyph-motion': glyphLayout, [MATERIAL_LAYOUT]: materialLayout }, appearanceCss, observeSurfaces, layoutBaseCss); return () => runtime.dispose(); });
   applyMaterialIntegration(ctx, () => runtime);
   applyCodexIntegration(ctx, () => runtime);
   applyClaudeIntegration(ctx, () => runtime);

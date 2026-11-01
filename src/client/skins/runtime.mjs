@@ -12,7 +12,7 @@ import windowChromeCss from '../../../plugins/glyph-theme/src/shared/window-chro
 export const STORAGE_KEY = 'omd.skins.v1';
 // OMD and the standalone theme manager ship this file unchanged; product
 // differences are options. assetUrl maps a bundled skin file to its route.
-export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', surfaceMarkers, layoutBaseCss = '', options = {}) {
+export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', observeSurfaces, layoutBaseCss = '', options = {}) {
   const { storageKey = STORAGE_KEY, defaultSkin = 'glyph-motion', owner = { id: 'omd', priority: 0 }, tokenOwner = 'oh-my-dsh/skin',
     brand = OMD_BRAND, assetUrl = file => `oh-my-dsh/api/skins/${file}` } = options;
   const defaults = () => advancedDefaults(brand);
@@ -82,7 +82,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     }
     emit();
   };
-  const background = createBackgroundRuntime(appearanceCss, value => { state = { ...state, background: value }; emit(); }, { recovery, enabled: false, surfaceMarkers });
+  const background = createBackgroundRuntime(appearanceCss, value => { state = { ...state, background: value }; emit(); }, { recovery, enabled: false, observeSurfaces });
   const clearTheme = () => {
     const root = document.documentElement;
     style?.remove(); style = undefined;

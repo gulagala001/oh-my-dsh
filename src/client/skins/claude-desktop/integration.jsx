@@ -18,12 +18,13 @@ export function bindClaudeResize(frame, store) {
   const setWidth = (side, value) => side === 'sidebar' ? store.actions.setSidebar(value) : store.actions.setRightbar(value);
   const snap = side => setWidth(side, side === 'sidebar' ? 280 : (frame.clientWidth - width('sidebar')) / 2);
   const sync = () => {
-    const elements = [...frame.querySelectorAll(handles)];
-    for (const [name, marker] of attributes) marker.update(new Map(elements.map(el => [el, {
+    const max = String(frame.clientWidth);
+    const values = [...frame.querySelectorAll(handles)].map(el => [el, {
       role: 'separator', tabindex: '0', 'aria-label': el.dataset.side === 'sidebar' ? '调整侧栏宽度' : '调整预览宽度',
       'aria-orientation': 'vertical', 'aria-valuenow': String(Math.round(width(el.dataset.side))),
-      'aria-valuemin': '0', 'aria-valuemax': String(frame.clientWidth),
-    }[name]])));
+      'aria-valuemin': '0', 'aria-valuemax': max,
+    }]);
+    for (const [name, marker] of attributes) marker.update(new Map(values.map(([el, attrs]) => [el, attrs[name]])));
   };
   const cancel = () => {
     if (!drag) return;
@@ -98,12 +99,14 @@ function ClaudeShell({ ctx }) {
     const narrow = matchMedia('(max-width: 600px)'), column = frame.querySelector('.pI_x6G_sidebarCol');
     const roles = new Map(['role','aria-modal','aria-label'].map(name => [name, createAttributeMarkers(name)]));
     let modal = false, previousFocus, releaseInert = () => {}, raf, disposed = false;
+    let portalTargets = [];
     const otherOverlay = () => [...document.querySelectorAll('[role="dialog"],[role="menu"]')].some(el => el !== column && visible(el));
     const sync = () => {
       raf = undefined;
       const next = [...frame.querySelectorAll('[data-chat-running] [class$="_runningIcon"]')];
       setIndicators(previous => previous.length === next.length && previous.every((el,i) => el === next[i]) ? previous : next);
       const media = [...document.querySelectorAll('._backdrop_19zw2_2[role="dialog"] > ._stage_19zw2_9 > img._image_19zw2_26')];
+      portalTargets = [...next, ...media];
       setImages(previous => previous.length === media.length && previous.every((el,i) => el === media[i]) ? previous : media);
       const open = Boolean(column && narrow.matches && frame.dataset.sidebarCollapsed !== 'true' && !frame.hasAttribute('data-rightbar-fullscreen'));
       if (open === modal) return;
@@ -126,8 +129,18 @@ function ClaudeShell({ ctx }) {
         else if (!event.shiftKey && (document.activeElement === last || !column.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
       }
     };
-    const observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-sidebar-collapsed','data-rightbar-fullscreen'] });
+    const parts = '[class$="_runningIcon"], ._image_19zw2_26, ._stage_19zw2_9, ._backdrop_19zw2_2';
+    const containsPart = node => node.nodeType === 1 && (node.matches(parts) || (node.firstElementChild && node.querySelector(parts)));
+    const observer = new MutationObserver(records => {
+      if (records.some(record => {
+        if (record.type === 'childList') return [...record.addedNodes, ...record.removedNodes].some(containsPart);
+        if (record.attributeName === 'data-chat-running') return true;
+        if (record.attributeName === 'data-sidebar-collapsed' || record.attributeName === 'data-rightbar-fullscreen') return record.target === frame;
+        return record.target.matches(parts) || portalTargets.some(el => record.target.contains(el));
+      })) schedule();
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true,
+      attributeFilter: ['data-sidebar-collapsed', 'data-rightbar-fullscreen', 'data-chat-running', 'class', 'role'] });
     narrow.addEventListener('change', schedule); document.addEventListener('keydown', key); sync();
     return () => {
       disposed = true; cancelAnimationFrame(raf); observer.disconnect(); narrow.removeEventListener('change', schedule);

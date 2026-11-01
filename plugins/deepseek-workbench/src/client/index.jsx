@@ -207,8 +207,20 @@ function PortalSurfaces({ ctx, openChat, notices, platform }) {
       }
       setTargets(old => old.account === next.account && old.sidebar === next.sidebar ? old : next);
     };
-    const observer = new MutationObserver(() => { if (!queued) { queued = true; queueMicrotask(reconcile); } });
-    observer.observe(document.body, { childList: true, subtree: true }); reconcile();
+    const anchors = '[data-shortcut-modal="settings"], [data-slot="settings.section"], section[aria-label], [data-slot="sidebar"], [data-omd-surface="sidebar"], button[data-omd-nav-part="create"], button[class*="_newSession"]';
+    const containsAnchor = node => node.nodeType === 1 && (node.matches(anchors) || (node.firstElementChild && node.querySelector(anchors)));
+    const observer = new MutationObserver(records => {
+      if (queued) return;
+      const mounts = [...own.values()];
+      if (!mounts.some(({ container, root }) => !container.isConnected || !root.isConnected)
+        && !records.some(record => record.type === 'attributes'
+          ? record.target.matches(anchors) || mounts.some(({ root }) => record.target.contains(root))
+          : [...record.addedNodes, ...record.removedNodes].some(containsAnchor))) return;
+      queued = true; queueMicrotask(reconcile);
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true,
+      attributeFilter: ['data-shortcut-modal', 'data-slot', 'data-omd-surface', 'data-omd-nav-part', 'class', 'aria-label'] });
+    reconcile();
     return () => { stopped = true; observer.disconnect(); for (const entry of own.values()) entry.container.remove(); };
   }, []);
   return <>{notice && createPortal(<div className="dswb-toast" role={notice.error ? "alert" : "status"}><div><strong>{notice.title}</strong><button type="button" aria-label="关闭迁移通知" onClick={() => setNotice(null)}>×</button></div><WarningList warnings={notice.warnings}/></div>, document.body)}{targets.account && createPortal(<AccountPanel ctx={ctx} platform={platform}/>, targets.account)}{targets.sidebar && createPortal(<SidebarEntry openChat={openChat}/>, targets.sidebar)}</>;

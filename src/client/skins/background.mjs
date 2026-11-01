@@ -1,4 +1,4 @@
-import { createSurfaceMarkers } from './surfaces.mjs';
+import { observeSurfaces as observeHostSurfaces } from './surfaces.mjs';
 export const BACKGROUND_DB = 'omd.appearance.background.v1';
 export const MAX_BACKGROUND_BYTES = 15 * 1024 * 1024;
 export const backgroundDefaults = Object.freeze({ blur: 0, shade: 0, opacity: 85, fit: 'cover', scope: 'all' });
@@ -25,7 +25,7 @@ async function prepareImage(file) {
 
 // Image and controls commit together in one IndexedDB record. No file upload,
 // data URLs in localStorage, or transient blob URL persisted across restarts.
-export function createBackgroundRuntime(css, changed, { recovery = false, enabled = true, surfaceMarkers } = {}) {
+export function createBackgroundRuntime(css, changed, { recovery = false, enabled = true, observeSurfaces = observeHostSurfaces } = {}) {
   let disposed = false, db, opening, objectUrl = '', imageId, sequence = 0, uploadSequence = 0, reduced = false;
   let state = { ...backgroundDefaults, name: '', url: '', loading: false, error: '' };
   const style = document.createElement('style'); style.dataset.omdBackgroundStyle = ''; style.textContent = css;
@@ -36,10 +36,9 @@ export function createBackgroundRuntime(css, changed, { recovery = false, enable
   const emit = () => { if (!disposed) changed({ ...state }); };
   // Only move our own layer. The host owns its columns and may remount them;
   // absolute positioning follows their size without viewport polling.
-  const surfaces = surfaceMarkers ?? createSurfaceMarkers();
+  let regions = {}, stopObserving;
   const mount = () => {
     if (disposed || !enabled) return;
-    const regions = surfaces.refresh();
     const target = state.scope === 'all' ? document.body : regions[state.scope];
     const parent = target || document.body;
     if (layer.parentElement !== parent) parent.prepend(layer);
@@ -47,7 +46,7 @@ export function createBackgroundRuntime(css, changed, { recovery = false, enable
     if (layer.hidden) document.documentElement.removeAttribute('data-omd-background');
     else document.documentElement.setAttribute('data-omd-background', state.scope);
   };
-  const observer = new MutationObserver(mount);
+  const follow = () => observeSurfaces(next => { regions = next; mount(); });
   const render = () => {
     if (disposed || !enabled) return;
     mount();
@@ -61,16 +60,16 @@ export function createBackgroundRuntime(css, changed, { recovery = false, enable
     enabled = value;
     if (enabled) {
       document.head.append(style); document.body.prepend(layer);
-      observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-omd-surface'] }); render();
+      stopObserving = follow(); render();
     } else {
-      observer.disconnect(); layer.remove(); style.remove(); if (!surfaceMarkers) surfaces.dispose();
+      stopObserving?.(); layer.remove(); style.remove();
       document.documentElement.removeAttribute('data-omd-background');
       document.documentElement.style.removeProperty('--omd-panel-opacity');
     }
   };
   if (enabled) {
     document.head.append(style); document.body.prepend(layer);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-omd-surface'] });
+    stopObserving = follow();
   }
   const open = () => {
     if (db) return Promise.resolve(db);
@@ -147,9 +146,9 @@ export function createBackgroundRuntime(css, changed, { recovery = false, enable
     reduceEffects(value) { reduced = value; render(); },
     dispose() {
       setEnabled(false);
-      disposed = true; ++sequence; ++uploadSequence; observer.disconnect(); channel?.close(); db?.close();
+      disposed = true; ++sequence; ++uploadSequence; channel?.close(); db?.close();
       image.onerror = null; if (objectUrl) URL.revokeObjectURL(objectUrl);
-      layer.remove(); style.remove(); if (!surfaceMarkers) surfaces.dispose();
+      layer.remove(); style.remove();
     },
   };
 }
