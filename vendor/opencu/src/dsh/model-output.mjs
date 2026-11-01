@@ -22,7 +22,7 @@ export function modelResult(value, { includeHistory = false, format, details = f
   const { lastObservation, annotations, selectedTarget, targets, ...control } = state;
   return { ...result, state: { ...control,
     ...(targets ? { targets: targets.map(target => Object.fromEntries(
-      ['id', 'backend', 'provider', 'browserId', 'title', 'url', 'verified', 'cold'].filter(key => target[key] !== undefined).map(key => [key, target[key]]))) } : {}),
+      ['id', 'backend', 'provider', 'browserId', 'title', 'url', 'verified', 'cold', 'needsObservation', 'releaseAcknowledged'].filter(key => target[key] !== undefined).map(key => [key, target[key]]))) } : {}),
     ...(lastObservation ? { lastObservation: { targetId: lastObservation.targetId,
       observationId: lastObservation.observation?.id ?? lastObservation.observation?.observationId ?? lastObservation.observationId,
       notice: 'Stored observation; observe the target for current state. Use includeHistory:true to read saved content.' } } : {}),

@@ -375,7 +375,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       delete session.releaseError;
       session.targetReleaseErrors = new Map(result.isolatedTabs.map(item => [String(item.tabId),
         new ExtensionError('RELEASE_FAILED', 'This tab still has unconfirmed input release.', item)]));
-      return result;
+      return {...result,connection:{instanceId:session.instanceId,browserInstanceId:session.browserInstanceId,epoch:session.epoch}};
     },
     async openSettings(instanceId, section) {
       const session = [...sessions.values()].find(session => session.instanceId === instanceId);
@@ -510,7 +510,8 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       }
       const failures = [];
       for (const session of sessions.values()) {
-        try { await request(session, 'release', {}); } catch (error) { failures.push(error.toJSON?.() ?? { message: error.message }); }
+        try { await request(session, 'release', {}); } catch (error) { failures.push({...error.toJSON?.() ?? {message:error.message},
+          browserId:'extension:'+session.instanceId,connection:{instanceId:session.instanceId,browserInstanceId:session.browserInstanceId,epoch:session.epoch}}); }
       }
       return { released: failures.length === 0, failures };
     },

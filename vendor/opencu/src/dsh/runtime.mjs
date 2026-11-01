@@ -417,12 +417,13 @@ export function createPluginRuntime(options = {}) {
         const sidebar = await options.dshBrowser?.listTargets() ?? [];
         const failed = new Set();
         const collect = item => {
-          if (item.code === 'STALE_TARGET') failed.add(item.targetId);
-          for (const failure of item.failures ?? []) collect(failure);
-          if (item.result) collect(item.result);
+          if (!item || typeof item !== 'object') return;
+          if (Array.isArray(item)) { for (const value of item) collect(value); return; }
+          if (typeof item.targetId === 'string') failed.add(item.targetId);
+          for (const key of ['failures','errors','result','error','details']) collect(item[key]);
         };
         for (const failure of state.releaseErrors ?? []) collect(failure);
-        const targets = state.targets.filter(target => failed.has(target.id) && (target.provider === 'extension'
+        const targets = state.targets.filter(target => !target.releaseAcknowledged && failed.has(target.id) && (target.provider === 'extension'
           ? !connected.some(item => item.instanceId === target.identity.instanceId && item.browserInstanceId === target.identity.browserInstanceId)
           : target.provider === 'dsh' && !sidebar.some(item => item.id === target.id && sameIdentity(item.identity, target.identity))));
         if (!state.releasePending || !targets.length) throw error('NO_ORPHANED_CONNECTIONS', 'No offline browser connection needs manual recovery. Reconnect the original browser and retry release.');

@@ -256,7 +256,17 @@ async function inputMarker(tabId,method,input={},route,backendNodeId){
   route??=await attached.get(tabId)?.frameRouter?.focused();
   return frameContent(tabId,route,method,input,backendNodeId);
 }
-const finishMarker=(tabId,marker,dispatched=false)=>frameContent(tabId,marker.frameRoute,'finishInput',{markerId:marker.markerId,documentId:marker.documentId,dispatched});
+async function finishMarker(tabId,marker,dispatched=false) {
+  try { return await frameContent(tabId,marker.frameRoute,'finishInput',{markerId:marker.markerId,documentId:marker.documentId,dispatched}); }
+  catch (error) {
+    // A marker belongs to its document. Once that document is gone there is
+    // nothing left to clean; this is not a failure of acknowledged input.
+    if (error.code !== 'FRAME_DETACHED') throw error;
+    const state = attached.get(tabId);
+    if (state) state.retiredMarkers = (state.retiredMarkers ?? 0) + 1;
+    return {retired:true};
+  }
+}
 async function frameActivity(tabId,documentId,read=directRead){
   const state=attached.get(tabId);
   if(!state?.frameRoutes)return;
@@ -500,12 +510,13 @@ async function actionPoint(identity, action, current, from = false, elementOptio
   return { x: screenshot.bounds.x + x * screenshot.bounds.width / width, y: screenshot.bounds.y + y * screenshot.bounds.height / height };
 }
 async function act(identity, action, epoch = controlToken(identity.tabId)) {
-  let inputState, inputStart = 0;
+  let inputState, inputStart = 0, markerStart = 0;
   try {
   checkControl(epoch);
   const current = await readOperation(epoch, async read => {
     await attach(identity, read);
     inputState = attached.get(identity.tabId); inputStart = inputState.inputSequence ?? 0;
+    markerStart = inputState.retiredMarkers ?? 0;
     return verify(identity, true, read);
   }), tabId = identity.tabId;
   checkControl(epoch);
@@ -516,7 +527,26 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   const press = action.type === 'press_key' ? pressParameters(action,keyboard) : undefined;
   const pressKeys = press?.keys.map(keySpec);
   if (pressKeys) checkPressHeld(inputState,pressKeys.map(key => key.key),keyboard);
-  const done = result => { checkControl(epoch); return { ...result, inputMode: 'background', delivery: 'target-cdp', effectVerified: false, identity }; };
+  const done = async result => {
+    try {
+    checkControl(epoch);
+    if (!['navigate','back','forward','reload','new_tab','close_tab'].includes(action.type) && (inputState.inputSequence ?? 0) !== inputStart &&
+      ((inputState.retiredMarkers ?? 0) !== markerStart || documents.has(tabId) && documents.get(tabId) !== identity.documentId)) {
+      let frame;
+      try { frame = await readOperation(epoch, read => read(() => chrome.webNavigation.getFrame({tabId,frameId:0}))); }
+      catch { checkControl(epoch); /* The input receipt remains valid; no navigation is claimed without a document receipt. */ }
+      if (frame?.documentId && frame.documentId !== identity.documentId) result = {...result,
+        inputDispatched:true, observationRequired:true, reselectRequired:true,
+        navigationObserved:{tabId,previousDocumentId:identity.documentId,documentId:frame.documentId,url:frame.url},
+        notice:'Input was dispatched and the same tab now has a new top-level document. List tabs and bind that document before observing or acting. Do not repeat the trigger.'};
+    }
+    checkControl(epoch);
+    return {...result, inputMode:'background', delivery:'target-cdp', effectVerified:false, identity};
+    } catch(error) {
+      error.details={...error.details,inputDispatched:error.details?.inputDispatched===true || (inputState.inputSequence??0)!==inputStart};
+      throw error;
+    }
+  };
   if (!['background', 'foreground'].includes(action.inputMode ?? 'background')) fail('INVALID_ACTION', 'inputMode must be background or foreground');
   if (['click', 'double_click', 'right_click', 'move', 'mouse_down', 'mouse_up', 'scroll', 'drag', 'type_text', 'press_key', 'key_down', 'key_up', 'fill', 'set_value'].includes(action.type)) {
     await cdp(tabId, 'Emulation.setFocusEmulationEnabled', { enabled: true });
@@ -624,8 +654,9 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       const checked = method === 'setChecked' ? args.checked : method === 'check';
       if (!checking || result.checked !== checked) {
         const type = checking ? 'click' : ({dblclick:'double_click',press:'press_key',type:'type_text',pressSequentially:'type_text'})[method] ?? method;
-        await act(identity, {type,elementId:result.elementId,button:args.button,key:click?.keys.length ? click.keys.join('+') : args.key,value:args.value,text:args.value,
+        const receipt = await act(identity, {type,elementId:result.elementId,button:args.button,key:click?.keys.length ? click.keys.join('+') : args.key,value:args.value,text:args.value,
           sequential:method === 'pressSequentially',deadline:action.deadline,keyboardEditable:result.keyboardEditable,inputMode:action.inputMode}, epoch);
+        if (receipt.navigationObserved) return {...receipt,value:null};
         if (checking && (await element('checked', {elementId:result.elementId})).checked !== checked) fail('LOCATOR_ACTION_FAILED', 'Click did not produce the requested checked state.');
       }
       return done({value:null});

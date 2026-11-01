@@ -109,6 +109,7 @@ export function controlFailure(result) {
     mode: state.mode, activeTargetId: state.activeTargetId, releasePending: state.releasePending, explicitlyStopped: state.explicitlyStopped === true,
     ...(state.explicitlyStopped && state.stopInfo ? {stopInfo: state.stopInfo} : {}),
     ...(state.recoveryIsolated ? {recoveryIsolated:true} : {}),
+    ...(state.inputReadiness ? {inputReadiness:state.inputReadiness} : {}),
     ...(state.releaseErrors?.length ? {releaseErrors: state.releaseErrors} : {}),
     recovery: state.explicitlyStopped || state.mode === 'stopped'
       ? 'Explicitly stopped. When the user requests continuation, use cua.resume(targetId) for a verified live target, or cua.resume({browserId}) for a connected browser even when it has no tabs. Then observe before input; never replay uncertain actions.'
