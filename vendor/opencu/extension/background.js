@@ -38,6 +38,16 @@ const fail = (code, message, details = {}) => { const error = new Error(message)
 const errorJSON = error => ({ code: error.code || 'BROWSER_FAILURE', message: error.message, details: error.details || {} });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const directRead = work => work();
+// Chrome reports a removed tab as an untyped API rejection. Preserve that
+// terminal state across verify, observation, navigation and monitor capture.
+async function getTab(tabId) {
+  try { return await chrome.tabs.get(tabId); }
+  catch (error) {
+    if (error?.message === `No tab with id: ${tabId}.` || error?.message === `No tab with id: ${tabId}`)
+      Object.assign(error, {code:'TARGET_CLOSED', details:{...error.details, tabId}});
+    throw error;
+  }
+}
 // Abandon only read replies. Attach/input dispatch and release still retain the
 // command lane until Chrome acknowledges them, even when cancellation arrives.
 async function readOperation(token, work) {
@@ -81,7 +91,7 @@ async function api(path, value, c = connection) {
   return result;
 }
 async function content(tabId, method, input = {}, expectedDocumentId, read = directRead) {
-  const tab = await read(() => chrome.tabs.get(tabId));
+  const tab = await read(() => getTab(tabId));
   if (!allowed(tab.url)) fail('UNSUPPORTED_PAGE', 'Chrome/Edge internal pages, extension pages, browser stores and non-HTTP(S) URLs cannot be controlled.');
   const inject = async (documentId, script, stage) => {
     const target = documentId ? {tabId,documentIds:[documentId]} : {tabId,frameIds:[0]};
@@ -147,7 +157,7 @@ async function tabInfo(tab, read = directRead) {
 }
 async function verify(identity, selected = false, read = directRead) {
   if (!connection || identity.epoch !== connection.epoch || identity.instanceId !== connection.instanceId || identity.browserInstanceId !== connection.browserInstanceId) fail('STALE_CONNECTION', 'Connection identity changed; list tabs and select again.');
-  const tab = await read(() => chrome.tabs.get(identity.tabId));
+  const tab = await read(() => getTab(identity.tabId));
   if (!allowed(tab.url)) fail('UNSUPPORTED_PAGE', 'This page cannot be controlled.');
   const current = await content(identity.tabId, 'identity', {}, undefined, read);
   if (current.browserDocumentId !== identity.documentId && current.documentId !== identity.documentId) fail('STALE_DOCUMENT', 'Document changed; list tabs and select again.');
@@ -376,7 +386,7 @@ async function releaseTabInputs(tabId,read) {
     // document for key/button-up recovery, never another debugger's session.
     if (state.identity?.tabId !== tabId || typeof state.identity.documentId !== 'string')
       fail('RELEASE_FAILED', 'The detached input journal has no original document identity; close the original tab to retire it.', {tabId,heldKeys:[...state.keys.keys()],heldButtons:[...state.buttons]});
-    const tab = await read(() => chrome.tabs.get(tabId)), current = allowed(tab.url) && await content(tabId, 'identity', {}, undefined, read);
+    const tab = await read(() => getTab(tabId)), current = allowed(tab.url) && await content(tabId, 'identity', {}, undefined, read);
     if (!current || current.browserDocumentId !== state.identity.documentId && current.documentId !== state.identity.documentId)
       fail('RELEASE_FAILED', 'The detached tab document changed; its input release remains unconfirmed.', {tabId,heldKeys:[...state.keys.keys()],heldButtons:[...state.buttons]});
   }
@@ -470,7 +480,7 @@ async function preview(identity, token = controlToken(identity.tabId)) {
     await verify(identity, true, read);
     const image = await read(() => cdp(identity.tabId, 'Page.captureScreenshot', { format: 'png', captureBeyondViewport: false, fromSurface: true }));
     await verify(identity, true, read);
-    const tab = await read(() => chrome.tabs.get(identity.tabId)), window = await read(() => chrome.windows.get(tab.windowId));
+    const tab = await read(() => getTab(identity.tabId)), window = await read(() => chrome.windows.get(tab.windowId));
     return { dataUrl: `data:image/png;base64,${image.data}`, ...pngSize(image.data), active: tab.active && window.focused };
   });
 }
@@ -595,7 +605,7 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
     case 'close_tab': await step(() => releaseTab(tabId)); await step(() => chrome.tabs.remove(tabId)); return done({ closed: true, tabId });
     case 'activate':
       await step(() => chrome.tabs.update(tabId, { active: true }));
-      const tab = await step(() => chrome.tabs.get(tabId));
+      const tab = await step(() => getTab(tabId));
       await step(() => chrome.windows.update(tab.windowId, { focused: true }));
       return done({ focused: true });
     case 'domSnapshot': {
@@ -777,7 +787,7 @@ async function navigateTab(tabId, token, action) {
     return await readOperation(token, async read => {
       const deadline = Date.now() + 10000;
       do {
-        const tab = await read(() => chrome.tabs.get(tabId));
+        const tab = await read(() => getTab(tabId));
         if (committed && tab.status === 'complete') {
           const page = await tabInfo(tab, read); read.check();
           if (!page.supported) throw Object.assign(new Error(page.error?.message || 'The navigated page is unavailable.'), {
@@ -795,7 +805,7 @@ async function waitForTab(tabId, read) {
   const deadline = Date.now() + 10000;
   let tab;
   do {
-    tab = await read(() => chrome.tabs.get(tabId));
+    tab = await read(() => getTab(tabId));
     if (tab.status === 'complete' && !tab.pendingUrl) return tab;
     await delay(100);
   } while (Date.now() < deadline);
@@ -834,7 +844,7 @@ async function command(message, token) {
     case 'focus': {
       await readOperation(token, read => verify(identity, false, read)); checkControl(token);
       await chrome.tabs.update(identity.tabId, { active: true }); checkControl(token);
-      const tab = await readOperation(token, read => read(() => chrome.tabs.get(identity.tabId))); checkControl(token);
+      const tab = await readOperation(token, read => read(() => getTab(identity.tabId))); checkControl(token);
       await chrome.windows.update(tab.windowId, { focused: true }); checkControl(token);
       return { focused: true };
     }
