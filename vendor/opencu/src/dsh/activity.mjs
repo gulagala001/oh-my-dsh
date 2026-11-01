@@ -50,6 +50,10 @@ export function createActivityFeed(currentTurn) {
         session.targets.delete(target.id); session.targets.set(target.id, value);
       }
       if (result?.result?.closedTargetId) session.targets.delete(result.result.closedTargetId);
+      const navigation = result?.result?.navigationObserved, source = session.targets.get(targetId);
+      if (result?.result?.reselectRequired && source?.provider === 'extension' && navigation &&
+        source.identity?.tabId === navigation.tabId && source.identity.documentId === navigation.previousDocumentId &&
+        navigation.documentId !== navigation.previousDocumentId) session.targets.delete(targetId);
       if (targetId && result?.observation && session.targets.has(targetId)) {
         session.targets.set(targetId, { ...session.targets.get(targetId),
           observation: result.observation, image: result.image ?? null });

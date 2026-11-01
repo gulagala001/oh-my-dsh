@@ -53,7 +53,7 @@ export async function createController({dataDir, browser, native} = {}) {
       scope: !allowed ? 'blocked' : recoveryIsolated ? 'verified-targets-only' : 'verified-targets',
       activeTarget: active ? {id:active.id, status:!allowed ? 'blocked' : active.cold || !active.verified ? 'recovery-required'
         : active.needsObservation ? 'observation-required' : 'ready-for-live-verification', releaseAcknowledged:active.releaseAcknowledged === true} : null,
-      release:releasePending ? recoveryIsolated ? 'unconfirmed-isolated' : 'unconfirmed-blocking' : 'confirmed',
+      release:releasePending ? recoveryIsolated ? 'unconfirmed-isolated' : 'unconfirmed-blocking' : 'no-pending-recovery',
       ...(releasePending ? {recovery:'These records remain release obligations, not harmless history. Reconnect each original target and retry its release. If it is permanently closed, use Settings → Computer and browsers → Browser connections → Review recovery. Confirmation retires only reviewed offline targets; unscoped legacy records cannot be cleared by recovering another connection.'} : {}),
     };
     return json({version: PROTOCOL_VERSION, mode, activeTargetId, releasePending, releaseErrors, recoveryIsolated, explicitlyStopped, stopInfo,

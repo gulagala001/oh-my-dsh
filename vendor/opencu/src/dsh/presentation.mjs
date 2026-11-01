@@ -82,6 +82,9 @@ export function createPresentationHost({ runtime, activity, browserHost, prefere
     if (Number.isFinite(next)) timer = setTimeout(() => void refresh(), Math.max(0, next - Date.now()));
   }
   async function presentFrames(ownerId, owner, frames) {
+    // Keep capture errors and retry state in taskState. A floating monitor
+    // has no content to present until this occurrence has usable pixels again.
+    frames = frames.filter(frame => !frame.cacheInvalidated && frame.imageDataURL);
     // Image bytes are represented by their cached revision, not serialized again for comparison.
     const signature = JSON.stringify(frames.map(({ imageDataURL, ...frame }) => frame));
     if (signature === owner.presentationSignature && (!frames.length || owner.visible)) return;
