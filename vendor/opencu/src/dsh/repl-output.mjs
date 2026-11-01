@@ -40,6 +40,7 @@ export function toolReplError(error) {
   const details = error?.details ?? {}, control = details.control;
   const diagnostic = Object.fromEntries(['targetId', 'inputDispatched', 'observationRequired', 'recoveryRequired', 'created', 'launched', 'stage', 'notice']
     .filter(key => details[key] !== undefined).map(key => [key, details[key]]));
+  if (error?.code === 'STALE_SCREENSHOT' && details.screenshot) Object.assign(diagnostic, {action: details.action, screenshot: details.screenshot});
   if (details.target?.id) diagnostic.targetId = details.target.id;
   if (details.pendingRequests) diagnostic.pendingRequests = details.pendingRequests.slice(0, 8);
   if (control) {

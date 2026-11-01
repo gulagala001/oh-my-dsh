@@ -89,7 +89,8 @@ export function createComputerRepl(request, report = () => {}) {
     const observe = async (format, options = {}) => {
       const raw = await call('observe', { ...targetRequest(), format });
       const { id, observationId, coordinateSpace, screenshot } = raw.observation;
-      last = { id, observationId, coordinateSpace, screenshot };
+      // DSH coordinates refer to the last image even when a newer AX tree supplies element IDs.
+      last = { id, observationId, coordinateSpace, screenshot: screenshot ?? (target.provider === 'dsh' ? last?.screenshot : undefined) };
       const result = modelResult(observations.project(raw, { ...options, targetId: target.id, format }), { ...options, format });
       if (options.emit !== false) {
         if (raw.observation.partial && raw.observation.errors?.length) emit({targetId: target.id, partialObservation: true, errors: raw.observation.errors});
@@ -104,9 +105,10 @@ export function createComputerRepl(request, report = () => {}) {
     };
     const act = async (action, args = {}) => {
       const shot = last?.screenshot, image = shot?.image;
+      const dshPoint = target.provider === 'dsh' && args.elementId == null && (args.x != null || args.path != null);
       const payload = { action, observationId: last?.id ?? last?.observationId,
-        screenshotId: shot?.id, mappingId: shot?.mappingId,
-        coordinateSpace: shot ? 'screenshot-pixels' : last?.coordinateSpace,
+        screenshotId: dshPoint ? args.observationId ?? shot?.id : shot?.id, mappingId: shot?.mappingId,
+        coordinateSpace: shot || dshPoint && args.screenshotId != null ? 'screenshot-pixels' : last?.coordinateSpace,
         previewWidth: image?.width ?? shot?.width, previewHeight: image?.height ?? shot?.height, ...args, ...targetRequest() };
       if (target.backend === 'native' && shot && image) {
         for (const key of ['x', 'fromX']) if (payload[key] != null) payload[key] *= shot.width / image.width;

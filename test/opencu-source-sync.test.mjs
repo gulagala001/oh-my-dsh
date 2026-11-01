@@ -53,7 +53,7 @@ test('source sync refuses dirty source, changed baseline, generated files and ne
 test('client sync validates built chunks, replaces obsolete output and retains unrelated source', async t => {
   const f = await fixture(t), oldChunk = 'lib/rea-assets/opencu-chunk-AAAAAAAA.js', newChunk = 'lib/rea-assets/opencu-chunk-BBBBBBBB.js';
   const files = ['lib/client.js', 'lib/browser-surface.js', 'lib/presentation.js', 'lib/page-cursor.js',
-    'lib/page-annotations.js', 'lib/extension.zip', 'lib/rea-assets/manifest.json', 'extension/page-cursor.js', 'src/extension/distribution.json'];
+    'lib/page-annotations.js', 'lib/extension.zip', 'lib/rea-assets/manifest.json', 'extension/page-cursor.js', 'extension/input-monitor.js', 'src/extension/distribution.json'];
   for (const name of [...files, oldChunk, newChunk]) {
     await mkdir(join(f.source, name, '..'), { recursive: true });
     await mkdir(join(f.bundled, name, '..'), { recursive: true });
@@ -65,6 +65,10 @@ test('client sync validates built chunks, replaces obsolete output and retains u
   const nextBytes = 'export const fresh = true;';
   await writeFile(join(f.source, newChunk), nextBytes);
   await writeFile(join(f.source, 'extension/page-cursor.js'), await readFile(join(f.source, 'lib/page-cursor.js')));
+  await writeFile(join(f.source, 'src/extension/distribution.json'), JSON.stringify({files: {
+    'page-cursor.js': hash(await readFile(join(f.source, 'extension/page-cursor.js'))),
+    'input-monitor.js': hash(await readFile(join(f.source, 'extension/input-monitor.js'))),
+  }}));
   await writeFile(join(f.source, 'lib/rea-assets/manifest.json'), JSON.stringify([
     { file: 'opencu-chunk-BBBBBBBB.js', sha256: hash(nextBytes), source: 'opencu-client-build' },
   ]));
@@ -93,6 +97,7 @@ test('client sync validates built chunks, replaces obsolete output and retains u
     assert(bytes.equals(await readFile(join(f.source, name))));
     assert.equal(manifest.files[name], hash(bytes));
   }
+  assert.equal(manifest.clientSourceCommit, manifest.sourceCommit);
   assert.equal(manifest.files[oldChunk], undefined);
   assert.equal(manifest.archiveSha256, undefined);
   assert.equal(await readFile(join(f.bundled, 'src/dsh/downloads.mjs'), 'utf8'), 'export const previous = true;\n');

@@ -15,6 +15,8 @@ export async function inputFrameFailure(error, {documentChanged, validate} = {})
 
 /** Exact trusted-input attribution shared by REA and native frame worlds. */
 export function createPageInputMonitor(enqueue) {
+  // This function is serialized into guest frames, including opaque data: documents.
+  const markerId = () => crypto.getRandomValues(new Uint32Array(4)).join('-');
   const expected = [];
   let pointerControl, pointerEffect;
   const pointerTarget = target => {
@@ -149,14 +151,14 @@ export function createPageInputMonitor(enqueue) {
   for (const type of inputEvents) window.addEventListener(type, activity, true);
   return {
     expectInput(events, pending = false) {
-      const id = crypto.randomUUID(), until = pending ? Infinity : performance.now() + 1500;
+      const id = markerId(), until = pending ? Infinity : performance.now() + 1500;
       expected.push(...events.map(event => ({ ...event, id, until })));
       return id;
     },
     expectTextInput(text) {
       const target = textInputTarget();
       if (!target || typeof text !== 'string') return;
-      const id = crypto.randomUUID();
+      const id = markerId();
       expected.push({type:'beforeinput',inputType:'insertText',data:text,target,textInput:true,id,until:performance.now()+1500});
       return id;
     },

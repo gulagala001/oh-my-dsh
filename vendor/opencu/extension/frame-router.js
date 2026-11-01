@@ -5,6 +5,31 @@ export async function hitTestViewport(send, point) {
   return send('DOM.getNodeForLocation', {x:Math.floor(point.x+viewport.pageX),y:Math.floor(point.y+viewport.pageY),includeUserAgentShadowDOM:false});
 }
 
+/** Compare the image's coordinate system again after any cursor or CDP frame preparation. */
+export function checkScreenshotViewport(mapping, current, {requestedId = mapping?.id, latestId = mapping?.id, reason} = {}) {
+  const fields = mapping ? Object.keys(mapping.viewport) : Object.keys(current ?? {}).filter(key => !['documentId', 'url', 'focused'].includes(key));
+  // Older desktop adapters omit deviceScaleFactor from pageState.
+  const changed = current && mapping ? fields.filter(key => !(key === 'deviceScaleFactor' && current[key] === undefined)
+    && current[key] !== mapping.viewport[key]) : [];
+  if (!reason) {
+    if (!mapping) reason = 'no-screenshot';
+    else if (requestedId !== mapping.id || latestId !== mapping.id) reason = 'screenshot-replaced';
+    else if (current.documentId !== mapping.documentId) reason = 'document-changed';
+    else if (current.url !== mapping.url) reason = 'url-changed';
+    else if (changed.length) reason = 'viewport-changed';
+    else return;
+  }
+  throw Object.assign(new Error(`Screenshot coordinates are stale (${reason}). Capture the current viewport again.`), {
+    code: 'STALE_SCREENSHOT', details: {inputDispatched: false, screenshot: {
+      reason, requestedId: requestedId ?? null, latestId: latestId ?? null,
+      ...(mapping && {capturedViewport: mapping.viewport, capturedDocumentId: mapping.documentId}),
+      ...(mapping && (requestedId !== mapping.id || latestId !== mapping.id) && {mappedId: mapping.id}),
+      ...(current && {currentViewport: Object.fromEntries(fields.map(key => [key, current[key]])), currentDocumentId: current.documentId ?? null}),
+      ...(changed.length && {changed}),
+    }},
+  });
+}
+
 /** Enumerate real owners in one exact document; Page.getFrameTree omits OOPIFs. */
 export async function readCDPFrameOwners(route, check = () => {}) {
   check();

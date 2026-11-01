@@ -1,5 +1,7 @@
 export type CDPSend = (method: string, params?: object) => Promise<any>;
 export function hitTestViewport(send:CDPSend,point:{x:number;y:number}):Promise<{backendNodeId:number;frameId?:string}>;
+export interface ScreenshotMapping { id: string; url: string; documentId: string; viewport: Record<string, number> }
+export function checkScreenshotViewport(mapping: ScreenshotMapping | null | undefined, current: Record<string, unknown> | null, options?: {requestedId?: string | null; latestId?: string | null; reason?: string}): void;
 export function readCDPFrameOwners(route:FrameRoute,check?:()=>void):Promise<{backendNodeId:number;frameId?:string}[]>;
 export interface FrameRoute { send: CDPSend; frameId: string; sessionId: string; sessionFrameId: string; contextId: number; documentId: string; owners: {parent: FrameRoute;backendNodeId:number;frameId:string;childSessionId?:string}[] }
 export interface FrameElement { backendNodeId: number; route?: FrameRoute; observationId?: string }

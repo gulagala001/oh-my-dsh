@@ -33,11 +33,16 @@ if (['--files', '--client'].includes(process.argv[3])) {
       const name = `lib/rea-assets/${record.file}`;
       if (!runtimeFile.test(name) || createHash('sha256').update(await readFile(join(source, name))).digest('hex') !== record.sha256) throw new Error(`Invalid built client resource: ${name}`);
     }
+    const distribution = JSON.parse(await readFile(join(source, 'src/extension/distribution.json')));
+    const extensionFiles = Object.keys(distribution.files).map(name => `extension/${name}`);
+    const previousExtension = Object.keys(manifest.files).filter(name => name.startsWith('extension/'));
+    if (extensionFiles.length !== previousExtension.length || extensionFiles.some(name => !previousExtension.includes(name)))
+      throw new Error('Extension membership changed; synchronize the complete OpenCU package');
     const previous = Object.keys(manifest.files).filter(name => runtimeFile.test(name));
     previous.filter(name => !next.includes(name)).forEach(name => removed.add(name));
     selected = [...new Set(['lib/client.js', 'lib/browser-surface.js', 'lib/presentation.js', 'lib/page-cursor.js',
       'lib/page-annotations.js', 'lib/extension.zip', 'lib/rea-assets/manifest.json',
-      'extension/page-cursor.js', 'src/extension/distribution.json', ...previous, ...next])];
+      ...extensionFiles, 'src/extension/distribution.json', ...previous, ...next])];
   }
   if (!selected.length) throw new Error('Select existing distributed source files');
   const updates = [];
@@ -69,6 +74,7 @@ if (['--files', '--client'].includes(process.argv[3])) {
     else delete manifest.files[name];
   }
   manifest.source = '../opencu'; manifest.sourceCommit = commit;
+  if (clientOnly) manifest.clientSourceCommit = commit;
   delete manifest.archiveSha256; // No new archive was built for this mixed source/output snapshot.
   const applied = [];
   try {

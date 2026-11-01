@@ -12,7 +12,7 @@ import { filePaths, validateFileInput, writeFileInput } from './opencu-file-inpu
 import { guestKeySpec as inputKey, keyEventParameters, keyboardInputTypes } from './opencu-keyboard.js'
 import { createPageInputMonitor, inputFrameFailure } from './opencu-input-monitor.js'
 import { runTextEdit, validateTextEditRequest } from './opencu-text-edit.js'
-import { createCDPFrameRouter, hitTestViewport, readCDPFrameOwners, type CDPFrameRouter, type FrameElement, type FrameRoute } from './opencu-frame-router.js'
+import { createCDPFrameRouter, checkScreenshotViewport, type ScreenshotMapping, hitTestViewport, readCDPFrameOwners, type CDPFrameRouter, type FrameElement, type FrameRoute } from './opencu-frame-router.js'
 import { captureAXTree, axElementKey } from './opencu-ax-tree.js'
 import { readElementScrollGeometry, scrollDeltas, checkScrollGeometry, type ScrollGeometry } from './opencu-scroll.js'
 import { openCUDialogs, type DialogFence } from './opencu-dialogs.ts'
@@ -76,7 +76,9 @@ function dispatchesInput(method: string, params: Record<string, unknown>, operat
 const guestExited = (): Error => Object.assign(new Error('The browser page process exited; reload the page before observing or sending input'), { code: 'BROWSER_GUEST_CRASHED', details: { inputDispatched: false } })
 // Error documents and ordinary HTTP pages need not expose crypto.randomUUID.
 // Mint a fresh candidate in the host; the document retains its existing identity.
-const metadata = (): string => `(() => { const state = globalThis.__opencuDocument ??= { id: ${JSON.stringify(randomUUID())}, next: 0, elements: new Map() }; return { documentId: state.id, url: location.href, title: document.title, viewport: { width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY } }; })()`
+const viewport = '{ width: innerWidth, height: innerHeight, deviceScaleFactor: devicePixelRatio, scrollX, scrollY, visualScale: visualViewport?.scale ?? 1, visualOffsetX: visualViewport?.offsetLeft ?? 0, visualOffsetY: visualViewport?.offsetTop ?? 0, visualWidth: visualViewport?.width ?? innerWidth, visualHeight: visualViewport?.height ?? innerHeight }'
+const pageState = `({ documentId: globalThis.__opencuDocument?.id, url: location.href, ...${viewport}, focused: document.hasFocus() })`
+const metadata = (): string => `(() => { const state = globalThis.__opencuDocument ??= { id: ${JSON.stringify(randomUUID())}, next: 0, elements: new Map() }; return { documentId: state.id, url: location.href, title: document.title, viewport: ${viewport} }; })()`
 
 
 function value(result: RemoteResult): unknown {
@@ -422,8 +424,8 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
           || !('readyState' in result) || typeof result.readyState !== 'string') throw new Error('Invalid browser navigation state')
         return {url:result.url,readyState:result.readyState,documentId:String(current.documentGeneration),navigationId:String(current.navigationGeneration),webContentsId:guest.id,...cursor()}
       }
-      if (operation === 'pageState') return value(await send('Runtime.evaluate', { expression:
-        '({ documentId: globalThis.__opencuDocument?.id, url: location.href, width: innerWidth, height: innerHeight, scrollX, scrollY, focused: document.hasFocus() })', returnByValue: true }))
+      const readPageState = async () => value(await send('Runtime.evaluate', {expression: pageState, returnByValue: true})) as Record<string, unknown>
+      if (operation === 'pageState') return await readPageState()
       if (operation === 'inputMonitor') {
         if (!['install', 'read', 'dispose'].includes(String(args.method)) || typeof args.owner !== 'string' || !args.owner || args.owner.length > 200
           || !Number.isSafeInteger(args.epoch) || Number(args.epoch) < 0) throw new Error('Invalid frame input monitor request')
@@ -616,6 +618,7 @@ export function openCUAutomation(guest: WebContents, operation: unknown, input: 
             }
             await dispatchMarked(captureMarker, () => dispatchMarked(marker, async () => {
               await checkOccurrence()
+              if (!releasing && args.screenshot) checkScreenshotViewport(args.screenshot as ScreenshotMapping, await readPageState())
               return send('Input.dispatchMouseEvent', { type, x: args.x, y: args.y, button: args.button ?? 'none', buttons: args.buttons ?? 0, clickCount: args.clickCount ?? 0, modifiers,
                 ...(type === 'mouseWheel' ? wheel : {}) }, undefined, type === 'mousePressed' ? () => {
                 if (current.documentGeneration !== generation) throw Object.assign(new Error('The document changed before pointer dispatch'), {code:'STALE_ELEMENT',details:{inputDispatched:false}})
