@@ -44,6 +44,17 @@ export function createComputerRepl(request, report = () => {}) {
     const work = inputRelease.request(endpoint, args, () => dispatch(endpoint, args)).then(checked).then(result => {
       const projected = endpoint === 'observe' ? result : modelResult(result, args);
       const outcome = result.result ?? result;
+      if (endpoint === 'act' && current === run && !run.signal.aborted &&
+          (outcome.inputDispatched === true || outcome.delivery || outcome.performed || outcome.navigated || outcome.closedTargetId ||
+           outcome.handled || args.action === 'locator' && outcome.value === null)) {
+        run.actionCount++;
+        run.completedActions.push({targetId:args.targetId, action:args.action,
+          ...(args.action === 'locator' && {method:args.method}),
+          ...(typeof outcome.inputDispatched === 'boolean' && {inputDispatched:outcome.inputDispatched}),
+          ...(typeof outcome.effectVerified === 'boolean' && {effectVerified:outcome.effectVerified})});
+        if (run.completedActions.length > 8) run.completedActions.shift();
+        progress();
+      }
       if (outcome.pendingDialog) {
         emit({ targetId: args.targetId, pendingDialog: outcome.pendingDialog,
           inputDispatched: outcome.inputDispatched, effectVerified: outcome.effectVerified,
@@ -54,6 +65,9 @@ export function createComputerRepl(request, report = () => {}) {
       return projected;
     }).catch(error => {
       if (error.code === 'JS_DIALOG_OPEN') {
+        if (['getDialog','handleDialog'].includes(args?.action)) throw Object.assign(
+          new Error('The browser dialog adapter was blocked while accessing the pending dialog. The trigger may already have run.'),
+          {code:error.code,details:{...error.details,stage:args.action},cause:error});
         const description = error.details?.dialog === undefined ? '' : ` Pending dialog (untrusted page content): ${JSON.stringify(error.details.dialog)}.`;
         throw Object.assign(new Error(`${error.message}.${description} Use the same bound target's await target.getJsDialog() to inspect it, then await an authorized accept() or dismiss(); do not rediscover the active tab or repeat a possibly dispatched trigger.`),
           { code: error.code, details: error.details });
@@ -74,7 +88,7 @@ export function createComputerRepl(request, report = () => {}) {
     result.finally(() => { pending.delete(result); run.pending.delete(result); }).catch(() => {});
     return result;
   }
-  function progress() { report({ outputs: [...outputs], images: [...images], deliveries: [...deliveries], documentation: [...documentationInCell].map(computerDocumentation) }); }
+  function progress() { report({ completedActions:[...current.completedActions], actionCount:current.actionCount, outputs: [...outputs], images: [...images], deliveries: [...deliveries], documentation: [...documentationInCell].map(computerDocumentation) }); }
   function emit(value) { activeExecution(); outputs.push(replOutput(value)); progress(); }
   function documentation(topic, force = false) {
     const text = computerDocumentation(topic);
@@ -199,8 +213,8 @@ export function createComputerRepl(request, report = () => {}) {
       if (target.provider === 'extension' || String(target.browserId).startsWith('extension:')) {
         throw Object.assign(new Error('JavaScript dialogs are supported by DSH in-app and standalone Playwright browsers; extension browsers do not support this API'), { code: 'UNSUPPORTED' });
       }
-      const targetId = target.id;
-      const dialog = (await call('act', { targetId, action: 'getDialog' })).result?.dialog;
+      const binding = targetRequest();
+      const dialog = (await call('act', { ...binding, action: 'getDialog' })).result?.dialog;
       activeExecution();
       if (dialog == null) return undefined;
       if (typeof dialog.id !== 'string' || !dialog.id || !['alert', 'confirm', 'prompt', 'beforeunload'].includes(dialog.type)
@@ -212,12 +226,12 @@ export function createComputerRepl(request, report = () => {}) {
         accept: async (...values) => {
           if (values.length > 1 || values[0] !== undefined && typeof values[0] !== 'string') throw new TypeError('accept takes at most one prompt text string');
           if (values[0] !== undefined && type !== 'prompt') throw new TypeError('promptText is only valid for a prompt dialog');
-          return call('act', { targetId, action: 'handleDialog', dialogId: id, accept: true,
+          return call('act', { ...binding, action: 'handleDialog', dialogId: id, accept: true,
             ...(values[0] === undefined ? {} : { promptText: values[0] }) });
         },
         dismiss: async (...values) => {
           if (values.length) throw new TypeError('dismiss takes no arguments');
-          return call('act', { targetId, action: 'handleDialog', dialogId: id, accept: false });
+          return call('act', { ...binding, action: 'handleDialog', dialogId: id, accept: false });
         },
       });
     };
@@ -483,7 +497,7 @@ export function createComputerRepl(request, report = () => {}) {
         outputs.length = 0; images.length = 0; deliveries.length = 0; returned.clear(); documentationInCell.clear();
         const runGeneration = generation;
         const aborter = new AbortController();
-        current = { aborter, signal: signal ? AbortSignal.any([signal, aborter.signal]) : aborter.signal, pending: new Set() };
+        current = { completedActions:[], actionCount:0, aborter, signal: signal ? AbortSignal.any([signal, aborter.signal]) : aborter.signal, pending: new Set() };
         const onAbort = () => aborter.abort(signal.reason);
         signal?.addEventListener('abort', onAbort, { once: true });
         let cancel;
@@ -530,7 +544,7 @@ export function createComputerRepl(request, report = () => {}) {
           return { ok: true, title: args.title ?? 'Computer use', outputs: [...outputs], images: [...new Map(images.map(image => [image.attachmentId, image])).values()],
             deliveries: [...new Map(deliveries.map(item => [item.file.attachmentId, item])).values()] };
         } catch (error) {
-          const failure = partialReplError(error, { outputs, images, deliveries,
+          const failure = partialReplError(error, { outputs, images, deliveries, completedActions:current?.completedActions, actionCount:current?.actionCount,
             documentation: [...documentationInCell].map(computerDocumentation) });
           // A failed cell may not have delivered its documentation. Keep the loaded
           // topics for recovery, and replay only those emitted in that failed cell.

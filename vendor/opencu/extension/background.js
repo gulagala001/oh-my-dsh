@@ -83,35 +83,64 @@ async function api(path, value, c = connection) {
 async function content(tabId, method, input = {}, expectedDocumentId, read = directRead) {
   const tab = await read(() => chrome.tabs.get(tabId));
   if (!allowed(tab.url)) fail('UNSUPPORTED_PAGE', 'Chrome/Edge internal pages, extension pages, browser stores and non-HTTP(S) URLs cannot be controlled.');
-  const target = expectedDocumentId ? { tabId, documentIds: [expectedDocumentId] } : { tabId, frameIds: [0] };
-  const probe = await read(() => chrome.scripting.executeScript({ target, world: 'ISOLATED', injectImmediately: true,
-    func: () => Boolean(globalThis.__opencuDocument && globalThis.__opencuCursor) }));
-  if (probe.length !== 1 || probe[0].frameId !== 0) fail('STALE_DOCUMENT', 'Main document changed during initialization.');
-  const currentTarget = { tabId, documentIds: [probe[0].documentId] };
-  if (!probe[0].result) {
-    await read(() => chrome.scripting.executeScript({ target: currentTarget, files: ['page-cursor.js'], world: 'ISOLATED', injectImmediately: true }));
-    await read(() => chrome.scripting.executeScript({ target: currentTarget, func: installDocumentRuntime, args:[{trackActivity:false}], world: 'ISOLATED', injectImmediately: true }));
+  const inject = async (documentId, script, stage) => {
+    const target = documentId ? {tabId,documentIds:[documentId]} : {tabId,frameIds:[0]};
+    try {
+      const [entry] = await read(() => chrome.scripting.executeScript({target,world:'ISOLATED',injectImmediately:true,...script}));
+      if (entry?.frameId !== 0 || !entry.documentId || entry.error)
+        throw new Error(entry?.error?.message || 'Chrome returned no main-document injection receipt.');
+      if (documentId && entry.documentId !== documentId) fail('STALE_DOCUMENT','Chrome returned another document occurrence.');
+      return entry;
+    } catch (error) {
+      read.check?.();
+      let frame;
+      if (documentId) try { frame = await read(() => chrome.webNavigation.getFrame({tabId,frameId:0})); } catch { read.check?.(); }
+      const replaced = frame?.documentId && frame.documentId !== documentId;
+      throw Object.assign(error, {code:replaced ? 'STALE_DOCUMENT' : error.code || 'CONTENT_INJECTION_FAILED',
+        details:{...error.details,stage,browserDocumentId:documentId}});
+    }
+  };
+  const probe = await inject(expectedDocumentId, {
+    func: async (method, input) => {
+      const runtime = globalThis.__opencuDocument;
+      if (typeof runtime?.run !== 'function' || method === 'cursor' && !globalThis.__opencuCursor)
+        return {needsInstall:true, needsCursor:method === 'cursor' && !globalThis.__opencuCursor};
+      try { return {ok:true, result:await runtime.run(method, input)}; }
+      catch (error) { return {ok:false, error:{code:error.code || 'CONTENT_FAILURE', message:error.message}}; }
+    }, args:[method,input]}, 'invoke');
+  const browserDocumentId = probe.documentId;
+  let value = probe.result, stage = 'invoke';
+  if (value?.needsInstall) {
+    if (value.needsCursor) await inject(browserDocumentId, {files:['page-cursor.js']}, 'cursor');
+    stage = 'initialize';
+    const installed = await inject(browserDocumentId, {func:installDocumentRuntime,
+      args:[{trackActivity:false, browserDocumentId, method, input}]}, stage);
+    value = installed.result;
   }
-  const result = await read(() => chrome.scripting.executeScript({ target: currentTarget,
-    world: 'ISOLATED', injectImmediately: true, func: async (method, input) => {
-      try { return { ok: true, result: await globalThis.__opencuDocument.run(method, input) }; }
-      catch (error) { return { ok: false, error: { code: error.code || 'CONTENT_FAILURE', message: error.message } }; }
-    }, args: [method, input] }));
-  if (result.length !== 1 || result[0].frameId !== 0) fail('STALE_DOCUMENT', 'Main document changed during operation.');
-  const value = result[0].result;
-  if (!value?.ok) fail(value?.error?.code || 'CONTENT_FAILURE', value?.error?.message || 'Content script returned no result.');
-  return { ...value.result, browserDocumentId: result[0].documentId };
+  if (value?.ok !== true) throw Object.assign(new Error(value?.error?.message || `The content script returned no receipt during ${stage}.`),
+    {code:value?.error?.code || (stage === 'initialize' ? 'CONTENT_INIT_FAILED' : 'CONTENT_FAILURE'), details:{stage:value?.stage ?? stage,browserDocumentId}});
+  return {...value.result, browserDocumentId};
+
+}
+async function unavailableTab(tab, error, read) {
+  let documentId = error.details?.browserDocumentId ?? documents.get(tab.id);
+  if (!documentId) {
+    try {
+      const frame = await read(() => chrome.webNavigation.getFrame({tabId:tab.id, frameId:0}));
+      if (frame?.url === tab.url) documentId = frame.documentId;
+    } catch { read.check?.(); }
+  }
+  return {tabId:tab.id, documentId:documentId ?? `unavailable-${tab.id}`, url:tab.url, title:tab.title,
+    windowId:tab.windowId, active:tab.active, supported:false, error:errorJSON(error)};
 }
 async function tabInfo(tab, read = directRead) {
   let identity;
   if (allowed(tab.url)) {
-    if (tab.status !== 'complete') return { tabId: tab.id, documentId: documents.get(tab.id) || `loading-${tab.id}`, url: tab.url,
-      title: tab.title, windowId: tab.windowId, active: tab.active, supported: false, error: { code: 'PAGE_LOADING', message: 'Page is loading; discover again after navigation completes.' } };
+    if (tab.status !== 'complete') return unavailableTab(tab, {code:'PAGE_LOADING',message:'Page is loading; discover again after navigation completes.'}, read);
     try { identity = await content(tab.id, 'identity', {}, undefined, read); }
-    catch (error) { read.check?.(); return { tabId: tab.id, documentId: documents.get(tab.id) || `unavailable-${tab.id}`, url: tab.url, title: tab.title,
-      windowId: tab.windowId, active: tab.active, supported: false, error: errorJSON(error) }; }
+    catch (error) { read.check?.(); return unavailableTab(tab, error, read); }
   } else identity = { documentId: documents.get(tab.id) || `restricted-${tab.id}` };
-  return { tabId: tab.id, documentId: identity.documentId, browserDocumentId: identity.browserDocumentId, url: tab.url,
+  return { tabId: tab.id, documentId: identity.browserDocumentId ?? identity.documentId, browserDocumentId: identity.browserDocumentId, url: tab.url,
     title: tab.title, windowId: tab.windowId, active: tab.active, supported: allowed(tab.url), incognito: tab.incognito,
     ...(allowed(tab.url) ? {} : { error: { code: 'UNSUPPORTED_PAGE', message: 'Browser-internal/store/non-HTTP(S) page is discovery-only.' } }) };
 }
@@ -120,9 +149,9 @@ async function verify(identity, selected = false, read = directRead) {
   const tab = await read(() => chrome.tabs.get(identity.tabId));
   if (!allowed(tab.url)) fail('UNSUPPORTED_PAGE', 'This page cannot be controlled.');
   const current = await content(identity.tabId, 'identity', {}, undefined, read);
-  if (current.documentId !== identity.documentId) fail('STALE_DOCUMENT', 'Document changed; list tabs and select again.');
+  if (current.browserDocumentId !== identity.documentId && current.documentId !== identity.documentId) fail('STALE_DOCUMENT', 'Document changed; list tabs and select again.');
   if (selected && (!attached.has(identity.tabId) || attached.get(identity.tabId).released)) fail('NOT_SELECTED', 'Select this tab before observing or acting.');
-  return { verified: true, identity, ...current };
+  return { verified: true, ...current, identity, documentId:identity.documentId };
 }
 const cdp = (tabId, method, params = {}, sessionId) => {
   if (method.startsWith('Input.') || method === 'DOM.setFileInputFiles') {const state = attached.get(tabId); if (state) state.inputSequence = (state.inputSequence ?? 0) + 1;}
@@ -151,7 +180,7 @@ async function attach(identity, read = directRead) {
     const previous=state.frameRoutes?.get(route.frameId);
     if(previous?.contextId!==route.contextId||previous.documentId!==route.documentId){
       const result=await route.send('Runtime.evaluate',{contextId:route.contextId,expression:`(${installDocumentRuntime.toString()})()`,returnByValue:true});
-      if(result.exceptionDetails)fail('FRAME_ACTIVITY_UNAVAILABLE',result.exceptionDetails.exception?.description??result.exceptionDetails.text);
+      if(result.exceptionDetails || result.result?.value?.ready !== true)fail('FRAME_ACTIVITY_UNAVAILABLE',result.exceptionDetails?.exception?.description ?? result.exceptionDetails?.text ?? 'The frame input monitor did not acknowledge initialization.');
     }
     (state.frameRoutes??=new Map()).set(route.frameId,route);
   },discardRoute:route=>{
@@ -185,15 +214,32 @@ async function frameContent(tabId, route, method, input = {}, backendNodeId) {
   const router=attached.get(tabId)?.frameRouter;
   if (!router) fail('NOT_SELECTED','Select this tab before using frame input.');
   await router.validate(route);
-  let reply,objectId;
+  let objectId;
+  // No input is sent by this function. A missing monitor is detected before
+  // calling its method and is reinstalled only in the validated frame world.
+  const command = function(method,input) {
+    const runtime = globalThis.__opencuDocument;
+    if (typeof runtime?.run !== 'function') return {needsInstall:true};
+    if (this?.nodeType) for (const event of input.events ?? []) event.target = this.nodeType === 3 ? this.parentElement : this;
+    return runtime.run(method,input);
+  };
   try {
-    if(backendNodeId!==undefined){
-      objectId=await router.remoteElement(route,backendNodeId);
-      reply=await route.send('Runtime.callFunctionOn',{objectId,functionDeclaration:'function(method,input){for(const event of input.events??[])event.target=this.nodeType===3?this.parentElement:this;return globalThis.__opencuDocument.run(method,input);}',arguments:[{value:method},{value:input}],returnByValue:true});
-    }else reply=await route.send('Runtime.evaluate',{contextId:route.contextId,expression:`globalThis.__opencuDocument.run(${JSON.stringify(method)},${JSON.stringify(input)})`,returnByValue:true});
-    if(reply.exceptionDetails)fail('FRAME_ACTIVITY_UNAVAILABLE',reply.exceptionDetails.exception?.description??reply.exceptionDetails.text);
+    if (backendNodeId !== undefined) objectId = await router.remoteElement(route,backendNodeId);
+    const invoke = () => objectId ? route.send('Runtime.callFunctionOn',{objectId,functionDeclaration:command.toString(),
+      arguments:[{value:method},{value:input}],returnByValue:true})
+      : route.send('Runtime.evaluate',{contextId:route.contextId,expression:`(${command})(${JSON.stringify(method)},${JSON.stringify(input)})`,returnByValue:true});
+    let reply = await invoke();
+    if (reply.result?.value?.needsInstall) {
+      await router.validate(route);
+      const installed = await route.send('Runtime.evaluate',{contextId:route.contextId,expression:`(${installDocumentRuntime})()`,returnByValue:true});
+      if (installed.result?.value?.ready !== true) fail('FRAME_ACTIVITY_UNAVAILABLE',installed.exceptionDetails?.exception?.description ?? 'Frame input monitor initialization was not acknowledged.');
+      reply = await invoke();
+    }
+    if (reply.exceptionDetails || !reply.result?.value || reply.result.value.needsInstall)
+      fail('FRAME_ACTIVITY_UNAVAILABLE',reply.exceptionDetails?.exception?.description ?? reply.exceptionDetails?.text ?? 'The frame input monitor returned no receipt.');
     return {...reply.result.value,frameRoute:route};
-  }finally{if(objectId)await route.send('Runtime.releaseObject',{objectId}).catch(()=>{});}
+  } finally { if (objectId) await route.send('Runtime.releaseObject',{objectId}).catch(()=>{}); }
+
 }
 async function inputMarker(tabId,method,input={},route,backendNodeId){
   route??=await attached.get(tabId)?.frameRouter?.focused();
@@ -330,7 +376,7 @@ async function releaseTabInputs(tabId,read) {
     if (state.identity?.tabId !== tabId || typeof state.identity.documentId !== 'string')
       fail('RELEASE_FAILED', 'The detached input journal has no original document identity; close the original tab to retire it.', {tabId,heldKeys:[...state.keys.keys()],heldButtons:[...state.buttons]});
     const tab = await read(() => chrome.tabs.get(tabId)), current = allowed(tab.url) && await content(tabId, 'identity', {}, undefined, read);
-    if (!current || current.documentId !== state.identity.documentId)
+    if (!current || current.browserDocumentId !== state.identity.documentId && current.documentId !== state.identity.documentId)
       fail('RELEASE_FAILED', 'The detached tab document changed; its input release remains unconfirmed.', {tabId,heldKeys:[...state.keys.keys()],heldButtons:[...state.buttons]});
   }
   if (state.detached && !state.released) {
@@ -347,7 +393,7 @@ async function releaseTabInputs(tabId,read) {
     await read(() => cdp(tabId, 'Runtime.evaluate', {expression:'void 0',returnByValue:true}));
     // Recheck after asynchronous attachment before releasing anything.
     const latest = await content(tabId, 'identity', {}, undefined, read);
-    if (attached.get(tabId) !== state || !state.recoveryAttached || latest.documentId !== state.identity.documentId)
+    if (attached.get(tabId) !== state || !state.recoveryAttached || latest.browserDocumentId !== state.identity.documentId && latest.documentId !== state.identity.documentId)
       fail('RELEASE_FAILED', 'The original detached tab changed during input recovery.', {tabId});
   }
   if (!state.released) {
@@ -398,7 +444,7 @@ async function observe(identity, options = {}, token = controlToken(identity.tab
   return readOperation(token, async read => {
     await attach(identity, read);
     const current = await verify(identity, true, read);
-    const dom = await content(identity.tabId, 'identity', { documentId: identity.documentId }, current.browserDocumentId, read);
+    const dom = await content(identity.tabId, 'identity', {}, current.browserDocumentId, read);
     const {commit, ...accessibility} = await read(() => observeAccessibility(identity.tabId, (method, params) => read(() => cdp(identity.tabId, method, params)), identity.documentId, read.check, {...options,deferCommit:true}, attached.get(identity.tabId)?.frameRouter));
     let screenshot;
     if (options.screenshot !== false) {
@@ -414,7 +460,7 @@ async function observe(identity, options = {}, token = controlToken(identity.tab
     await read(commit);
     if (screenshot) observations.set(identity.tabId, screenshot);
     const userActivity=await frameActivity(identity.tabId,identity.documentId,read);
-    return { identity, ...dom, ...accessibility, userActivity, ...(screenshot ? { screenshot } : {}) };
+    return { identity, ...dom, documentId:identity.documentId, ...accessibility, userActivity, ...(screenshot ? { screenshot } : {}) };
   });
 }
 async function preview(identity, token = controlToken(identity.tabId)) {
@@ -732,7 +778,9 @@ async function navigateTab(tabId, token, action) {
         const tab = await read(() => chrome.tabs.get(tabId));
         if (committed && tab.status === 'complete') {
           const page = await tabInfo(tab, read); read.check();
-          if (!page.supported) fail(page.error?.code || 'UNSUPPORTED_PAGE', page.error?.message || 'The navigated page is unavailable.');
+          if (!page.supported) throw Object.assign(new Error(page.error?.message || 'The navigated page is unavailable.'), {
+            code:page.error?.code || 'UNSUPPORTED_PAGE', details:{...page.error?.details, navigated:true, tabId, documentId:page.documentId,
+              inputDispatched:true, observationRequired:true, notice:'Navigation completed. Discover this document before continuing.'}});
           return page;
         }
         await delay(50);
@@ -746,7 +794,7 @@ async function waitForTab(tabId, read) {
   let tab;
   do {
     tab = await read(() => chrome.tabs.get(tabId));
-    if (tab.status === 'complete') return tab;
+    if (tab.status === 'complete' && !tab.pendingUrl) return tab;
     await delay(100);
   } while (Date.now() < deadline);
   fail('NAVIGATION_TIMEOUT', 'Navigation did not finish; list tabs to inspect the current page before retrying.');

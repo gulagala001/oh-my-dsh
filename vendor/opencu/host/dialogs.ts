@@ -38,7 +38,7 @@ function createDialogs(guest: WebContents) {
   const receive = (info: Info, callback: Entry['reply']): void => {
     if (disposed || typeof callback !== 'function') return
     if (!info?.frame || info.frame.detached || info.frame.top !== guest.mainFrame ||
-      !['alert', 'confirm', 'prompt', 'beforeunload'].includes(info.dialogType) || typeof info.messageText !== 'string') {
+      !['alert', 'confirm', 'beforeunload'].includes(info.dialogType) || typeof info.messageText !== 'string') {
       callback(false, '')
       return
     }

@@ -44,6 +44,23 @@ export function createBrowserHost() {
       };
       const abort = () => { cleanup(); reject(signal.reason); };
       const timer = setTimeout(() => {
+        if (params.target && ['verify','select'].includes(method) && !monitoring) {
+          cleanup();
+          reject(Object.assign(new Error(`Sidebar ${method} did not return a target verification receipt.`),
+            {code:'VERIFICATION_UNAVAILABLE',details:{stage:method,targetId:params.target.id,inputDispatched:false}}));
+          return;
+        }
+        if (!monitoring && params.target && ['release','focus','act'].includes(method) && params.action?.action !== 'newTab') {
+          const delivered = pending.get(id)?.dispatched === true, releasing = method === 'release';
+          const binding = bindings.get(params.target.id);
+          if (binding && (delivered || releasing)) { binding.uncertain = true; binding.needsRelease = true; }
+          cleanup();
+          reject(Object.assign(new Error(releasing ? 'The original guest has not acknowledged input release.' :
+            delivered ? 'The guest did not acknowledge this action. Inspect the original target before continuing.' : 'The action expired before delivery.'),
+            {code:releasing ? 'RELEASE_FAILED' : 'COMMAND_TIMEOUT', details:{targetId:params.target.id,stage:method,
+              ...(releasing ? {released:false} : delivered ? {dispatchUnknown:true} : {inputDispatched:false})}}));
+          return;
+        }
         if (!monitoring && method !== 'presentation' && method !== 'preview') {
           disconnect(client, `${method} timed out; its outcome is unknown`);
           return;
@@ -153,10 +170,10 @@ export function createBrowserHost() {
       if (matches.length !== 1) fail(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND', 'Select one live DSH sidebar tab');
       const target = matches[0]; checkExpected(target, reference.expected);
       const client = clientFor(target), previous = bindings.get(target.id);
-      if (previous?.needsRelease && previous.client !== client) {
+      if (previous?.uncertain || previous?.needsRelease && previous.client !== client) {
         const release = await request(client, 'release', { target, dismissDialogs: false });
         if (!inputReleased(release)) fail('RELEASE_FAILED', 'Reselection requires the original guest to release its input', release);
-        previous.needsRelease = false;
+        previous.needsRelease = false; previous.uncertain = false;
       }
       await request(client, 'select', { target });
       bindings.set(target.id, {target: json(target), client, needsRelease: previous?.needsRelease ?? false});
@@ -168,7 +185,10 @@ export function createBrowserHost() {
         return { valid: current.id === target.id && sameIdentity(current.identity, target.identity), target: current };
       } catch (error) { return { valid: false, reason: error.message, error: errorJSON(error) }; }
     },
-    async focus(target) { return request(clientFor(target), 'focus', { target }); },
+    async focus(target) {
+      if (bindings.get(target.id)?.uncertain) fail('RECOVERY_REQUIRED','This guest must acknowledge release before focus',{inputDispatched:false});
+      return request(clientFor(target), 'focus', { target });
+    },
     async preview(target) { return request(clientFor(target), 'preview', { target }); },
     async observe(target, options = {}) {
       const { signal, ...requestOptions } = options;
@@ -182,6 +202,8 @@ export function createBrowserHost() {
       const previous = bindings.get(target.id);
       const reading = ['getDialog', 'getDOM', 'domSnapshot', 'navigationState', 'hitTest', 'siteTools', 'cursor',
         'fileChooserArm', 'fileChooserPoll', 'fileChooserCancel', 'clipboardRead', 'clipboardReadText'].includes(action.action);
+      if (!reading && action.action !== 'handleDialog' && previous?.uncertain)
+        fail('RECOVERY_REQUIRED','This guest must acknowledge release before further input',{inputDispatched:false});
       if (!reading && previous && previous.client !== client) fail('RECOVERY_REQUIRED', 'The sidebar reconnected; resume the original target before input', {inputDispatched: false});
       // Keep the connection that owns selection and unresolved input even after
       // it disappears from inventory. A replacement connection is not a receipt.
@@ -204,12 +226,12 @@ export function createBrowserHost() {
           ? await creation(client, 'act', { target, action }, signal)
           : await request(client, 'act', { target, action }, reading, completion.signal);
         signal?.throwIfAborted();
-        if (inputReleased(result?.release)) binding.needsRelease = false;
+        if (inputReleased(result?.release) && !binding.uncertain) binding.needsRelease = false;
         if (result?.closedTargetId === target.id) retire(target);
         return result;
       } catch (error) {
-        if (error.details?.inputDispatched === false && error.details?.release === undefined) binding.needsRelease = owedBefore;
-        if (inputReleased(error.details?.release)) binding.needsRelease = false;
+        if (error.details?.inputDispatched === false && error.details?.release === undefined && !binding.uncertain) binding.needsRelease = owedBefore;
+        if (inputReleased(error.details?.release) && !binding.uncertain) binding.needsRelease = false;
         throw error;
       } finally {
         signal?.removeEventListener('abort', abort);
@@ -232,9 +254,9 @@ export function createBrowserHost() {
       if (binding?.client && binding.client !== client && !client.targets.some(current => current.id === target.id && sameIdentity(current.identity,target.identity)))
         fail('STALE_TARGET','The original sidebar guest has not reconnected');
       if (!binding) {binding={target:json(target),client,needsRelease:true};bindings.set(target.id,binding);}
-      binding.needsRelease = true;
+      binding.needsRelease = true; binding.uncertain = true;
       const result = await request(client, 'release', {target, dismissDialogs});
-      if (inputReleased(result) && binding) binding.needsRelease = false;
+      if (inputReleased(result) && binding) { binding.needsRelease = false; binding.uncertain = false; }
       if (inputReleased(result) && result.retired === true) {
         retire(target);client.targets=client.targets.filter(current=>current.id!==target.id || !sameIdentity(current.identity,target.identity));
       }
@@ -250,7 +272,7 @@ export function createBrowserHost() {
       // A broken idle page must not poison release of other guests. Every
       // dispatch is journalled in bindings before the renderer receives it.
       await Promise.all([...bindings.values()].map(async binding => {
-        if (!binding.needsRelease) {
+        if (!binding.needsRelease && !binding.uncertain) {
           if (!liveClients().some(client => client.targets.some(target => target.id === binding.target.id && sameIdentity(target.identity,binding.target.identity)))) {
             retire(binding.target);retiredTargetIds.push(binding.target.id);
           } else releasedTargetIds.push(binding.target.id);

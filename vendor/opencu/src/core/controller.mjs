@@ -1,7 +1,7 @@
 import {createStorage} from './storage.mjs';
 import {createBrowserBackend} from '../browser/backend.mjs';
 import {
-  PROTOCOL_VERSION, assertBackend, assertTarget, changedViewError, checkExpected, errorJSON, fail, inputReleased,
+  PROTOCOL_VERSION, assertBackend, assertTarget, changedViewError, checkExpected, errorJSON, fail, verificationFailure, inputReleased,
   json, readOperation, recoverableActionError, referenceMatches, sameIdentity,
 } from '../protocol.mjs';
 
@@ -96,8 +96,9 @@ export async function createController({dataDir, browser, native} = {}) {
       const result = await readOperation(() => backend.verify(json(target), {cold, signal}), signal);
       checkOperation(operationEpoch);
       if (result?.valid !== true) {
-        target.verified = false;
-        fail('TARGET_IDENTITY_CHANGED', result?.reason ?? 'Target occurrence could not be verified', {targetId: target.id});
+        const error = verificationFailure(result, target.id);
+        if (!['CONTENT_INIT_FAILED','CONTENT_INJECTION_FAILED','CONTENT_FAILURE','VERIFICATION_UNAVAILABLE'].includes(error.code)) target.verified = false;
+        throw error;
       }
       const current = assertTarget(result.target ?? target, target.backend);
       if (current.id !== target.id || !sameIdentity(current.identity, target.identity)) {
@@ -155,6 +156,21 @@ export async function createController({dataDir, browser, native} = {}) {
   }
   async function containTargetFailure(target, error) {
     const backend = backends.get(target.backend);
+    if (target.backend === 'native' && mode === 'active' && !persistenceFailures.has(error) &&
+        (recoveryIsolated || typeof backends.get('browser')?.releaseTarget === 'function')) {
+      // All native targets share the hardware journal. Settle that journal
+      // without releasing independent browser tabs or clearing their debts.
+      const operationEpoch = epoch;
+      for (const item of selected.values()) if (item.backend === 'native' && !item.releaseAcknowledged) item.needsObservation = true;
+      target.verified = false; target.needsObservation = true;
+      const releasedTargetIds = await releaseNativeInputs(operationEpoch);
+      checkOperation(operationEpoch);
+      refreshBrowserReleases();
+      await persist(); checkOperation(operationEpoch);
+      error.details = {...error.details, release:{released:true}, releasedTargetIds, targetId:target.id,
+        recoveryRequired:true, observationRequired:true};
+      return;
+    }
     // Native input is shared hardware. Browser input belongs to an occurrence:
     // quarantine only that occurrence, retaining healthy targets' authority.
     if (persistenceFailures.has(error) || target.backend !== 'browser' || typeof backend?.releaseTarget !== 'function') {
@@ -181,13 +197,7 @@ export async function createController({dataDir, browser, native} = {}) {
       notice:'This browser target requires recovery. Other verified browser targets remain usable. Observe before continuing; do not replay uncertain input.'};
     if (!target.releaseAcknowledged) fail('RELEASE_FAILED', 'This browser target has unconfirmed input release; it remains quarantined', error.details);
   }
-  async function recoverControl(target) {
-    const backend = backends.get('browser');
-    if (target?.backend !== 'native' && typeof backend?.releaseTarget !== 'function') {
-      await releaseAll();
-      return {release:{released:true},releasedTargetIds:[...selected.keys()]};
-    }
-    const operationEpoch = epoch;
+  async function releaseNativeInputs(operationEpoch) {
     const releasedTargetIds = [];
     // Native helpers share hardware input across applications. Browser isolation
     // must never turn an unresolved native key/button into permission to continue.
@@ -213,6 +223,17 @@ export async function createController({dataDir, browser, native} = {}) {
       }
       releaseErrors = releaseErrors.filter(item => item.backend !== 'native');
     }
+    return releasedTargetIds;
+  }
+  async function recoverControl(target) {
+    const backend = backends.get('browser');
+    if (target?.backend !== 'native' && typeof backend?.releaseTarget !== 'function') {
+      await releaseAll();
+      return {release:{released:true},releasedTargetIds:[...selected.keys()]};
+    }
+    const operationEpoch = epoch;
+    const releasedTargetIds = await releaseNativeInputs(operationEpoch);
+    checkOperation(operationEpoch);
     if (target?.backend === 'browser') {
       target.verified = false;
       let result;
@@ -473,7 +494,11 @@ export async function createController({dataDir, browser, native} = {}) {
       if (recovery) recoveryOperations.add(recovery);
       try {
         const signal = recovery?.signal ?? aborter.signal;
-        await verify(target, backend, false, operationEpoch, signal);
+        try { await verify(target, backend, false, operationEpoch, signal); }
+        catch (error) {
+          error.details = {...error.details, inputDispatched:false};
+          throw error;
+        }
         if (dialogAction) alive(); else controlAllowed(target);
         if (!reading && target.releaseAcknowledged) { target.releaseAcknowledged = false; await persist(); checkOperation(operationEpoch); }
         result = await backend.act(json(target), {...request, signal});

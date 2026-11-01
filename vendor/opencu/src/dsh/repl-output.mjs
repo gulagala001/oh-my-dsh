@@ -38,9 +38,12 @@ export function deserializeReplError(value) {
 /** The native tools/PTC error channel renders only message, not custom fields. */
 export function toolReplError(error) {
   const details = error?.details ?? {}, control = details.control;
-  const diagnostic = Object.fromEntries(['targetId', 'inputDispatched', 'observationRequired', 'recoveryRequired', 'created', 'launched', 'stage', 'notice']
+  const diagnostic = Object.fromEntries(['targetId', 'inputDispatched', 'dispatchUnknown', 'observationRequired', 'recoveryRequired', 'created', 'launched', 'stage', 'notice']
     .filter(key => details[key] !== undefined).map(key => [key, details[key]]));
   if (error?.code === 'STALE_SCREENSHOT' && details.screenshot) Object.assign(diagnostic, {action: details.action, screenshot: details.screenshot});
+  if (error?.code === 'WINDOW_AX_MAPPING_FAILED') {
+    for (const key of ['windowId','matches','geometryMatches','attempts']) if (details[key] !== undefined) diagnostic[key] = details[key];
+  }
   if (details.target?.id) diagnostic.targetId = details.target.id;
   if (details.pendingRequests) diagnostic.pendingRequests = details.pendingRequests.slice(0, 8);
   if (control) {
@@ -77,15 +80,18 @@ export function replOutput(value) {
 }
 
 /** Keep the SDK's error channel while exposing observations produced before the failure. */
-export function partialReplError(error, { outputs, images, deliveries, documentation = [] }) {
+export function partialReplError(error, { outputs, images, deliveries, documentation = [], completedActions = [], actionCount = completedActions.length }) {
   const text = outputs.filter(value => !documentation.includes(value));
-  if (!text.length && !images.length && !deliveries.length) return error;
+  if (!text.length && !images.length && !deliveries.length && !completedActions.length) return error;
   const message = error?.message ?? String(error);
   const partialResult = { ok: false, error: { code: error?.code ?? 'OPENCU_ERROR', message },
-    outputs: [...outputs], images: [...images], deliveries: [...deliveries] };
+    outputs: [...outputs], images: [...images], deliveries: [...deliveries], ...(completedActions.length && {completedActions,actionCount}) };
   const attachmentNotice = images.length || deliveries.length
     ? `\nPartial attachments: ${replOutput({ images, deliveries })}` : '';
-  const outputMessage = `${message}\n\nPartial output produced before this failure (the call failed; actions were not rolled back, so inspect current state before repeating input):\n${text.join('\n')}${attachmentNotice}`;
+  const receipts = completedActions.length ? `\nEarlier completed actions in this call (${actionCount} total). Inspect their effects before repeating input: ${JSON.stringify(completedActions)}` : '';
+  const output = text.length || attachmentNotice
+    ? `\n\nPartial output produced before this failure (the call failed; actions were not rolled back, so inspect current state before repeating input):\n${text.join('\n')}${attachmentNotice}` : '';
+  const outputMessage = `${message}${receipts}${output}`;
   const failure = new Error(outputMessage, { cause: error });
   if (error && typeof error === 'object') {
     Object.setPrototypeOf(failure, Object.getPrototypeOf(error));

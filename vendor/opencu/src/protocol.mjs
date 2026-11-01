@@ -39,6 +39,14 @@ export function fail(code, message, details) {
   throw new OpenCUError(code, message, details);
 }
 
+/** A failed probe does not by itself prove the target occurrence changed. */
+export function verificationFailure(result, targetId) {
+  const error = result?.error, code = error?.code;
+  const changed = !code || ['TARGET_IDENTITY_CHANGED','STALE_DOCUMENT','STALE_CONNECTION'].includes(code);
+  return new OpenCUError(changed ? 'TARGET_IDENTITY_CHANGED' : code, error?.message ?? result?.reason ?? 'Target occurrence could not be verified',
+    {...error?.details, targetId});
+}
+
 export function errorJSON(error) {
   return {
     code: error?.code ?? 'BACKEND_ERROR',
@@ -65,6 +73,7 @@ const recoverableActionErrors = new Set([
   'INVALID_ARGUMENT', 'INVALID_ACTION', 'INVALID_COORDINATES', 'INVALID_KEY', 'UNKNOWN_KEY', 'UNSUPPORTED_KEY',
   'INVALID_BUTTON', 'INVALID_SCROLL', 'INVALID_TEXT', 'SCROLL_POINT_REQUIRED',
   'INPUT_ALREADY_HELD', 'RELEASE_REQUIRED', 'UNSUPPORTED_ACTION', 'UNSUPPORTED_OPERATION', 'UNSUPPORTED_COORDINATE_SPACE',
+  'CONTENT_INIT_FAILED', 'CONTENT_INJECTION_FAILED', 'CONTENT_FAILURE', 'VERIFICATION_UNAVAILABLE', 'COMMAND_TIMEOUT',
   'UNSUPPORTED_PINCH_ZOOM', 'UNSUPPORTED_URL', 'NO_HISTORY_ENTRY',
   'STALE_FILE_CHOOSER', 'FILE_CHOOSER_BUSY', 'FILE_CHOOSER_NOT_READY', 'FILE_CHOOSER_TIMEOUT', 'UNSUPPORTED_UPLOAD_DIRECTORY', 'UPLOAD_SOURCE_UNAVAILABLE',
   'UNSUPPORTED_CLIPBOARD', 'UNSUPPORTED_CLIPBOARD_FORMAT', 'STALE_CLIPBOARD_DOCUMENT', 'INVALID_CLIPBOARD_STATE',
@@ -77,7 +86,7 @@ const recoverableActionErrors = new Set([
   'MODAL_BLOCKED', 'MODAL_STATE_UNAVAILABLE', 'MODAL_POINTER_UNAVAILABLE', 'MODAL_CAPTURE_UNAVAILABLE',
 ]);
 
-const changedViewErrors = new Set(['STALE_SCREENSHOT', 'STALE_OBSERVATION', 'STALE_ELEMENT', 'OBSERVATION_CHANGED',
+const changedViewErrors = new Set(['WINDOW_AX_MAPPING_FAILED', 'STALE_SCREENSHOT', 'STALE_OBSERVATION', 'STALE_ELEMENT', 'OBSERVATION_CHANGED',
   'TARGET_NOT_ACTIVE', 'TARGET_WINDOW_NOT_ACTIVE', 'FRAME_NOT_FOUND', 'FRAME_DETACHED', 'LOCATOR_NOT_STABLE',
   'ELEMENT_NOT_FOUND', 'ELEMENT_NOT_VISIBLE', 'SITE_TOOL_CONTEXT_CHANGED']);
 export const changedViewError = error => changedViewErrors.has(error?.code);

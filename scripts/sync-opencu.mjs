@@ -11,8 +11,8 @@ await mkdir(local, { recursive: true });
 const staging = await mkdtemp(join(local, 'opencu-bundle-'));
 // Direct source fixes retain host-specific output. --client synchronizes only
 // rebuilt frontend/extension bytes; version/build-input changes use the package path.
-if (['--files', '--client'].includes(process.argv[3])) {
-  const clientOnly = process.argv[3] === '--client', target = join(root, 'vendor/opencu');
+if (['--files', '--client', '--mac-helper'].includes(process.argv[3])) {
+  const clientOnly = process.argv[3] === '--client', macHelper = process.argv[3] === '--mac-helper', target = join(root, 'vendor/opencu');
   let selected = [...new Set(process.argv.slice(4))];
   const manifestPath = join(root, 'vendor/opencu.json'), originalManifest = await readFile(manifestPath);
   const manifest = JSON.parse(originalManifest), pkg = JSON.parse(await readFile(join(source, 'package.json')));
@@ -20,6 +20,16 @@ if (['--files', '--client'].includes(process.argv[3])) {
   const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim();
   const runtimeFile = /^lib\/rea-assets\/opencu-(?:client|chunk)-[A-Z0-9]{8}\.js$/;
   const removed = new Set();
+  let verifyHelper;
+  if (macHelper) {
+    if (process.platform !== 'darwin' || selected.length) throw new Error('--mac-helper requires macOS and takes no file arguments');
+    ({checkMacHelperDistribution:verifyHelper} = await import('./check-opencu-native.mjs'));
+    await verifyHelper(source);
+    const member = name => name.startsWith('native/macos/') || /^native\/bin\/darwin-(arm64|x64)\//.test(name);
+    selected = Object.keys(manifest.files).filter(member).sort();
+    const input = execFileSync('git', ['ls-tree', '-rz', '--name-only', commit, '--', 'native/macos', 'native/bin'], {cwd:source,encoding:'utf8'}).split('\0').filter(member).sort();
+    if (JSON.stringify(input) !== JSON.stringify(selected)) throw new Error('Mac helper membership changed. Synchronize the complete package.');
+  }
   if (clientOnly) {
     if (selected.length) throw new Error('--client takes no file arguments');
     if (execFileSync('git', ['status', '--porcelain', '--untracked-files=normal'], { cwd: source, encoding: 'utf8' }).trim()) throw new Error('Commit the OpenCU source and generated extension before synchronizing its client');
@@ -48,7 +58,7 @@ if (['--files', '--client'].includes(process.argv[3])) {
   const updates = [];
   for (const name of selected) {
     const exists = Object.hasOwn(manifest.files, name);
-    if (name.includes('\\') || name.split('/').includes('..') || (!clientOnly && (!exists ||
+    if (name.includes('\\') || name.split('/').includes('..') || (!clientOnly && !macHelper && (!exists ||
       !/^(?:src\/(?!client\/)|host\/(?!build-inputs\/)|docs\/|DEVELOPMENT\.md$)/.test(name) || !/\.(?:mjs|js|ts|json|md|css|ya?ml)$/.test(name))) ||
       (clientOnly && !exists && !runtimeFile.test(name))) throw new Error(`Not a distributed OpenCU file: ${name}`);
     const from = join(source, name), destination = join(target, name);
@@ -82,6 +92,7 @@ if (['--files', '--client'].includes(process.argv[3])) {
       if (update.staged) await rename(update.staged, update.destination); else await rm(update.destination);
       applied.push(update);
     }
+    if (macHelper) await verifyHelper(target);
     await writeFile(join(staging, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     await rename(join(staging, 'manifest.json'), manifestPath);
   } catch (error) {

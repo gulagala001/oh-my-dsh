@@ -384,7 +384,7 @@ export async function createBrowserBackend(options = {}) {
         return {valid: false, reason: 'Browser connection or target occurrence changed'};
       }
       return {valid: true, target: await descriptor(record, targetInfo)};
-    } catch (error) { return {valid: false, reason: error.message}; }
+    } catch (error) { return {valid: false, reason: error.message, error:errorJSON(error)}; }
   }
   function release({internal = false, dismissDialogs = true, targets} = {}) {
     return releasing ??= (async () => {

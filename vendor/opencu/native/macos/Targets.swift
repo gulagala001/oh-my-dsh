@@ -62,6 +62,21 @@ func accessibilityActiveSheet<Node>(_ window: Node, children: (Node) throws -> [
     throw NativeFailure("MODAL_STATE_UNAVAILABLE", "The active sheet hierarchy exceeds the supported traversal bound; no input was sent.", ["inputDispatched": false, "retryable": false])
 }
 
+// Core Graphics and AX publish window changes independently. Resample both
+// for the original CG ID, retaining the same uniqueness test on every read.
+func resolveAXWindow<Element>(_ id: Int, sample: () throws -> ([Element], Int), settle: () -> Void) throws -> Element {
+    var result = try sample()
+    for _ in 1..<3 where result.0.count != 1 {
+        settle()
+        result = try sample()
+    }
+    guard result.0.count == 1 else {
+        throw NativeFailure("WINDOW_AX_MAPPING_FAILED", "Could not uniquely map the public CG window identity to an AX window.",
+            ["stage": "windowMapping", "windowId": id, "matches": result.0.count, "geometryMatches": result.1, "attempts": 3])
+    }
+    return result.0[0]
+}
+
 final class TargetStore {
     private var icons: [String: String] = [:]
 
@@ -417,19 +432,22 @@ final class TargetStore {
         try requireAX()
         let running = try app(target), root = AXUIElementCreateApplication(running.processIdentifier)
         if let id = target["windowId"] as? Int {
-            guard let cg = window(id), cg.pid == running.processIdentifier else {
-                throw NativeFailure("TARGET_IDENTITY_CHANGED", "Selected window no longer exists.")
-            }
-            let candidates = axElements(root, kAXWindowsAttribute).filter { element in
-                guard let rect = axRect(element) else { return false }
-                return abs(rect.minX - cg.bounds.minX) < 2 && abs(rect.minY - cg.bounds.minY) < 2 &&
-                    abs(rect.width - cg.bounds.width) < 2 && abs(rect.height - cg.bounds.height) < 2 &&
-                    (cg.title.isEmpty || axString(element, kAXTitleAttribute) == cg.title)
-            }
-            guard candidates.count == 1 else {
-                throw NativeFailure("WINDOW_AX_MAPPING_FAILED", "Could not uniquely map the public CG window identity to an AX window.", ["windowId": id, "matches": candidates.count])
-            }
-            return candidates[0]
+            return try resolveAXWindow(id, sample: {
+                guard let cg = window(id), cg.pid == running.processIdentifier else {
+                    throw NativeFailure("TARGET_IDENTITY_CHANGED", "Selected window no longer exists.")
+                }
+                let geometry = axElements(root, kAXWindowsAttribute).filter { element in
+                    guard let rect = axRect(element) else { return false }
+                    return abs(rect.minX - cg.bounds.minX) < 2 && abs(rect.minY - cg.bounds.minY) < 2 &&
+                        abs(rect.width - cg.bounds.width) < 2 && abs(rect.height - cg.bounds.height) < 2
+                }
+                let matches = cg.title.isEmpty ? geometry : geometry.filter { axString($0, kAXTitleAttribute) == cg.title }
+                guard matches.count == 1 else { return (matches, geometry.count) }
+                guard let latest = window(id), latest.pid == cg.pid else {
+                    throw NativeFailure("TARGET_IDENTITY_CHANGED", "Selected window no longer exists.")
+                }
+                return (latest.title == cg.title && latest.bounds == cg.bounds ? matches : [], geometry.count)
+            }, settle: { pump(0.04) })
         }
         if let focused = attribute(root, kAXFocusedWindowAttribute), CFGetTypeID(focused) == AXUIElementGetTypeID() { return unsafeBitCast(focused, to: AXUIElement.self) }
         return root

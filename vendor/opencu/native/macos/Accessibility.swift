@@ -186,18 +186,18 @@ final class AccessibilityStore {
         return result
     }
 
-    func setValue(_ id: Int, target: [String: Any], targets: TargetStore, value: Any, check: () throws -> Void, willDispatch: () -> Void) throws {
+    func setValue(_ id: Int, target: [String: Any], targets: TargetStore, value: Any, check: () throws -> Void, willDispatch: () throws -> Void) throws {
         try requireAX()
         let element = try currentElement(id, target: target, targets: targets)
         var settable = DarwinBoolean(false)
         try checkedAX(AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable), "check value is settable")
         guard settable.boolValue else { throw NativeFailure("AX_VALUE_NOT_SETTABLE", "The selected element does not support AX value assignment.") }
         guard (attribute(element, kAXEnabledAttribute) as? NSNumber)?.boolValue != false else { throw NativeFailure("ELEMENT_DISABLED", "The selected control is disabled; no input was sent.") }
-        try check(); try targets.requireInteraction(element, target: target); willDispatch()
+        try check(); try targets.requireInteraction(element, target: target); try willDispatch()
         try checkedAX(AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, value as CFTypeRef), "set value")
     }
 
-    func press(_ id: Int, target: [String: Any], targets: TargetStore, check: () throws -> Void, willDispatch: () -> Void) throws {
+    func press(_ id: Int, target: [String: Any], targets: TargetStore, check: () throws -> Void, willDispatch: () throws -> Void) throws {
         try performSecondaryAction(id, target: target, targets: targets, name: "AXPress", check: check, willDispatch: willDispatch)
     }
 
@@ -246,7 +246,7 @@ final class AccessibilityStore {
         return element
     }
 
-    func selectText(_ id: Int, target: [String: Any], targets: TargetStore, action: [String: Any], check: () throws -> Void, willDispatch: () -> Void) throws {
+    func selectText(_ id: Int, target: [String: Any], targets: TargetStore, action: [String: Any], check: () throws -> Void, willDispatch: () throws -> Void) throws {
         try requireAX()
         let selectionType = action["selectionType"] as? String ?? "text"
         guard let text = action["text"] as? String, !text.isEmpty,
@@ -290,11 +290,11 @@ final class AccessibilityStore {
         }
         try textAvailable(live)
         try writable(live, kAXSelectedTextRangeAttribute)
-        try check(); try targets.requireInteraction(live, target: target); willDispatch()
+        try check(); try targets.requireInteraction(live, target: target); try willDispatch()
         try checkedAX(AXUIElementSetAttributeValue(live, kAXSelectedTextRangeAttribute as CFString, selected), "select text range")
     }
 
-    func paste(_ id: Int?, target: [String: Any], targets: TargetStore, text: String, check: () throws -> Void, willDispatch: () -> Void) throws {
+    func paste(_ id: Int?, target: [String: Any], targets: TargetStore, text: String, check: () throws -> Void, willDispatch: () throws -> Void) throws {
         try requireAX()
         let element = try currentElement(id, target: target, targets: targets)
         try textAvailable(element, editing: true)
@@ -315,13 +315,13 @@ final class AccessibilityStore {
         }
         try textAvailable(live, editing: true)
         try writable(live, kAXSelectedTextAttribute)
-        try check(); try targets.requireInteraction(live, target: target); willDispatch()
+        try check(); try targets.requireInteraction(live, target: target); try willDispatch()
         // The application's selected-text setter owns replacement and undo.
         // Never rewrite AXValue, focus a window, or modify the system clipboard.
         try checkedAX(AXUIElementSetAttributeValue(live, kAXSelectedTextAttribute as CFString, text as CFString), "insert selected text")
     }
 
-    func performSecondaryAction(_ id: Int, target: [String: Any], targets: TargetStore, name: String, check: () throws -> Void, willDispatch: () -> Void) throws {
+    func performSecondaryAction(_ id: Int, target: [String: Any], targets: TargetStore, name: String, check: () throws -> Void, willDispatch: () throws -> Void) throws {
         try requireAX()
         let aliases = ["Increment": "AXIncrement", "Decrement": "AXDecrement", "ShowMenu": "AXShowMenu", "Confirm": "AXConfirm", "Cancel": "AXCancel", "Raise": "AXRaise", "Pick": "AXPick", "Press": "AXPress"]
         let action = aliases[name] ?? name
@@ -344,7 +344,7 @@ final class AccessibilityStore {
         try checkedAX(AXUIElementCopyActionNames(live, &liveNames), "verify current element actions")
         guard (attribute(live, kAXEnabledAttribute) as? NSNumber)?.boolValue != false else { throw NativeFailure("ELEMENT_DISABLED", "The selected control became disabled; no input was sent.") }
         guard (liveNames as? [String] ?? []).contains(action) else { throw NativeFailure("UNSUPPORTED_ACTION", "The requested accessibility action is no longer available; no input was sent.") }
-        try check(); try targets.requireInteraction(live, target: target); willDispatch()
+        try check(); try targets.requireInteraction(live, target: target); try willDispatch()
         try checkedAX(AXUIElementPerformAction(live, action as CFString), "perform \(action)")
     }
 
@@ -372,12 +372,12 @@ final class AccessibilityStore {
     }
 
     func click(_ id: Int, resolved: (element: AXUIElement, action: String), target: [String: Any], targets: TargetStore,
-        check: () throws -> Void, willDispatch: () -> Void) throws {
+        check: () throws -> Void, willDispatch: () throws -> Void) throws {
         try check()
         guard let live = try clickTarget(id, target: target, targets: targets), CFEqual(live.element, resolved.element), live.action == resolved.action else {
             throw NativeFailure("STALE_ELEMENT", "The selected click control or its action changed; observe again. No input was sent.")
         }
-        try check(); try targets.requireInteraction(live.element, target: target); willDispatch()
+        try check(); try targets.requireInteraction(live.element, target: target); try willDispatch()
         try checkedAX(AXUIElementPerformAction(live.element, live.action as CFString), "click control using \(live.action)")
     }
 

@@ -222,14 +222,17 @@ final class InputStore {
 
     // An AX setter/action can time out after the application consumed it. Only
     // failures before its first attempt are safe to describe as undispatched.
-    func semanticAction<T>(_ operation: (_ willDispatch: () -> Void) throws -> T) throws -> T {
+    func semanticAction<T>(_ operation: (_ willDispatch: () throws -> Void) throws -> T) throws -> T {
         var dispatched = false
         do {
             try check()
             guard keys.isEmpty && buttons.isEmpty else {
                 throw NativeFailure("RELEASE_REQUIRED", "Release held input before an accessibility editing/action operation.", held())
             }
-            return try operation { dispatched = true; self.dispatchSequence &+= 1 }
+            return try operation {
+                try self.check()
+                dispatched = true; self.dispatchSequence &+= 1
+            }
         } catch let failure as NativeFailure {
             throw NativeFailure(failure.code, failure.message, failure.details.merging([
                 "inputDispatched": dispatched, "effectVerified": false, "retryable": false

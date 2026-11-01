@@ -127,7 +127,11 @@ final class NativeService {
             do {
                 let target = try targets.validated(params["target"] as? [String: Any] ?? [:])
                 input.interactionTarget = target
-                return try act(target, action)
+                var receipt = try act(target, action)
+                if receipt["performed"] as? Bool == true || input.dispatchSequence != inputStart {
+                    receipt["inputDispatched"] = input.dispatchSequence != inputStart
+                }
+                return receipt
             }
             catch let failure as NativeFailure {
                 let dispatched = failure.details["inputDispatched"] as? Bool == true || input.dispatchSequence != inputStart
@@ -273,7 +277,7 @@ final class NativeService {
             if let row = rowSelection {
                 try input.semanticAction { willDispatch in
                     try input.check(); try ax.verifyWindow(row, target: target, targets: targets)
-                    try targets.requireInteraction(row, target: target); willDispatch()
+                    try targets.requireInteraction(row, target: target); try willDispatch()
                     try checkedAX(AXUIElementSetAttributeValue(row, kAXSelectedAttribute as CFString, kCFBooleanTrue), "select row")
                 }
                 break
@@ -392,10 +396,9 @@ final class NativeService {
             try input.typeText(text)
         default: throw NativeFailure("UNSUPPORTED_ACTION", "Unsupported native action: \(type).")
         }
-        var result: [String: Any] = ["performed": true, "type": type, "input": input.held(), "inputMode": mode,
+        let result: [String: Any] = ["performed": true, "type": type, "input": input.held(), "inputMode": mode,
             "delivery": semantic ? "accessibility-acknowledged" : mode == "background" ? "process-posted" : "foreground-posted",
             "effectVerified": false]
-        if ["select_text", "paste", "perform_secondary_action", "click", "double_click", "right_click", "press_key"].contains(type) { result["inputDispatched"] = true }
         return result
     }
 }

@@ -5,7 +5,7 @@
  * Extension download events stay metadata-only until explicitly imported and validated.
  */
 import {basename} from 'node:path';
-import {assertBackend, checkExpected, checkSignal, errorJSON, fail, inputReleased, json, readOperation, referenceMatches, sameIdentity} from '../protocol.mjs';
+import {assertBackend, checkExpected, checkSignal, errorJSON, verificationFailure, fail, inputReleased, json, readOperation, referenceMatches, sameIdentity} from '../protocol.mjs';
 import {parseTarget, targetId} from '../extension/protocol.mjs';
 import {normalizeBrowserAction} from './actions.mjs';
 
@@ -41,6 +41,10 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
     const {provider: _provider, ...reference} = target;
     return {...reference, backend: provider === 'dsh' ? 'browser' : provider, kind: provider === 'extension' ? 'browser' : 'tab'};
   }
+  function requireAvailable(target, details = {}) {
+    if (target.supported === false && target.error) fail(target.error.code, target.error.message, {
+      ...target.error.details, targetId:target.id, observationRequired:true, inputDispatched:false, ...details});
+  }
   async function verifyExtension(target, options) {
     if (stale.has(target.id)) return {valid: false, reason: 'Document changed after navigation; list targets and select the new document occurrence'};
     const identity = parseTarget(target);
@@ -49,7 +53,8 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       const result = await extension.verify(unwrap(target, 'extension'), options);
       if (result?.valid !== true && result?.verified !== true) return {valid: false, reason: result?.reason ?? 'Extension did not verify the document', error: result?.error};
       const actual = result.target?.identity ?? result.identity;
-      if (!actual || !sameIdentity(actual, identity) || result.documentId !== undefined && result.documentId !== identity.documentId) {
+      if (!actual) return {valid:false, error:{code:'VERIFICATION_UNAVAILABLE',message:'Extension returned no document identity'}};
+      if (!sameIdentity(actual, identity) || result.documentId !== undefined && result.documentId !== identity.documentId) {
         return {valid: false, reason: 'Extension returned a different document occurrence'};
       }
       return {valid: true, target: wrap({...target, ...(result.target ?? {}),
@@ -147,6 +152,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       const {provider, backend} = providerFor(matches[0]);
       if (typeof backend.newTab !== 'function') fail('UNSUPPORTED_OPERATION', 'This browser cannot create a tab without an existing target');
       const target = wrap(await backend.newTab(browserId, url, options), provider);
+      requireAvailable(target, {target, created:true, notice:'The tab was created. Rebind it when its document is available.'});
       if (provider === 'extension') held.set(target.id, target);
       return target;
     },
@@ -185,6 +191,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       if (matches.length !== 1) fail(matches.length ? 'AMBIGUOUS_TARGET' : 'TARGET_NOT_FOUND', 'Reference must match one browser target');
       const target = matches[0], {provider, backend} = providerFor(target);
       checkExpected(target, reference?.expected);
+      if (provider === 'extension') requireAvailable(target);
       if (reference?.identity && !sameIdentity(reference.identity, target.identity)) fail('TARGET_IDENTITY_CHANGED', 'Selection changed document occurrence');
       if (stale.has(target.id)) fail('TARGET_IDENTITY_CHANGED', 'Navigation invalidated this document occurrence; select the new document');
       const selected = wrap({...target, ...await backend.select(unwrap(target, provider), {signal})}, provider);
@@ -196,7 +203,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       if (provider === 'extension') {
         const verified = await readOperation(() => verifyExtension(target, {signal}), signal);
         checkSignal(signal);
-        if (!verified.valid) fail('TARGET_IDENTITY_CHANGED', verified.reason);
+        if (!verified.valid) throw verificationFailure(verified, target.id);
       }
       if (typeof backend.focus !== 'function') fail('UNSUPPORTED_OPERATION', 'This browser backend cannot focus a target');
       const result = await backend.focus(unwrap(target, provider), {signal});
@@ -217,7 +224,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       alive(); const {provider, backend} = providerFor(target);
       if (provider === 'extension') {
         const verified = await verifyExtension(target);
-        if (!verified.valid) fail('TARGET_IDENTITY_CHANGED', verified.reason);
+        if (!verified.valid) throw verificationFailure(verified, target.id);
       }
       const result = await backend.observe(unwrap(target, provider), request);
       if (provider !== 'extension') return result;
@@ -238,7 +245,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       }
       const verified = await readOperation(() => verifyExtension(target, {signal: request.signal}), request.signal);
       checkSignal(request.signal);
-      if (!verified.valid) fail('TARGET_IDENTITY_CHANGED', verified.reason);
+      if (!verified.valid) throw verificationFailure(verified, target.id);
       const owedBefore = held.get(target.id);
       held.set(target.id, target);
       if (['activate', 'focus'].includes(request.action)) return {action: request.action, ...await composite.focus(target, {signal: request.signal})};
@@ -263,25 +270,38 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       if (request.action === 'newTab' || navigation.has(request.action)) {
         const navigated = navigation.has(request.action);
         if (navigated && result?.tabId !== target.identity.tabId) fail('TARGET_IDENTITY_CHANGED', 'Navigation did not acknowledge the same browser tab');
-        const next = (await composite.listTargets()).find(item => item.provider === 'extension' && item.supported &&
-          item.browserId === target.browserId && item.identity.tabId === result?.tabId && item.identity.documentId === result?.documentId);
-        checkSignal(signal);
-        if (!next) fail('TARGET_IDENTITY_CHANGED', 'The completed navigation document changed before verification; discover again');
-        if (navigated && next.id !== target.id) stale.add(target.id);
-        held.set(next.id, next);
-        // Back/forward may restore the same document from Chromium's BFCache.
-        // Only the acknowledged navigation plus fresh inventory may revive it.
-        const restored = stale.delete(next.id);
-        let checked;
+        // The tab/navigation already happened. Keep its acknowledged occurrence
+        // even if listing, selecting or verifying the destination subsequently fails.
+        const identity = {...target.identity,tabId:result?.tabId,documentId:result?.documentId};
+        const acknowledged = Number.isSafeInteger(identity.tabId) && typeof identity.documentId === 'string' && identity.documentId
+          ? wrap({id:targetId(identity),identity,browserId:target.browserId,url:result.url,title:result.title},'extension') : undefined;
         try {
-          const selected = await composite.select(next);
-          checked = await verifyExtension(selected);
+          const next = (await composite.listTargets({signal})).find(item => item.provider === 'extension' &&
+            item.browserId === target.browserId && item.identity.tabId === result?.tabId && item.identity.documentId === result?.documentId);
           checkSignal(signal);
-          if (!checked.valid) fail('TARGET_IDENTITY_CHANGED', checked.reason);
-        } catch (error) { if (restored) stale.add(next.id); throw error; }
-        if (navigated && next.id !== target.id) held.delete(target.id);
-        return {...result, action: request.action, reselectRequired: false, target: checked.target,
-          ...(navigated && next.id !== target.id ? {replacedTargetId: target.id} : {})};
+          if (!next) fail('TARGET_IDENTITY_CHANGED', 'The completed navigation document changed before verification; discover again');
+          requireAvailable(next);
+          if (navigated && next.id !== target.id) stale.add(target.id);
+          held.set(next.id, next);
+          // Back/forward may restore the same document from Chromium's BFCache.
+          // Only the acknowledged navigation plus fresh inventory may revive it.
+          const restored = stale.delete(next.id);
+          let checked;
+          try {
+            const selected = await composite.select(next, {signal});
+            checked = await verifyExtension(selected, {signal});
+            checkSignal(signal);
+            if (!checked.valid) throw verificationFailure(checked, selected.id);
+          } catch (error) { if (restored) stale.add(next.id); throw error; }
+          if (navigated && next.id !== target.id) held.delete(target.id);
+          return {...result, action: request.action, reselectRequired: false, target: checked.target,
+            ...(navigated && next.id !== target.id ? {replacedTargetId: target.id} : {})};
+        } catch (error) {
+          error.details = {...error.details, ...(navigated ? {navigated:true,inputDispatched:true} : {created:true,inputDispatched:false}),
+            ...(acknowledged && {target:acknowledged,targetId:acknowledged.id}), observationRequired:true,
+            notice:'Inspect the existing destination tab before continuing. Do not repeat the trigger.'};
+          throw error;
+        }
       }
       // Never promote the pre-navigation identity or an arbitrary bridge result to result.target.
       if (result?.identity && !sameIdentity(result.identity, target.identity)) stale.add(target.id);

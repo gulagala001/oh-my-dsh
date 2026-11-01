@@ -188,6 +188,9 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       task.reject(error);
     }
   }
+  const readOnlyRequest = (method, params) => ['listTargets','verify','observe','preview'].includes(method) ||
+    method === 'act' && (['domSnapshot','getDOM','hitTest'].includes(params.action?.type) ||
+      params.action?.type === 'locator' && ['count','innerText','textContent','allTextContents','isVisible','isEnabled','getAttribute','waitFor'].includes(params.action.method));
   function request(session, method, params = {}, timeout = requestTimeoutMs, monitoring = false) {
     if (closed || !sessions.has(session.sessionId)) return Promise.reject(failure('DISCONNECTED', 'Extension is disconnected.'));
     if (closing && !['release', 'disconnect'].includes(method)) return Promise.reject(failure('CLOSING', 'Extension backend is shutting down; retry close before using control.'));
@@ -199,6 +202,11 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       const timer = setTimeout(() => {
         pending.delete(id); session.queue = session.queue.filter(c => c.id !== id);
         if (monitoring) { reject(failure('PRESENTATION_TIMEOUT', `${method} timed out; monitoring is unavailable.`)); return; }
+        if (readOnlyRequest(method, params)) {
+          reject(new ExtensionError(method === 'verify' ? 'VERIFICATION_UNAVAILABLE' : 'COMMAND_TIMEOUT',
+            `Extension ${method} read timed out.`, {stage:method,inputDispatched:false}));
+          return;
+        }
         if (['release', 'disconnect'].includes(method)) {
           const error = new ExtensionError('RELEASE_FAILED', `${method} timed out; input release remains unconfirmed. Retry release or disconnect.`, { method });
           if (scope === undefined) session.releaseError = error;
@@ -227,6 +235,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
 
   async function controlRequest(session, method, params, signal) {
     signal?.throwIfAborted();
+    if (readOnlyRequest(method,params)) return readOperation(() => request(session,method,params),signal);
     let interruption;
     const abort = () => { interruption ??= request(session, 'release', { identity: params.identity })
       .catch(error => ({ released: false, error: error.toJSON?.() ?? { message: error.message } })); };
@@ -405,10 +414,14 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     async verify(target, options = {}) {
       try {
         const { session, identity } = sessionFor(target);
-        const current = await request(session, 'verify', { identity }, requestTimeoutMs, options.monitoring === true);
+        const current = await readOperation(() => request(session, 'verify', { identity }, requestTimeoutMs, options.monitoring === true), options.signal);
+        if (current?.verified !== true || !current.identity) return {valid:false,
+          error:{code:'VERIFICATION_UNAVAILABLE',message:'Extension returned no document verification receipt'}};
+        if (targetId(current.identity) !== targetId(identity) || current.documentId !== undefined && current.documentId !== identity.documentId)
+          return {valid:false,reason:'Extension verified a different document occurrence'};
         return { valid: true, target: { ...(typeof target === 'object' ? target : {}), id: targetId(identity), identity,
           kind: 'tab', backend: 'extension', browserId: `extension:${session.instanceId}`, url: current.url, title: current.title } };
-      } catch (error) { return { valid: false, reason: error.message, error: error.toJSON?.() }; }
+      } catch (error) { return { valid: false, reason: error.message, error: error.toJSON?.() ?? {code:error.code ?? 'EXTENSION_VERIFY_FAILED',message:error.message,details:error.details} }; }
     },
     async preview(target) {
       const { session, identity } = sessionFor(target);
