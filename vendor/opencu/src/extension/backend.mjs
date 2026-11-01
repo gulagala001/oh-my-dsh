@@ -196,7 +196,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     if (closing && !['release', 'disconnect'].includes(method)) return Promise.reject(failure('CLOSING', 'Extension backend is shutting down; retry close before using control.'));
     const scope = params.identity ? String(params.identity.tabId) : undefined;
     const blocked = session.releaseError ?? session.targetReleaseErrors?.get(scope);
-    if (blocked && !['release', 'disconnect'].includes(method)) return Promise.reject(blocked);
+    if (blocked && !['release', 'disconnect', 'recoverBrowser'].includes(method)) return Promise.reject(blocked);
     const id = randomUUID();
     return new Promise((resolveResult, reject) => {
       const timer = setTimeout(() => {
@@ -364,6 +364,18 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       return [...sessions.values()].map(({ instanceId, browserInstanceId, epoch, label, lastSeen, origin }) => ({
         instanceId, browserInstanceId, epoch, label, lastSeen, extensionId: new URL(origin).hostname,
       }));
+    },
+    async recoverBrowser(browserId) {
+      const session = [...sessions.values()].find(value => browserId === 'extension:' + value.instanceId);
+      if (!session) throw failure('DISCONNECTED', 'The browser connection is no longer available.');
+      const result = await request(session, 'recoverBrowser');
+      if (result?.ready !== true || !Array.isArray(result.isolatedTabs) ||
+        result.isolatedTabs.some(item => !Number.isInteger(item.tabId) || !item.error))
+        throw failure('RELEASE_FAILED', 'Browser recovery did not identify its remaining input responsibilities.');
+      delete session.releaseError;
+      session.targetReleaseErrors = new Map(result.isolatedTabs.map(item => [String(item.tabId),
+        new ExtensionError('RELEASE_FAILED', 'This tab still has unconfirmed input release.', item)]));
+      return result;
     },
     async openSettings(instanceId, section) {
       const session = [...sessions.values()].find(session => session.instanceId === instanceId);

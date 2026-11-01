@@ -619,10 +619,16 @@ export async function createController({dataDir, browser, native} = {}) {
         // No target is needed to recover an empty browser. Native hardware must
         // still release; unresolved old browser occurrences stay quarantined.
         const recovered = await recoverControl(); checkOperation(operationEpoch);
+        const browserRecovery = await backends.get('browser')?.recoverBrowser?.(request.browserId);
+        checkOperation(operationEpoch);
+        releaseErrors = releaseErrors.filter(item => item.browserId !== request.browserId);
+        if (browserRecovery?.isolatedTabs?.length) releaseErrors.push({backend:'browser', browserId:request.browserId,
+          released:false, failures:browserRecovery.isolatedTabs});
+        refreshBrowserReleases();
         const browser = await connected(); checkOperation(operationEpoch);
         aborter = new AbortController(); mode = 'active'; explicitlyStopped = false;
         await persist(); checkOperation(operationEpoch);
-        return {browser, state: snapshot(), ...recovered};
+        return {browser, state: snapshot(), ...recovered, ...(browserRecovery ? {browserRecovery} : {})};
       }
       const {target, backend} = targetFor(request.targetId, request.targetIdentity);
       let selecting = false;

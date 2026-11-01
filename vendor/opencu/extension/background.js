@@ -118,7 +118,8 @@ async function content(tabId, method, input = {}, expectedDocumentId, read = dir
     value = installed.result;
   }
   if (value?.ok !== true) throw Object.assign(new Error(value?.error?.message || `The content script returned no receipt during ${stage}.`),
-    {code:value?.error?.code || (stage === 'initialize' ? 'CONTENT_INIT_FAILED' : 'CONTENT_FAILURE'), details:{stage:value?.stage ?? stage,browserDocumentId}});
+    {code:value?.error?.code || (stage === 'initialize' ? 'CONTENT_INIT_FAILED' : 'CONTENT_FAILURE'),
+      details:{component:'extension/content.js',operation:method,stage:value?.stage ?? stage,browserDocumentId,tabId}});
   return {...value.result, browserDocumentId};
 
 }
@@ -402,9 +403,10 @@ async function releaseTabInputs(tabId,read) {
     for (const button of [...state.buttons]) try { await mouse(tabId, 'mouseReleased', state, button, 1); } catch (error) { errors.push(errorJSON(error)); }
     // Preserve modifiers while a mouse-up remains unacknowledged for retry.
     if (!state.buttons.size) for (const key of [...state.keys.values()].reverse()) try { await keyEvent(tabId, key, false); } catch (error) { errors.push(errorJSON(error)); }
-    try { await content(tabId, 'release', {}, undefined, read); } catch (error) { errors.push(errorJSON(error)); }
-    for(const[frameId,route]of state.frameRoutes??[])try{await read(() => frameContent(tabId,route,'release'));}
-    catch(error){if(error.code!=='FRAME_DETACHED')errors.push(errorJSON(error));else state.frameRoutes.delete(frameId);}
+    // Page markers and cursor visibility own no input. A stalled document must
+    // not prevent acknowledged key/button-up from reaching debugger detach.
+    void Promise.allSettled([content(tabId, 'release'),
+      ...[...state.frameRoutes?.values() ?? []].map(route => frameContent(tabId, route, 'release'))]);
     if (!errors.length) try { await cdp(tabId, 'Emulation.setFocusEmulationEnabled', { enabled: false }); } catch (error) { errors.push(errorJSON(error)); }
     if (!errors.length) {
       releasing.add(tabId);
@@ -854,6 +856,11 @@ async function command(message, token) {
       return { opened: true, tabId: tab.id, url: urls[section] };
     }
     case 'newTab': return newTab(message.params.url, token);
+    case 'recoverBrowser': {
+      const release = await releaseAll({isolate:true});
+      return {ready:true, release, isolatedTabs:[...attached].filter(([,state]) => state.quarantined)
+        .map(([tabId,state]) => ({tabId,error:state.releaseError}))};
+    }
     case 'release': return identity ? releaseTab(identity.tabId) : releaseAll();
     default: fail('UNSUPPORTED_OPERATION', 'Unknown bridge method.');
   }
@@ -988,7 +995,7 @@ async function loop(c) {
       if (connection !== c) break;
       for (const message of result.commands || []) {
         if (message.epoch !== c.epoch || Date.now() > message.deadline) continue;
-        if (message.method === 'release' || message.method === 'disconnect') {
+        if (['release', 'disconnect', 'recoverBrowser'].includes(message.method)) {
           const tabId = message.params?.identity?.tabId;
           cancelControl(tabId);
           // Cursor hiding is best-effort; real key/mouse release must not wait

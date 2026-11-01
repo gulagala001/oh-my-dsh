@@ -197,8 +197,9 @@ final class AccessibilityStore {
         try checkedAX(AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, value as CFTypeRef), "set value")
     }
 
-    func press(_ id: Int, target: [String: Any], targets: TargetStore, check: () throws -> Void, willDispatch: () throws -> Void) throws {
-        try performSecondaryAction(id, target: target, targets: targets, name: "AXPress", check: check, willDispatch: willDispatch)
+    @discardableResult
+    func press(_ id: Int, target: [String: Any], targets: TargetStore, check: () throws -> Void, willDispatch: () throws -> Void) throws -> Bool {
+        return try performSecondaryAction(id, target: target, targets: targets, name: "AXPress", check: check, willDispatch: willDispatch)
     }
 
     private func selectedRange(_ element: AXUIElement) -> CFRange? {
@@ -321,7 +322,8 @@ final class AccessibilityStore {
         try checkedAX(AXUIElementSetAttributeValue(live, kAXSelectedTextAttribute as CFString, text as CFString), "insert selected text")
     }
 
-    func performSecondaryAction(_ id: Int, target: [String: Any], targets: TargetStore, name: String, check: () throws -> Void, willDispatch: () throws -> Void) throws {
+    @discardableResult
+    func performSecondaryAction(_ id: Int, target: [String: Any], targets: TargetStore, name: String, check: () throws -> Void, willDispatch: () throws -> Void) throws -> Bool {
         try requireAX()
         let aliases = ["Increment": "AXIncrement", "Decrement": "AXDecrement", "ShowMenu": "AXShowMenu", "Confirm": "AXConfirm", "Cancel": "AXCancel", "Raise": "AXRaise", "Pick": "AXPick", "Press": "AXPress"]
         let action = aliases[name] ?? name
@@ -345,7 +347,27 @@ final class AccessibilityStore {
         guard (attribute(live, kAXEnabledAttribute) as? NSNumber)?.boolValue != false else { throw NativeFailure("ELEMENT_DISABLED", "The selected control became disabled; no input was sent.") }
         guard (liveNames as? [String] ?? []).contains(action) else { throw NativeFailure("UNSUPPORTED_ACTION", "The requested accessibility action is no longer available; no input was sent.") }
         try check(); try targets.requireInteraction(live, target: target); try willDispatch()
-        try checkedAX(AXUIElementPerformAction(live, action as CFString), "perform \(action)")
+        return try performAction(live, action: action, target: target, targets: targets, check: check)
+    }
+
+    // Finder can commit a radio selection while returning attributeUnsupported.
+    // Only a witnessed false-to-true transition on this same live control proves it.
+    private func performAction(_ element: AXUIElement, action: String, target: [String: Any], targets: TargetStore,
+        check: () throws -> Void) throws -> Bool {
+        let selecting = action == "AXPress" && axString(element, kAXRoleAttribute) == "AXRadioButton"
+            && (attribute(element, kAXValueAttribute) as? NSNumber)?.intValue == 0
+        let result = AXUIElementPerformAction(element, action as CFString)
+        if result == .success { return false }
+        if selecting && [AXError.attributeUnsupported, .cannotComplete].contains(result) {
+            for _ in 0..<6 {
+                try check()
+                try targets.requireInteraction(element, target: target)
+                if (attribute(element, kAXValueAttribute) as? NSNumber)?.intValue == 1 { return true }
+                pump(0.025)
+            }
+        }
+        try checkedAX(result, "perform \(action); input was dispatched, observe before another action")
+        return false
     }
 
     func verifyWindow(_ element: AXUIElement, target: [String: Any], targets: TargetStore) throws {
@@ -372,13 +394,13 @@ final class AccessibilityStore {
     }
 
     func click(_ id: Int, resolved: (element: AXUIElement, action: String), target: [String: Any], targets: TargetStore,
-        check: () throws -> Void, willDispatch: () throws -> Void) throws {
+        check: () throws -> Void, willDispatch: () throws -> Void) throws -> Bool {
         try check()
         guard let live = try clickTarget(id, target: target, targets: targets), CFEqual(live.element, resolved.element), live.action == resolved.action else {
             throw NativeFailure("STALE_ELEMENT", "The selected click control or its action changed; observe again. No input was sent.")
         }
         try check(); try targets.requireInteraction(live.element, target: target); try willDispatch()
-        try checkedAX(AXUIElementPerformAction(live.element, live.action as CFString), "click control using \(live.action)")
+        return try performAction(live.element, action: live.action, target: target, targets: targets, check: check)
     }
 
     func selectableRow(_ id: Int, target: [String: Any], targets: TargetStore) throws -> AXUIElement? {

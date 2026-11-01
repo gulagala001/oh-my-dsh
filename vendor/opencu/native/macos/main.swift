@@ -211,6 +211,7 @@ final class NativeService {
                 if clickTarget == nil { rowSelection = try ax.selectableRow(id, target: target, targets: targets) }
             }
         }
+        var effectVerified = false
         let semantic = ["set_value", "ax_press", "select_text", "paste", "perform_secondary_action"].contains(type) || rowSelection != nil || clickTarget != nil
         if !semantic {
             try input.route(to: mode == "background" ? target : nil)
@@ -250,11 +251,11 @@ final class NativeService {
                 try ax.paste(action["elementId"] as? Int, target: target, targets: targets, text: text, check: input.check, willDispatch: willDispatch)
             }
         case "perform_secondary_action":
-            try input.semanticAction { willDispatch in
+            effectVerified = try input.semanticAction { willDispatch in
                 guard let id = action["elementId"] as? Int, let name = action["actionName"] as? String, !name.isEmpty else {
                     throw NativeFailure("INVALID_ARGUMENT", "performSecondaryAction requires a numeric elementId and non-empty actionName from the element's observed actions.")
                 }
-                try ax.performSecondaryAction(id, target: target, targets: targets, name: name, check: input.check, willDispatch: willDispatch)
+                return try ax.performSecondaryAction(id, target: target, targets: targets, name: name, check: input.check, willDispatch: willDispatch)
             }
         case "set_value":
             try input.semanticAction { willDispatch in
@@ -262,15 +263,15 @@ final class NativeService {
                 try ax.setValue(id, target: target, targets: targets, value: value, check: input.check, willDispatch: willDispatch)
             }
         case "ax_press":
-            try input.semanticAction { willDispatch in
+            effectVerified = try input.semanticAction { willDispatch in
                 guard let id = action["elementId"] as? Int else { throw NativeFailure("INVALID_ACTION", "ax_press requires numeric elementId.") }
-                try ax.press(id, target: target, targets: targets, check: input.check, willDispatch: willDispatch)
+                return try ax.press(id, target: target, targets: targets, check: input.check, willDispatch: willDispatch)
             }
         case "move": try input.move(point(action, target))
         case "click", "double_click", "right_click", "mouse_down", "mouse_up":
             if let resolved = clickTarget, let id = clickID {
-                try input.semanticAction { willDispatch in
-                    try ax.click(id, resolved: resolved, target: target, targets: targets, check: input.check, willDispatch: willDispatch)
+                effectVerified = try input.semanticAction { willDispatch in
+                    return try ax.click(id, resolved: resolved, target: target, targets: targets, check: input.check, willDispatch: willDispatch)
                 }
                 break
             }
@@ -398,7 +399,7 @@ final class NativeService {
         }
         let result: [String: Any] = ["performed": true, "type": type, "input": input.held(), "inputMode": mode,
             "delivery": semantic ? "accessibility-acknowledged" : mode == "background" ? "process-posted" : "foreground-posted",
-            "effectVerified": false]
+            "effectVerified": effectVerified]
         return result
     }
 }

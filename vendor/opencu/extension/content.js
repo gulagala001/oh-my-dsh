@@ -4,6 +4,7 @@ export function installDocumentRuntime({trackActivity = true, browserDocumentId,
   function invoke() {
     if (method === undefined) return {ready: true};
     try {
+      if (typeof globalThis.__opencuDocument?.run !== 'function') throw Object.assign(new Error('The document runtime is unavailable after installation.'), {code:'CONTENT_RUNTIME_UNAVAILABLE'});
       return Promise.resolve(globalThis.__opencuDocument.run(method, input)).then(
         result => ({ok:true, result}), error => ({ok:false, stage:'invoke', error:{code:error.code || 'CONTENT_FAILURE', message:error.message}}));
     } catch (error) { return {ok:false, stage:'invoke', error:{code:error.code || 'CONTENT_FAILURE', message:error.message}}; }

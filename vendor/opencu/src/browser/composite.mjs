@@ -156,6 +156,12 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
       if (provider === 'extension') held.set(target.id, target);
       return target;
     },
+    async recoverBrowser(browserId) {
+      const matches = (await composite.listBrowsers()).filter(item => item.id === browserId);
+      if (matches.length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected browser ID');
+      const {backend} = providerFor(matches[0]);
+      return backend.recoverBrowser ? backend.recoverBrowser(browserId) : {ready:true};
+    },
     async listTargets({signal} = {}) {
       alive(); checkSignal(signal);
       const targets = [], errors = [];
