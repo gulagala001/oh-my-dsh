@@ -75,7 +75,7 @@ Side chats, local history, follow-ups and independent cancellation Bundled side-
 
 Themes, colors, backgrounds, fonts and appearance management Independent product sharing appearance source with OMD。
 
-- Pinned source / version: [SHA256:2214ef2aab7ebc7b67a602a1d45afdd066a2d9f05744c7d50db0fc392da37c3d](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
+- Pinned source / version: [SHA256:435fe1335631e736f76c7c15d980b1bdabf2fc6ef8eba20600bcf0f719ea7277](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
 
 ### Glyph

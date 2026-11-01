@@ -89,6 +89,15 @@ export function bindClaudeResize(frame, store) {
   };
 }
 
+function ClaudeRunningDots({ target }) {
+  useLayoutEffect(() => {
+    const marker = createAttributeMarkers('data-omd-claude-running-icon');
+    marker.update(new Map([[target, '']]));
+    return () => marker.dispose();
+  }, [target]);
+  return <span className="omd-cds-quiet-dots" aria-hidden="true"><span/><span/><span/></span>;
+}
+
 function ClaudeShell({ ctx }) {
   const ref = useRef(null), [indicators, setIndicators] = useState([]), [images, setImages] = useState([]);
   const entry = useSyncExternalStore(fn => ctx.slots.subscribe('root', fn), () => ctx.slots.entriesOfSlot('root')[0]);
@@ -148,7 +157,7 @@ function ClaudeShell({ ctx }) {
     };
   }, [ctx, entry]);
   return <><span ref={ref} hidden/>{indicators.map((element, index) => createPortal(
-    <span className="omd-cds-quiet-dots" aria-hidden="true"><span/><span/><span/></span>, element, String(index),
+    <ClaudeRunningDots target={element}/>, element, String(index),
   ))}{images.map((element,index) => createPortal(<ClaudeMediaControls image={element}/>, element.parentElement, 'image-' + index))}</>;
 }
 

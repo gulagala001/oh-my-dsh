@@ -211,8 +211,8 @@ html.omd[data-omd-layout="claude-desktop"] {
   & [data-chat-flow-kind="tool-call"] [data-disclosure-row] { border-radius: 7px; }
   & [data-chat-flow-kind="tool-call"] [data-disclosure-row]:hover { background: var(--omd-hover); }
   & [data-chat-running] { color: var(--omd-accent); }
-  & [data-chat-running] [class$="_runningIcon"]:has(.omd-cds-quiet-dots) { position: relative; width: 16px; }
-  & [data-chat-running] [class$="_runningIcon"]:has(.omd-cds-quiet-dots) > :not(.omd-cds-quiet-dots) { visibility: hidden; }
+  & [data-chat-running] [data-omd-claude-running-icon] { position: relative; width: 16px; }
+  & [data-chat-running] [data-omd-claude-running-icon] > :not(.omd-cds-quiet-dots) { visibility: hidden; }
   & .omd-cds-quiet-dots { position: absolute; inset: 0; display: inline-flex; align-items: center; gap: 3.5px; }
   & .omd-cds-quiet-dots > span { flex: none; width: 3px; height: 3px; background: var(--omd-accent); border-radius: 50%; animation: omd-cds-quiet-dot 1.9s cubic-bezier(.4,0,.2,1) infinite; }
   & .omd-cds-quiet-dots > span:nth-child(2) { animation-delay: .15s; }
