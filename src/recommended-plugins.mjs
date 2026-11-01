@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { recommendedPlugins, resolveRecommendedPlugin } from './recommended-plugin-catalog.mjs';
-import { prepareReviewedPackage } from './recommended-plugin-package.mjs';
+import { prepareReviewedPackage, readPluginManifest } from './recommended-plugin-package.mjs';
 import { compareVersions, parseVersion, releaseHostVersion, INSTALLED_VERSION } from './version.mjs';
 import { pluginManagementError, requirePluginChange } from './plugin-operation.mjs';
 import { withPluginPreflight } from './plugin-preflight/service.mjs';
@@ -51,18 +51,9 @@ export function pluginInstallSpec(plugin, version) {
 }
 export async function latestPluginVersion(plugin, signal) {
   if (plugin.bundled) throw Error('内置插件随 OMD 管理，不查询独立发行版本');
-  const response = await fetch(plugin.githubRelease ? `https://api.github.com/repos/${plugin.githubRelease}/releases/${plugin.review?.releaseTag ? 'tags/' + encodeURIComponent(plugin.review.releaseTag) : 'latest'}` : `https://registry.npmjs.org/${encodeURIComponent(plugin.packageName)}/latest`, {
-    signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]), headers: { Accept: 'application/json' },
-  });
-  if (!response.ok) {
-    await response.body?.cancel().catch(() => {});
-    throw Error(`查询最新版本失败（HTTP ${response.status}）`);
-  }
-  const parts = []; let bytes = 0;
-  for await (const part of response.body) {
-    bytes += part.length; if (bytes > 512 * 1024) throw Error('插件版本信息过大'); parts.push(part);
-  }
-  const manifest = JSON.parse(Buffer.concat(parts).toString('utf8'));
+  const url = plugin.githubRelease ? `https://api.github.com/repos/${plugin.githubRelease}/releases/${plugin.review?.releaseTag ? 'tags/' + encodeURIComponent(plugin.review.releaseTag) : 'latest'}`
+    : `https://registry.npmjs.org/${encodeURIComponent(plugin.packageName)}/latest`;
+  const manifest = await readPluginManifest(url, signal);
   if (plugin.githubRelease) {
     const version = plugin.review?.releaseTag ? plugin.review.version : manifest.tag_name?.replace(/^v/, '');
     if (plugin.review?.releaseTag && manifest.tag_name !== plugin.review.releaseTag) throw Error('GitHub Release 与固定桥接版本不一致');

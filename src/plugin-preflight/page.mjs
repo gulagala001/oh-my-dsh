@@ -72,26 +72,37 @@ export function activationState(inventory, candidate, entryId) {
 
 async function checkActivation(page, candidate, entryId, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
-  let waiting = [];
+  let waiting = [], readError;
   while (Date.now() < deadline) {
     const inventory = await page.evaluate(async timeout => {
+      const controller = new AbortController();
+      const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(timeout)]);
       const call = async method => {
-        const response = await fetch('/api/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(timeout),
+        const response = await fetch('/api/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
           body: JSON.stringify({ type: 'client-request', rpcId: crypto.randomUUID(), method, payload: { args: {} } }) });
+        if (!response.ok) throw Object.assign(Error(`${method}（HTTP ${response.status}）`), { retryable: response.status >= 500 });
         const data = await response.json();
-        if (!response.ok || !data.result?.ok) throw Error('无法读取原生插件加载状态：' + method);
+        if (!data?.result?.ok) throw Error('无法读取原生插件加载状态：' + method);
         return data.result.value;
       };
-      const [plugins, bundles] = await Promise.all([call('pluginManager/listPlugins'), call('pluginManager/listBundles')]);
-      return { plugins, bundles };
-    }, Math.max(1, Math.min(4000, deadline - Date.now()))).catch(error => {
-      throw Object.assign(problem(Date.now() >= deadline ? 'environment-timeout' : 'environment-unavailable', '原生插件加载状态读取未完成'), { details: error.message });
+      try {
+        const [plugins, bundles] = await Promise.all([call('pluginManager/listPlugins'), call('pluginManager/listBundles')]);
+        return { plugins, bundles };
+      } catch (error) {
+        if (signal.aborted || error.name === 'TypeError' || error.retryable) return { readError: error.message };
+        throw error;
+      } finally { controller.abort(); }
+    }, Math.max(1, deadline - Date.now())).catch(error => {
+      throw Object.assign(problem('environment-unavailable', '原生插件加载状态读取未完成'), { details: error.message });
     });
-    waiting = activationState(inventory, candidate, entryId);
-    if (!waiting.length) return;
-    await delay(150);
+    readError = inventory.readError;
+    if (readError === undefined) {
+      waiting = activationState(inventory, candidate, entryId);
+      if (!waiting.length) return;
+    }
+    await delay(Math.max(0, Math.min(150, deadline - Date.now())));
   }
+  if (readError !== undefined) throw Object.assign(problem('environment-timeout', '原生插件加载状态读取超时'), { details: readError });
   throw problem('environment-timeout', '插件尚未完成加载或仍在等待依赖服务：'
     + waiting.map(row => `${row.moduleName} (${row.fiberPhase ?? '未加载'})`).join('、'));
 }

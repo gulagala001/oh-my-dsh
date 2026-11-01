@@ -13,7 +13,7 @@ const en = {
   'billion-context': ['Billion Context', 'Long-context compression, original-content recovery and cache diagnostics.'],
   'dsh-ops': ['dsh-ops', 'Bounded file, document and shell tools with on-demand discovery.'],
   'dsh-intelligent-ui': ['DSH Intelligent UI', 'Interactive charts, forms, calculators, simulations and games in answers.'],
-  'oh-my-agents-above-all': ['Oh My Agents Above All', 'Agent presets and interfaces for Codex, Claude Code, Grok, Pi and ZCode workflows.'],
+  'oh-my-agents-above-all': ['Oh My Agents Above All', 'Choose a Codex, Grok Build, Cursor, Pi Coding Agent or ZCode preset in Settings → OMAA to use with DSH sessions and tools.'],
   'dsh-plugin-subscriptions': ['Subscription Login', 'Connect supported subscription providers and discover models.'],
   'dsh-open-design': ['OpenDesign', 'Design skills, templates and design systems.'],
   'omd-intent-assistant': ['Prompt Optimizer', 'Review and clarify requests before sending.'],

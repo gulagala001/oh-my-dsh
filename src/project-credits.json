@@ -585,8 +585,8 @@
       "url": "https://github.com/gulagala001/oh-my-agents-above-all",
       "authors": "gulagala001",
       "purpose": {
-        "zh": "选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。",
-        "en": "Agent presets and interfaces for Codex, Claude Code, Grok, Pi and ZCode workflows."
+        "zh": "在「设置 → OMAA」选择 Codex、Grok Build、Cursor、Pi Coding Agent 或 ZCode 预设，沿用 DSH 会话和工具。",
+        "en": "Choose a Codex, Grok Build, Cursor, Pi Coding Agent or ZCode preset in Settings → OMAA to use with DSH sessions and tools."
       },
       "relationship": {
         "zh": "可选安装／推荐；当前兼容范围见插件兼容说明",

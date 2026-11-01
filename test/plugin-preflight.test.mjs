@@ -296,8 +296,13 @@ test('package preparation reuses an existing Corepack cache without exposing it 
   assert.equal((await packageEnvironment({}, f.root, 'darwin')).COREPACK_HOME, undefined);
   await mkdir(native, { recursive: true });
   assert.equal((await packageEnvironment({}, f.root, 'darwin')).COREPACK_HOME, native);
-  const explicit = await packageEnvironment({ COREPACK_HOME: '/configured-cache', API_KEY: 'private' }, f.root, 'darwin');
+  const network = { HTTPS_PROXY: 'http://proxy.invalid:3128', no_proxy: 'localhost', npm_config_registry: 'https://registry.invalid' };
+  const explicit = await packageEnvironment({ COREPACK_HOME: '/configured-cache', API_KEY: 'private', ...network }, f.root, 'darwin');
   assert.equal(explicit.COREPACK_HOME, '/configured-cache'); assert.equal(explicit.API_KEY, undefined);
   const runtime = cleanEnvironment(f.root, explicit);
   assert.equal(runtime.COREPACK_HOME, undefined); assert.equal(runtime.HOME, join(f.root, 'home'));
+  for (const [key, value] of Object.entries(network)) {
+    assert.equal(explicit[key], value);
+    assert.equal(runtime[key], undefined);
+  }
 });

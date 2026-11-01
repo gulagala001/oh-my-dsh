@@ -204,7 +204,7 @@ For a bug report, include the full DSH and plugin versions, the entry point, min
 | [Billion Context](https://github.com/ranxianglei/billion-context) | Long-context compression, original-content recovery and cache diagnostics. |
 | [dsh-ops](https://github.com/T-Auto/dsh-ops) | Bounded file, document and shell tools with on-demand discovery. |
 | [DSH Intelligent UI](https://github.com/gulagala001/dsh-intelligent-ui) | Interactive charts, forms, calculators, simulations and games in answers. |
-| [Oh My Agents Above All](https://github.com/gulagala001/oh-my-agents-above-all) | Agent presets and interfaces for Codex, Claude Code, Grok, Pi and ZCode workflows. |
+| [Oh My Agents Above All](https://github.com/gulagala001/oh-my-agents-above-all) | Choose a Codex, Grok Build, Cursor, Pi Coding Agent or ZCode preset in Settings → OMAA to use with DSH sessions and tools. |
 | [Subscription Login](https://github.com/V1ki/dsh-plugin-subscriptions) | Connect supported subscription providers and discover models. |
 | [OpenDesign](https://github.com/omegapaopao/dsh-open-design) | Design skills, templates and design systems. |
 | [Prompt Optimizer](https://github.com/WestFox-AwA/dsh-prompt-optimizer) | Review and clarify requests before sending. |

@@ -15,7 +15,12 @@ test('preflight follows rendered onboarding branches and still rejects real fail
         ? [{ name: 'fixture', enabled: true, rows: [{ entryId: 'include:fixture' }] }]
         : [{ entryId: 'include:fixture', moduleName: 'fixture', enabled: true,
           fiberPhase: scenario === 'host-failed' ? 'failed' : scenario === 'loading' || scenario === 'settling' && reads++ === 0 ? 'loading' : 'active' }];
-      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ result: { ok: true, value } })); return;
+      if (req.url.endsWith('listPlugins') && scenario === 'reset-inventory' && reads++ === 0) { req.socket.destroy(); return; }
+      if (scenario === 'denied-inventory') { res.writeHead(403); res.end(); return; }
+      const reply = () => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ result: { ok: true, value } })); };
+      if (req.url.endsWith('listPlugins') && scenario === 'slow-inventory') setTimeout(reply, 4200);
+      else reply();
+      return;
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     if (scenario === 'blank') { res.end('<html><body></body></html>'); return; }
@@ -53,13 +58,13 @@ account.onclick=()=>{const m=document.createElement('div');m.setAttribute('role'
   const browser = await chromium.launch({ headless: true, ...(process.env.OMD_TEST_BROWSER ? { executablePath: process.env.OMD_TEST_BROWSER } : {}) });
   t.after(() => browser.close());
   const url = `http://127.0.0.1:${server.address().port}/`;
-  for (const name of ['choice', 'direct', 'direct-after-welcome', 'ready-after-welcome', 'ready', 'english', 'hidden-choice', 'settling', 'disabled-auto-close', 'vanishing',
+  for (const name of ['choice', 'direct', 'direct-after-welcome', 'ready-after-welcome', 'ready', 'english', 'hidden-choice', 'settling', 'slow-inventory', 'reset-inventory', 'denied-inventory', 'disabled-auto-close', 'vanishing',
     'blocked', 'blank', 'client-failed', 'script-failed', 'host-failed', 'loading']) await t.test(name, async () => {
     scenario = name; reads = 0;
     const page = await browser.newPage();
     try {
-      const codes = { blocked: 'ui-timeout', blank: 'client-failed', 'client-failed': 'client-failed', 'script-failed': 'client-failed', 'host-failed': 'host-failed', loading: 'environment-timeout' };
-      const result = checkRuntimePage(page, url, { candidate: 'fixture', timeoutMs: name === 'vanishing' ? 3000 : 1800 });
+      const codes = { 'denied-inventory': 'environment-unavailable', blocked: 'ui-timeout', blank: 'client-failed', 'client-failed': 'client-failed', 'script-failed': 'client-failed', 'host-failed': 'host-failed', loading: 'environment-timeout' };
+      const result = checkRuntimePage(page, url, { candidate: 'fixture', timeoutMs: name === 'slow-inventory' ? 6500 : name === 'vanishing' ? 3000 : 1800 });
       if (codes[name]) await assert.rejects(result, { code: codes[name] });
       else { await result; assert.equal(await page.getByRole('dialog', { name: /^(设置|Settings)$/ }).isVisible(), true); }
     } finally { await page.close(); }

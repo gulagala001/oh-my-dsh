@@ -45,11 +45,13 @@ export function cleanEnvironment(root, inherited = process.env) {
     DSH_TELEMETRY_DISABLED: '1', ELECTRON_RUN_AS_NODE: '1', OMD_PLUGIN_PREFLIGHT: '1' };
 }
 
-// Package acquisition may reuse the launcher's native caches. Runtime and
-// browser environment remain isolated; no second permanent cache is created.
+// Only the package manager inherits network settings and native caches.
+// The trial host and browser still start with cleanEnvironment().
 export async function packageEnvironment(inherited = process.env, home = homedir(), platform = process.platform) {
-  const env = Object.fromEntries(['PNPM_HOME', 'COREPACK_HOME', 'npm_config_cache', 'NPM_CONFIG_CACHE', 'LOCALAPPDATA']
-    .filter(key => inherited[key]).map(key => [key, inherited[key]]));
+  const names = ['PNPM_HOME', 'COREPACK_HOME', 'LOCALAPPDATA', 'NODE_EXTRA_CA_CERTS', 'NODE_USE_ENV_PROXY'];
+  for (const key of ['http_proxy', 'https_proxy', 'all_proxy', 'no_proxy', 'npm_config_cache', 'npm_config_registry',
+    'npm_config_proxy', 'npm_config_https_proxy', 'npm_config_noproxy', 'npm_config_cafile']) names.push(key, key.toUpperCase());
+  const env = Object.fromEntries(names.filter(key => inherited[key] !== undefined).map(key => [key, inherited[key]]));
   env.XDG_DATA_HOME = inherited.XDG_DATA_HOME || join(home, platform === 'darwin' ? 'Library' : '.local/share');
   if (!env.COREPACK_HOME) {
     const native = join(inherited.XDG_CACHE_HOME || inherited.LOCALAPPDATA || join(home, platform === 'win32' ? 'AppData/Local' : '.cache'), 'node/corepack');

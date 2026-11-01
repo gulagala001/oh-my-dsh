@@ -204,7 +204,7 @@ OMD 自有代码采用 [MIT 许可证](LICENSE)。第三方代码、组件和素
 | [Billion Context](https://github.com/ranxianglei/billion-context) | 管理长会话的上下文压缩、原文恢复和缓存诊断；在 OMD 上下文页按会话切换。 |
 | [dsh-ops](https://github.com/T-Auto/dsh-ops) | 增强文件、文档与命令操作，按需加载工具并复用结果；支持普通模式和 PTC，保留原生工具。 |
 | [DSH Intelligent UI](https://github.com/gulagala001/dsh-intelligent-ui) | 在回答中使用交互图表、表单、计算器、模拟和小游戏。 |
-| [Oh My Agents Above All](https://github.com/gulagala001/oh-my-agents-above-all) | 选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。 |
+| [Oh My Agents Above All](https://github.com/gulagala001/oh-my-agents-above-all) | 在「设置 → OMAA」选择 Codex、Grok Build、Cursor、Pi Coding Agent 或 ZCode 预设，沿用 DSH 会话和工具。 |
 | [Subscription Login](https://github.com/V1ki/dsh-plugin-subscriptions) | 登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。 |
 | [OpenDesign](https://github.com/omegapaopao/dsh-open-design) | 使用 52 个设计技能、模板和设计系统，技能入口为 open-design。 |
 | [Prompt Optimizer](https://github.com/WestFox-AwA/dsh-prompt-optimizer) | 发送前梳理本轮需求，保留原话，支持审查、自动模式和只读查证；启用后可在输入框选择模式。 |

@@ -59,7 +59,7 @@ export const recommendedPlugins = [
   {
     id: 'oh-my-agents-above-all', name: '智能体预设', section: 'features', versionSuffix: 'omaa',
     packageName: 'oh-my-agents-above-all', author: 'gulagala001',
-    description: '选用 Codex、Claude Code、Grok、Pi 与 ZCode 风格的智能体，沿用 DSH 会话和工具。',
+    description: '在「设置 → OMAA」选择 Codex、Grok Build、Cursor、Pi Coding Agent 或 ZCode 预设，沿用 DSH 会话和工具。',
     category: '智能体', url: 'https://github.com/gulagala001/oh-my-agents-above-all', githubRelease: 'gulagala001/oh-my-agents-above-all',
     hostBuilds: {
       '0.2.1-rc.5': {"version": "0.2.1-rc.5.omaa.0.17.7", "releaseTag": "v0.2.1-rc.5.omaa.0.17.7", "asset": "oh-my-agents-above-all-0.2.1-rc.5.omaa.0.17.7.tgz", "sha256": "0605bf8c744b38de06b5c84bf375bbdc8643557287b34487606d65b1daa8fa7b", "dsh": "0.2.1-rc.5", "allowPrerelease": false},

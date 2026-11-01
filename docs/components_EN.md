@@ -129,7 +129,7 @@ Interactive charts, forms, calculators, simulations and games in answers. Option
 
 [Project](https://github.com/gulagala001/oh-my-agents-above-all) · gulagala001
 
-Agent presets and interfaces for Codex, Claude Code, Grok, Pi and ZCode workflows. Optional recommendation; see compatibility guide for current support。
+Choose a Codex, Grok Build, Cursor, Pi Coding Agent or ZCode preset in Settings → OMAA to use with DSH sessions and tools. Optional recommendation; see compatibility guide for current support。
 
 - Pinned source / version: [0.2.1-rc.5.omaa.0.17.7 / 0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
