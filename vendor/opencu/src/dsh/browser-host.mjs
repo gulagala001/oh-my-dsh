@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { checkExpected, fail, inputReleased, json, referenceMatches, sameIdentity } from '../protocol.mjs';
+import { checkExpected, errorJSON, fail, inputReleased, json, referenceMatches, sameIdentity } from '../protocol.mjs';
 import { compactPresentationImages } from '../presentation-images.mjs';
 
 /** The authenticated DSH renderer owns each real sidebar guest, not a screenshot proxy. */
@@ -166,7 +166,7 @@ export function createBrowserHost() {
       try {
         const current = await request(clientFor(target), 'verify', { target }, options.monitoring === true, options.signal);
         return { valid: current.id === target.id && sameIdentity(current.identity, target.identity), target: current };
-      } catch (error) { return { valid: false, reason: error.message }; }
+      } catch (error) { return { valid: false, reason: error.message, error: errorJSON(error) }; }
     },
     async focus(target) { return request(clientFor(target), 'focus', { target }); },
     async preview(target) { return request(clientFor(target), 'preview', { target }); },
@@ -287,6 +287,10 @@ export function createBrowserHost() {
     backend,
     listBrowsers() { return liveClients().map(client => ({ id: `dsh:${client.id}`, provider: 'dsh', name: 'DSH Browser' })); },
     presentationOwner,
+    revealTab({ id, identity }, sessionId, signal) {
+      const target = { id, identity };
+      return request(clientFor(target), 'revealTab', { target, sessionId }, true, signal);
+    },
     isPresentationSession(rendererId, sessionId) { return liveClients().some(client => client.id === rendererId && client.presentation && client.sessionIds.includes(sessionId)); },
     async cursor(payload, ownerId) {
       const owner = liveClients().find(client => client.id === ownerId && client.presentation);

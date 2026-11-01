@@ -85,6 +85,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     entry.offSessionDisposed = root.on('session/disposed', session => {
       turns.delete(session);
       entry.runtime.forgetSession(session.id);
+      entry.presentation.forgetSession(session.id);
       entry.activity.forget(session.id);
       const handBack = entry.handBack(session, {endpoint: 'away', args: {relinquish: true}});
       const computer = entry.computers.get(session.id);
@@ -96,7 +97,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
         entry.activity.forget(session.id);
       }).catch(error => console.error('OpenCU computer session cleanup', error));
     }, { global: true });
-    entry.presentation = createPresentationHost({ runtime: entry.runtime, activity: entry.activity, browserHost: entry.browserHost });
+    entry.presentation = createPresentationHost({ runtime: entry.runtime, activity: entry.activity, browserHost: entry.browserHost, preferences: entry.preferences });
     entry.request = async (endpoint, args = {}, { signal, attachments, sessionKey, modelProjection = false, onApprovalWait, requestSource = 'interface' } = {}) => {
       signal?.throwIfAborted();
       if (endpoint.startsWith('recovery/')) throw new Error('Recovery confirmation is available only in browser connection settings');

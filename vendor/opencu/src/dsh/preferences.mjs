@@ -7,6 +7,7 @@ const validators = {
   'browser-download-directory': value => value === null || typeof value === 'string' && isAbsolute(value),
   'browser-download-prompt-enabled': value => typeof value === 'boolean',
   'browser-show-full-url': value => typeof value === 'boolean',
+  'browser-cu-initial-view': value => ['sidebar', 'floating'].includes(value),
   'browser-annotation-markers-visible': value => typeof value === 'boolean',
   'browser-extensions-toolbar-visible': value => typeof value === 'boolean',
   'browser-show-device-toolbar-in-new-tabs': value => typeof value === 'boolean',

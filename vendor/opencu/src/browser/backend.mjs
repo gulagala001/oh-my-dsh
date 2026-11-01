@@ -376,7 +376,8 @@ export async function createBrowserBackend(options = {}) {
   async function verify(target) {
     await initialize();
     const record = records.get(target.id);
-    if (!record || record.page.isClosed() || record.crashed) return {valid: false, reason: 'Browser tab occurrence is no longer available'};
+    if (!record || record.page.isClosed()) return {valid: false, reason: 'Browser tab occurrence is no longer available', error: {code: 'TARGET_CLOSED'}};
+    if (record.crashed) return {valid: false, reason: 'Browser tab process exited', error: {code: 'TARGET_CRASHED'}};
     try {
       const {targetInfo} = await record.session.send('Target.getTargetInfo');
       if (targetInfo.targetId !== record.identity.targetId || !sameIdentity(record.identity, target.identity)) {

@@ -666,7 +666,8 @@ export async function createController({dataDir, browser, native} = {}) {
         capture = (async () => {
           const current = await backend.verify(json(target), {monitoring: true});
           checkOperation(operationEpoch);
-          if (current?.valid !== true || current.target && (current.target.id !== target.id || !sameIdentity(current.target.identity, target.identity))) fail('TARGET_IDENTITY_CHANGED', current?.reason ?? 'Preview target is no longer available');
+          if (current?.valid !== true) fail(current?.error?.code ?? 'TARGET_IDENTITY_CHANGED', current?.reason ?? 'Preview target is no longer available');
+          if (current.target && (current.target.id !== target.id || !sameIdentity(current.target.identity, target.identity))) fail('TARGET_IDENTITY_CHANGED', 'Preview target is no longer available');
           const preview = await backend.preview(json(target));
           return { ...preview, active: preview.active ?? current.target?.active === true, isDetached: current.target?.isDetached === true };
         })().finally(() => { if (previews.get(target.id) === capture) previews.delete(target.id); });
@@ -677,7 +678,11 @@ export async function createController({dataDir, browser, native} = {}) {
         timer = setTimeout(() => reject(Object.assign(new Error('Monitor capture timed out; input remains available'), {code: 'PRESENTATION_TIMEOUT'})), 12000);
       })]).finally(() => clearTimeout(timer));
       checkOperation(operationEpoch);
-      if (selected.get(target.id) !== target) fail('TARGET_IDENTITY_CHANGED', 'The monitored target changed');
+      const latest = selected.get(target.id);
+      if (latest !== target) {
+        if (latest && sameIdentity(latest.identity, target.identity)) fail('STALE_OBSERVATION', 'The target was updated during capture');
+        fail('TARGET_IDENTITY_CHANGED', 'The monitored target changed');
+      }
       return {target, preview};
     }),
     stopPreview: (request = {}) => response(async () => {

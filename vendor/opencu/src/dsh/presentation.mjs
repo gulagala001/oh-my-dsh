@@ -3,9 +3,10 @@ import { createHash, randomUUID } from 'node:crypto';
 const FRAME_LIMIT = 5, EXPANDED_FRAME_LIMIT = 10, MAX_CAPTURE_BACKOFF = 15000;
 
 /** Monitoring has its own capture path; display changes never select a tool target. */
-export function createPresentationHost({ runtime, activity, browserHost }) {
+export function createPresentationHost({ runtime, activity, browserHost, preferences }) {
   const owners = new Map(), videoTargets = new Set(), hiddenTasks = new Set(), placements = new Map(), yieldedTargets = new Map();
   const hiddenTargets = new Map(), expandedOwners = new Set();
+  const closedTargets = new Map(), browserViews = new Map();
   // Image revisions only need to be unique per host instance; never hash the image bytes.
   const imageInstance = randomUUID().slice(0, 8);
   let imageSequence = 0;
@@ -13,7 +14,7 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
   let mediaGeneration = 0;
   const transientCaptureErrors = new Set(['PRESENTATION_TIMEOUT', 'CAPTURE_FAILED', 'CAPTURE_TIMEOUT', 'VIDEO_CAPTURE_FAILED',
     'VIDEO_CAPTURE_TIMEOUT', 'VIDEO_CAPTURE_STOPPED', 'BROWSER_CAPTURE_TIMEOUT', 'WINDOW_AX_MAPPING_FAILED',
-    'JS_DIALOG_OPEN', 'PREVIEW_FRAME_INVALID', 'BACKGROUND_CAPTURE_UNAVAILABLE']);
+    'JS_DIALOG_OPEN', 'PREVIEW_FRAME_INVALID', 'BACKGROUND_CAPTURE_UNAVAILABLE', 'STALE_OBSERVATION']);
   let timer, refreshing, refreshRequested = false, captureRequested = false, closed = false, revision = 0;
   const targetKey = (rendererId, sessionId, targetId) => JSON.stringify([rendererId, sessionId, targetId]);
   const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object'
@@ -24,13 +25,44 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
   const manuallyHidden = (target, rendererId) => hiddenTargets.get(targetKey(rendererId, target.threadID, target.id))?.visibilityKey === visibilityKey(target, rendererId);
   // Moving a target into the sidebar hides its preview for the current activity; it is restorable like a closed one.
   const yielded = (target, group) => yieldedTargets.get(target.id)?.activity === group.activity.get(target.threadID);
-  const eligible = (target, group, ownerId) => !hiddenTasks.has(target.threadID) && !manuallyHidden(target, ownerId) && !yielded(target, group);
+  const ownBrowserTab = target => target.provider === 'dsh' && target.sessionId === target.threadID && !target.isDetached;
+  const usesBrowserSidebar = target => ownBrowserTab(target) && ['pending', 'sidebar'].includes(browserViews.get(target.threadID)?.placement);
+  const eligible = (target, group, ownerId) => !hiddenTasks.has(target.threadID) && !manuallyHidden(target, ownerId)
+    && !yielded(target, group) && !usesBrowserSidebar(target);
   const frameLimit = ownerId => expandedOwners.has(ownerId) ? EXPANDED_FRAME_LIMIT : FRAME_LIMIT;
   const renderFailure = (rendererId, frame) => {
     const failure = renderFailures.get(targetKey(rendererId, frame.threadID, frame.presentationID));
     return failure?.identity === frame.visibilityKey && failure.mediaGeneration === frame.mediaGeneration ? failure : null;
   };
   const ownerError = (rendererId, owner) => owner?.error ?? owner?.frames.map(frame => renderFailure(rendererId, frame)).find(Boolean)?.message ?? null;
+  function useMonitor(sessionId) {
+    browserViews.get(sessionId)?.controller?.abort();
+    browserViews.set(sessionId, { placement: 'monitor' });
+  }
+  function hideTask(sessionId) {
+    hiddenTasks.add(sessionId);
+    if (browserViews.get(sessionId)?.controller) useMonitor(sessionId);
+  }
+  async function startBrowserView(target, ownerId) {
+    const sessionId = target.threadID, controller = new AbortController();
+    const view = { placement: 'pending', controller, ownerId };
+    browserViews.set(sessionId, view);
+    let placement = 'monitor';
+    try {
+      const { values } = await preferences.read();
+      if (values['browser-cu-initial-view'] !== 'floating' && !controller.signal.aborted && browserHost.isPresentationSession(ownerId, sessionId)) {
+        const result = await browserHost.revealTab(target, sessionId, controller.signal);
+        if (result.revealed) placement = 'sidebar';
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) console.warn('OpenCU initial browser view', error.message);
+    } finally {
+      if (!closed && browserViews.get(sessionId) === view) {
+        browserViews.set(sessionId, { placement });
+        void refresh();
+      }
+    }
+  }
   async function releaseUnusedVideo() {
     const displayed = new Set([...owners.values()].filter(owner => !owner.hidden && !closed).flatMap(owner => owner.targetIds));
     for (const targetId of videoTargets) if (!displayed.has(targetId)) {
@@ -72,9 +104,12 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
         try { ownerId = browserHost.presentationOwner(target, session.sessionId); }
         catch { continue; /* A disconnected window must not move its monitor to another DSH window. */ }
         if (!browserHost.isPresentationSession(ownerId, session.sessionId)) continue;
+        const item = { ...target, threadID: session.sessionId, completion: session.completion ?? null };
+        const closedKey = closedTargets.get(session.sessionId)?.get(target.id);
+        if (closedKey && closedKey === visibilityKey(item, ownerId)) continue;
         let group = grouped.get(ownerId);
         if (!group) { group = { targets: new Map(), activity: new Map() }; grouped.set(ownerId, group); }
-        group.targets.delete(target.id); group.targets.set(target.id, { ...target, threadID: session.sessionId, completion: session.completion ?? null });
+        group.targets.delete(target.id); group.targets.set(target.id, item);
         group.activity.set(session.sessionId, session.lastStarted?.id || '');
       }
     }
@@ -94,13 +129,15 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
   function taskState(rendererId, { compactImages = false, knownImages, imagePlacement, imageSessions } = {}) {
     const group = groups().get(rendererId), owner = owners.get(rendererId);
     const activeTaskIds = [...group?.activity.keys() ?? []];
+    const placementFor = id => placements.get(id) ?? (browserViews.get(id)?.placement === 'sidebar'
+      && ![...group.targets.values()].some(target => target.threadID === id && eligible(target, group, rendererId)) ? 'home' : 'pinned');
     return { activeTaskIds, revision, globalHidden: false,
       taskVisibilities: Object.fromEntries(activeTaskIds.map(id => [id, hiddenTasks.has(id) || owner?.hidden ? 'hidden' : 'shown'])),
       hiddenTargetCounts: Object.fromEntries(activeTaskIds.map(id => [id,
         [...group.targets.values()].filter(target => target.threadID === id && !hiddenTasks.has(id)
-          && (manuallyHidden(target, rendererId) || yielded(target, group))).length])),
+          && (manuallyHidden(target, rendererId) || yielded(target, group) || usesBrowserSidebar(target))).length])),
       overflowCounts: overflowCounts(rendererId, group), expanded: expandedOwners.has(rendererId),
-      placements: Object.fromEntries(activeTaskIds.map(id => [id, placements.get(id) ?? 'pinned'])),
+      placements: Object.fromEntries(activeTaskIds.map(id => [id, placementFor(id)])),
       frames: owner?.hidden ? [] : (owner?.frames ?? []).filter(frame => activeTaskIds.includes(frame.threadID)).map(frame => {
         const failure = renderFailure(rendererId, frame);
         const value = failure ? { ...frame, renderError: failure.message, renderErrorCode: failure.code } : frame;
@@ -133,10 +170,20 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
       requested = true;
     }
     const failed = error => {
+      const errorCode = error?.code ?? 'PRESENTATION_ERROR', message = error?.message ?? 'Preview capture failed';
+      if (errorCode === 'TARGET_CLOSED' || errorCode === 'TARGET_NOT_SELECTED'
+        || target.backend === 'native' && ['TARGET_NOT_FOUND', 'TARGET_IDENTITY_CHANGED'].includes(errorCode)) {
+        // Keep task history separate from the lifetime of a monitored window or tab.
+        if (captures.get(key) === record && owners.get(ownerId)?.generation === generation) {
+          let targets = closedTargets.get(target.threadID);
+          if (!targets) closedTargets.set(target.threadID, targets = new Map());
+          targets.set(target.id, identity);
+        }
+        return;
+      }
       // Repeated failures back off instead of recapturing every frame interval.
       record.failures = (record.failures ?? 0) + 1;
       record.nextCaptureAt = Date.now() + Math.min((target.backend === 'native' ? 100 : 600) * 2 ** record.failures, MAX_CAPTURE_BACKOFF);
-      const errorCode = error?.code ?? 'PRESENTATION_ERROR', message = error?.message ?? 'Preview capture failed';
       if (record.lastGood && transientCaptureErrors.has(errorCode)) {
         record.staleSince ??= Date.now();
         record.value = { ...record.lastGood, stale: true, staleSince: record.staleSince, lastSuccessfulAt: record.lastGoodAt, error: message, errorCode };
@@ -152,7 +199,7 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
     if (requested && !record.work && Date.now() >= record.nextCaptureAt) {
       record.nextCaptureAt = Date.now() + (target.backend === 'native' ? 100 : 600);
       if (target.backend === 'native') videoTargets.add(target.id);
-      record.work = Promise.resolve().then(() => runtime.request('preview', { targetId: target.id }, { sessionKey: target.threadID }))
+      record.work = Promise.resolve().then(() => runtime.request('preview', { targetId: target.id, targetIdentity: target.identity }, { sessionKey: target.threadID }))
         .then(result => {
           if (result.ok === false) { failed(result.error); return; }
           if (result.target?.id && result.target.id !== target.id || result.target?.identity
@@ -208,6 +255,10 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
         let owner = owners.get(ownerId);
         if (!owner) { owner = { available: true, visible: false, rendered: false, error: null, hidden: false, generation: 0, targetIds: [], frames: [] }; owners.set(ownerId, owner); }
         if (owner.hidden) continue;
+        for (const target of group.targets.values()) {
+          if (preferences && ownBrowserTab(target) && !hiddenTasks.has(target.threadID) && !browserViews.has(target.threadID))
+            void startBrowserView(target, ownerId);
+        }
         const targets = shownTargets(group, ownerId), generation = owner.generation;
         owner.targetIds = targets.map(target => target.id);
         const frames = targets.flatMap(target => {
@@ -249,6 +300,9 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
       error: [...owners].map(([rendererId, owner]) => ownerError(rendererId, owner)).find(Boolean) ?? null,
       windows: [...owners].map(([rendererId, owner]) => { const { frames, presentationSignature, ...state } = owner; return { rendererId, ...state, error: ownerError(rendererId, owner) }; }) }),
     async sessionsChanged() {
+      for (const [id, view] of browserViews) {
+        if (view.controller && !browserHost.isPresentationSession(view.ownerId, id)) useMonitor(id);
+      }
       for (const [targetId, yielded] of yieldedTargets) {
         if (!browserHost.isPresentationSession(yielded.rendererId, yielded.threadID)) yieldedTargets.delete(targetId);
       }
@@ -280,10 +334,11 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
       if (!group) throw new Error('The monitoring window is no longer connected');
       if (!['hideAll', 'expand'].includes(method) && !group.activity.has(args.sessionId)) throw new Error('The monitored task does not belong to this window');
       const owner = owners.get(args.rendererId);
-      if (method === 'hideAll') for (const id of group.activity.keys()) hiddenTasks.add(id);
-      else if (method === 'hideTask') hiddenTasks.add(args.sessionId);
+      if (method === 'hideAll') for (const id of group.activity.keys()) hideTask(id);
+      else if (method === 'hideTask') hideTask(args.sessionId);
       else if (method === 'showTask') {
         hiddenTasks.delete(args.sessionId);
+        if (browserViews.has(args.sessionId)) useMonitor(args.sessionId);
         for (const [key, hidden] of hiddenTargets) if (hidden.rendererId === args.rendererId && hidden.sessionId === args.sessionId) hiddenTargets.delete(key);
         for (const target of group.targets.values()) if (target.threadID === args.sessionId) yieldedTargets.delete(target.id);
         for (const [key, record] of captures) if (record.ownerId === args.rendererId && record.threadID === args.sessionId) {
@@ -299,6 +354,7 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
       }
       else if (method === 'placement') {
         if (!['home', 'pinned'].includes(args.placement)) throw new Error('Unsupported monitoring placement');
+        useMonitor(args.sessionId);
         placements.set(args.sessionId, args.placement);
       } else throw new Error('Unknown monitoring action');
       if (owner) { owner.generation++; owner.frames = owner.frames.filter(frame => !hiddenTasks.has(frame.threadID)); }
@@ -360,7 +416,7 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
         }
       }
       if (event.type === 'hidden') {
-        for (const frame of owner.frames) hiddenTasks.add(frame.threadID);
+        for (const frame of owner.frames) hideTask(frame.threadID);
         owner.visible = false; owner.frames = []; owner.targetIds = []; owner.generation++; revision++; schedule();
         await presentFrames(event.rendererId, owner, []);
         await releaseUnusedVideo();
@@ -382,8 +438,14 @@ export function createPresentationHost({ runtime, activity, browserHost }) {
       }
       return { ok: true };
     },
+    forgetSession(id) {
+      browserViews.get(id)?.controller?.abort();
+      browserViews.delete(id); closedTargets.delete(id); placements.delete(id); hiddenTasks.delete(id);
+    },
     async close() {
       closed = true; unsubscribe(); clearTimeout(timer); captures.clear(); hiddenTargets.clear(); renderFailures.clear(); expandedOwners.clear();
+      for (const view of browserViews.values()) view.controller?.abort();
+      browserViews.clear(); closedTargets.clear();
       for (const owner of owners.values()) { owner.hidden = true; owner.generation++; owner.visible = false; owner.frames = []; }
       const results = await Promise.allSettled([refreshing, releaseUnusedVideo(), browserHost.closePresentations()]);
       const failures = results.filter(result => result.status === 'rejected').map(result => result.reason);

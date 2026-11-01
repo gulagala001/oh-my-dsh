@@ -47,7 +47,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
     if (!sameIdentity(identity, target.identity)) return {valid: false, reason: 'Extension id and identity disagree'};
     try {
       const result = await extension.verify(unwrap(target, 'extension'), options);
-      if (result?.valid !== true && result?.verified !== true) return {valid: false, reason: result?.reason ?? 'Extension did not verify the document'};
+      if (result?.valid !== true && result?.verified !== true) return {valid: false, reason: result?.reason ?? 'Extension did not verify the document', error: result?.error};
       const actual = result.target?.identity ?? result.identity;
       if (!actual || !sameIdentity(actual, identity) || result.documentId !== undefined && result.documentId !== identity.documentId) {
         return {valid: false, reason: 'Extension returned a different document occurrence'};
