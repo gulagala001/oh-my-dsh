@@ -23,7 +23,7 @@ test('starting from another cwd preserves relative home, explicit permissions an
       const file = path.join(home, 'profiles/oh-my-dsh/package.json');
       fs.writeFileSync(file, JSON.stringify({ dependencies: { 'oh-my-dsh': args.at(-1) } }));
     }`);
-  for (const permission of ['workspace-write']) {
+  for (const permission of [undefined, 'workspace-write', 'danger-full-access']) {
     const env = { ...process.env, OMD_DSH_CLI: 'external host.cjs', DSH_HOME: 'home', PORT: '0' };
     if (permission === undefined) delete env.DSH_PERMISSION_MODE;
     else env.DSH_PERMISSION_MODE = permission;
@@ -31,7 +31,7 @@ test('starting from another cwd preserves relative home, explicit permissions an
     const last = JSON.parse((await readFile(join(caller, 'home/commands.jsonl'), 'utf8')).trim().split('\n').at(-1));
     assert.equal(last.cwd, source);
     assert.equal(last.home, join(caller, 'home'));
-    assert.equal(last.permission, permission ?? 'danger-full-access');
+    assert.equal(last.permission, permission);
     assert.equal(last.args.at(-1), '0');
   }
 });

@@ -6,7 +6,7 @@ import { execFileSync, spawn } from 'node:child_process';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dshHome = resolve(process.env.DSH_HOME || join(root, 'data', 'dsh'));
 const profile = 'oh-my-dsh';
-const env = { ...process.env, DSH_HOME: dshHome, DSH_PERMISSION_MODE: process.env.DSH_PERMISSION_MODE || 'danger-full-access' };
+const env = { ...process.env, DSH_HOME: dshHome };
 const cli = resolve(process.env.OMD_DSH_CLI || join(root, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'));
 const run = args => execFileSync(process.execPath, [cli, ...args], { cwd: root, env, stdio: ['ignore', 'ignore', 'inherit'] });
 mkdirSync(dshHome, { recursive: true });

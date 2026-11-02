@@ -23,15 +23,6 @@
 - id: fs-observation-policy
   disabled: true
 
-- id: sandbox-policy
-  config:
-    mode: danger-full-access
-    workspaceRoot: !!js process.cwd()
-
-- id: approval
-  config:
-    policy: never
-
 # Matching DSH providers with opt-in OMD extensions. Original rows remain
 # intact and become active again when this bundle is removed.
 - id: jobs

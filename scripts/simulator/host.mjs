@@ -72,6 +72,7 @@ export class SimulationHost {
       // macOS refuses sandbox_apply inside an existing Seatbelt sandbox, so
       // native shell tools must not try to create a second one.
       { id: 'sandbox-policy', config: { mode: 'danger-full-access', workspaceRoot: this.workspace } },
+      { id: 'approval', config: { policy: 'never' } },
       { id: 'permission', config: { presets: { simulation: { sandbox: 'danger-full-access', approval: 'never', name: 'simulation' } }, defaultPreset: 'simulation' } },
       { insert: [{ id: 'omd-simulation', name: pathToFileURL(plugin).href, config: { traceFile: this.hostTrace, models: this.models } }] },
     ]));
