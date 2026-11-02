@@ -2,6 +2,19 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.1-rc.5.omd.1.3.2",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "OMD 1.3.2 · DSH 0.2.1-rc.5",
+      "notes": [
+        "在 Chrome / Edge 连接管理中可按目标重试释放输入，或在确认离线目标已永久关闭后清除其占用。",
+        "修复内置 OpenCU 的页面输入、截图、权限提示和预览恢复，改善慢导航和跨站重定向后的结果确认。",
+        "减少流式回复时 Claude Desktop 主题重复扫描聊天内容的开销，并跳过隐藏浏览器标签的无效绘制。",
+        "修复推荐插件下载失败后的恢复，以及冷启动时预设插件的安装。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.2.md"
+    },
+    {
       "version": "0.2.1-rc.5.omd.1.3.1",
       "severity": "required",
       "unpublished": false,
