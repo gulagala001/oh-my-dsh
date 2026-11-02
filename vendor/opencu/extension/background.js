@@ -902,6 +902,13 @@ async function command(message, token) {
       return {ready:true, release, isolatedTabs:[...attached].filter(([,state]) => state.quarantined)
         .map(([tabId,state]) => ({tabId,error:state.releaseError}))};
     }
+    case 'releaseReviewed': {
+      const journal = attached.get(identity.tabId);
+      if (journal && !['instanceId','browserInstanceId','epoch','tabId','documentId'].every(key => journal.identity?.[key] === identity[key]))
+        fail('RELEASE_OWNER_CHANGED', 'This tab has a different input owner. Review the original browser target again.', {releaseAttempted:false});
+      // Ordered after other commands. Do not cancel unrelated input for a settings review.
+      return readOperation(token, read => releaseTabInputs(identity.tabId, read));
+    }
     case 'release': return identity ? releaseTab(identity.tabId) : releaseAll();
     default: fail('UNSUPPORTED_OPERATION', 'Unknown bridge method.');
   }

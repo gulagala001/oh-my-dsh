@@ -175,13 +175,14 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
   }
   function sessionFor(value) {
     const identity = parseTarget(value);
+    if (retired.has(targetId(identity))) throw failure('TARGET_CLOSED', 'This reviewed browser target has been retired.');
     const session = [...sessions.values()].find(s => s.instanceId === identity.instanceId && s.browserInstanceId === identity.browserInstanceId && s.epoch === identity.epoch);
     if (!session) throw failure('STALE_TARGET', 'Browser connection changed; listTargets() and select again.');
     return { session, identity };
   }
   function cancelControlRequests(session, error, scope) {
     for (const [id, task] of pending) {
-      if (session && task.session !== session || ['release', 'disconnect'].includes(task.method)) continue;
+      if (session && task.session !== session || ['release', 'releaseReviewed', 'disconnect'].includes(task.method)) continue;
       if (scope !== undefined && task.scope !== scope) continue;
       clearTimeout(task.timer); pending.delete(id);
       task.session.queue = task.session.queue.filter(command => command.id !== id);
@@ -193,10 +194,10 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       params.action?.type === 'locator' && ['count','innerText','textContent','allTextContents','isVisible','isEnabled','getAttribute','waitFor'].includes(params.action.method));
   function request(session, method, params = {}, timeout = requestTimeoutMs, monitoring = false) {
     if (closed || !sessions.has(session.sessionId)) return Promise.reject(failure('DISCONNECTED', 'Extension is disconnected.'));
-    if (closing && !['release', 'disconnect'].includes(method)) return Promise.reject(failure('CLOSING', 'Extension backend is shutting down; retry close before using control.'));
+    if (closing && !['release', 'releaseReviewed', 'disconnect'].includes(method)) return Promise.reject(failure('CLOSING', 'Extension backend is shutting down; retry close before using control.'));
     const scope = params.identity ? String(params.identity.tabId) : undefined;
     const blocked = session.releaseError ?? session.targetReleaseErrors?.get(scope);
-    if (blocked && !['release', 'disconnect', 'recoverBrowser'].includes(method)) return Promise.reject(blocked);
+    if (blocked && !['release', 'releaseReviewed', 'disconnect', 'recoverBrowser'].includes(method)) return Promise.reject(blocked);
     const id = randomUUID();
     return new Promise((resolveResult, reject) => {
       const timer = setTimeout(() => {
@@ -207,7 +208,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
             `Extension ${method} read timed out.`, {stage:method,inputDispatched:false}));
           return;
         }
-        if (['release', 'disconnect'].includes(method)) {
+        if (['release', 'releaseReviewed', 'disconnect'].includes(method)) {
           const error = new ExtensionError('RELEASE_FAILED', `${method} timed out; input release remains unconfirmed. Retry release or disconnect.`, { method });
           if (scope === undefined) session.releaseError = error;
           else (session.targetReleaseErrors ??= new Map()).set(scope,error);
@@ -305,11 +306,13 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         const task = pending.get(value.id);
         if (!task || task.session !== session) { send(res, 200, { ignored: true }, origin); return; }
         pending.delete(value.id); clearTimeout(task.timer);
-        const releasing = ['release', 'disconnect'].includes(task.method);
+        const releasing = ['release', 'releaseReviewed', 'disconnect'].includes(task.method);
         let error = value.ok === true ? null : new ExtensionError(value.error?.code || 'EXTENSION_FAILURE', value.error?.message || 'Extension command failed.', value.error?.details);
         if (!error && releasing && !inputReleased(value.result)) error = new ExtensionError('RELEASE_FAILED', 'Browser input release was not acknowledged.', value.result);
         if (error) {
-          if (releasing) {
+          const reviewDidNotDispatch = task.method === 'releaseReviewed' &&
+            (error.code === 'UNSUPPORTED_OPERATION' || error.details?.releaseAttempted === false);
+          if (releasing && !reviewDidNotDispatch) {
             if (task.fullRelease) session.releaseError = error;
             else (session.targetReleaseErrors ??= new Map()).set(task.scope,error);
             cancelControlRequests(session,error,task.scope);
@@ -356,7 +359,11 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       return retirementWork(async () => {
         if (closed || closing) throw failure('CLOSING', 'Extension backend is shutting down.');
         for (const {identity} of identities) if ([...sessions.values()].some(session => session.instanceId === identity.instanceId && session.browserInstanceId === identity.browserInstanceId)) throw failure('BROWSER_STILL_CONNECTED', 'This browser instance is connected; disconnect and release it normally.');
-        for (const {identity} of identities) await retireNow(identity);
+        // A settings confirmation covers the reviewed documents only. Protocol
+        // release tickets still cover an entire authenticated connection epoch.
+        const ids = identities.map(value => value.id);
+        await persistPrivate(retirementsFile, [...new Set([...retired, ...ids])]);
+        for (const id of ids) retired.add(id);
         return { released: true, retiredTargetIds: [...new Set(identities.map(value => value.id))], confirmation: 'human-confirmed-browser-closed' };
       });
     },
@@ -501,12 +508,13 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
           {created: !!target, ...(target ? {target} : {})});
       }
     },
-    async release(target) {
+    async release(target, {reviewed = false} = {}) {
       if (target && !target.targets) {
         await ready;
         const identity = parseTarget(target);
-        if (retired.has(connectionKey(identity))) return { released: true, retired: true };
-        const { session } = sessionFor(target); return request(session, 'release', { identity });
+        if (retired.has(targetId(identity)) || retired.has(connectionKey(identity))) return { released: true, retired: true };
+        const { session } = sessionFor(target);
+        return request(session, reviewed ? 'releaseReviewed' : 'release', { identity });
       }
       const failures = [];
       for (const session of sessions.values()) {

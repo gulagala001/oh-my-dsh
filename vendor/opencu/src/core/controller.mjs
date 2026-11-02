@@ -54,7 +54,7 @@ export async function createController({dataDir, browser, native} = {}) {
       activeTarget: active ? {id:active.id, status:!allowed ? 'blocked' : active.cold || !active.verified ? 'recovery-required'
         : active.needsObservation ? 'observation-required' : 'ready-for-live-verification', releaseAcknowledged:active.releaseAcknowledged === true} : null,
       release:releasePending ? recoveryIsolated ? 'unconfirmed-isolated' : 'unconfirmed-blocking' : 'no-pending-recovery',
-      ...(releasePending ? {recovery:'These records remain release obligations, not harmless history. Reconnect each original target and retry its release. If it is permanently closed, use Settings → Computer and browsers → Browser connections → Review recovery. Confirmation retires only reviewed offline targets; unscoped legacy records cannot be cleared by recovering another connection.'} : {}),
+      ...(releasePending ? {recovery:'Open Settings → Computer and browsers → Browser connections → Review recovery and choose a target. Reconnect its original window or browser profile to retry release. Confirm permanent closure only for the specific offline target you have checked. Unattributed obligations require their original release evidence.'} : {}),
     };
     return json({version: PROTOCOL_VERSION, mode, activeTargetId, releasePending, releaseErrors, recoveryIsolated, explicitlyStopped, stopInfo,
       targets: [...selected.values()], userActivity: [...userActivity.values()], inputReadiness, closed});
@@ -162,6 +162,14 @@ export async function createController({dataDir, browser, native} = {}) {
     };
     releaseErrors = releaseErrors.map(remaining).filter(Boolean);
   }
+  function settleTargetRelease(targetId) {
+    pruneReleaseErrors(item => item.targetId === targetId);
+    releasePending = releaseErrors.length > 0;
+    if (!releasePending) {
+      recoveryIsolated = false;
+      if (mode === 'release_failed') mode = explicitlyStopped ? 'stopped' : 'recovery_required';
+    }
+  }
   function refreshBrowserReleases() {
     const acknowledged = new Set([...selected.values()].filter(t => t.releaseAcknowledged).map(t => t.id));
     pruneReleaseErrors(item => item.targetId && acknowledged.has(item.targetId));
@@ -262,7 +270,12 @@ export async function createController({dataDir, browser, native} = {}) {
         }
         throw error;
       }
-      if (result.retired === true) { forgetTarget(target.id); await persist(); fail('TARGET_NOT_FOUND','The original browser target is closed; discover a live target'); }
+      if (result.retired === true) {
+        forgetTarget(target.id);
+        settleTargetRelease(target.id);
+        await persist();
+        fail('TARGET_NOT_FOUND','The original browser target is closed; discover a live target');
+      }
       target.releaseAcknowledged = true;
       releasedTargetIds.push(target.id);
     }
@@ -542,7 +555,10 @@ export async function createController({dataDir, browser, native} = {}) {
         }
         if (result?.observationRequired === true && selected.has(result?.target?.id ?? target.id))
           selected.get(result?.target?.id ?? target.id).needsObservation = true;
-        if (result?.closedTargetId) forgetTarget(result.closedTargetId);
+        if (result?.closedTargetId) {
+          forgetTarget(result.closedTargetId);
+          if (inputReleased(result.release)) settleTargetRelease(result.closedTargetId);
+        }
         if (inputReleased(result?.release)) {
           const current = selected.get(result?.target?.id ?? target.id);
           if (current) current.releaseAcknowledged = true;
@@ -687,25 +703,33 @@ export async function createController({dataDir, browser, native} = {}) {
         throw error;
       } finally { if (recovery) recoveryOperations.delete(recovery); }
     })),
-    recoverClosedTargets: (request = {}) => response(() => serial(async () => {
+    resolveBrowserRelease: (request = {}) => response(() => serial(async () => {
       alive();
       const operationEpoch = epoch;
-      if (!releasePending || JSON.stringify(releaseErrors) !== request.expectedReleaseErrors) fail('RECOVERY_CHANGED', 'Recovery state changed; review the current pending connections again');
-      const ids = new Set(request.targetIds);
-      if (!ids.size) fail('INVALID_ARGUMENT', 'Choose the exact closed browser connections');
-      const targets = [...ids].map(id => targetFor(id).target);
-      if (targets.some(target => target.backend !== 'browser' || !['extension', 'dsh'].includes(target.provider))) fail('INVALID_ARGUMENT', 'Only closed browser connections can be confirmed');
-      const result = await backends.get('browser').confirmClosedTargets(targets);
+      if (!releasePending || JSON.stringify(releaseErrors) !== request.expectedReleaseErrors)
+        fail('RECOVERY_CHANGED', 'Release obligations changed. Review the current targets again.');
+      const {target, backend} = targetFor(request.targetId, request.targetIdentity);
+      if (!request.targetIdentity || target.releaseAcknowledged || target.backend !== 'browser' ||
+          !['extension', 'dsh'].includes(target.provider) || !['retry', 'confirm'].includes(request.operation))
+        fail('RECOVERY_CHANGED', 'Choose a reviewed browser target with an unconfirmed release.');
+      const retired = request.operation === 'confirm';
+      const release = retired ? await backend.confirmClosedTargets([json(target)])
+        : await backend.releaseTarget(json(target), {dismissDialogs:false, reviewed:true});
       checkOperation(operationEpoch);
-      if (result?.released !== true) fail('RELEASE_FAILED', 'Closed connection confirmation was not persisted');
-      block(explicitlyStopped ? 'stopped' : 'recovery_required');
-      const recoveryEpoch = epoch;
-      for (const id of ids) forgetTarget(id);
-      if (ids.has(activeTargetId)) activeTargetId = null;
-      await releaseAll();
-      checkOperation(recoveryEpoch);
-      mode = 'recovery_required'; explicitlyStopped = false; await persist(); checkOperation(recoveryEpoch);
-      return {state: snapshot()};
+      if (!inputReleased(release)) fail('RELEASE_FAILED', 'The original target has not acknowledged release.', release);
+      if (retired || release.retired === true) {
+        const wasActive = activeTargetId === target.id;
+        forgetTarget(target.id);
+        if (wasActive) activeTargetId = null;
+      } else {
+        target.releaseAcknowledged = true;
+        // Release may detach the input driver. A future action needs a fresh binding.
+        target.verified = false;
+      }
+      settleTargetRelease(target.id);
+      await persist();
+      checkOperation(operationEpoch);
+      return {targetId:target.id, release, state:snapshot()};
     })),
     getState: () => response(async () => ({state: snapshot()})),
     preview: (request = {}) => response(async () => {

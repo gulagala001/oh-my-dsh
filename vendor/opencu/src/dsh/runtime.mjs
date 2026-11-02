@@ -423,16 +423,33 @@ export function createPluginRuntime(options = {}) {
           for (const key of ['failures','errors','result','error','details']) collect(item[key]);
         };
         for (const failure of state.releaseErrors ?? []) collect(failure);
-        const targets = state.targets.filter(target => !target.releaseAcknowledged && failed.has(target.id) && (target.provider === 'extension'
-          ? !connected.some(item => item.instanceId === target.identity.instanceId && item.browserInstanceId === target.identity.browserInstanceId)
-          : target.provider === 'dsh' && !sidebar.some(item => item.id === target.id && sameIdentity(item.identity, target.identity))));
-        if (!state.releasePending || !targets.length) throw error('NO_ORPHANED_CONNECTIONS', 'No offline browser connection needs manual recovery. Reconnect the original browser and retry release.');
-        recoveryOffer = { nonce: randomUUID(), expires: Date.now() + 60000, targetIds: targets.map(target => target.id), expectedReleaseErrors: JSON.stringify(state.releaseErrors) };
-        return { ok: true, nonce: recoveryOffer.nonce, targets: targets.map(target => ({ id: target.id, title: target.title })) };
+        const candidates = state.targets.filter(target => !target.releaseAcknowledged && failed.has(target.id)
+          && ['dsh','extension'].includes(target.provider));
+        const targets = candidates.map(target => {
+          const originalBrowser = target.provider === 'extension' && connected.find(item =>
+            item.instanceId === target.identity.instanceId && item.browserInstanceId === target.identity.browserInstanceId);
+          const live = target.provider === 'dsh'
+            ? sidebar.some(item => item.id === target.id && sameIdentity(item.identity,target.identity))
+            : originalBrowser && originalBrowser.epoch === target.identity.epoch;
+          const status = live ? (target.provider === 'dsh' ? 'connected' : 'connection-online')
+            : originalBrowser ? 'replaced-connection' : 'offline';
+          return {id:target.id, title:target.title, url:target.url, provider:target.provider, status};
+        });
+        recoveryOffer = {nonce:randomUUID(), expires:Date.now()+60000, candidates, targets,
+          expectedReleaseErrors:JSON.stringify(state.releaseErrors)};
+        return {ok:true, nonce:recoveryOffer.nonce, targets, releasePending:state.releasePending};
       }
-      const offer = recoveryOffer; recoveryOffer = undefined;
-      if (method !== 'confirm' || args.confirmedClosed !== true || !offer || offer.nonce !== args.nonce || Date.now() > offer.expires) throw error('RECOVERY_CONFIRMATION_REQUIRED', 'Review and confirm the closed browser connections in settings');
-      return runtime.recoverClosedTargets(offer);
+      const offer = recoveryOffer;
+      if (!offer || offer.nonce !== args.nonce || Date.now() > offer.expires)
+        throw error('RECOVERY_CONFIRMATION_REQUIRED', 'Review current browser release obligations in settings.');
+      const row = offer.targets.find(item => item.id === args.targetId);
+      if (!row || !['retry','confirm'].includes(method) ||
+          (method === 'confirm' ? args.confirmedClosed !== true || row.status !== 'offline' : row.status === 'offline'))
+        throw error('RECOVERY_CONFIRMATION_REQUIRED', 'Choose one listed target and the action available for that target.');
+      recoveryOffer = undefined;
+      const target = offer.candidates.find(item => item.id === row.id);
+      return runtime.resolveBrowserRelease({operation:method, targetId:target.id, targetIdentity:target.identity,
+        expectedReleaseErrors:offer.expectedReleaseErrors});
     },
     pendingAppApprovals: () => appApprovals.snapshot(),
     forgetSession: sessionId => appApprovals.forgetSession(sessionId),

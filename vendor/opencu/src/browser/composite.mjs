@@ -117,7 +117,7 @@ export function createCompositeBrowserBackend({browser, extension, dsh, releaseU
     async releaseTarget(target, options) {
       alive();
       const {provider, backend} = providerFor(target), original = unwrap(target, provider);
-      const result = provider === 'extension' ? await backend.release(original)
+      const result = provider === 'extension' ? await backend.release(original, options)
         : typeof backend.releaseTarget === 'function' ? await backend.releaseTarget(original, options)
         : {released: false, failures: [{code: 'TARGET_RELEASE_UNAVAILABLE'}]};
       if (inputReleased(result)) held.delete(target.id);
