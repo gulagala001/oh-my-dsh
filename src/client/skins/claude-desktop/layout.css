@@ -86,7 +86,10 @@ html.omd[data-omd-layout="claude-desktop"] {
   & .VOzbGW_content { padding: 24px 28px; min-width: 0; }
   & :is(.VOzbGW_header,.omd-appearance-row) { border-bottom: var(--omd-hairline) solid var(--omd-border); }
   & :is(.cx-card,.tx-card,.tx-plugin-card) { border-radius: 12px; border-color: var(--omd-border); }
-  & :is(button,input,textarea,select):focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 2px; }
+  /* REA inputs and inline searches put focus on their outer shell via the
+     form-control alias. Do not draw another ring around the inner editor;
+     composer editors and scope-chip selects also have their own focus owner. */
+  & :is(button,input:not(span[class*="_wrap"] > input, [class*="_search"] > input[class*="_searchInput"], [data-composer-input]),textarea:not([data-composer-input]),select:not(.cx-scope-chip select)):focus-visible { outline: 2px solid var(--omd-focus); outline-offset: 2px; }
 }
 
 /* CDS controls: native handlers, keyboard semantics and disabled state stay
