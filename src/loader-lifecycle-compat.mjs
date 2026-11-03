@@ -52,6 +52,9 @@ export function bindLiveLoaderEntries(loader) {
   let active = true;
   function retire(entry) {
     if (!entry) return () => {};
+    // Native entry-tree journals distinguish removal from self-disposal and
+    // persist only the owning changes; leave that lifecycle to modern Loader.
+    if (typeof entry.parent?.tree?.commit === 'function' && typeof loader.ctx?.fiber?.resolveConfig === 'function') return () => {};
     let state = retiringEntries.get(entry);
     if (!state) {
       const original = Object.getOwnPropertyDescriptor(entry, 'disabled');

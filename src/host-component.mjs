@@ -100,6 +100,13 @@ export async function mountHostComponent(ctx, name, createModule, dependencies, 
       if (ctx.fiber?.uid === null || ![1, 2].includes(ctx.fiber?.state)) return;
       const next = inheritedConfig();
       if (!next || isDeepStrictEqual(next, effective)) return;
+      if ('effectiveConfig' in fiber) {
+        // Modern Cordis returns the native update/restart acknowledgement.
+        await fiber.update(next, true);
+        await fiber.await();
+        effective = next;
+        return;
+      }
       // Cordis update() returns void. The native lifecycle is the acknowledgement,
       // so a failed activation must not become our remembered applied config.
       // Observe the existing waterfall, including asynchronous update hooks.

@@ -316,9 +316,14 @@ await patch(sidebar + 'service.ts', [[
     })`,
 ]], 'occurrence.closeGuards.close(');
 await patch(sidebar + 'contract/slots.ts', [["    /** Session content selected by the root-scoped right Sidebar controller. */", "    /** Session-owned accessories; no contributor changes the docking surface. */\n    'sidebar.right.accessory': { kind: 'list'; scope: 'session'; owner: { readonly visible: boolean } }\n    /** Session content selected by the root-scoped right Sidebar controller. */"]], 'sidebar.right.accessory');
-await patch(sidebar + 'index.ts', [["          'sidebar.right.tab.menu.item': { kind: 'list', scope: 'session' },", "          'sidebar.right.tab.menu.item': { kind: 'list', scope: 'session' },\n          'sidebar.right.accessory': { kind: 'list', scope: 'session' },"]], 'sidebar.right.accessory');
+// Structured context menus moved the menu-item child out of rightbar.session.
+// Attach accessories to the session's title child, which remains in that seat.
+const accessoryAnchor = "          'sidebar.right.pane.tab.title': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: tabInfoFactory } } },";
+await patch(sidebar + 'index.ts', [[accessoryAnchor, accessoryAnchor + "\n          'sidebar.right.accessory': { kind: 'list', scope: 'session' },"]], 'sidebar.right.accessory');
+const sidebarChildren = (await source(sidebar + 'shell/SidebarRight.tsx')).includes("'sidebar.right.pane.tab.title' | 'sidebar.right.tab.menu.item'>")
+  ? "'sidebar.right.pane.tab.title' | 'sidebar.right.tab.menu.item'>" : "'sidebar.right.pane.tab.title'>";
 await patch(sidebar + 'shell/SidebarRight.tsx', [
-  ["'sidebar.right.pane.tab.title' | 'sidebar.right.tab.menu.item'>", "'sidebar.right.pane.tab.title' | 'sidebar.right.tab.menu.item' | 'sidebar.right.accessory'>"],
+  [sidebarChildren, sidebarChildren.slice(0, -1) + " | 'sidebar.right.accessory'>"],
   ['      <div className={css.panelBody}>', "      <div className={css.accessory} hidden={!expanded || !panel.active}>\n        {renderSlot('sidebar.right.accessory', { visible: expanded && panel.active })}\n      </div>\n      <div className={css.panelBody}>"],
 ], 'sidebar.right.accessory');
 await patch(sidebar + 'shell/SidebarRight.module.css', [['.panelBody {', '.accessory {\n  flex: none;\n  min-height: 0;\n  pointer-events: auto;\n}\n\n.accessory[hidden], .accessory:empty {\n  display: none;\n}\n\n.panelBody {']], '.accessory {');
@@ -464,8 +469,13 @@ await patch(sidebar + 'tab-domain.ts', [
 await patch(sidebar + 'service.ts', [
   ['      ...placement.revealIfOpened === undefined ? {} : { revealIfOpened: placement.revealIfOpened },', '      ...placement.revealIfOpened === undefined ? {} : { revealIfOpened: placement.revealIfOpened },\n      ...placement.active === undefined ? {} : { active: placement.active },'],
 ], 'active: placement.active');
+const expandedOps = '          const ops: LayoutOp[] = [...planSetExpanded(state, true)]';
+const floatingOps = "          const ops: LayoutOp[] = revealed !== undefined && findTabPane(state, revealed).host === 'float'\n            ? []\n            : [...planSetExpanded(state, true)]";
+const expansionSource = (await source(sidebar + 'stores.ts')).includes(expandedOps) ? expandedOps : floatingOps;
 await patch(sidebar + 'stores.ts', [
-  ['          const ops: LayoutOp[] = [...planSetExpanded(state, true)]', '          if (intent.active === false && (intent.replaceTab !== undefined || intent.preferNewPane)) throw new Error(\'Background opens cannot replace or split the visible pane\')\n          const ops: LayoutOp[] = intent.active === false ? [] : [...planSetExpanded(state, true)]'],
+  [expansionSource, '          if (intent.active === false && (intent.replaceTab !== undefined || intent.preferNewPane)) throw new Error(\'Background opens cannot replace or split the visible pane\')\n' + (expansionSource === expandedOps
+    ? '          const ops: LayoutOp[] = intent.active === false ? [] : [...planSetExpanded(state, true)]'
+    : floatingOps.replace('= revealed', '= intent.active === false || revealed'))],
   ['          ops.push(...planned.ops)', `          ops.push(...(intent.active === false
             ? planned.ops.filter(op => op.type !== 'focusTab').map(op => op.type === 'openTab' ? { ...op, type: 'insertTab' as const } : op)
             : planned.ops))`],

@@ -54,7 +54,7 @@
     "extension/select-options.js": "0a6718e15a82eb89cb2aa402a9a7ceff140f522ff116e6bd330de40091d1f97a",
     "extension/text-edit.d.ts": "ee6c554eeac0f01c99c666ee33bc7e33304fc5fc777f4d8bb5cb3dfad05026b5",
     "extension/text-edit.js": "f6ffae9b7dc8e09f7f8709eb8c83a68cde813cbfaeb0507089ee6e1d09bb9182",
-    "host/apply.mjs": "f4bf1effb550f6b0349e7da160ad934e058b04d84ddec8d2f505bcc1e9b09912",
+    "host/apply.mjs": "f60e8c7e4255f22cdd76361d63179f8147577ed509deb2f7823fb58785775c83",
     "host/artifact-documents.ts": "dd56a64effad00c5cab1ccfa4f7a4ce7487a26c482caf255196a6f83454d2d1f",
     "host/automation.ts": "77039e053cf8e72594ec15a03c2376b76a9bab099312afb4159a6f5bfdedb9f4",
     "host/browser-surfaces.ts": "5a7899df40b0e021f409c8a8cc1dd2dc14f3f6998bca4755ad872cbc1f81e6de",
@@ -786,6 +786,6 @@
     "lib/rea-assets/opencu-chunk-PWF4OGL2.js": "b783003c9c4e040099972a49a0a0c9acf573ef7fe8e8bff62efdda509b881edc",
     "lib/rea-assets/opencu-chunk-I5YZRUKD.js": "ea0889604b733a95ed15029aa679739136f96f96267dc06d6c04f23d89dc0c02"
   },
-  "sourceCommit": "98d9dfa6506e5d0d80184165fd8c87158d094c7e",
+  "sourceCommit": "c0d9dfcd7191727b896c7468eda4bcb639b01f3b",
   "clientSourceCommit": "98d9dfa6506e5d0d80184165fd8c87158d094c7e"
 }

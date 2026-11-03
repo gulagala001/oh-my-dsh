@@ -9,6 +9,8 @@ export const MAX_INSTRUCTION_BYTES = 1024 * 1024;
 // current directory, as required by the native discovery API.
 const names = values => values.filter(name => name && name !== '.' && name !== '..' && !/[\\/]/.test(name));
 const missing = error => error.code === 'ENOENT' || error.code === 'ENOTDIR';
+// Cordis rc.11 retains raw input in config; use the validated activation object.
+const activeConfig = fiber => 'effectiveConfig' in fiber ? fiber.effectiveConfig : fiber.config;
 
 /** Edit native instruction candidates using the active, validated preset configs. */
 export class Instructions {
@@ -41,11 +43,11 @@ export class Instructions {
         }
       }
       const policies = [...this.ctx.registry.get(native)?.fibers ?? []]
-        .filter(fiber => fiber.state === 2 && keys.has(routing.scopeOf(fiber.ctx)) && Number.isFinite(fiber.config.maxBytes) && fiber.config.maxBytes > 0)
-        .map(fiber => ({ fiber, config: fiber.config }));
+        .map(fiber => ({ fiber, config: activeConfig(fiber) }))
+        .filter(({ fiber, config }) => fiber.state === 2 && keys.has(routing.scopeOf(fiber.ctx)) && Number.isFinite(config?.maxBytes) && config.maxBytes > 0);
       const check = async () => {
         signal.throwIfAborted();
-        let changed = presets?.defaultId !== defaultId || policies.some(({ fiber, config }) => fiber.state !== 2 || fiber.config !== config)
+        let changed = presets?.defaultId !== defaultId || policies.some(({ fiber, config }) => fiber.state !== 2 || activeConfig(fiber) !== config)
           || views.some(({ agent, chain }) => {
             const current = routing.scopeChainOf(routing.scopeOf(agent.ctx));
             return current.length !== chain.length || current.some((key, index) => key !== chain[index]);

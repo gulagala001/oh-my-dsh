@@ -20,6 +20,9 @@ export function installFileUploadCompatibility(ctx) {
   root[installed] = true;
   root.inject(['fileUploads'], async scope => {
     const uploads = original(scope.fileUploads), register = uploads.registerAgentResolver;
+    // Modern DSH owns resolver identity in a stable state object. Its native
+    // disposer handles traced receivers, so no registration wrapper is needed.
+    if (uploads.agentResolution && typeof uploads.agentResolution === 'object') return;
     const initial = uploads.agentResolver;
     const nativeInitial = isLegacyNativeResolver(initial);
     const controllers = [...ctx.loader.entries()]
