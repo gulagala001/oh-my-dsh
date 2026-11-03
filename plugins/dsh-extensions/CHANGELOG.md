@@ -1,3 +1,19 @@
+## 未发布 · 宿主接口兼容
+
+[中文](#host-compat-zh) | [English](#host-compat-en)
+
+<a id="host-compat-zh"></a>
+
+### 中文
+
+- 从插件生效配置读取指令候选，保留停用、取消与预设变化校验。
+
+<a id="host-compat-en"></a>
+
+### English
+
+- Read instruction candidates from effective plugin configuration while preserving disablement, cancellation and preset checks.
+
 # DSH Extensions 0.1.3 · DSH 0.2.1-rc.5
 
 [中文](#zh-013) | [English](#en-013)

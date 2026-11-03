@@ -470,6 +470,12 @@ await patch(sidebar + 'service.ts', [
   ['      ...placement.revealIfOpened === undefined ? {} : { revealIfOpened: placement.revealIfOpened },', '      ...placement.revealIfOpened === undefined ? {} : { revealIfOpened: placement.revealIfOpened },\n      ...placement.active === undefined ? {} : { active: placement.active },'],
 ], 'active: placement.active');
 const expandedOps = '          const ops: LayoutOp[] = [...planSetExpanded(state, true)]';
+if ((await source(sidebar + 'stores.ts')).includes('          if (intent.destination !== undefined) {')) {
+  await patch(sidebar + 'stores.ts', [[
+    '          if (intent.destination !== undefined) {',
+    "          if (intent.destination !== undefined) {\n            if (intent.active === false) throw new Error('Background opens cannot change destination')",
+  ]], 'Background opens cannot change destination');
+}
 const floatingOps = "          const ops: LayoutOp[] = revealed !== undefined && findTabPane(state, revealed).host === 'float'\n            ? []\n            : [...planSetExpanded(state, true)]";
 const expansionSource = (await source(sidebar + 'stores.ts')).includes(expandedOps) ? expandedOps : floatingOps;
 await patch(sidebar + 'stores.ts', [

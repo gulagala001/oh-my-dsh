@@ -1,3 +1,19 @@
+## 未发布 · 宿主接口兼容
+
+[中文](#host-compat-zh) | [English](#host-compat-en)
+
+<a id="host-compat-zh"></a>
+
+### 中文
+
+- 适配侧栏上下文菜单与浮动面板结构，保持后台打开约束及原生交互边界。
+
+<a id="host-compat-en"></a>
+
+### English
+
+- Adapt sidebar context menus and floating panels while preserving background-open constraints and native interaction ownership.
+
 # OpenCU 2.2.7 · DSH 0.2.1-rc.5
 
 [中文](#zh-227) | [English](#en-227)

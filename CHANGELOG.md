@@ -1,3 +1,19 @@
+## 未发布 · 宿主接口兼容
+
+[中文](#host-compat-zh) | [English](#host-compat-en)
+
+<a id="host-compat-zh"></a>
+
+### 中文
+
+- 复用宿主原生配置更新和上传清理，收缩 Loader 兼容补丁；同步内置组件的接口修复。
+
+<a id="host-compat-en"></a>
+
+### English
+
+- Reuse native configuration updates and upload cleanup, narrow Loader compatibility handling, and synchronize component fixes.
+
 # OMD 1.3.2 · DSH 0.2.1-rc.5
 
 [中文](#zh-132) | [English](#en-132)
