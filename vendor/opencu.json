@@ -4,9 +4,9 @@
   "source": "opencu@2.2.8-dsh.0.2.2-rc.1",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.2-rc.1",
-  "archiveSha256": "ee697bd87f08fc1ea723cbf1770487fcb3dbc70adc35cab8bf4442f5266416cc",
+  "archiveSha256": "498e18869a269f600710b7f6334d1af1f27b3bc95aa7cd24f563c2dbd2f6c281",
   "files": {
-    "CHANGELOG.md": "821f828fc575ee3cd98c07335bc8cd7bbe7babce9f55108bb20821606de193a5",
+    "CHANGELOG.md": "aebffca5acdca37e0eb98c80f9c24e9810b69d5644cc2b01b67e5dbde515864a",
     "DEVELOPMENT.md": "46eb2f34945f7199d6dff846450e639383781bb8cca3646a7a3d8f926299f31e",
     "README.md": "370530e9fdd87133edf586216156c2395c8cb61041310db07bcda8e57ea14a41",
     "README_EN.md": "8c4e07a17d218468e056c2b583f07b30d431267789881e894876727c432f528c",

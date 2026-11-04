@@ -4,9 +4,9 @@
   "version": "0.1.6-dsh.0.2.2-rc.1",
   "host": "0.2.2-rc.1",
   "source": "../dsh-btw-plugin",
-  "sourceCommit": "2d6920e5ce907242294886323aed350db480b996",
+  "sourceCommit": "f167f3910cd7bdea71c0263777e6ab6600238bfe",
   "files": {
-    "CHANGELOG.md": "047a878ee085d6440b9fac2d1b1f1cc2eb45ed321c6da8fb077907f93e6db7de",
+    "CHANGELOG.md": "2c3eb95b84175f04d9799b4e67ccc81cf2b57afd4fcea25182dd62ec5723381e",
     "LICENSE": "34afbe3ace726d5a23cd5c54a95cf1e0ae2777153afc33959f55ac3e4bf6c187",
     "README.md": "b16b88c29937a4f37226f7851418d0d878163b4374d887f43fae498260107d53",
     "README.zh.md": "b6d61cdb31b6ef643adbad7d8bd16aeb6776fc64be16edd3cb827437907a7031",

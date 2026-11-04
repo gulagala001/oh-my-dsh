@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sourceCommit": "48a9be1525a6c826916db4f4da4fd46a285950de",
+  "sourceCommit": "b00138b46e81a0f410456c9f5b21f446bfd110ec",
   "package": "dsh-workflow-plus",
   "version": "0.1.8-dsh.0.2.2-rc.1",
   "host": "0.2.2-rc.1",
@@ -10,7 +10,7 @@
     "tag": "dsh-v0.2.2-alpha.3"
   },
   "files": {
-    "CHANGELOG.md": "016cf11cddef9062326ea8befa1bea86f5c402f94862a99fb74203875c1b3a68",
+    "CHANGELOG.md": "cd8cd13134ba3c63e12db716ead9c1b87fec9520eb3a926fbb984ad20c1e86bd",
     "cordis.patch.yml": "6f818b0977db06f8a4e745b15d44447d4c4632878a31a1639010cc0c639fbe6b",
     "docs/architecture.md": "6d9d92f219a3776caf07f824bf6a2d40032aff00283355c78f804448144ba079",
     "docs/documentation.md": "b1e16a81c78b82ee2d86ac54a5ecc228d9929cdf77dcbc13d646b6282c9edb09",
