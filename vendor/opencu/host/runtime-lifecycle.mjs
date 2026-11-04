@@ -1,6 +1,7 @@
 /** Apply the reviewed lifecycle corrections to the matching owned host source. */
 export async function applyRuntimeLifecycle(patch, target) {
-  if (target.id !== '021rc5') return;
+  if (!['021rc5', '022rc1'].includes(target.id)) return;
+  if (target.id === '021rc5') {
   await patch('apps/desktop-host/src/office.ts', [
     ['  await ctx.plugin(workspaceDependencies, config)', '  // opencu-office-lifetime:v1\n  const dependencies = ctx.plugin(workspaceDependencies, config)'],
     ['  await ctx.plugin(officeSkills, {', '  const skills = ctx.plugin(officeSkills, {'],
@@ -14,6 +15,12 @@ export async function applyRuntimeLifecycle(patch, target) {
     ['    } catch (error: unknown) {\n      return toolErrorResult(error)\n    } finally {\n      fused.dispose()',
       '    } catch (error: unknown) {\n      // opencu-tool-cancellation:v1\n      // A thrown caller reason is cancellation; unrelated failures stay failures.\n      return isAborted(signal) && error === signal.reason ? toolAbortedResult() : toolErrorResult(error)\n    } finally {\n      fused.dispose()'],
   ], '// opencu-tool-cancellation:v1');
+  }
+  await applyWebHostAuthentication(patch);
+}
+
+/** Reuse the native login cookie for the owned Host, including its welcome RPC. */
+export async function applyWebHostAuthentication(patch) {
   await patch('apps/desktop/src/web-document.ts', [
     ['/**\n * Response headers not relayed to the renderer.', `/**
  * Create native HTTP access using the cookie already issued to this Host owner.
