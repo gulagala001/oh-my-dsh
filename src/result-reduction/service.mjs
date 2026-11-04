@@ -1,3 +1,4 @@
+import { forkParentOf } from '../host/session-fork.mjs';
 import { randomUUID } from 'node:crypto';
 import { appendPluginRecord } from '@deepseek-ai/dsh-session';
 import { ProgramOutputs, programView, recallDisplay } from './program.mjs';
@@ -151,9 +152,9 @@ export class ResultReduction {
   async settled() { await Promise.allSettled([...this.writes]); }
   async ancestors(session, signal) {
     const ids = [], seen = new Set([session.id]); let current = session;
-    while (current.header?.parentSession && current.header.origin !== 'subagent' && ids.length < 64) {
+    while (forkParentOf(current.header, this.hub.store) && current.header.origin !== 'subagent' && ids.length < 64) {
       signal?.throwIfAborted();
-      const id = current.header.parentSession;
+      const id = forkParentOf(current.header, this.hub.store);
       if (seen.has(id)) break;
       seen.add(id); ids.push(id);
       const live = this.ctx.sessions.get(id);

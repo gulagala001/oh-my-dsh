@@ -99,6 +99,7 @@ Roles: home · index · guide · development · sources · release · redirect. 
 | [docs/release-1.3.2.md](release-1.3.2.md) | release | bilingual | — |
 | [docs/release-1.3.3.md](release-1.3.3.md) | release | bilingual | — |
 | [docs/release-1.3.4.md](release-1.3.4.md) | release | bilingual | — |
+| [docs/release-1.3.5.md](release-1.3.5.md) | release | bilingual | — |
 | [docs/releases.md](releases.md) | release | zh | — |
 | [docs/runtime-state-background.md](runtime-state-background.md) | guide | zh | — |
 | [docs/showcase_EN.md](showcase_EN.md) | guide | zh | — |

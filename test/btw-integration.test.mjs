@@ -26,7 +26,7 @@ test('bundled BTW serves a detached side reply with the parent prefix and no age
   ctx.llm.registerAdapter(['fixture'], new Adapter());
   ctx.on('llm/stream', (options, next) => { if (isAgentLoopRequest(options)) mainLoopCalls++; return next(); }, { global: true });
   ctx.reflect.provide('sessions', { get: id => ({ id, requestHeader: () => ({ config: { provider: 'fixture', model: 'fixture' }, tools: [] }), toolHistory: () => ({ tools: [], updates: [] }), deriveMessages: () => prefix }) });
-  ctx.reflect.provide('sessionController', {});
+  ctx.reflect.provide('sessionQuery', {});
   ctx.reflect.provide('connection', { requestRejection: () => undefined });
   ctx.reflect.provide('webServer', { register(value) { assert.equal(route, undefined); route = value; return () => { route = undefined; }; } });
   const owner = ctx.plugin(btw); await owner;

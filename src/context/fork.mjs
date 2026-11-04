@@ -3,8 +3,8 @@ import { sourceName } from '../message-source.mjs';
 // Forks copy native events, not plugin sidecar files. Pin only archives named
 // by inherited OMD checkpoints and their historical dependencies. User/tool
 // text cannot grant archive access, and later parent work stays outside the cut.
-export function forkArchiveSnapshot(session, state, store, parentOf) {
-  const parentSession = session.header?.parentSession, count = session.inheritedEventCount;
+export function forkArchiveSnapshot(session, state, store, parentOf, parentSession = session.header?.parentSession) {
+  const count = session.inheritedEventCount;
   if (state.forkArchive?.version === 1 || !parentSession || !session.header.isSeeded
     || session.header.origin === 'subagent' || Number(session.header.delegationDepth) > 0 || !Number.isSafeInteger(count)) return null;
   const ids = new Set();

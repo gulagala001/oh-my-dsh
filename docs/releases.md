@@ -1,5 +1,9 @@
 # 下载与版本 / Downloads and versions
 
+## Oh My DSH 1.3.5 · DSH 0.2.2-rc.1
+
+[发行说明与固定安装包 / Release and fixed packages](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.5)
+
 ## Oh My DSH 1.3.3 · DSH 0.2.2-rc.1
 
 [发行说明与固定安装包 / Release and fixed packages](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.3)

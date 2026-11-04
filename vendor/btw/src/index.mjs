@@ -4,7 +4,7 @@ import { validateQuestion } from './protocol.mjs';
 import { readSnapshot } from './snapshot.mjs';
 
 export const name = 'dsh-btw';
-export const inject = ['sessions', 'llm', 'sessionController', 'webServer', 'connection'];
+export const inject = ['sessions', 'llm', 'sessionQuery', 'webServer', 'connection'];
 const API = '/api/dsh-btw/ask';
 
 async function readBody(req, signal) {

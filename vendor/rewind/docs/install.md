@@ -13,12 +13,12 @@
 在实际使用的实例打开 **插件 → ＋ 添加插件**，粘贴固定发行地址：
 
 ```text
-https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.7-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.7-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.8-dsh.0.2.2-rc.1.tgz
 ```
 
 等当前任务结束后按宿主提示启用或重启，沿用原 profile、DSH_HOME、模型配置和会话。
 
-下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.7-dsh.0.2.2-rc.1/SHA256SUMS).
+下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.8-dsh.0.2.2-rc.1/SHA256SUMS).
 
 ### 首次成功检查
 
@@ -32,7 +32,7 @@ https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.7-dsh.0.2.
 使用同一 DSH 实例对应的 CLI，将 `web` 换成实际 profile。
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.7-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.7-dsh.0.2.2-rc.1.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.8-dsh.0.2.2-rc.1.tgz"
 ```
 
 </details>

@@ -1,3 +1,4 @@
+import { forkParentOf } from '../host/session-fork.mjs';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { isAgentLoopRequest, markAgentLoopRequest, freezeMessage } from '@deepseek-ai/dsh-llm';
 import { installRequestProjection } from '../llm-request-projection.mjs';
@@ -97,7 +98,7 @@ export class BillionContext {
   backend(session) {
     const p = this.hub.context, own = p.store.peek(session.id);
     if (own?.contextBackend) return own.contextBackend;
-    if (session.header?.parentSession) return p.store.peek(session.header.parentSession)?.contextBackend || 'omd';
+    if (forkParentOf(session.header, this.hub.store)) return p.store.peek(forkParentOf(session.header, this.hub.store))?.contextBackend || 'omd';
     return 'omd';
   }
   active(session) { return this.backend(session) === 'bc'; }
@@ -259,9 +260,9 @@ export class BillionContext {
   install(ctx, managed) {
     this.managed = managed;
     ctx.on('agent/created', ({ agent }) => {
-      if (!managed(agent.session) || !agent.session.header?.parentSession) return;
+      if (!managed(agent.session) || !forkParentOf(agent.session.header, this.hub.store)) return;
       const s = this.state(agent.session);
-      if (!s.contextBackend) { s.contextBackend = this.hub.context.store.peek(agent.session.header.parentSession)?.contextBackend || 'omd'; this.hub.context.store.save(s); }
+      if (!s.contextBackend) { s.contextBackend = this.hub.context.store.peek(forkParentOf(agent.session.header, this.hub.store))?.contextBackend || 'omd'; this.hub.context.store.save(s); }
     }, { global: true });
     ctx.on('agent/disposed', ({ agent }) => { this.restrictions.get(agent)?.(); this.restrictions.delete(agent); this.selections.delete(agent.session.id); this.meters.delete(agent.session.id); }, { global: true });
     ctx.on('agent/pre-step', async ({ agent, signal }, next) => {

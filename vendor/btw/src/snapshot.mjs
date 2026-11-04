@@ -1,9 +1,10 @@
+import { readNativeSession } from './session-read.mjs';
 import { Session } from '@deepseek-ai/dsh-session';
 
 export async function readSnapshot(ctx, id, signal) {
   let session = ctx.sessions.get(id);
   if (!session) {
-    const inspected = await ctx.sessionController.inspect(id, signal);
+    const inspected = await readNativeSession(ctx, id, signal);
     signal.throwIfAborted();
     session = Session.create(id, inspected.events, inspected.meta,
       inspected.inheritedEventCount, ctx.sessions.messageProjections);

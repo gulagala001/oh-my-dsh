@@ -1,9 +1,10 @@
+import { readNativeSession } from './host/session-read.mjs';
 async function nativeNotFound(ctx, error) {
   const entry = [...ctx.loader?.entries?.() ?? []].find(row => row.options.name === '@deepseek-ai/dsh-api-session-controller');
   if (!entry) return false;
   try {
-    const native = await entry.parent.tree.import('@deepseek-ai/dsh-api-session-controller');
-    return typeof native.ApiSessionNotFound === 'function' && error instanceof native.ApiSessionNotFound;
+    const native = await entry.parent.tree.import('@deepseek-ai/dsh-session-query');
+    return error?.code === 'SESSION_QUERY_SESSION_NOT_FOUND' && error instanceof native.SessionQueryError;
   } catch { return false; }
 }
 
@@ -16,10 +17,8 @@ export async function apiSessionTarget(ctx, store, id, signal) {
   const stored = id ? store.peek(id) : undefined;
   let inspection;
   if (id && !session) {
-    const controller = ctx.get('sessionController');
-    if (typeof controller?.inspect !== 'function') throw Error('宿主没有可用的原生会话查询接口');
     try {
-      inspection = await controller.inspect(id, signal);
+      inspection = await readNativeSession(ctx, id, signal);
       signal?.throwIfAborted();
       if (inspection?.meta?.id !== id || !Array.isArray(inspection.events)) throw Error('原生会话查询身份或记录无效');
     } catch (error) {

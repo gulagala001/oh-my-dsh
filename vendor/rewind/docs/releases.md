@@ -1,5 +1,9 @@
 # DSH Undo 0.1.6 · DSH 0.2.1-rc.5
 
+## DSH Undo 0.1.8 · DSH 0.2.2-rc.1
+
+[发行说明与固定安装包 / Release and fixed packages](https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.8-dsh.0.2.2-rc.1)
+
 ## DSH Undo 0.1.7 · DSH 0.2.2-rc.1
 
 [发行说明与固定安装包 / Release and fixed packages](https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.7-dsh.0.2.2-rc.1)

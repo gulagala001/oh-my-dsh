@@ -13,12 +13,12 @@ File restoration only covers retained checkpoints. Older messages may support co
 Open **Plugins → Add plugin** in the instance you actually use and paste this fixed release address:
 
 ```text
-https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.7-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.7-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.8-dsh.0.2.2-rc.1.tgz
 ```
 
 Finish active tasks, follow the host’s activation/restart prompt, and keep your existing profile, DSH_HOME, model configuration and conversations.
 
-Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.7-dsh.0.2.2-rc.1/SHA256SUMS).
+Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.8-dsh.0.2.2-rc.1/SHA256SUMS).
 
 ### First success check
 
@@ -32,7 +32,7 @@ A rewind list opens above the composer. Selecting an entry shows the affected sc
 Use the CLI belonging to the same DSH instance; replace `web` with its actual profile.
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.7-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.7-dsh.0.2.2-rc.1.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.8-dsh.0.2.2-rc.1.tgz"
 ```
 
 </details>

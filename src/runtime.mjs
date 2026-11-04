@@ -1,3 +1,4 @@
+import { forkParentOf, installForkProvenance } from './host/session-fork.mjs';
 import { installFileReadIntegrity } from './file-read-integrity.mjs';
 import { installOmaaEnhancement, omaaWorkflowComposition, omaaIdentityPrompt } from './omaa-enhancement.mjs';
 import { installResultReduction } from './result-reduction/service.mjs';
@@ -157,6 +158,7 @@ export async function apply(ctx, config) {
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
   mountRecommendedPlugins(ctx, hub);
   mountPluginPreflight(ctx, hub);
+  installForkProvenance(ctx, hub.store);
   const isX = session => isOmdPreset(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
   installPtcLifecycle(ctx, { adaptiveBudgets: session => Boolean(session && (isX(session) || isOmaaEnhanced(session))) });
@@ -316,7 +318,7 @@ export async function apply(ctx, config) {
     await hub.dream.sources.refreshScope(agent.session.header,signal);
     if (!monitored(agent.session)) return;
     const state = hub.store.state(agent.session.id);
-    state.cwd = agent.session.header.cwd; state.parentSession = agent.session.header.parentSession;
+    state.cwd = agent.session.header.cwd; state.parentSession = forkParentOf(agent.session.header, hub.store);
     state.origin = agent.session.header.origin ?? null;
     if (agent.session.header.origin === 'subagent') { hub.store.save(state); return; }
     // Native create announces the agent before attaching Workspace membership.
@@ -328,10 +330,10 @@ export async function apply(ctx, config) {
     hub.components.project(currentDirectory(ctx, agent.session));
   }, { global: true });
   ctx.on('session/created', async session => {
-    if (!isX(session) || !session.header.parentSession || !session.header.isSeeded || session.header.origin === 'subagent') return;
+    if (!isX(session) || !forkParentOf(session.header, hub.store) || !session.header.isSeeded || session.header.origin === 'subagent') return;
     const state = hub.store.state(session.id);
     state.memoryScope ??= hub.scope(session,{effective:false}).mode;
-    state.cwd = session.header.cwd; state.parentSession = session.header.parentSession; state.origin = session.header.origin ?? null;
+    state.cwd = session.header.cwd; state.parentSession = forkParentOf(session.header, hub.store); state.origin = session.header.origin ?? null;
     hub.store.save(state);
     // Seeded user events already lock the archive, so resolve inherited Chat
     // ownership before pinning its Context binding and historical records.

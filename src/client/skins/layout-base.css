@@ -37,7 +37,7 @@ html[data-omd-skin] .wSkVaW_headerLeading:has(> [data-slot="conversation.header.
 html[data-omd-skin] .wSkVaW_tabs { order: -1; flex: 0 1 auto; width: auto; max-width: 100%; align-items: center; margin: 0; gap: 2px; padding: 2px; border-radius: 8px; background: var(--tx-shell-hover); }
 html[data-omd-skin] .wSkVaW_viewTabs { align-items: center; gap: inherit; }
 html[data-omd-skin] .wSkVaW_viewsMore { margin-top: 0; }
-html[data-omd-skin] .wSkVaW_tab { padding: 5px 10px; border-radius: 6px; font-size: 12px; line-height: 18px; font-weight: 400; }
+html[data-omd-skin] .wSkVaW_tab { margin: 0; min-height: 0; padding: 5px 10px; border-radius: 6px; font-size: 12px; line-height: 18px; font-weight: 400; }
 html[data-omd-skin] .wSkVaW_tab:after { display: none; }
 html[data-omd-skin] .wSkVaW_tabActive { background: var(--tx-shell-bg); color: var(--tx-shell-text); box-shadow: 0 1px 3px #00000008; }
 html[data-omd-skin] [data-composer-card] {

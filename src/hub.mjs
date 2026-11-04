@@ -1,3 +1,4 @@
+import { forkParentOf } from './host/session-fork.mjs';
 import { isLocalImagePreflight, localImageEvent, imagePreflightsFor } from './monitor-attempt.mjs';
 import { ownedUsageRequest } from './metering/stream.mjs';
 import { assertRequestFits, inputBudget, requestPricing } from './metering/estimate.mjs';
@@ -93,7 +94,7 @@ export class Hub extends Service {
   taskReminders(session) {
     const read = id => (this.store.peek ? this.store.peek(id) : this.store.state(id));
     const saved = read(session.id)?.betterTodo;
-    let inherited, parent = session.header?.origin === 'subagent' || Number(session.header?.delegationDepth) > 0 ? session.header.parentSession : null;
+    let inherited, parent = session.header?.origin === 'subagent' || Number(session.header?.delegationDepth) > 0 ? forkParentOf(session.header, this.store) : null;
     const seen = new Set([session.id]);
     while (parent && !seen.has(parent)) {
       seen.add(parent);
@@ -127,7 +128,7 @@ export class Hub extends Service {
     const state = this.store.peek ? this.store.peek(session.id) ?? { id: session.id } : this.store.state(session.id);
     const prepared=effective&&this.context?.store?.peek?.(session.id);
     if(prepared?.binding?.scope==='session'&&(state.started||prepared.records?.length))return {mode:'session',project:`session:${session.id}`};
-    let root = state, parentId = session.header.parentSession, workflowProject = state.workflowProject;
+    let root = state, parentId = forkParentOf(session.header, this.store), workflowProject = state.workflowProject;
     const ancestors = new Set([session.id]);
     while (parentId) {
       if (ancestors.has(parentId)) throw Error('会话继承关系形成循环，未扩大记忆范围');
@@ -169,7 +170,7 @@ export class Hub extends Service {
     entry = { ...entry, usage: reportedMonitorUsage(entry.usage, entry.hasOutput) };
     const state = this.store.state(session.id);
     state.cwd = session.header.cwd;
-    state.parentSession = session.header.parentSession;
+    state.parentSession = forkParentOf(session.header, this.store);
     state.origin = session.header.origin ?? null;
     const previous=entry.id&&state.lastNativeCall?.id===entry.id?state.lastNativeCall:null;
     if(previous)entry={...previous,...entry,usage:entry.usage??previous.usage,error:entry.error??null,durationMs:entry.durationMs??previous.durationMs,firstTokenMs:entry.firstTokenMs??previous.firstTokenMs,startedAt:entry.startedAt??previous.startedAt,replace:true};
@@ -334,7 +335,7 @@ export class Hub extends Service {
     if (event.type === 'user/message' && event.data.source.kind === 'user') {
       const state = this.store.state(session.id);
       state.memoryScope ??= this.scope(session,{effective:false}).mode;
-      state.cwd = session.header.cwd; state.parentSession = session.header.parentSession;
+      state.cwd = session.header.cwd; state.parentSession = forkParentOf(session.header, this.store);
       state.origin = session.header.origin ?? null;
       state.started = true; this.store.save(state);
     }

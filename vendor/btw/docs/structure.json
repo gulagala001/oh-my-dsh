@@ -70,6 +70,11 @@
       "path": "docs/releases/v0.1.6-dsh.0.2.2-rc.1.md",
       "role": "release",
       "language": "bilingual"
+    },
+    {
+      "path": "docs/releases/v0.1.7-dsh.0.2.2-rc.1.md",
+      "role": "release",
+      "language": "bilingual"
     }
   ]
 }

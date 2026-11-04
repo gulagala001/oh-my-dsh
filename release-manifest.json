@@ -2,6 +2,15 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.1.omd.1.3.5",
+      "severity": "normal",
+      "title": "OMD 1.3.5 · DSH 0.2.2-rc.1",
+      "notes": [
+        "修复历史会话冷读取、撤回状态与相关独立组件。",
+        "修复右侧栏渲染崩溃及图片、文档预览入口，修正对话标签偏移；匹配桌面适配需要同步更新。原生普通分叉保留 OMD 归档、Dream、回查及 BC 选择的插件资料继承。"
+      ]
+    },
+    {
       "version": "0.2.2-rc.1.omd.1.3.4",
       "severity": "normal",
       "title": "OMD 1.3.4 · DSH 0.2.2-rc.1",

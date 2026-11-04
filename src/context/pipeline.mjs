@@ -1,3 +1,4 @@
+import { forkParentOf } from '../host/session-fork.mjs';
 import { replacementEstimate } from '../metering/estimate.mjs';
 import { catalogPage } from './catalog.mjs';
 import { sourceName } from '../message-source.mjs';
@@ -101,7 +102,7 @@ export class ContextPipeline {
     const scope = this.hub.scope(session);
     const binding = { scope: scope.mode === 'session' ? 'session' : 'project', project: scope.project, title: session.header?.title || session.id };
     const state = this.store.state(session.id, binding);
-    const inherited = forkArchiveSnapshot(session, state, this.store, id => this.hub.store.peek?.(id)?.parentSession ?? this.hub.ctx.sessions?.get?.(id)?.header.parentSession);
+    const inherited = forkArchiveSnapshot(session, state, this.store, id => this.hub.store.peek?.(id)?.parentSession ?? this.hub.ctx.sessions?.get?.(id)?.header.parentSession, forkParentOf(session.header, this.hub.store));
     if (inherited) {
       this.store.write(this.store.path(state.id), { ...state, ...inherited });
       Object.assign(state, inherited);

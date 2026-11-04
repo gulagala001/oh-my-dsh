@@ -1,3 +1,4 @@
+import { readNativeSession } from './session-read.mjs';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { appendPluginRecord } from '@deepseek-ai/dsh-session';
 import { randomUUID } from 'node:crypto';
@@ -91,8 +92,8 @@ export class RewindEngine {
 
   async acknowledge(id,token){return this.store.lock(id,async()=>{const st=await this.store.load(id);if(st.pendingDraft?.id===token){st.pendingDraft=null;await this.store.save(st);}return this.state(st);});}
   async getState(id){return this.store.lock(id,async()=>{
-    // Viewing persisted history does not activate an Agent in DSH rc.2.
-    const events=this.ctx.sessions.get(id)?.snapshotEvents()??(await this.ctx.sessionController.inspect(id)).events;
+    // Viewing persisted history does not activate an Agent.
+    const events=this.ctx.sessions.get(id)?.snapshotEvents()??(await readNativeSession(this.ctx, id)).events;
     const st=await this.store.load(id);
     return {...this.state(st,events),...(st.journal&&!this.operations.has(id)?{error:'检测到中断的撤回，请先恢复中断操作'}:{})};
   });}
@@ -101,7 +102,7 @@ export class RewindEngine {
     return this.store.lock(id,async()=>{
       // Read the persisted log, including compacted history, without resuming an
       // Agent or scanning the workspace. Bound both response size and UI rows.
-      const events=this.ctx.sessions.get(id)?.snapshotEvents()??(await this.ctx.sessionController.inspect(id)).events;
+      const events=this.ctx.sessions.get(id)?.snapshotEvents()??(await readNativeSession(this.ctx, id)).events;
       const st=await this.store.load(id),items=[];
       for(let i=events.length-1;i>=0;i--){
         const e=events[i];

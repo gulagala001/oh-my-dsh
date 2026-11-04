@@ -1,3 +1,4 @@
+import { Session } from '@deepseek-ai/dsh-session';
 import { catalogPage } from './catalog.mjs';
 import { sendAttachment, withRequestSignal } from '../http.mjs';
 import { compactionMessage } from './commands.mjs';
@@ -9,7 +10,17 @@ import { CONFIG_KEYS as PERSONA_KEYS } from '../../plugins/persona/src/store.mjs
 
 export async function handleContextApi({ hub, ctx, req, res, url, session, agent, inspection, archivedOnly, refreshSession, id, send, readBody }) {
   const path = url.pathname.replace('/oh-my-dsh/api', '');
-  const needSession = () => { if (!session) throw new Error('请选择一个可读取的会话'); return session; };
+  let readable;
+  const needSession = () => {
+    if (session) return session;
+    if (req.method === 'GET' && inspection?.meta?.id === id) {
+      // Native replay supplies surface/request semantics for read-only panels.
+      // It stays detached: no Agent activation, store attachment or log write.
+      return readable ??= Session.create(id, inspection.events, inspection.meta,
+        inspection.inheritedEventCount, ctx.sessions.messageProjections);
+    }
+    throw new Error('请选择一个可读取的会话');
+  };
   if (path.startsWith('/context/evidence')) {
     const service = hub.optimization;
     // Evidence only needs the native immutable log, including its inherited

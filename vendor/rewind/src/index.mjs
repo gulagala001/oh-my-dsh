@@ -10,7 +10,7 @@ import { RewindEngine } from './engine.mjs';
 import { acquireShared } from './shared.mjs';
 import {Maintenance} from './maintenance.mjs';
 export const name='dsh-undo-plugin';
-export const inject=['agents','sessions','sessionController','webServer','connection'];
+export const inject=['agents','sessions','sessionController','sessionQuery','webServer','connection'];
 const send=(res,status,value)=>{if(res.writableEnded)return;res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
 async function body(req){let size=0,parts=[];for await(const part of req){size+=part.length;if(size>256*1024)throw Error('请求过大');parts.push(part);}return JSON.parse(Buffer.concat(parts).toString('utf8')||'{}');}
 export async function install(ctx,config={}) {

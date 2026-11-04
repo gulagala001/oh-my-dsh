@@ -339,7 +339,7 @@ const sidebarChildren = (await source(sidebar + 'shell/SidebarRight.tsx')).inclu
   ? "'sidebar.right.pane.tab.title' | 'sidebar.right.tab.menu.item'>" : "'sidebar.right.pane.tab.title'>";
 await patch(sidebar + 'shell/SidebarRight.tsx', [
   [sidebarChildren, sidebarChildren.slice(0, -1) + " | 'sidebar.right.accessory'>"],
-  ['      <div className={css.panelBody}>', "      <div className={css.accessory} hidden={!expanded || !panel.active}>\n        {renderSlot('sidebar.right.accessory', { visible: expanded && panel.active })}\n      </div>\n      <div className={css.panelBody}>"],
+  ['      <div className={css.panelBody}>', "      <div className={css.accessory} hidden={!expanded || !panel.active}>\n        {panel.renderSlot('sidebar.right.accessory', { visible: expanded && panel.active })}\n      </div>\n      <div className={css.panelBody}>"],
 ], 'sidebar.right.accessory');
 await patch(sidebar + 'shell/SidebarRight.module.css', [['.panelBody {', '.accessory {\n  flex: none;\n  min-height: 0;\n  pointer-events: auto;\n}\n\n.accessory[hidden], .accessory:empty {\n  display: none;\n}\n\n.panelBody {']], '.accessory {');
 const packagePath = 'apps/desktop/package.json';

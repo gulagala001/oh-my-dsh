@@ -3,7 +3,7 @@ import { mountStartup } from './startup.mjs';
 
 export { Config };
 export const name = 'oh-my-dsh';
-export const inject = ['loader', 'tools', 'llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections', 'sessionPersistence'];
+export const inject = ['loader', 'tools', 'llm', 'agents', 'sessions', 'settings', 'tokenMeter', 'sessionProjections', 'sessionPersistence', 'sessionQuery'];
 
 // Keep the client-owning entry importable when an enhancement's dependencies
 // are damaged. Cordis tears down a failed child, retaining this entry and UI.

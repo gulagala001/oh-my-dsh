@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-undo-plugin",
-  "version": "0.1.7-dsh.0.2.2-rc.1",
+  "version": "0.1.8-dsh.0.2.2-rc.1",
   "type": "module",
   "license": "MIT",
   "description": "Rewind conversations and workspace files in DeepSeek Harness, with undo.",

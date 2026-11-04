@@ -1,3 +1,4 @@
+import { forkParentOf } from '../host/session-fork.mjs';
 import { basename } from 'node:path';
 import { createHash } from 'node:crypto';
 import { scheduler } from 'node:timers/promises';
@@ -93,7 +94,7 @@ export class DreamSources {
       signal.throwIfAborted();
       this.store.saveSession({...old,id:header.id,title:old?.title||header.title||header.id,...scope,
         projectless:Boolean(scope.projectless),scopeError:scope.scopeError,...(old?.readError?{shared:false}:{}),
-        activity:old?.activity||0,createdAt:Number(header.createdAt)||old?.createdAt||0,cwd:header.cwd||'',parentSession:header.parentSession});
+        activity:old?.activity||0,createdAt:Number(header.createdAt)||old?.createdAt||0,cwd:header.cwd||'',parentSession:forkParentOf(header, this.hub.store)});
       return scope;
     });
   }
@@ -101,7 +102,7 @@ export class DreamSources {
     sideQuestion ||= isBtwSession(this.ctx.sessions?.get?.(header.id)) || this.store.session(header.id)?.sideQuestion === true;
     if(projectless)return {mode:'session',project:'@unclassified',shared:false,projectless:true,...(sideQuestion?{sideQuestion:true}:{})};
     const saved=this.hub.store.peek?.(header.id), archive=this.hub.context.store.peek(header.id);
-    let parent=header.parentSession, inherited=saved, seen=new Set([header.id]);
+    let parent=forkParentOf(header, this.hub.store), inherited=saved, seen=new Set([header.id]);
     while(parent) {
       if(seen.has(parent))throw Error('会话继承关系形成循环');seen.add(parent);
       const p=this.hub.store.peek?.(parent);if(!p)break;
@@ -150,7 +151,7 @@ export class DreamSources {
       if(scope.scopeError) {
         signal.throwIfAborted();
         this.store.saveSession({...old,id,title:old?.title||entry.header.title||id,...scope,
-          activity:old?.activity||0,createdAt:old?.createdAt||Number(entry.header.createdAt)||0,cwd:entry.header.cwd||old?.cwd||'',parentSession:entry.header.parentSession});
+          activity:old?.activity||0,createdAt:old?.createdAt||Number(entry.header.createdAt)||0,cwd:entry.header.cwd||old?.cwd||'',parentSession:forkParentOf(entry.header, this.hub.store)});
         if(old?.readError)warnings.push({sessionId:id,title:old.title,project:scope.project,scope:scope.mode,error:old.readError});
         continue;
       }
@@ -275,8 +276,8 @@ export class DreamSources {
       if(event.type==='session/title'&&typeof event.data?.title==='string')title=event.data.title;
     }
     // Generation identity is immutable metadata, not file mtime or a representation carrier.
-    const generation=digest([header.id,header.version,header.createdAt,header.parentSession,inherited]);
-    const value={id,title,...scope,available:true,activity:activity||Number(header.createdAt)||0,createdAt:Number(header.createdAt)||0,cwd:header.cwd||'',parentSession:header.parentSession,generation,inherited,eventCount:events.length,eventDigest};
+    const generation=digest([header.id,header.version,header.createdAt,forkParentOf(header, this.hub.store),inherited]);
+    const value={id,title,...scope,available:true,activity:activity||Number(header.createdAt)||0,createdAt:Number(header.createdAt)||0,cwd:header.cwd||'',parentSession:forkParentOf(header, this.hub.store),generation,inherited,eventCount:events.length,eventDigest};
     this.store.saveSession(value);return {...snapshot,metadata:value};
   }
   async manifest(id,{signal,deepAgeMs,cut,before=Infinity}) {
@@ -354,7 +355,7 @@ export class DreamSources {
     const handle=await this.persistence().open(metadata.id,'read',{signal});
     try {
       const header=handle.header,scope=await this.scopeFor({...header,id:metadata.id},false,signal);
-      const generation=digest([header.id,header.version,header.createdAt,header.parentSession,handle.inheritedEventCount||0]);
+      const generation=digest([header.id,header.version,header.createdAt,forkParentOf(header, this.hub.store),handle.inheritedEventCount||0]);
       if(generation!==metadata.generation||scope.project!==metadata.project||scope.shared!==metadata.shared)throw Error('会话来源或共享范围已改变；停止发布');
       const records=this.hub.context.store.peek(metadata.id)?.records||[];
       for(const {source} of batch){
