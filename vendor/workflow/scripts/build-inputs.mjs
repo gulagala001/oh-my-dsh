@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 export const root = fileURLToPath(new URL('../', import.meta.url));
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 export const readJson = async path => JSON.parse(await readFile(path, 'utf8'));
-export const host = Object.freeze({ repository: 'https://github.com/deepseek-ai/deepseek-harness', version: '0.2.1-rc.5', tag: 'dsh-v0.2.1-rc.5', commit: 'b830ec950faba0a46dda564be3e2d854afed94f1' });
+export const host = Object.freeze({ repository: 'https://github.com/deepseek-ai/deepseek-harness', version: '0.2.2-alpha.3', tag: 'dsh-v0.2.2-alpha.3', commit: '05b1cae8db6e674c5685101494d4eec24652424a' });
 
 export async function owned(path, directory = false) {
   try {
@@ -28,16 +28,19 @@ export async function outputPath(path) {
 }
 
 export async function validateInputs() {
+  const targetVersion = '0.2.2-rc.1';
+  const { verifyHostArtifacts } = await import('./host-artifacts.mjs');
+  await verifyHostArtifacts(root, await readJson(join(root, 'vendor/dsh.json')));
   const pkg = await readJson(join(root, 'package.json'));
   const requireBuild = createRequire(join(root, 'package.json'));
-  if (pkg.name !== 'dsh-workflow-plus' || !/^\d+\.\d+\.\d+-dsh\./.test(pkg.version) || !pkg.version.endsWith(`-dsh.${host.version}`) || pkg.engines?.node !== '>=22.19' || pkg.engines?.dsh !== host.version) throw Error('Package metadata must target dsh-workflow-plus and exact DSH 0.2.1-rc.5');
+  if (pkg.name !== 'dsh-workflow-plus' || !/^\d+\.\d+\.\d+-dsh\./.test(pkg.version) || !pkg.version.endsWith(`-dsh.${targetVersion}`) || pkg.engines?.node !== '>=24.9.0' || pkg.engines?.dsh !== targetVersion) throw Error('Package metadata must target dsh-workflow-plus and exact DSH 0.2.2-rc.1');
   const [major, minor] = process.versions.node.split('.').map(Number);
-  if (major < 22 || major === 22 && minor < 19) throw Error('Node >=22.19 is required');
-  for (const [name, version] of Object.entries({ '@deepseek-ai/dsh': host.version, '@deepseek-ai/cordis': '4.0.5', '@deepseek-ai/schemastery': '3.18.5', typescript: '6.0.3' })) {
+  if (major < 24 || major === 24 && minor < 9) throw Error('Node >=24.9.0 is required');
+  for (const [name, version] of Object.entries({ '@deepseek-ai/dsh': targetVersion, '@deepseek-ai/cordis': '4.1.0', '@deepseek-ai/schemastery': '3.19.0', typescript: '6.0.3' })) {
     if (pkg.devDependencies?.[name] !== version) throw Error(`Build requires devDependencies.${name}=${version}`);
   }
   for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) for (const [name, version] of Object.entries(pkg[section] ?? {})) {
-    if (/^@deepseek-ai\/dsh(?:-|$)/.test(name) && version !== host.version) throw Error(`Mismatched host package: ${section}.${name}=${version}`);
+    if (/^@deepseek-ai\/dsh(?:-|$)/.test(name) && version !== targetVersion) throw Error(`Mismatched host package: ${section}.${name}=${version}`);
   }
   for (const [name, expected] of Object.entries(pkg.devDependencies ?? {})) {
     if (!/^@deepseek-ai\/(?:dsh(?:-|$)|cordis$|schemastery$)/.test(name)) continue;

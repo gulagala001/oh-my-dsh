@@ -1,31 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { installPtcPresentation } from '../src/ptc.mjs';
 import { recommendedPlugins, resolveRecommendedPlugin } from '../src/recommended-plugin-catalog.mjs';
 import { RecommendedPluginManager, pluginInstallSpec } from '../src/recommended-plugins.mjs';
 import { patchPtc } from '../scripts/build-ops-compat.mjs';
-
-test('scope-only presentation probes and real requests expose identical controls without mutating context', async () => {
-  const owner = {}, agent = { ctx: {}, session: {} }, callbacks = new Map(), guards = [];
-  const definitions = new Map(['run_code', 'job_output', 'ops_inspect_local_file'].map(name => [name, { name }]));
-  const tools = { presentAs() {}, guard(fn) { guards.push(fn); }, get: name => definitions.get(name),
-    schemas: () => [...definitions.values()], modeFor: () => 'ptc', collapses: () => false };
-  // This test isolates prompt projection. Real execution and scheduler gates
-  // are exercised by the native host integration check.
-  const ctx = { tools, effect() {}, on(name, fn) { callbacks.set(name, fn); } };
-  const scopes = { scopeOf: () => owner, scopeChainOf: value => value === agent ? [owner] : [] };
-  installPtcPresentation(ctx, () => ['job_output'], 'ptc', tools, scopes);
-  const assembly = () => ({ tools: [{ name: 'run_code' }], sections: [{ name: 'tools:ptc-only', text: 'PTC' }] });
-  const probe = { scope: agent }, request = { scope: agent, agent };
-  const project = context => callbacks.get('system-prompt/assemble')(null, context, async () => assembly());
-  assert.deepEqual(await project(probe), await project(request));
-  assert.equal(Object.hasOwn(probe, 'agent'), false);
-  assert.deepEqual((await project(probe)).tools.map(t => t.name), ['run_code', 'job_output']);
-  assert.equal(guards[0]({ agent, name: 'job_output' }), undefined);
-  assert.match(guards[0]({ agent, name: 'ops_inspect_local_file' }), /unknown tool/);
-  assert.equal(guards[0]({ agent, name: 'ops_inspect_local_file', parent: {} }), undefined);
-  assert.deepEqual(await project({ scope: {} }), assembly());
-});
 
 test('OPS compatibility recognizes pure PTC and reviewed controls, but rejects direct business tools', async () => {
   const upstream = "const isPtc = (assembly) => assembly.tools.length === 1 && assembly.tools[0]?.name === 'run_code'\n    && assembly.sections.some(section => section.name === 'tools:ptc-only' && section.text.trim() !== '');";

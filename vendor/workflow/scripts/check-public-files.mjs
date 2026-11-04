@@ -41,7 +41,9 @@ for (const path of new Set(current)) {
   checkBytes(await readFile(full), `Git working file ${path}`);
 }
 const objects = new Map();
-const commits = git(['rev-list', '--all']).trim().split('\n').filter(Boolean);
+// Audit this publication and existing public refs; retained local adaptation
+// branches are not implicitly published by pushing main and the release tag.
+const commits = git(['rev-list', 'HEAD', '--tags', '--remotes=origin']).trim().split('\n').filter(Boolean);
 for (const commit of commits) {
   checkBytes(Buffer.from(git(['cat-file', 'commit', commit])), `Commit ${commit}`);
   for (const entry of git(['ls-tree', '-r', '-z', commit]).split('\0').filter(Boolean)) {

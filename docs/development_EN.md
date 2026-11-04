@@ -15,7 +15,7 @@ OMD tarballs omit the redundant standalone registration bundle `vendor/opencu/li
 
 ## Running from Source
 
-Use Node.js ≥22.19, Git, and the pnpm specified in the checkout's `package.json`.
+Use Node.js ≥24.9.0, Git, and the pnpm specified in the checkout's `package.json`.
 The example runs the published fixed `0.10.0` source, not the current source version.
 
 ```sh

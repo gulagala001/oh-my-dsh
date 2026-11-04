@@ -6,7 +6,7 @@ OMD retains native DSH tools, skills, sessions and third-party entries. **Use pl
 
 ## Match the artifacts
 
-The current release targets DSH `0.2.1-rc.5`: OMD `1.0.2` and standalone/bundled OpenCU `2.2.1`. Older rc.1/rc.2 hosts retain their fixed historical builds. Independent projects such as IUI and OMAA need their own matching builds; relabeling the same frontend is not adaptation.
+The current release targets DSH `0.2.2-rc.1`: OMD `1.0.2` and standalone/bundled OpenCU `2.2.1`. Older rc.1/rc.2 hosts retain their fixed historical builds. Independent projects such as IUI and OMAA need their own matching builds; relabeling the same frontend is not adaptation.
 
 Do not replace current work with old packages, older HEAD or version exemptions. Back up actual data and retain explicit settings, accounts and third-party provenance.
 
@@ -51,7 +51,7 @@ Plugin preflight wraps the running host’s `pluginManager`, independently of ma
 
 On macOS/Linux, the controller and isolated host reuse modules within one temporary process, while the browser remains separate. Host startup, plugin activation, page loading, composer and Settings checks all remain in place; Windows retains its previous separate host process. Package preparation reuses existing native tool caches, including Corepack’s default cache; the trial runtime keeps its isolated environment. Passing requires all checks and process cleanup to finish. Early exits, abnormal exits and cleanup timeouts do not pass.
 
-Current validation targets an isolated macOS DSH `0.2.1-rc.5` host, including native installation, the dsh-market desktop bridge and isolated startup through the desktop app’s packaged CLI; the running desktop app was not updated. On macOS/Linux, process-tree and temporary-directory sampling stops a check at approximately 2 GiB summed process memory or 1 GiB temporary files; sampling is not an OS hard quota. Windows uses process-tree termination and timeouts, has not been verified on a physical machine, and does not claim equivalent RSS/disk sampling. Other host builds and complete external CLI coverage need separate integration and validation. Preflight installs no resident daemon and does not rewrite the user’s command-line entry points.
+Current validation targets an isolated macOS DSH `0.2.2-rc.1` host, including native installation, the dsh-market desktop bridge and isolated startup through the desktop app’s packaged CLI; the running desktop app was not updated. On macOS/Linux, process-tree and temporary-directory sampling stops a check at approximately 2 GiB summed process memory or 1 GiB temporary files; sampling is not an OS hard quota. Windows uses process-tree termination and timeouts, has not been verified on a physical machine, and does not claim equivalent RSS/disk sampling. Other host builds and complete external CLI coverage need separate integration and validation. Preflight installs no resident daemon and does not rewrite the user’s command-line entry points.
 
 The catalog lists purpose, original author, fixed source, full host, SHA-256 and state. Unknown hosts, missing artifacts and unpublished targets do not get invented installation entries. Use the current profile's native manager; on desktop, use the app or its bundled CLI.
 
@@ -66,3 +66,5 @@ The dsh-ops third-party feature page provides an install/enable switch and selec
 Disable/removal retains conversations, drafts, attachments, settings, short memory and companion data. A saved conversation missing its preset may need that plugin restored.
 
 Report full versions, loading order, profile, a minimal reproduction and the first redacted error. Do not clear data or disable every enhancement to conceal conflicts. [Troubleshooting](troubleshooting_EN.md) · [Sources and licensing](../THIRD_PARTY_NOTICES.md)
+
+On DSH 0.2.2-rc.1, registry updates use native `updateBundle` for replacement, cancellation and recovery. OMD runs one preflight before removal; cancelling it retains the previous package, and native restoration does not trigger another preflight or substitute the candidate. Fixed GitHub releases retain exact-host, source and digest checks.

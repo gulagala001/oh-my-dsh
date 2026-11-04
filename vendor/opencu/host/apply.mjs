@@ -1,5 +1,7 @@
 import { readFile, writeFile, realpath, access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { targetFor, adapterRevision, browserCapabilities } from './compatibility.mjs';
 import { applyComposerReferences } from './composer-references.mjs';
 import { applyToolVisibility } from './tool-visibility.mjs';
@@ -10,8 +12,21 @@ if (!process.argv[2]) throw new Error('Usage: node host/apply.mjs /absolute/owne
 const root = await realpath(resolve(process.argv[2]));
 if (root.includes('.app/') || root.endsWith('.app') || root.includes('/oh-my-dsh/.cache/dsh-source/')) throw new Error('OpenCU adapters require an independent owned source copy');
 const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-const target = targetFor(manifest.version);
-for (const [name, version] of [['cordis', target.cordis], ['schemastery', target.schema]]) {
+const explicitTarget = process.argv[3] === '--target' && process.argv[4];
+if (process.argv.length > 3 && (!explicitTarget || process.argv.length !== 5)) throw Error('Usage: node host/apply.mjs <owned-source> [--target <exact-version>]');
+const target = targetFor(explicitTarget || manifest.version);
+if (target.sourceVersion) {
+  if (manifest.version !== target.sourceVersion) throw Error('Source version does not match the reviewed artifact-equivalent source');
+  const receipt = JSON.parse(await readFile(new URL('./build-inputs/' + target.id + '/source.json', import.meta.url)));
+  if (receipt.targetVersion !== target.version || receipt.sourceCommit !== target.sourceCommit || receipt.officialBuildCommit !== target.commit
+    || execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim() !== receipt.sourceCommit) throw Error('Desktop source provenance mismatch');
+  execFileSync('git', ['diff', '--exit-code', 'HEAD', '--', 'apps/desktop/src', 'packages/client', 'vendor'], { cwd: root, stdio: 'pipe' });
+  for (const [name, hash] of Object.entries(receipt.files)) {
+    if (!/^[a-z-]+\.(?:js|cjs)$/.test(name) || createHash('sha256').update(await readFile(join(root, 'apps/desktop/lib', name))).digest('hex') !== hash)
+      throw Error('Desktop baseline differs from the exact official artifact: ' + name);
+  }
+} else if (manifest.version !== target.version) throw Error('Desktop source version mismatch');
+for (const [name, version] of [['cordis', target.sourceCordis ?? target.cordis], ['schemastery', target.sourceSchema ?? target.schema]]) {
   const framework = JSON.parse(await readFile(join(root, 'vendor', name, 'package.json'), 'utf8'));
   if (framework.version !== version) throw new Error(`OpenCU ${target.id} framework mismatch: ${name}: ${framework.version}, expected ${version}`);
 }
@@ -487,7 +502,7 @@ await patch(sidebar + 'stores.ts', [
             : planned.ops))`],
 ], 'Background opens cannot replace');
 await applyRuntimeLifecycle(patch, target);
-if (target.version === '0.2.1-rc.5') {
+if (['0.2.1-rc.5', '0.2.2-rc.1'].includes(target.version)) {
   const preparation = 'apps/desktop/scripts/prepare-dsh.ts';
   await patch(preparation, [
     ["import { packagingStep } from './packaging-step.mjs'", "import { packagingStep } from './packaging-step.mjs'\nimport { prepareNativeRuntime } from './opencu-native-runtime.mjs'"],

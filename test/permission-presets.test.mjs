@@ -30,6 +30,7 @@ for (const [title, envMode, profile, expected] of [
   ctx.provide('shell', { sandboxMode: config('sandbox-policy').mode });
   ctx.provide('approval', { config: config('approval') });
   ctx.provide('sessions', { list: () => [] });
+  ctx.provide('agents', { list: () => [] });
   ctx.provide('sessionProjections', { register() {} });
   let command;
   ctx.provide('commands', { register(definition) { command = definition; } });

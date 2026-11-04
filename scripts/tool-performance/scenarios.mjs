@@ -78,7 +78,8 @@ export async function scenario({ root, directory, name, phase, size = 1200, brow
   await ctx.plugin(LocalFileSystem, { cwd: directory });
   await ctx.plugin(LocalSubprocessRuntime);
   await ctx.plugin(NodePtcRuntime, { executionMode: 'per-call', timeoutMs: 30000, maxTimeoutMs: 30000, graceMs: 50 });
-  await ctx.plugin(ToolRuntime, { mode: name === 'ptc-workflow' ? 'ptc' : 'native' });
+  await ctx.plugin(ToolRuntime);
+  await ctx.plugin(await native(name === 'ptc-workflow' ? 'tool-executor-ptc' : 'tool-executor-native'));
   const { LlmRuntime } = await native('llm'); await ctx.plugin(LlmRuntime);
   fsTool.apply(ctx, fsTool.Config({ readImage: false }));
   const hub = { store: { dir: directory }, config: () => ({ contextOptimizationEnabled: true }) };
@@ -97,7 +98,7 @@ export async function scenario({ root, directory, name, phase, size = 1200, brow
   const call = async (name, args, signal) => {
     const callId = `perf-${++serial}`;
     session.append('tool/call', { callId, name, arguments: JSON.stringify(args) });
-    const result = await ctx.tools.execute({ name, arguments: args, callId, rootCallId: callId, agent, signal });
+    const result = await ctx.tools.execute({ calls: [{type: 'tool-call', id: callId, name, arguments: JSON.stringify(args)}], agent, signal }).then(batch => batch.results[0].result);
     const message = { id: 'result-' + callId, role: 'tool', toolCallId: callId, content: result.content, isError: result.isError };
     session.append('tool/result', { message }, { surfaceOp: 'append' }); await service.settled();
     assert.equal(result.isError, false, JSON.stringify(result.content));
@@ -105,10 +106,9 @@ export async function scenario({ root, directory, name, phase, size = 1200, brow
   };
   const normalize = value => JSON.parse(JSON.stringify(value).replaceAll(directory, '<workspace>').replace(/omd-raw:[a-f0-9-]{36}/g, 'omd-raw:<reference>'));
   if (name === 'http-fetch') {
-    const [httpNative, web, timers, proxy, webTool] = await Promise.all([native('web-fetch-http'), native('web'), native('timeout'), native('http-proxy'), native('tool-web')]);
-    const transport = createRequire(host.resolve('@deepseek-ai/dsh-web-fetch-http'))('undici');
+    const [httpNative, web, webTool] = await Promise.all([native('web-fetch-http'), native('web'), native('tool-web')]);
     await ctx.plugin(web.WebRuntime);
-    let connections = 0, requests = 0, resolves = 0, diagnostics;
+    let connections = 0, requests = 0, diagnostics;
     const body = '<html><title>Local source</title><body>' + 'Complete local content. 中文。'.repeat(size) + '</body></html>';
     const server = createServer((request, response) => {
       requests++;
@@ -117,28 +117,23 @@ export async function scenario({ root, directory, name, phase, size = 1200, brow
     });
     server.on('connection', () => connections++);
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-    const port = server.address().port, url = `http://fixture.invalid:${port}/document`;
-    // Explicit native resolver seam for a deterministic local HTTP fixture.
-    // This does not test production public-IP validation or DNS safety.
-    const provider = new httpNative.HttpFetchProvider(httpNative.Config({ maxBodyChars: 1000000 }), async () => { resolves++; return [{ address: '127.0.0.1', family: 4 }]; });
+    const port = server.address().port, url = `http://127.0.0.1:${port}/document`;
+    const provider = new httpNative.HttpFetchProvider(httpNative.Config({ maxBodyChars: 1000000 }));
     ctx.web.registerFetchProvider(provider);
     webTool.apply(ctx, webTool.Config({}));
-    let releasePool;
-    try { const { bindWebFetchPooling } = await load('src/web-fetch-pool.mjs'); releasePool = bindWebFetchPooling(ctx.web, { ...httpNative, ...web, ...timers, ...proxy, ...transport }); }
-    catch (error) { if (error.code !== 'ERR_MODULE_NOT_FOUND') throw error; }
     const readBody = provider.readBody.bind(provider); provider.readBody = (...args) => phase('http.decodeAndCap', () => readBody(...args));
     return { fingerprint: hash({ version: 1, name, body, requestsPerRun: 6 }), stats: { bodyBytes: Buffer.byteLength(body), requestsPerRun: 6 }, async run(signal) {
-      const before = { connections, requests, resolves }, results = [];
+      const before = { connections, requests }, results = [];
       for (let i = 0; i < 6; i++) {
         const result = await call('web_fetch', { url }, signal);
         assert.equal(result.statusCode, 200); assert.equal(result.body.content, body); assert.equal(result.truncated, false);
         results.push({ ...result, url: result.url.replace(`:${port}`, ':<port>') });
       }
-      diagnostics = { connections: connections - before.connections, requests: requests - before.requests, resolverCalls: resolves - before.resolves, poolingInstalled: Boolean(releasePool) };
-      assert.equal(diagnostics.requests, 6); assert.equal(diagnostics.resolverCalls, 6);
+      diagnostics = { connections: connections - before.connections, requests: requests - before.requests, transport: 'native shared dispatcher' };
+      assert.equal(diagnostics.requests, 6);
       return results;
-    }, diagnostics: () => diagnostics, cancel: signal => provider.fetch({ url: `http://fixture.invalid:${port}/slow` }, signal),
-    async close() { await releasePool?.(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); service.release(); await service.settled(); await ctx.fiber.dispose(); } };
+    }, diagnostics: () => diagnostics, cancel: signal => provider.fetch({ url: `http://127.0.0.1:${port}/slow` }, signal),
+    async close() { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); service.release(); await service.settled(); await ctx.fiber.dispose(); } };
   }
   if (name === 'schedule-rules') {
     const { createEveryScheduleRecord, createCronScheduleRecord, resolveRecurringOccurrence } = await native('schedule');

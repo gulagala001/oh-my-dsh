@@ -15,7 +15,6 @@ import { installSessionRecordRepair } from './session-record-repair.mjs';
 import { currentDirectory } from './working-directory.mjs';
 import { apiSessionTarget } from './api-session.mjs';
 import { installLoaderLifecycleCompatibility } from './loader-lifecycle-compat.mjs';
-import { installToolSchedulerCompatibility } from './tool-scheduler-compat.mjs';
 import { installToolCancellationPresentation } from './tool-cancellation.mjs';
 import { installPtcLifecycle } from './ptc-lifecycle.mjs';
 import { installSearchCompatibility } from './search-compat.mjs';
@@ -67,7 +66,6 @@ import { TemporaryChats, handleTemporaryChatApi } from './temporary-chat.mjs';
 import { createProjectlessWorkspaceService } from './projectless-workspaces.mjs';
 import { closeToolComputations } from './compute.mjs';
 import { clearOriginalSearchCache } from './context/original-search.mjs';
-import { installWebFetchPooling } from './web-fetch-pool.mjs';
 
 export async function apply(ctx, config) {
   ctx.effect(() => () => { clearOriginalSearchCache(); return closeToolComputations(); });
@@ -77,10 +75,8 @@ export async function apply(ctx, config) {
   const legacy = await legacySettings(ctx, 'oh-my-dsh', Config, ['opencu']);
   const directory = legacy.value.dataDir || migratedDirectory;
   installSearchCompatibility(ctx, directory);
-  installWebFetchPooling(ctx);
   await migrateSessionStorage(ctx, directory);
   installSessionRecordRepair(ctx, directory);
-  installToolSchedulerCompatibility(ctx);
   installToolCancellationPresentation(ctx);
   const hub = new Hub(ctx, { ...config, dataDir: directory });
   hub.omaaWorkflowComposition = omaaWorkflowComposition;

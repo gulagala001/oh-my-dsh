@@ -157,6 +157,7 @@ for (const name of ['client.js', 'index.js']) {
   const path = join(chat, 'lib', name);
   await writeFile(path, browserOutput(await readFile(path, 'utf8')));
 }
+await cp(join(source, 'packages/client/ui-chat/lib/assets'), join(chat, 'lib/assets'), { recursive: true });
 await cp(join(source, 'LICENSE'), join(chat, 'LICENSE'));
 await mkdir(join(chat, 'build'));
 await cp(join(source, 'packages/client/tsdown.client.ts'), join(chat, 'build/tsdown.client.ts'));

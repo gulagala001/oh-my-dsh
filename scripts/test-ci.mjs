@@ -3,8 +3,7 @@ import { spawnSync } from 'node:child_process';
 
 // A few known regressions only; no host installation, browser or build matrix.
 const core = [
-  'market-release-check',
-  'chat-style-adapter', 'host-build-contracts', 'file-context',
+  'market-release-check', 'alpha-tool-pipeline', 'chat-style-adapter', 'host-build-contracts', 'file-context',
   'permission-presets', 'startup-isolation', 'metering-contract',
   'start', 'monitor-partial', 'monitor-read-cache', 'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget', 'task-budget-persistence',
   'file-upload-compat', 'search-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update', 'recommended-plugin-package', 'dsh-ops-compat',
@@ -33,7 +32,7 @@ core.push('test/web-chat-page-scripts.test.mjs');
 core.push('test/context-optimization.test.mjs', 'test/bc-compatibility.test.mjs',
   'test/personality-files-session.test.mjs', 'test/projectless-disposal.test.mjs', 'test/projectless-cancellation.test.mjs', 'test/projectless-navigation.test.mjs');
 core.push('test/tool-optimization-paths.test.mjs', 'test/document-views.test.mjs', 'test/session-plugin-records.test.mjs', 'test/monitor-preflight.test.mjs',
-  'test/tool-computation.test.mjs', 'test/web-fetch-pool.test.mjs');
+  'test/tool-computation.test.mjs', 'test/web-fetch-native.test.mjs');
 core.push('test/result-reduction-memo.test.mjs', 'test/legacy-identity.test.mjs', 'test/legacy-settings.test.mjs');
 core.push('test/evidence-lifecycle.test.mjs');
 core.push('test/client-injection.test.mjs');

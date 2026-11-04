@@ -1,6 +1,6 @@
 # Install Oh My DSH
 
-Repairing terminal, search and Office helper startup in an older desktop package also requires updating the matching desktop host. A plugin update alone does not repair file permissions inside an older app; see the [OMD 1.3.2 release notes](release-1.3.2.md).
+Repairing terminal, search and Office helper startup in an older desktop package also requires updating the matching desktop host. A plugin update alone does not repair file permissions inside an older app; see the [OMD 1.3.3 release notes](release-1.3.3.md).
 
 [简体中文](install.md) · [Overview](../README_EN.md) · [Upgrade and migration](upgrade_EN.md)
 
@@ -37,15 +37,15 @@ These instructions install the published plugin. Complete desktop computer use h
 
 ### 1. Check your DSH version
 
-Read the **complete host version** in DSH's About/version information, for example 0.2.1-rc.3. This is not the OMD version. DSH 0.2.0-rc.2 and 0.2.1-rc.5 are different hosts.
+Read the **complete host version** in DSH's About/version information, for example 0.2.1-rc.3. This is not the OMD version. DSH 0.2.0-rc.2 and 0.2.2-rc.1 are different hosts.
 
 ### 2. Copy the URL for your host
 
 
-**DSH 0.2.1-rc.5 → OMD 1.3.2:**
+**DSH 0.2.2-rc.1 → OMD 1.3.3:**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.2/oh-my-dsh-0.2.1-rc.5.omd.1.3.2.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.3/oh-my-dsh-0.2.2-rc.1.omd.1.3.3.tgz
 ```
 
 **DSH 0.2.1-rc.1 → OMD 0.100.0:**
@@ -88,33 +88,33 @@ OMD's default installation configuration grants full file/command access and dis
 <details>
 <summary>Optional: terminal installation / first-time Web setup</summary>
 
-Existing Web installation: stop the service and use its original CLI. This example is for DSH 0.2.1-rc.5 with the web profile; retain any custom profile name.
+Existing Web installation: stop the service and use its original CLI. This example is for DSH 0.2.2-rc.1 with the web profile; retain any custom profile name.
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.2/oh-my-dsh-0.2.1-rc.5.omd.1.3.2.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.3/oh-my-dsh-0.2.2-rc.1.omd.1.3.3.tgz
 ```
 
 Restart through the original launch method, retaining the data directory and port. For DSH 0.2.1-rc.1, use the rc.1 URL above.
 
-First-time Web setup requires Node.js ≥22.19; use PowerShell 7 on Windows:
+First-time Web setup requires Node.js ≥24.9.0; use PowerShell 7 on Windows:
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.5 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.2/oh-my-dsh-0.2.1-rc.5.omd.1.3.2.tgz
-npx --yes @deepseek-ai/dsh@0.2.1-rc.5 --profile web
+npx --yes @deepseek-ai/dsh@0.2.2-rc.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.3/oh-my-dsh-0.2.2-rc.1.omd.1.3.3.tgz
+npx --yes @deepseek-ai/dsh@0.2.2-rc.1 --profile web
 ```
 
 Open the full login link printed by the terminal. Data defaults to .dsh in your user directory; a new Web service defaults to port 3080. Do not use these commands to create a second environment for an existing installation.
 
-Default macOS desktop CLI example, only for an actual DSH 0.2.1-rc.5 installation:
+Default macOS desktop CLI example, only for an actual DSH 0.2.2-rc.1 installation:
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.2/oh-my-dsh-0.2.1-rc.5.omd.1.3.2.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.3/oh-my-dsh-0.2.2-rc.1.omd.1.3.3.tgz
 ```
 
 On Windows desktop, the plugin dialog is the simplest route; CLI paths depend on the installation. A Web CLI does not substitute for the desktop CLI.
 
 </details>
 
-**Release scope:** the rc.5 URL installs OMD 1.3.2; rc.3 retains OMD 1.2.1; rc.1 and rc.2 retain OMD 0.100.0. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).
+**Release scope:** the rc.5 URL installs OMD 1.3.3; rc.3 retains OMD 1.2.1; rc.1 and rc.2 retain OMD 0.100.0. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).

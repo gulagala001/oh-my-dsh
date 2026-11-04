@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { parse } from 'acorn';
-import { assertSupportedJsonSchema, renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
+import { assertSupportedJsonSchema } from '@deepseek-ai/dsh-tools';
+import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tool-executor-ptc';
 import { installCatalog } from '../src/result-reduction/catalog.mjs';
 import { registerContextViews } from '../src/result-reduction/views.mjs';
 import { registerContextRecall } from '../src/context/recall.mjs';

@@ -224,7 +224,15 @@ export class RecommendedPluginManager {
         if (!await refreshCandidate()) return skipped;
         if (action === 'update' && (bundle.version !== preparedVersion || bundle.enabled !== options.enabled))
           throw Error('插件安装版本或启用状态在预检期间改变，请重新操作以保留当前选择');
+        if (action === 'update' && bundle.updatable && spec === `${plugin.packageName}@${version}`
+          && typeof this.manager.updateBundle === 'function') {
+          const update = await this.manager.updateBundle(plugin.packageName, version, { requestId: options.requestId });
+          if (update.restore && !['applied', 'restart-required'].includes(update.restore.application))
+            throw Error('原生更新及旧版本恢复均未完成，请到宿主“插件”页面查看详情。');
+          return update.result;
+        }
         if (action === 'update') {
+          // Fixed URL and reviewed archive sources are outside native registry updates.
           // Retire the old bundle only after the candidate passed preflight.
           // A running bundle without HMR stays until the required restart.
           const removed = await this.manager.removeBundle(plugin.packageName);

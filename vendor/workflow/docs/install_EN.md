@@ -2,7 +2,7 @@
 
 [简体中文](install.md) · [README](../README_EN.md#readme-install)
 
-**DSH 0.2.1-rc.5 · Node.js ≥22.19 · 0.1.1**
+**DSH 0.2.2-rc.1 · Node.js ≥24.9.0 · 0.1.1**
 
 Subagents use host models and permissions and incur normal model usage. Resume re-executes calls after the successful prefix; check existing artifacts and side effects first.
 
@@ -11,12 +11,12 @@ Subagents use host models and permissions and incur normal model usage. Resume r
 Open **Plugins → Add plugin** in the instance you actually use and paste this fixed release address:
 
 ```text
-https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.7-dsh.0.2.1-rc.5/dsh-workflow-plus-0.1.7-dsh.0.2.1-rc.5.tgz
+https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.8-dsh.0.2.2-rc.1/dsh-workflow-plus-0.1.8-dsh.0.2.2-rc.1.tgz
 ```
 
 Finish active tasks, follow the host’s activation/restart prompt, and keep your existing profile, DSH_HOME, model configuration and conversations.
 
-Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.7-dsh.0.2.1-rc.5/SHA256SUMS).
+Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.8-dsh.0.2.2-rc.1/SHA256SUMS).
 
 ### First success check
 
@@ -34,7 +34,7 @@ The workflow panel shows actual phases, members and status, with agents running 
 Use the CLI belonging to the same DSH instance; replace `web` with its actual profile.
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.7-dsh.0.2.1-rc.5/dsh-workflow-plus-0.1.7-dsh.0.2.1-rc.5.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.8-dsh.0.2.2-rc.1/dsh-workflow-plus-0.1.8-dsh.0.2.2-rc.1.tgz"
 ```
 
 </details>

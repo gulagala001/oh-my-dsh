@@ -1,3 +1,4 @@
+import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
@@ -34,7 +35,7 @@ async function fixture(t) {
   ctx.reflect.provide('systemPrompt', { tools() {}, section() {}, getSectionOrder() { return 0; } });
   ctx.reflect.provide('sessions', { get: id => id === session.id ? session : undefined });
   ctx.reflect.provide('llm', { async *stream() {}, async prepareCall() { return { stream: this.stream }; } });
-  await ctx.plugin(ToolRuntime);
+  await installTools(ctx);
   const hub = { store: { dir: directory }, config: () => settings, bc: { view: () => ({ backend: bc }) } };
   const service = installResultReduction(ctx, hub, () => true), messages = [];
   let serial = 0;
@@ -42,7 +43,7 @@ async function fixture(t) {
     const callId = 'call-' + ++serial;
     session.append('tool/call', { callId, name, arguments: JSON.stringify(args) });
     const assistant = { id: 'a' + callId, role: 'assistant', content: [{ type: 'tool-call', id: callId, name, arguments: JSON.stringify(args) }] };
-    const result = await ctx.tools.execute({ name, arguments: args, agent, callId, signal: new AbortController().signal, ...extras });
+    const result = await executeTool(ctx, { name, arguments: args, agent, callId, signal: new AbortController().signal, ...extras });
     const message = createToolResultMessage({ callId, content: result.content, isError: result.isError });
     const event = session.append('tool/result', { message }, { surfaceOp: 'append' });
     ctx.emit('session/event', session, event); await service.settled(); messages.push(assistant, message);

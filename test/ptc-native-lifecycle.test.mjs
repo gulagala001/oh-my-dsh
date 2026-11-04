@@ -27,15 +27,16 @@ async function fixture(t, executionMode = 'per-call', adaptive = false) {
   ctx.reflect.provide('sandboxPolicy', { defaultMode: 'danger-full-access', resolve: () => ({ mode: 'danger-full-access', workspaceRoot: directory, sessionId: session.id }) });
   await ctx.plugin(LocalSubprocessRuntime);
   await ctx.plugin(NodePtcRuntime, { executionMode, timeoutMs: 500, maxTimeoutMs: 1500, graceMs: 25 });
-  await ctx.plugin(ToolRuntime, { mode: 'ptc' });
+  await ctx.plugin(ToolRuntime);
+  await ctx.plugin(await load('tool-executor-ptc'));
   if (process.env.OMD_PTC_BASELINE !== '1') installPtcLifecycle(ctx, { cleanupMs: 50, adaptiveBudgets: () => adaptive });
   await new Promise(resolve => setImmediate(resolve));
   let sequence = 0, probes = 0;
   ctx.tools.register({ name: 'probe', description: 'Native PTC round trip', parameters: { type: 'object', properties: {} },
     output: { schema: { type: 'number' }, render: (_args, value) => [{ type: 'text', text: String(value) }] },
     execute: () => ++probes, isConcurrencySafe: () => true });
-  const call = (code, extras = {}) => ctx.tools.execute({ name: 'run_code', arguments: { code, description: 'Native regression', ...extras.arguments },
-    callId: `native-${++sequence}`, agent, signal: extras.signal ?? new AbortController().signal });
+  const call = (code, extras = {}) => ctx.tools.execute({ calls: [{ type: 'tool-call', name: 'run_code', arguments: JSON.stringify({ code, description: 'Native regression', ...extras.arguments }), id: `native-${++sequence}` }],
+    agent, signal: extras.signal ?? new AbortController().signal }).then(batch => batch.results[0].result);
   t.after(async () => { for (const gate of gates) gate.resolve(); await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }); });
   return { ctx, directory, call, probes: () => probes, gates };
 }

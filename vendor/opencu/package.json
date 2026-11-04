@@ -1,11 +1,11 @@
 {
   "name": "opencu",
-  "version": "2.2.7-dsh.0.2.1-rc.5",
+  "version": "2.2.8-dsh.0.2.2-rc.1",
   "description": "Computer-use plugin with original REA browser, annotation and monitoring components for DSH",
   "type": "module",
   "engines": {
-    "node": ">=22.19",
-    "dsh": "0.2.1-rc.5"
+    "node": ">=24.9.0",
+    "dsh": "0.2.2-rc.1"
   },
   "exports": {
     ".": "./src/index.mjs",
@@ -92,16 +92,16 @@
     "@babel/generator": "7.29.7"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.5",
-    "@deepseek-ai/dsh-attachment": "0.2.1-rc.5",
-    "@deepseek-ai/dsh-scope": "0.2.1-rc.5",
-    "@deepseek-ai/schemastery": "3.18.5"
+    "@deepseek-ai/cordis": "4.1.0",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-attachment": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-scope": "0.2.2-rc.1",
+    "@deepseek-ai/schemastery": "3.19.0"
   },
   "opencu": {
-    "host": "0.2.1-rc.5",
-    "sourceCommit": "b830ec950faba0a46dda564be3e2d854afed94f1",
-    "adapterRevision": 2
+    "host": "0.2.2-rc.1",
+    "adapterRevision": 2,
+    "sourceCommit": "c59d10aff167ad7eefead4b3a9082fb57c8fbfe8"
   },
   "repository": {
     "type": "git",

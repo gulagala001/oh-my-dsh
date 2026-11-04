@@ -1,3 +1,4 @@
+import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -28,7 +29,7 @@ for (const mode of ['native','ptc']) test(`bundled CU diagnostics survive the re
     await ctx.plugin(LocalSubprocessRuntime);
     await ctx.plugin(NodePtcRuntime,{executionMode:'per-call',timeoutMs:5000,maxTimeoutMs:5000});
   }
-  await ctx.plugin(ToolRuntime,{mode});
+  await installTools(ctx, mode);
   const computer = createComputerSession(async endpoint => {
     assert.equal(endpoint,'openTarget');
     return {ok:false,error:{code:'CONTROL_STOPPED',message:'Control is blocked (release_failed)'},
@@ -37,7 +38,7 @@ for (const mode of ['native','ptc']) test(`bundled CU diagnostics survive the re
   installToolDefinitions(ctx,{request:(_endpoint,args)=>computer.run(args)},session.id);
   t.after(async()=>{await computer.close();await ctx.fiber.dispose();await rm(directory,{recursive:true,force:true});});
   const args={code:'await cua.createBrowserTab("browser:synthetic","about:blank");',title:'Synthetic continuity'};
-  const result = await ctx.tools.execute({name:mode==='ptc'?'run_code':'computer_use',callId:'continuity-'+mode,agent,signal:new AbortController().signal,
+  const result = await executeTool(ctx, {name:mode==='ptc'?'run_code':'computer_use',callId:'continuity-'+mode,agent,signal:new AbortController().signal,
     arguments:mode==='ptc'?{code:`await tools.computer_use(${JSON.stringify(args)});`,description:'Synthetic CU diagnostics'}:args});
   assert.equal(result.isError,true);
   const text = result.content.filter(item=>item.type==='text').map(item=>item.text).join('\n');

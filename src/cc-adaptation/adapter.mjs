@@ -1,3 +1,4 @@
+import { presentationTools } from '../host/prompt-provider.mjs';
 import { selectCatalog, rememberCatalog, projectCatalogAssembly } from '../result-reduction/catalog.mjs';
 import { readFileSync } from 'node:fs';
 import { sessionPersonality } from '../personality-session.mjs';
@@ -159,14 +160,16 @@ export function transformAssembly(assembly, context, options = {}) {
 export function installPromptAdapter(ctx) {
   const seen = new Set();
   ctx.on('system-prompt/assemble', async (_initial, context, next) => {
-    const assembly = await next();
+    const presentation = await next();
+    const assembly = { ...presentation, tools: presentation.sections.some(section => section.name === 'tools:sdk' && section.text)
+      ? presentationTools(ctx, context) : ctx.tools.schemas(context.scope ?? context.agent, context.toolSet) };
     if (!context?.agent) return assembly;
-    const schemas = ctx.tools.schemas(context.scope ?? context.agent);
+    const schemas = ctx.tools.schemas(context.scope ?? context.agent, context.toolSet);
     const style = agentPromptStyle(ctx.omd, context.agent);
     const activeSdk = assembly.sections.some(section => section.name === 'tools:sdk' && section.text);
     let renderSdk;
     if (activeSdk && (style === 'omd' || ctx.omd.optimization?.enabled(context.agent.session))) {
-      const { renderToolsSdk, renderToolsSdkPy } = await import('@deepseek-ai/dsh-tools');
+      const { renderToolsSdk, renderToolsSdkPy } = await import('@deepseek-ai/dsh-tool-executor-ptc');
       const runtime = ctx.get('ptcRuntime');
       const language = runtime?.language;
       renderSdk = language === 'typescript' ? sdk => renderToolsSdk(sdk, runtime.programFormat)
@@ -180,13 +183,13 @@ export function installPromptAdapter(ctx) {
       identityPrompt: personality.modules.identity, personalityModules: personality.modules,
       todoConstraintFirst: config.todoConstraintFirst, stateHintsEnabled: config.stateHintsEnabled,
       backgroundTasksEnabled: ctx.omd.backgroundOptions?.(context.agent)?.interruptibleWait === true,
-      schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent),
+      schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent, context.toolSet),
     });
     // Catalog projection is independent of persona/style adaptation and also
     // covers delegated agents which deliberately retain their native prompts.
     result.assembly = projectCatalogAssembly(result.assembly, {
       enabled: ctx.omd.optimization?.enabled(context.agent.session), renderSdk,
-      schemas: result.sdkSchemas ?? schemas.map(tool => ({ ...tool, output: ctx.tools.get(tool.name, context.scope ?? context.agent)?.output?.schema })),
+      schemas: result.sdkSchemas ?? schemas.map(tool => ({ ...tool, output: ctx.tools.get(tool.name, context.scope ?? context.agent, context.toolSet)?.output?.schema })),
       select: schemas => selectCatalog(ctx, ctx.omd, context.agent, schemas),
       remember: plan => rememberCatalog(ctx.omd, plan),
     });
@@ -198,6 +201,23 @@ export function installPromptAdapter(ctx) {
       seen.add(key);
       ctx.logger?.info?.('OMD prompt adapter coverage: ' + JSON.stringify(result.audit));
     }
-    return result.assembly;
+    const { tools: _tools, ...presentationResult } = result.assembly;
+    return presentationResult;
   });
+}
+
+export function projectToolDeclarations(ctx, model, definitions, context) {
+  const agent = context.agent ?? context.scope;
+  if (!agent?.session) return model;
+  const schemas = definitions.map(({ name, description, parameters }) => ({ name, description, parameters }));
+  const personality = sessionPersonality(ctx.omd, agent.session), config = ctx.omd.config();
+  const result = transformAssembly({ tools: model.schemas, sections: [{ name: 'oh-my-dsh:persona', text: '' }] }, { ...context, agent }, {
+    schemas, promptStyle: agentPromptStyle(ctx.omd, agent), personalityModules: personality.modules,
+    identityPrompt: personality.modules.identity, todoConstraintFirst: config.todoConstraintFirst,
+  });
+  const projected = projectCatalogAssembly(result.assembly, {
+    enabled: ctx.omd.optimization?.enabled(agent.session), schemas,
+    select: values => selectCatalog(ctx, ctx.omd, agent, values), remember: plan => rememberCatalog(ctx.omd, plan),
+  });
+  return { ...model, schemas: projected.tools };
 }

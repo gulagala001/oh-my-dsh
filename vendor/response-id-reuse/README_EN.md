@@ -17,15 +17,15 @@ Stored response receipts verify reasoning replay automatically, keeping continua
 
 ## Install
 
-**DSH 0.2.1-rc.5** · Node 22.19+
+**DSH 0.2.2-rc.1** · Node 22.19+
 
 Paste this URL into **Plugins → Add plugin**:
 
 ```text
-https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.5-dsh.0.2.1-rc.5/gulagala001-dsh-response-id-reuse-0.1.5-dsh.0.2.1-rc.5.tgz
+https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.6-dsh.0.2.2-rc.1/gulagala001-dsh-response-id-reuse-0.1.6-dsh.0.2.2-rc.1.tgz
 ```
 
-[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.5-dsh.0.2.1-rc.5/SHA256SUMS)
+[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.6-dsh.0.2.2-rc.1/SHA256SUMS)
 
 ## Uninstall
 

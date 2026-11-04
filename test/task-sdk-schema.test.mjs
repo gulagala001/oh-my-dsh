@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assertSupportedJsonSchema, renderToolsSdk, renderToolsSdkPy, validateJsonSchemaValue } from '@deepseek-ai/dsh-tools';
+import { assertSupportedJsonSchema, validateJsonSchemaValue } from '@deepseek-ai/dsh-tools';
+import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tool-executor-ptc';
 import { TASK_PARAMETERS, VERIFICATION_PARAMETERS, registerTasks } from '../src/tasks.mjs';
 
 const schemas = [

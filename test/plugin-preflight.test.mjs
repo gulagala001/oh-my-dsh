@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { spawn, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
 import { PluginPreflight, withPluginPreflight } from '../src/plugin-preflight/service.mjs';
 import { packageDigest, LIMITS } from '../src/plugin-preflight/shared.mjs';
 import { runProbe, sweep, packageEnvironment, cleanEnvironment, copyCandidate } from '../src/plugin-preflight/process.mjs';
@@ -71,7 +72,7 @@ test('a copied package retains private overrides and shared hoisted dependencies
   assert.deepEqual((await import(pathToFileURL(join(snapshot, 'entry.mjs')).href)).default, ['private', 'shared']);
 });
 
-async function fixture(t, probe = async () => ({ ok: true })) {
+async function fixture(t, probe = async () => ({ ok: true }), configure) {
   const root = await mkdtemp(join(tmpdir(), 'omd-preflight-'));
   await writeFile(join(root, 'package.json'), JSON.stringify({ dependencies: {} }));
   const calls = []; let enabled = true;
@@ -85,6 +86,7 @@ async function fixture(t, probe = async () => ({ ok: true })) {
     async listPlugins() { return [{ entryId: 'include:one', patchId: 'one' }]; },
     async listBundles() { return [{ name: 'fixture', rows: [{ entryId: 'include:one', rowId: 'one' }] }]; },
   };
+  await configure?.(manager, calls, root);
   const original = manager.installBundle;
   const service = new PluginPreflight({ manager, profile: { dir: root }, directory: join(root, 'runs'),
     getEnabled: () => enabled, probe, hostVersion: '0.2.1-rc.2', cli: '/unused' }).bind();
@@ -305,4 +307,71 @@ test('package preparation reuses an existing Corepack cache without exposing it 
     assert.equal(explicit[key], value);
     assert.equal(runtime[key], undefined);
   }
+});
+
+async function nativeUpdateFixture(t, { probe, failTarget = false } = {}) {
+  const require = createRequire(import.meta.url), host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
+  const { PluginManager } = await import(host.resolve('@deepseek-ai/dsh-plugin-manager'));
+  let installed = '1.0.0';
+  const f = await fixture(t, probe, (manager, calls, root) => Object.assign(manager, {
+    profile: { dir: root }, installedFrom: new Map([['fixture', 'https://previous.invalid']]),
+    ownerContext: { emit() {}, get: () => ({}) },
+    registryFor: (_name, registry) => registry,
+    registries: async () => ({ registry: 'https://registry.invalid', fallbackRegistries: [], resolved: 'https://registry.invalid' }),
+    askRegistries: async () => ({ status: 'answered', registry: 'https://registry.invalid', attempts: [],
+      answer: { name: 'fixture', version: '2.0.0', dsh: { bundle: { patch: './cordis.patch.yml' } } } }),
+    listVersions: async () => ({ status: 'listed', registry: 'https://registry.invalid', installed,
+      versions: [{ version: '2.0.0', bundle: true }], attempts: [], omitted: 0 }),
+    listBundles: async () => [{ name: 'fixture', version: installed, installed: true, enabled: false,
+      availability: 'profile', official: false, source: 'fixture@' + installed, updatable: true, rows: [] }],
+    updateBundle: PluginManager.prototype.updateBundle,
+    async installBundle(spec, options) {
+      calls.push(['install', spec, options]);
+      if (failTarget && spec === 'fixture@2.0.0') return { application: 'failed', changed: false, stage: 'install', error: { code: 'operation-error' } };
+      installed = spec.slice('fixture@'.length); return { application: 'applied', changed: true, stage: 'install', bundle: 'fixture' };
+    },
+  }));
+  return { ...f, installed: () => installed, setInstalled: value => { installed = value; } };
+}
+
+test('native registry update preflights before removal and cancellation keeps the old package', async t => {
+  const f = await nativeUpdateFixture(t, { probe: async () => { throw failure; } });
+  const pending = f.manager.updateBundle('fixture', '2.0.0', { requestId: 'native-cancel' });
+  await until(() => f.service.snapshot().phase === 'decision');
+  assert.deepEqual(f.calls, []);
+  await f.manager.cancelInstall('native-cancel');
+  const result = await pending;
+  assert.equal(result.step, 'check'); assert.equal(result.result.application, 'cancelled');
+  assert.equal(f.installed(), '1.0.0'); assert.deepEqual(f.calls, []);
+});
+
+test('native registry update retains its single preflight, selection and original restore transaction', async t => {
+  let probes = 0;
+  const f = await nativeUpdateFixture(t, { failTarget: true, probe: async input => {
+    probes++; assert.equal(input.target, 'fixture@2.0.0');
+    assert.equal(input.options.registry, 'https://registry.invalid'); return { ok: true };
+  } });
+  const result = await f.manager.updateBundle('fixture', '2.0.0', { requestId: 'native-restore' });
+  assert.equal(result.result.application, 'failed'); assert.equal(result.restore?.application, 'applied', JSON.stringify(result));
+  assert.equal(probes, 1); assert.equal(f.installed(), '1.0.0');
+  assert.deepEqual(f.calls.map(call => call.slice(0, 2)), [['remove', 'fixture'], ['install', 'fixture@2.0.0'], ['install', 'fixture@1.0.0']]);
+  assert.equal(f.calls[1][2].enabled, false); assert.equal(f.calls[2][2].enabled, false);
+  assert.equal(f.calls[2][2].registry, 'https://previous.invalid');
+  assert.equal(f.calls[2][2].requestId, undefined);
+});
+
+test('curated registry updates reuse native update and restore within the caller preflight', async t => {
+  let probes = 0;
+  const f = await nativeUpdateFixture(t, { failTarget: true, probe: async () => { probes++; return { ok: true }; } });
+  const result = await withPluginPreflight(f.manager, 'fixture@2.0.0', {}, () => f.manager.updateBundle('fixture', '2.0.0', { registry: 'https://registry.invalid' }));
+  assert.equal(result.restore?.application, 'applied', JSON.stringify(result)); assert.equal(probes, 1); assert.equal(f.installed(), '1.0.0');
+});
+
+
+test('native update rechecks installed identity after a queued or asynchronous preflight', async t => {
+  let f;
+  f = await nativeUpdateFixture(t, { probe: async () => { f.setInstalled('1.5.0'); return { ok: true }; } });
+  const result = await f.manager.updateBundle('fixture', '2.0.0', { requestId: 'native-stale' });
+  assert.equal(result.step, 'check'); assert.equal(result.result.application, 'failed');
+  assert.deepEqual(f.calls, []); assert.equal(f.installed(), '1.5.0');
 });

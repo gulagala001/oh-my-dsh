@@ -7,7 +7,8 @@ const reviewedSource = {
   sha256: '5345409ad105881250939dbb478f8cb01f5a14dad94b0aa446b4280b80427f55',
 };
 const reviewedFactories = new Map(reviewedSource.commits.map(commit => [commit, reviewedSource.sha256]));
-reviewedFactories.set('b830ec950faba0a46dda564be3e2d854afed94f1', 'a81f19f90a6e3b9fc2d9e32fbad204d165fe854c07fe06555c1d6289d8d3ce5e');
+reviewedFactories.set('f3803c96974ad4a94195fb97e5c637e9c2a3afe3', '7671998cd4560381656c42aafa427d761a4a7105c823bd6a857730c6b59298e6');
+reviewedFactories.set('05b1cae8db6e674c5685101494d4eec24652424a', '31fee6f283a3187b10a4aac465890cc0bc52553c0ebc3c92d5558fbd1db88526');
 const before = '.EvIC1a_column:has(>.EvIC1a_older)>[data-slot="conversation.chat.flow"]>';
 const after = '.EvIC1a_column>.EvIC1a_older~[data-slot="conversation.chat.flow"]>';
 const empty = '.EvIC1a_flowItem:is(:empty,:has(>[data-slot="conversation.chat.node"]:empty))';
@@ -71,41 +72,50 @@ function adaptProcessHeader(client) {
   return client.slice(0, start) + JSON.stringify(css + layout) + client.slice(start + match[2].length);
 }
 
-/**
- * ChatView renders its optional older button before its only flow slot. Use
- * that sibling relationship to avoid column-wide :has() invalidations while
- * retaining the selector's specificity, declarations and empty predicates.
- */
+/** Resolve only reviewed native package assets and constant CSS concatenations. */
+export function inlineFactoryAssets(client, assets) {
+  const ast = parse(client, { ecmaVersion: 'latest', sourceType: 'script' }), edits = [];
+  const value = node => {
+    if (node.type === 'Literal' && typeof node.value === 'string') return node.value;
+    if (node.type === 'BinaryExpression' && node.operator === '+') return value(node.left) + value(node.right);
+    if (node.type === 'CallExpression' && node.callee.type === 'MemberExpression'
+      && node.callee.object.name === 'require' && node.callee.property.name === 'asset'
+      && node.arguments.length === 1 && node.arguments[0].type === 'Literal') {
+      const path = node.arguments[0].value;
+      gate(Object.hasOwn(assets, path), 'missing native asset: ' + path);
+      return assets[path];
+    }
+    throw Error('Unsupported native CSS asset expression');
+  };
+  const walk = node => {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 'VariableDeclarator' && /^css(?:\$\d+)?$/.test(node.id.name) && node.init.type !== 'Literal')
+      edits.push([node.init.start, node.init.end, JSON.stringify(value(node.init))]);
+    for (const child of Object.values(node)) if (Array.isArray(child)) child.forEach(walk); else if (child && typeof child === 'object') walk(child);
+  };
+  walk(ast);
+  for (const [start, end, replacement] of edits.sort((a,b) => b[0]-a[0])) client = client.slice(0,start)+replacement+client.slice(end);
+  return client;
+}
+
+/** Alpha's native sibling selector already avoids the former broad :has(). */
 export function adaptChatStyleFactory(client) {
-  gate(typeof client === 'string' && client.startsWith('window.__ModuleLoader__.load({') && client.trimEnd().endsWith('});'), 'expected an upstream-built browser factory');
-  gate(client.slice(0, 150).includes('id: "@deepseek-ai/dsh-client-ui-chat"'), 'unexpected upstream module identity');
-  const cssPattern = /^(\s*const (css(?:\$\d+)?) = )("(?:[^"\\]|\\.)*")(?=;\n\s*const tagId(?:\$\d+)? = "@deepseek-ai\/dsh-client-ui-chat\/ChatView\.module\.css";)/gm;
-  const matches = [...client.matchAll(cssPattern)];
-  gate(matches.length === 1, `expected one ChatView CSS string, found ${matches.length}`);
-  const maps = [...client.matchAll(/var ChatView_module_css_default = \{([\s\S]*?)\n\s*\};/g)];
-  gate(maps.length === 1, `expected one ChatView CSS module map, found ${maps.length}`);
-  for (const [key, value] of Object.entries({ column: 'EvIC1a_column', older: 'EvIC1a_older', flowItem: 'EvIC1a_flowItem' })) {
-    gate(count(maps[0][1], `"${key}": "${value}"`) === 1, `unexpected reviewed rc.2 ${key} class`);
-  }
-  const match = matches[0], css = JSON.parse(match[3]);
-  gate(JSON.stringify(css) === match[3], 'ChatView CSS is not in the reviewed JSON literal format');
-  gate(count(css, before) === 1 && count(css, after) === 0, 'expected exactly one unadapted rc.2 older selector');
-  gate(count(css, empty) === 7, 'expected all seven original empty predicates');
-  const adaptedCSS = css.replace(before, after);
-  gate(count(adaptedCSS, after) === 1 && adaptedCSS.replace(after, before) === css, 'CSS changed outside the older selector');
-  const literalStart = match.index + match[1].length;
-  const adaptedLiteral = JSON.stringify(adaptedCSS);
-  const code = client.slice(0, literalStart) + adaptedLiteral + client.slice(literalStart + match[3].length);
-  gate(code.slice(0, literalStart) + match[3] + code.slice(literalStart + adaptedLiteral.length) === client, 'factory changed outside the ChatView CSS literal');
-  return { code: adaptProcessHeader(code), stats: { cssStrings: 2, selectorReplacements: 1, emptyPredicates: 7, processHeaderLayouts: 1 } };
+  gate(client.startsWith('window.__ModuleLoader__.load({') && client.trimEnd().endsWith('});'), 'expected native browser factory');
+  const pattern = /^(\s*const css(?:\$\d+)? = )("(?:[^"\\]|\\.)*")(?=;\n\s*const tagId(?:\$\d+)? = "@deepseek-ai\/dsh-client-ui-chat\/ChatView\.module\.css";)/gm;
+  const matches = [...client.matchAll(pattern)];
+  gate(matches.length === 1, 'expected one native ChatView stylesheet');
+  const css = JSON.parse(matches[0][2]);
+  gate(count(css, before) === 0 && count(css, '.EvIC1a_column>.EvIC1a_older+[data-slot="conversation.chat.flow"]>') === 1, 'native sibling layout changed');
+  gate(count(css, empty) === 8, 'native empty/quote predicates changed');
+  return { code: adaptProcessHeader(client), stats: { cssStrings: 2, selectorReplacements: 0, emptyPredicates: 8, processHeaderLayouts: 1 } };
 }
 
 /** Shared by the host build and an isolated ui-chat factory rebuild. */
-export function buildChatStyleFactory(rawClient, source) {
+export function buildChatStyleFactory(rawClient, source, assets = {}) {
   gate(reviewedFactories.has(source?.commit) && source?.sha256 === reviewedFactories.get(source.commit), 'unsupported upstream source; use the exact reviewed host factory');
   gate(createHash('sha256').update(rawClient).digest('hex') === source.sha256, 'upstream ui-chat lib SHA-256 differs from the snapshot');
   const composerStats = readComposerStats(rawClient);
-  const adapted = adaptChatStyleFactory(rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''));
+  const adapted = adaptChatStyleFactory(inlineFactoryAssets(rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''), assets));
   const owned = ownClientStyles(adapted.code, { moduleId: '@deepseek-ai/dsh-client-ui-chat', owner: 'oh-my-dsh/chat', namespace: 'oh-my-dsh/chat', count: 18 })
     .replace(/^([ \t]*\/\/#region \\0dsh-css:)[^\r\n]*?\/(packages\/[^\r\n]+)$/gm, '$1$2');
   const registration = clientRegistration(owned, '@deepseek-ai/dsh-client-ui-chat');

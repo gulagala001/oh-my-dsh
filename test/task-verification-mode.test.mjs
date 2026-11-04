@@ -1,3 +1,5 @@
+import { setPresentedExecutor } from '../src/host/prompt-provider.mjs';
+import { projectToolDeclarations } from '../src/cc-adaptation/adapter.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -35,7 +37,10 @@ async function fixture(t, mode = 'native') {
     async run(spec) { return { logs: [], value: await spec.bindings[0].functions.verify_link({ op: 'view' }) }; } };
   ctx.provide('ptcRuntime', runtime);
   await ctx.plugin(SystemPrompt);
-  await ctx.plugin(ToolRuntime, { mode });
+  await ctx.plugin(ToolRuntime);
+  const { NativeToolExecutor } = await import(native.resolve('@deepseek-ai/dsh-tool-executor-native'));
+  const { PtcExecutor } = await import(native.resolve('@deepseek-ai/dsh-tool-executor-ptc'));
+  setPresentedExecutor(ctx, mode === 'ptc' ? new PtcExecutor(ctx) : new NativeToolExecutor(ctx), (model, definitions, context) => projectToolDeclarations(ctx, model, definitions, context));
   await root.inject(['omd', 'systemPrompt', 'tools', 'sessionProjections', 'ptcRuntime'], scope => { ctx = scope; });
   const key = {}, owner = createScope(ctx, key).ctx;
   owner.systemPrompt.section({ name: 'oh-my-dsh:persona', text: 'placeholder', order: 0 });
@@ -51,9 +56,9 @@ async function fixture(t, mode = 'native') {
     return value;
   };
   let sequence = 0;
-  const call = (agent, name, args) => ctx.tools.execute({ agent, name, arguments: args,
-    callId: `call-${++sequence}`, signal: new AbortController().signal });
-  const assemble = agent => ctx.systemPrompt.assemble({ agent, scope: agent });
+  const admitted = new WeakMap();
+  const call = (agent, name, args) => ctx.tools.execute({ agent, toolSet: admitted.get(agent), calls: [{ type: 'tool-call', name, arguments: JSON.stringify(args), id: `call-${++sequence}` }], signal: new AbortController().signal }).then(batch => batch.results[0].result);
+  const assemble = async agent => { admitted.get(agent)?.dispose(); const toolSet = await ctx.tools.resolve({ agent, modelSelection: { provider: 'test', model: 'test' }, signal: new AbortController().signal }); admitted.set(agent, toolSet); return ctx.systemPrompt.assemble({ agent, scope: agent, toolSet }); };
   return { ctx, hub, config, directory, agent, assemble, call, runtime };
 }
 

@@ -1,3 +1,63 @@
+# DSH Persona 0.2.2 · DSH 0.2.2-rc.1
+
+[中文](#zh) · [English](#en)
+
+<a id="zh"></a>
+
+## 中文
+
+### 体验优化与问题修复
+
+- 权限菜单沿用原生组件，保留人格数据与选择；加入保持原始 Actuary 内容的“精算（英文版）”预设。
+
+### 其他变更
+
+- 精确适配 DSH **0.2.2-rc.1**、Cordis **4.1.0** 与 Schemastery **3.19.0**，使用对应 SDK 与冻结依赖；Node.js 最低版本为 **24.9.0**。
+- 保留已有配置、会话与插件数据；原宿主的历史固定发行继续保留。
+
+<a id="en"></a>
+
+## English
+
+### Improvements and fixes
+
+- Keep the native permission picker, persona data and selections; add the economical English preset with the original Actuary content.
+
+### Other changes
+
+- Target exactly DSH **0.2.2-rc.1**, Cordis **4.1.0** and Schemastery **3.19.0**, with matching SDK packages and frozen dependencies; require Node.js **24.9.0** or later.
+- Preserve settings, conversations and plugin data. Historical releases remain available for their original hosts.
+
+## 安装 / Installation
+
+| DSH | 固定安装包 / Fixed package | 校验 / Checksums |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [DSH Persona 0.2.2](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.2-dsh.0.2.2-rc.1/gulagala001-dsh-persona-plugin-0.2.2-dsh.0.2.2-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.2-dsh.0.2.2-rc.1/SHA256SUMS) |
+
+在 **插件 → 添加插件** 使用匹配的固定包。保留原 profile、配置与数据，安装后按宿主提示重载。
+
+Use the matching fixed package in **Plugins → Add plugin**. Retain your profile, settings and data, then reload when requested.
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-persona-plugin/blob/main/README.md)
+
+---
+
+## 未发布 · DSH 0.2.2-alpha.3
+
+[中文](#alpha3-zh) | [English](#alpha3-en)
+
+<a id="alpha3-zh"></a>
+
+### 中文
+
+- 增加 DSH 0.2.2-alpha.3 专用构建，精确对齐 SDK、Cordis 与依赖锁；保留当前主线功能和修复。此候选尚未发布，既有安装入口保持不变。
+
+<a id="alpha3-en"></a>
+
+### English
+
+- Add a dedicated DSH 0.2.2-alpha.3 build with exact SDK, Cordis and dependency locks, retaining current features and fixes. This candidate is unpublished; existing installation links remain unchanged.
+
 # DSH Persona 0.2.1 · DSH 0.2.1-rc.5
 
 [中文](#zh-021) | [English](#en-021)

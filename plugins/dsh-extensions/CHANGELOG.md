@@ -1,3 +1,63 @@
+# DSH Extensions 0.1.4 · DSH 0.2.2-rc.1
+
+[中文](#zh) · [English](#en)
+
+<a id="zh"></a>
+
+## 中文
+
+### 体验优化与问题修复
+
+- 指令发现使用原生生效配置与作用域；保留 Skill、MCP、指令、自定义命令及 Hooks 的权限和启停边界。
+
+### 其他变更
+
+- 精确适配 DSH **0.2.2-rc.1**、Cordis **4.1.0** 与 Schemastery **3.19.0**，使用对应 SDK 与冻结依赖；Node.js 最低版本为 **24.9.0**。
+- 保留已有配置、会话与插件数据；原宿主的历史固定发行继续保留。
+
+<a id="en"></a>
+
+## English
+
+### Improvements and fixes
+
+- Discover instructions through native effective configuration and scopes; preserve permissions and lifecycle boundaries for skills, MCP, instructions, commands and hooks.
+
+### Other changes
+
+- Target exactly DSH **0.2.2-rc.1**, Cordis **4.1.0** and Schemastery **3.19.0**, with matching SDK packages and frozen dependencies; require Node.js **24.9.0** or later.
+- Preserve settings, conversations and plugin data. Historical releases remain available for their original hosts.
+
+## 安装 / Installation
+
+| DSH | 固定安装包 / Fixed package | 校验 / Checksums |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [DSH Extensions 0.1.4](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.4-dsh.0.2.2-rc.1/dsh-extensions-0.1.4-dsh.0.2.2-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.4-dsh.0.2.2-rc.1/SHA256SUMS) |
+
+在 **插件 → 添加插件** 使用匹配的固定包。保留原 profile、配置与数据，安装后按宿主提示重载。
+
+Use the matching fixed package in **Plugins → Add plugin**. Retain your profile, settings and data, then reload when requested.
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-extensions/blob/main/docs/install.md)
+
+---
+
+## 未发布 · DSH 0.2.2-alpha.3
+
+[中文](#alpha3-zh) | [English](#alpha3-en)
+
+<a id="alpha3-zh"></a>
+
+### 中文
+
+- 增加 DSH 0.2.2-alpha.3 专用构建，精确对齐 SDK、Cordis 与依赖锁；保留当前主线功能和修复。此候选尚未发布，既有安装入口保持不变。
+
+<a id="alpha3-en"></a>
+
+### English
+
+- Add a dedicated DSH 0.2.2-alpha.3 build with exact SDK, Cordis and dependency locks, retaining current features and fixes. This candidate is unpublished; existing installation links remain unchanged.
+
 ## 未发布 · 宿主接口兼容
 
 [中文](#host-compat-zh) | [English](#host-compat-en)

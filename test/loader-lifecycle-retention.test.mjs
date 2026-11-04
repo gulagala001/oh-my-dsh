@@ -38,7 +38,7 @@ test('pending native teardown remains protected and a suspended iterator skips r
   const parent = loader.resolve('slow'), leaf = loader.resolve('slow-leaf'), iterator = loader.entries();
   assert.equal(iterator.next().value, parent);
   const removing = loader.root.remove('slow'); await started.promise;
-  assert.equal(leaf.disabled, true); assert.equal(leaf.options.disabled, undefined);
+  assert.equal(Object.hasOwn(leaf, 'disabled'), false, 'native removal journal owns teardown without a shadow disabled flag'); assert.equal(leaf.options.disabled, undefined);
   assert.deepEqual([...iterator], []); assert.deepEqual([...loader.entries()], []);
   let complete = false; const waiting = loader.await().then(() => { complete = true; });
   await new Promise(resolve => setImmediate(resolve)); assert.equal(complete, false);

@@ -59,7 +59,8 @@ export class SimulationHost {
     for (const dir of [this.home, this.workspace, join(this.root, 'tmp'), join(this.home, 'profiles/simulation/node_modules'),
       ...['config','cache/corepack','data','state','pi-agent','bin'].map(path => join(this.home, path))]) await mkdir(dir, { recursive: true });
     this.version = JSON.parse(await readFile(this.anchor.resolve('@deepseek-ai/dsh/package.json'), 'utf8')).version;
-    const { initProfile, PROFILE_TEMPLATES } = await import(pathToFileURL(this.anchor.resolve('@deepseek-ai/dsh-app-boot')).href);
+    const { initProfile } = await import(pathToFileURL(this.anchor.resolve('@deepseek-ai/dsh-app-boot')).href);
+    const { PROFILE_TEMPLATES } = await import(pathToFileURL(this.anchor.resolve('@deepseek-ai/dsh-official-bundles')).href);
     const profile = join(this.home, 'profiles/simulation');
     initProfile(profile, [...PROFILE_TEMPLATES.web.bundles, 'oh-my-dsh']);
     const manifestPath = join(profile, 'package.json');

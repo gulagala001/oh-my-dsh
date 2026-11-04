@@ -1,3 +1,6 @@
+- id: tool-executor
+  name: 'oh-my-dsh/native-executor'
+
 # Adapted from DSH 0.1.6-alpha.1 standard preset; see THIRD_PARTY_NOTICES.md.
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
@@ -78,9 +81,6 @@
   config:
     - id: tool-subagent-control
       name: '@deepseek-ai/dsh-tool-subagent-control'
-
-    - id: tool-subagent-list-agents
-      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 
     - id: tool-subagent
       name: '@deepseek-ai/dsh-tool-subagent'

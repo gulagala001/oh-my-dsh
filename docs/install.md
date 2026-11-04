@@ -1,6 +1,6 @@
 # 安装 Oh My DSH
 
-修复旧桌面包中终端、搜索和 Office 助手的启动失败，还需同步更新匹配的桌面宿主。仅升级插件不会修复旧应用内的文件权限；具体步骤见 [OMD 1.3.2 更新说明](release-1.3.2.md)。
+修复旧桌面包中终端、搜索和 Office 助手的启动失败，还需同步更新匹配的桌面宿主。仅升级插件不会修复旧应用内的文件权限；具体步骤见 [OMD 1.3.3 更新说明](release-1.3.3.md)。
 
 [English](install_EN.md) · [首页](../README.md) · [升级与迁移](upgrade.md)
 
@@ -37,15 +37,15 @@ OMD 已内置 OpenCU，不重复安装。不要把仓库 main 当成已发布安
 
 ### 1. 确认 DSH 版本
 
-在 DSH 的“关于／版本信息”中查看**宿主完整版本**，例如 0.2.1-rc.5。它不是 OMD 版本；0.2.0-rc.2 和 0.2.1-rc.5 也不是同一版。
+在 DSH 的“关于／版本信息”中查看**宿主完整版本**，例如 0.2.2-rc.1。它不是 OMD 版本；0.2.0-rc.2 和 0.2.2-rc.1 也不是同一版。
 
 ### 2. 复制与你的 DSH 对应的地址
 
 
-**DSH 0.2.1-rc.5 → OMD 1.3.2：**
+**DSH 0.2.2-rc.1 → OMD 1.3.3：**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.2/oh-my-dsh-0.2.1-rc.5.omd.1.3.2.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.3/oh-my-dsh-0.2.2-rc.1.omd.1.3.3.tgz
 ```
 
 **DSH 0.2.1-rc.1 → OMD 0.100.0：**
@@ -88,33 +88,33 @@ OMD 默认安装配置包含完整文件／命令访问并关闭执行审批；�
 <details>
 <summary>补充：终端安装／首次使用 Web（供 AI 或熟悉命令行的用户）</summary>
 
-已有 Web：使用原服务配套的 CLI，先停止该服务；以下仅适用于 DSH 0.2.1-rc.5 和 web profile。自定义 profile 沿用原名称。
+已有 Web：使用原服务配套的 CLI，先停止该服务；以下仅适用于 DSH 0.2.2-rc.1 和 web profile。自定义 profile 沿用原名称。
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.2/oh-my-dsh-0.2.1-rc.5.omd.1.3.2.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.3/oh-my-dsh-0.2.2-rc.1.omd.1.3.3.tgz
 ```
 
 之后按原方式启动服务，保留原数据目录和端口。DSH 0.2.1-rc.1 使用上面的 rc.1 地址。
 
-首次使用 Web（需要 Node.js ≥22.19；Windows 使用 PowerShell 7）：
+首次使用 Web（需要 Node.js ≥24.9.0；Windows 使用 PowerShell 7）：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.1-rc.5 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.2/oh-my-dsh-0.2.1-rc.5.omd.1.3.2.tgz
-npx --yes @deepseek-ai/dsh@0.2.1-rc.5 --profile web
+npx --yes @deepseek-ai/dsh@0.2.2-rc.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.3/oh-my-dsh-0.2.2-rc.1.omd.1.3.3.tgz
+npx --yes @deepseek-ai/dsh@0.2.2-rc.1 --profile web
 ```
 
 打开终端打印的完整登录链接。默认数据目录为用户目录下的 .dsh，新 Web 默认端口为 3080。已有安装不要用这段命令另建环境。
 
-macOS 默认桌面安装位置的 CLI 示例（仅适用于实际 DSH 0.2.1-rc.5）：
+macOS 默认桌面安装位置的 CLI 示例（仅适用于实际 DSH 0.2.2-rc.1）：
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.5.omd.1.3.2/oh-my-dsh-0.2.1-rc.5.omd.1.3.2.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.3/oh-my-dsh-0.2.2-rc.1.omd.1.3.3.tgz
 ```
 
 Windows 桌面建议直接用上面的插件界面；命令行路径以实际安装为准。Web CLI 不代替桌面 CLI。
 
 </details>
 
-**版本说明：** 本页 rc.5 固定地址指向 OMD 1.3.2；rc.3 保留 OMD 1.2.1；rc.1／rc.2 沿用 OMD 0.100.0。固定 Release 不会随 main 后续修改而改变。安装之后看[第一次使用](getting-started.md)。
+**版本说明：** 本页 rc.5 固定地址指向 OMD 1.3.3；rc.3 保留 OMD 1.2.1；rc.1／rc.2 沿用 OMD 0.100.0。固定 Release 不会随 main 后续修改而改变。安装之后看[第一次使用](getting-started.md)。

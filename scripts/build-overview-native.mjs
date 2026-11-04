@@ -13,15 +13,15 @@ function walk(node, callback) {
 const field = (node, name) => node?.properties?.find(p => p.key?.name === name || p.key?.value === name)?.value;
 const sources = [];
 const reviewed = {
-  'dsh-experimental-client-ui-agent-team': '5740a0ab636520ee318e052146fa64cb5019f7fb98cda4344fd1266521b99cdb',
-  'dsh-client-ui-jobs': 'ad8f57b1b5b9adcd09b197b97ced17e3da4b9dcd0615d25a07f1282beba89fc8',
-  'dsh-client-ui-workflow-run': 'c0e08d98885bfc4733c470c80520a460798060ccb9d08778bbef3dfc8011cbcf',
+  'dsh-experimental-client-ui-agent-team': 'aa1450d2a58014adcc03a09d7309a371b98ddf35a0f2c1c5c9249fa5d1f1925b',
+  'dsh-client-ui-jobs': '14c57d9e46d6aba597e7a9eac94a6cab1a5a635bafa3427a9cfe57b6fe1d4608',
+  'dsh-client-ui-workflow-run': 'b1704958ad7a1fbe7e6497913b0967e4b711d3dded3b52708896a73db59156e3',
 };
 for (const [name, exportName] of [['dsh-experimental-client-ui-agent-team', 'createTeamOverview'], ['dsh-client-ui-jobs', 'createJobsOverview'], ['dsh-client-ui-workflow-run', 'createWorkflowOverview']]) {
   let { source, version } = await hostClientSource(root, '@deepseek-ai/' + name);
   const hash = createHash('sha256').update(source).digest('hex');
   // These reviewed packages contain byte-identical overview sources.
-  if (!['0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3', '0.2.1-rc.5'].includes(version) || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
+  if (!['0.2.2-alpha.3', '0.2.2-rc.1'].includes(version) || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
   const ast = parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
   const functions = new Map(), duplicates = new Set();
   walk(ast, node => { if (node.type === 'FunctionDeclaration' && node.id) {

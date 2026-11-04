@@ -1,3 +1,4 @@
+import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -5,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { Context } from '@deepseek-ai/cordis';
-import { ToolRuntime, renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
+import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tool-executor-ptc';
 import { LlmRuntime, LlmAdapter, createToolResultMessage, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { Session } from '@deepseek-ai/dsh-session';
 import { installResultReduction, ResultReduction } from '../src/result-reduction/service.mjs';
@@ -32,7 +33,7 @@ async function fixture(t, mode = 'ptc') {
   ctx.reflect.provide('sandboxPolicy', { defaultMode: 'danger-full-access', resolve: () => ({ mode: 'danger-full-access', workspaceRoot: dir, sessionId: session.id }) });
   await ctx.plugin(LocalSubprocessRuntime);
   await ctx.plugin(NodePtcRuntime, { executionMode: 'per-call', timeoutMs: 3000, maxTimeoutMs: 5000, graceMs: 25 });
-  await ctx.plugin(ToolRuntime, { mode });
+  await installTools(ctx, mode);
   await ctx.plugin(LlmRuntime);
   const sent = []; let fail = false;
   class Adapter extends LlmAdapter { async *stream(options) { sent.push(options); yield { type: 'finish', reason: { kind: fail ? 'error' : 'stop' } }; } }
@@ -44,7 +45,7 @@ async function fixture(t, mode = 'ptc') {
   const call = async (name, args) => {
     const callId = 'path-' + ++serial;
     session.append('tool/call', { callId, name, arguments: JSON.stringify(args) });
-    const result = await ctx.tools.execute({ name, arguments: args, callId, rootCallId: callId, agent, signal: new AbortController().signal });
+    const result = await executeTool(ctx, { name, arguments: args, callId, rootCallId: callId, agent, signal: new AbortController().signal });
     const message = createToolResultMessage({ callId, content: result.content, isError: result.isError });
     session.append('tool/result', { message }, { surfaceOp: 'append' }); await service.settled();
     messages.push({ id: 'assistant-' + callId, role: 'assistant', source: { kind: 'model', provider: 'fixture', model: 'fixture' }, content: [{ type: 'tool-call', id: callId, name, arguments: JSON.stringify(args) }] }, message);

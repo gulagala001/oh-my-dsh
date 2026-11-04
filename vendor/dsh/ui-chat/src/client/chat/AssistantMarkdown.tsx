@@ -36,6 +36,8 @@ export interface AssistantMarkdownProps extends
   useDisclosure: UseDisclosure
   blocks: readonly AssistantBlock[]
   streaming: boolean
+  /** Only finalized durable Assistant messages supply selection sources. */
+  textInteractionSource?: boolean
   /** Frozen partial of an aborted turn: rendered with a stopped marker. */
   interrupted?: boolean | undefined
   /** Hide reasoning that belongs to the Turn-level process disclosure. */
@@ -54,7 +56,7 @@ export interface AssistantMarkdownProps extends
 
 /** Adjacent non-blank reasoning blocks in one Assistant share a Think disclosure. */
 export const AssistantMarkdown = memo(function AssistantMarkdown({
-  blocks, streaming, interrupted, loadImage, groupPart, useDisclosure,
+  blocks, streaming, textInteractionSource = false, interrupted, loadImage, groupPart, useDisclosure,
   reasoningHidden = false, usePresentation, revealProcess, mentions, renderSlot, useGroupAction, t,
 }: AssistantMarkdownProps) {
   // Stable per locale revision (t identity changes on switch): a fresh object
@@ -88,6 +90,7 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
             labels={labels}
             fileMentions={mentions}
             pathImages={pathImages}
+            textInteractionSource={textInteractionSource}
           />,
         )
         break
@@ -109,7 +112,7 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
             useGroupAction={useGroupAction}
           >
             <ReasoningRow text={parts.join('\n\n')} running={streaming && i === last} usePresentation={usePresentation}
-              useDisclosure={useDisclosure} renderSlot={renderSlot} t={t} />
+              useDisclosure={useDisclosure} renderSlot={renderSlot} textInteractionSource={textInteractionSource} t={t} />
           </ProcessReasoning>,
         )
         break

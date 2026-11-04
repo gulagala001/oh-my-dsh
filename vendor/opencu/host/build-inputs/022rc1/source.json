@@ -1,0 +1,17 @@
+{
+  "sourceCommit": "05b1cae8db6e674c5685101494d4eec24652424a",
+  "sourceTag": "dsh-v0.2.2-alpha.3",
+  "targetVersion": "0.2.2-rc.1",
+  "officialBuildCommit": "c59d10aff167ad7eefead4b3a9082fb57c8fbfe8",
+  "desktopUrl": "https://download.deepseek.com/dsh-desk/bin/mac-arm64/deepseek-harness-0.2.2-rc.1-mac-arm64.zip",
+  "desktopSha512": "mHn+lwXZd7I3ZvakFhRg0lxrGe0pNSmWhMU65AQiyrjy/yfa0C8Rq6nQ6tLcxnqdFYl+j5BN4ghOToTLiT2qGA==",
+  "files": {
+    "main.js": "f42ed25b0b844a63e515a3aff93dee89b781dae7fcbbbbfc93e04d95ad399ec1",
+    "preload-app.cjs": "d6126b3555fcb679f79922c23976025ab260a08f98bc2d20984e112ded397b96",
+    "preload-welcome.cjs": "07769d8837dfb5eaed21cf111d6304771761f8715f83317d8aa1cd110035c51b",
+    "preload-platform-account.cjs": "bf997c17dfc71885e8fa01e75c75a527c0863877ca995c6f7e943a288ea90f3c",
+    "preload-mandatory.cjs": "1d1df2edd1b50e051cae606019081731a5939ab7b4313567029fdaa97ee59273",
+    "preload-update-dialog.cjs": "65856af44fbd11bca80df7ac065ac118611c6d060d745d39efa7d18544648483",
+    "operation-report-worker.js": "18083e067b0b6fd144874b3a294a45ea29eb59de465fe28d24832290afba6fba"
+  }
+}

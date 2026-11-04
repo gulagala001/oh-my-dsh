@@ -54,3 +54,5 @@ CI 只构建一次，并用 `node scripts/test-ci.mjs run core --built` 汇总�
 运行包排除网站媒体、站点静态资源、文档站构建和评测／性能工具；源码与网站保留完整内容，包内文档插图链接到公开资源。`scripts/package-policy.mjs` 由公开文件／prepack 和实际包交付检查共同执行。保留离线准备、启动诊断、构建输入和 vendor 原始快照；源码目录是开发入口。composer 槽位由 `scripts/chat-style-adapter.mjs` 在指纹验证后进行 AST 提取并直接导出，缺失、重复、未知 ID 或动态顺序均阻止构建；变更运行 `node --test test/chat-style-adapter.test.mjs`，受影响客户端需重建。
 
 宿主浏览器组件统一使用 `scripts/host-build-contracts.mjs` 校验 SDK／组件身份、ModuleLoader 注册结构、样式归属数量和唯一替换锚点；通过宿主解析依赖，不能扫描 `.pnpm` 布局选副本，离线平铺布局须能生成相同产物。源码位置编辑按原始 AST 从后向前应用。`host-build-contracts` 与现有实际包交付回归接入 core；归档检查同时核对源 package.json、声明入口和安装补丁及包内文档链接，源码链接可用不能代替安装包检查。仅存在于源码仓库的文档入口链接到公开源码，站点指南链接到线上产品页。
+
+DSH 0.2.2-rc.1 构建保留原始源码提交与 tag，并在 `vendor/host-artifacts.json` 单独记录目标官方 npm 工件。构建核对被复用模块的完整实现、类型声明及源文件与目标 SDK 的逐文件摘要；SDK、框架和锁仍精确匹配 rc.1。桌面适配前还须将未修改源码的七个桌面入口重建为官方 rc.1 的相同字节，不能将旧源码重新标为新版。

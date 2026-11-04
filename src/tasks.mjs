@@ -1,7 +1,10 @@
+import { executeNativeTool } from "./host/native-tool-call.mjs";
 import { checkedTool } from './tool-contract.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 import { z } from 'zod';
-import { validateJsonSchemaValue, renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tools';
+import { validateJsonSchemaValue } from '@deepseek-ai/dsh-tools';
+import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tool-executor-ptc';
+import { beforeToolResolution, presentationTools } from './host/prompt-provider.mjs';
 import { randomUUID } from 'node:crypto';
 import { createTodoStore } from './todolist.mjs';
 import { normalizeTaskSnapshot, readTaskSnapshot, taskSnapshotFromEvents, todosOf } from './task-ledger.mjs';
@@ -105,8 +108,8 @@ export function currentTasks(session, cached, events) {
 
 export function createVerificationRunner(ctx, exec, workdir = currentDirectory(ctx, exec.agent.session)) {
   const invoke = async (name, args, signal = exec.signal, callId = randomUUID()) => {
-    const result = await ctx.tools.execute({ name, arguments: args, agent: exec.agent, signal,
-      callId, rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
+    const result = await executeNativeTool(ctx, { name, arguments: args, agent: exec.agent, signal,
+      callId, rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token, toolSet: exec.toolSet });
     for (const context of result.additionalContexts || []) exec.deferContext?.(context);
     return result;
   };
@@ -238,6 +241,7 @@ function installTaskVerification(ctx, store, [todo, verify], releases) {
     return () => { hub.taskVerificationControllers.delete(refreshAll); for (const state of agents.values()) state.dispose.splice(0).forEach(dispose => dispose()); agents.clear(); };
   });
   ctx.on('app-boot/config-reload', refreshAll, { global: true });
+  beforeToolResolution(ctx, refresh);
   ctx.on('agent/pre-step', ({ agent }, next) => { refresh(agent); return next(); }, { prepend: true });
   ctx.on('system-prompt/assemble', async (_initial, context, next) => {
     const agent = context?.agent ?? context?.scope;
@@ -257,7 +261,7 @@ function installTaskVerification(ctx, store, [todo, verify], releases) {
       if (text === null) throw Error('Cannot update task verification in an unsupported PTC runtime.');
       return [{ ...section, text }];
     });
-    return { ...assembly, sections, tools: assembly.tools.filter(tool => tool.name !== 'verify_link').map(tool => tool.name === 'todo_write'
+    return { ...assembly, sections, tools: presentationTools(ctx, context).filter(tool => tool.name !== 'verify_link').map(tool => tool.name === 'todo_write'
       ? { ...tool, description: withoutTaskVerification(tool.description) } : tool) };
   }, { prepend: true });
   const denied = exec => exec.name === 'verify_link' && !taskVerificationEnabled(hub, exec.agent?.session)

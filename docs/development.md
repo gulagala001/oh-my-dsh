@@ -9,13 +9,13 @@
 [English](development_EN.md) · [目录](README.md) · [用户指南](usage.md) · [贡献说明](../CONTRIBUTING.md)
 
 供源码试用和贡献者使用。普通用户用[安装指南](install.md)，无需跑工程测试。
-本 checkout 保留固定 `0.10.0` 底座与后续成果，当前插件版本与精确宿主以 [package.json](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json) 为准；构建入口精确区分 0.2.1-rc.1／rc.2／rc.3；旧宿主使用对应历史 tag 和工件。[包元数据](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json)保留 `private`，使用 GitHub Release 分发而非 npm。匹配的公共 Chat、Conversation 与宿主组件来源见 [DSH manifest](../vendor/dsh.json)；[新版 OpenCU](../vendor/opencu.json)已整体内置，只装 OMD 即包含核心、工具与真实 REA 前端。0.2.1-rc.5 使用 Cordis `4.0.5`、Schemastery `3.18.5` 与冻结依赖锁，不放宽门禁。
+本 checkout 保留固定 `0.10.0` 底座与后续成果，当前插件版本与精确宿主以 [package.json](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json) 为准；构建入口精确核对完整宿主版本；旧宿主使用对应历史 tag 和工件。[包元数据](https://github.com/gulagala001/oh-my-dsh/blob/main/package.json)保留 `private`，使用 GitHub Release 分发而非 npm。匹配的公共 Chat、Conversation 与宿主组件来源见 [DSH manifest](../vendor/dsh.json)；[新版 OpenCU](../vendor/opencu.json)已整体内置，只装 OMD 即包含核心、工具与真实 REA 前端。0.2.1-rc.5 使用 Cordis `4.0.5`、Schemastery `3.18.5` 与冻结依赖锁，不放宽门禁。
 
 OMD 发行包不重复携带 OpenCU 的独立注册包 `vendor/opencu/lib/client.js`：集成客户端已在 OMD 主包内，`client.factory.mjs` 由构建过程生成，连同独立注册包一起排除出最终安装包；工作区快照和独立 OpenCU 发行不受影响。
 
 ## 源码运行
 
-需要 Node.js ≥22.19、Git，以及 checkout 的 `package.json` 指定的 pnpm。
+需要 Node.js ≥24.9.0、Git，以及 checkout 的 `package.json` 指定的 pnpm。
 下面只演示已公开的固定 `0.10.0` 源码运行，不是当前源码版本的安装命令。
 
 ```sh
@@ -148,7 +148,7 @@ DeepSWE 的本地适配器位于 `scripts/deepswe/`，通过固定版本的 [Pie
 
 工具执行性能可用 `npm run perf:tools -- --root <源码根> --out <本地 .local/report.json> --repeats 7` 按需评测。先准备匹配 SDK 依赖及计量生成物；真实宿主 Workflow 场景还需模拟器已有构建，截图场景使用已安装 Chromium，不自动下载。基线和候选使用同一份评测工具、宿主、环境及 `size`／`repeats`／`idle-ms`，候选附 `--baseline <基线 JSON>`；`--cases` 可限定场景。报告分列新进程初始化后的首次操作与热操作，记录完整耗时、首个有效回执、局部阶段、事件循环延迟、CPU、采样进程树 RSS、闲置、取消清理和结果等价性；没有观测到的指标保留 null。21 个系列逐项注明实际覆盖层级，隔离宿主使用本地协议模型，不代表远端模型或 GUI 性能。嵌套阶段不可相加，小样本 p95 只描述本次样本，未清空操作系统缓存。`--idle-ms 31000 --cases article` 可观察正文计算 worker 的自动回收，显式关闭耗时另列；AST 场景会先执行取消检查，其闲置数据不单独证明自动回收。`node scripts/tool-performance/native-candidates.mjs --root <源码根> --out <本地 .local/candidates.json>` 单独测原生写入／编辑的大差异回执与持久 Bash 的实际轮询、就绪等待和取消；其中 worker 只是等价计算候选，不会安装到宿主。
 
-工具内部优化保持模型工具契约、提示词、agent loop、跨工具调度及 PTC 状态模式不变。大段 AST 和所有正文解析使用同一算法的单个懒加载计算 worker，闲置 30 秒回收；小段 AST 直接计算。正文依赖检查也执行同一个 worker 入口，避免桌面宿主的模块路由干扰 jsdom 内部加载。AST 树按内容和语言有界复用，取消会结束当前纯计算。原文查询仅缓存已确认深冻结的日志前缀，按原算法匹配和校验游标；缓存不保持整个 Session，最多三个有界前缀并在闲置后释放，可变快照仍完整扫描。原生匿名网页读取沿 Loader 解析的同一 provider 接入 Undici 连接池，每次仍做原生 DNS 校验，改变的地址集合重新建立连接；代理、跳转、字节上限、超时与第三方 provider 保持原实现。卸载恢复原方法并清理连接。
+工具内部优化保持模型工具契约、提示词、agent loop、跨工具调度及 PTC 状态模式不变。大段 AST 和所有正文解析使用同一算法的单个懒加载计算 worker，闲置 30 秒回收；小段 AST 直接计算。正文依赖检查也执行同一个 worker 入口，避免桌面宿主的模块路由干扰 jsdom 内部加载。AST 树按内容和语言有界复用，取消会结束当前纯计算。原文查询仅缓存已确认深冻结的日志前缀，按原算法匹配和校验游标；缓存不保持整个 Session，最多三个有界前缀并在闲置后释放，可变快照仍完整扫描。DSH 0.2.2-rc.1 的匿名网页读取已使用原生共享 Undici dispatcher；OMD 不再包装 provider 或建立第二套连接池，连接复用、代理、跳转、字节上限、取消与超时均遵循当前原生实现。
 
 图片、上下文预算和空闲预处理见[上下文整理与原文回查](context-workflow.md)；来源与许可见[第三方声明](../THIRD_PARTY_NOTICES.md)。
 
@@ -168,3 +168,5 @@ DeepSWE 的本地适配器位于 `scripts/deepswe/`，通过固定版本的 [Pie
 源码 CI 先执行 `npm run build`，再执行 `node scripts/test-ci.mjs run core --built`，复用同一份产物并一次汇总回归失败；独立 `npm test` 会准备计量模块。真实安装包仍单独核验。Chromium 布局检查仅跟随相关 UI、宿主源码和依赖锁变更，手动 CI 可用 `layout` 开启。公开文件与文档结构共用快速工作流；main 的文档变更检查、构建并自动发布到 Pages。
 
 文档构建通过 `OMD_DOCS_CHROMIUM` 复用 runner 预装的 Chrome 渲染静态 Mermaid，不下载另一份浏览器。旧桌面／rc.2 热安装验收报告验证器不再随每次 PR 自动运行，真实宿主验收时按需调用；实际源码的 OpenCU 导入和会话控制器就绪检查已合并进 core。Release 附件工作流仅在发布／编辑 Release 或手动触发时核对对应 tag，不随无关源码推送重复下载旧包。
+
+DSH 0.2.2-rc.1 构建保留原始源码提交与 tag，并在 `vendor/host-artifacts.json` 单独记录目标官方 npm 工件。构建核对被复用模块的完整实现、类型声明及源文件与目标 SDK 的逐文件摘要；SDK、框架和锁仍精确匹配 rc.1。桌面适配前还须将未修改源码的七个桌面入口重建为官方 rc.1 的相同字节，不能将旧源码重新标为新版。

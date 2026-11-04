@@ -24,7 +24,7 @@ await collect(join(root, 'src'), 'src/', path => /\.(?:mjs|jsx|css|json)$/.test(
 await collect(join(root, 'lib'), 'lib/', path => /\.(?:mjs|js|json)$/.test(path));
 await collect(join(root, 'docs'), 'docs/', () => true);
 await collect(join(root, 'scripts'), 'scripts/', path => /\.(?:mjs|json)$/.test(path));
-await collect(join(root, 'vendor'), 'vendor/', path => path === 'vendor/dsh.json' || path.startsWith('vendor/dsh/'));
+await collect(join(root, 'vendor'), 'vendor/', path => ['vendor/dsh.json', 'vendor/host-artifacts.json'].includes(path) || path.startsWith('vendor/dsh/'));
 for (const name of ['package.json', 'cordis.patch.yml', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md', 'README_EN.md', 'CHANGELOG.md']) {
   const path = join(root, name);
   if (!(await lstat(path)).isFile() || await realpath(path) !== path) throw Error(`Invalid package metadata: ${name}`);
@@ -65,7 +65,7 @@ try {
     await copyFile(source, path);
     hashes[name] = sha256(await readFile(path));
   }
-  const manifest = { schema: 1, sourceCommit: execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(), package: pkg.name, version: pkg.version, host: snapshot.version, upstream: { repository: snapshot.repository, commit: snapshot.commit, tag: snapshot.tag }, files: hashes };
+  const manifest = { schema: 1, sourceCommit: execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(), package: pkg.name, version: pkg.version, host: snapshot.buildTarget?.version ?? snapshot.version, upstream: { repository: snapshot.repository, commit: snapshot.commit, tag: snapshot.tag }, files: hashes };
   const pendingManifest = manifestPath + `.sync-${process.pid}`;
   await writeFile(pendingManifest, JSON.stringify(manifest, null, 2) + '\n');
   try { await rename(destination, backup); moved = true; } catch (error) { if (error.code !== 'ENOENT') throw error; }

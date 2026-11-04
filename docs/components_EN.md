@@ -12,7 +12,7 @@ This catalog covers independently maintained products, optional integrations, ho
 
 Computer and browser observation, interaction, annotations and previews Bundled plugin; also distributed independently。
 
-- Pinned source / version: [2.2.7-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- Pinned source / version: [2.2.8-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - License / attribution: See component notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -21,7 +21,7 @@ Computer and browser observation, interaction, annotations and previews Bundled 
 
 Task planning, execution, budgets and recovery Bundled workflow plugin。
 
-- Pinned source / version: [0.1.7-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
+- Pinned source / version: [0.1.8-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
 
 ### DSH Rewind
@@ -30,7 +30,7 @@ Task planning, execution, budgets and recovery Bundled workflow plugin。
 
 Turn undo and conversation rewind Bundled undo plugin。
 
-- Pinned source / version: [0.1.6-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
+- Pinned source / version: [0.1.7-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/THIRD_PARTY_NOTICES.md)
 
 ### DSH Persona
@@ -39,7 +39,7 @@ Turn undo and conversation rewind Bundled undo plugin。
 
 Personality import, management and global or per-chat selection Bundled personality plugin。
 
-- Pinned source / version: [0.2.1-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
+- Pinned source / version: [0.2.2-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/THIRD_PARTY_NOTICES.md)
 
 ### DSH Extensions
@@ -48,7 +48,7 @@ Personality import, management and global or per-chat selection Bundled personal
 
 Manage skills, MCP, instructions, commands and hooks Bundled extension management plugin。
 
-- Pinned source / version: [0.1.3-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
+- Pinned source / version: [0.1.4-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)
 
 ### DeepSeek Workbench
@@ -57,7 +57,7 @@ Manage skills, MCP, instructions, commands and hooks Bundled extension managemen
 
 DeepSeek web workspace and conversation import Bundled workspace plugin。
 
-- Pinned source / version: [0.1.4-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
+- Pinned source / version: [0.1.5-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md)
 
 ### DSH BTW
@@ -66,7 +66,7 @@ DeepSeek web workspace and conversation import Bundled workspace plugin。
 
 Side chats, local history, follow-ups and independent cancellation Bundled side-chat plugin。
 
-- Pinned source / version: [0.1.5-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
+- Pinned source / version: [0.1.6-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/LICENSE)
 
 ### DSH Theme
@@ -93,7 +93,7 @@ Animated character interface and whale visuals Theme component distributed with 
 
 Automatic Responses ID continuation and full-request fallback Bundled backend plugin with shared runtime ownership。
 
-- Pinned source / version: [0.1.5-dsh.0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
+- Pinned source / version: [0.1.6-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
 
 ## Optional integrations and recommendations
@@ -113,7 +113,7 @@ Long-context compression, original-content recovery and cache diagnostics. Optio
 
 Bounded file, document and shell tools with on-demand discovery. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.2.1-rc.5.ops.0.1.0 / 0.2.1-rc.3.ops.0.1.0 / 0.2.1-rc.2.ops.0.1.0 / 0.2.1-rc.1.ops.0.1.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.2.2-rc.1.ops.0.1.0 / 0.2.1-rc.5.ops.0.1.0 / 0.2.1-rc.3.ops.0.1.0 / 0.2.1-rc.2.ops.0.1.0 / 0.2.1-rc.1.ops.0.1.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### DSH Intelligent UI
@@ -122,7 +122,7 @@ Bounded file, document and shell tools with on-demand discovery. Optional recomm
 
 Interactive charts, forms, calculators, simulations and games in answers. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.2.1-rc.5.iui.1.0.14 / 0.2.1-rc.3.iui.1.0.13 / 0.2.1-rc.2.iui.1.0.12 / 0.2.1-rc.1.iui.1.0.12](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.2.2-rc.1.iui.1.0.15 / 0.2.1-rc.5.iui.1.0.14 / 0.2.1-rc.3.iui.1.0.13 / 0.2.1-rc.2.iui.1.0.12 / 0.2.1-rc.1.iui.1.0.12](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Oh My Agents Above All
@@ -131,7 +131,7 @@ Interactive charts, forms, calculators, simulations and games in answers. Option
 
 Choose a Codex, Grok Build, Cursor, Pi Coding Agent or ZCode preset in Settings → OMAA to use with DSH sessions and tools. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.2.1-rc.5.omaa.0.17.7 / 0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.2.2-rc.1.omaa.0.17.8 / 0.2.1-rc.5.omaa.0.17.7 / 0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Subscription Login
@@ -158,7 +158,7 @@ Design skills, templates and design systems. Optional recommendation; see compat
 
 Review and clarify requests before sending. Optional recommendation; see compatibility guide for current support。
 
-- Pinned source / version: [0.2.1-rc.5.intent.0.3.4 / 0.2.1-rc.3.intent.0.3.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
+- Pinned source / version: [0.2.2-rc.1.intent.0.3.4 / 0.2.1-rc.5.intent.0.3.4 / 0.2.1-rc.3.intent.0.3.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### DSH Market
@@ -214,7 +214,7 @@ Usage and balance widget with interactive characters. Optional recommendation; s
 
 Host, sessions, tools and UI components Host, source or asset; scope documented in provenance。
 
-- Pinned source / version: [0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/dsh.json)
+- Pinned source / version: [0.2.2-alpha.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/dsh.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#dsh)
 
 ### Codex frontend / REA
@@ -223,7 +223,7 @@ Host, sessions, tools and UI components Host, source or asset; scope documented 
 
 Original frontend assets used by OpenCU and provenance Host, source or asset; scope documented in provenance。
 
-- Pinned source / version: [SHA256:a36107e34534612ef202daed2068bf21fe77c15ac8ff824388fc5d32362abdfb](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- Pinned source / version: [SHA256:403d3944f678e3f56336100d54e21b7f046e5ae168fe8846872c9707c06ab3ce](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev
@@ -354,7 +354,7 @@ Design tokens and component styling for the Claude Desktop theme Pinned CDS visu
 
 ## Locked dependency inventory
 
-All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend lockfiles are listed below, including direct, transitive, build and optional platform dependencies. These are dependency inputs, not a claim that every package is loaded at runtime. Package pages provide original maintainers and license metadata; distributed licenses remain authoritative. [Machine-readable inventory](dependencies.json).
+All 1028 distinct package versions in the OMD and embedded OpenCU host/frontend lockfiles are listed below, including direct, transitive, build and optional platform dependencies. These are dependency inputs, not a claim that every package is loaded at runtime. Package pages provide original maintainers and license metadata; distributed licenses remain authoritative. [Machine-readable inventory](dependencies.json).
 
 | Package | Version | Lockfile sources |
 | --- | --- | --- |
@@ -363,24 +363,24 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@asamuzakjp/css-color](https://www.npmjs.com/package/@asamuzakjp/css-color/v/3.2.0) | 3.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@ast-grep/wasm](https://www.npmjs.com/package/@ast-grep/wasm/v/0.51.0) | 0.51.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@aws-sdk/client-bedrock-runtime](https://www.npmjs.com/package/@aws-sdk/client-bedrock-runtime/v/3.1127.0) | 3.1127.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/core](https://www.npmjs.com/package/@aws-sdk/core/v/3.977.9) | 3.977.9 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/credential-provider-env](https://www.npmjs.com/package/@aws-sdk/credential-provider-env/v/3.972.70) | 3.972.70 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/credential-provider-http](https://www.npmjs.com/package/@aws-sdk/credential-provider-http/v/3.972.72) | 3.972.72 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/credential-provider-ini](https://www.npmjs.com/package/@aws-sdk/credential-provider-ini/v/3.973.15) | 3.973.15 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/credential-provider-login](https://www.npmjs.com/package/@aws-sdk/credential-provider-login/v/3.972.77) | 3.972.77 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/credential-provider-node](https://www.npmjs.com/package/@aws-sdk/credential-provider-node/v/3.972.82) | 3.972.82 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/credential-provider-process](https://www.npmjs.com/package/@aws-sdk/credential-provider-process/v/3.972.70) | 3.972.70 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/credential-provider-sso](https://www.npmjs.com/package/@aws-sdk/credential-provider-sso/v/3.973.14) | 3.973.14 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/credential-provider-web-identity](https://www.npmjs.com/package/@aws-sdk/credential-provider-web-identity/v/3.972.76) | 3.972.76 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/eventstream-handler-node](https://www.npmjs.com/package/@aws-sdk/eventstream-handler-node/v/3.972.34) | 3.972.34 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/middleware-eventstream](https://www.npmjs.com/package/@aws-sdk/middleware-eventstream/v/3.972.29) | 3.972.29 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/middleware-websocket](https://www.npmjs.com/package/@aws-sdk/middleware-websocket/v/3.972.52) | 3.972.52 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/nested-clients](https://www.npmjs.com/package/@aws-sdk/nested-clients/v/3.997.44) | 3.997.44 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/signature-v4-multi-region](https://www.npmjs.com/package/@aws-sdk/signature-v4-multi-region/v/3.996.46) | 3.996.46 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/token-providers](https://www.npmjs.com/package/@aws-sdk/token-providers/v/3.1116.0) | 3.1116.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/core](https://www.npmjs.com/package/@aws-sdk/core/v/3.978.7) | 3.978.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/credential-provider-env](https://www.npmjs.com/package/@aws-sdk/credential-provider-env/v/3.972.78) | 3.972.78 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/credential-provider-http](https://www.npmjs.com/package/@aws-sdk/credential-provider-http/v/3.972.80) | 3.972.80 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/credential-provider-ini](https://www.npmjs.com/package/@aws-sdk/credential-provider-ini/v/3.973.23) | 3.973.23 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/credential-provider-login](https://www.npmjs.com/package/@aws-sdk/credential-provider-login/v/3.972.85) | 3.972.85 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/credential-provider-node](https://www.npmjs.com/package/@aws-sdk/credential-provider-node/v/3.972.90) | 3.972.90 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/credential-provider-process](https://www.npmjs.com/package/@aws-sdk/credential-provider-process/v/3.972.78) | 3.972.78 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/credential-provider-sso](https://www.npmjs.com/package/@aws-sdk/credential-provider-sso/v/3.973.22) | 3.973.22 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/credential-provider-web-identity](https://www.npmjs.com/package/@aws-sdk/credential-provider-web-identity/v/3.972.84) | 3.972.84 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/eventstream-handler-node](https://www.npmjs.com/package/@aws-sdk/eventstream-handler-node/v/3.972.39) | 3.972.39 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/middleware-eventstream](https://www.npmjs.com/package/@aws-sdk/middleware-eventstream/v/3.972.35) | 3.972.35 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/middleware-websocket](https://www.npmjs.com/package/@aws-sdk/middleware-websocket/v/3.972.60) | 3.972.60 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/nested-clients](https://www.npmjs.com/package/@aws-sdk/nested-clients/v/3.997.52) | 3.997.52 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/signature-v4-multi-region](https://www.npmjs.com/package/@aws-sdk/signature-v4-multi-region/v/3.996.50) | 3.996.50 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@aws-sdk/token-providers](https://www.npmjs.com/package/@aws-sdk/token-providers/v/3.1127.0) | 3.1127.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/types](https://www.npmjs.com/package/@aws-sdk/types/v/3.974.5) | 3.974.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@aws-sdk/xml-builder](https://www.npmjs.com/package/@aws-sdk/xml-builder/v/3.972.40) | 3.972.40 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/token-providers](https://www.npmjs.com/package/@aws-sdk/token-providers/v/3.1159.0) | 3.1159.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/types](https://www.npmjs.com/package/@aws-sdk/types/v/3.975.0) | 3.975.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@aws-sdk/xml-builder](https://www.npmjs.com/package/@aws-sdk/xml-builder/v/3.972.42) | 3.972.42 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@aws/lambda-invoke-store](https://www.npmjs.com/package/@aws/lambda-invoke-store/v/0.3.0) | 0.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@babel/code-frame](https://www.npmjs.com/package/@babel/code-frame/v/7.29.7) | 7.29.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [@babel/generator](https://www.npmjs.com/package/@babel/generator/v/7.29.7) | 7.29.7 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
@@ -388,7 +388,7 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@babel/helper-string-parser](https://www.npmjs.com/package/@babel/helper-string-parser/v/7.29.7) | 7.29.7 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [@babel/helper-validator-identifier](https://www.npmjs.com/package/@babel/helper-validator-identifier/v/7.29.7) | 7.29.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [@babel/parser](https://www.npmjs.com/package/@babel/parser/v/7.29.7) | 7.29.7 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
-| [@babel/runtime](https://www.npmjs.com/package/@babel/runtime/v/7.29.7) | 7.29.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@babel/runtime](https://www.npmjs.com/package/@babel/runtime/v/7.29.10) | 7.29.10 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@babel/template](https://www.npmjs.com/package/@babel/template/v/7.29.7) | 7.29.7 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [@babel/traverse](https://www.npmjs.com/package/@babel/traverse/v/7.29.7) | 7.29.7 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [@babel/types](https://www.npmjs.com/package/@babel/types/v/7.29.8) | 7.29.8 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
@@ -404,352 +404,378 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@csstools/css-color-parser](https://www.npmjs.com/package/@csstools/css-color-parser/v/3.1.0) | 3.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@csstools/css-parser-algorithms](https://www.npmjs.com/package/@csstools/css-parser-algorithms/v/3.0.5) | 3.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@csstools/css-tokenizer](https://www.npmjs.com/package/@csstools/css-tokenizer/v/3.0.4) | 3.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/cordis-plugin-group](https://www.npmjs.com/package/@deepseek-ai/cordis-plugin-group/v/1.0.5) | 1.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/cordis-plugin-include](https://www.npmjs.com/package/@deepseek-ai/cordis-plugin-include/v/1.0.10) | 1.0.10 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/cordis-plugin-loader](https://www.npmjs.com/package/@deepseek-ai/cordis-plugin-loader/v/1.0.6) | 1.0.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/cordis-plugin-timer](https://www.npmjs.com/package/@deepseek-ai/cordis-plugin-timer/v/1.1.7) | 1.1.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/cordis](https://www.npmjs.com/package/@deepseek-ai/cordis/v/4.0.5) | 4.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/cosmokit](https://www.npmjs.com/package/@deepseek-ai/cosmokit/v/1.8.6) | 1.8.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-acp-app](https://www.npmjs.com/package/@deepseek-ai/dsh-acp-app/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-acp](https://www.npmjs.com/package/@deepseek-ai/dsh-acp/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-agent-default-model](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-default-model/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-agent-instructions](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-instructions/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-agent-loop](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-loop/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-agent-preset-registry](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-preset-registry/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-agent-preset](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-preset/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-agent-tool-presentation](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-tool-presentation/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/cordis-plugin-group](https://www.npmjs.com/package/@deepseek-ai/cordis-plugin-group/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/cordis-plugin-include](https://www.npmjs.com/package/@deepseek-ai/cordis-plugin-include/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/cordis-plugin-loader](https://www.npmjs.com/package/@deepseek-ai/cordis-plugin-loader/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/cordis-plugin-timer](https://www.npmjs.com/package/@deepseek-ai/cordis-plugin-timer/v/1.2.0) | 1.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/cordis](https://www.npmjs.com/package/@deepseek-ai/cordis/v/4.0.5) | 4.0.5 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
+| [@deepseek-ai/cordis](https://www.npmjs.com/package/@deepseek-ai/cordis/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/cosmokit](https://www.npmjs.com/package/@deepseek-ai/cosmokit/v/1.8.6) | 1.8.6 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
+| [@deepseek-ai/cosmokit](https://www.npmjs.com/package/@deepseek-ai/cosmokit/v/1.9.0) | 1.9.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-acp-app](https://www.npmjs.com/package/@deepseek-ai/dsh-acp-app/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-acp](https://www.npmjs.com/package/@deepseek-ai/dsh-acp/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-action-cards](https://www.npmjs.com/package/@deepseek-ai/dsh-action-cards/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-agent-default-model](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-default-model/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-agent-instructions](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-instructions/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-agent-loop](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-loop/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-agent-preset-registry](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-preset-registry/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-agent-preset](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-preset/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-agent-tool-presentation](https://www.npmjs.com/package/@deepseek-ai/dsh-agent-tool-presentation/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-agent](https://www.npmjs.com/package/@deepseek-ai/dsh-agent/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-agent](https://www.npmjs.com/package/@deepseek-ai/dsh-agent/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-agent](https://www.npmjs.com/package/@deepseek-ai/dsh-agent/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-anonymous-user-id](https://www.npmjs.com/package/@deepseek-ai/dsh-anonymous-user-id/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-account-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-account-controller/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-gateway](https://www.npmjs.com/package/@deepseek-ai/dsh-api-gateway/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-job-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-job-controller/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-remote-access](https://www.npmjs.com/package/@deepseek-ai/dsh-api-remote-access/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-remotes](https://www.npmjs.com/package/@deepseek-ai/dsh-api-remotes/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-session-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-session-controller/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-settings-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-settings-controller/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-terminal-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-terminal-controller/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-workspace-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-workspace-controller/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-api-workspace-files](https://www.npmjs.com/package/@deepseek-ai/dsh-api-workspace-files/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-app-boot](https://www.npmjs.com/package/@deepseek-ai/dsh-app-boot/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-atomic-write](https://www.npmjs.com/package/@deepseek-ai/dsh-atomic-write/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-agent](https://www.npmjs.com/package/@deepseek-ai/dsh-agent/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-anonymous-user-id](https://www.npmjs.com/package/@deepseek-ai/dsh-anonymous-user-id/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-account-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-account-controller/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-gateway](https://www.npmjs.com/package/@deepseek-ai/dsh-api-gateway/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-job-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-job-controller/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-remote-access](https://www.npmjs.com/package/@deepseek-ai/dsh-api-remote-access/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-remotes](https://www.npmjs.com/package/@deepseek-ai/dsh-api-remotes/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-session-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-session-controller/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-settings-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-settings-controller/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-terminal-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-terminal-controller/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-workspace-controller](https://www.npmjs.com/package/@deepseek-ai/dsh-api-workspace-controller/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-api-workspace-files](https://www.npmjs.com/package/@deepseek-ai/dsh-api-workspace-files/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-app-boot](https://www.npmjs.com/package/@deepseek-ai/dsh-app-boot/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-atomic-write](https://www.npmjs.com/package/@deepseek-ai/dsh-atomic-write/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-attachment-local](https://www.npmjs.com/package/@deepseek-ai/dsh-attachment-local/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-attachment-local](https://www.npmjs.com/package/@deepseek-ai/dsh-attachment-local/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-attachment-local](https://www.npmjs.com/package/@deepseek-ai/dsh-attachment-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-attachment-local](https://www.npmjs.com/package/@deepseek-ai/dsh-attachment-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-attachment](https://www.npmjs.com/package/@deepseek-ai/dsh-attachment/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-attachment](https://www.npmjs.com/package/@deepseek-ai/dsh-attachment/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-attachment](https://www.npmjs.com/package/@deepseek-ai/dsh-attachment/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-authorization](https://www.npmjs.com/package/@deepseek-ai/dsh-authorization/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-base](https://www.npmjs.com/package/@deepseek-ai/dsh-base/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-bash-local](https://www.npmjs.com/package/@deepseek-ai/dsh-bash-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-bash-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-bash-sandbox/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-attachment](https://www.npmjs.com/package/@deepseek-ai/dsh-attachment/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-authorization](https://www.npmjs.com/package/@deepseek-ai/dsh-authorization/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-base](https://www.npmjs.com/package/@deepseek-ai/dsh-base/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-bash-local](https://www.npmjs.com/package/@deepseek-ai/dsh-bash-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-bash-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-bash-sandbox/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-brand](https://www.npmjs.com/package/@deepseek-ai/dsh-brand/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-brand](https://www.npmjs.com/package/@deepseek-ai/dsh-brand/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-brand](https://www.npmjs.com/package/@deepseek-ai/dsh-brand/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-chunked-list](https://www.npmjs.com/package/@deepseek-ai/dsh-chunked-list/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-connection](https://www.npmjs.com/package/@deepseek-ai/dsh-client-connection/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-file-upload](https://www.npmjs.com/package/@deepseek-ai/dsh-client-file-upload/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-hmr](https://www.npmjs.com/package/@deepseek-ai/dsh-client-hmr/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-locale](https://www.npmjs.com/package/@deepseek-ai/dsh-client-locale/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-modules](https://www.npmjs.com/package/@deepseek-ai/dsh-client-modules/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-product-analytics](https://www.npmjs.com/package/@deepseek-ai/dsh-client-product-analytics/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-resources](https://www.npmjs.com/package/@deepseek-ai/dsh-client-resources/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-shortcuts](https://www.npmjs.com/package/@deepseek-ai/dsh-client-shortcuts/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-agent-preset](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-agent-preset/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-approval](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-approval/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-attachment](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-attachment/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-brand-official](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-brand-official/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-chat](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-chat/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-commands](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-commands/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-conversation](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-conversation/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-cordis](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-cordis/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-deepseek-model-label-1017](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-deepseek-model-label-1017/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-deliverables](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-deliverables/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-directory-picker-browse](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-directory-picker-browse/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-directory-picker-native](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-directory-picker-native/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-entry-customization](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-entry-customization/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-goal](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-goal/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-input-trigger](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-input-trigger/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-jobs](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-jobs/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-layout](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-layout/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-message-feedback](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-message-feedback/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-model-selection](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-model-selection/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-open-in-app](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-open-in-app/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-permission-presets](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-permission-presets/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-plan](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-plan/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-plugin-manager](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-plugin-manager/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-plugin-market](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-plugin-market/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-reference](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-reference/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-renderer](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-renderer/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-schedule](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-schedule/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-secret-mask](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-secret-mask/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-session](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-session/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-account](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-account/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-agent-loop](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-agent-loop/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-general](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-general/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-models](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-models/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-plugin-inventory](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-plugin-inventory/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-plugins](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-plugins/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-session-log](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-session-log/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-shell](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-shell/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-subagent](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-subagent/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings-web-search](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-web-search/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-settings](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-shortcuts](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-shortcuts/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-sidebar-browser](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-browser/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-sidebar-documentpreview](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-documentpreview/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-sidebar-files](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-files/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-sidebar-right](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-right/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-sidebar-terminal](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-terminal/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-sidebar](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-skill](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-skill/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-subagent](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-subagent/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-theme](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-theme/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-tool](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-tool/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-trajectory](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-trajectory/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-user-questions](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-user-questions/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-workflow-run](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-workflow-run/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-client-ui-workspace](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-workspace/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-cmdline](https://www.npmjs.com/package/@deepseek-ai/dsh-cmdline/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-command-compact](https://www.npmjs.com/package/@deepseek-ai/dsh-command-compact/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-command-feedback](https://www.npmjs.com/package/@deepseek-ai/dsh-command-feedback/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-command-goal](https://www.npmjs.com/package/@deepseek-ai/dsh-command-goal/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-commands](https://www.npmjs.com/package/@deepseek-ai/dsh-commands/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-compaction-basic](https://www.npmjs.com/package/@deepseek-ai/dsh-compaction-basic/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-compaction-image-offload](https://www.npmjs.com/package/@deepseek-ai/dsh-compaction-image-offload/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-compaction-tool-result-pruner](https://www.npmjs.com/package/@deepseek-ai/dsh-compaction-tool-result-pruner/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-compaction](https://www.npmjs.com/package/@deepseek-ai/dsh-compaction/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-config-editor](https://www.npmjs.com/package/@deepseek-ai/dsh-config-editor/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-cordis-client-runner](https://www.npmjs.com/package/@deepseek-ai/dsh-cordis-client-runner/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-cordis-host-runner](https://www.npmjs.com/package/@deepseek-ai/dsh-cordis-host-runner/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-credentials-local](https://www.npmjs.com/package/@deepseek-ai/dsh-credentials-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-credentials](https://www.npmjs.com/package/@deepseek-ai/dsh-credentials/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-deepseek-account-platform](https://www.npmjs.com/package/@deepseek-ai/dsh-deepseek-account-platform/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-deepseek-account](https://www.npmjs.com/package/@deepseek-ai/dsh-deepseek-account/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-deepseek-llm-api-extensions](https://www.npmjs.com/package/@deepseek-ai/dsh-deepseek-llm-api-extensions/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-deque](https://www.npmjs.com/package/@deepseek-ai/dsh-deque/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-agent-team-profile](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-agent-team-profile/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-agent-team](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-agent-team/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-api-speech-to-text](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-api-speech-to-text/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-auto-review](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-auto-review/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-badge-skill-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-badge-skill-bundle/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-client-ui-agent-team](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-client-ui-agent-team/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-client-ui-cot-translation](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-client-ui-cot-translation/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-client-ui-voice-input](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-client-ui-voice-input/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-cot-translation-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-cot-translation-bundle/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-inspector-profile](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-inspector-profile/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-inspector](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-inspector/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-plugin-market-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-plugin-market-bundle/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-ralph-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-ralph-bundle/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-session-inspector](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-session-inspector/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-session-search](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-session-search/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-session-titles-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-session-titles-bundle/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-speech-to-text-sensevoice](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-speech-to-text-sensevoice/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-speech-to-text](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-speech-to-text/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-terminal-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-terminal-bundle/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-tool-agent-team](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-tool-agent-team/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-tool-worktree](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-tool-worktree/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-translator](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-translator/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-voice-input-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-voice-input-bundle/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-experimental-worktree](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-worktree/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-file-reference-local](https://www.npmjs.com/package/@deepseek-ai/dsh-file-reference-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-file-reference](https://www.npmjs.com/package/@deepseek-ai/dsh-file-reference/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-fs-local](https://www.npmjs.com/package/@deepseek-ai/dsh-fs-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-fs-observation-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-fs-observation-policy/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-fs-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-fs-sandbox/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-brand](https://www.npmjs.com/package/@deepseek-ai/dsh-brand/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-chunked-list](https://www.npmjs.com/package/@deepseek-ai/dsh-chunked-list/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-connection](https://www.npmjs.com/package/@deepseek-ai/dsh-client-connection/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-file-upload](https://www.npmjs.com/package/@deepseek-ai/dsh-client-file-upload/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-hmr](https://www.npmjs.com/package/@deepseek-ai/dsh-client-hmr/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-locale](https://www.npmjs.com/package/@deepseek-ai/dsh-client-locale/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-modules](https://www.npmjs.com/package/@deepseek-ai/dsh-client-modules/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-product-analytics](https://www.npmjs.com/package/@deepseek-ai/dsh-client-product-analytics/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-resources](https://www.npmjs.com/package/@deepseek-ai/dsh-client-resources/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-shortcuts](https://www.npmjs.com/package/@deepseek-ai/dsh-client-shortcuts/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-action-cards](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-action-cards/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-agent-preset](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-agent-preset/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-approval](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-approval/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-attachment](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-attachment/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-brand-official](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-brand-official/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-chat](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-chat/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-commands](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-commands/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-context-menu](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-context-menu/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-conversation](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-conversation/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-cordis](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-cordis/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-creation-recommendations](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-creation-recommendations/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-deliverables](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-deliverables/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-directory-picker-browse](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-directory-picker-browse/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-directory-picker-native](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-directory-picker-native/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-entry-customization](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-entry-customization/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-file-actions](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-file-actions/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-file-drag](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-file-drag/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-goal](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-goal/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-input-trigger](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-input-trigger/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-jobs](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-jobs/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-layout](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-layout/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-message-feedback](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-message-feedback/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-model-selection](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-model-selection/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-open-in-app](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-open-in-app/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-permission-presets](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-permission-presets/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-plan](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-plan/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-plugin-manager](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-plugin-manager/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-plugin-market](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-plugin-market/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-plugin-recommendations](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-plugin-recommendations/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-reference](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-reference/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-renderer](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-renderer/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-schedule](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-schedule/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-secret-mask](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-secret-mask/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-session](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-session/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-account](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-account/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-agent-loop](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-agent-loop/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-general](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-general/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-models](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-models/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-plugin-inventory](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-plugin-inventory/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-plugins](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-plugins/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-session-log](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-session-log/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-shell](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-shell/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-subagent](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-subagent/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings-web-search](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings-web-search/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-settings](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-settings/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-shortcuts](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-shortcuts/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-sidebar-browser](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-browser/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-sidebar-documentpreview](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-documentpreview/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-sidebar-files](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-files/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-sidebar-right](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-right/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-sidebar-terminal](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar-terminal/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-sidebar](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-sidebar/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-skill](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-skill/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-subagent](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-subagent/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-theme](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-theme/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-tool](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-tool/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-trajectory](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-trajectory/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-user-questions](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-user-questions/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-workflow-run](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-workflow-run/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-client-ui-workspace](https://www.npmjs.com/package/@deepseek-ai/dsh-client-ui-workspace/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-cmdline](https://www.npmjs.com/package/@deepseek-ai/dsh-cmdline/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-command-compact](https://www.npmjs.com/package/@deepseek-ai/dsh-command-compact/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-command-feedback](https://www.npmjs.com/package/@deepseek-ai/dsh-command-feedback/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-command-goal](https://www.npmjs.com/package/@deepseek-ai/dsh-command-goal/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-commands](https://www.npmjs.com/package/@deepseek-ai/dsh-commands/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-compaction-basic](https://www.npmjs.com/package/@deepseek-ai/dsh-compaction-basic/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-compaction-image-offload](https://www.npmjs.com/package/@deepseek-ai/dsh-compaction-image-offload/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-compaction-tool-result-pruner](https://www.npmjs.com/package/@deepseek-ai/dsh-compaction-tool-result-pruner/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-compaction](https://www.npmjs.com/package/@deepseek-ai/dsh-compaction/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-config-editor](https://www.npmjs.com/package/@deepseek-ai/dsh-config-editor/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-cordis-client-runner](https://www.npmjs.com/package/@deepseek-ai/dsh-cordis-client-runner/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-cordis-host-runner](https://www.npmjs.com/package/@deepseek-ai/dsh-cordis-host-runner/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-creation-recommendations](https://www.npmjs.com/package/@deepseek-ai/dsh-creation-recommendations/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-credentials-local](https://www.npmjs.com/package/@deepseek-ai/dsh-credentials-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-credentials](https://www.npmjs.com/package/@deepseek-ai/dsh-credentials/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-deepseek-account-platform](https://www.npmjs.com/package/@deepseek-ai/dsh-deepseek-account-platform/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-deepseek-account](https://www.npmjs.com/package/@deepseek-ai/dsh-deepseek-account/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-deepseek-llm-api-extensions](https://www.npmjs.com/package/@deepseek-ai/dsh-deepseek-llm-api-extensions/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-deliverable-file-references](https://www.npmjs.com/package/@deepseek-ai/dsh-deliverable-file-references/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-deque](https://www.npmjs.com/package/@deepseek-ai/dsh-deque/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-agent-team-profile](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-agent-team-profile/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-agent-team](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-agent-team/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-api-speech-to-text](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-api-speech-to-text/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-auto-review](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-auto-review/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-badge-skill-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-badge-skill-bundle/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-client-ui-agent-team](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-client-ui-agent-team/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-client-ui-cot-translation](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-client-ui-cot-translation/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-client-ui-forge](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-client-ui-forge/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-client-ui-stats](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-client-ui-stats/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-client-ui-voice-input](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-client-ui-voice-input/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-cot-translation-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-cot-translation-bundle/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-forge-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-forge-bundle/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-forge-github](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-forge-github/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-forge-session](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-forge-session/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-forge](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-forge/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-inspector-profile](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-inspector-profile/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-inspector](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-inspector/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-liveshare-protocol](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-liveshare-protocol/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-liveshare](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-liveshare/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-plugin-market-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-plugin-market-bundle/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-ralph-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-ralph-bundle/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-session-inspector](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-session-inspector/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-session-search](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-session-search/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-session-titles-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-session-titles-bundle/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-speech-to-text-sensevoice](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-speech-to-text-sensevoice/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-speech-to-text](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-speech-to-text/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-terminal-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-terminal-bundle/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-tool-agent-team](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-tool-agent-team/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-tool-worktree](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-tool-worktree/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-translator](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-translator/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-voice-input-bundle](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-voice-input-bundle/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-experimental-worktree](https://www.npmjs.com/package/@deepseek-ai/dsh-experimental-worktree/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-file-reference-local](https://www.npmjs.com/package/@deepseek-ai/dsh-file-reference-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-file-reference](https://www.npmjs.com/package/@deepseek-ai/dsh-file-reference/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-fs-local](https://www.npmjs.com/package/@deepseek-ai/dsh-fs-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-fs-observation-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-fs-observation-policy/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-fs-patch](https://www.npmjs.com/package/@deepseek-ai/dsh-fs-patch/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-fs-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-fs-sandbox/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-fs](https://www.npmjs.com/package/@deepseek-ai/dsh-fs/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-fs](https://www.npmjs.com/package/@deepseek-ai/dsh-fs/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-fs](https://www.npmjs.com/package/@deepseek-ai/dsh-fs/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-goal-round-driver](https://www.npmjs.com/package/@deepseek-ai/dsh-goal-round-driver/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-goal](https://www.npmjs.com/package/@deepseek-ai/dsh-goal/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-harness-dev-context](https://www.npmjs.com/package/@deepseek-ai/dsh-harness-dev-context/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-headless](https://www.npmjs.com/package/@deepseek-ai/dsh-headless/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-hmr](https://www.npmjs.com/package/@deepseek-ai/dsh-hmr/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-fs](https://www.npmjs.com/package/@deepseek-ai/dsh-fs/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-goal-round-driver](https://www.npmjs.com/package/@deepseek-ai/dsh-goal-round-driver/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-goal](https://www.npmjs.com/package/@deepseek-ai/dsh-goal/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-harness-dev-context](https://www.npmjs.com/package/@deepseek-ai/dsh-harness-dev-context/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-headless](https://www.npmjs.com/package/@deepseek-ai/dsh-headless/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-hmr](https://www.npmjs.com/package/@deepseek-ai/dsh-hmr/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-home-paths](https://www.npmjs.com/package/@deepseek-ai/dsh-home-paths/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-home-paths](https://www.npmjs.com/package/@deepseek-ai/dsh-home-paths/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-home-paths](https://www.npmjs.com/package/@deepseek-ai/dsh-home-paths/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-host-directory-picker-auto](https://www.npmjs.com/package/@deepseek-ai/dsh-host-directory-picker-auto/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-host-directory-picker-browse](https://www.npmjs.com/package/@deepseek-ai/dsh-host-directory-picker-browse/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-host-directory-picker-native](https://www.npmjs.com/package/@deepseek-ai/dsh-host-directory-picker-native/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-host-directory-picker](https://www.npmjs.com/package/@deepseek-ai/dsh-host-directory-picker/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-host-frontend-static](https://www.npmjs.com/package/@deepseek-ai/dsh-host-frontend-static/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-host-open-in-app](https://www.npmjs.com/package/@deepseek-ai/dsh-host-open-in-app/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-host-plugin-inventory](https://www.npmjs.com/package/@deepseek-ai/dsh-host-plugin-inventory/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-host-product-telemetry-otel](https://www.npmjs.com/package/@deepseek-ai/dsh-host-product-telemetry-otel/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-host-webserver](https://www.npmjs.com/package/@deepseek-ai/dsh-host-webserver/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-http-proxy](https://www.npmjs.com/package/@deepseek-ai/dsh-http-proxy/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-jobs-local](https://www.npmjs.com/package/@deepseek-ai/dsh-jobs-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-jobs](https://www.npmjs.com/package/@deepseek-ai/dsh-jobs/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-launch-environment](https://www.npmjs.com/package/@deepseek-ai/dsh-launch-environment/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-home-paths](https://www.npmjs.com/package/@deepseek-ai/dsh-home-paths/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-host-directory-picker-auto](https://www.npmjs.com/package/@deepseek-ai/dsh-host-directory-picker-auto/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-host-directory-picker-browse](https://www.npmjs.com/package/@deepseek-ai/dsh-host-directory-picker-browse/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-host-directory-picker-native](https://www.npmjs.com/package/@deepseek-ai/dsh-host-directory-picker-native/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-host-directory-picker](https://www.npmjs.com/package/@deepseek-ai/dsh-host-directory-picker/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-host-frontend-static](https://www.npmjs.com/package/@deepseek-ai/dsh-host-frontend-static/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-host-open-in-app](https://www.npmjs.com/package/@deepseek-ai/dsh-host-open-in-app/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-host-plugin-inventory](https://www.npmjs.com/package/@deepseek-ai/dsh-host-plugin-inventory/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-host-product-telemetry-otel](https://www.npmjs.com/package/@deepseek-ai/dsh-host-product-telemetry-otel/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-host-webserver](https://www.npmjs.com/package/@deepseek-ai/dsh-host-webserver/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-http-proxy](https://www.npmjs.com/package/@deepseek-ai/dsh-http-proxy/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-jobs-local](https://www.npmjs.com/package/@deepseek-ai/dsh-jobs-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-jobs](https://www.npmjs.com/package/@deepseek-ai/dsh-jobs/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-launch-environment](https://www.npmjs.com/package/@deepseek-ai/dsh-launch-environment/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-lazy-require](https://www.npmjs.com/package/@deepseek-ai/dsh-lazy-require/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-lazy-require](https://www.npmjs.com/package/@deepseek-ai/dsh-lazy-require/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-lazy-require](https://www.npmjs.com/package/@deepseek-ai/dsh-lazy-require/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-llm-deepseek-account](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-deepseek-account/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-llm-deepseek-api-key](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-deepseek-api-key/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-llm-deepseek](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-deepseek/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-llm-pi-ai](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-pi-ai/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-llm-retry](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-retry/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-lazy-require](https://www.npmjs.com/package/@deepseek-ai/dsh-lazy-require/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-llm-deepseek-account](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-deepseek-account/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-llm-deepseek-api-key](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-deepseek-api-key/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-llm-deepseek](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-deepseek/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-llm-pi-ai](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-pi-ai/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-llm-retry](https://www.npmjs.com/package/@deepseek-ai/dsh-llm-retry/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-llm/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-llm/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-llm/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-mcp-client](https://www.npmjs.com/package/@deepseek-ai/dsh-mcp-client/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-mcp-resources](https://www.npmjs.com/package/@deepseek-ai/dsh-mcp-resources/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-message-feedback](https://www.npmjs.com/package/@deepseek-ai/dsh-message-feedback/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-native-command](https://www.npmjs.com/package/@deepseek-ai/dsh-native-command/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-office-to-pdf](https://www.npmjs.com/package/@deepseek-ai/dsh-office-to-pdf/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-otel](https://www.npmjs.com/package/@deepseek-ai/dsh-otel/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-output-retention](https://www.npmjs.com/package/@deepseek-ai/dsh-output-retention/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-package-manifest](https://www.npmjs.com/package/@deepseek-ai/dsh-package-manifest/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-permission-presets](https://www.npmjs.com/package/@deepseek-ai/dsh-permission-presets/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-persona](https://www.npmjs.com/package/@deepseek-ai/dsh-persona/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-plan-mode](https://www.npmjs.com/package/@deepseek-ai/dsh-plan-mode/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-plugin-manager](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-manager/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-plugin-market-index](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-market-index/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-plugin-market](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-market/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-plugin-package-inventory-deepseek](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-package-inventory-deepseek/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-ptc-runtime-node](https://www.npmjs.com/package/@deepseek-ai/dsh-ptc-runtime-node/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-llm/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-mcp-client](https://www.npmjs.com/package/@deepseek-ai/dsh-mcp-client/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-mcp-resources](https://www.npmjs.com/package/@deepseek-ai/dsh-mcp-resources/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-message-feedback](https://www.npmjs.com/package/@deepseek-ai/dsh-message-feedback/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-message-quotes](https://www.npmjs.com/package/@deepseek-ai/dsh-message-quotes/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-native-command](https://www.npmjs.com/package/@deepseek-ai/dsh-native-command/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-office-to-pdf](https://www.npmjs.com/package/@deepseek-ai/dsh-office-to-pdf/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-official-bundles](https://www.npmjs.com/package/@deepseek-ai/dsh-official-bundles/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-otel](https://www.npmjs.com/package/@deepseek-ai/dsh-otel/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-output-retention](https://www.npmjs.com/package/@deepseek-ai/dsh-output-retention/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-package-manifest](https://www.npmjs.com/package/@deepseek-ai/dsh-package-manifest/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-permission-presets](https://www.npmjs.com/package/@deepseek-ai/dsh-permission-presets/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-persona](https://www.npmjs.com/package/@deepseek-ai/dsh-persona/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-personalized-recommendations](https://www.npmjs.com/package/@deepseek-ai/dsh-personalized-recommendations/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-plan-mode](https://www.npmjs.com/package/@deepseek-ai/dsh-plan-mode/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-plugin-detail](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-detail/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-plugin-manager](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-manager/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-plugin-market-index](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-market-index/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-plugin-market](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-market/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-plugin-package-inventory-deepseek](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-package-inventory-deepseek/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-plugin-recommendations](https://www.npmjs.com/package/@deepseek-ai/dsh-plugin-recommendations/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-ptc-runtime-node](https://www.npmjs.com/package/@deepseek-ai/dsh-ptc-runtime-node/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-ptc-runtime](https://www.npmjs.com/package/@deepseek-ai/dsh-ptc-runtime/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-ptc-runtime](https://www.npmjs.com/package/@deepseek-ai/dsh-ptc-runtime/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-ptc-runtime](https://www.npmjs.com/package/@deepseek-ai/dsh-ptc-runtime/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-pwsh-local](https://www.npmjs.com/package/@deepseek-ai/dsh-pwsh-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-pwsh-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-pwsh-sandbox/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-repeat-tool-reminder](https://www.npmjs.com/package/@deepseek-ai/dsh-repeat-tool-reminder/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-sandbox-local](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-ptc-runtime](https://www.npmjs.com/package/@deepseek-ai/dsh-ptc-runtime/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-pwsh-local](https://www.npmjs.com/package/@deepseek-ai/dsh-pwsh-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-pwsh-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-pwsh-sandbox/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-repeat-tool-reminder](https://www.npmjs.com/package/@deepseek-ai/dsh-repeat-tool-reminder/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-sandbox-local](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-sandbox-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox-policy/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-sandbox-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox-policy/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-sandbox-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox-policy/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-sandbox-windows-acl](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox-windows-acl/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-sandbox-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox-policy/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-sandbox-windows-acl](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox-windows-acl/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-schedule](https://www.npmjs.com/package/@deepseek-ai/dsh-schedule/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-sandbox](https://www.npmjs.com/package/@deepseek-ai/dsh-sandbox/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-schedule](https://www.npmjs.com/package/@deepseek-ai/dsh-schedule/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-scope](https://www.npmjs.com/package/@deepseek-ai/dsh-scope/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-scope](https://www.npmjs.com/package/@deepseek-ai/dsh-scope/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-scope](https://www.npmjs.com/package/@deepseek-ai/dsh-scope/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-sdk-app](https://www.npmjs.com/package/@deepseek-ai/dsh-sdk-app/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-sdk-jsonrpc-server](https://www.npmjs.com/package/@deepseek-ai/dsh-sdk-jsonrpc-server/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-sdk-minimal](https://www.npmjs.com/package/@deepseek-ai/dsh-sdk-minimal/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-sdk-protocol](https://www.npmjs.com/package/@deepseek-ai/dsh-sdk-protocol/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-checkpoint-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-session-checkpoint-policy/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-format-catalog](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-catalog/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-format-v0-to-v1](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-v0-to-v1/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-format-v1-to-v2](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-v1-to-v2/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-format-v2-to-v3](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-v2-to-v3/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-format-v3-to-v4](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-v3-to-v4/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-format](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-log-deepseek](https://www.npmjs.com/package/@deepseek-ai/dsh-session-log-deepseek/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-log-export](https://www.npmjs.com/package/@deepseek-ai/dsh-session-log-export/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-persistence-jsonl](https://www.npmjs.com/package/@deepseek-ai/dsh-session-persistence-jsonl/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-persistence](https://www.npmjs.com/package/@deepseek-ai/dsh-session-persistence/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-projection-cache](https://www.npmjs.com/package/@deepseek-ai/dsh-session-projection-cache/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-scope](https://www.npmjs.com/package/@deepseek-ai/dsh-scope/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-sdk-app](https://www.npmjs.com/package/@deepseek-ai/dsh-sdk-app/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-sdk-jsonrpc-server](https://www.npmjs.com/package/@deepseek-ai/dsh-sdk-jsonrpc-server/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-sdk-minimal](https://www.npmjs.com/package/@deepseek-ai/dsh-sdk-minimal/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-sdk-protocol](https://www.npmjs.com/package/@deepseek-ai/dsh-sdk-protocol/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-checkpoint-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-session-checkpoint-policy/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-format-catalog](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-catalog/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-format-v0-to-v1](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-v0-to-v1/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-format-v1-to-v2](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-v1-to-v2/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-format-v2-to-v3](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-v2-to-v3/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-format-v3-to-v4](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format-v3-to-v4/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-format](https://www.npmjs.com/package/@deepseek-ai/dsh-session-format/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-log-deepseek](https://www.npmjs.com/package/@deepseek-ai/dsh-session-log-deepseek/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-log-export](https://www.npmjs.com/package/@deepseek-ai/dsh-session-log-export/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-persistence-jsonl](https://www.npmjs.com/package/@deepseek-ai/dsh-session-persistence-jsonl/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-persistence](https://www.npmjs.com/package/@deepseek-ai/dsh-session-persistence/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-projection-cache](https://www.npmjs.com/package/@deepseek-ai/dsh-session-projection-cache/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-session-projection](https://www.npmjs.com/package/@deepseek-ai/dsh-session-projection/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-session-projection](https://www.npmjs.com/package/@deepseek-ai/dsh-session-projection/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-projection](https://www.npmjs.com/package/@deepseek-ai/dsh-session-projection/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-query-sqlite](https://www.npmjs.com/package/@deepseek-ai/dsh-session-query-sqlite/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-query](https://www.npmjs.com/package/@deepseek-ai/dsh-session-query/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-reference](https://www.npmjs.com/package/@deepseek-ai/dsh-session-reference/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-stats](https://www.npmjs.com/package/@deepseek-ai/dsh-session-stats/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-telemetry-otel](https://www.npmjs.com/package/@deepseek-ai/dsh-session-telemetry-otel/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-telemetry](https://www.npmjs.com/package/@deepseek-ai/dsh-session-telemetry/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-title-all-prompts-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-session-title-all-prompts-llm/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-title-first-prompt-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-session-title-first-prompt-llm/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-title-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-session-title-llm/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-title](https://www.npmjs.com/package/@deepseek-ai/dsh-session-title/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session-turn-outline](https://www.npmjs.com/package/@deepseek-ai/dsh-session-turn-outline/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-projection](https://www.npmjs.com/package/@deepseek-ai/dsh-session-projection/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-query-sqlite](https://www.npmjs.com/package/@deepseek-ai/dsh-session-query-sqlite/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-query](https://www.npmjs.com/package/@deepseek-ai/dsh-session-query/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-reference](https://www.npmjs.com/package/@deepseek-ai/dsh-session-reference/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-stats](https://www.npmjs.com/package/@deepseek-ai/dsh-session-stats/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-telemetry-otel](https://www.npmjs.com/package/@deepseek-ai/dsh-session-telemetry-otel/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-telemetry](https://www.npmjs.com/package/@deepseek-ai/dsh-session-telemetry/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-title-all-prompts-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-session-title-all-prompts-llm/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-title-first-prompt-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-session-title-first-prompt-llm/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-title-llm](https://www.npmjs.com/package/@deepseek-ai/dsh-session-title-llm/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-title](https://www.npmjs.com/package/@deepseek-ai/dsh-session-title/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session-turn-outline](https://www.npmjs.com/package/@deepseek-ai/dsh-session-turn-outline/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-session](https://www.npmjs.com/package/@deepseek-ai/dsh-session/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-session](https://www.npmjs.com/package/@deepseek-ai/dsh-session/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-session](https://www.npmjs.com/package/@deepseek-ai/dsh-session/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-settings](https://www.npmjs.com/package/@deepseek-ai/dsh-settings/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-shell-env](https://www.npmjs.com/package/@deepseek-ai/dsh-shell-env/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-shell](https://www.npmjs.com/package/@deepseek-ai/dsh-shell/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-skill-badge](https://www.npmjs.com/package/@deepseek-ai/dsh-skill-badge/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-skill-filesystem](https://www.npmjs.com/package/@deepseek-ai/dsh-skill-filesystem/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-skill-office](https://www.npmjs.com/package/@deepseek-ai/dsh-skill-office/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-skill](https://www.npmjs.com/package/@deepseek-ai/dsh-skill/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-spill-local](https://www.npmjs.com/package/@deepseek-ai/dsh-spill-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-spill-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-spill-policy/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-spill](https://www.npmjs.com/package/@deepseek-ai/dsh-spill/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-storage-domain](https://www.npmjs.com/package/@deepseek-ai/dsh-storage-domain/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-storage-json](https://www.npmjs.com/package/@deepseek-ai/dsh-storage-json/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-storage](https://www.npmjs.com/package/@deepseek-ai/dsh-storage/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-subagent-fork-in-process](https://www.npmjs.com/package/@deepseek-ai/dsh-subagent-fork-in-process/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-subagent-spawn-in-process](https://www.npmjs.com/package/@deepseek-ai/dsh-subagent-spawn-in-process/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-subagent](https://www.npmjs.com/package/@deepseek-ai/dsh-subagent/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-subprocess-local](https://www.npmjs.com/package/@deepseek-ai/dsh-subprocess-local/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-subprocess](https://www.npmjs.com/package/@deepseek-ai/dsh-subprocess/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-session](https://www.npmjs.com/package/@deepseek-ai/dsh-session/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-settings](https://www.npmjs.com/package/@deepseek-ai/dsh-settings/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-shell-env](https://www.npmjs.com/package/@deepseek-ai/dsh-shell-env/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-shell](https://www.npmjs.com/package/@deepseek-ai/dsh-shell/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-skill-badge](https://www.npmjs.com/package/@deepseek-ai/dsh-skill-badge/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-skill-filesystem](https://www.npmjs.com/package/@deepseek-ai/dsh-skill-filesystem/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-skill-office](https://www.npmjs.com/package/@deepseek-ai/dsh-skill-office/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-skill](https://www.npmjs.com/package/@deepseek-ai/dsh-skill/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-spill-local](https://www.npmjs.com/package/@deepseek-ai/dsh-spill-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-spill-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-spill-policy/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-spill](https://www.npmjs.com/package/@deepseek-ai/dsh-spill/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-storage-domain](https://www.npmjs.com/package/@deepseek-ai/dsh-storage-domain/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-storage-json](https://www.npmjs.com/package/@deepseek-ai/dsh-storage-json/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-storage](https://www.npmjs.com/package/@deepseek-ai/dsh-storage/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-subagent-fork-in-process](https://www.npmjs.com/package/@deepseek-ai/dsh-subagent-fork-in-process/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-subagent-spawn-in-process](https://www.npmjs.com/package/@deepseek-ai/dsh-subagent-spawn-in-process/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-subagent](https://www.npmjs.com/package/@deepseek-ai/dsh-subagent/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-subprocess-local](https://www.npmjs.com/package/@deepseek-ai/dsh-subprocess-local/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-subprocess](https://www.npmjs.com/package/@deepseek-ai/dsh-subprocess/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-system-prompt](https://www.npmjs.com/package/@deepseek-ai/dsh-system-prompt/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-system-prompt](https://www.npmjs.com/package/@deepseek-ai/dsh-system-prompt/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-system-prompt](https://www.npmjs.com/package/@deepseek-ai/dsh-system-prompt/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-terminal-bash](https://www.npmjs.com/package/@deepseek-ai/dsh-terminal-bash/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-terminal](https://www.npmjs.com/package/@deepseek-ai/dsh-terminal/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-time-context](https://www.npmjs.com/package/@deepseek-ai/dsh-time-context/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-system-prompt](https://www.npmjs.com/package/@deepseek-ai/dsh-system-prompt/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-terminal-bash](https://www.npmjs.com/package/@deepseek-ai/dsh-terminal-bash/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-terminal](https://www.npmjs.com/package/@deepseek-ai/dsh-terminal/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-time-context](https://www.npmjs.com/package/@deepseek-ai/dsh-time-context/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-timeout](https://www.npmjs.com/package/@deepseek-ai/dsh-timeout/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-timeout](https://www.npmjs.com/package/@deepseek-ai/dsh-timeout/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-timeout](https://www.npmjs.com/package/@deepseek-ai/dsh-timeout/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tmux-context](https://www.npmjs.com/package/@deepseek-ai/dsh-tmux-context/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-token-meter](https://www.npmjs.com/package/@deepseek-ai/dsh-token-meter/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-ask-user](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-ask-user/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-bash-persistent](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-bash-persistent/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-bash](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-bash/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-call-timeout-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-call-timeout-policy/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-cordis](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-cordis/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-fs-search](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-fs-search/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-fs](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-fs/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-goal](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-goal/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-jobs](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-jobs/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-present](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-present/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-pwsh-persistent](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-pwsh-persistent/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-pwsh](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-pwsh/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-ralph](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-ralph/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-schedule](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-schedule/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-session-query](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-session-query/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-skill](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-skill/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-str-replace-editor](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-str-replace-editor/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-subagent-control](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-subagent-control/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-subagent](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-subagent/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-terminal](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-terminal/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-todo](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-todo/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-web](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-web/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-workflow](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-workflow/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-working-directory](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-working-directory/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tool-workspace-dependencies](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-workspace-dependencies/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-timeout](https://www.npmjs.com/package/@deepseek-ai/dsh-timeout/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tmux-context](https://www.npmjs.com/package/@deepseek-ai/dsh-tmux-context/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-token-meter](https://www.npmjs.com/package/@deepseek-ai/dsh-token-meter/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-ask-user](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-ask-user/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-bash-persistent](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-bash-persistent/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-bash](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-bash/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-call-timeout-policy](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-call-timeout-policy/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-cordis](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-cordis/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-executor-native](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-executor-native/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-executor-ptc](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-executor-ptc/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-fs-search](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-fs-search/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-fs](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-fs/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-goal](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-goal/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-jobs](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-jobs/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-present](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-present/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-pwsh-persistent](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-pwsh-persistent/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-pwsh](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-pwsh/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-ralph](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-ralph/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-schedule](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-schedule/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-session-query](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-session-query/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-skill](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-skill/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-str-replace-editor](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-str-replace-editor/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-subagent-control](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-subagent-control/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-subagent](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-subagent/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-terminal](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-terminal/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-todo](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-todo/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-web](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-web/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-workflow](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-workflow/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-working-directory](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-working-directory/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tool-workspace-dependencies](https://www.npmjs.com/package/@deepseek-ai/dsh-tool-workspace-dependencies/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-tools](https://www.npmjs.com/package/@deepseek-ai/dsh-tools/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-tools](https://www.npmjs.com/package/@deepseek-ai/dsh-tools/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-tools](https://www.npmjs.com/package/@deepseek-ai/dsh-tools/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-typert-loader](https://www.npmjs.com/package/@deepseek-ai/dsh-typert-loader/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-tools](https://www.npmjs.com/package/@deepseek-ai/dsh-tools/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-typert-loader](https://www.npmjs.com/package/@deepseek-ai/dsh-typert-loader/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-typert-protocol](https://www.npmjs.com/package/@deepseek-ai/dsh-typert-protocol/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-typert-protocol](https://www.npmjs.com/package/@deepseek-ai/dsh-typert-protocol/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-typert-protocol](https://www.npmjs.com/package/@deepseek-ai/dsh-typert-protocol/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-typert-registry](https://www.npmjs.com/package/@deepseek-ai/dsh-typert-registry/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-typert-protocol](https://www.npmjs.com/package/@deepseek-ai/dsh-typert-protocol/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-typert-registry](https://www.npmjs.com/package/@deepseek-ai/dsh-typert-registry/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-user-approval](https://www.npmjs.com/package/@deepseek-ai/dsh-user-approval/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-user-approval](https://www.npmjs.com/package/@deepseek-ai/dsh-user-approval/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-user-approval](https://www.npmjs.com/package/@deepseek-ai/dsh-user-approval/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-user-questions](https://www.npmjs.com/package/@deepseek-ai/dsh-user-questions/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-util-code-language](https://www.npmjs.com/package/@deepseek-ai/dsh-util-code-language/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-user-approval](https://www.npmjs.com/package/@deepseek-ai/dsh-user-approval/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-user-questions](https://www.npmjs.com/package/@deepseek-ai/dsh-user-questions/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-util-code-language](https://www.npmjs.com/package/@deepseek-ai/dsh-util-code-language/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-util-crypto](https://www.npmjs.com/package/@deepseek-ai/dsh-util-crypto/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-util-crypto](https://www.npmjs.com/package/@deepseek-ai/dsh-util-crypto/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-util-crypto](https://www.npmjs.com/package/@deepseek-ai/dsh-util-crypto/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-util-time](https://www.npmjs.com/package/@deepseek-ai/dsh-util-time/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-util-crypto](https://www.npmjs.com/package/@deepseek-ai/dsh-util-crypto/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-util-time](https://www.npmjs.com/package/@deepseek-ai/dsh-util-time/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-util-values](https://www.npmjs.com/package/@deepseek-ai/dsh-util-values/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-util-values](https://www.npmjs.com/package/@deepseek-ai/dsh-util-values/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-util-values](https://www.npmjs.com/package/@deepseek-ai/dsh-util-values/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-util-workspace-path](https://www.npmjs.com/package/@deepseek-ai/dsh-util-workspace-path/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-web-app](https://www.npmjs.com/package/@deepseek-ai/dsh-web-app/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-web-deepseek-api](https://www.npmjs.com/package/@deepseek-ai/dsh-web-deepseek-api/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-web-fetch-http](https://www.npmjs.com/package/@deepseek-ai/dsh-web-fetch-http/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-web-frontend](https://www.npmjs.com/package/@deepseek-ai/dsh-web-frontend/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-web-search-deepseek](https://www.npmjs.com/package/@deepseek-ai/dsh-web-search-deepseek/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-web](https://www.npmjs.com/package/@deepseek-ai/dsh-web/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-win32-process](https://www.npmjs.com/package/@deepseek-ai/dsh-win32-process/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-workflow-ptc](https://www.npmjs.com/package/@deepseek-ai/dsh-workflow-ptc/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-workflow](https://www.npmjs.com/package/@deepseek-ai/dsh-workflow/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-util-values](https://www.npmjs.com/package/@deepseek-ai/dsh-util-values/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-util-workspace-path](https://www.npmjs.com/package/@deepseek-ai/dsh-util-workspace-path/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-web-app](https://www.npmjs.com/package/@deepseek-ai/dsh-web-app/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-web-deepseek-api](https://www.npmjs.com/package/@deepseek-ai/dsh-web-deepseek-api/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-web-fetch-http](https://www.npmjs.com/package/@deepseek-ai/dsh-web-fetch-http/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-web-frontend](https://www.npmjs.com/package/@deepseek-ai/dsh-web-frontend/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-web-search-deepseek](https://www.npmjs.com/package/@deepseek-ai/dsh-web-search-deepseek/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-web](https://www.npmjs.com/package/@deepseek-ai/dsh-web/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-win32-process](https://www.npmjs.com/package/@deepseek-ai/dsh-win32-process/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-workflow-ptc](https://www.npmjs.com/package/@deepseek-ai/dsh-workflow-ptc/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-workflow](https://www.npmjs.com/package/@deepseek-ai/dsh-workflow/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-working-directory](https://www.npmjs.com/package/@deepseek-ai/dsh-working-directory/v/0.2.1-rc.1) | 0.2.1-rc.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) |
 | [@deepseek-ai/dsh-working-directory](https://www.npmjs.com/package/@deepseek-ai/dsh-working-directory/v/0.2.1-rc.2) | 0.2.1-rc.2 | [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-working-directory](https://www.npmjs.com/package/@deepseek-ai/dsh-working-directory/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-workspace-changes](https://www.npmjs.com/package/@deepseek-ai/dsh-workspace-changes/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh-workspace](https://www.npmjs.com/package/@deepseek-ai/dsh-workspace/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/dsh](https://www.npmjs.com/package/@deepseek-ai/dsh/v/0.2.1-rc.5) | 0.2.1-rc.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-working-directory](https://www.npmjs.com/package/@deepseek-ai/dsh-working-directory/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-workspace-changes](https://www.npmjs.com/package/@deepseek-ai/dsh-workspace-changes/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh-workspace](https://www.npmjs.com/package/@deepseek-ai/dsh-workspace/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/dsh](https://www.npmjs.com/package/@deepseek-ai/dsh/v/0.2.2-rc.1) | 0.2.2-rc.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/libreoffice-kit-darwin-arm64](https://www.npmjs.com/package/@deepseek-ai/libreoffice-kit-darwin-arm64/v/0.1.5) | 0.1.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/libreoffice-kit-darwin-x64](https://www.npmjs.com/package/@deepseek-ai/libreoffice-kit-darwin-x64/v/0.1.5) | 0.1.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/libreoffice-kit-wasm](https://www.npmjs.com/package/@deepseek-ai/libreoffice-kit-wasm/v/0.1.5) | 0.1.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -761,9 +787,10 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@deepseek-ai/node-addon-system-linux-arm64](https://www.npmjs.com/package/@deepseek-ai/node-addon-system-linux-arm64/v/0.1.2) | 0.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/node-addon-system-linux-x64](https://www.npmjs.com/package/@deepseek-ai/node-addon-system-linux-x64/v/0.1.2) | 0.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@deepseek-ai/node-addon-system](https://www.npmjs.com/package/@deepseek-ai/node-addon-system/v/0.1.2) | 0.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@deepseek-ai/schemastery](https://www.npmjs.com/package/@deepseek-ai/schemastery/v/3.18.5) | 3.18.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@earendil-works/pi-ai](https://www.npmjs.com/package/@earendil-works/pi-ai/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@earendil-works/pi-telemetry](https://www.npmjs.com/package/@earendil-works/pi-telemetry/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@deepseek-ai/schemastery](https://www.npmjs.com/package/@deepseek-ai/schemastery/v/3.18.5) | 3.18.5 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
+| [@deepseek-ai/schemastery](https://www.npmjs.com/package/@deepseek-ai/schemastery/v/3.19.0) | 3.19.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@earendil-works/pi-ai](https://www.npmjs.com/package/@earendil-works/pi-ai/v/1.4.0) | 1.4.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@earendil-works/pi-telemetry](https://www.npmjs.com/package/@earendil-works/pi-telemetry/v/1.4.0) | 1.4.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@electron-internal/extract-zip](https://www.npmjs.com/package/@electron-internal/extract-zip/v/1.0.5) | 1.0.5 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [@electron/get](https://www.npmjs.com/package/@electron/get/v/5.1.0) | 5.1.0 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [@emnapi/runtime](https://www.npmjs.com/package/@emnapi/runtime/v/1.11.3) | 1.11.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
@@ -797,7 +824,6 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@fast-csv/format](https://www.npmjs.com/package/@fast-csv/format/v/4.3.5) | 4.3.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@fast-csv/parse](https://www.npmjs.com/package/@fast-csv/parse/v/4.3.6) | 4.3.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@google/genai](https://www.npmjs.com/package/@google/genai/v/2.21.0) | 2.21.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@hono/node-server](https://www.npmjs.com/package/@hono/node-server/v/2.1.1) | 2.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@img/colour](https://www.npmjs.com/package/@img/colour/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [@img/sharp-darwin-arm64](https://www.npmjs.com/package/@img/sharp-darwin-arm64/v/0.35.5) | 0.35.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [@img/sharp-darwin-x64](https://www.npmjs.com/package/@img/sharp-darwin-x64/v/0.35.5) | 0.35.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
@@ -851,7 +877,6 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@mixmark-io/domino](https://www.npmjs.com/package/@mixmark-io/domino/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@modelcontextprotocol/client](https://www.npmjs.com/package/@modelcontextprotocol/client/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@modelcontextprotocol/core](https://www.npmjs.com/package/@modelcontextprotocol/core/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk/v/1.30.0) | 1.30.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@mozilla/readability](https://www.npmjs.com/package/@mozilla/readability/v/0.6.0) | 0.6.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@napi-rs/canvas-android-arm64](https://www.npmjs.com/package/@napi-rs/canvas-android-arm64/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@napi-rs/canvas-darwin-arm64](https://www.npmjs.com/package/@napi-rs/canvas-darwin-arm64/v/1.0.13) | 1.0.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -874,7 +899,7 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@opentelemetry/sdk-logs](https://www.npmjs.com/package/@opentelemetry/sdk-logs/v/0.222.0) | 0.222.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@opentelemetry/sdk-metrics](https://www.npmjs.com/package/@opentelemetry/sdk-metrics/v/2.11.0) | 2.11.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@opentelemetry/sdk-trace](https://www.npmjs.com/package/@opentelemetry/sdk-trace/v/2.11.0) | 2.11.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@opentelemetry/semantic-conventions](https://www.npmjs.com/package/@opentelemetry/semantic-conventions/v/1.43.0) | 1.43.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@opentelemetry/semantic-conventions](https://www.npmjs.com/package/@opentelemetry/semantic-conventions/v/1.44.0) | 1.44.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@protobufjs/aspromise](https://www.npmjs.com/package/@protobufjs/aspromise/v/1.1.2) | 1.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@protobufjs/base64](https://www.npmjs.com/package/@protobufjs/base64/v/1.1.2) | 1.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@protobufjs/codegen](https://www.npmjs.com/package/@protobufjs/codegen/v/2.0.5) | 2.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -888,12 +913,13 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@selderee/plugin-htmlparser2](https://www.npmjs.com/package/@selderee/plugin-htmlparser2/v/0.12.0) | 0.12.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@sindresorhus/is](https://www.npmjs.com/package/@sindresorhus/is/v/7.2.0) | 7.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@sindresorhus/merge-streams](https://www.npmjs.com/package/@sindresorhus/merge-streams/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@smithy/core](https://www.npmjs.com/package/@smithy/core/v/3.33.3) | 3.33.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@smithy/core](https://www.npmjs.com/package/@smithy/core/v/3.37.0) | 3.37.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@smithy/credential-provider-imds](https://www.npmjs.com/package/@smithy/credential-provider-imds/v/4.5.2) | 4.5.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@smithy/fetch-http-handler](https://www.npmjs.com/package/@smithy/fetch-http-handler/v/5.8.0) | 5.8.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@smithy/node-http-handler](https://www.npmjs.com/package/@smithy/node-http-handler/v/4.12.1) | 4.12.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@smithy/signature-v4](https://www.npmjs.com/package/@smithy/signature-v4/v/5.7.3) | 5.7.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [@smithy/types](https://www.npmjs.com/package/@smithy/types/v/4.18.0) | 4.18.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@smithy/node-http-handler](https://www.npmjs.com/package/@smithy/node-http-handler/v/4.13.0) | 4.13.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@smithy/signature-v4](https://www.npmjs.com/package/@smithy/signature-v4/v/5.7.4) | 5.7.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@smithy/types](https://www.npmjs.com/package/@smithy/types/v/4.19.0) | 4.19.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@stablelib/base64](https://www.npmjs.com/package/@stablelib/base64/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@standard-schema/spec](https://www.npmjs.com/package/@standard-schema/spec/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [@swc/helpers](https://www.npmjs.com/package/@swc/helpers/v/0.5.23) | 0.5.23 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -902,7 +928,7 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@types/node](https://www.npmjs.com/package/@types/node/v/14.18.63) | 14.18.63 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@types/node](https://www.npmjs.com/package/@types/node/v/22.20.1) | 22.20.1 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [@types/node](https://www.npmjs.com/package/@types/node/v/24.19.2) | 24.19.2 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [@types/node](https://www.npmjs.com/package/@types/node/v/26.5.0) | 26.5.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [@types/node](https://www.npmjs.com/package/@types/node/v/26.6.6) | 26.6.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@types/retry](https://www.npmjs.com/package/@types/retry/v/0.12.0) | 0.12.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@vscode/ripgrep-darwin-arm64](https://www.npmjs.com/package/@vscode/ripgrep-darwin-arm64/v/1.18.0) | 1.18.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@vscode/ripgrep-darwin-x64](https://www.npmjs.com/package/@vscode/ripgrep-darwin-x64/v/1.18.0) | 1.18.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -921,11 +947,10 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [@xmldom/xmldom](https://www.npmjs.com/package/@xmldom/xmldom/v/0.8.15) | 0.8.15 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@xterm/addon-serialize](https://www.npmjs.com/package/@xterm/addon-serialize/v/0.14.0) | 0.14.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [@xterm/headless](https://www.npmjs.com/package/@xterm/headless/v/6.0.0) | 6.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [accepts](https://www.npmjs.com/package/accepts/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [acorn-walk](https://www.npmjs.com/package/acorn-walk/v/8.3.5) | 8.3.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [acorn](https://www.npmjs.com/package/acorn/v/8.18.0) | 8.18.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [agent-base](https://www.npmjs.com/package/agent-base/v/7.1.4) | 7.1.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [agent-base](https://www.npmjs.com/package/agent-base/v/9.0.0) | 9.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [ajv-formats](https://www.npmjs.com/package/ajv-formats/v/3.0.1) | 3.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ajv](https://www.npmjs.com/package/ajv/v/8.20.0) | 8.20.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [archiver-utils](https://www.npmjs.com/package/archiver-utils/v/2.1.0) | 2.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [archiver-utils](https://www.npmjs.com/package/archiver-utils/v/3.0.4) | 3.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -942,10 +967,10 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [big-integer](https://www.npmjs.com/package/big-integer/v/1.6.52) | 1.6.52 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [bignumber.js](https://www.npmjs.com/package/bignumber.js/v/9.3.1) | 9.3.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [binary](https://www.npmjs.com/package/binary/v/0.3.0) | 0.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [birpc](https://www.npmjs.com/package/birpc/v/4.2.0) | 4.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [bl](https://www.npmjs.com/package/bl/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [bluebird](https://www.npmjs.com/package/bluebird/v/3.4.7) | 3.4.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [body-parser](https://www.npmjs.com/package/body-parser/v/2.3.0) | 2.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [bowser](https://www.npmjs.com/package/bowser/v/2.14.1) | 2.14.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [bowser](https://www.npmjs.com/package/bowser/v/2.15.0) | 2.15.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [brace-expansion](https://www.npmjs.com/package/brace-expansion/v/1.1.21) | 1.1.21 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [brace-expansion](https://www.npmjs.com/package/brace-expansion/v/2.1.7) | 2.1.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [brotli](https://www.npmjs.com/package/brotli/v/1.3.3) | 1.3.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -954,7 +979,7 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [buffer-indexof-polyfill](https://www.npmjs.com/package/buffer-indexof-polyfill/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [buffer](https://www.npmjs.com/package/buffer/v/5.7.1) | 5.7.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [buffers](https://www.npmjs.com/package/buffers/v/0.1.1) | 0.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [bundle-name](https://www.npmjs.com/package/bundle-name/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [bundle-name](https://www.npmjs.com/package/bundle-name/v/4.1.1) | 4.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [byte-counter](https://www.npmjs.com/package/byte-counter/v/0.1.0) | 0.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [bytes](https://www.npmjs.com/package/bytes/v/3.1.2) | 3.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [cacheable-lookup](https://www.npmjs.com/package/cacheable-lookup/v/7.0.0) | 7.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -968,15 +993,10 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [commander](https://www.npmjs.com/package/commander/v/15.0.0) | 15.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [compress-commons](https://www.npmjs.com/package/compress-commons/v/4.1.2) | 4.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [compressible](https://www.npmjs.com/package/compressible/v/2.0.18) | 2.0.18 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [compression](https://www.npmjs.com/package/compression/v/1.8.1) | 1.8.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [compression](https://www.npmjs.com/package/compression/v/1.8.2) | 1.8.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [concat-map](https://www.npmjs.com/package/concat-map/v/0.0.1) | 0.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [content-disposition](https://www.npmjs.com/package/content-disposition/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [content-type](https://www.npmjs.com/package/content-type/v/1.0.5) | 1.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [content-type](https://www.npmjs.com/package/content-type/v/2.1.0) | 2.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [cookie-signature](https://www.npmjs.com/package/cookie-signature/v/1.2.2) | 1.2.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [cookie](https://www.npmjs.com/package/cookie/v/0.7.2) | 0.7.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [core-util-is](https://www.npmjs.com/package/core-util-is/v/1.0.3) | 1.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [cors](https://www.npmjs.com/package/cors/v/2.8.6) | 2.8.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [crc-32](https://www.npmjs.com/package/crc-32/v/1.2.2) | 1.2.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [crc32-stream](https://www.npmjs.com/package/crc32-stream/v/4.0.3) | 4.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [cross-spawn](https://www.npmjs.com/package/cross-spawn/v/7.0.6) | 7.0.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -999,6 +1019,7 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [define-lazy-prop](https://www.npmjs.com/package/define-lazy-prop/v/3.0.0) | 3.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [define-properties](https://www.npmjs.com/package/define-properties/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [depd](https://www.npmjs.com/package/depd/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [destroy](https://www.npmjs.com/package/destroy/v/1.2.0) | 1.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [detect-libc](https://www.npmjs.com/package/detect-libc/v/2.1.2) | 2.1.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [dfa](https://www.npmjs.com/package/dfa/v/1.2.0) | 1.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [diff](https://www.npmjs.com/package/diff/v/9.0.0) | 9.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1014,7 +1035,7 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [ee-first](https://www.npmjs.com/package/ee-first/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [electron-chrome-extensions](https://www.npmjs.com/package/electron-chrome-extensions/v/4.9.0) | 4.9.0 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [electron](https://www.npmjs.com/package/electron/v/44.7.0) | 44.7.0 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
-| [encodeurl](https://www.npmjs.com/package/encodeurl/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [encodeurl](https://www.npmjs.com/package/encodeurl/v/2.0.1) | 2.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [end-of-stream](https://www.npmjs.com/package/end-of-stream/v/1.4.5) | 1.4.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [entities](https://www.npmjs.com/package/entities/v/4.5.0) | 4.5.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [entities](https://www.npmjs.com/package/entities/v/6.0.1) | 6.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1033,23 +1054,19 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [eventsource-parser](https://www.npmjs.com/package/eventsource-parser/v/3.1.1) | 3.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [eventsource](https://www.npmjs.com/package/eventsource/v/3.0.7) | 3.0.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [exceljs](https://www.npmjs.com/package/exceljs/v/4.4.0) | 4.4.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [execa](https://www.npmjs.com/package/execa/v/10.0.1) | 10.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [express-rate-limit](https://www.npmjs.com/package/express-rate-limit/v/8.7.0) | 8.7.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [express](https://www.npmjs.com/package/express/v/5.2.1) | 5.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [execa](https://www.npmjs.com/package/execa/v/10.2.1) | 10.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [extend](https://www.npmjs.com/package/extend/v/3.0.2) | 3.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fast-csv](https://www.npmjs.com/package/fast-csv/v/4.3.6) | 4.3.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fast-deep-equal](https://www.npmjs.com/package/fast-deep-equal/v/3.1.3) | 3.1.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fast-sha256](https://www.npmjs.com/package/fast-sha256/v/1.3.0) | 1.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [fast-uri](https://www.npmjs.com/package/fast-uri/v/3.1.7) | 3.1.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [fast-uri](https://www.npmjs.com/package/fast-uri/v/3.1.9) | 3.1.9 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fetch-blob](https://www.npmjs.com/package/fetch-blob/v/3.2.0) | 3.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fflate](https://www.npmjs.com/package/fflate/v/0.8.3) | 0.8.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [figures](https://www.npmjs.com/package/figures/v/6.1.0) | 6.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [finalhandler](https://www.npmjs.com/package/finalhandler/v/2.1.1) | 2.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fontkit](https://www.npmjs.com/package/fontkit/v/2.0.4) | 2.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [for-each](https://www.npmjs.com/package/for-each/v/0.3.5) | 0.3.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [form-data-encoder](https://www.npmjs.com/package/form-data-encoder/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [formdata-polyfill](https://www.npmjs.com/package/formdata-polyfill/v/4.0.10) | 4.0.10 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [forwarded](https://www.npmjs.com/package/forwarded/v/0.2.0) | 0.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fresh](https://www.npmjs.com/package/fresh/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fs-constants](https://www.npmjs.com/package/fs-constants/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [fs.realpath](https://www.npmjs.com/package/fs.realpath/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1077,11 +1094,11 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [has-symbols](https://www.npmjs.com/package/has-symbols/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [has-tostringtag](https://www.npmjs.com/package/has-tostringtag/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [hasown](https://www.npmjs.com/package/hasown/v/2.0.4) | 2.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [hono](https://www.npmjs.com/package/hono/v/4.13.7) | 4.13.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [hosted-git-info](https://www.npmjs.com/package/hosted-git-info/v/9.0.3) | 9.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [html-encoding-sniffer](https://www.npmjs.com/package/html-encoding-sniffer/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [html-to-text](https://www.npmjs.com/package/html-to-text/v/10.0.1) | 10.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [htmlparser2](https://www.npmjs.com/package/htmlparser2/v/10.1.0) | 10.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [http-cache-semantics](https://www.npmjs.com/package/http-cache-semantics/v/4.2.0) | 4.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [http-cache-semantics](https://www.npmjs.com/package/http-cache-semantics/v/4.3.0) | 4.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [http-errors](https://www.npmjs.com/package/http-errors/v/2.0.1) | 2.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [http-proxy-agent](https://www.npmjs.com/package/http-proxy-agent/v/7.0.2) | 7.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [http-proxy-agent](https://www.npmjs.com/package/http-proxy-agent/v/9.1.0) | 9.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1090,14 +1107,11 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [https-proxy-agent](https://www.npmjs.com/package/https-proxy-agent/v/9.1.0) | 9.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [human-signals](https://www.npmjs.com/package/human-signals/v/8.0.1) | 8.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [iconv-lite](https://www.npmjs.com/package/iconv-lite/v/0.6.3) | 0.6.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [iconv-lite](https://www.npmjs.com/package/iconv-lite/v/0.7.3) | 0.7.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ieee754](https://www.npmjs.com/package/ieee754/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [immediate](https://www.npmjs.com/package/immediate/v/3.0.6) | 3.0.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [inflight](https://www.npmjs.com/package/inflight/v/1.0.6) | 1.0.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [inherits](https://www.npmjs.com/package/inherits/v/2.0.4) | 2.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [internal-slot](https://www.npmjs.com/package/internal-slot/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [ip-address](https://www.npmjs.com/package/ip-address/v/10.7.0) | 10.7.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [ipaddr.js](https://www.npmjs.com/package/ipaddr.js/v/1.9.1) | 1.9.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ipaddr.js](https://www.npmjs.com/package/ipaddr.js/v/2.5.0) | 2.5.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-array-buffer](https://www.npmjs.com/package/is-array-buffer/v/3.0.5) | 3.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-async-function](https://www.npmjs.com/package/is-async-function/v/2.1.1) | 2.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1117,7 +1131,6 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [is-number-object](https://www.npmjs.com/package/is-number-object/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-plain-obj](https://www.npmjs.com/package/is-plain-obj/v/4.1.0) | 4.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-potential-custom-element-name](https://www.npmjs.com/package/is-potential-custom-element-name/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [is-promise](https://www.npmjs.com/package/is-promise/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-regex](https://www.npmjs.com/package/is-regex/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-set](https://www.npmjs.com/package/is-set/v/2.0.3) | 2.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [is-shared-array-buffer](https://www.npmjs.com/package/is-shared-array-buffer/v/1.0.4) | 1.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1133,7 +1146,7 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [isarray](https://www.npmjs.com/package/isarray/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [isarray](https://www.npmjs.com/package/isarray/v/2.0.5) | 2.0.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [isexe](https://www.npmjs.com/package/isexe/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [jose](https://www.npmjs.com/package/jose/v/6.2.12) | 6.2.12 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [jose](https://www.npmjs.com/package/jose/v/6.2.13) | 6.2.13 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [js-tokens](https://www.npmjs.com/package/js-tokens/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [js-yaml](https://www.npmjs.com/package/js-yaml/v/4.3.2) | 4.3.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [jsbi](https://www.npmjs.com/package/jsbi/v/4.3.2) | 4.3.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1142,7 +1155,6 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [json-bigint](https://www.npmjs.com/package/json-bigint/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [json-schema-to-ts](https://www.npmjs.com/package/json-schema-to-ts/v/3.1.1) | 3.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [json-schema-traverse](https://www.npmjs.com/package/json-schema-traverse/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [json-schema-typed](https://www.npmjs.com/package/json-schema-typed/v/8.0.2) | 8.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [jszip](https://www.npmjs.com/package/jszip/v/3.10.2) | 3.10.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [jwa](https://www.npmjs.com/package/jwa/v/2.0.1) | 2.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [jws](https://www.npmjs.com/package/jws/v/4.0.1) | 4.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1170,11 +1182,10 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [lop](https://www.npmjs.com/package/lop/v/0.4.2) | 0.4.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [lowercase-keys](https://www.npmjs.com/package/lowercase-keys/v/3.0.0) | 3.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [lru-cache](https://www.npmjs.com/package/lru-cache/v/10.4.3) | 10.4.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [lru-cache](https://www.npmjs.com/package/lru-cache/v/11.5.3) | 11.5.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [mammoth](https://www.npmjs.com/package/mammoth/v/1.13.0) | 1.13.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [marked](https://www.npmjs.com/package/marked/v/18.0.12) | 18.0.12 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [math-intrinsics](https://www.npmjs.com/package/math-intrinsics/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [media-typer](https://www.npmjs.com/package/media-typer/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [merge-descriptors](https://www.npmjs.com/package/merge-descriptors/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [mime-db](https://www.npmjs.com/package/mime-db/v/1.54.0) | 1.54.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [mime-types](https://www.npmjs.com/package/mime-types/v/3.0.2) | 3.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [mimic-response](https://www.npmjs.com/package/mimic-response/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1206,14 +1217,13 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [normalize-url](https://www.npmjs.com/package/normalize-url/v/8.1.1) | 8.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [npm-run-path](https://www.npmjs.com/package/npm-run-path/v/6.0.0) | 6.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [nwsapi](https://www.npmjs.com/package/nwsapi/v/2.2.28) | 2.2.28 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [object-assign](https://www.npmjs.com/package/object-assign/v/4.1.1) | 4.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [object-inspect](https://www.npmjs.com/package/object-inspect/v/1.13.4) | 1.13.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [object-keys](https://www.npmjs.com/package/object-keys/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [object.assign](https://www.npmjs.com/package/object.assign/v/4.1.7) | 4.1.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [on-finished](https://www.npmjs.com/package/on-finished/v/2.4.1) | 2.4.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [on-finished](https://www.npmjs.com/package/on-finished/v/2.4.2) | 2.4.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [on-headers](https://www.npmjs.com/package/on-headers/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [once](https://www.npmjs.com/package/once/v/1.4.0) | 1.4.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [open](https://www.npmjs.com/package/open/v/11.0.2) | 11.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [open](https://www.npmjs.com/package/open/v/11.0.4) | 11.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [openai](https://www.npmjs.com/package/openai/v/7.19.0) | 7.19.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [option](https://www.npmjs.com/package/option/v/0.2.4) | 0.2.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [own-keys](https://www.npmjs.com/package/own-keys/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1230,7 +1240,6 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [path-is-absolute](https://www.npmjs.com/package/path-is-absolute/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [path-key](https://www.npmjs.com/package/path-key/v/3.1.1) | 3.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [path-key](https://www.npmjs.com/package/path-key/v/4.0.0) | 4.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [path-to-regexp](https://www.npmjs.com/package/path-to-regexp/v/8.4.2) | 8.4.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [pdfjs-dist](https://www.npmjs.com/package/pdfjs-dist/v/6.4.299) | 6.4.299 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [peberminta](https://www.npmjs.com/package/peberminta/v/0.10.0) | 0.10.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [picocolors](https://www.npmjs.com/package/picocolors/v/1.1.1) | 1.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
@@ -1239,19 +1248,15 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [playwright-core](https://www.npmjs.com/package/playwright-core/v/1.63.0) | 1.63.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [playwright](https://www.npmjs.com/package/playwright/v/1.63.0) | 1.63.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [possible-typed-array-names](https://www.npmjs.com/package/possible-typed-array-names/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [powershell-utils](https://www.npmjs.com/package/powershell-utils/v/0.1.0) | 0.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [powershell-utils](https://www.npmjs.com/package/powershell-utils/v/0.2.1) | 0.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [pretty-ms](https://www.npmjs.com/package/pretty-ms/v/9.3.1) | 9.3.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [process-nextick-args](https://www.npmjs.com/package/process-nextick-args/v/2.0.1) | 2.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [progress](https://www.npmjs.com/package/progress/v/2.0.3) | 2.0.3 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [protobufjs](https://www.npmjs.com/package/protobufjs/v/7.6.6) | 7.6.6 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [proxy-addr](https://www.npmjs.com/package/proxy-addr/v/2.0.7) | 2.0.7 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [proxy-agent-negotiate](https://www.npmjs.com/package/proxy-agent-negotiate/v/1.1.0) | 1.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [punycode](https://www.npmjs.com/package/punycode/v/2.3.1) | 2.3.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [qs](https://www.npmjs.com/package/qs/v/6.16.0) | 6.16.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [quick-lru](https://www.npmjs.com/package/quick-lru/v/5.1.1) | 5.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [range-parser](https://www.npmjs.com/package/range-parser/v/1.3.0) | 1.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [raw-body](https://www.npmjs.com/package/raw-body/v/3.0.2) | 3.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [react-compiler-runtime](https://www.npmjs.com/package/react-compiler-runtime/v/1.0.0) | 1.0.0 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [react-dom](https://www.npmjs.com/package/react-dom/v/18.3.1) | 18.3.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [react-dom](https://www.npmjs.com/package/react-dom/v/19.2.7) | 19.2.7 | [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
@@ -1265,12 +1270,12 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [regexp.prototype.flags](https://www.npmjs.com/package/regexp.prototype.flags/v/1.5.4) | 1.5.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [require-from-string](https://www.npmjs.com/package/require-from-string/v/2.0.2) | 2.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [resolve-alpn](https://www.npmjs.com/package/resolve-alpn/v/1.2.1) | 1.2.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [resolve.exports](https://www.npmjs.com/package/resolve.exports/v/2.0.3) | 2.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [resolve.exports](https://www.npmjs.com/package/resolve.exports/v/2.0.4) | 2.0.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [responselike](https://www.npmjs.com/package/responselike/v/4.0.2) | 4.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [restructure](https://www.npmjs.com/package/restructure/v/3.0.2) | 3.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [retry](https://www.npmjs.com/package/retry/v/0.13.1) | 0.13.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [rimraf](https://www.npmjs.com/package/rimraf/v/2.7.1) | 2.7.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [router](https://www.npmjs.com/package/router/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [rrule](https://www.npmjs.com/package/rrule/v/2.8.1) | 2.8.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [rrweb-cssom](https://www.npmjs.com/package/rrweb-cssom/v/0.8.0) | 0.8.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [run-applescript](https://www.npmjs.com/package/run-applescript/v/7.1.0) | 7.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [safe-array-concat](https://www.npmjs.com/package/safe-array-concat/v/1.1.4) | 1.1.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1295,6 +1300,7 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [sharp](https://www.npmjs.com/package/sharp/v/0.35.5) | 0.35.5 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [shebang-command](https://www.npmjs.com/package/shebang-command/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [shebang-regex](https://www.npmjs.com/package/shebang-regex/v/3.0.0) | 3.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [shell-quote](https://www.npmjs.com/package/shell-quote/v/1.12.0) | 1.12.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [sherpa-onnx-darwin-arm64](https://www.npmjs.com/package/sherpa-onnx-darwin-arm64/v/1.13.8) | 1.13.8 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [sherpa-onnx-darwin-x64](https://www.npmjs.com/package/sherpa-onnx-darwin-x64/v/1.13.8) | 1.13.8 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [sherpa-onnx-linux-arm64](https://www.npmjs.com/package/sherpa-onnx-linux-arm64/v/1.13.8) | 1.13.8 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1332,7 +1338,6 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [tslib](https://www.npmjs.com/package/tslib/v/2.8.1) | 2.8.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [turndown](https://www.npmjs.com/package/turndown/v/7.2.4) | 7.2.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [type-fest](https://www.npmjs.com/package/type-fest/v/4.41.0) | 4.41.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [type-is](https://www.npmjs.com/package/type-is/v/2.1.0) | 2.1.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [typebox](https://www.npmjs.com/package/typebox/v/1.3.27) | 1.3.27 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [typed-array-buffer](https://www.npmjs.com/package/typed-array-buffer/v/1.0.3) | 1.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [typed-array-byte-length](https://www.npmjs.com/package/typed-array-byte-length/v/1.0.3) | 1.0.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1350,7 +1355,6 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [unicode-properties](https://www.npmjs.com/package/unicode-properties/v/1.4.1) | 1.4.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [unicode-trie](https://www.npmjs.com/package/unicode-trie/v/2.0.0) | 2.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [unicorn-magic](https://www.npmjs.com/package/unicorn-magic/v/0.3.0) | 0.3.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [unpipe](https://www.npmjs.com/package/unpipe/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [unzipper](https://www.npmjs.com/package/unzipper/v/0.10.14) | 0.10.14 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [util-deprecate](https://www.npmjs.com/package/util-deprecate/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [uuid](https://www.npmjs.com/package/uuid/v/8.3.2) | 8.3.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
@@ -1370,16 +1374,15 @@ All 1025 distinct package versions in the OMD and embedded OpenCU host/frontend 
 | [which](https://www.npmjs.com/package/which/v/2.0.2) | 2.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [wrappy](https://www.npmjs.com/package/wrappy/v/1.0.2) | 1.0.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [ws](https://www.npmjs.com/package/ws/v/8.21.3) | 8.21.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [wsl-utils](https://www.npmjs.com/package/wsl-utils/v/1.0.0) | 1.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [wsl-utils](https://www.npmjs.com/package/wsl-utils/v/1.0.1) | 1.0.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [xml-name-validator](https://www.npmjs.com/package/xml-name-validator/v/5.0.0) | 5.0.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [xmlbuilder](https://www.npmjs.com/package/xmlbuilder/v/10.1.1) | 10.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [xmlchars](https://www.npmjs.com/package/xmlchars/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [yaml](https://www.npmjs.com/package/yaml/v/2.8.1) | 2.8.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [yaml](https://www.npmjs.com/package/yaml/v/2.9.0) | 2.9.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
+| [yaml](https://www.npmjs.com/package/yaml/v/2.9.1) | 2.9.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [yocto-queue](https://www.npmjs.com/package/yocto-queue/v/1.2.2) | 1.2.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [yoctocolors](https://www.npmjs.com/package/yoctocolors/v/2.2.0) | 2.2.0 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [zip-stream](https://www.npmjs.com/package/zip-stream/v/4.1.1) | 4.1.1 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
-| [zod-to-json-schema](https://www.npmjs.com/package/zod-to-json-schema/v/3.25.2) | 3.25.2 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) |
 | [zod](https://www.npmjs.com/package/zod/v/4.4.3) | 4.4.3 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |
 | [zod](https://www.npmjs.com/package/zod/v/4.5.4) | 4.5.4 | [pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml) |
 | [zod](https://www.npmjs.com/package/zod/v/4.6.7) | 4.6.7 | [vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml) · [vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml) |

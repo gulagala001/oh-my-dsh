@@ -1,3 +1,4 @@
+import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -41,7 +42,7 @@ async function fixture(t, { runtime, cleanupMs = 15 } = {}) {
   ctx.reflect.provide('systemPrompt', { tools() {}, section() {}, getSectionOrder() { return 0; } });
   ctx.reflect.provide('workingDirectory', { ensure: async () => process.cwd() });
   ctx.reflect.provide('ptcRuntime', defaultRuntime);
-  await ctx.plugin(ToolRuntime, { mode: 'ptc' });
+  await installTools(ctx, 'ptc');
   const install = () => ctx.plugin({ inject: ['tools'], apply(scope) { installPtcLifecycle(scope, { cleanupMs }); } });
   const owner = baseline ? undefined : install();
   await owner;
@@ -51,7 +52,7 @@ async function fixture(t, { runtime, cleanupMs = 15 } = {}) {
     parameters: { type: 'object', properties: {} }, output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: value }] }, execute });
   register('ok', () => 'OK');
   let sequence = 0;
-  const call = (code, signal = new AbortController().signal) => ctx.tools.execute({
+  const call = (code, signal = new AbortController().signal) => executeTool(ctx, {
     name: 'run_code', callId: `ptc-${++sequence}`, arguments: { code, description: 'PTC regression' }, agent, signal,
   });
   t.after(async () => { for (const release of releases) release(); await delay(25); await ctx.fiber.dispose(); });
@@ -70,7 +71,7 @@ test('nested cancellation cannot hang the native run_code drain; unknown effects
   const refused = await deadline(f.call('slow'));
   assert.equal(refused.error.info.code, 'OMD_PTC_CLEANUP_PENDING');
   assert.equal(calls, 1);
-  const other = await f.ctx.tools.execute({ name: 'run_code', callId: 'other-session',
+  const other = await executeTool(f.ctx, { name: 'run_code', callId: 'other-session',
     arguments: { code: 'ok', description: 'Independent session' },
     agent: { ctx: f.ctx, session: { ...f.agent.session, id: 'other' } }, signal: new AbortController().signal });
   assert.equal(other.isError, false, 'quarantine belongs only to the affected session');
@@ -206,8 +207,9 @@ test('quarantine preserves existing direct job controls but does not admit repla
   f.register('slow', () => gate.promise);
   const remove = f.register('job_kill', () => 'cancel requested');
   assert.equal((await deadline(f.call('slow'))).isError, true);
-  const restore = scope.ctx.get('tools').presentAs('native');
-  const direct = name => f.ctx.tools.execute({ name, arguments: {}, callId: 'control-' + name, agent: f.agent, signal: new AbortController().signal });
+  let restore;
+  await scope.ctx.inject(['tools', 'systemPrompt'], context => { restore = context.tools.setExecutor(new NativeToolExecutor(context)); });
+  const direct = name => executeTool(f.ctx, { name, arguments: {}, callId: 'control-' + name, agent: f.agent, signal: new AbortController().signal });
   assert.equal((await direct('job_kill')).value, 'cancel requested');
   assert.equal((await direct('ok')).error.info.code, 'OMD_PTC_CLEANUP_PENDING');
   remove(); f.register('job_kill', () => 'replacement must not run');

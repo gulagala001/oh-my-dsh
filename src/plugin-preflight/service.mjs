@@ -55,8 +55,43 @@ export class PluginPreflight {
     const self = this;
     this.wrap(TRANSACTION, () => (spec, options, perform) => self.run('install', spec, options || {}, perform));
     this.wrap('installBundle', original => function (spec, options = {}) {
+      const inherited = self.local.getStore(), update = inherited?.extra?.nativeUpdate;
+      // Native update owns rollback. It restores the exact previous registry
+      // version without an update request id, even after target cancellation.
+      // Do not preflight it as a second candidate or rewrite it to the new one.
+      if (update && spec === `${update.name}@${update.from}` && options.requestId === undefined)
+        return self.local.run(undefined, () => original.call(this, spec, options));
       const invoke = () => original.call(this, self.local.getStore()?.checked?.installSpec || spec, options);
       return self.run('install', spec, options, invoke);
+    });
+    this.wrap('updateBundle', original => async function (name, version, options = {}) {
+      if (self.closed || !self.getEnabled()) return original.call(this, name, version, options);
+      const bundle = (await this.listBundles()).find(row => row.name === name);
+      // The native updater accepts registry dependencies only. Preserve its
+      // own refusal for URLs, official bundles and invalid version requests.
+      if (!bundle?.updatable)
+        return original.call(this, name, version, options);
+      let registry = options.registry;
+      if (registry === undefined && typeof this.listVersions === 'function') {
+        const listing = await this.listVersions(name);
+        if (listing.status !== 'listed') return { from: bundle.version, to: version, step: 'check', result: {
+          application: 'failed', changed: false, stage: 'install', target: name,
+          error: { code: 'operation-error', diagnostic: listing.reason || '原生插件版本查询未完成' } } };
+        registry = listing.registry;
+      }
+      const nativeOptions = { ...options, ...(registry === undefined ? {} : { registry }) };
+      const target = `${name}@${version}`;
+      const nativeUpdate = { name, from: bundle.version, to: version };
+      const perform = async () => {
+        const current = (await this.listBundles()).find(row => row.name === name);
+        if (!current?.updatable || current.version !== bundle.version || current.source !== bundle.source || current.enabled !== bundle.enabled)
+          throw problem('environment-changed', '插件版本、来源或启用状态在更新预检期间改变，请重新操作');
+        const inherited = self.local.getStore();
+        return self.local.run({ ...inherited, extra: { ...inherited?.extra, nativeUpdate } },
+          () => original.call(this, name, version, nativeOptions));
+      };
+      const result = await self.run('install', target, nativeOptions, perform, { nativeUpdate });
+      return result?.result ? result : { from: bundle.version, to: version, step: 'check', result };
     });
     this.wrap('setBundleEnabled', original => function (name, enabled) {
       return enabled ? self.run('enable', name, {}, () => original.call(this, name, enabled), { bundle: name }) : original.call(this, name, enabled);
@@ -79,8 +114,10 @@ export class PluginPreflight {
       return original.call(this, requestId);
     });
     this.wrap('waitForInstall', original => function (requestId) {
-      return self.job?.requestId === requestId ? self.job.promise
-        : self.queue.find(job => job.requestId === requestId)?.promise ?? original.call(this, requestId);
+      const pending = self.job?.requestId === requestId ? self.job.promise
+        : self.queue.find(job => job.requestId === requestId)?.promise;
+      return pending ? pending.then(value => value?.from !== undefined && value?.to !== undefined && value?.result ? value.result : value)
+        : original.call(this, requestId);
     });
     // Check the payload the native installer actually produced before it can
     // activate it. This catches mutable URLs/local packages changing in flight.

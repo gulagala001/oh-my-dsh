@@ -11,7 +11,7 @@ await mkdir(root+'lib/host',{recursive:true});
 await writeFile(root+'lib/host/metering-version.mjs',`export const ESTIMATOR_VERSION = ${await meteringVersion()};\n`);
 const source = JSON.parse(await readFile(root + 'src/metering/native/source.json'));
 const pkg = JSON.parse(await readFile(root + 'package.json'));
-if (source.commit !== hostTarget(pkg.engines.dsh).commit) throw Error('Metering source does not match the host');
+if (source.commit !== (hostTarget(pkg.engines.dsh).source?.commit ?? hostTarget(pkg.engines.dsh).commit)) throw Error('Metering source does not match the host');
 for (const [file, hash] of Object.entries(source.files)) {
   if (createHash('sha256').update(await readFile(root + 'src/metering/native/' + file)).digest('hex') !== hash) throw Error('Changed upstream metering source: ' + file);
 }

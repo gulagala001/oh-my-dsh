@@ -33,7 +33,7 @@ export async function decodeDocument(bytes, format, signal) {
 export async function documentSource(ctx, exec, path, view) {
   const format = documentFormat(path);
   if (!format || view === 'raw' && ['csv', 'tsv'].includes(format)) return null;
-  if (!ctx.tools.get('read', exec.agent)) throw Error('当前会话没有文件读取工具');
+  if (!ctx.tools.executable('read', exec.agent, exec.toolSet)) throw Error('当前会话没有文件读取工具');
   const fs = ctx.get('fs');
   if (!fs?.readBytes) throw Error('当前文件后端不支持文档字节读取');
   const cwd = await ctx.get('workingDirectory')?.ensure(exec.agent, exec.signal);

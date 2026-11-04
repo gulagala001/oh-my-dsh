@@ -46,7 +46,8 @@ async function fixture(root, directory, terminal = false) {
   ctx.reflect.provide('agents', { get: id => id === agent.id ? agent : undefined });
   ctx.reflect.provide('sandbox', { confine() { throw Error('Unexpected confinement route'); } });
   ctx.reflect.provide('sandboxPolicy', { defaultMode: 'danger-full-access', resolve: () => ({ mode: 'danger-full-access', workspaceRoot: directory, sessionId: session.id }) });
-  await ctx.plugin(ToolRuntime, { mode: 'native' });
+  await ctx.plugin(ToolRuntime);
+  await ctx.plugin(await load('tool-executor-native'));
   const identity = [], fs = await load('tool-fs');
   const register = ctx.tools.register;
   ctx.tools.register = function (definition) {
@@ -74,7 +75,7 @@ async function fixture(root, directory, terminal = false) {
   let serial = 0;
   const call = (name, args, signal = new AbortController().signal) => {
     const callId = 'candidate-' + ++serial;
-    return ctx.tools.execute({ name, arguments: args, callId, rootCallId: callId, agent, signal });
+    return ctx.tools.execute({ calls: [{type: 'tool-call', id: callId, name, arguments: JSON.stringify(args)}], agent, signal }).then(batch => batch.results[0].result);
   };
   return { ctx, agent, identity, call, close: () => ctx.fiber.dispose() };
 }

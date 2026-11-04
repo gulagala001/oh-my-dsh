@@ -1,5 +1,10 @@
 # OpenCU 2.2.7 · DSH 0.2.1-rc.5
 
+## OpenCU 2.2.8 · DSH 0.2.2-rc.1
+
+[发行说明与固定安装包 / Release and fixed packages](https://github.com/gulagala001/opencu/releases/tag/v2.2.8-dsh.0.2.2-rc.1)
+
+
 [中文](#zh-227) | [English](#en-227)
 
 <a id="zh-227"></a>

@@ -1,5 +1,10 @@
 # DeepSeek Workbench 0.1.4 · DSH 0.2.1-rc.5
 
+## DeepSeek Workbench 0.1.5 · DSH 0.2.2-rc.1
+
+[发行说明与固定安装包 / Release and fixed packages](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.5-dsh.0.2.2-rc.1)
+
+
 [中文](#zh-014) | [English](#en-014)
 
 <a id="zh-014"></a>

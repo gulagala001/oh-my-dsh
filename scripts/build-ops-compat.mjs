@@ -123,7 +123,51 @@ export async function buildOpsCompatibility(archive, host, output) {
       await writeFile(path, `import { hostScopes } from '${relative}';\n` + source.replace(expected, 'await hostScopes(ctx)'));
     }
     const ptcPath = join(root, 'lib/ptc/index.js');
-    await writeFile(ptcPath, patchPtc(await readFile(ptcPath, 'utf8')));
+    let ptcSource = patchPtc(await readFile(ptcPath, 'utf8'));
+    if (host === '0.2.2-rc.1') {
+      // The modern waterfall carries presentation only. Declarations belong
+      // to the executor and are added by assemble() after the hooks settle.
+      const before = 'if (!entry || !heldPtc || isPtc(result))';
+      if (ptcSource.split(before).length !== 2) throw Error('The pinned OPS presentation hook changed');
+      ptcSource = ptcSource.replace(before, 'if (!entry || !heldPtc || isPresentationProbe(context) || isPtc(await inspectPresentation(prompt, context.scope, context.signal)))');
+    }
+    await writeFile(ptcPath, ptcSource);
+    if (host === '0.2.2-rc.1') {
+      // Step admission freezes definitions before prompt/pre-step hooks in rc.1.
+      // Finish only OPS-owned pending publication before that native snapshot.
+      await writeFile(join(root, 'lib/host-admission.js'), `import { symbols } from '@deepseek-ai/cordis';
+const key = Symbol.for('dsh-ops.native-admission.022rc1');
+export function beforeToolResolution(ctx, prepare) {
+  const tools = ctx.tools[symbols.original] ?? ctx.tools;
+  let state = tools[key];
+  if (!state) {
+    const original = tools.resolve, callbacks = new Set();
+    const wrapped = async function(context) {
+      for (const callback of callbacks) await callback(context);
+      return original.call(this, context);
+    };
+    state = { original, wrapped, callbacks }; tools[key] = state; tools.resolve = wrapped;
+  }
+  state.callbacks.add(prepare);
+  ctx.effect(() => () => {
+    state.callbacks.delete(prepare);
+    if (!state.callbacks.size) {
+      if (tools.resolve === state.wrapped) tools.resolve = state.original;
+      delete tools[key];
+    }
+  });
+}
+`);
+      for (const entry of ['ptc/index.js', 'discovery/index.js']) {
+        const path = join(root, 'lib', entry), source = await readFile(path, 'utf8');
+        const start = source.indexOf("        ctx.on('agent/pre-step', async ("), end = source.indexOf("        ctx.on('agent/disposed'", start);
+        if (start < 0 || end < 0) throw Error('The pinned OPS admission hook changed');
+        const previous = source.slice(start, end);
+        if (previous.split('return next();').length !== 2) throw Error('Unexpected OPS pre-step hook');
+        const replacement = previous.replace("ctx.on('agent/pre-step',", 'beforeToolResolution(ctx,').replace(', next)', ')').replace('            return next();\n', '').replace(/(await attach\([^\n]+\);)/, '$1\n            await drain();');
+        await writeFile(path, "import { beforeToolResolution } from '../host-admission.js';\n" + source.slice(0, start) + replacement + source.slice(end));
+      }
+    }
     // Native receipts describe the unchanged upstream binaries, not this JS
     // compatibility distribution. Keep their original version and provenance.
     const runtimePath = join(root, 'bin/native-runtime.mjs');

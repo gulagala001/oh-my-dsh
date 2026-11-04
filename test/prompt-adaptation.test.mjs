@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { parse } from 'acorn';
-import { installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
+import { installPromptAdapter, projectToolDeclarations } from '../src/cc-adaptation/adapter.mjs';
 import { buildMainPrompt } from '../src/cc-adaptation/texts.mjs';
 import { renderBudget } from '../src/task-budget.mjs';
 import { renderRuntimeState } from '../src/runtime-state.mjs';
@@ -32,13 +32,21 @@ function fixture(runtime, team = false) {
   if (runtime) sections.push({ name: 'tools:sdk', text: 'Host SDK' }, { name: 'tools:ptc-only', text: 'SDK tools only' });
   const assembly = { sections, tools: runtime ? schemas.filter(t => t.name === 'run_code') : schemas };
   let hook;
-  installPromptAdapter({
+  const ctx = {
+    systemPrompt: {},
     on: (_event, callback) => { hook = callback; },
     get: name => name === 'ptcRuntime' ? runtime : undefined,
     tools: { schemas: () => schemas, get: name => definitions.find(t => t.name === name) },
     omd: { config: () => ({ identityPrompt: 'OMD fixture identity' }) },
-  });
-  return { assembly, schemas, controls, assemble: (origin = 'user') => hook(null, { agent: { session: { header: { origin } } } }, async () => assembly) };
+  };
+  installPromptAdapter(ctx);
+  return { assembly, schemas, controls, async assemble(origin = 'user') {
+    const context = { agent: { session: { header: { origin } } } };
+    // Modern DSH assembles prompt sections and provider-owned tool declarations separately.
+    const presentation = await hook(null, context, async () => ({ sections: assembly.sections }));
+    const model = projectToolDeclarations(ctx, { schemas: assembly.tools }, definitions, context);
+    return { ...presentation, tools: model.schemas };
+  } };
 }
 const section = (assembly, name) => assembly.sections.find(s => s.name === name)?.text;
 
@@ -52,7 +60,10 @@ test('native and PTC preserve live child/Team controls, identities, schemas and 
     }
     assert.deepEqual(result.tools.map(t => t.parameters), f.assembly.tools.map(t => t.parameters));
     assert.ok(section(result, 'oh-my-dsh:persona').startsWith('OMD fixture identity'));
-    assert.equal(await f.assemble('subagent'), f.assembly);
+    const child = await f.assemble('subagent');
+    assert.equal(section(child, 'oh-my-dsh:persona'), 'Placeholder');
+    assert.deepEqual(child.tools, f.assembly.tools);
+    for (const control of f.controls) assert.equal(section(child, `tool:${control.name}`), control.description);
   }
 });
 
@@ -79,8 +90,10 @@ test('Python SDK keeps its native language and runtime-neutral OMD guidance', as
 
 test('both generated presets use the authored policy and require explicit plan approval', async () => {
   const generated = readFileSync(new URL('../presets/cordis.patch.yml', import.meta.url), 'utf8');
-  const indented = composition.trimEnd().split('\n').map(line => '          ' + line).join('\n');
-  assert.equal(generated.split(indented).length - 1, 2, 'Native/PTC preset copies match the authored composition');
+  for (const executor of ['native-executor', 'ptc']) {
+    const expected = composition.replace("name: 'oh-my-dsh/native-executor'", "name: 'oh-my-dsh/" + executor + "'").trimEnd().split('\n').map(line => line ? '          ' + line : '').join('\n');
+    assert.ok(generated.includes(expected), `${executor} preset matches the authored composition`);
+  }
   assert.ok(policy.includes('approved: true') && !policy.includes('`exit_plan_mode` succeeds'));
   const review = (await fixture().assemble()).tools.find(t => t.name === 'exit_plan_mode').description;
   assert.ok(review.includes('approved: true') && review.includes('approved: false'));

@@ -4,7 +4,7 @@
 
 Host factories preserve lazy dynamic imports through the original component Loader tree. Windows-only native dependencies are not preloaded at startup on other platforms.
 
-宿主构建以 `package.json` 的完整版本为准，当前源码默认 `0.2.1-rc.5`。每份构建对齐同版本 SDK、组件与依赖锁，安装入口按正式发行包的宿主版本选择。
+宿主构建以 `package.json` 的完整版本为准，当前源码默认 `0.2.2-rc.1`。每份构建对齐同版本 SDK、组件与依赖锁，安装入口按正式发行包的宿主版本选择。
 
 [中文首页](../README.md) · [English](../README_EN.md)
 
@@ -29,3 +29,5 @@ Host modules resolve service dependencies through the original Loader tree and c
 上游来源、固定提交与许可证见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。
 
 See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for upstream provenance, the pinned commit and licenses.
+
+DSH 0.2.2-rc.1 的构建输入在 `vendor/host-artifacts.json` 将原始固定源码与目标 npm 工件分开记录。构建逐文件核对实际 SDK 的实现、类型和源文件，原始源码 tag／commit 保持不变。

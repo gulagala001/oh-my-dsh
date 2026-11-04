@@ -1,3 +1,4 @@
+import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -19,8 +20,8 @@ async function fixture(t) {
   const ctx = new Context(), requests = [], errors = [];
   t.after(async () => { await ctx.fiber.dispose(); await rm(root, { recursive: true, force: true }); });
   for (const name of ['dsh-session', 'dsh-session-projection', 'dsh-agent', 'dsh-llm',
-    'dsh-system-prompt', 'dsh-tools', 'dsh-fs-local', 'dsh-working-directory', 'dsh-agent-loop']) {
-    await ctx.plugin((await native(name)).default);
+    'dsh-system-prompt', 'dsh-tools', 'dsh-tool-executor-native', 'dsh-fs-local', 'dsh-working-directory', 'dsh-agent-loop']) {
+    const module = await native(name); await ctx.plugin(module.default ?? module);
   }
   class Adapter extends LlmAdapter {
     async *stream(options) {
@@ -151,7 +152,7 @@ test('required cwd survives context suppression, tool execution and cold loop re
   const named = cwd;
   assert.equal(f.requests.length, 1);
   assertModelDirectory(f.requests[0], named);
-  const execute = (name, args) => f.ctx.tools.execute({ agent, name, arguments: args, callId: 'probe-' + name, signal: new AbortController().signal });
+  const execute = (name, args) => executeTool(f.ctx, { agent, name, arguments: args, callId: 'probe-' + name, signal: new AbortController().signal });
   const written = await execute('write', { file_path: 'location.txt', content: 'written in the effective cwd' });
   assert.equal(written.isError, false, JSON.stringify(written));
   assert.equal(await readFile(join(named, 'location.txt'), 'utf8'), 'written in the effective cwd');

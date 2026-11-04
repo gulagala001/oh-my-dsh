@@ -32,7 +32,7 @@ function latestCompletedParagraphFirstLine(text: string): string {
 }
 
 /**
- * Render one assistant reasoning block collapsed until the reader opens it. The
+ * Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
  * collapsed summary omits double-asterisk markers; expanded content renders
  * the complete Markdown with secondary typography. A streaming preview advances
  * when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
@@ -45,9 +45,12 @@ function latestCompletedParagraphFirstLine(text: string): string {
  * @param props.t - conversation locale seat for the disclosure and running status.
  * @returns the reasoning disclosure.
  */
-export const ReasoningRow = memo(function ReasoningRow({ text: rawText, running, usePresentation, useDisclosure, renderSlot, t }: {
+export const ReasoningRow = memo(function ReasoningRow({
+  text: rawText, running, textInteractionSource = false, usePresentation, useDisclosure, renderSlot, t,
+}: {
   text: string
   running: boolean
+  textInteractionSource?: boolean
   useDisclosure: UseDisclosure
   usePresentation: UsePresentation
   t: ChatViewSlotProps['t']
@@ -72,10 +75,10 @@ export const ReasoningRow = memo(function ReasoningRow({ text: rawText, running,
     </>
   ), [running, summary])
   const content = useMemo(() => expanded ? (
-    <div className={css.thinkBody}>
+    <div className={css.thinkBody} data-text-interaction-source={textInteractionSource && !running ? '' : undefined}>
       {renderSlot('conversation.chat.reasoning.body', { rawText, text, running })}
     </div>
-  ) : undefined, [expanded, renderSlot, running, rawText, text])
+  ) : undefined, [expanded, renderSlot, running, rawText, text, textInteractionSource])
 
   if (hidden) return null
 

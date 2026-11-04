@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { join, relative, isAbsolute } from 'node:path';
 import { createHostConstEnums } from './host-const-enums.mjs';
 import { hostTarget } from './host-targets.mjs';
+import { verifyHostArtifacts } from './host-artifacts.mjs';
 import { checkMacHelperDistribution } from './check-opencu-native.mjs';
 import { buildChatStyleFactory } from './chat-style-adapter.mjs';
 import { ownClientStyles, clientRegistration } from './host-build-contracts.mjs';
@@ -16,11 +17,13 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 if (process.platform === 'darwin') await checkMacHelperDistribution(join(root, 'vendor/opencu'));
 const snapshot = JSON.parse(await readFile(`${root}vendor/dsh.json`, 'utf8'));
 const chatSnapshot = JSON.parse(await readFile(`${root}vendor/dsh/ui-chat.json`, 'utf8'));
-const hostLayout = hostTarget(snapshot.version);
-if (snapshot.repository !== 'https://github.com/deepseek-ai/deepseek-harness' || snapshot.commit !== hostLayout.commit || snapshot.tag !== 'dsh-v' + snapshot.version) throw new Error('DSH snapshot does not use the reviewed official source pin');
+const hostLayout = hostTarget(snapshot.buildTarget?.version ?? snapshot.version);
+const sourcePin = hostLayout.source ?? { commit: hostLayout.commit, version: snapshot.version, tag: 'dsh-v' + snapshot.version };
+await verifyHostArtifacts(root, snapshot);
+if (snapshot.repository !== 'https://github.com/deepseek-ai/deepseek-harness' || snapshot.commit !== sourcePin.commit || snapshot.version !== sourcePin.version || snapshot.tag !== sourcePin.tag) throw new Error('DSH snapshot does not use the reviewed official source pin');
 const parent = JSON.parse(await readFile(`${root}package.json`, 'utf8'));
 const sdk = parent.devDependencies['@deepseek-ai/dsh'];
-if (sdk !== snapshot.version) throw new Error(`DSH SDK ${sdk} does not match snapshot ${snapshot.version}`);
+if (sdk !== (snapshot.buildTarget?.version ?? snapshot.version)) throw new Error(`DSH SDK ${sdk} does not match snapshot ${snapshot.version}`);
 for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) {
   for (const [name, version] of Object.entries(parent[section] ?? {})) {
     if (/^@deepseek-ai\/dsh(?:-|$)/.test(name) && version !== sdk) throw new Error(`DSH SDK ${section}.${name} ${version} does not match snapshot ${snapshot.version}`);
@@ -125,7 +128,13 @@ for (const name of ['bash-local.mjs', 'pwsh-local.mjs', 'tools.mjs', 'tools.fact
 for (const [name, create, styleOwner] of [['ui-conversation', 'createConversation', 'oh-my-dsh'], ['ui-chat', 'createChat', 'oh-my-dsh/chat']]) {
   const rawClient = await readFile(`${root}vendor/dsh/${name}/lib/client.js`, 'utf8');
   if (name === 'ui-chat') {
-    const { code } = buildChatStyleFactory(rawClient, { commit: snapshot.commit, sha256: chatSnapshot.files['lib/client.js'] });
+    const assets = {};
+    for (const path of Object.keys(chatSnapshot.files).filter(path => path.startsWith('lib/assets/'))) {
+      if (!path.endsWith('.png')) throw Error('Unreviewed Chat asset type: '+path);
+      const key = 'plugins/@deepseek-ai/dsh-client-ui-chat/' + path.slice(4).split('/').map(encodeURIComponent).join('/');
+      assets[key] = 'data:image/png;base64,' + (await readFile(`${root}vendor/dsh/ui-chat/${path}`)).toString('base64');
+    }
+    const { code } = buildChatStyleFactory(rawClient, { commit: snapshot.commit, sha256: chatSnapshot.files['lib/client.js'] }, assets);
     await writeFile(`${root}lib/host/${name}.factory.mjs`, code);
     continue;
   }

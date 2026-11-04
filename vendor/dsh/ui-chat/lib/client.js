@@ -52,14 +52,14 @@ window.__ModuleLoader__.load({
 		/**
 		* Resolve a Workspace-relative path into the Host-facing spelling used by path operations.
 		* @param cwd - Session Workspace root, when known.
-		* @param path - Absolute or Workspace-relative path.
+		* @param path - Absolute or Workspace-relative path; leading `./` segments are dropped when joining.
 		* @returns an absolute path when a Workspace root is available, otherwise the original path.
 		*/
 		function resolveWorkspacePath(cwd, path) {
 			if (isAbsoluteWorkspacePath(path)) return path;
 			if (cwd === void 0 || cwd === "") return path;
 			const separator = isWindowsStylePath(cwd) && cwd.includes("\\") ? "\\" : "/";
-			return `${cwd.replace(/[/\\]+$/, "")}${separator}${path.replace(/^[/\\]+/, "")}`;
+			return `${cwd.replace(/[/\\]+$/, "")}${separator}${path.replace(/^(?:\.?[/\\])+/, "")}`;
 		}
 		/**
 		* The address for a path as a caller holds it: a relative path, or an absolute
@@ -165,6 +165,21 @@ window.__ModuleLoader__.load({
 					if (root !== void 0 && root.callId === callId && !("kind" in root) && root.phase === "start") return commandOf(root);
 				}
 			}) ?? null;
+		}
+		//#endregion
+		//#region src/client/file-path.ts
+		/**
+		* Bind path resolution to the originating Session without capturing its current directory.
+		* @param ctx - Chat plugin context.
+		* @param sessionId - Original Session identity.
+		* @returns Resolver using the live working directory, falling back to the workspace root.
+		*/
+		function sessionFilePath(ctx, sessionId) {
+			return (path) => {
+				const cwd = ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd;
+				const current = ctx.sessions.binding(sessionId)?.session.projections.faceOf("workingDirectory").getSnapshot();
+				return resolveWorkspacePath(current ?? cwd, path);
+			};
 		}
 		//#endregion
 		//#region src/client/contract/group-tree.ts
@@ -405,7 +420,8 @@ window.__ModuleLoader__.load({
 					count: items.length,
 					height: viewHeight
 				};
-				scrollToIndex(activeIndex, "if-needed", previous?.count === items.length && previous.height === viewHeight ? preferredScrollBehavior() : "instant");
+				const behavior = previous?.count === items.length && previous.height === viewHeight ? preferredScrollBehavior() : "instant";
+				scrollToIndex(activeIndex, "if-needed", behavior);
 			}, [
 				activeIndex,
 				items.length,
@@ -479,7 +495,7 @@ window.__ModuleLoader__.load({
 		*/
 		const TurnNavigator = (0, react.memo)((0, react.forwardRef)(TurnNavigatorRail));
 		//#endregion
-		//#region ../../util/brand/lib/index.js
+		//#region ../../../../../../node_modules/.pnpm/@deepseek-ai+dsh-brand@0.2.2-alpha.3_@deepseek-ai+cordis@4.0.6-alpha.2/node_modules/@deepseek-ai/dsh-brand/lib/index.js
 		/**
 		* Apply a compile-time number brand without changing the value.
 		* @param value - number admitted by the domain that owns the target brand.
@@ -564,6 +580,525 @@ window.__ModuleLoader__.load({
 			}
 			if (byTurn.size === 0) return EMPTY_ITEMS$1;
 			return [...byTurn.values()].sort((left, right) => left.turn - right.turn);
+		}
+		//#endregion
+		//#region src/client/chat/text-selection.ts
+		/** DOM selection validation and visible-text projection, independent of business actions. */
+		const PROJECTED_BLOCK_TAGS = /* @__PURE__ */ new Set([
+			"ADDRESS",
+			"ARTICLE",
+			"ASIDE",
+			"BLOCKQUOTE",
+			"DD",
+			"DIV",
+			"DL",
+			"DT",
+			"FIGCAPTION",
+			"FIGURE",
+			"FOOTER",
+			"H1",
+			"H2",
+			"H3",
+			"H4",
+			"H5",
+			"H6",
+			"HEADER",
+			"LI",
+			"MAIN",
+			"NAV",
+			"OL",
+			"P",
+			"PRE",
+			"SECTION",
+			"TABLE",
+			"TBODY",
+			"TFOOT",
+			"THEAD",
+			"TR",
+			"UL"
+		]);
+		const PROJECTED_CELL_TAGS = /* @__PURE__ */ new Set(["TD", "TH"]);
+		function excluded(element) {
+			if (element.matches(".katex-mathml, [data-text-interaction-exclude], [hidden], .sr-only")) return true;
+			if (element.matches("[aria-hidden=\"true\"]") && !element.matches(".katex-html")) return true;
+			return element.tagName === "BUTTON" && element.parentElement?.tagName !== "CODE";
+		}
+		function projectedBoundary(node) {
+			if (!(node instanceof Element)) return "";
+			if (PROJECTED_CELL_TAGS.has(node.tagName)) return "	";
+			return PROJECTED_BLOCK_TAGS.has(node.tagName) ? "\n" : "";
+		}
+		function projectedSeparator(previous, current) {
+			const left = projectedBoundary(previous);
+			const right = projectedBoundary(current);
+			if (left === "\n" || right === "\n") return "\n";
+			return left === "	" || right === "	" ? "	" : "";
+		}
+		function projectedText(node) {
+			const source = node.data;
+			const parent = node.parentElement;
+			const view = node.ownerDocument.defaultView;
+			const whiteSpace = parent === null || view === null ? "" : view.getComputedStyle(parent).whiteSpace;
+			const preservesBreaks = whiteSpace === "pre" || whiteSpace === "pre-wrap" || whiteSpace === "pre-line" || whiteSpace === "break-spaces";
+			const offsets = new Array(source.length + 1).fill(0);
+			if (!preservesBreaks && /^[\t\n\f\r ]*$/u.test(source) && [node.previousSibling, node.nextSibling].some((sibling) => sibling !== null && projectedBoundary(sibling) !== "")) return {
+				text: "",
+				offsets
+			};
+			let text = "";
+			let cursor = 0;
+			if (!preservesBreaks && node.previousSibling instanceof HTMLElement && node.previousSibling.tagName === "BR" && source.startsWith("\n")) cursor = 1;
+			while (cursor < source.length) {
+				const softBreak = preservesBreaks ? null : /^[ \t]*[\r\n]+[ \t]*/u.exec(source.slice(cursor));
+				if (softBreak !== null) {
+					const end = cursor + softBreak[0].length;
+					for (let index = cursor; index < end; index++) offsets[index] = text.length;
+					text += " ";
+					offsets[end] = text.length;
+					cursor = end;
+					continue;
+				}
+				offsets[cursor] = text.length;
+				text += source.charAt(cursor);
+				cursor += 1;
+				offsets[cursor] = text.length;
+			}
+			return {
+				text,
+				offsets
+			};
+		}
+		function projectedFragment(node) {
+			if (node.nodeType === Node.TEXT_NODE) {
+				const projected = projectedText(node);
+				return {
+					text: projected.text,
+					spans: projected.offsets.length <= 1 ? [] : [{
+						node,
+						start: 0,
+						offsets: projected.offsets
+					}],
+					boundaries: []
+				};
+			}
+			if (!(node instanceof Element)) return {
+				text: "",
+				spans: [],
+				boundaries: []
+			};
+			if (excluded(node)) return {
+				text: "",
+				spans: [],
+				boundaries: []
+			};
+			if (node.tagName === "BR") return {
+				text: "\n",
+				spans: [],
+				boundaries: []
+			};
+			let text = "";
+			let previous = null;
+			const spans = [];
+			const boundaries = [];
+			const offsets = new Array(node.childNodes.length + 1).fill(0);
+			for (const [index, child] of [...node.childNodes].entries()) {
+				const fragment = projectedFragment(child);
+				if (fragment.text !== "" && previous !== null) {
+					const separator = projectedSeparator(previous, child);
+					if (separator === "\n" ? !text.endsWith("\n") && !fragment.text.startsWith("\n") : separator === "	" && !/[\t\n]$/u.test(text) && !/^[\t\n]/u.test(fragment.text)) text += separator;
+				}
+				offsets[index] = text.length;
+				const base = text.length;
+				text += fragment.text;
+				for (const span of fragment.spans) spans.push({
+					node: span.node,
+					start: base + span.start,
+					offsets: span.offsets
+				});
+				for (const [owner, childOffsets] of fragment.boundaries) boundaries.push([owner, childOffsets.map((offset) => base + offset)]);
+				if (fragment.text !== "") previous = child;
+				offsets[index + 1] = text.length;
+			}
+			boundaries.push([node, offsets]);
+			return {
+				text,
+				spans,
+				boundaries
+			};
+		}
+		function projectedOffset(projection, container, offset) {
+			if (container.nodeType === Node.TEXT_NODE) {
+				const span = projection.spans.find((candidate) => candidate.node === container);
+				const projected = span?.offsets[offset];
+				return span === void 0 || projected === void 0 ? null : span.start + projected;
+			}
+			return (projection.boundaries.find(([owner]) => owner === container)?.[1])?.[offset] ?? null;
+		}
+		/**
+		* Find a single noncollapsed selection inside one enabled source.
+		* @param root - mounted interaction area.
+		* @param selection - browser selection in that area's document.
+		* @returns the selected source and range, or null across sources and excluded content.
+		*/
+		function readTextSelection(root, selection) {
+			if (selection === null || selection.rangeCount !== 1 || selection.isCollapsed) return null;
+			const range = selection.getRangeAt(0);
+			const sourceOf = (node) => (node instanceof Element ? node : node.parentElement)?.closest("[data-text-interaction-source]") ?? null;
+			const source = sourceOf(range.startContainer);
+			if (source === null || source !== sourceOf(range.endContainer) || !root.contains(source) || source.closest("[hidden], [inert], [data-text-interaction-exclude]") !== null) return null;
+			return {
+				source,
+				range
+			};
+		}
+		/**
+		* Project selected DOM text with visible block boundaries and without renderer chrome.
+		* @param selection - range and its source, obtained through readTextSelection.
+		* @returns trimmed visible text; empty or excluded selections return null.
+		*/
+		function selectedText(selection) {
+			const { source, range } = selection;
+			const projection = projectedFragment(source);
+			const start = projectedOffset(projection, range.startContainer, range.startOffset);
+			const end = projectedOffset(projection, range.endContainer, range.endOffset);
+			if (start === null || end === null) return null;
+			const text = projection.text.slice(start, end).trim();
+			return text === "" ? null : text;
+		}
+		//#endregion
+		//#region src/client/chat/text-interaction.ts
+		/** Area-local text gestures, action ownership, dismissal, and content-relative placement. */
+		function rectBounds(rect) {
+			return {
+				left: rect.left,
+				top: rect.top,
+				right: rect.left + rect.width,
+				bottom: rect.top + rect.height
+			};
+		}
+		function intersects(a, b) {
+			return a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom;
+		}
+		function sameRange(a, b) {
+			return a === b || a !== null && b !== null && a.startContainer === b.startContainer && a.startOffset === b.startOffset && a.endContainer === b.endContainer && a.endOffset === b.endOffset;
+		}
+		function available(root, target) {
+			if (!root.isConnected || !root.contains(target.source) || !target.source.hasAttribute("data-text-interaction-source")) return false;
+			const view = root.ownerDocument.defaultView;
+			/* v8 ignore if -- Mounted browser content always has an owner window. */
+			if (view === null) return false;
+			for (let node = target.source; node !== null; node = node.parentElement) {
+				const style = view.getComputedStyle(node);
+				if (node.hidden || node.inert || node.hasAttribute("data-text-interaction-exclude") || style.display === "none" || style.visibility === "hidden") return false;
+			}
+			return target.selection === null || target.source.contains(target.selection.range.startContainer) && target.source.contains(target.selection.range.endContainer) && selectedText(target.selection) === target.text;
+		}
+		function composerSeat(root) {
+			return root.closest("[data-conversation-scroll]")?.querySelector("[data-composer-seat]") ?? null;
+		}
+		function visibleBounds(root, source, view) {
+			const rootRect = rectBounds(root.getBoundingClientRect());
+			const bounds = {
+				left: Math.max(0, rootRect.left),
+				right: Math.min(view.innerWidth, rootRect.right),
+				top: 0,
+				bottom: view.innerHeight
+			};
+			for (let node = source; node !== null; node = node.parentElement) {
+				const style = view.getComputedStyle(node);
+				const rect = rectBounds(node.getBoundingClientRect());
+				if (/(auto|scroll|hidden|clip)/u.test(style.overflowX)) {
+					bounds.left = Math.max(bounds.left, rect.left);
+					bounds.right = Math.min(bounds.right, rect.right);
+				}
+				if (/(auto|scroll|hidden|clip)/u.test(style.overflowY)) {
+					bounds.top = Math.max(bounds.top, rect.top);
+					bounds.bottom = Math.min(bounds.bottom, rect.bottom);
+				}
+			}
+			const composer = composerSeat(root)?.getBoundingClientRect();
+			if (composer !== void 0 && composer.height > 0 && composer.right > bounds.left && composer.left < bounds.right) bounds.bottom = Math.min(bounds.bottom, composer.top);
+			return bounds;
+		}
+		/**
+		* Own text interactions for one positioned content area and its local surface.
+		* @param rootRef - existing content element with position: relative.
+		* @param surfaceRef - absolute surface inside that element; only the selected Slot consumer is mounted.
+		* @param dispatchInteraction - framework-injected plugin gesture dispatch.
+		* @param registeredIds - live registered owners used to dismiss removed plugins.
+		* @returns current owner and area-local selection actions.
+		*/
+		function useTextInteraction(rootRef, surfaceRef, dispatchInteraction, registeredIds) {
+			const target = (0, react.useRef)(null);
+			const [active, setActive] = (0, react.useState)(null);
+			const dismiss = (0, react.useCallback)(() => {
+				target.current = null;
+				if (surfaceRef.current !== null) surfaceRef.current.style.visibility = "hidden";
+				setActive(null);
+			}, [surfaceRef]);
+			(0, react.useEffect)(dismiss, [
+				registeredIds,
+				dispatchInteraction,
+				dismiss
+			]);
+			const readText = (0, react.useCallback)(() => {
+				const root = rootRef.current;
+				const current = target.current;
+				if (root === null || current === null || !available(root, current)) return null;
+				return current.selection === null ? null : selectedText(current.selection);
+			}, [rootRef]);
+			const clearSelection = (0, react.useCallback)(() => {
+				rootRef.current?.ownerDocument.getSelection()?.removeAllRanges();
+			}, [rootRef]);
+			const place = (0, react.useCallback)(() => {
+				const root = rootRef.current;
+				const surface = surfaceRef.current;
+				const current = target.current;
+				if (root === null || surface === null || current === null) return;
+				if (!available(root, current)) {
+					dismiss();
+					return;
+				}
+				const view = root.ownerDocument.defaultView;
+				/* v8 ignore if -- Mounted browser content always has an owner window. */
+				if (view === null) return;
+				const visible = visibleBounds(root, current.source, view);
+				const selectionRects = current.selection === null ? [] : [...current.selection.range.getClientRects()];
+				const fallback = current.selection?.range.getBoundingClientRect() ?? current.source.getBoundingClientRect();
+				const rects = selectionRects.length === 0 ? [fallback] : selectionRects;
+				const sourceRect = current.source.getBoundingClientRect();
+				const pointX = current.point === null ? 0 : sourceRect.left + current.point.x - current.source.scrollLeft;
+				const pointY = current.point === null ? 0 : sourceRect.top + current.point.y - current.source.scrollTop;
+				const anchor = current.point === null ? rects.map(rectBounds).find((rect) => intersects(rect, visible)) : {
+					left: pointX,
+					right: pointX + 1,
+					top: pointY,
+					bottom: pointY + 1
+				};
+				if (anchor === void 0 || !intersects(anchor, visible) || visible.right <= visible.left || visible.bottom <= visible.top) {
+					surface.style.visibility = "hidden";
+					return;
+				}
+				const gap = 8;
+				surface.style.maxWidth = `${visible.right - visible.left}px`;
+				surface.style.maxHeight = `${visible.bottom - visible.top}px`;
+				const size = surface.getBoundingClientRect();
+				const x = current.point === null ? (Math.max(anchor.left, visible.left) + Math.min(anchor.right, visible.right) - size.width) / 2 : anchor.left;
+				const above = anchor.top - gap - size.height;
+				const below = anchor.bottom + gap;
+				const preferredY = current.point === null && above >= visible.top ? above : below;
+				const left = Math.max(visible.left, Math.min(x, visible.right - size.width));
+				const top = Math.max(visible.top, Math.min(preferredY, visible.bottom - size.height));
+				const rootRect = root.getBoundingClientRect();
+				const scaleX = root.offsetWidth === 0 ? 1 : rootRect.width / root.offsetWidth;
+				const scaleY = root.offsetHeight === 0 ? 1 : rootRect.height / root.offsetHeight;
+				surface.style.left = `${(left - rootRect.left) / scaleX - root.clientLeft + root.scrollLeft}px`;
+				surface.style.top = `${(top - rootRect.top) / scaleY - root.clientTop + root.scrollTop}px`;
+				surface.style.visibility = "visible";
+			}, [
+				dismiss,
+				rootRef,
+				surfaceRef
+			]);
+			(0, react.useLayoutEffect)(place, [active, place]);
+			(0, react.useEffect)(() => {
+				const root = rootRef.current;
+				const surface = surfaceRef.current;
+				if (root === null || surface === null) return;
+				const document = root.ownerDocument;
+				const view = document.defaultView;
+				/* v8 ignore if -- Mounted browser content always has an owner window. */
+				if (view === null) return;
+				let pointerSelecting = false;
+				let keyboardSelecting = false;
+				let selectionChangedDuringGesture = false;
+				let previousRange = null;
+				let frame;
+				const schedulePlacement = () => {
+					if (target.current === null || frame !== void 0) return;
+					frame = view.requestAnimationFrame(() => {
+						frame = void 0;
+						place();
+					});
+				};
+				const dispatch = (trigger, next, event) => {
+					if (!available(root, next)) return;
+					const id = dispatchInteraction({
+						trigger,
+						hasSelection: next.selection !== null,
+						readText: () => next.text,
+						preventDefault: () => {
+							event.preventDefault();
+						}
+					});
+					if (id === null) return;
+					target.current = next;
+					setActive({
+						id,
+						trigger
+					});
+				};
+				const updateSelection = (event) => {
+					if (pointerSelecting || keyboardSelecting) {
+						selectionChangedDuringGesture = true;
+						return;
+					}
+					if (target.current !== null && target.current.point !== null) return;
+					if (target.current !== null && surface.contains(document.activeElement)) return;
+					const selection = readTextSelection(root, document.getSelection());
+					const range = selection?.range ?? null;
+					if (!selectionChangedDuringGesture && sameRange(previousRange, range)) return;
+					selectionChangedDuringGesture = false;
+					previousRange = range?.cloneRange() ?? null;
+					dismiss();
+					if (selection === null) return;
+					const text = selectedText(selection);
+					if (text === null) return;
+					dispatch("selection", {
+						source: selection.source,
+						selection: {
+							...selection,
+							range: selection.range.cloneRange()
+						},
+						text,
+						point: null
+					}, event);
+				};
+				const insideSurface = (event) => event.composedPath().includes(surface);
+				const pointerDown = (event) => {
+					if (insideSurface(event)) return;
+					const selection = document.getSelection();
+					previousRange = selection?.rangeCount === 1 ? selection.getRangeAt(0).cloneRange() : null;
+					dismiss();
+					selectionChangedDuringGesture = false;
+					pointerSelecting = event.button === 0 && event.target instanceof Node && root.contains(event.target);
+				};
+				const pointerUp = (event) => {
+					if (!pointerSelecting) return;
+					pointerSelecting = false;
+					updateSelection(event);
+				};
+				const cancel = () => {
+					pointerSelecting = false;
+					keyboardSelecting = false;
+					dismiss();
+				};
+				const keyDown = (event) => {
+					if (event.key === "Escape") {
+						cancel();
+						return;
+					}
+					if (insideSurface(event) || !(event.target instanceof Node) || !root.contains(event.target)) return;
+					if (event.key === "Shift" || event.shiftKey) {
+						keyboardSelecting = true;
+						dismiss();
+					}
+				};
+				const keyUp = (event) => {
+					if (!keyboardSelecting || event.key !== "Shift" && event.shiftKey) return;
+					keyboardSelecting = false;
+					updateSelection(event);
+				};
+				const contextMenu = (event) => {
+					if (insideSurface(event)) return;
+					const element = event.target instanceof Element ? event.target : null;
+					const source = element?.closest("[data-text-interaction-source]");
+					if (source === void 0 || source === null || !root.contains(source) || element?.closest("[data-text-interaction-exclude], button, input, textarea, [contenteditable=\"true\"]")) return;
+					pointerSelecting = false;
+					dismiss();
+					const selected = readTextSelection(root, document.getSelection());
+					const keyboard = event.clientX === 0 && event.clientY === 0;
+					const selection = selected?.source === source && (keyboard || [...selected.range.getClientRects()].some((rect) => event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom)) ? selected : null;
+					const bounds = source.getBoundingClientRect();
+					dispatch("contextmenu", {
+						source,
+						selection: selection === null ? null : {
+							...selection,
+							range: selection.range.cloneRange()
+						},
+						text: selection === null ? null : selectedText(selection),
+						point: {
+							x: (keyboard ? 0 : event.clientX - bounds.left) + source.scrollLeft,
+							y: (keyboard ? 0 : event.clientY - bounds.top) + source.scrollTop
+						}
+					}, event);
+				};
+				document.addEventListener("selectionchange", updateSelection);
+				document.addEventListener("pointerdown", pointerDown, true);
+				document.addEventListener("pointerup", pointerUp);
+				document.addEventListener("pointercancel", cancel);
+				document.addEventListener("keydown", keyDown);
+				document.addEventListener("keyup", keyUp);
+				document.addEventListener("scroll", schedulePlacement, true);
+				root.addEventListener("contextmenu", contextMenu);
+				view.addEventListener("resize", schedulePlacement);
+				view.addEventListener("blur", cancel);
+				return () => {
+					document.removeEventListener("selectionchange", updateSelection);
+					document.removeEventListener("pointerdown", pointerDown, true);
+					document.removeEventListener("pointerup", pointerUp);
+					document.removeEventListener("pointercancel", cancel);
+					document.removeEventListener("keydown", keyDown);
+					document.removeEventListener("keyup", keyUp);
+					document.removeEventListener("scroll", schedulePlacement, true);
+					root.removeEventListener("contextmenu", contextMenu);
+					view.removeEventListener("resize", schedulePlacement);
+					view.removeEventListener("blur", cancel);
+					if (frame !== void 0) view.cancelAnimationFrame(frame);
+				};
+			}, [
+				dismiss,
+				place,
+				rootRef,
+				surfaceRef,
+				dispatchInteraction
+			]);
+			(0, react.useEffect)(() => {
+				const root = rootRef.current;
+				const surface = surfaceRef.current;
+				if (active === null || root === null || surface === null) return;
+				const view = root.ownerDocument.defaultView;
+				/* v8 ignore if -- Mounted browser content always has an owner window. */
+				if (view === null) return;
+				let frame;
+				const schedule = () => {
+					if (frame !== void 0) return;
+					frame = view.requestAnimationFrame(() => {
+						frame = void 0;
+						place();
+					});
+				};
+				const resize = new ResizeObserver(schedule);
+				resize.observe(root);
+				resize.observe(surface);
+				const composer = composerSeat(root);
+				if (composer !== null) resize.observe(composer);
+				const mutations = new MutationObserver((records) => {
+					if (records.some((record) => !surface.contains(record.target))) schedule();
+				});
+				mutations.observe(root, {
+					childList: true,
+					subtree: true,
+					characterData: true,
+					attributes: true
+				});
+				return () => {
+					resize.disconnect();
+					mutations.disconnect();
+					if (frame !== void 0) view.cancelAnimationFrame(frame);
+				};
+			}, [
+				active,
+				place,
+				rootRef,
+				surfaceRef
+			]);
+			return {
+				active,
+				dismiss,
+				readText,
+				clearSelection
+			};
 		}
 		//#endregion
 		//#region src/client/chat/use-chat-navigation.ts
@@ -1012,11 +1547,12 @@ window.__ModuleLoader__.load({
 			}
 			/**
 			* Follow the tail on the active fold's animation clock.
+			* @param input - whether the reader's own input requests the landing rather than a content change.
 			* @returns whether a fold batch owns the tail movement instead of a separate scroll animation.
 			*/
-			followInputFold() {
+			followInputFold(input) {
 				this.cancelPending();
-				return this.viewport.followInputFold(this.follow);
+				return this.viewport.followInputFold(this.follow, input);
 			}
 			/**
 			* Let fold batches read follow intent and commit their tail landings.
@@ -1302,9 +1838,10 @@ window.__ModuleLoader__.load({
 		* Create animation coordination without cross-viewport broadcasts.
 		* @param driver - the viewport's driver for the next batch; null while detached.
 		* @param foldingChanged - disable or restore this viewport's native scroll anchoring.
+		* @param beforeInstantHide - measures the layout before a row hides at once outside a motion scope.
 		* @returns stable callbacks and cleanup for this viewport's animations.
 		*/
-		function createFlowMotion(driver, foldingChanged) {
+		function createFlowMotion(driver, foldingChanged, beforeInstantHide) {
 			const running = /* @__PURE__ */ new Map();
 			let folding = 0;
 			const foldIdleListeners = /* @__PURE__ */ new Set();
@@ -1329,9 +1866,14 @@ window.__ModuleLoader__.load({
 			function batchMember(box) {
 				return box.element.parentElement?.closest("[data-chat-motion=\"collapse\"]") === null;
 			}
+			/** @returns whether a batch started; without a closing member the caller settles held rows itself. */
 			function runBatch(current) {
 				for (const box of [...boxes.values()]) {
 					if (!batchMember(box)) continue;
+					if (box.element.parentElement?.closest("[hidden]") != null) {
+						box.finish();
+						continue;
+					}
 					const height = box.element.offsetHeight;
 					const marginTop = Number.parseFloat(getComputedStyle(box.element).marginTop) || 0;
 					if (!box.closing) {
@@ -1345,7 +1887,7 @@ window.__ModuleLoader__.load({
 				}
 				const owned = [...boxes.values()];
 				const members = owned.filter(batchMember).sort((left, right) => left.element.compareDocumentPosition(right.element) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
-				if (!members.some((box) => box.closing)) return;
+				if (!members.some((box) => box.closing)) return false;
 				batch = true;
 				cancelled = false;
 				const travelling = current.begin(members.map((box) => box.closing ? box : {
@@ -1441,6 +1983,7 @@ window.__ModuleLoader__.load({
 				};
 				if (reduced) tick(0);
 				else frameRequest = requestAnimationFrame(tick);
+				return true;
 			}
 			function foldActive() {
 				return folding > 0;
@@ -1456,10 +1999,7 @@ window.__ModuleLoader__.load({
 				batchScheduled = false;
 				if (batch) return;
 				const current = [...boxes.values()].some((box) => box.closing) ? driver() : null;
-				if (current !== null) {
-					runBatch(current);
-					return;
-				}
+				if (current !== null && runBatch(current)) return;
 				const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 				for (const box of [...boxes.values()]) if (reduced || box.held && box.closing) box.finish();
 				else if (box.held) box.release();
@@ -1631,6 +2171,10 @@ window.__ModuleLoader__.load({
 				foldIdleListeners.clear();
 				for (const cancel of [...running.values()]) cancel();
 			}
+			function hideNow(element, commit) {
+				beforeInstantHide?.(element);
+				commit();
+			}
 			return {
 				collapse,
 				reveal,
@@ -1640,6 +2184,7 @@ window.__ModuleLoader__.load({
 				cancelInput,
 				resumeInput,
 				clear,
+				hideNow,
 				inputActive: () => batch || batchScheduled && [...boxes.values()].some((box) => box.closing && batchMember(box))
 			};
 		}
@@ -1656,6 +2201,7 @@ window.__ModuleLoader__.load({
 				if (hidden) {
 					if (hiddenOrCollapsing(element)) return;
 					if (mounted && element.closest(MOTION_SCOPE) !== null && motion !== void 0) motion.collapse(element, commit);
+					else if (mounted && motion?.hideNow !== void 0) motion.hideNow(element, commit);
 					else commit();
 					return;
 				}
@@ -1707,7 +2253,7 @@ window.__ModuleLoader__.load({
 			"keydown",
 			"beforematch"
 		];
-		const SCROLL_KEYS$1 = new Set([
+		const SCROLL_KEYS$1 = /* @__PURE__ */ new Set([
 			"ArrowUp",
 			"ArrowDown",
 			"PageUp",
@@ -1728,13 +2274,23 @@ window.__ModuleLoader__.load({
 			};
 			paging = null;
 			reader = null;
+			/** Rows measured before an instant close; see {@link ChatViewport.keepAboveClosing}. */
+			closing = null;
+			/** Discards a closing measurement that no size observation consumed by the end of its frame. */
+			closingFrame = null;
+			/** Content height without fold room at the latest size observation: the content that frame painted. */
+			settledContent = 0;
 			/** The pending or running fold batch lands at the tail. */
 			tailRequested = false;
+			/** The tail request came from the reader's own input rather than from a content change. */
+			tailInput = false;
 			/** Switches the running batch to a tail landing; null while no batch runs. */
 			retarget = null;
 			/** Transition state and row callbacks owned by this viewport's attachment. */
 			motion = createFlowMotion(() => this.foldDriver(), (active) => {
 				if (this.elements !== null) this.elements.scroller.style.overflowAnchor = active ? "none" : "";
+			}, (element) => {
+				this.measureClosing(element);
 			});
 			/**
 			* Bind to the containing scrollport and observe content and viewport sizes.
@@ -1767,6 +2323,8 @@ window.__ModuleLoader__.load({
 				if (typeof ResizeObserver !== "undefined") {
 					this.observer = new ResizeObserver(() => {
 						if (this.elements !== elements) return;
+						this.settledContent = elements.scroller.scrollHeight - this.spacerHeight();
+						this.keepAboveClosing();
 						this.reclaimBelow();
 						this.invalidate();
 						this.events?.resize();
@@ -1781,6 +2339,7 @@ window.__ModuleLoader__.load({
 				this.stopPreserving();
 				this.motion.clear();
 				if (this.elements !== null) this.elements.scroller.style.overflowAnchor = "";
+				this.dropClosing();
 				this.elements?.scroller.removeEventListener("scroll", this.onScroll);
 				this.elements?.scroller.removeEventListener("scrollend", this.onScrollEnd, true);
 				for (const type of READING_INTENTS) this.elements?.scroller.removeEventListener(type, this.onIntent, true);
@@ -1789,6 +2348,7 @@ window.__ModuleLoader__.load({
 				this.elements = null;
 				this.events = null;
 				this.tailRequested = false;
+				this.tailInput = false;
 				this.retarget = null;
 				this.turns = [];
 				this.observation = {
@@ -1849,12 +2409,15 @@ window.__ModuleLoader__.load({
 			/**
 			* Land the pending or running fold batch at the tail instead of starting a separate scroll.
 			* @param follow - follow controller whose native animation yields to the batch.
+			* @param input - whether the reader's own input requests the landing; a content change, such as a Turn
+			* ending, requests it in place of the immediate follow.
 			* @returns whether a fold owns the tail movement.
 			*/
-			followInputFold(follow) {
+			followInputFold(follow, input) {
 				if (this.elements === null || this.reader === null || !this.motion.inputActive()) return false;
 				this.interruptFollow(follow);
 				this.tailRequested = true;
+				this.tailInput ||= input;
 				this.retarget?.();
 				return true;
 			}
@@ -1908,11 +2471,25 @@ window.__ModuleLoader__.load({
 				return {
 					begin: (boxes) => {
 						tail = this.tailRequested || follow.active && !reader.pending();
+						const input = this.tailInput;
 						this.tailRequested = false;
+						this.tailInput = false;
 						viewportTop = elements.scroller.getBoundingClientRect().top;
 						start = elements.scroller.scrollTop;
 						const originalRoom = this.spacerHeight();
 						initialHeight = Math.max(elements.column.offsetHeight, elements.scroller.scrollHeight - originalRoom);
+						if (tail && !input) {
+							const pinned = originalRoom === 0 && this.settledContent > elements.scroller.clientHeight && follow.active && !reader.pending() && !follow.animating;
+							const external = elements.scroller.scrollHeight - originalRoom - this.settledContent;
+							if (external > .5 && pinned) {
+								elements.scroller.scrollTop = start + external;
+								start = elements.scroller.scrollTop;
+								this.observation = {
+									top: start,
+									landing: null
+								};
+							}
+						}
 						let above = 0;
 						const below = [];
 						for (const box of boxes) {
@@ -1995,6 +2572,7 @@ window.__ModuleLoader__.load({
 					finish: (cancelled) => {
 						this.retarget = null;
 						this.tailRequested = false;
+						this.tailInput = false;
 						if (this.elements !== elements) return;
 						elements.column.offsetHeight;
 						delete elements.column.dataset.inputFold;
@@ -2065,8 +2643,131 @@ window.__ModuleLoader__.load({
 				}
 				return null;
 			}
+			/**
+			* Measure, before the first row of a commit closes at once, the rows a following reader's shrink keeps
+			* still: the first row visible in the last painted layout, the rows after it that were on screen, and the
+			* rows above it within one scrollport.
+			* Rows above the closing rows keep their painted screen positions, which the commit did not move; the same
+			* commit can add rows between them and the closing rows, as a Turn's duration control does, so rows from
+			* the closing rows on are placed against the current end. Reads happen only when rows close, never on the
+			* following path's size observations. A measurement the same frame's size observation does not use is
+			* discarded after that frame.
+			* @param element - the first row of this commit to close.
+			*/
+			measureClosing(element) {
+				const elements = this.elements;
+				const reader = this.reader;
+				if (elements === null || reader === null || this.closing !== null || !element.isConnected) return;
+				if (!reader.follow.active || reader.follow.animating || reader.pending()) return;
+				if (this.paging !== null || this.motion.foldActive() || this.motion.inputActive()) return;
+				const scroller = elements.scroller;
+				const scrollHeight = scroller.scrollHeight;
+				const height = scroller.clientHeight;
+				const painted = scroller.scrollTop + height;
+				const origin = scroller.getBoundingClientRect().top - scroller.scrollTop;
+				const rows = (elements.column.querySelector(":scope > [data-slot=\"conversation.chat.flow\"]") ?? elements.column).children;
+				const end = (row) => row !== element && !row.contains(element) && (element.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_PRECEDING) !== 0 ? painted : scrollHeight;
+				const screen = (row, offset) => offset - origin - (end(row) - height);
+				let low = 0;
+				let high = rows.length;
+				while (low < high) {
+					const middle = low + high >>> 1;
+					const row = rows[middle];
+					if (screen(row, row.getBoundingClientRect().bottom) > 0) high = middle;
+					else low = middle + 1;
+				}
+				let first = -1;
+				for (let index = low; index < rows.length && first < 0; index++) {
+					const row = rows[index];
+					const rect = row.getBoundingClientRect();
+					if (screen(row, rect.top) >= height) break;
+					if (rect.height > 0 && !row.hasAttribute("hidden")) first = index;
+				}
+				if (first < 0) return;
+				const anchors = [];
+				const add = (row, rect) => {
+					if (rect.height > 0 && !row.hasAttribute("hidden")) anchors.push({
+						element: row,
+						fromEnd: end(row) - (rect.top - origin)
+					});
+				};
+				add(rows[first], rows[first].getBoundingClientRect());
+				for (let index = first + 1; index < rows.length; index++) {
+					const row = rows[index];
+					const rect = row.getBoundingClientRect();
+					if (screen(row, rect.top) >= height) break;
+					add(row, rect);
+				}
+				for (let index = first - 1; index >= 0; index--) {
+					const row = rows[index];
+					const rect = row.getBoundingClientRect();
+					if (screen(row, rect.bottom) <= -height) break;
+					add(row, rect);
+				}
+				this.closing = {
+					rows: anchors,
+					content: scrollHeight - this.spacerHeight()
+				};
+				if (typeof requestAnimationFrame === "function") this.closingFrame = requestAnimationFrame(() => {
+					this.closingFrame = requestAnimationFrame(() => {
+						this.closingFrame = null;
+						this.closing = null;
+					});
+				});
+			}
+			dropClosing() {
+				this.closing = null;
+				if (this.closingFrame !== null && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.closingFrame);
+				this.closingFrame = null;
+			}
+			/**
+			* Keep a following reader's content still after rows closed at once, for example work details at Turn
+			* completion: the first visible row keeps its screen position, or, when it closed, the first surviving row
+			* that followed it on screen, else the nearest surviving row above it. Room below fills the gap, at most half
+			* the scrollport; beyond that the content end stops at the scrollport's middle. Called from the size
+			* observation, after layout and before paint; only the observation of the frame that closed the rows uses
+			* the measurement, and only while the reader still follows the tail with no fold batch, native animation,
+			* unsampled movement, or paging writing positions.
+			*/
+			keepAboveClosing() {
+				const closing = this.closing;
+				const elements = this.elements;
+				const reader = this.reader;
+				if (closing === null) return;
+				this.dropClosing();
+				if (elements === null || reader === null || !reader.follow.active || reader.follow.animating || reader.pending()) return;
+				if (this.paging !== null || this.motion.foldActive() || this.motion.inputActive()) return;
+				const scroller = elements.scroller;
+				const content = scroller.scrollHeight - this.spacerHeight();
+				if (content >= closing.content - .5) return;
+				const height = scroller.clientHeight;
+				const origin = scroller.getBoundingClientRect().top - scroller.scrollTop;
+				const cap = height / 2;
+				let top = content + cap - height;
+				for (const row of closing.rows) {
+					if (!row.element.isConnected || row.element.closest("[hidden]") !== null) continue;
+					const rect = row.element.getBoundingClientRect();
+					if (rect.height === 0) continue;
+					top = rect.top - origin - (height - row.fromEnd);
+					break;
+				}
+				if (top + height - content > cap) top = content + cap - height;
+				top = Math.max(0, top);
+				this.setSpacer(top === 0 ? 0 : Math.max(0, top + height - content));
+				if (scroller.scrollTop !== top) scroller.scrollTop = top;
+				const metrics = scrollMetrics(scroller);
+				this.observation = {
+					top: metrics.top,
+					landing: {
+						metrics,
+						position: null,
+						turn: this.latestTurn
+					}
+				};
+			}
 			/** Clear fold reservations after a display-mode change, allowing the scroll range to shrink. */
 			resetBelow() {
+				this.dropClosing();
 				this.setSpacer(0);
 				this.invalidate();
 			}
@@ -2463,7 +3164,7 @@ window.__ModuleLoader__.load({
 		* @returns element refs, visible reading state, and navigation callbacks.
 		*/
 		function useChatScroll(input) {
-			const { ready, order, firstSeq, lastKey, lastIsUser, steeringId, submissionId, running, deferCompletedTurns, loadedTurns, chatScroll, hasMore, loadingOlder, loadOlder, loadThrough, transcriptView } = input;
+			const { ready, order, firstSeq, lastKey, lastIsUser, steeringId, submissionId, submissionSteers, running, deferCompletedTurns, loadedTurns, chatScroll, hasMore, loadingOlder, loadOlder, loadThrough, transcriptView } = input;
 			const { viewport, listRef, columnRef } = useChatViewport();
 			const { reading, state } = useChatReading(viewport, chatScroll, loadedTurns.at(-1)?.turn ?? null);
 			const navigationInput = (0, react.useMemo)(() => ({
@@ -2492,7 +3193,9 @@ window.__ModuleLoader__.load({
 				const current = content.current.input;
 				if (!current.ready && !content.current.opened) return;
 				const previous = content.current.applied;
-				const ownInput = current.lastIsUser && current.lastKey !== previous?.lastKey || current.steeringId !== null && current.steeringId !== previous?.steeringId && current.steeringId !== previous?.submissionId || current.submissionId !== null && current.submissionId !== previous?.submissionId && current.submissionId !== previous?.steeringId;
+				const steeringInput = current.steeringId !== null && current.steeringId !== previous?.steeringId && current.steeringId !== previous?.submissionId;
+				const submissionInput = current.submissionId !== null && current.submissionId !== previous?.submissionId && current.submissionId !== previous?.steeringId;
+				const ownInput = current.lastIsUser && current.lastKey !== previous?.lastKey || steeringInput || submissionInput;
 				if (reading.pending && !ownInput) return;
 				content.current.applied = current;
 				if (current.ready && !content.current.opened) {
@@ -2503,8 +3206,9 @@ window.__ModuleLoader__.load({
 				}
 				if (ownInput) {
 					navigation.cancel();
-					if (current.deferCompletedTurns && reading.followInputFold()) return;
-					reading.followTail(current.deferCompletedTurns ? "smooth" : "instant");
+					if (current.deferCompletedTurns && reading.followInputFold(true)) return;
+					const steering = steeringInput || submissionInput && current.submissionSteers;
+					reading.followTail(current.deferCompletedTurns && !steering ? "smooth" : "instant");
 					return;
 				}
 				if (navigation.contentCommitted()) {
@@ -2513,7 +3217,7 @@ window.__ModuleLoader__.load({
 				}
 				if ((previous === null || current.ready !== previous.ready || current.firstSeq !== previous.firstSeq || current.lastKey !== previous.lastKey || current.order.length !== previous.order.length || current.running !== previous.running || current.steeringId !== previous.steeringId || current.submissionId !== previous.submissionId) && reading.followingTail) {
 					navigation.cancel();
-					if (current.deferCompletedTurns && reading.followInputFold()) return;
+					if (current.deferCompletedTurns && reading.followInputFold(false)) return;
 					reading.followTail();
 				} else navigation.reconcile();
 			}, [reading, navigation]);
@@ -2571,6 +3275,7 @@ window.__ModuleLoader__.load({
 					lastIsUser,
 					steeringId,
 					submissionId,
+					submissionSteers,
 					running,
 					loadedTurns,
 					chatScroll,
@@ -2599,6 +3304,7 @@ window.__ModuleLoader__.load({
 				lastIsUser,
 				steeringId,
 				submissionId,
+				submissionSteers,
 				running,
 				loadedTurns,
 				chatScroll,
@@ -2644,7 +3350,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/ChatView.module.css.mjs
-		const css$16 = ".EvIC1a_frame{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;container-type:inline-size}.EvIC1a_root{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;overflow:visible clip}.EvIC1a_scroll{min-height:0;padding:16px calc(var(--dsh-composer-side-clearance) + 16px);flex:auto;overflow-y:auto;container-type:inline-size}.EvIC1a_root[data-chat-following-tail] .EvIC1a_scroll,[data-conversation-scroll]:has(.EvIC1a_root[data-chat-following-tail]){overflow-anchor:none}[data-conversation-scroll] .EvIC1a_frame,[data-conversation-scroll] .EvIC1a_root{flex:none;height:auto;min-height:auto}[data-conversation-scroll] .EvIC1a_scroll{flex:none;min-height:auto;overflow:visible}.EvIC1a_column{max-width:var(--dsh-chat-content-width);flex-direction:column;width:100%;margin:0 auto;display:flex}:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty)))~:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))),.EvIC1a_column:has(>.EvIC1a_older)>[data-slot=\"conversation.chat.flow\"]>:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))){margin-top:var(--dsh-chat-flow-gap,6px)}.EvIC1a_flowItem[data-chat-group-part=response],:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>[data-chat-group-part=response]:not([hidden]):not(:empty)+:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))):not(.EvIC1a_running){--dsh-chat-flow-gap:12px}.EvIC1a_flowItem{min-width:0}.EvIC1a_turnSpacer{height:0}.EvIC1a_column[data-chat-motion]>:not([data-chat-motion]),.EvIC1a_column[data-chat-motion]>[data-slot=\"conversation.chat.flow\"]>:not([data-chat-motion]){transition:margin-top .16s cubic-bezier(.4,0,.2,1)}.EvIC1a_column[data-input-fold]>:not([data-chat-motion]),.EvIC1a_column[data-input-fold]>[data-slot=\"conversation.chat.flow\"]>:not([data-chat-motion]){transition:none}@media (prefers-reduced-motion:reduce){.EvIC1a_column[data-chat-motion]>:not([data-chat-motion]),.EvIC1a_column[data-chat-motion]>[data-slot=\"conversation.chat.flow\"]>:not([data-chat-motion]){transition:none}}.EvIC1a_flowItem[data-chat-flow-kind=turn-process],.EvIC1a_flowItem[data-turn-process-answer],:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>[data-chat-flow-kind=turn-process]+:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))):not(.EvIC1a_running){--dsh-chat-flow-gap:16px}.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty)){height:0}.EvIC1a_callRow{border-radius:var(--dsw-radius-sm)}.EvIC1a_hint{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_running{--dsh-chat-flow-gap:12px;--dsw-alias-label-shimmer:var(--dsw-alias-label-deep-diving-shimmer);color:var(--dsw-alias-label-deep-diving);font-size:calc(var(--dsh-content-font-size,14px) - 2px);line-height:calc(22px + var(--dsh-content-font-delta,0px));flex-direction:column;align-items:flex-start;display:flex}:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>:nth-last-child(2 of :not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty)))):is(.EvIC1a_flowItem:not([data-chat-flow-kind=user]):not([data-chat-flow-kind=steering]):not([data-chat-flow-kind=turn-trigger]),[data-chat-group-key])~.EvIC1a_running>.EvIC1a_runningDivider{display:block}.EvIC1a_runningDivider{background:color-mix(in srgb, var(--dsw-alias-border-l1) 75%, var(--dsw-alias-border-l2));pointer-events:none;width:100%;height:.5px;margin:8px 0 10px;display:none}.EvIC1a_runningContent{align-items:center;gap:6px;min-width:0;display:inline-flex}.EvIC1a_runningText{font-variant-numeric:tabular-nums;min-width:0}.EvIC1a_runningIcon{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px));contain:strict;flex:none;display:inline-flex;position:relative;overflow:hidden}.EvIC1a_runningWhaleAnimated{display:none;position:absolute;inset:0}.EvIC1a_runningWhaleStill{display:initial}@supports (mask-mode:alpha) and (mask-image:url('')){@media (prefers-reduced-motion:no-preference) and (forced-colors:none){.EvIC1a_runningWhaleAnimated{will-change:transform;background:currentColor;display:block;mask:url(data:image/png;base64,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) 50%/100% 100% no-repeat alpha}.EvIC1a_runningWhaleStill{display:none}}}.EvIC1a_openError{color:var(--dsw-alias-state-error-primary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_older{justify-content:center;display:flex}.EvIC1a_older button{border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover-solid);cursor:pointer;border:none;padding:4px 12px;font-size:12px}.EvIC1a_older button:disabled{cursor:default;opacity:.6}.EvIC1a_toBottomSlot{z-index:8;height:0;padding-right:max(calc(var(--dsh-composer-side-clearance) + 16px), calc((100% - var(--dsh-chat-content-width)) / 2));pointer-events:none;justify-content:flex-end;display:flex;position:absolute;bottom:16px;left:0;right:0}[data-conversation-scroll] .EvIC1a_toBottomSlot{bottom:calc(var(--dsh-composer-height,152px) + 16px);position:sticky}.EvIC1a_toBottom{--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);corner-shape:round;width:34px;height:34px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-button-floating-fill);box-shadow:var(--dsw-elevation-panel);cursor:pointer;pointer-events:auto;border:0;border-radius:100px;justify-content:center;align-items:center;margin-top:-34px;padding:0;display:flex}.EvIC1a_toBottom:hover{background:var(--dsw-alias-button-floating-hover)}.EvIC1a_modalAction{min-width:72px}";
+		const css$16 = ".EvIC1a_frame{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;container-type:inline-size}.EvIC1a_root{flex-direction:column;flex:auto;min-height:0;display:flex;position:relative;overflow:visible clip}.EvIC1a_scroll{min-height:0;padding:16px calc(var(--dsh-composer-side-clearance) + 16px);flex:auto;overflow:clip auto;container-type:inline-size}.EvIC1a_root[data-chat-following-tail] .EvIC1a_scroll,[data-conversation-scroll]:has(.EvIC1a_root[data-chat-following-tail]){overflow-anchor:none}[data-conversation-scroll] .EvIC1a_frame,[data-conversation-scroll] .EvIC1a_root{flex:none;height:auto;min-height:auto}[data-conversation-scroll] .EvIC1a_scroll{flex:none;min-height:auto;overflow:clip visible}.EvIC1a_column{max-width:var(--dsh-chat-content-width);flex-direction:column;width:100%;margin:0 auto;display:flex;position:relative}:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>:not([hidden]):not(.EvIC1a_textInteraction):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty)))~:not([hidden]):not(.EvIC1a_textInteraction):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))),.EvIC1a_column>.EvIC1a_older+[data-slot=\"conversation.chat.flow\"]>:not([hidden]):not(.EvIC1a_textInteraction):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))){margin-top:var(--dsh-chat-flow-gap,4px)}.EvIC1a_flowItem[data-chat-group-part=response],:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>[data-chat-group-part=response]:not([hidden]):not(:empty)+:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))):not(.EvIC1a_running):not(:has(>[data-slot=\"conversation.chat.node\"]>[data-chat-steering-batch])){--dsh-chat-flow-gap:12px}.EvIC1a_flowItem{min-width:0}.EvIC1a_turnSpacer{height:0}.EvIC1a_column[data-chat-motion]>:not([data-chat-motion]),.EvIC1a_column[data-chat-motion]>[data-slot=\"conversation.chat.flow\"]>:not([data-chat-motion]){transition:margin-top .16s cubic-bezier(.4,0,.2,1)}.EvIC1a_column[data-input-fold]>:not([data-chat-motion]),.EvIC1a_column[data-input-fold]>[data-slot=\"conversation.chat.flow\"]>:not([data-chat-motion]){transition:none}.EvIC1a_column[data-chat-motion]>[data-chat-flow-kind=turn-process],.EvIC1a_column[data-chat-motion]>[data-slot=\"conversation.chat.flow\"]>[data-chat-flow-kind=turn-process]{transition:none}@media (prefers-reduced-motion:reduce){.EvIC1a_column[data-chat-motion]>:not([data-chat-motion]),.EvIC1a_column[data-chat-motion]>[data-slot=\"conversation.chat.flow\"]>:not([data-chat-motion]){transition:none}}.EvIC1a_flowItem[data-chat-flow-kind=turn-process],:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>[data-chat-flow-kind=turn-process]:not(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))+:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))):not(.EvIC1a_running):not(:has(>[data-slot=\"conversation.chat.node\"]>[data-chat-steering-batch])),:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>[data-chat-flow-kind=turn-process]+:not([hidden]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty))):not(.EvIC1a_running):not([data-submission-echo],[data-pending-steering]):not(:has(>[data-slot=\"conversation.chat.node\"]>[data-chat-steering-batch])){--dsh-chat-flow-gap:16px}:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>.EvIC1a_flowItem:has(>[data-slot=\"conversation.chat.node\"]>[data-chat-steering-batch=start]){--dsh-chat-flow-gap:calc(44px + var(--dsh-content-font-delta,0px))}.EvIC1a_running+[data-pending-steering]{--dsh-chat-flow-gap:0px}.EvIC1a_flowItem[data-chat-flow-kind=turn-tail]+.EvIC1a_running{display:none}@media (prefers-reduced-motion:no-preference){:where(.EvIC1a_column>[data-slot=\"conversation.chat.flow\"]>.EvIC1a_flowItem[data-chat-flow-kind=steering])+.EvIC1a_running{animation:.14s cubic-bezier(.2,.8,.2,1) EvIC1a_running-enters-slot}.EvIC1a_column[data-input-fold] .EvIC1a_running{animation-duration:0s}}@keyframes EvIC1a_running-enters-slot{0%{opacity:0;translate:0 calc(-44px - var(--dsh-content-font-delta,0px))}40%{opacity:1}}.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty)){height:0}.EvIC1a_callRow{border-radius:var(--dsw-radius-sm)}.EvIC1a_hint{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_running{--dsh-chat-flow-gap:12px;--dsw-alias-label-shimmer:var(--dsw-alias-label-deep-diving-shimmer);color:var(--dsw-alias-label-deep-diving);font-size:calc(var(--dsh-content-font-size,14px) - 2px);line-height:calc(22px + var(--dsh-content-font-delta,0px));flex-direction:column;align-items:flex-start;display:flex;position:relative}.EvIC1a_running[data-holding]{visibility:hidden;opacity:0}:is(.EvIC1a_column,[data-slot=\"conversation.chat.flow\"])>:nth-last-child(2 of :not([hidden]):not([data-pending-steering]):not(.EvIC1a_flowItem:is(:empty,:has(>[data-slot=\"conversation.chat.node\"]:empty)))):is(.EvIC1a_flowItem:not([data-chat-flow-kind=user]):not([data-chat-flow-kind=steering]):not([data-chat-flow-kind=turn-trigger]),[data-chat-group-key])~.EvIC1a_running>.EvIC1a_runningDivider{opacity:1}.EvIC1a_runningDivider{background:color-mix(in srgb, var(--dsw-alias-border-l1) 75%, var(--dsw-alias-border-l2));opacity:0;pointer-events:none;height:.5px;position:absolute;top:-4px;left:0;right:0}@media (prefers-reduced-motion:no-preference){.EvIC1a_runningDivider{transition:opacity .16s}}.EvIC1a_runningContent{min-width:0;height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:6px;margin-top:4px;display:inline-flex}.EvIC1a_runningText{font-variant-numeric:tabular-nums;min-width:0}.EvIC1a_runningIcon{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px));contain:strict;flex:none;display:inline-flex;position:relative;overflow:hidden}.EvIC1a_runningWhaleAnimated{display:none;position:absolute;inset:0}.EvIC1a_runningWhaleStill{display:initial}@supports (mask-mode:alpha) and (mask-image:url('')){@media (prefers-reduced-motion:no-preference) and (forced-colors:none){.EvIC1a_runningWhaleAnimated{will-change:transform;background:currentColor;display:block;mask:url(" + require.asset("plugins/@deepseek-ai/dsh-client-ui-chat/assets/running-whale%402x-06738fa29b2f.png") + ") 50%/100% 100% no-repeat alpha}.EvIC1a_runningWhaleStill{display:none}}}.EvIC1a_openError{color:var(--dsw-alias-state-error-primary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.EvIC1a_older{justify-content:center;display:flex}.EvIC1a_older button{border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover-solid);cursor:pointer;border:none;padding:4px 12px;font-size:12px}.EvIC1a_older button:disabled{cursor:default;opacity:.6}.EvIC1a_toBottomSlot{z-index:8;height:0;padding-right:max(calc(var(--dsh-composer-side-clearance) + 16px), calc((100% - var(--dsh-chat-content-width)) / 2));pointer-events:none;justify-content:flex-end;display:flex;position:absolute;bottom:16px;left:0;right:0}[data-conversation-scroll] .EvIC1a_toBottomSlot{bottom:calc(var(--dsh-composer-height,152px) + 16px);position:sticky}.EvIC1a_toBottom{--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);corner-shape:round;width:34px;height:34px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-button-floating-fill);box-shadow:var(--dsw-elevation-panel);cursor:pointer;pointer-events:auto;border:0;border-radius:100px;justify-content:center;align-items:center;margin-top:-34px;padding:0;display:flex}@media (hover:hover){.EvIC1a_toBottom:hover{background:var(--dsw-alias-button-floating-hover)}}.EvIC1a_modalAction{min-width:72px}.EvIC1a_column>.EvIC1a_textInteraction{z-index:6;visibility:hidden;width:max-content;margin:0;position:absolute}";
 		const tagId$16 = "@deepseek-ai/dsh-client-ui-chat/ChatView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$16) + "]") === null) {
 			const tag = document.createElement("style");
@@ -2664,6 +3370,7 @@ window.__ModuleLoader__.load({
 			"openError": "EvIC1a_openError",
 			"root": "EvIC1a_root",
 			"running": "EvIC1a_running",
+			"running-enters-slot": "EvIC1a_running-enters-slot",
 			"runningContent": "EvIC1a_runningContent",
 			"runningDivider": "EvIC1a_runningDivider",
 			"runningIcon": "EvIC1a_runningIcon",
@@ -2671,6 +3378,7 @@ window.__ModuleLoader__.load({
 			"runningWhaleAnimated": "EvIC1a_runningWhaleAnimated",
 			"runningWhaleStill": "EvIC1a_runningWhaleStill",
 			"scroll": "EvIC1a_scroll",
+			"textInteraction": "EvIC1a_textInteraction",
 			"toBottom": "EvIC1a_toBottom",
 			"toBottomSlot": "EvIC1a_toBottomSlot",
 			"turnSpacer": "EvIC1a_turnSpacer"
@@ -2709,7 +3417,41 @@ window.__ModuleLoader__.load({
 		* The chat view slot entry: pure component over the composed props; each
 		* ordered business Node crosses the keyed renderer seat.
 		*/
-		function ChatView({ useSession, useChat, useConversation, useSessions, renderSlot, sessionId, openFile, openExternalLink, loadOlder, loadThrough, loadImage, inspectCall, chatScroll, forkAt, fileMentions, usePresentation, useProjection, t }) {
+		function ChatView({ useSession, useChat, useConversation, useSessions, renderSlot, sessionId, openFile, openExternalLink, resolveFilePath, useContextMenu, loadOlder, loadThrough, loadImage, inspectCall, chatScroll, forkAt, usePresentation, useProjection, useInteractionIds, dispatchInteraction, t, fileDrag }) {
+			const { getTriggerProps } = useContextMenu();
+			const getMarkdownTriggerProps = (0, react.useCallback)((target) => getTriggerProps(() => {
+				switch (target.kind) {
+					case "file": return {
+						kind: "file",
+						value: {
+							sessionId,
+							path: resolveFilePath(target.path),
+							...target.line === void 0 ? {} : { line: target.line }
+						}
+					};
+					case "url": return {
+						kind: "url",
+						value: {
+							sessionId,
+							url: target.url
+						}
+					};
+					case "image": return {
+						kind: "image",
+						value: {
+							sessionId,
+							url: target.url,
+							...target.name === void 0 ? {} : { name: target.name },
+							...target.mediaType === void 0 ? {} : { mediaType: target.mediaType },
+							...target.path === void 0 ? {} : { path: resolveFilePath(target.path) }
+						}
+					};
+				}
+			}), [
+				getTriggerProps,
+				resolveFilePath,
+				sessionId
+			]);
 			const order = useChat((s) => s.order);
 			const groupedEntries = useConversation((snapshot) => snapshot.views.grouped("chat")?.entries);
 			const entries = (0, react.useMemo)(() => groupedEntries ?? order.map((key) => ({
@@ -2725,7 +3467,9 @@ window.__ModuleLoader__.load({
 			const inbox = useProjection("inbox");
 			const cwd = useSessions((s) => s.byId[sessionId]?.cwd);
 			const fileImages = (0, react.useMemo)(() => ({
+				fileDrag,
 				resolve: (path) => fileMediaUrl(document.baseURI, resolveWorkspacePath(cwd, path)),
+				resourceAddress: (path) => sessionFileAddress(sessionId, resolveWorkspacePath(cwd, path)),
 				labels: {
 					open: t("image.open"),
 					loading: t("image.loading"),
@@ -2733,7 +3477,12 @@ window.__ModuleLoader__.load({
 					dialog: t("image.dialog"),
 					close: t("image.close")
 				}
-			}), [cwd, t]);
+			}), [
+				cwd,
+				t,
+				fileDrag,
+				sessionId
+			]);
 			const running = useSession((s) => s.running);
 			const [motionTail, setMotionTail] = (0, react.useState)(false);
 			(0, react.useEffect)(() => {
@@ -2828,9 +3577,13 @@ window.__ModuleLoader__.load({
 				lastIsUser: lastKey !== null && nodeStore.get(lastKey)?.kind === "user",
 				steeringId,
 				submissionId: visibleSubmissions.at(-1)?.requestId ?? null,
+				submissionSteers: visibleSubmissions.at(-1)?.placement === "steering",
 				loadedTurns: turnNavigationItems,
 				transcriptView
 			});
+			const interactionSurfaceRef = (0, react.useRef)(null);
+			const interactionIds = useInteractionIds((ids) => ids);
+			const textInteraction = useTextInteraction(scroll.columnRef, interactionSurfaceRef, dispatchInteraction, interactionIds);
 			const flowContext = (0, react.useMemo)(() => ({ motion: scroll.motion }), [scroll.motion]);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: ChatView_module_css_default.frame,
@@ -2875,6 +3628,7 @@ window.__ModuleLoader__.load({
 										})
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownDelegateProvider, {
+										getTriggerProps: getMarkdownTriggerProps,
 										openFile: requestOpenFile,
 										openExternalLink,
 										fileImages,
@@ -2887,9 +3641,20 @@ window.__ModuleLoader__.load({
 											openFile: requestOpenFile,
 											inspectCall,
 											forkAt,
-											loadImage,
-											fileMentions
+											loadImage
 										}, { hookContext: flowContext })
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										ref: interactionSurfaceRef,
+										className: ChatView_module_css_default.textInteraction,
+										"data-text-interaction-surface": "",
+										"aria-hidden": textInteraction.active === null,
+										children: textInteraction.active !== null && renderSlot("conversation.chat.text-interaction", {
+											trigger: textInteraction.active.trigger,
+											readText: textInteraction.readText,
+											dismiss: textInteraction.dismiss,
+											clearSelection: textInteraction.clearSelection
+										}, { entryKey: textInteraction.active.id })
 									})
 								]
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -3598,6 +4363,21 @@ window.__ModuleLoader__.load({
 			throw new Error(`unreachable variant${context ? ` in ${context}` : ""}: ${rendered}`);
 		}
 		//#endregion
+		//#region src/client/contract/assistant-content.ts
+		/**
+		* Test whether Assistant blocks contain a user-facing reply rather than only
+		* reasoning or Tool-call protocol material.
+		* @param blocks - Assistant content blocks.
+		* @returns whether the blocks contain visible reply content.
+		*/
+		function hasAssistantReplyContent(blocks) {
+			return blocks.some((block) => {
+				if (block.kind === "reasoning" || block.kind === "tool-call") return false;
+				if (block.kind === "text") return block.text.trim() !== "";
+				return true;
+			});
+		}
+		//#endregion
 		//#region src/client/contract/turn-process.ts
 		/**
 		* Compare immutable Turn-process specifications by their published fields.
@@ -3690,7 +4470,7 @@ window.__ModuleLoader__.load({
 		* Policy reads select this seat's own conclusion, so a mode change re-renders
 		* only seats whose visibility actually changes.
 		*/
-		const ChatNodeSeat = (0, react.memo)(function ChatNodeSeat({ nodeKey, groupPart, useChatNode, useChatNodeProcess, usePresentation, cwd, openFile, inspectCall, forkAt, loadImage, fileMentions, useStore, actions, renderSlot, t, useChatNodeBottom, deferCollapse, useGroupAction }) {
+		const ChatNodeSeat = (0, react.memo)(function ChatNodeSeat({ nodeKey, groupPart, useChatNode, useChatNodeProcess, usePresentation, cwd, openFile, inspectCall, forkAt, loadImage, useStore, actions, renderSlot, t, useChatNodeBottom, deferCollapse, useGroupAction }) {
 			const bottom = useChatNodeBottom(nodeKey);
 			const node = useChatNode(nodeKey);
 			const routedNode = node;
@@ -3710,28 +4490,30 @@ window.__ModuleLoader__.load({
 				alwaysOpen
 			]);
 			const foldCompleted = usePresentation((policy) => policy.foldCompletedTurns);
+			const keepReplies = usePresentation((policy) => policy.foldedReplies === "all");
 			const processWindowReady = processSpec !== void 0 && processPresentation !== void 0 && foldCompleted && processPresentation.turn === processSpec.turn && (processPresentation.turnStarted || processPresentation.turnClosed);
-			const processMember = routedNode !== void 0 && processWindowReady && !isAtOrOutside(routedNode, "turn") && routedNode.anchorSeq >= processSpec.processStartSeq && (liveProcess || processSpec.answerAnchorSeq === null || routedNode.anchorSeq < processSpec.answerAnchorSeq || groupPart === "reasoning" && routedNode.kind === "assistant-step" && routedNode.data.step === processSpec.answerStep);
+			const replyRow = keepReplies && routedNode?.kind === "assistant-step" && groupPart !== "reasoning" && hasAssistantReplyContent(routedNode.data.blocks);
+			const processMember = routedNode !== void 0 && processWindowReady && !replyRow && !isAtOrOutside(routedNode, "turn") && routedNode.anchorSeq >= processSpec.processStartSeq && (liveProcess || processSpec.answerAnchorSeq === null || routedNode.anchorSeq < processSpec.answerAnchorSeq || groupPart === "reasoning" && routedNode.kind === "assistant-step" && routedNode.data.step === processSpec.answerStep);
 			const processAnswer = routedNode !== void 0 && processWindowReady && !liveProcess && groupPart !== "reasoning" && routedNode.kind === "assistant-step" && routedNode.data.step === processSpec.answerStep;
-			const ownsDisclosure = routedNode?.kind === "turn-process" || processAnswer;
+			const ownsDisclosure = routedNode?.kind === "turn-process" || processAnswer || replyRow;
 			const foldable = processWindowReady && (liveProcess || processMember || ownsDisclosure);
 			const turnProcess = (0, react.useMemo)(() => processSpec === void 0 ? void 0 : {
 				spec: processSpec,
 				foldable,
-				hasContent: !interleavedInput && (processPresentation?.hasExternalProcess === true || processSpec.inlineReasoning),
+				hasContent: !interleavedInput && (processSpec.inlineReasoning || (keepReplies ? processPresentation?.hasNonReplyProcess === true : processPresentation?.hasExternalProcess === true)),
 				open: processOpen,
 				setOpen
 			}, [
 				foldable,
 				interleavedInput,
+				keepReplies,
 				processOpen,
 				processSpec,
 				processPresentation?.hasExternalProcess,
+				processPresentation?.hasNonReplyProcess,
 				setOpen
 			]);
-			const controllerInactive = routedNode?.kind === "turn-process" && foldCompleted && !foldable;
-			const compactAnswer = processAnswer && foldable && processPresentation.compactAnswer && !processOpen;
-			const processHidden = controllerInactive || foldable && processMember && !processOpen;
+			const processHidden = routedNode?.kind === "turn-process" && foldCompleted && !foldable || foldable && processMember && !processOpen;
 			const wrapperRef = useGroupAction(processHidden, (0, react.useCallback)(() => {
 				if (processMember) setOpen(true);
 			}, [processMember, setOpen]));
@@ -3753,7 +4535,6 @@ window.__ModuleLoader__.load({
 				inspectCall,
 				forkAt,
 				loadImage,
-				fileMentions,
 				turnProcess
 			}, [
 				node,
@@ -3763,7 +4544,6 @@ window.__ModuleLoader__.load({
 				inspectCall,
 				forkAt,
 				loadImage,
-				fileMentions,
 				turnProcess
 			]);
 			if (routedNode === void 0 || owner === null) return null;
@@ -3784,7 +4564,6 @@ window.__ModuleLoader__.load({
 				"data-chat-turn": turn,
 				"data-turn-process-member": processMember || void 0,
 				"data-turn-process-hidden": processHidden || void 0,
-				"data-turn-process-answer": compactAnswer || void 0,
 				children: renderSlot("conversation.chat.node", routedOwner, {
 					entryKey: routedNode.kind,
 					hookContext,
@@ -3878,7 +4657,7 @@ window.__ModuleLoader__.load({
 			canScrollUp: false,
 			canScrollDown: false
 		};
-		const SCROLL_KEYS = new Set([
+		const SCROLL_KEYS = /* @__PURE__ */ new Set([
 			"ArrowUp",
 			"ArrowDown",
 			"PageUp",
@@ -3985,7 +4764,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/ChatGroupSeat.module.css.mjs
-		const css$15 = ".O_Ebla_root{min-width:0}.O_Ebla_title{max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex}.O_Ebla_title:hover{color:var(--dsw-alias-label-secondary)}.O_Ebla_leading{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px));color:inherit;flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative}.O_Ebla_leading svg{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px))}.O_Ebla_leading svg[width=\"16\"]{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px))}.O_Ebla_activityIcon,.O_Ebla_chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0}.O_Ebla_activityIcon{opacity:1}.O_Ebla_chevron,.O_Ebla_title:is(:hover,:focus-visible) .O_Ebla_activityIcon{opacity:0}.O_Ebla_title:is(:hover,:focus-visible) .O_Ebla_chevron{opacity:1}.O_Ebla_title[aria-expanded=true] .O_Ebla_activityIcon{opacity:0}.O_Ebla_title[aria-expanded=true] .O_Ebla_chevron{opacity:1}.O_Ebla_title[aria-expanded=true]{padding-bottom:8px}.O_Ebla_body{--dsh-chat-flow-gap:6px;overscroll-behavior-y:auto;scrollbar-gutter:stable;max-height:min(400px,50vh);position:relative;overflow-y:auto}.O_Ebla_label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.O_Ebla_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.O_Ebla_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.O_Ebla_fadeTop.O_Ebla_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}@media (prefers-reduced-motion:reduce){.O_Ebla_title,.O_Ebla_activityIcon,.O_Ebla_chevron{transition:none}}.O_Ebla_content{flex-direction:column;display:flex}.O_Ebla_content>*{flex-shrink:0}.O_Ebla_content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,6px)}.O_Ebla_expandedBody{scrollbar-gutter:auto;max-height:none;overflow:visible}[data-chat-motion] .O_Ebla_content>:not([data-chat-motion]){transition:margin-top .16s cubic-bezier(.4,0,.2,1)}@media (prefers-reduced-motion:reduce){[data-chat-motion] .O_Ebla_content>:not([data-chat-motion]){transition:none}}.O_Ebla_count{color:var(--dsw-alias-label-tertiary);flex:none;font-size:11px}";
+		const css$15 = ".O_Ebla_root{min-width:0}.O_Ebla_title{max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:var(--dsh-content-font-size,14px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex}@media (hover:hover){.O_Ebla_title:hover{color:var(--dsw-alias-label-secondary)}}.O_Ebla_leading{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px));color:inherit;flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative}.O_Ebla_leading svg{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px))}.O_Ebla_leading svg[width=\"16\"]{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px))}.O_Ebla_activityIcon,.O_Ebla_chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0}.O_Ebla_activityIcon{opacity:1}.O_Ebla_chevron,.O_Ebla_title:focus-visible .O_Ebla_activityIcon{opacity:0}@media (hover:hover){.O_Ebla_title:hover .O_Ebla_activityIcon{opacity:0}}.O_Ebla_title:focus-visible .O_Ebla_chevron{opacity:1}@media (hover:hover){.O_Ebla_title:hover .O_Ebla_chevron{opacity:1}}.O_Ebla_title[aria-expanded=true] .O_Ebla_activityIcon{opacity:0}.O_Ebla_title[aria-expanded=true] .O_Ebla_chevron{opacity:1}.O_Ebla_title[aria-expanded=true]{padding-bottom:8px}.O_Ebla_body{--dsh-chat-flow-gap:4px;overscroll-behavior-y:auto;scrollbar-gutter:stable;max-height:min(400px,50vh);position:relative;overflow-y:auto}.O_Ebla_label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.O_Ebla_fadeTop{mask-image:linear-gradient(#0000 0,#000 24px 100%)}.O_Ebla_fadeBottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%)}.O_Ebla_fadeTop.O_Ebla_fadeBottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%)}@media (prefers-reduced-motion:reduce){.O_Ebla_title,.O_Ebla_activityIcon,.O_Ebla_chevron{transition:none}}.O_Ebla_content{flex-direction:column;display:flex}.O_Ebla_content>*{flex-shrink:0}.O_Ebla_content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,4px)}.O_Ebla_expandedBody{scrollbar-gutter:auto;max-height:none;overflow:visible}[data-chat-motion] .O_Ebla_content>:not([data-chat-motion]){transition:margin-top .16s cubic-bezier(.4,0,.2,1)}@media (prefers-reduced-motion:reduce){[data-chat-motion] .O_Ebla_content>:not([data-chat-motion]){transition:none}}.O_Ebla_count{color:var(--dsw-alias-label-tertiary);flex:none;font-size:11px}";
 		const tagId$15 = "@deepseek-ai/dsh-client-ui-chat/ChatGroupSeat.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$15) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4199,8 +4978,11 @@ window.__ModuleLoader__.load({
 				open,
 				setOpen
 			]);
+			const shownCap = !grouped ? false : open ? true : void 0;
+			const [closingCap, setClosingCap] = (0, react.useState)(shownCap ?? true);
+			if (shownCap !== void 0 && shownCap !== closingCap) setClosingCap(shownCap);
 			if (members === void 0) return null;
-			const capped = grouped && (!deferCompletedTurns || open);
+			const capped = grouped && (!deferCompletedTurns || (shownCap ?? closingCap));
 			const classes = [
 				ChatGroupSeat_module_css_default.body,
 				!capped ? ChatGroupSeat_module_css_default.expandedBody : "",
@@ -4276,7 +5058,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/MessageItem.module.css.mjs
-		const css$14 = ".Sixlwa_userRow{flex-direction:column;align-items:flex-end;gap:6px;display:flex}.Sixlwa_userStack{min-width:0;max-width:min(calc(var(--dsh-chat-content-width,748px) * .702), 82%);flex-direction:column;align-items:flex-end;gap:8px;display:flex}.Sixlwa_bubble{background:var(--dsw-specific-bubble);border-radius:var(--dsw-radius-xl);max-width:100%;font-size:var(--dsh-content-font-size,14px);line-height:calc(22px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-primary);white-space:pre-wrap;word-break:break-word;padding:10px 16px}.Sixlwa_referenceSummary{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.Sixlwa_contextRow{padding:2px 0}.Sixlwa_compactionRow{--dsh-compaction-header-height:calc(24px + var(--dsh-content-font-delta,0px));padding:2px 0}.Sixlwa_compactionButton{width:100%;height:var(--dsh-compaction-header-height);border-radius:var(--dsw-radius-sm);min-width:0;color:var(--dsw-alias-label-tertiary);font:inherit;text-align:left;background:0 0;border:none;align-items:center;padding:0;transition:color .1s;display:flex}.Sixlwa_compactionRow:has(.Sixlwa_compactionBody) .Sixlwa_compactionButton{z-index:7;background:var(--dsw-alias-bg-base);border-radius:0;position:sticky;top:0}.Sixlwa_compactionBody :has(>[data-code-block-banner]){top:var(--dsh-compaction-header-height)}.Sixlwa_compactionRow:has(.Sixlwa_compactionBody) .Sixlwa_compactionButton:hover{background:var(--dsw-alias-interactive-bg-hover-solid)}.Sixlwa_compactionButton:not(:disabled){cursor:pointer}.Sixlwa_compactionButton:hover{color:var(--dsw-alias-label-secondary)}.Sixlwa_compactionButton:not(:disabled):hover{background:var(--dsw-alias-interactive-bg-hover)}.Sixlwa_compactionLeading{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px));color:inherit;flex:none;place-items:center;margin-right:6px;display:inline-grid}.Sixlwa_compactionLeading svg{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px))}.Sixlwa_compactionContextIcon,.Sixlwa_compactionDisclosureIcon{grid-area:1/1;justify-content:center;align-items:center;display:inline-flex}.Sixlwa_compactionDisclosureIcon,.Sixlwa_compactionButton:not(:disabled):hover .Sixlwa_compactionContextIcon,.Sixlwa_compactionButton:not(:disabled):focus-visible .Sixlwa_compactionContextIcon{opacity:0}.Sixlwa_compactionButton:not(:disabled):hover .Sixlwa_compactionDisclosureIcon,.Sixlwa_compactionButton:not(:disabled):focus-visible .Sixlwa_compactionDisclosureIcon{opacity:1}.Sixlwa_compactionTitle{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:inherit;flex:none}.Sixlwa_compactionSep{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.Sixlwa_compactionSummary{min-width:0;color:inherit;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:auto;overflow:hidden}.Sixlwa_compactionBody{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px))}.Sixlwa_retryRow{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px))}.Sixlwa_retrySummary{border-radius:var(--dsw-radius-sm);width:fit-content;max-width:100%;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex}.Sixlwa_retrySummary::-webkit-details-marker{display:none}.Sixlwa_retrySummary:after{content:\"\";border-bottom:1.5px solid;border-right:1.5px solid;flex:none;width:6px;height:6px;margin-right:2px;transition:transform .12s;transform:rotate(-45deg)}.Sixlwa_retrySummary:hover{color:var(--dsw-alias-label-secondary)}@media (prefers-reduced-motion:reduce){.Sixlwa_compactionButton{transition:none}}.Sixlwa_retrySummary:focus-visible{outline:1.5px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}.Sixlwa_retryText{overflow-wrap:anywhere;min-width:0}.Sixlwa_retryRow[open] .Sixlwa_retrySummary:after{transform:rotate(45deg)}.Sixlwa_retryDetails{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid}.Sixlwa_retryDetailLabel{color:var(--dsw-alias-label-secondary)}.Sixlwa_turnErrorRow{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid}.Sixlwa_turnErrorDot{margin-top:5px}.Sixlwa_turnErrorCopy{overflow-wrap:anywhere;min-width:0}.Sixlwa_turnErrorTitle{color:var(--dsw-alias-state-error-primary);margin-right:6px;font-weight:600}.Sixlwa_turnErrorMessage{color:var(--dsw-alias-label-secondary)}.Sixlwa_turnErrorCode{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-markdown-code-block-small)}.Sixlwa_maxTokensTitle{color:var(--dsw-alias-state-warn-primary);margin-right:6px;font-weight:600}.Sixlwa_attachmentRow{flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:100%;display:flex}.Sixlwa_fileCard{border:.5px solid var(--dsw-alias-border-l2,#0000001f);border-radius:var(--dsw-radius-lg);background:var(--dsw-specific-input-major,transparent);box-sizing:border-box;flex:0 0 240px;align-items:center;gap:10px;width:240px;min-height:64px;padding:8px 12px;display:inline-flex}.Sixlwa_fileIcon{flex:none;width:28px;height:28px}.Sixlwa_fileContent{flex-direction:column;flex:1;min-width:0;display:flex}.Sixlwa_fileName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px;overflow:hidden}.Sixlwa_fileMeta{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-tertiary,#00000073);font-size:12px;line-height:15px;overflow:hidden}";
+		const css$14 = ".Sixlwa_userRow{flex-direction:column;align-items:flex-end;gap:6px;display:flex}.Sixlwa_userStack{min-width:0;max-width:min(calc(var(--dsh-chat-content-width,748px) * .702), 82%);flex-direction:column;align-items:flex-end;gap:8px;display:flex}.Sixlwa_referenceSummary{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px))}.Sixlwa_contextRow{padding:2px 0}.Sixlwa_compactionRow{--dsh-compaction-header-height:calc(24px + var(--dsh-content-font-delta,0px));padding:2px 0}.Sixlwa_compactionButton{width:100%;height:var(--dsh-compaction-header-height);border-radius:var(--dsw-radius-sm);min-width:0;color:var(--dsw-alias-label-tertiary);font:inherit;text-align:left;background:0 0;border:none;align-items:center;padding:0;transition:color .1s;display:flex}.Sixlwa_compactionRow:has(.Sixlwa_compactionBody) .Sixlwa_compactionButton{z-index:7;background:var(--dsw-alias-bg-base);border-radius:0;position:sticky;top:0}.Sixlwa_compactionBody :has(>[data-code-block-banner]){top:var(--dsh-compaction-header-height)}@media (hover:hover){.Sixlwa_compactionRow:has(.Sixlwa_compactionBody) .Sixlwa_compactionButton:hover{background:var(--dsw-alias-interactive-bg-hover-solid)}}.Sixlwa_compactionButton:not(:disabled){cursor:pointer}@media (hover:hover){.Sixlwa_compactionButton:hover{color:var(--dsw-alias-label-secondary)}.Sixlwa_compactionButton:not(:disabled):hover{background:var(--dsw-alias-interactive-bg-hover)}}.Sixlwa_compactionLeading{width:calc(16px + var(--dsh-content-font-delta,0px));height:calc(16px + var(--dsh-content-font-delta,0px));color:inherit;flex:none;place-items:center;margin-right:6px;display:inline-grid}.Sixlwa_compactionLeading svg{width:calc(14px + var(--dsh-content-font-delta,0px));height:calc(14px + var(--dsh-content-font-delta,0px))}.Sixlwa_compactionContextIcon,.Sixlwa_compactionDisclosureIcon{grid-area:1/1;justify-content:center;align-items:center;display:inline-flex}.Sixlwa_compactionDisclosureIcon,.Sixlwa_compactionButton:not(:disabled):focus-visible .Sixlwa_compactionContextIcon{opacity:0}@media (hover:hover){.Sixlwa_compactionButton:not(:disabled):hover .Sixlwa_compactionContextIcon{opacity:0}}.Sixlwa_compactionButton:not(:disabled):focus-visible .Sixlwa_compactionDisclosureIcon{opacity:1}@media (hover:hover){.Sixlwa_compactionButton:not(:disabled):hover .Sixlwa_compactionDisclosureIcon{opacity:1}}.Sixlwa_compactionTitle{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:inherit;flex:none}.Sixlwa_compactionSep{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}.Sixlwa_compactionSummary{min-width:0;color:inherit;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;flex:auto;overflow:hidden}.Sixlwa_compactionBody{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px))}.Sixlwa_retryRow{color:var(--dsw-alias-label-tertiary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px))}.Sixlwa_retrySummary{border-radius:var(--dsw-radius-sm);width:fit-content;max-width:100%;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex}.Sixlwa_retrySummary::-webkit-details-marker{display:none}.Sixlwa_retrySummary:after{content:\"\";border-bottom:1.5px solid;border-right:1.5px solid;flex:none;width:6px;height:6px;margin-right:2px;transition:transform .12s;transform:rotate(-45deg)}@media (hover:hover){.Sixlwa_retrySummary:hover{color:var(--dsw-alias-label-secondary)}}@media (prefers-reduced-motion:reduce){.Sixlwa_compactionButton{transition:none}}.Sixlwa_retrySummary:focus-visible{outline:1.5px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}.Sixlwa_retryText{overflow-wrap:anywhere;min-width:0}.Sixlwa_retryRow[open] .Sixlwa_retrySummary:after{transform:rotate(45deg)}.Sixlwa_retryDetails{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid}.Sixlwa_retryDetailLabel{color:var(--dsw-alias-label-secondary)}.Sixlwa_turnErrorRow{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid}.Sixlwa_turnErrorDot{margin-top:5px}.Sixlwa_turnErrorCopy{overflow-wrap:anywhere;min-width:0}.Sixlwa_turnErrorTitle{color:var(--dsw-alias-state-error-primary);margin-right:6px;font-weight:600}.Sixlwa_turnErrorMessage{color:var(--dsw-alias-label-secondary)}.Sixlwa_turnErrorCode{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-markdown-code-block-small)}.Sixlwa_maxTokensTitle{color:var(--dsw-alias-state-warn-primary);margin-right:6px;font-weight:600}.Sixlwa_attachmentRow{flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:100%;display:flex}.Sixlwa_fileCard{border:.5px solid var(--dsw-alias-border-l2,#0000001f);border-radius:var(--dsw-radius-lg);background:var(--dsw-specific-input-major,transparent);box-sizing:border-box;flex:0 0 240px;align-items:center;gap:10px;width:240px;min-height:64px;padding:8px 12px;display:inline-flex}.Sixlwa_fileIcon{flex:none;width:28px;height:28px}.Sixlwa_fileContent{flex-direction:column;flex:1;min-width:0;display:flex}.Sixlwa_fileName{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px;overflow:hidden}.Sixlwa_fileMeta{white-space:nowrap;text-overflow:ellipsis;color:var(--dsw-alias-label-tertiary,#00000073);font-size:12px;line-height:15px;overflow:hidden}";
 		const tagId$14 = "@deepseek-ai/dsh-client-ui-chat/MessageItem.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$14) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4287,7 +5069,6 @@ window.__ModuleLoader__.load({
 		}
 		var MessageItem_module_css_default = {
 			"attachmentRow": "Sixlwa_attachmentRow",
-			"bubble": "Sixlwa_bubble",
 			"compactionBody": "Sixlwa_compactionBody",
 			"compactionButton": "Sixlwa_compactionButton",
 			"compactionContextIcon": "Sixlwa_compactionContextIcon",
@@ -5155,7 +5936,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/MessageIconActions.module.css.mjs
-		const css$11 = ".xzv4MW_actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex}.xzv4MW_timeStart{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);white-space:nowrap;padding-right:12px}.xzv4MW_timeEnd{font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:inherit;white-space:nowrap}.xzv4MW_endInfo{min-width:0;color:var(--dsw-alias-label-tertiary);align-items:center;gap:8px;margin-left:8px;display:inline-flex}@media (hover:hover){[data-actions-reveal=hover] .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])) .xzv4MW_actions{opacity:0;transition:opacity 80ms}[data-actions-reveal=hover]:hover .xzv4MW_actions,[data-actions-reveal=hover]:focus-within .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])):hover .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])):focus-within .xzv4MW_actions{opacity:1}}.xzv4MW_action{width:calc(28px + var(--dsh-content-font-delta,0px));height:calc(28px + var(--dsh-content-font-delta,0px));border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;justify-content:center;align-items:center;padding:6px;display:inline-flex}.xzv4MW_action svg{width:calc(15px + var(--dsh-content-font-delta,0px));height:calc(15px + var(--dsh-content-font-delta,0px))}.xzv4MW_actions[data-clock=end] .xzv4MW_action svg{width:calc(17px + var(--dsh-content-font-delta,0px));height:calc(17px + var(--dsh-content-font-delta,0px))}.xzv4MW_action:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.xzv4MW_action[data-unavailable]{cursor:default;opacity:.4}.xzv4MW_action[data-unavailable]:hover{color:var(--dsw-alias-label-tertiary);background:0 0}.xzv4MW_visuallyHidden{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}";
+		const css$11 = ".xzv4MW_actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex}.xzv4MW_timeStart{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary);white-space:nowrap;padding-right:12px}.xzv4MW_timeEnd{font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:inherit;white-space:nowrap}.xzv4MW_endInfo{min-width:0;color:var(--dsw-alias-label-tertiary);align-items:center;gap:8px;margin-left:8px;display:inline-flex}@media (hover:hover){[data-actions-reveal=hover] .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])) .xzv4MW_actions{opacity:0;transition:opacity 80ms}[data-actions-reveal=hover]:hover .xzv4MW_actions,[data-actions-reveal=hover]:focus-within .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])):hover .xzv4MW_actions,:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering]):has(~:is([data-chat-flow-kind=user],[data-chat-flow-kind=steering])):focus-within .xzv4MW_actions{opacity:1}}.xzv4MW_action{width:calc(28px + var(--dsh-content-font-delta,0px));height:calc(28px + var(--dsh-content-font-delta,0px));border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;justify-content:center;align-items:center;padding:6px;display:inline-flex}.xzv4MW_action svg{width:calc(15px + var(--dsh-content-font-delta,0px));height:calc(15px + var(--dsh-content-font-delta,0px))}.xzv4MW_actions[data-clock=end] .xzv4MW_action svg{width:calc(17px + var(--dsh-content-font-delta,0px));height:calc(17px + var(--dsh-content-font-delta,0px))}@media (hover:hover){.xzv4MW_action:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}}.xzv4MW_action[data-unavailable]{cursor:default;opacity:.4}@media (hover:hover){.xzv4MW_action[data-unavailable]:hover{color:var(--dsw-alias-label-tertiary);background:0 0}}.xzv4MW_visuallyHidden{clip:rect(0 0 0 0);white-space:nowrap;width:1px;height:1px;position:absolute;overflow:hidden}";
 		const tagId$11 = "@deepseek-ai/dsh-client-ui-chat/MessageIconActions.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$11) + "]") === null) {
 			const tag = document.createElement("style");
@@ -5182,30 +5963,7 @@ window.__ModuleLoader__.load({
 		function MessageIconActions({ text, time, clock, onBranch, branchUnavailable = false, className, extraActions, usageAction, t }) {
 			const day = useCalendarDay();
 			const reasonId = (0, react.useId)();
-			const [copied, setCopied] = (0, react.useState)(false);
-			const copyPending = (0, react.useRef)(false);
-			const copyTimer = (0, react.useRef)(null);
-			const copyEpoch = (0, react.useRef)(0);
-			(0, react.useEffect)(() => () => {
-				copyEpoch.current += 1;
-				copyPending.current = false;
-				if (copyTimer.current !== null) clearTimeout(copyTimer.current);
-			}, []);
-			const onCopy = (0, react.useCallback)(() => {
-				if (copied || copyPending.current) return;
-				const epoch = copyEpoch.current;
-				copyPending.current = true;
-				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(text).then((ok) => {
-					if (epoch !== copyEpoch.current) return;
-					copyPending.current = false;
-					if (!ok) return;
-					setCopied(true);
-					copyTimer.current = window.setTimeout(() => {
-						copyTimer.current = null;
-						setCopied(false);
-					}, 1e3);
-				});
-			}, [copied, text]);
+			const { copied, onCopy } = (0, _deepseek_ai_dsh_client_ui_primitives.useClipboardCopy)(text);
 			const clockEl = time === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 				className: clock === "start" ? MessageIconActions_module_css_default.timeStart : MessageIconActions_module_css_default.timeEnd,
 				children: formatMessageClock(time, t, day)
@@ -5230,6 +5988,7 @@ window.__ModuleLoader__.load({
 					onBranch !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 						label: branchUnavailable ? t("message.branchUnavailable") : t("message.branch"),
 						side: "bottom",
+						openOnClick: branchUnavailable,
 						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: MessageIconActions_module_css_default.action,
@@ -5395,8 +6154,15 @@ window.__ModuleLoader__.load({
 				})]
 			});
 		}
+		/** Pending and local-echo rows carry no durable source for the seat to elect. */
+		const UNDECORATED_ROW = {
+			kind: "user",
+			data: { source: null }
+		};
+		/** Occupant used by rows that do not own the message-source seat. */
+		const NO_MESSAGE_SOURCE = () => null;
 		/** Right-aligned bubble shared by user and steering rows. */
-		function UserStyleBubble({ content, loadImage, renderFactorySlot, actions, pending = false, echo = false, referenceLabels, skillNames, previewAttachments, facts: inputFacts = EMPTY_TEXT_FACTS, interactive = false }) {
+		function UserStyleBubble({ node, renderSlotChain, content, loadImage, renderFactorySlot, actions, pending = false, echo = false, batchStart = false, referenceLabels, skillNames, previewAttachments, facts: inputFacts = EMPTY_TEXT_FACTS, interactive = false }) {
 			const parts = (0, react.useMemo)(() => contentParts(content), [content]);
 			const prepared = (0, react.useMemo)(() => ({
 				text: parts.text,
@@ -5421,12 +6187,20 @@ window.__ModuleLoader__.load({
 				className: MessageItem_module_css_default.userRow,
 				"data-pending-steering": pending || void 0,
 				"data-submission-echo": echo || void 0,
-				children: [renderFactorySlot("conversation.chat.user.content", {
-					content: prepared,
-					loadImage,
-					facts,
-					interactive
-				}), actions?.(prepared.text)]
+				"data-chat-steering-batch": batchStart ? "start" : void 0,
+				children: [
+					renderSlotChain("conversation.chat.user.before", {
+						source: node.data.source,
+						kind: node.kind
+					}, { fallback: null }),
+					renderFactorySlot("conversation.chat.user.content", {
+						content: prepared,
+						loadImage,
+						facts,
+						interactive
+					}),
+					actions?.(prepared.text)
+				]
 			});
 		}
 		/**
@@ -5437,6 +6211,8 @@ window.__ModuleLoader__.load({
 		*/
 		function PendingSteeringBubble({ content, loadImage, renderFactorySlot, t }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UserStyleBubble, {
+				node: UNDECORATED_ROW,
+				renderSlotChain: NO_MESSAGE_SOURCE,
 				content,
 				renderFactorySlot,
 				loadImage,
@@ -5458,23 +6234,27 @@ window.__ModuleLoader__.load({
 		* @returns the echoed user bubble.
 		*/
 		function PendingSubmissionBubble({ submission, loadImage, renderFactorySlot, t }) {
+			const content = (0, react.useMemo)(() => submission.text === "" ? [] : [{
+				type: "text",
+				text: submission.text
+			}], [submission.text]);
+			const previewAttachments = (0, react.useMemo)(() => submission.attachments.map((attachment) => attachment.type === "image" ? {
+				type: "image",
+				image: { preview: {
+					url: attachment.value.previewUrl,
+					...attachment.value.name === void 0 ? {} : { name: attachment.value.name },
+					...attachment.value.width === void 0 ? {} : { width: attachment.value.width },
+					...attachment.value.height === void 0 ? {} : { height: attachment.value.height }
+				} }
+			} : {
+				type: "file",
+				file: attachment.value
+			}), [submission.attachments]);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UserStyleBubble, {
-				content: (0, react.useMemo)(() => submission.text === "" ? [] : [{
-					type: "text",
-					text: submission.text
-				}], [submission.text]),
-				previewAttachments: (0, react.useMemo)(() => submission.attachments.map((attachment) => attachment.type === "image" ? {
-					type: "image",
-					image: { preview: {
-						url: attachment.value.previewUrl,
-						...attachment.value.name === void 0 ? {} : { name: attachment.value.name },
-						...attachment.value.width === void 0 ? {} : { width: attachment.value.width },
-						...attachment.value.height === void 0 ? {} : { height: attachment.value.height }
-					} }
-				} : {
-					type: "file",
-					file: attachment.value
-				}), [submission.attachments]),
+				node: UNDECORATED_ROW,
+				renderSlotChain: NO_MESSAGE_SOURCE,
+				content,
+				previewAttachments,
 				renderFactorySlot,
 				loadImage,
 				pending: submission.placement === "steering",
@@ -5488,14 +6268,23 @@ window.__ModuleLoader__.load({
 				})
 			});
 		}
-		/** User and admitted-steering keyed Chat renderer. */
-		const UserMessageNodeView = (0, react.memo)(function UserMessageNodeView({ node, renderFactorySlot, loadImage, t }) {
+		/**
+		* Official user and admitted-steering keyed Chat renderer.
+		*
+		* Renders the durable-message chain seat directly above the bubble. The seat is
+		* declared by the `user` registration alone, so a steering row renders the same
+		* bubble without asking for it.
+		*/
+		const UserMessageNodeView = (0, react.memo)(function UserMessageNodeView({ node, renderFactorySlot, loadImage, renderSlotChain, t }) {
 			const data = node.data;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UserStyleBubble, {
+				node,
+				renderSlotChain,
 				content: data.content,
 				interactive: true,
 				renderFactorySlot,
 				loadImage,
+				batchStart: node.kind === "steering" && node.data.batchStart === true,
 				...data.referenceLabels === void 0 ? {} : { referenceLabels: data.referenceLabels },
 				...data.skillNames === void 0 ? {} : { skillNames: data.skillNames },
 				actions: (text) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MessageIconActions, {
@@ -5601,13 +6390,14 @@ window.__ModuleLoader__.load({
 		/** Running Turn clock isolated from the transcript's render cycle. */
 		/**
 		* Show live elapsed time after the current Turn's content without announcing ticks.
-		* @param props - Current Turn start time and localized copy.
-		* @returns the blue running indicator; mount only while the Session is running.
+		* @param props - Current Turn start time, pause state, and localized copy.
+		* @returns the blue running indicator; mount while the Session is running, or holding its slot hidden until the
+		* Turn's actions row replaces it.
 		*/
-		const RunningStatus = (0, react.memo)(function RunningStatus({ startTime, t }) {
+		const RunningStatus = (0, react.memo)(function RunningStatus({ startTime, paused, holding = false, t }) {
 			const [now, setNow] = (0, react.useState)(Date.now);
 			(0, react.useEffect)(() => {
-				if (startTime === void 0) return;
+				if (startTime === void 0 || paused || holding) return;
 				setNow(Date.now());
 				const timer = setInterval(() => {
 					setNow(Date.now());
@@ -5615,13 +6405,19 @@ window.__ModuleLoader__.load({
 				return () => {
 					clearInterval(timer);
 				};
-			}, [startTime]);
+			}, [
+				startTime,
+				paused,
+				holding
+			]);
 			const label = startTime === void 0 ? t("chat.deepDiving") : t("chat.deepDivingFor", { duration: formatRunDuration(Math.max(1e3, now - startTime), t).map((part) => part.text).join("") });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: ChatView_module_css_default.running,
 				"data-chat-running": true,
+				"data-holding": holding ? "" : void 0,
+				"aria-hidden": holding || void 0,
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					holding ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: accessibility_module_css_default.visuallyHidden,
 						role: "status",
 						"aria-live": "polite",
@@ -5635,7 +6431,7 @@ window.__ModuleLoader__.load({
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 						className: ChatView_module_css_default.runningContent,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RunningWhaleTail, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
-							active: true,
+							active: !holding,
 							className: ChatView_module_css_default.runningText,
 							children: label
 						})]
@@ -5646,14 +6442,29 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/chat/ChatFlow.tsx
 		/** Ordered Chat rows, local echoes, and running status share the flow slot's parent. */
+		/** Whether the echo is a local submission rather than a Host-pending steering item. */
+		function isLocalSubmission(item) {
+			return "requestId" in item;
+		}
+		/** Whether the echo is a local submission that opens a new Turn. */
+		function isTranscriptEcho(item) {
+			return isLocalSubmission(item) && item.placement === "transcript";
+		}
 		/** Render the flow without adding a DOM parent or changing keyed row positions. */
-		const ChatFlow = (0, react.memo)(function ChatFlow({ entries, pendingInputs, lastInputTurn, deferCollapse, useSession, useChat, useChatNode, useChatNodeBottom, useChatNodeProcess, useChatGroup, usePresentation, useStore, actions, renderSlot, renderFactorySlot, t, useGroupAction, useGroupHeaderAction, cwd, openFile, inspectCall, forkAt, loadImage, fileMentions }) {
+		const ChatFlow = (0, react.memo)(function ChatFlow({ entries, pendingInputs, lastInputTurn, deferCollapse, useSession, useChat, useChatNode, useChatNodeBottom, useChatNodeProcess, useChatGroup, usePresentation, useConnectionState, useStore, actions, renderSlot, renderFactorySlot, t, useGroupAction, useGroupHeaderAction, cwd, openFile, inspectCall, forkAt, loadImage }) {
 			const nodeStore = useChat((snapshot) => snapshot.nodes);
 			const running = useSession((snapshot) => snapshot.running);
-			const runningStartTime = useChatNode(useChat((snapshot) => snapshot.navigation.items().at(-1)?.anchorKey) ?? "", (node) => {
+			const disconnected = useConnectionState((state) => state === "disconnected" || state === "connecting");
+			const latestTurnAnchor = useChat((snapshot) => snapshot.navigation.items().at(-1)?.anchorKey);
+			const runningStartTime = useChatNode(latestTurnAnchor ?? "", (node) => {
 				const location = node?.location;
 				return location?.kind === "turn" || location?.kind === "step" ? location.turn.status === "open" ? location.turn.start?.time : void 0 : void 0;
 			});
+			const latestTurnOpen = useChatNode(latestTurnAnchor ?? "", (node) => {
+				const location = node?.location;
+				return (location?.kind === "turn" || location?.kind === "step") && location.turn.status === "open";
+			});
+			const holding = !running && latestTurnOpen;
 			const seatProps = {
 				nodeStore,
 				useChatNode,
@@ -5670,8 +6481,7 @@ window.__ModuleLoader__.load({
 				openFile,
 				inspectCall,
 				forkAt,
-				loadImage,
-				fileMentions
+				loadImage
 			};
 			const rows = entries.map((entry) => {
 				switch (entry.kind) {
@@ -5691,30 +6501,40 @@ window.__ModuleLoader__.load({
 					default: return assertNever$1(entry);
 				}
 			});
-			const pendingRows = pendingInputs.map((item) => "requestId" in item ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
-				submission: item,
-				loadImage,
-				renderFactorySlot,
-				t
-			}, item.requestId) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
-				content: item.content,
-				loadImage,
-				renderFactorySlot,
-				t
-			}, item.id));
+			const firstTranscript = pendingInputs.findIndex(isTranscriptEcho);
+			const leadingRows = [];
+			const openingRows = [];
+			const pendingRows = [];
+			for (const [index, item] of pendingInputs.entries()) {
+				const row = isLocalSubmission(item) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSubmissionBubble, {
+					submission: item,
+					loadImage,
+					renderFactorySlot,
+					t
+				}, item.requestId) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PendingSteeringBubble, {
+					content: item.content,
+					loadImage,
+					renderFactorySlot,
+					t
+				}, item.id);
+				if (index <= firstTranscript) leadingRows.push(row);
+				else if (isTranscriptEcho(item)) openingRows.push(row);
+				else pendingRows.push(row);
+			}
 			const tail = entries.at(-1);
 			const node = tail?.kind === "node" ? nodeStore.get(tail.key) : void 0;
-			if (node?.kind === "turn-process" && node.location.kind === "turn" && node.location.turn.status === "open" && node.location.turn.turn !== lastInputTurn) {
-				const index = pendingInputs.findIndex((item) => "requestId" in item && item.placement === "transcript");
-				if (index !== -1) rows.splice(rows.length - 1, 0, ...pendingRows.splice(index, 1));
-			}
+			if (node?.kind === "turn-process" && node.location.kind === "turn" && node.location.turn.status === "open" && node.location.turn.turn !== lastInputTurn) rows.splice(rows.length - 1, 0, ...leadingRows.splice(0));
 			return [
 				...rows,
-				...pendingRows,
-				...running ? [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RunningStatus, {
+				...leadingRows,
+				...openingRows,
+				...running || holding ? [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(RunningStatus, {
 					startTime: runningStartTime,
+					paused: disconnected,
+					holding,
 					t
-				}, "running")] : []
+				}, "running")] : [],
+				...pendingRows
 			];
 		});
 		//#endregion
@@ -5831,6 +6651,10 @@ window.__ModuleLoader__.load({
 			"settings.collapse.description": "选择何时自动收起工作步骤",
 			"settings.collapse.completion": "回答结束后",
 			"settings.collapse.nextInput": "下次有新消息时",
+			"settings.foldedReplies.title": "收起后显示的回复",
+			"settings.foldedReplies.description": "工作步骤收起后，保留哪些助手回复",
+			"settings.foldedReplies.all": "全部回复",
+			"settings.foldedReplies.final": "仅最终回答",
 			"settings.transcript.compact": "简洁",
 			"settings.transcript.standard": "标准",
 			"settings.transcript.detailed": "详细",
@@ -6031,6 +6855,10 @@ window.__ModuleLoader__.load({
 			"settings.collapse.description": "Choose when to automatically collapse work details",
 			"settings.collapse.completion": "On completion",
 			"settings.collapse.nextInput": "On next message",
+			"settings.foldedReplies.title": "Replies After Collapse",
+			"settings.foldedReplies.description": "Choose which assistant replies stay visible when work details collapse",
+			"settings.foldedReplies.all": "All replies",
+			"settings.foldedReplies.final": "Final answer only",
 			"settings.transcript.compact": "Compact",
 			"settings.transcript.standard": "Standard",
 			"settings.transcript.detailed": "Detailed",
@@ -6122,6 +6950,1230 @@ window.__ModuleLoader__.load({
 			"clock.md": "{m}/{d}",
 			"clock.ymd": "{y}-{m}-{d}"
 		};
+		/** Japanese copy, checked against the English keys. */
+		const ja = {
+			"message.stepProcess.prepare.computer": "コンピューター操作を準備中",
+			"message.stepProcess.computer": "コンピューターを操作中",
+			"message.stepProcess.done.computer": "コンピューターを操作しました",
+			"message.stepProcess.count": "{count} 回の操作",
+			"message.stepProcess.failures": "{count} 件失敗",
+			"message.stepProcess.stopped": "{count} 件停止",
+			"message.stepProcess.thinking": "リクエストを分析中",
+			"message.stepProcess.read": "ファイルを読み取り中",
+			"message.stepProcess.readImage": "画像を読み取り中",
+			"message.stepProcess.write": "ファイルを書き込み中",
+			"message.stepProcess.search": "コードを検索中",
+			"message.stepProcess.edit": "ファイルを編集中",
+			"message.stepProcess.commands": "コマンドを実行中",
+			"message.stepProcess.code": "コードを実行中",
+			"message.stepProcess.webSearch": "ウェブを検索中",
+			"message.stepProcess.webFetch": "ウェブページを閲覧中",
+			"message.stepProcess.subagents": "サブエージェントを調整中",
+			"message.stepProcess.plan": "計画を更新中",
+			"message.stepProcess.questions": "操作を待機中",
+			"message.stepProcess.tools": "ツールを呼び出し中",
+			"message.stepProcess.prepare.read": "ファイル読み取りの準備中",
+			"message.stepProcess.prepare.readImage": "画像読み取りの準備中",
+			"message.stepProcess.prepare.write": "ファイル書き込みの準備中",
+			"message.stepProcess.prepare.search": "コード検索の準備中",
+			"message.stepProcess.prepare.edit": "ファイル編集の準備中",
+			"message.stepProcess.prepare.commands": "コマンド実行の準備中",
+			"message.stepProcess.prepare.code": "コード実行の準備中",
+			"message.stepProcess.prepare.webSearch": "ウェブ検索の準備中",
+			"message.stepProcess.prepare.webFetch": "ウェブページ閲覧の準備中",
+			"message.stepProcess.prepare.subagents": "サブエージェント調整の準備中",
+			"message.stepProcess.prepare.plan": "計画更新の準備中",
+			"message.stepProcess.prepare.questions": "質問の準備中",
+			"message.stepProcess.prepare.tools": "ツール呼び出しの準備中",
+			"message.stepProcess.done.thinking": "分析完了",
+			"message.stepProcess.done.read": "ファイルを読み取りました",
+			"message.stepProcess.done.readImage": "画像を読み取りました",
+			"message.stepProcess.done.write": "ファイルを書き込みました",
+			"message.stepProcess.done.search": "コードを検索しました",
+			"message.stepProcess.done.edit": "ファイルを編集しました",
+			"message.stepProcess.done.commands": "コマンドを実行しました",
+			"message.stepProcess.done.code": "コードを実行しました",
+			"message.stepProcess.done.webSearch": "ウェブを検索しました",
+			"message.stepProcess.done.webFetch": "ウェブページを閲覧しました",
+			"message.stepProcess.done.subagents": "サブエージェントを調整しました",
+			"message.stepProcess.done.plan": "計画を更新しました",
+			"message.stepProcess.done.questions": "質問しました",
+			"message.stepProcess.done.tools": "ツールを呼び出しました",
+			"message.stepProcess.joinTwo": "{first}と{second}",
+			"message.stepProcess.comma": "、",
+			"message.stepProcess.sharedPrefix": "",
+			"message.stepProcess.more": "{title}など",
+			"message.trigger.request": "実行が要求されました",
+			"message.trigger.goal": "目標を継続中",
+			"message.trigger.agent": "タスクメッセージを受信しました",
+			"message.trigger.team": "チームメッセージを受信しました",
+			"message.trigger.subagent": "サブタスクの状態が更新されました",
+			"message.trigger.github": "GitHubイベントを受信しました",
+			"message.trigger.webhook": "外部イベントを受信しました",
+			"message.trigger.schedule": "自動化タスク",
+			"message.trigger.job": "バックグラウンドタスクが更新されました",
+			"message.trigger.plugin": "プラグインの状態が更新されました",
+			"message.trigger.explanation": "この通知がこの応答のトリガーとなりました。",
+			"message.turnProcess.worked": "完了",
+			"message.turnProcess.took": "完了まで ",
+			"message.turnProcess.failed": "失敗",
+			"view.chat": "チャット",
+			"image.open": "画像を全画面表示",
+			"image.loading": "画像を読み込み中…",
+			"image.failed": "画像プレビューを利用できません",
+			"image.dialog": "画像プレビュー",
+			"image.close": "画像プレビューを閉じる",
+			"number.groupSeparator": ",",
+			"duration.compactSeconds": "{seconds}秒",
+			"duration.compactMinutes": "{minutes}分{seconds}秒",
+			"duration.milliseconds": "{milliseconds}ms",
+			"stats.counts": "{turns}ターン {steps}ステップ",
+			"stats.cacheHit": "キャッシュヒット {percent}%",
+			"stats.dialog.title": "セッション統計",
+			"stats.dialog.usageTitle": "トークン使用量",
+			"stats.dialog.llmTime": "LLM時間",
+			"stats.dialog.toolTime": "ツール時間",
+			"stats.dialog.ttft": "平均初回トークン時間（TTFT）",
+			"stats.dialog.speed": "毎秒トークン数（TPS）",
+			"chat.loadingHistory": "履歴を読み込み中…",
+			"chat.loadError": "履歴の読み込みに失敗しました: {message}（{code}）",
+			"chat.loadOlder": "以前を読み込む",
+			"chat.toBottom": "最下部へ戻る",
+			"chat.deepDiving": "深掘り中",
+			"chat.deepDivingFor": "{duration} の間深く分析中 ···",
+			"chat.turnNavigation.label": "ターン移動",
+			"chat.turnNavigation.jump": "ターン {turn} へ移動",
+			"chat.turnNavigation.jumpLoad": "読み込んでターン {turn} へ移動",
+			"chat.turnNavigation.turn": "ターン {turn}",
+			"settings.performance.title": "パフォーマンスと使用状況",
+			"settings.performance.description": "パフォーマンスと使用状況の表示量を選択",
+			"settings.performance.compact": "コンパクト",
+			"settings.performance.detailed": "詳細",
+			"settings.links.title": "チャットリンクを開く場所",
+			"settings.links.description": "Web リンクを開く場所を選択",
+			"settings.links.sidebar": "アプリ内サイドバー",
+			"settings.links.newTab": "既定のブラウザー",
+			"settings.transcript.title": "作業の詳細",
+			"settings.transcript.description": "ツール呼び出しの表示詳細度を選択",
+			"settings.collapse.title": "作業詳細を折りたたむタイミング",
+			"settings.collapse.description": "作業詳細を自動で折りたたむタイミングを選択",
+			"settings.collapse.completion": "完了時",
+			"settings.collapse.nextInput": "次のメッセージ送信時",
+			"settings.foldedReplies.title": "折りたたみ後の返信",
+			"settings.foldedReplies.description": "作業詳細の折りたたみ時に表示するアシスタントの返信を選択",
+			"settings.foldedReplies.all": "すべての返信",
+			"settings.foldedReplies.final": "最終回答のみ",
+			"settings.transcript.compact": "コンパクト",
+			"settings.transcript.standard": "標準",
+			"settings.transcript.detailed": "詳細",
+			"settings.transcript.verbose": "冗長",
+			"fileOpen.title": "ファイルを開けませんでした",
+			"fileOpen.unknown": "このファイルを開けませんでした",
+			"message.extraBlock": "追加のコンテンツブロック",
+			"message.systemPrompt": "システムプロンプト",
+			"message.systemPromptUpdate": "システムプロンプトの更新",
+			"message.toolAdded": "ツールを追加: {name}",
+			"message.toolRemoved": "ツールを削除: {name}",
+			"message.toolsAdded": "追加: {names}",
+			"message.toolsAddedCount": "{count} 件追加",
+			"message.toolsChanged": "{added} 件追加、{removed} 件削除",
+			"message.toolsRemoved": "削除: {names}",
+			"message.toolsRemovedCount": "{count} 件削除",
+			"message.toolsUpdated": "ツールを更新しました",
+			"message.contextInjection": "コンテキスト注入",
+			"message.contextRecall": "セッションの呼び出し",
+			"message.referenceSummary": "参照セッション · {labels}",
+			"message.referenceSeparator": ", ",
+			"message.context.instructions.loaded": "読み込み済み",
+			"message.context.instructions.added": "追加済み",
+			"message.context.instructions.updated": "更新済み",
+			"message.context.instructions.removed": "削除済み",
+			"message.context.catalog.replaced": "置換カタログ",
+			"message.context.catalog.more": "… 他 {count} 件",
+			"message.context.snapshot.supersedes": "以前のスナップショットを置き換えます",
+			"message.context.relay.from": "セッション {session} から",
+			"message.context.recall.counts": "{retained} 件保持 · {omitted} 件除外",
+			"message.context.recall.truncated": "切り詰め済み",
+			"message.compaction": "コンテキストを圧縮しました",
+			"message.compaction.running": "コンテキストを圧縮中…",
+			"message.compaction.completed": "履歴 {items} 件を圧縮しました（約 {tokens} トークン）",
+			"message.compaction.expand": "圧縮の要約を表示",
+			"message.compaction.unavailable": "圧縮の要約は利用できません",
+			"message.compaction.commandTitle": "compact",
+			"message.think": "思考",
+			"message.unknownSurface": "不明なサーフェスイベント: {type}",
+			"message.unknownBlock": "不明なコンテンツブロック",
+			"message.turnProcess.toolCalls.one": "ツール呼び出し {count} 件",
+			"message.turnProcess.toolCalls.other": "ツール呼び出し {count} 件",
+			"message.turnProcess.messages.one": "メッセージ {count} 件",
+			"message.turnProcess.messages.other": "メッセージ {count} 件",
+			"message.turnProcess.subagents.one": "サブエージェント {count} 件",
+			"message.turnProcess.subagents.other": "サブエージェント {count} 件",
+			"message.turnProcess.thoughtForAWhile": "しばらく思考しました",
+			"message.turnProcess.separator": " · ",
+			"message.stopped": "停止しました",
+			"message.branch": "新しい会話に分岐",
+			"message.branchUnavailable": "完了したターンの最後のメッセージでのみ利用できます",
+			"message.retry.active": "モデルリクエストを再試行中",
+			"message.retry.cancelled": "モデルリクエストの再試行をキャンセルしました",
+			"message.retry.started": "モデルリクエストを再試行しました",
+			"message.retry.scheduled": "モデルリクエストの再試行待ちです",
+			"message.retry.status": "{label} ({retry}/{maximum}) · {seconds}秒",
+			"message.retry.delay": "再試行までの待機時間: ",
+			"message.retry.failure": "失敗理由: ",
+			"message.failure.auth": "APIキーが無効です",
+			"message.taskStopped": "タスクを停止しました",
+			"message.failure.accountSignedOut": "DeepSeekからログアウトしたため停止しました。",
+			"message.failure.interrupted": "このターンが完了する前にDSHプロセスが終了したため（強制終了、クラッシュ、シャットダウン中のタイムアウトなど）、DSHの再起動時にターンは閉じられました。未完了のツール呼び出しの結果は不明です。",
+			"message.failure.accountSignInRequired": "DeepSeekにログインし、リクエスト先がアカウント認証に対応していることを確認してください。",
+			"message.failure.quota": "リクエストのクォータを使い切りました。",
+			"message.turnError": "このターンは失敗しました",
+			"message.maxTokens": "出力トークンの上限に達しました",
+			"message.maxTokens.hint": "応答が途中で打ち切られました。それまでの出力は会話に保持されています。「続けて」と送信するとモデルが再開します。",
+			"message.tokensPerSecond": "{tps} tok/s",
+			"message.turnUsage.title": "ターンの使用量",
+			"message.turnUsage.consumed": "使用量 {total}",
+			"message.turnUsage.model": "プロバイダー / モデル",
+			"message.turnUsage.cacheHit": "キャッシュヒット",
+			"message.turnUsage.input": "未キャッシュの入力",
+			"message.turnUsage.cacheRead": "キャッシュ済み入力",
+			"message.turnUsage.cacheWrite": "キャッシュ書き込み",
+			"message.turnUsage.output": "出力",
+			"message.turnUsage.reasoning": " (推論 {tokens})",
+			"message.turnUsage.count": "{count} tok",
+			"duration.secondUnit": "秒",
+			"duration.minuteUnit": "分 ",
+			"duration.hourUnit": "時間 ",
+			"command.running": "実行中…",
+			"command.failed": "コマンドが失敗しました",
+			"command.done": "完了",
+			"command.title": "コマンド",
+			"row.running": "実行中",
+			"row.failed": "失敗",
+			"json.truncated": "… 省略表示、全{total}文字",
+			"clock.md": "{m}/{d}",
+			"clock.ymd": "{y}-{m}-{d}"
+		};
+		/** Spanish dictionary, checked against the English keys. */
+		const es = {
+			"message.stepProcess.prepare.computer": "Preparando el control del equipo",
+			"message.stepProcess.computer": "Controlando el equipo",
+			"message.stepProcess.done.computer": "Equipo controlado",
+			"message.stepProcess.count": "{count} operaciones",
+			"message.stepProcess.failures": "{count} fallidas",
+			"message.stepProcess.stopped": "{count} detenidas",
+			"message.stepProcess.thinking": "Analizando la solicitud",
+			"message.stepProcess.read": "Leyendo archivos",
+			"message.stepProcess.readImage": "Leyendo imágenes",
+			"message.stepProcess.write": "Escribir archivos",
+			"message.stepProcess.search": "código de búsqueda",
+			"message.stepProcess.edit": "Editar archivos",
+			"message.stepProcess.commands": "Ejecutar comandos",
+			"message.stepProcess.code": "Código en ejecución",
+			"message.stepProcess.webSearch": "buscando en la web",
+			"message.stepProcess.webFetch": "Visitar páginas web",
+			"message.stepProcess.subagents": "Subagentes coordinadores",
+			"message.stepProcess.plan": "Actualizando el plan",
+			"message.stepProcess.questions": "Esperando tu acción",
+			"message.stepProcess.tools": "herramientas de llamada",
+			"message.stepProcess.prepare.read": "Preparándose para leer archivos",
+			"message.stepProcess.prepare.readImage": "Preparándose para leer imágenes",
+			"message.stepProcess.prepare.write": "Preparándose para escribir archivos",
+			"message.stepProcess.prepare.search": "Preparándose para buscar el código",
+			"message.stepProcess.prepare.edit": "Preparándose para editar archivos",
+			"message.stepProcess.prepare.commands": "Preparándose para ejecutar comandos",
+			"message.stepProcess.prepare.code": "Preparándose para ejecutar código",
+			"message.stepProcess.prepare.webSearch": "Preparándose para buscar en la web",
+			"message.stepProcess.prepare.webFetch": "Preparándose para visitar páginas web",
+			"message.stepProcess.prepare.subagents": "Preparándose para coordinar subagentes",
+			"message.stepProcess.prepare.plan": "Preparándose para actualizar el plan",
+			"message.stepProcess.prepare.questions": "Preparando preguntas",
+			"message.stepProcess.prepare.tools": "Preparando llamadas a herramientas",
+			"message.stepProcess.done.thinking": "Análisis completado",
+			"message.stepProcess.done.read": "leer archivos",
+			"message.stepProcess.done.readImage": "Leer imágenes",
+			"message.stepProcess.done.write": "Escribió archivos",
+			"message.stepProcess.done.search": "código buscado",
+			"message.stepProcess.done.edit": "Archivos editados",
+			"message.stepProcess.done.commands": "Comandos ejecutados",
+			"message.stepProcess.done.code": "código ejecutado",
+			"message.stepProcess.done.webSearch": "Busqué en la web",
+			"message.stepProcess.done.webFetch": "Paginas web visitadas",
+			"message.stepProcess.done.subagents": "Subagentes coordinados",
+			"message.stepProcess.done.plan": "Actualizado el plan",
+			"message.stepProcess.done.questions": "preguntas hechas",
+			"message.stepProcess.done.tools": "herramientas llamadas",
+			"message.stepProcess.joinTwo": "{first} y {second}",
+			"message.stepProcess.comma": ", ",
+			"message.stepProcess.sharedPrefix": "",
+			"message.stepProcess.more": "{title}, etc.",
+			"message.trigger.request": "Ejecución solicitada",
+			"message.trigger.goal": "Objetivo continuo",
+			"message.trigger.agent": "Mensaje de tarea recibido",
+			"message.trigger.team": "Mensaje del equipo recibido",
+			"message.trigger.subagent": "Estado de subtarea actualizado",
+			"message.trigger.github": "Evento GitHub recibido",
+			"message.trigger.webhook": "Evento externo recibido",
+			"message.trigger.schedule": "Tarea de automatización",
+			"message.trigger.job": "Tarea en segundo plano actualizada",
+			"message.trigger.plugin": "Estado del complemento actualizado",
+			"message.trigger.explanation": "Esta notificación desencadenó esta respuesta.",
+			"message.turnProcess.worked": "Completado",
+			"message.turnProcess.took": "Completado en ",
+			"message.turnProcess.failed": "Fallido",
+			"view.chat": "Chat",
+			"image.open": "Ver imagen completa",
+			"image.loading": "Cargando imagen…",
+			"image.failed": "Vista previa de la imagen no disponible",
+			"image.dialog": "Vista previa de la imagen",
+			"image.close": "Cerrar vista previa de la imagen",
+			"number.groupSeparator": ",",
+			"duration.compactSeconds": "{seconds}s",
+			"duration.compactMinutes": "{minutes}m{seconds}s",
+			"duration.milliseconds": "{milliseconds}ms",
+			"stats.counts": "{turns} turnos, {steps} pasos",
+			"stats.cacheHit": "Aciertos de caché: {percent}%",
+			"stats.dialog.title": "Estadísticas de sesión",
+			"stats.dialog.usageTitle": "Uso de tokens",
+			"stats.dialog.llmTime": "tiempo de maestría",
+			"stats.dialog.toolTime": "tiempo de herramienta",
+			"stats.dialog.ttft": "Tiempo promedio hasta el primer token (TTFT)",
+			"stats.dialog.speed": "Fichas por segundo (TPS)",
+			"chat.loadingHistory": "Cargando historial…",
+			"chat.loadError": "No se pudo cargar el historial: {message} ({code})",
+			"chat.loadOlder": "Cargar antes",
+			"chat.toBottom": "Volver al fondo",
+			"chat.deepDiving": "Razonamiento profundo",
+			"chat.deepDivingFor": "Razonando a fondo durante {duration} ···",
+			"chat.turnNavigation.label": "Navegación por turnos",
+			"chat.turnNavigation.jump": "Ir al turno {turn}",
+			"chat.turnNavigation.jumpLoad": "Cargar e ir al turno {turn}",
+			"chat.turnNavigation.turn": "Turno {turn}",
+			"settings.performance.title": "Rendimiento y uso",
+			"settings.performance.description": "Elija cuánta información de rendimiento y uso desea mostrar",
+			"settings.performance.compact": "Compacto",
+			"settings.performance.detailed": "Detallado",
+			"settings.links.title": "Abrir enlaces de chat en",
+			"settings.links.description": "Elija dónde abrir enlaces web",
+			"settings.links.sidebar": "Barra lateral en la aplicación",
+			"settings.links.newTab": "Navegador predeterminado",
+			"settings.transcript.title": "Detalles del trabajo",
+			"settings.transcript.description": "Elija cuántos detalles mostrar para las llamadas de herramientas",
+			"settings.collapse.title": "Cuándo contraer los detalles del trabajo",
+			"settings.collapse.description": "Elija cuándo contraer automáticamente los detalles del trabajo",
+			"settings.collapse.completion": "Al finalizar",
+			"settings.collapse.nextInput": "En el siguiente mensaje",
+			"settings.foldedReplies.title": "Respuestas después del plegado",
+			"settings.foldedReplies.description": "Elija qué respuestas del asistente permanecen visibles cuando los detalles del trabajo colapsan",
+			"settings.foldedReplies.all": "Todas las respuestas",
+			"settings.foldedReplies.final": "Solo respuesta final",
+			"settings.transcript.compact": "Compacto",
+			"settings.transcript.standard": "Estándar",
+			"settings.transcript.detailed": "Detallado",
+			"settings.transcript.verbose": "Detallado",
+			"fileOpen.title": "No se pudo abrir el archivo",
+			"fileOpen.unknown": "No se pudo abrir este archivo",
+			"message.extraBlock": "Bloque de contenido adicional",
+			"message.systemPrompt": "Aviso del sistema",
+			"message.systemPromptUpdate": "Actualización del mensaje del sistema",
+			"message.toolAdded": "Herramienta agregada: {name}",
+			"message.toolRemoved": "Herramienta eliminada: {name}",
+			"message.toolsAdded": "Añadido: {names}",
+			"message.toolsAddedCount": "{count} añadido",
+			"message.toolsChanged": "{added} agregado, {removed} eliminado",
+			"message.toolsRemoved": "Eliminado: {names}",
+			"message.toolsRemovedCount": "{count} eliminado",
+			"message.toolsUpdated": "Herramientas actualizadas",
+			"message.contextInjection": "inyección de contexto",
+			"message.contextRecall": "Recuerdo de sesión",
+			"message.referenceSummary": "Sesión referenciada · {labels}",
+			"message.referenceSeparator": ", ",
+			"message.context.instructions.loaded": "cargado",
+			"message.context.instructions.added": "añadido",
+			"message.context.instructions.updated": "actualizado",
+			"message.context.instructions.removed": "eliminado",
+			"message.context.catalog.replaced": "Catálogo de repuestos",
+			"message.context.catalog.more": "… {count} más",
+			"message.context.snapshot.supersedes": "Reemplaza instantáneas anteriores",
+			"message.context.relay.from": "De la sesión {session}",
+			"message.context.recall.counts": "{retained} mantenido · {omitted} omitido",
+			"message.context.recall.truncated": "truncado",
+			"message.compaction": "Contexto compactado",
+			"message.compaction.running": "Contexto de compactación…",
+			"message.compaction.completed": "Elementos del historial {items} compactados (~tokens {tokens})",
+			"message.compaction.expand": "Ver resumen de compactación",
+			"message.compaction.unavailable": "Resumen de compactación no disponible",
+			"message.compaction.commandTitle": "compacto",
+			"message.think": "pensar",
+			"message.unknownSurface": "Evento de superficie desconocido: {type}",
+			"message.unknownBlock": "Bloque de contenido desconocido",
+			"message.turnProcess.toolCalls.one": "Llamada a la herramienta {count}",
+			"message.turnProcess.toolCalls.other": "Llamadas a herramientas {count}",
+			"message.turnProcess.messages.one": "Mensaje {count}",
+			"message.turnProcess.messages.other": "Mensajes {count}",
+			"message.turnProcess.subagents.one": "Subagente {count}",
+			"message.turnProcess.subagents.other": "Subagentes {count}",
+			"message.turnProcess.thoughtForAWhile": "Razonó durante un tiempo",
+			"message.turnProcess.separator": " · ",
+			"message.stopped": "Detenido",
+			"message.branch": "Pasar a una nueva conversación",
+			"message.branchUnavailable": "Disponible solo en el último mensaje de un turno completado",
+			"message.retry.active": "Reintentando solicitud de modelo",
+			"message.retry.cancelled": "Reintento de solicitud de modelo cancelado",
+			"message.retry.started": "Solicitud de modelo reintentada",
+			"message.retry.scheduled": "Esperando para volver a intentar la solicitud de modelo",
+			"message.retry.status": "{label} ({retry}/{maximum}) · {seconds}s",
+			"message.retry.delay": "Retraso de reintento: ",
+			"message.retry.failure": "Razón del fracaso: ",
+			"message.failure.auth": "La clave API no es válida",
+			"message.taskStopped": "Tarea detenida",
+			"message.failure.accountSignedOut": "Se detuvo porque cerró sesión en DeepSeek.",
+			"message.failure.interrupted": "El proceso DSH salió antes de que terminara este turno (por ejemplo, se detuvo, se estrelló o se agotó el tiempo de espera mientras se apagaba), por lo que el turno se cerró cuando se reinició DSH. Las llamadas a herramientas inacabadas tienen resultados desconocidos.",
+			"message.failure.accountSignInRequired": "Inicie sesión en DeepSeek y asegúrese de que el destino de la solicitud admita la autenticación de la cuenta.",
+			"message.failure.quota": "Solicitud de cupo agotado.",
+			"message.turnError": "Este turno falló",
+			"message.maxTokens": "Se alcanzó el límite del token de salida",
+			"message.maxTokens.hint": "La respuesta fue cortada; La salida anterior se conserva en la conversación. Envíe \"continuar\" para permitir que se reanude el modelo.",
+			"message.tokensPerSecond": "{tps} tok/s",
+			"message.turnUsage.title": "Uso del turno",
+			"message.turnUsage.consumed": "Uso {total}",
+			"message.turnUsage.model": "Proveedor / modelo",
+			"message.turnUsage.cacheHit": "Aciertos de caché",
+			"message.turnUsage.input": "Entrada sin caché",
+			"message.turnUsage.cacheRead": "Entrada en caché",
+			"message.turnUsage.cacheWrite": "escritura en caché",
+			"message.turnUsage.output": "Salida",
+			"message.turnUsage.reasoning": " (razonamiento {tokens})",
+			"message.turnUsage.count": "Tok {count}",
+			"duration.secondUnit": "s",
+			"duration.minuteUnit": "m ",
+			"duration.hourUnit": "h ",
+			"command.running": "Corriendo…",
+			"command.failed": "El comando falló",
+			"command.done": "Completado",
+			"command.title": "Comando",
+			"row.running": "corriendo",
+			"row.failed": "Fallido",
+			"json.truncated": "… truncado, caracteres {total} en total",
+			"clock.md": "{m}/{d}",
+			"clock.ymd": "{y}-{m}-{d}"
+		};
+		/** French dictionary, checked against the English keys. */
+		const fr = {
+			"message.stepProcess.prepare.computer": "Préparation du contrôle de l’ordinateur",
+			"message.stepProcess.computer": "Contrôle de l’ordinateur",
+			"message.stepProcess.done.computer": "Ordinateur contrôlé",
+			"message.stepProcess.count": "{count} opérations",
+			"message.stepProcess.failures": "{count} échecs",
+			"message.stepProcess.stopped": "{count} arrêtées",
+			"message.stepProcess.thinking": "Analyser la demande",
+			"message.stepProcess.read": "Lecture de fichiers",
+			"message.stepProcess.readImage": "Lire des images",
+			"message.stepProcess.write": "Écriture de fichiers",
+			"message.stepProcess.search": "Recherche de code",
+			"message.stepProcess.edit": "Modification de fichiers",
+			"message.stepProcess.commands": "Exécuter des commandes",
+			"message.stepProcess.code": "Exécution du code",
+			"message.stepProcess.webSearch": "Recherche sur le Web",
+			"message.stepProcess.webFetch": "Visiter des pages Web",
+			"message.stepProcess.subagents": "Sous-agents de coordination",
+			"message.stepProcess.plan": "Mise à jour du plan",
+			"message.stepProcess.questions": "En attendant votre action",
+			"message.stepProcess.tools": "Outils d'appel",
+			"message.stepProcess.prepare.read": "Préparation à la lecture de fichiers",
+			"message.stepProcess.prepare.readImage": "Se préparer à lire des images",
+			"message.stepProcess.prepare.write": "Préparation à l'écriture de fichiers",
+			"message.stepProcess.prepare.search": "Préparation à la recherche de code",
+			"message.stepProcess.prepare.edit": "Préparation à la modification de fichiers",
+			"message.stepProcess.prepare.commands": "Préparation à l'exécution de commandes",
+			"message.stepProcess.prepare.code": "Préparation à l'exécution du code",
+			"message.stepProcess.prepare.webSearch": "Se préparer à effectuer une recherche sur le Web",
+			"message.stepProcess.prepare.webFetch": "Se préparer à visiter des pages Web",
+			"message.stepProcess.prepare.subagents": "Se préparer à coordonner les sous-agents",
+			"message.stepProcess.prepare.plan": "Préparation de la mise à jour du plan",
+			"message.stepProcess.prepare.questions": "Préparation des questions",
+			"message.stepProcess.prepare.tools": "Préparation des appels d'outils",
+			"message.stepProcess.done.thinking": "Analyse terminée",
+			"message.stepProcess.done.read": "Lire des fichiers",
+			"message.stepProcess.done.readImage": "Lire des images",
+			"message.stepProcess.done.write": "A écrit des fichiers",
+			"message.stepProcess.done.search": "Code recherché",
+			"message.stepProcess.done.edit": "Fichiers modifiés",
+			"message.stepProcess.done.commands": "Commandes exécutées",
+			"message.stepProcess.done.code": "Code exécuté",
+			"message.stepProcess.done.webSearch": "J'ai cherché sur le Web",
+			"message.stepProcess.done.webFetch": "Pages Web visitées",
+			"message.stepProcess.done.subagents": "Sous-agents coordonnés",
+			"message.stepProcess.done.plan": "Plan mis à jour",
+			"message.stepProcess.done.questions": "Questions posées",
+			"message.stepProcess.done.tools": "Outils appelés",
+			"message.stepProcess.joinTwo": "{first} et {second}",
+			"message.stepProcess.comma": ", ",
+			"message.stepProcess.sharedPrefix": "",
+			"message.stepProcess.more": "{title}, etc.",
+			"message.trigger.request": "Exécution demandée",
+			"message.trigger.goal": "Objectif continu",
+			"message.trigger.agent": "Message de tâche reçu",
+			"message.trigger.team": "Message d'équipe reçu",
+			"message.trigger.subagent": "Statut de la sous-tâche mis à jour",
+			"message.trigger.github": "Événement GitHub reçu",
+			"message.trigger.webhook": "Événement externe reçu",
+			"message.trigger.schedule": "Tâche d'automatisation",
+			"message.trigger.job": "Tâche en arrière-plan mise à jour",
+			"message.trigger.plugin": "Statut du plugin mis à jour",
+			"message.trigger.explanation": "Cette notification a déclenché cette réponse.",
+			"message.turnProcess.worked": "Terminé",
+			"message.turnProcess.took": "Terminé en ",
+			"message.turnProcess.failed": "Échec",
+			"view.chat": "Discussion",
+			"image.open": "Voir l'image complète",
+			"image.loading": "Chargement de l'image…",
+			"image.failed": "Aperçu de l'image indisponible",
+			"image.dialog": "Aperçu de l'image",
+			"image.close": "Fermer l'aperçu de l'image",
+			"number.groupSeparator": ",",
+			"duration.compactSeconds": "{seconds}s",
+			"duration.compactMinutes": "{minutes}m{seconds}s",
+			"duration.milliseconds": "{milliseconds}ms",
+			"stats.counts": "{turns} tours, {steps} étapes",
+			"stats.cacheHit": "Taux de réussite du cache : {percent} %",
+			"stats.dialog.title": "Statistiques de session",
+			"stats.dialog.usageTitle": "Utilisation des jetons",
+			"stats.dialog.llmTime": "Temps LLM",
+			"stats.dialog.toolTime": "Temps d'outil",
+			"stats.dialog.ttft": "Temps moyen jusqu'au premier jeton (TTFT)",
+			"stats.dialog.speed": "Jetons par seconde (TPS)",
+			"chat.loadingHistory": "Chargement de l'historique…",
+			"chat.loadError": "Échec du chargement de l'historique\xA0: {message} ({code})",
+			"chat.loadOlder": "Charger plus tôt",
+			"chat.toBottom": "Retour en bas",
+			"chat.deepDiving": "Réflexion approfondie",
+			"chat.deepDivingFor": "Réflexion approfondie depuis {duration} ···",
+			"chat.turnNavigation.label": "Navigation entre les tours",
+			"chat.turnNavigation.jump": "Aller au tour {turn}",
+			"chat.turnNavigation.jumpLoad": "Charger et aller au tour {turn}",
+			"chat.turnNavigation.turn": "Tour {turn}",
+			"settings.performance.title": "Performances et utilisation",
+			"settings.performance.description": "Choisissez la quantité d'informations sur les performances et l'utilisation à afficher",
+			"settings.performance.compact": "Compacte",
+			"settings.performance.detailed": "Détaillé",
+			"settings.links.title": "Ouvrir les liens de discussion dans",
+			"settings.links.description": "Choisissez où ouvrir les liens Web",
+			"settings.links.sidebar": "Barre latérale dans l'application",
+			"settings.links.newTab": "Navigateur par défaut",
+			"settings.transcript.title": "Détails du travail",
+			"settings.transcript.description": "Choisissez le niveau de détails à afficher pour les appels d'outils",
+			"settings.collapse.title": "Quand réduire les détails du travail",
+			"settings.collapse.description": "Choisissez quand réduire automatiquement les détails du travail",
+			"settings.collapse.completion": "À la fin",
+			"settings.collapse.nextInput": "Au prochain message",
+			"settings.foldedReplies.title": "Réponses après le repli",
+			"settings.foldedReplies.description": "Choisissez quelles réponses de l'assistant restent visibles lorsque les détails du travail sont réduits",
+			"settings.foldedReplies.all": "Toutes les réponses",
+			"settings.foldedReplies.final": "Réponse finale seulement",
+			"settings.transcript.compact": "Compacte",
+			"settings.transcript.standard": "Norme",
+			"settings.transcript.detailed": "Détaillé",
+			"settings.transcript.verbose": "Verbeux",
+			"fileOpen.title": "Impossible d'ouvrir le fichier",
+			"fileOpen.unknown": "Impossible d'ouvrir ce fichier",
+			"message.extraBlock": "Bloc de contenu supplémentaire",
+			"message.systemPrompt": "Invite système",
+			"message.systemPromptUpdate": "Mise à jour de l'invite du système",
+			"message.toolAdded": "Outil ajouté\xA0: {name}",
+			"message.toolRemoved": "Outil supprimé\xA0: {name}",
+			"message.toolsAdded": "Ajouté\xA0: {names}",
+			"message.toolsAddedCount": "{count} ajouté",
+			"message.toolsChanged": "{added} ajouté, {removed} supprimé",
+			"message.toolsRemoved": "Supprimé\xA0: {names}",
+			"message.toolsRemovedCount": "{count} supprimé",
+			"message.toolsUpdated": "Outils mis à jour",
+			"message.contextInjection": "Injection de contexte",
+			"message.contextRecall": "Rappel de session",
+			"message.referenceSummary": "Séance référencée · {labels}",
+			"message.referenceSeparator": ", ",
+			"message.context.instructions.loaded": "chargé",
+			"message.context.instructions.added": "ajouté",
+			"message.context.instructions.updated": "mis à jour",
+			"message.context.instructions.removed": "supprimé",
+			"message.context.catalog.replaced": "Catalogue de remplacement",
+			"message.context.catalog.more": "… {count} plus",
+			"message.context.snapshot.supersedes": "Remplace les instantanés précédents",
+			"message.context.relay.from": "De la séance {session}",
+			"message.context.recall.counts": "{retained} conservé · {omitted} omis",
+			"message.context.recall.truncated": "tronqué",
+			"message.compaction": "Contexte compacté",
+			"message.compaction.running": "Contexte de compactage…",
+			"message.compaction.completed": "Éléments d'historique {items} compactés (~jetons {tokens})",
+			"message.compaction.expand": "Afficher le résumé du compactage",
+			"message.compaction.unavailable": "Résumé du compactage indisponible",
+			"message.compaction.commandTitle": "compacte",
+			"message.think": "Pensez",
+			"message.unknownSurface": "Événement de surface inconnu\xA0: {type}",
+			"message.unknownBlock": "Bloc de contenu inconnu",
+			"message.turnProcess.toolCalls.one": "Appel d'outil {count}",
+			"message.turnProcess.toolCalls.other": "Appels d'outil {count}",
+			"message.turnProcess.messages.one": "Message {count}",
+			"message.turnProcess.messages.other": "Messages {count}",
+			"message.turnProcess.subagents.one": "Sous-agent {count}",
+			"message.turnProcess.subagents.other": "Sous-agents {count}",
+			"message.turnProcess.thoughtForAWhile": "Réflexion pendant un moment",
+			"message.turnProcess.separator": " · ",
+			"message.stopped": "Arrêté",
+			"message.branch": "Lancez-vous dans une nouvelle conversation",
+			"message.branchUnavailable": "Disponible uniquement sur le dernier message d'un tour terminé",
+			"message.retry.active": "Nouvelle tentative de demande de modèle",
+			"message.retry.cancelled": "Nouvelle tentative de demande de modèle annulée",
+			"message.retry.started": "Demande de modèle réessayée",
+			"message.retry.scheduled": "En attente de réessayer la demande de modèle",
+			"message.retry.status": "{label} ({retry}/{maximum}) · {seconds}",
+			"message.retry.delay": "Délai de nouvelle tentative\xA0: ",
+			"message.retry.failure": "Raison de l'échec\xA0: ",
+			"message.failure.auth": "La clé API n'est pas valide",
+			"message.taskStopped": "Tâche arrêtée",
+			"message.failure.accountSignedOut": "Arrêté car vous vous êtes déconnecté de DeepSeek.",
+			"message.failure.interrupted": "Le processus DSH s'est terminé avant la fin de ce tour (par exemple, il a été arrêté, s'est écrasé ou a expiré lors de l'arrêt), de sorte que le tour a été fermé lorsque DSH a redémarré. Les appels d’outils inachevés ont des résultats inconnus.",
+			"message.failure.accountSignInRequired": "Connectez-vous à DeepSeek et assurez-vous que la destination de la demande prend en charge l'authentification du compte.",
+			"message.failure.quota": "Quota de demandes épuisé.",
+			"message.turnError": "Ce tour a échoué",
+			"message.maxTokens": "Limite de jetons de sortie atteinte",
+			"message.maxTokens.hint": "La réponse fut coupée ; la sortie antérieure est conservée dans la conversation. Envoyez «\xA0continuer\xA0» pour laisser le modèle reprendre.",
+			"message.tokensPerSecond": "{tps} jetons/s",
+			"message.turnUsage.title": "Consommation du tour",
+			"message.turnUsage.consumed": "Utilisation {total}",
+			"message.turnUsage.model": "Fournisseur / modèle",
+			"message.turnUsage.cacheHit": "Taux de réussite du cache",
+			"message.turnUsage.input": "Entrée non mise en cache",
+			"message.turnUsage.cacheRead": "Entrée en cache",
+			"message.turnUsage.cacheWrite": "Écriture en cache",
+			"message.turnUsage.output": "Sortie",
+			"message.turnUsage.reasoning": " (raisonnement {tokens})",
+			"message.turnUsage.count": "Jeton {count}",
+			"duration.secondUnit": "s",
+			"duration.minuteUnit": "m ",
+			"duration.hourUnit": "h ",
+			"command.running": "Courir…",
+			"command.failed": "La commande a échoué",
+			"command.done": "Terminé",
+			"command.title": "Commande",
+			"row.running": "Courir",
+			"row.failed": "Échec",
+			"json.truncated": "… tronqué, nombre total de caractères {total}",
+			"clock.md": "{m}/{d}",
+			"clock.ymd": "{y}-{m}-{d}"
+		};
+		/** German dictionary, checked against the English keys. */
+		const de = {
+			"message.stepProcess.prepare.computer": "Computersteuerung wird vorbereitet",
+			"message.stepProcess.computer": "Computer wird bedient",
+			"message.stepProcess.done.computer": "Computer bedient",
+			"message.stepProcess.count": "{count} Vorgänge",
+			"message.stepProcess.failures": "{count} fehlgeschlagen",
+			"message.stepProcess.stopped": "{count} gestoppt",
+			"message.stepProcess.thinking": "Analyse der Anfrage",
+			"message.stepProcess.read": "Dateien lesen",
+			"message.stepProcess.readImage": "Bilder lesen",
+			"message.stepProcess.write": "Dateien schreiben",
+			"message.stepProcess.search": "Code wird gesucht",
+			"message.stepProcess.edit": "Bearbeiten von Dateien",
+			"message.stepProcess.commands": "Befehle ausführen",
+			"message.stepProcess.code": "Ausführen von Code",
+			"message.stepProcess.webSearch": "Suche im Internet",
+			"message.stepProcess.webFetch": "Besuch von Webseiten",
+			"message.stepProcess.subagents": "Koordinierende Unteragenten",
+			"message.stepProcess.plan": "Aktualisierung des Plans",
+			"message.stepProcess.questions": "Ich warte auf Ihre Aktion",
+			"message.stepProcess.tools": "Aufrufende Werkzeuge",
+			"message.stepProcess.prepare.read": "Vorbereitung zum Lesen von Dateien",
+			"message.stepProcess.prepare.readImage": "Vorbereitung zum Lesen von Bildern",
+			"message.stepProcess.prepare.write": "Vorbereitung zum Schreiben von Dateien",
+			"message.stepProcess.prepare.search": "Vorbereiten der Codesuche",
+			"message.stepProcess.prepare.edit": "Vorbereitung zum Bearbeiten von Dateien",
+			"message.stepProcess.prepare.commands": "Vorbereitung zum Ausführen von Befehlen",
+			"message.stepProcess.prepare.code": "Vorbereiten, Code auszuführen",
+			"message.stepProcess.prepare.webSearch": "Bereiten Sie sich auf die Suche im Internet vor",
+			"message.stepProcess.prepare.webFetch": "Vorbereitung auf den Besuch von Webseiten",
+			"message.stepProcess.prepare.subagents": "Vorbereitung zur Koordinierung von Subagenten",
+			"message.stepProcess.prepare.plan": "Vorbereitung zur Aktualisierung des Plans",
+			"message.stepProcess.prepare.questions": "Fragen vorbereiten",
+			"message.stepProcess.prepare.tools": "Toolaufrufe vorbereiten",
+			"message.stepProcess.done.thinking": "Analyse abgeschlossen",
+			"message.stepProcess.done.read": "Dateien lesen",
+			"message.stepProcess.done.readImage": "Bilder lesen",
+			"message.stepProcess.done.write": "Dateien geschrieben",
+			"message.stepProcess.done.search": "Gesuchter Code",
+			"message.stepProcess.done.edit": "Bearbeitete Dateien",
+			"message.stepProcess.done.commands": "Befehle ausgeführt",
+			"message.stepProcess.done.code": "Code ausgeführt",
+			"message.stepProcess.done.webSearch": "Habe das Internet durchsucht",
+			"message.stepProcess.done.webFetch": "Besuchte Webseiten",
+			"message.stepProcess.done.subagents": "Koordinierte Unteragenten",
+			"message.stepProcess.done.plan": "Plan aktualisiert",
+			"message.stepProcess.done.questions": "Gestellte Fragen",
+			"message.stepProcess.done.tools": "Werkzeuge genannt",
+			"message.stepProcess.joinTwo": "{first} und {second}",
+			"message.stepProcess.comma": ", ",
+			"message.stepProcess.sharedPrefix": "",
+			"message.stepProcess.more": "{title} usw.",
+			"message.trigger.request": "Ausführung beantragt",
+			"message.trigger.goal": "Weiterführendes Ziel",
+			"message.trigger.agent": "Aufgabennachricht erhalten",
+			"message.trigger.team": "Teamnachricht erhalten",
+			"message.trigger.subagent": "Unteraufgabenstatus aktualisiert",
+			"message.trigger.github": "GitHub-Ereignis empfangen",
+			"message.trigger.webhook": "Externes Ereignis empfangen",
+			"message.trigger.schedule": "Automatisierungsaufgabe",
+			"message.trigger.job": "Hintergrundaufgabe aktualisiert",
+			"message.trigger.plugin": "Plugin-Status aktualisiert",
+			"message.trigger.explanation": "Diese Benachrichtigung hat diese Reaktion ausgelöst.",
+			"message.turnProcess.worked": "Abgeschlossen",
+			"message.turnProcess.took": "Fertiggestellt in ",
+			"message.turnProcess.failed": "Fehlgeschlagen",
+			"view.chat": "Chat",
+			"image.open": "Vollständiges Bild anzeigen",
+			"image.loading": "Bild wird geladen…",
+			"image.failed": "Bildvorschau nicht verfügbar",
+			"image.dialog": "Bildvorschau",
+			"image.close": "Bildvorschau schließen",
+			"number.groupSeparator": ",",
+			"duration.compactSeconds": "{seconds}s",
+			"duration.compactMinutes": "{minutes}m{seconds}s",
+			"duration.milliseconds": "{milliseconds}ms",
+			"stats.counts": "{turns} Runden, {steps} Schritte",
+			"stats.cacheHit": "Cache-Treffer: {percent}%",
+			"stats.dialog.title": "Sitzungsstatistiken",
+			"stats.dialog.usageTitle": "Token-Nutzung",
+			"stats.dialog.llmTime": "LLM-Zeit",
+			"stats.dialog.toolTime": "Werkzeugzeit",
+			"stats.dialog.ttft": "Durchschnittliche Zeit bis zum ersten Token (TTFT)",
+			"stats.dialog.speed": "Token pro Sekunde (TPS)",
+			"chat.loadingHistory": "Verlauf wird geladen…",
+			"chat.loadError": "Fehler beim Laden des Verlaufs: {message} ({code})",
+			"chat.loadOlder": "Früher laden",
+			"chat.toBottom": "Zurück nach unten",
+			"chat.deepDiving": "Gründliches Nachdenken",
+			"chat.deepDivingFor": "Gründliches Nachdenken seit {duration} ···",
+			"chat.turnNavigation.label": "Rundennavigation",
+			"chat.turnNavigation.jump": "Zu Runde {turn} springen",
+			"chat.turnNavigation.jumpLoad": "Runde {turn} laden und öffnen",
+			"chat.turnNavigation.turn": "Runde {turn}",
+			"settings.performance.title": "Leistung und Nutzung",
+			"settings.performance.description": "Wählen Sie aus, wie viele Leistungs- und Nutzungsinformationen angezeigt werden sollen",
+			"settings.performance.compact": "Kompakt",
+			"settings.performance.detailed": "Ausführlich",
+			"settings.links.title": "Öffnen Sie Chat-Links in",
+			"settings.links.description": "Wählen Sie aus, wo Weblinks geöffnet werden sollen",
+			"settings.links.sidebar": "In-App-Seitenleiste",
+			"settings.links.newTab": "Standardbrowser",
+			"settings.transcript.title": "Arbeitsdetails",
+			"settings.transcript.description": "Wählen Sie aus, wie viele Details für Werkzeugaufrufe angezeigt werden sollen",
+			"settings.collapse.title": "Wann Arbeitsdetails minimiert werden sollten",
+			"settings.collapse.description": "Wählen Sie aus, wann Arbeitsdetails automatisch ausgeblendet werden sollen",
+			"settings.collapse.completion": "Nach Fertigstellung",
+			"settings.collapse.nextInput": "Bei der nächsten Nachricht",
+			"settings.foldedReplies.title": "Antworten nach dem Einklappen",
+			"settings.foldedReplies.description": "Wählen Sie aus, welche Assistentenantworten sichtbar bleiben, wenn die Arbeitsdetails ausgeblendet werden",
+			"settings.foldedReplies.all": "Alle Antworten",
+			"settings.foldedReplies.final": "Nur die endgültige Antwort",
+			"settings.transcript.compact": "Kompakt",
+			"settings.transcript.standard": "Standard",
+			"settings.transcript.detailed": "Ausführlich",
+			"settings.transcript.verbose": "Ausführlich",
+			"fileOpen.title": "Datei konnte nicht geöffnet werden",
+			"fileOpen.unknown": "Diese Datei konnte nicht geöffnet werden",
+			"message.extraBlock": "Zusätzlicher Inhaltsblock",
+			"message.systemPrompt": "Systemaufforderung",
+			"message.systemPromptUpdate": "Aktualisierung der Systemaufforderung",
+			"message.toolAdded": "Tool hinzugefügt: {name}",
+			"message.toolRemoved": "Entferntes Werkzeug: {name}",
+			"message.toolsAdded": "Hinzugefügt: {names}",
+			"message.toolsAddedCount": "{count} hinzugefügt",
+			"message.toolsChanged": "{added} hinzugefügt, {removed} entfernt",
+			"message.toolsRemoved": "Entfernt: {names}",
+			"message.toolsRemovedCount": "{count} entfernt",
+			"message.toolsUpdated": "Werkzeuge aktualisiert",
+			"message.contextInjection": "Kontextinjektion",
+			"message.contextRecall": "Sitzungsrückruf",
+			"message.referenceSummary": "Referenzierte Sitzung · {labels}",
+			"message.referenceSeparator": ", ",
+			"message.context.instructions.loaded": "geladen",
+			"message.context.instructions.added": "hinzugefügt",
+			"message.context.instructions.updated": "aktualisiert",
+			"message.context.instructions.removed": "entfernt",
+			"message.context.catalog.replaced": "Ersatzkatalog",
+			"message.context.catalog.more": "… {count} mehr",
+			"message.context.snapshot.supersedes": "Ersetzt frühere Schnappschüsse",
+			"message.context.relay.from": "Aus der Sitzung {session}",
+			"message.context.recall.counts": "{retained} beibehalten · {omitted} weggelassen",
+			"message.context.recall.truncated": "abgeschnitten",
+			"message.compaction": "Kontext verdichtet",
+			"message.compaction.running": "Kontext verdichten…",
+			"message.compaction.completed": "Komprimierte {items}-Verlaufselemente (~{tokens}-Tokens)",
+			"message.compaction.expand": "Komprimierungszusammenfassung anzeigen",
+			"message.compaction.unavailable": "Komprimierungszusammenfassung nicht verfügbar",
+			"message.compaction.commandTitle": "kompakt",
+			"message.think": "Denken Sie nach",
+			"message.unknownSurface": "Unbekanntes Oberflächenereignis: {type}",
+			"message.unknownBlock": "Unbekannter Inhaltsblock",
+			"message.turnProcess.toolCalls.one": "Werkzeugaufruf {count}",
+			"message.turnProcess.toolCalls.other": "{count} Toolaufrufe",
+			"message.turnProcess.messages.one": "{count}-Nachricht",
+			"message.turnProcess.messages.other": "{count}-Nachrichten",
+			"message.turnProcess.subagents.one": "{count}-Subagent",
+			"message.turnProcess.subagents.other": "{count}-Subagenten",
+			"message.turnProcess.thoughtForAWhile": "Eine Weile nachgedacht",
+			"message.turnProcess.separator": " · ",
+			"message.stopped": "Angehalten",
+			"message.branch": "Verzweigen Sie in ein neues Gespräch",
+			"message.branchUnavailable": "Nur verfügbar bei der letzten Nachricht einer abgeschlossenen Runde",
+			"message.retry.active": "Modellanforderung wird erneut versucht",
+			"message.retry.cancelled": "Wiederholungsversuch der Modellanforderung abgebrochen",
+			"message.retry.started": "Modellanfrage erneut versucht",
+			"message.retry.scheduled": "Warten auf erneuten Versuch der Modellanforderung",
+			"message.retry.status": "{label} ({retry}/{maximum}) · {seconds}s",
+			"message.retry.delay": "Wiederholungsverzögerung: ",
+			"message.retry.failure": "Fehlergrund: ",
+			"message.failure.auth": "Der API-Schlüssel ist ungültig",
+			"message.taskStopped": "Aufgabe gestoppt",
+			"message.failure.accountSignedOut": "Gestoppt, weil Sie sich von DeepSeek abgemeldet haben.",
+			"message.failure.interrupted": "Der DSH-Prozess wurde beendet, bevor dieser Zug beendet war (z. B. wurde er beendet, stürzte ab oder es kam zu einer Zeitüberschreitung beim Herunterfahren), sodass der Zug geschlossen wurde, als DSH neu gestartet wurde. Unvollendete Werkzeugaufrufe haben unbekannte Ergebnisse.",
+			"message.failure.accountSignInRequired": "Melden Sie sich bei DeepSeek an und stellen Sie sicher, dass das Anforderungsziel die Kontoauthentifizierung unterstützt.",
+			"message.failure.quota": "Anforderungskontingent ausgeschöpft.",
+			"message.turnError": "Diese Runde ist fehlgeschlagen",
+			"message.maxTokens": "Ausgabe-Token-Limit erreicht",
+			"message.maxTokens.hint": "Die Antwort wurde abgeschnitten; Frühere Ausgaben bleiben in der Konversation erhalten. Senden Sie „Weiter“, um das Modell fortzusetzen.",
+			"message.tokensPerSecond": "{tps} tok/s",
+			"message.turnUsage.title": "Rundenverbrauch",
+			"message.turnUsage.consumed": "Verwendung {total}",
+			"message.turnUsage.model": "Anbieter / Modell",
+			"message.turnUsage.cacheHit": "Cache-Treffer",
+			"message.turnUsage.input": "Nicht zwischengespeicherte Eingabe",
+			"message.turnUsage.cacheRead": "Zwischengespeicherte Eingabe",
+			"message.turnUsage.cacheWrite": "Cache-Schreiben",
+			"message.turnUsage.output": "Ausgabe",
+			"message.turnUsage.reasoning": " ({tokens}-Argumentation)",
+			"message.turnUsage.count": "{count}-Token",
+			"duration.secondUnit": "s",
+			"duration.minuteUnit": "m ",
+			"duration.hourUnit": "h ",
+			"command.running": "Laufen…",
+			"command.failed": "Der Befehl ist fehlgeschlagen",
+			"command.done": "Abgeschlossen",
+			"command.title": "Befehl",
+			"row.running": "Laufen",
+			"row.failed": "Fehlgeschlagen",
+			"json.truncated": "… gekürzt, {total} Zeichen insgesamt",
+			"clock.md": "{m}/{d}",
+			"clock.ymd": "{y}-{m}-{d}"
+		};
+		/** Russian dictionary, checked against the English keys. */
+		const ru = {
+			"message.stepProcess.prepare.computer": "Подготовка управления компьютером",
+			"message.stepProcess.computer": "Управление компьютером",
+			"message.stepProcess.done.computer": "Работа с компьютером завершена",
+			"message.stepProcess.count": "Операций: {count}",
+			"message.stepProcess.failures": "Сбоев: {count}",
+			"message.stepProcess.stopped": "Остановлено: {count}",
+			"message.stepProcess.thinking": "Анализ запроса",
+			"message.stepProcess.read": "Чтение файлов",
+			"message.stepProcess.readImage": "Чтение изображений",
+			"message.stepProcess.write": "Запись файлов",
+			"message.stepProcess.search": "Поиск кода",
+			"message.stepProcess.edit": "Редактирование файлов",
+			"message.stepProcess.commands": "Запуск команд",
+			"message.stepProcess.code": "Запуск кода",
+			"message.stepProcess.webSearch": "Поиск в Интернете",
+			"message.stepProcess.webFetch": "Посещение веб-страниц",
+			"message.stepProcess.subagents": "Координирующие субагенты",
+			"message.stepProcess.plan": "Обновление плана",
+			"message.stepProcess.questions": "Жду ваших действий",
+			"message.stepProcess.tools": "Вызов инструментов",
+			"message.stepProcess.prepare.read": "Подготовка к чтению файлов",
+			"message.stepProcess.prepare.readImage": "Подготовка к чтению изображений",
+			"message.stepProcess.prepare.write": "Подготовка к записи файлов",
+			"message.stepProcess.prepare.search": "Подготовка к поиску кода",
+			"message.stepProcess.prepare.edit": "Подготовка к редактированию файлов",
+			"message.stepProcess.prepare.commands": "Подготовка к выполнению команд",
+			"message.stepProcess.prepare.code": "Подготовка к запуску кода",
+			"message.stepProcess.prepare.webSearch": "Подготовка к поиску в Интернете",
+			"message.stepProcess.prepare.webFetch": "Подготовка к посещению веб-страниц",
+			"message.stepProcess.prepare.subagents": "Подготовка к координации субагентов",
+			"message.stepProcess.prepare.plan": "Подготовка к обновлению плана",
+			"message.stepProcess.prepare.questions": "Подготовка вопросов",
+			"message.stepProcess.prepare.tools": "Подготовка вызовов инструментов",
+			"message.stepProcess.done.thinking": "Анализ завершен",
+			"message.stepProcess.done.read": "Чтение файлов",
+			"message.stepProcess.done.readImage": "Чтение изображений",
+			"message.stepProcess.done.write": "Написал файлы",
+			"message.stepProcess.done.search": "Искомый код",
+			"message.stepProcess.done.edit": "Отредактированные файлы",
+			"message.stepProcess.done.commands": "Выполнение команд",
+			"message.stepProcess.done.code": "Выполненный код",
+			"message.stepProcess.done.webSearch": "Искал в Интернете",
+			"message.stepProcess.done.webFetch": "Посещенные веб-страницы",
+			"message.stepProcess.done.subagents": "Координированные субагенты",
+			"message.stepProcess.done.plan": "Обновлен план",
+			"message.stepProcess.done.questions": "Задаваемые вопросы",
+			"message.stepProcess.done.tools": "Вызываемые инструменты",
+			"message.stepProcess.joinTwo": "{first} и {second}",
+			"message.stepProcess.comma": ", ",
+			"message.stepProcess.sharedPrefix": "",
+			"message.stepProcess.more": "{title} и т. д.",
+			"message.trigger.request": "Запрошено выполнение",
+			"message.trigger.goal": "Постоянная цель",
+			"message.trigger.agent": "Сообщение о задаче получено",
+			"message.trigger.team": "Сообщение команды получено",
+			"message.trigger.subagent": "Статус подзадачи обновлен",
+			"message.trigger.github": "Событие GitHub получено",
+			"message.trigger.webhook": "Получено внешнее событие",
+			"message.trigger.schedule": "Задача автоматизации",
+			"message.trigger.job": "Фоновая задача обновлена.",
+			"message.trigger.plugin": "Статус плагина обновлен",
+			"message.trigger.explanation": "Это уведомление вызвало такой ответ.",
+			"message.turnProcess.worked": "Завершено",
+			"message.turnProcess.took": "Завершено в ",
+			"message.turnProcess.failed": "Не удалось",
+			"view.chat": "Чат",
+			"image.open": "Посмотреть полное изображение",
+			"image.loading": "Загрузка изображения…",
+			"image.failed": "Предварительный просмотр изображения недоступен.",
+			"image.dialog": "Предварительный просмотр изображения",
+			"image.close": "Закрыть предварительный просмотр изображения",
+			"number.groupSeparator": ",",
+			"duration.compactSeconds": "{seconds}s",
+			"duration.compactMinutes": "{minutes}m{seconds}s",
+			"duration.milliseconds": "{milliseconds}ms",
+			"stats.counts": "Ходов: {turns}, шагов: {steps}",
+			"stats.cacheHit": "Попадание в кэш: {percent}%",
+			"stats.dialog.title": "Статистика сеансов",
+			"stats.dialog.usageTitle": "Использование токена",
+			"stats.dialog.llmTime": "время магистратуры",
+			"stats.dialog.toolTime": "Время работы инструмента",
+			"stats.dialog.ttft": "Среднее время до первого токена (TTFT)",
+			"stats.dialog.speed": "Токенов в секунду (TPS)",
+			"chat.loadingHistory": "Загрузка истории…",
+			"chat.loadError": "Не удалось загрузить историю: {message} ({code})",
+			"chat.loadOlder": "Загрузить раньше",
+			"chat.toBottom": "Вернуться к низу",
+			"chat.deepDiving": "Глубокое размышление",
+			"chat.deepDivingFor": "Глубокое размышление в течение {duration} ···",
+			"chat.turnNavigation.label": "Навигация по ходам",
+			"chat.turnNavigation.jump": "Перейти к ходу {turn}",
+			"chat.turnNavigation.jumpLoad": "Загрузить ход {turn} и перейти к нему",
+			"chat.turnNavigation.turn": "Ход {turn}",
+			"settings.performance.title": "Производительность и использование",
+			"settings.performance.description": "Выберите, какой объем информации о производительности и использовании показывать",
+			"settings.performance.compact": "Компактный",
+			"settings.performance.detailed": "Подробный",
+			"settings.links.title": "Открыть ссылки на чат в",
+			"settings.links.description": "Выберите, где открывать веб-ссылки",
+			"settings.links.sidebar": "Боковая панель в приложении",
+			"settings.links.newTab": "Браузер по умолчанию",
+			"settings.transcript.title": "Детали работы",
+			"settings.transcript.description": "Выберите, насколько подробно следует отображать вызовы инструментов.",
+			"settings.collapse.title": "Когда сворачивать детали работы",
+			"settings.collapse.description": "Выберите, когда автоматически сворачивать сведения о работе",
+			"settings.collapse.completion": "По завершении",
+			"settings.collapse.nextInput": "В следующем сообщении",
+			"settings.foldedReplies.title": "Ответы после сворачивания",
+			"settings.foldedReplies.description": "Выберите, какие ответы помощника останутся видимыми, когда сведения о работе будут свернуты.",
+			"settings.foldedReplies.all": "Все ответы",
+			"settings.foldedReplies.final": "Только окончательный ответ",
+			"settings.transcript.compact": "Компактный",
+			"settings.transcript.standard": "Стандартный",
+			"settings.transcript.detailed": "Подробный",
+			"settings.transcript.verbose": "Многословный",
+			"fileOpen.title": "Не удалось открыть файл",
+			"fileOpen.unknown": "Не удалось открыть этот файл",
+			"message.extraBlock": "Дополнительный блок контента",
+			"message.systemPrompt": "Системная подсказка",
+			"message.systemPromptUpdate": "Обновление системного запроса",
+			"message.toolAdded": "Добавлен инструмент: {name}.",
+			"message.toolRemoved": "Инструмент удален: {name}.",
+			"message.toolsAdded": "Добавлено: {names}",
+			"message.toolsAddedCount": "{count} добавлен",
+			"message.toolsChanged": "{added} добавлен, {removed} удален.",
+			"message.toolsRemoved": "Удалено: {names}.",
+			"message.toolsRemovedCount": "{count} удален.",
+			"message.toolsUpdated": "Инструменты обновлены",
+			"message.contextInjection": "Внедрение контекста",
+			"message.contextRecall": "Отзыв сеанса",
+			"message.referenceSummary": "Ссылка на сессию · {labels}",
+			"message.referenceSeparator": ", ",
+			"message.context.instructions.loaded": "загружен",
+			"message.context.instructions.added": "добавлено",
+			"message.context.instructions.updated": "обновлено",
+			"message.context.instructions.removed": "удалено",
+			"message.context.catalog.replaced": "Каталог замены",
+			"message.context.catalog.more": "… {count} ещё",
+			"message.context.snapshot.supersedes": "Заменяет предыдущие снимки",
+			"message.context.relay.from": "Из сеанса {session}",
+			"message.context.recall.counts": "{retained} сохранен · {omitted} опущен",
+			"message.context.recall.truncated": "усеченный",
+			"message.compaction": "Контекст сжат",
+			"message.compaction.running": "Сжатие контекста…",
+			"message.compaction.completed": "Сжатые элементы истории {items} (токены ~{tokens})",
+			"message.compaction.expand": "Посмотреть сводку по уплотнению",
+			"message.compaction.unavailable": "Сводка по уплотнению недоступна.",
+			"message.compaction.commandTitle": "компактный",
+			"message.think": "Подумайте",
+			"message.unknownSurface": "Неизвестное событие на поверхности: {type}.",
+			"message.unknownBlock": "Неизвестный блок контента",
+			"message.turnProcess.toolCalls.one": "{count} вызов инструмента",
+			"message.turnProcess.toolCalls.other": "{count} вызовов инструментов",
+			"message.turnProcess.messages.one": "Сообщение {count}",
+			"message.turnProcess.messages.other": "Сообщения {count}",
+			"message.turnProcess.subagents.one": "Субагент {count}",
+			"message.turnProcess.subagents.other": "Субагенты {count}",
+			"message.turnProcess.thoughtForAWhile": "Размышлял некоторое время",
+			"message.turnProcess.separator": " · ",
+			"message.stopped": "Остановлено",
+			"message.branch": "Перейти к новому разговору",
+			"message.branchUnavailable": "Доступно только в последнем сообщении о завершенном ходу.",
+			"message.retry.active": "Повторный запрос модели",
+			"message.retry.cancelled": "Повтор запроса модели отменен.",
+			"message.retry.started": "Повторный запрос модели",
+			"message.retry.scheduled": "Ожидание повторного запроса модели",
+			"message.retry.status": "{label} ({retry}/{maximum}) · {seconds}s",
+			"message.retry.delay": "Задержка повтора: ",
+			"message.retry.failure": "Причина неисправности: ",
+			"message.failure.auth": "Ключ API недействителен.",
+			"message.taskStopped": "Задача остановлена",
+			"message.failure.accountSignedOut": "Остановлено, поскольку вы вышли из DeepSeek.",
+			"message.failure.interrupted": "Процесс DSH завершился до завершения этого хода (например, был завершен, произошел сбой или истекло время ожидания при завершении работы), поэтому ход был закрыт при перезапуске DSH. Незавершенные вызовы инструментов имеют неизвестные результаты.",
+			"message.failure.accountSignInRequired": "Войдите в DeepSeek и убедитесь, что пункт назначения запроса поддерживает аутентификацию учетной записи.",
+			"message.failure.quota": "Квота запросов исчерпана.",
+			"message.turnError": "Этот ход завершился ошибкой",
+			"message.maxTokens": "Достигнут предел выходных токенов",
+			"message.maxTokens.hint": "Ответ был прерван; более ранний вывод сохраняется в разговоре. Отправьте «продолжить», чтобы модель возобновила работу.",
+			"message.tokensPerSecond": "{tps} ток/с",
+			"message.turnUsage.title": "Использование ресурсов за ход",
+			"message.turnUsage.consumed": "Использование {total}",
+			"message.turnUsage.model": "Поставщик/модель",
+			"message.turnUsage.cacheHit": "Попадание в кэш",
+			"message.turnUsage.input": "Некэшированный ввод",
+			"message.turnUsage.cacheRead": "Кэшированный ввод",
+			"message.turnUsage.cacheWrite": "Запись в кэш",
+			"message.turnUsage.output": "Выход",
+			"message.turnUsage.reasoning": " (рассуждение {tokens})",
+			"message.turnUsage.count": "{count} ток",
+			"duration.secondUnit": "с",
+			"duration.minuteUnit": "м ",
+			"duration.hourUnit": "ч ",
+			"command.running": "Бег…",
+			"command.failed": "Команда не выполнена",
+			"command.done": "Завершено",
+			"command.title": "Команда",
+			"row.running": "Бег",
+			"row.failed": "Не удалось",
+			"json.truncated": "… усечено, всего символов {total}",
+			"clock.md": "{m}/{d}",
+			"clock.ymd": "{y}-{m}-{d}"
+		};
+		/** Portuguese dictionary, checked against the English keys. */
+		const pt = {
+			"message.stepProcess.prepare.computer": "Preparando o controle do computador",
+			"message.stepProcess.computer": "Controlando o computador",
+			"message.stepProcess.done.computer": "Computador controlado",
+			"message.stepProcess.count": "{count} operações",
+			"message.stepProcess.failures": "{count} falharam",
+			"message.stepProcess.stopped": "{count} interrompidas",
+			"message.stepProcess.thinking": "Analisando a solicitação",
+			"message.stepProcess.read": "Lendo arquivos",
+			"message.stepProcess.readImage": "Lendo imagens",
+			"message.stepProcess.write": "Gravando arquivos",
+			"message.stepProcess.search": "Pesquisando código",
+			"message.stepProcess.edit": "Editando arquivos",
+			"message.stepProcess.commands": "Executando comandos",
+			"message.stepProcess.code": "Executando código",
+			"message.stepProcess.webSearch": "Pesquisando na web",
+			"message.stepProcess.webFetch": "Visitando páginas da web",
+			"message.stepProcess.subagents": "Coordenando subagentes",
+			"message.stepProcess.plan": "Atualizando o plano",
+			"message.stepProcess.questions": "Esperando por sua ação",
+			"message.stepProcess.tools": "Ferramentas de chamada",
+			"message.stepProcess.prepare.read": "Preparando-se para ler arquivos",
+			"message.stepProcess.prepare.readImage": "Preparando-se para ler imagens",
+			"message.stepProcess.prepare.write": "Preparando-se para gravar arquivos",
+			"message.stepProcess.prepare.search": "Preparando-se para pesquisar o código",
+			"message.stepProcess.prepare.edit": "Preparando-se para editar arquivos",
+			"message.stepProcess.prepare.commands": "Preparando para executar comandos",
+			"message.stepProcess.prepare.code": "Preparando-se para executar o código",
+			"message.stepProcess.prepare.webSearch": "Preparando-se para pesquisar na web",
+			"message.stepProcess.prepare.webFetch": "Preparando-se para visitar páginas da web",
+			"message.stepProcess.prepare.subagents": "Preparando-se para coordenar subagentes",
+			"message.stepProcess.prepare.plan": "Preparando-se para atualizar o plano",
+			"message.stepProcess.prepare.questions": "Preparando perguntas",
+			"message.stepProcess.prepare.tools": "Preparando chamadas de ferramenta",
+			"message.stepProcess.done.thinking": "Análise concluída",
+			"message.stepProcess.done.read": "Ler arquivos",
+			"message.stepProcess.done.readImage": "Ler imagens",
+			"message.stepProcess.done.write": "Escreveu arquivos",
+			"message.stepProcess.done.search": "Código pesquisado",
+			"message.stepProcess.done.edit": "Arquivos editados",
+			"message.stepProcess.done.commands": "Comandos executados",
+			"message.stepProcess.done.code": "Código executado",
+			"message.stepProcess.done.webSearch": "Pesquisei na web",
+			"message.stepProcess.done.webFetch": "Páginas da web visitadas",
+			"message.stepProcess.done.subagents": "Subagentes coordenados",
+			"message.stepProcess.done.plan": "Atualizado o plano",
+			"message.stepProcess.done.questions": "Perguntas feitas",
+			"message.stepProcess.done.tools": "Ferramentas chamadas",
+			"message.stepProcess.joinTwo": "{first} e {second}",
+			"message.stepProcess.comma": ", ",
+			"message.stepProcess.sharedPrefix": "",
+			"message.stepProcess.more": "{title}, etc.",
+			"message.trigger.request": "Execução solicitada",
+			"message.trigger.goal": "Objetivo contínuo",
+			"message.trigger.agent": "Mensagem de tarefa recebida",
+			"message.trigger.team": "Mensagem da equipe recebida",
+			"message.trigger.subagent": "Status da subtarefa atualizado",
+			"message.trigger.github": "GitHub evento recebido",
+			"message.trigger.webhook": "Evento externo recebido",
+			"message.trigger.schedule": "Tarefa de automação",
+			"message.trigger.job": "Tarefa em segundo plano atualizada",
+			"message.trigger.plugin": "Status do plug-in atualizado",
+			"message.trigger.explanation": "Esta notificação desencadeou esta resposta.",
+			"message.turnProcess.worked": "Concluído",
+			"message.turnProcess.took": "Concluído em ",
+			"message.turnProcess.failed": "Falha",
+			"view.chat": "Chat",
+			"image.open": "Ver imagem completa",
+			"image.loading": "Carregando imagem…",
+			"image.failed": "Visualização da imagem indisponível",
+			"image.dialog": "Visualização da imagem",
+			"image.close": "Fechar visualização da imagem",
+			"number.groupSeparator": ",",
+			"duration.compactSeconds": "{seconds}s",
+			"duration.compactMinutes": "{minutes}m{seconds}s",
+			"duration.milliseconds": "{milliseconds}ms",
+			"stats.counts": "{turns} turnos, {steps} etapas",
+			"stats.cacheHit": "Acertos no cache: {percent}%",
+			"stats.dialog.title": "Estatísticas da sessão",
+			"stats.dialog.usageTitle": "Uso de token",
+			"stats.dialog.llmTime": "Horário do LLM",
+			"stats.dialog.toolTime": "Tempo da ferramenta",
+			"stats.dialog.ttft": "Tempo médio para o primeiro token (TTFT)",
+			"stats.dialog.speed": "Tokens por segundo (TPS)",
+			"chat.loadingHistory": "Carregando histórico…",
+			"chat.loadError": "Falha ao carregar o histórico: {message} ({code})",
+			"chat.loadOlder": "Carregar mais cedo",
+			"chat.toBottom": "De volta ao fundo",
+			"chat.deepDiving": "Raciocínio profundo",
+			"chat.deepDivingFor": "Raciocínio profundo há {duration} ···",
+			"chat.turnNavigation.label": "Navegação entre turnos",
+			"chat.turnNavigation.jump": "Ir para o turno {turn}",
+			"chat.turnNavigation.jumpLoad": "Carregar e ir para o turno {turn}",
+			"chat.turnNavigation.turn": "Turno {turn}",
+			"settings.performance.title": "Desempenho e uso",
+			"settings.performance.description": "Escolha quantas informações de desempenho e uso serão exibidas",
+			"settings.performance.compact": "Compacto",
+			"settings.performance.detailed": "Detalhado",
+			"settings.links.title": "Abra links de bate-papo em",
+			"settings.links.description": "Escolha onde abrir links da web",
+			"settings.links.sidebar": "Barra lateral no aplicativo",
+			"settings.links.newTab": "Navegador padrão",
+			"settings.transcript.title": "Detalhes do trabalho",
+			"settings.transcript.description": "Escolha quantos detalhes serão exibidos nas chamadas de ferramenta",
+			"settings.collapse.title": "Quando recolher detalhes do trabalho",
+			"settings.collapse.description": "Escolha quando recolher automaticamente os detalhes do trabalho",
+			"settings.collapse.completion": "Na conclusão",
+			"settings.collapse.nextInput": "Na próxima mensagem",
+			"settings.foldedReplies.title": "Respostas após o recolhimento",
+			"settings.foldedReplies.description": "Escolha quais respostas do assistente permanecerão visíveis quando os detalhes do trabalho forem recolhidos",
+			"settings.foldedReplies.all": "Todas as respostas",
+			"settings.foldedReplies.final": "Apenas resposta final",
+			"settings.transcript.compact": "Compacto",
+			"settings.transcript.standard": "Padrão",
+			"settings.transcript.detailed": "Detalhado",
+			"settings.transcript.verbose": "Verboso",
+			"fileOpen.title": "Não foi possível abrir o arquivo",
+			"fileOpen.unknown": "Não foi possível abrir este arquivo",
+			"message.extraBlock": "Bloco de conteúdo extra",
+			"message.systemPrompt": "Alerta do sistema",
+			"message.systemPromptUpdate": "Atualização imediata do sistema",
+			"message.toolAdded": "Ferramenta adicionada: {name}",
+			"message.toolRemoved": "Ferramenta removida: {name}",
+			"message.toolsAdded": "Adicionado: {names}",
+			"message.toolsAddedCount": "{count} adicionado",
+			"message.toolsChanged": "{added} adicionado, {removed} removido",
+			"message.toolsRemoved": "Removido: {names}",
+			"message.toolsRemovedCount": "{count} removido",
+			"message.toolsUpdated": "Ferramentas atualizadas",
+			"message.contextInjection": "Injeção de contexto",
+			"message.contextRecall": "Recuperação de sessão",
+			"message.referenceSummary": "Sessão referenciada · {labels}",
+			"message.referenceSeparator": ", ",
+			"message.context.instructions.loaded": "carregado",
+			"message.context.instructions.added": "adicionado",
+			"message.context.instructions.updated": "atualizado",
+			"message.context.instructions.removed": "removido",
+			"message.context.catalog.replaced": "Catálogo de substituição",
+			"message.context.catalog.more": "… {count} mais",
+			"message.context.snapshot.supersedes": "Substitui instantâneos anteriores",
+			"message.context.relay.from": "Da sessão {session}",
+			"message.context.recall.counts": "{retained} mantido · {omitted} omitido",
+			"message.context.recall.truncated": "truncado",
+			"message.compaction": "Contexto compactado",
+			"message.compaction.running": "Contexto compactado…",
+			"message.compaction.completed": "{items} itens de histórico compactados (~{tokens} tokens)",
+			"message.compaction.expand": "Ver resumo de compactação",
+			"message.compaction.unavailable": "Resumo de compactação indisponível",
+			"message.compaction.commandTitle": "compacto",
+			"message.think": "Pense",
+			"message.unknownSurface": "Evento de superfície desconhecido: {type}",
+			"message.unknownBlock": "Bloco de conteúdo desconhecido",
+			"message.turnProcess.toolCalls.one": "{count} chamada de ferramenta",
+			"message.turnProcess.toolCalls.other": "{count} chamadas de ferramenta",
+			"message.turnProcess.messages.one": "{count} mensagem",
+			"message.turnProcess.messages.other": "{count} mensagens",
+			"message.turnProcess.subagents.one": "{count} subagente",
+			"message.turnProcess.subagents.other": "{count} subagentes",
+			"message.turnProcess.thoughtForAWhile": "Pensou por um tempo",
+			"message.turnProcess.separator": " · ",
+			"message.stopped": "Parado",
+			"message.branch": "Ramifique para uma nova conversa",
+			"message.branchUnavailable": "Disponível apenas na última mensagem de um turno concluído",
+			"message.retry.active": "Tentando novamente a solicitação de modelo",
+			"message.retry.cancelled": "Nova tentativa de solicitação de modelo cancelada",
+			"message.retry.started": "Solicitação de modelo repetida",
+			"message.retry.scheduled": "Aguardando para tentar novamente a solicitação de modelo",
+			"message.retry.status": "{label} ({retry}/{maximum}) · {seconds}s",
+			"message.retry.delay": "Atraso na nova tentativa: ",
+			"message.retry.failure": "Motivo da falha: ",
+			"message.failure.auth": "A chave API é inválida",
+			"message.taskStopped": "Tarefa interrompida",
+			"message.failure.accountSignedOut": "Interrompido porque você saiu de DeepSeek.",
+			"message.failure.interrupted": "O processo DSH foi encerrado antes do término deste turno (por exemplo, ele foi eliminado, travou ou expirou durante o desligamento), portanto, o turno foi encerrado quando DSH foi reiniciado. Chamadas de ferramentas inacabadas têm resultados desconhecidos.",
+			"message.failure.accountSignInRequired": "Faça login em DeepSeek e verifique se o destino da solicitação suporta autenticação de conta.",
+			"message.failure.quota": "Cota de solicitação esgotada.",
+			"message.turnError": "Este turno falhou",
+			"message.maxTokens": "Limite de token de saída atingido",
+			"message.maxTokens.hint": "A resposta foi cortada; a saída anterior é preservada na conversa. Envie \"continuar\" para permitir que o modelo seja retomado.",
+			"message.tokensPerSecond": "{tps} tok/s",
+			"message.turnUsage.title": "Uso do turno",
+			"message.turnUsage.consumed": "Uso {total}",
+			"message.turnUsage.model": "Provedor/modelo",
+			"message.turnUsage.cacheHit": "Acertos no cache",
+			"message.turnUsage.input": "Entrada sem cache",
+			"message.turnUsage.cacheRead": "Entrada em cache",
+			"message.turnUsage.cacheWrite": "Gravação em cache",
+			"message.turnUsage.output": "Saída",
+			"message.turnUsage.reasoning": " ({tokens} raciocínio)",
+			"message.turnUsage.count": "{count} tok",
+			"duration.secondUnit": "s",
+			"duration.minuteUnit": "m ",
+			"duration.hourUnit": "h ",
+			"command.running": "Correndo…",
+			"command.failed": "Falha no comando",
+			"command.done": "Concluído",
+			"command.title": "Comando",
+			"row.running": "Correndo",
+			"row.failed": "Falha",
+			"json.truncated": "… truncado, {total} caracteres no total",
+			"clock.md": "{m}/{d}",
+			"clock.ymd": "{y}-{m}-{d}"
+		};
 		//#endregion
 		//#region src/client/reasoning-text.ts
 		/** Display text preparation for model reasoning. */
@@ -6190,7 +8242,7 @@ window.__ModuleLoader__.load({
 			}
 		}
 		/**
-		* Render one assistant reasoning block collapsed until the reader opens it. The
+		* Render one consecutive run of assistant reasoning collapsed until the reader opens it. The
 		* collapsed summary omits double-asterisk markers; expanded content renders
 		* the complete Markdown with secondary typography. A streaming preview advances
 		* when a paragraph's first line completes. Mode changes toggle CSS display without unmounting
@@ -6203,7 +8255,7 @@ window.__ModuleLoader__.load({
 		* @param props.t - conversation locale seat for the disclosure and running status.
 		* @returns the reasoning disclosure.
 		*/
-		const ReasoningRow = (0, react.memo)(function ReasoningRow({ text: rawText, running, usePresentation, useDisclosure, renderSlot, t }) {
+		const ReasoningRow = (0, react.memo)(function ReasoningRow({ text: rawText, running, textInteractionSource = false, usePresentation, useDisclosure, renderSlot, t }) {
 			const { expanded, toggle } = useDisclosure();
 			const { text, hidden } = (0, react.useMemo)(() => {
 				const text = reasoningText(rawText);
@@ -6229,6 +8281,7 @@ window.__ModuleLoader__.load({
 			})] }), [running, summary]);
 			const content = (0, react.useMemo)(() => expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: ReasoningRow_module_css_default.thinkBody,
+				"data-text-interaction-source": textInteractionSource && !running ? "" : void 0,
 				children: renderSlot("conversation.chat.reasoning.body", {
 					rawText,
 					text,
@@ -6239,7 +8292,8 @@ window.__ModuleLoader__.load({
 				renderSlot,
 				running,
 				rawText,
-				text
+				text,
+				textInteractionSource
 			]);
 			if (hidden) return null;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -6306,7 +8360,7 @@ window.__ModuleLoader__.load({
 			return fileMediaUrl(base, path);
 		}
 		/** Adjacent non-blank reasoning blocks in one Assistant share a Think disclosure. */
-		const AssistantMarkdown = (0, react.memo)(function AssistantMarkdown({ blocks, streaming, interrupted, loadImage, groupPart, useDisclosure, reasoningHidden = false, usePresentation, revealProcess, mentions, renderSlot, useGroupAction, t }) {
+		const AssistantMarkdown = (0, react.memo)(function AssistantMarkdown({ blocks, streaming, textInteractionSource = false, interrupted, loadImage, groupPart, useDisclosure, reasoningHidden = false, usePresentation, revealProcess, mentions, renderSlot, useGroupAction, t }) {
 			const labels = (0, react.useMemo)(() => markdownLabels(t), [t]);
 			const pathImages = (0, react.useMemo)(() => {
 				return { resolve: (value) => localPathMediaUrl(document.baseURI, value) };
@@ -6326,7 +8380,8 @@ window.__ModuleLoader__.load({
 							streaming,
 							labels,
 							fileMentions: mentions,
-							pathImages
+							pathImages,
+							textInteractionSource
 						}, i));
 						break;
 					case "reasoning": {
@@ -6349,6 +8404,7 @@ window.__ModuleLoader__.load({
 								usePresentation,
 								useDisclosure,
 								renderSlot,
+								textInteractionSource,
 								t
 							})
 						}, start));
@@ -6401,7 +8457,19 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/chat/AssistantNodeView.tsx
 		/** Streaming, settled, and interrupted Assistant states share one keyed renderer instance. */
-		const AssistantNodeView = (0, react.memo)(function AssistantNodeView({ node, groupPart, useDisclosure, useGroupAction, useTurnData, turnProcess, openFile, loadImage, fileMentions, usePresentation, renderSlot, t }) {
+		const AssistantNodeView = (0, react.memo)(function AssistantNodeView({ node, groupPart, useDisclosure, useGroupAction, useTurnData, turnProcess, openFile, loadImage, fileMentions, usePresentation, renderSlot, t, sessionId, useContextMenu, resolveFilePath }) {
+			const { getTriggerProps } = useContextMenu();
+			const getFileTriggerProps = (0, react.useCallback)((path) => getTriggerProps(() => ({
+				kind: "file",
+				value: {
+					sessionId,
+					path: resolveFilePath(path)
+				}
+			})), [
+				getTriggerProps,
+				sessionId,
+				resolveFilePath
+			]);
 			const data = node.data;
 			const turn = node.location.kind === "turn" || node.location.kind === "step" ? node.location.turn : void 0;
 			const tail = useTurnData("turn-tail");
@@ -6419,8 +8487,13 @@ window.__ModuleLoader__.load({
 				tail,
 				turn
 			]);
-			const mentions = (0, react.useMemo)(() => owner === void 0 ? void 0 : fileMentions(owner), [fileMentions, owner]);
-			const reasoningHidden = turnProcess !== void 0 && turnProcess.foldable && turnProcess.spec.answerStep === data.step && turnProcess.spec.inlineReasoning && !turnProcess.open;
+			const mentions = (0, react.useMemo)(() => owner === void 0 ? void 0 : fileMentions(owner, getFileTriggerProps), [
+				fileMentions,
+				owner,
+				getFileTriggerProps
+			]);
+			const keepReplies = usePresentation((policy) => policy.foldedReplies === "all");
+			const reasoningHidden = turnProcess !== void 0 && turnProcess.foldable && (keepReplies ? groupPart !== "reasoning" : turnProcess.spec.answerStep === data.step && turnProcess.spec.inlineReasoning) && !turnProcess.open;
 			const revealProcess = (0, react.useCallback)(() => {
 				turnProcess?.setOpen(true);
 			}, [turnProcess]);
@@ -6429,6 +8502,7 @@ window.__ModuleLoader__.load({
 				groupPart,
 				useDisclosure,
 				streaming: data.status === "running",
+				textInteractionSource: data.status === "settled" && data.finalNode?.messageId !== void 0,
 				interrupted: data.status === "interrupted",
 				loadImage,
 				reasoningHidden,
@@ -6659,7 +8733,7 @@ window.__ModuleLoader__.load({
 		});
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/TurnProcessNodeView.module.css.mjs
-		const css$6 = ".l_V-RG_root{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);font:inherit;font-size:var(--dsh-content-font-size,14px);cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex}.l_V-RG_root:disabled{cursor:default}.l_V-RG_root:hover:not(:disabled){color:var(--dsw-alias-label-secondary)}.l_V-RG_chevron{width:14px;height:14px;color:inherit;flex:none;margin-left:4px;transition:transform .1s}.l_V-RG_root[data-open] .l_V-RG_chevron{transform:rotate(180deg)}.l_V-RG_label{min-width:0;font-size:inherit;line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.l_V-RG_durationNumber{font-family:var(--ds-font-family-code);font-variant-numeric:tabular-nums}@media (prefers-reduced-motion:reduce){.l_V-RG_root,.l_V-RG_chevron{transition:none}}";
+		const css$6 = ".l_V-RG_root{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-tertiary);font:inherit;font-size:var(--dsh-content-font-size,14px);cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex}.l_V-RG_root:disabled{cursor:default}@media (hover:hover){.l_V-RG_root:hover:not(:disabled){color:var(--dsw-alias-label-secondary)}}.l_V-RG_chevron{width:14px;height:14px;color:inherit;flex:none;margin-left:4px;transition:transform .1s}.l_V-RG_root[data-open] .l_V-RG_chevron{transform:rotate(180deg)}.l_V-RG_label{min-width:0;font-size:inherit;line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.l_V-RG_durationNumber{font-family:var(--ds-font-family-code);font-variant-numeric:tabular-nums}@media (prefers-reduced-motion:reduce){.l_V-RG_root,.l_V-RG_chevron{transition:none}}";
 		const tagId$6 = "@deepseek-ai/dsh-client-ui-chat/TurnProcessNodeView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
@@ -6856,7 +8930,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/TurnUsagePanel.module.css.mjs
-		const css$5 = ".Q51KRG_root{min-width:0;display:inline-flex}.Q51KRG_root+.Q51KRG_root{margin-left:-6px}.Q51KRG_trigger{min-width:0;height:calc(28px + var(--dsh-content-font-delta,0px));border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-tertiary);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);font-variant-numeric:tabular-nums;line-height:calc(24px + var(--dsh-content-font-delta,0px));white-space:nowrap;cursor:pointer;background:0 0;border:none;align-items:center;gap:4px;padding:6px 8px;display:inline-flex}.Q51KRG_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.Q51KRG_trigger svg{width:calc(15px + var(--dsh-content-font-delta,0px));height:calc(15px + var(--dsh-content-font-delta,0px));flex:none}.Q51KRG_trigger:hover,.Q51KRG_trigger[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary)}@media (width<=480px){.Q51KRG_trigger{width:calc(28px + var(--dsh-content-font-delta,0px));justify-content:center;padding:6px}.Q51KRG_trigger .Q51KRG_label{display:none}.Q51KRG_root+.Q51KRG_root{margin-left:0}}";
+		const css$5 = ".Q51KRG_root{min-width:0;display:inline-flex}.Q51KRG_root+.Q51KRG_root{margin-left:-6px}.Q51KRG_trigger{min-width:0;height:calc(28px + var(--dsh-content-font-delta,0px));border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-tertiary);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);font-variant-numeric:tabular-nums;line-height:calc(24px + var(--dsh-content-font-delta,0px));white-space:nowrap;cursor:pointer;background:0 0;border:none;align-items:center;gap:4px;padding:6px 8px;display:inline-flex}.Q51KRG_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.Q51KRG_trigger svg{width:calc(15px + var(--dsh-content-font-delta,0px));height:calc(15px + var(--dsh-content-font-delta,0px));flex:none}.Q51KRG_trigger[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary)}@media (hover:hover){.Q51KRG_trigger:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-tertiary)}}@media (width<=480px){.Q51KRG_trigger{width:calc(28px + var(--dsh-content-font-delta,0px));justify-content:center;padding:6px}.Q51KRG_trigger .Q51KRG_label{display:none}.Q51KRG_root+.Q51KRG_root{margin-left:0}}";
 		const tagId$5 = "@deepseek-ai/dsh-client-ui-chat/TurnUsagePanel.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
@@ -6872,7 +8946,7 @@ window.__ModuleLoader__.load({
 		};
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/stat-dialog.module.css.mjs
-		const css$4 = ".bRhRbq_panel{z-index:1100;box-sizing:border-box;border-radius:var(--dsw-radius-lg);background:var(--dsw-specific-menu);width:max-content;min-width:min(300px,100vw - 24px);max-width:min(440px,100vw - 24px);backdrop-filter:var(--dsw-menu-backdrop-filter);--dsw-elevation-stroke-color:var(--dsw-alias-border-l1);box-shadow:var(--dsw-elevation-prominent);color:var(--dsw-alias-label-secondary);cursor:default;border:0;padding:16px;font-size:12px;line-height:18px;position:fixed}.bRhRbq_title{color:var(--dsw-alias-label-primary);justify-content:space-between;gap:16px;margin-bottom:8px;font-weight:500;display:flex}.bRhRbq_titleRule{border-top:.5px solid var(--dsw-alias-border-l2);margin-bottom:10px}.bRhRbq_titleValue{font-variant-numeric:tabular-nums}.bRhRbq_titleLabel{align-items:center;gap:6px;min-width:0;display:inline-flex}.bRhRbq_titleLabel svg{flex:none;width:14px;height:14px}.bRhRbq_details{color:var(--dsw-alias-label-tertiary);grid-template-columns:minmax(76px,auto) minmax(0,1fr);gap:6px 16px;margin:0;display:grid}.bRhRbq_details dt,.bRhRbq_details dd{min-width:0;margin:0}.bRhRbq_details dd{color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;text-align:right}.bRhRbq_details .bRhRbq_route{overflow-wrap:anywhere}.bRhRbq_reasoning{color:var(--dsw-alias-label-tertiary);white-space:nowrap}";
+		const css$4 = ".bRhRbq_panel{z-index:1100;box-sizing:border-box;width:max-content;min-width:min(300px, calc(100vw - 24px), var(--dsh-anchored-max-width,100vw));max-width:min(440px, calc(100vw - 24px), var(--dsh-anchored-max-width,100vw));border-radius:var(--dsw-radius-lg);background:var(--dsw-specific-menu);backdrop-filter:var(--dsw-menu-backdrop-filter);--dsw-elevation-stroke-color:var(--dsw-alias-border-l1);box-shadow:var(--dsw-elevation-prominent);color:var(--dsw-alias-label-secondary);cursor:default;max-height:var(--dsh-anchored-max-height,none);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border:0;padding:16px;font-size:12px;line-height:18px;position:fixed;overflow:hidden auto}.bRhRbq_title{color:var(--dsw-alias-label-primary);justify-content:space-between;gap:16px;margin-bottom:8px;font-weight:500;display:flex}.bRhRbq_titleRule{border-top:.5px solid var(--dsw-alias-border-l2);margin-bottom:10px}.bRhRbq_titleValue{font-variant-numeric:tabular-nums}.bRhRbq_titleLabel{align-items:center;gap:6px;min-width:0;display:inline-flex}.bRhRbq_titleLabel svg{flex:none;width:14px;height:14px}.bRhRbq_details{color:var(--dsw-alias-label-tertiary);grid-template-columns:minmax(76px,auto) minmax(0,1fr);gap:6px 16px;margin:0;display:grid}.bRhRbq_details dt,.bRhRbq_details dd{min-width:0;margin:0}.bRhRbq_details dd{color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;text-align:right}.bRhRbq_details .bRhRbq_route{overflow-wrap:anywhere}.bRhRbq_reasoning{color:var(--dsw-alias-label-tertiary);white-space:nowrap}";
 		const tagId$4 = "@deepseek-ai/dsh-client-ui-chat/stat-dialog.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
 			const tag = document.createElement("style");
@@ -6979,21 +9053,6 @@ window.__ModuleLoader__.load({
 		*/
 		function assistantText(blocks) {
 			return blocks.flatMap((block) => block.kind === "text" ? [block.text] : []).join("");
-		}
-		//#endregion
-		//#region src/client/contract/assistant-content.ts
-		/**
-		* Test whether Assistant blocks contain a user-facing reply rather than only
-		* reasoning or Tool-call protocol material.
-		* @param blocks - Assistant content blocks.
-		* @returns whether the blocks contain visible reply content.
-		*/
-		function hasAssistantReplyContent(blocks) {
-			return blocks.some((block) => {
-				if (block.kind === "reasoning" || block.kind === "tool-call") return false;
-				if (block.kind === "text") return block.text.trim() !== "";
-				return true;
-			});
 		}
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/TurnTailNodeView.module.css.mjs
@@ -7131,7 +9190,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/TurnTriggerNodeView.module.css.mjs
-		const css$2 = ".oz9t_a_root{border:.5px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-xl);background:var(--dsw-alias-turn-trigger-bg,var(--dsw-alias-markdown-code-block));min-width:0;transition:background-color .1s}.oz9t_a_root:hover{background:var(--dsw-alias-turn-trigger-bg-hover,var(--dsw-alias-interactive-bg-hover))}.oz9t_a_header{width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:10px;padding:12px 16px;transition:color .1s;display:flex}.oz9t_a_header:hover{color:var(--dsw-alias-label-secondary)}.oz9t_a_icon{color:inherit;flex:none;display:inline-flex}.oz9t_a_title{font-size:var(--dsh-content-font-size,14px);flex:none}.oz9t_a_time{color:inherit;font:var(--dsw-font-xxs-12);flex:none;margin-left:auto}.oz9t_a_chevron,.oz9t_a_openChevron{color:inherit;flex:none}.oz9t_a_openChevron{transform:rotate(180deg)}.oz9t_a_body{padding:0 16px 12px 40px}.oz9t_a_explanation{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);margin:8px 0}.oz9t_a_content{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;font:var(--dsw-font-xxs-12);overflow:auto}@media (prefers-reduced-motion:reduce){.oz9t_a_root,.oz9t_a_header{transition:none}}";
+		const css$2 = ".oz9t_a_root{border:.5px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-xl);background:var(--dsw-alias-turn-trigger-bg,var(--dsw-alias-markdown-code-block));min-width:0;transition:background-color .1s}@media (hover:hover){.oz9t_a_root:hover{background:var(--dsw-alias-turn-trigger-bg-hover,var(--dsw-alias-interactive-bg-hover))}}.oz9t_a_header{width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:10px;padding:12px 16px;transition:color .1s;display:flex}@media (hover:hover){.oz9t_a_header:hover{color:var(--dsw-alias-label-secondary)}}.oz9t_a_icon{color:inherit;flex:none;display:inline-flex}.oz9t_a_title{font-size:var(--dsh-content-font-size,14px);flex:none}.oz9t_a_time{color:inherit;font:var(--dsw-font-xxs-12);flex:none;margin-left:auto}.oz9t_a_chevron,.oz9t_a_openChevron{color:inherit;flex:none}.oz9t_a_openChevron{transform:rotate(180deg)}.oz9t_a_body{padding:0 16px 12px 40px}.oz9t_a_explanation{color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);margin:8px 0}.oz9t_a_content{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;font:var(--dsw-font-xxs-12);overflow:auto}@media (prefers-reduced-motion:reduce){.oz9t_a_root,.oz9t_a_header{transition:none}}";
 		const tagId$2 = "@deepseek-ai/dsh-client-ui-chat/TurnTriggerNodeView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -7246,12 +9305,17 @@ window.__ModuleLoader__.load({
 			ctx.slots.inject("conversation.chat.node", () => ctx.slots.register({
 				name: "conversation.chat.node",
 				key: "user",
-				locale: NS
+				locale: NS,
+				children: { "conversation.chat.user.before": {
+					kind: "chain",
+					scope: "session"
+				} }
 			}, UserMessageNodeView));
 			ctx.slots.inject("conversation.chat.node", () => ctx.slots.register({
 				name: "conversation.chat.node",
 				key: "steering",
-				locale: NS
+				locale: NS,
+				inject: () => ({ renderSlotChain: () => null })
 			}, UserMessageNodeView));
 			ctx.slots.inject("conversation.chat.node", () => ctx.slots.register({
 				name: "conversation.chat.node",
@@ -7282,7 +9346,11 @@ window.__ModuleLoader__.load({
 						scope: "session"
 					}
 				},
-				inject: () => ({ hooks: { presentation } })
+				inject: (sessionId) => ({
+					hooks: { presentation },
+					resolveFilePath: sessionFilePath(ctx, sessionId),
+					fileMentions: (owner, getFileTriggerProps) => ctx.get("chatFileMentions")?.forClosing(owner, sessionId, getFileTriggerProps)
+				})
 			}, AssistantNodeView));
 			ctx.slots.inject("conversation.chat.node", () => ctx.slots.register({
 				name: "conversation.chat.node",
@@ -7389,8 +9457,9 @@ window.__ModuleLoader__.load({
 							})]
 						}, `file:${index}`))
 					}),
-					showBubble && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: MessageItem_module_css_default.bubble,
+					showBubble && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(_deepseek_ai_dsh_client_ui_primitives.UserMessageBubble, {
+						"data-message-bubble": "",
+						"data-text-interaction-source": "",
 						children: [renderFactorySlot("conversation.user.text", {
 							text,
 							facts,
@@ -7431,7 +9500,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/chat/StatsPills.module.css.mjs
-		const css$1 = ".bOPqQW_anchor{min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));display:inline-flex}.bOPqQW_pill{box-sizing:border-box;border-radius:var(--dsw-radius-sm);max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-variant-numeric:tabular-nums;line-height:inherit;white-space:nowrap;background:0 0;border:none;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}.bOPqQW_pill svg{flex:none;width:14px;height:14px}button.bOPqQW_pill{cursor:pointer}button.bOPqQW_pill:hover,button.bOPqQW_pill[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}.bOPqQW_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.bOPqQW_sep{color:var(--dsw-alias-separator-primary);margin:0 6px}";
+		const css$1 = ".bOPqQW_anchor{min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));display:inline-flex}.bOPqQW_pill{box-sizing:border-box;border-radius:var(--dsw-radius-sm);max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-variant-numeric:tabular-nums;line-height:inherit;white-space:nowrap;background:0 0;border:none;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}.bOPqQW_pill svg{flex:none;width:14px;height:14px}button.bOPqQW_pill{cursor:pointer}button.bOPqQW_pill[aria-expanded=true]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}@media (hover:hover){button.bOPqQW_pill:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}}.bOPqQW_label{text-overflow:ellipsis;min-width:0;overflow:hidden}.bOPqQW_sep{color:var(--dsw-alias-separator-primary);margin:0 6px}";
 		const tagId$1 = "@deepseek-ai/dsh-client-ui-chat/StatsPills.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -7535,17 +9604,24 @@ window.__ModuleLoader__.load({
 		function exactCount(value, t) {
 			return t("message.turnUsage.count", { count: formatExactTokens(value, t) });
 		}
-		function joined$1(first, second) {
-			if (second === null) return first;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-				first,
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: StatsPills_module_css_default.sep,
-					"aria-hidden": true,
-					children: "·"
-				}),
-				second
-			] });
+		/** One or two reading segments, visually joined by a separator glyph. */
+		function reading(first, second) {
+			if (second === null) return {
+				label: first,
+				text: first
+			};
+			return {
+				label: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+					first,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: StatsPills_module_css_default.sep,
+						"aria-hidden": true,
+						children: "·"
+					}),
+					second
+				] }),
+				text: `${first} · ${second}`
+			};
 		}
 		function useSessionStats(useChat, useProjection) {
 			const settledNodes = useChat((s) => s.legacy.nodes);
@@ -7555,17 +9631,29 @@ window.__ModuleLoader__.load({
 		function decodeSpeed(stats, t) {
 			return t("message.tokensPerSecond", { tps: formatTokensPerSecond(stats.decodeTokens / (stats.decodeMs / 1e3)) });
 		}
+		/** The full reading above a pill, only while an ellipsis cuts its label; the delay matches the dock's context meter. */
+		const FULL_READING_TOOLTIP = {
+			side: "top",
+			portal: true,
+			delayMs: 200,
+			onlyWhenClipped: true
+		};
 		/** A static reading: used when the pill has no dialog rows or the mode is Compact. */
-		function PlainPill({ stat, icon, label }) {
+		function PlainPill({ stat, icon, label, text }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 				className: StatsPills_module_css_default.anchor,
 				"data-composer-stat": stat,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-					className: StatsPills_module_css_default.pill,
-					children: [icon, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: StatsPills_module_css_default.label,
-						children: label
-					})]
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					label: text,
+					...FULL_READING_TOOLTIP,
+					openOnClick: true,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						className: StatsPills_module_css_default.pill,
+						children: [icon, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: StatsPills_module_css_default.label,
+							children: label
+						})]
+					})
 				})
 			});
 		}
@@ -7574,25 +9662,30 @@ window.__ModuleLoader__.load({
 		* state; useStatDialog closes it on Escape or an outside pointerdown or click,
 		* so at most one dialog is open across the dock.
 		*/
-		function DialogPill({ stat, icon, label, ariaLabel, title, titleValue, children }) {
+		function DialogPill({ stat, icon, label, text, title, titleValue, children }) {
 			const { open, setOpen, rootRef, panelRef, pos } = useStatDialog();
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 				ref: rootRef,
 				className: StatsPills_module_css_default.anchor,
 				"data-composer-stat": stat,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-					type: "button",
-					className: StatsPills_module_css_default.pill,
-					"aria-haspopup": "dialog",
-					"aria-expanded": open,
-					"aria-label": ariaLabel,
-					onClick: () => {
-						setOpen(!open);
-					},
-					children: [icon, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: StatsPills_module_css_default.label,
-						children: label
-					})]
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					label: text,
+					...FULL_READING_TOOLTIP,
+					disabled: open,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+						type: "button",
+						className: StatsPills_module_css_default.pill,
+						"aria-haspopup": "dialog",
+						"aria-expanded": open,
+						"aria-label": text,
+						onClick: () => {
+							setOpen(!open);
+						},
+						children: [icon, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: StatsPills_module_css_default.label,
+							children: label
+						})]
+					})
 				}), open && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					ref: panelRef,
 					className: stat_dialog_module_css_default.panel,
@@ -7631,7 +9724,7 @@ window.__ModuleLoader__.load({
 			if (mode === "compact") return speed === null ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PlainPill, {
 				stat: "activity",
 				icon,
-				label: speed
+				...reading(speed, null)
 			});
 			if (stats.steps === 0) return null;
 			const counts = t("stats.counts", {
@@ -7641,13 +9734,13 @@ window.__ModuleLoader__.load({
 			const content = {
 				stat: "activity",
 				icon,
-				label: joined$1(counts, speed)
+				...reading(counts, speed)
 			};
 			if (stats.llmMs <= 0 && stats.toolMs <= 0 && stats.ttftSteps <= 0 && speed === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PlainPill, { ...content });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DialogPill, {
 				...content,
-				ariaLabel: speed === null ? counts : `${counts} · ${speed}`,
 				title: t("stats.dialog.title"),
+				titleValue: counts,
 				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
 					className: stat_dialog_module_css_default.details,
 					"data-session-stats-details": true,
@@ -7671,15 +9764,13 @@ window.__ModuleLoader__.load({
 			if (mode === "compact") return cacheHitText === null ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PlainPill, {
 				stat: "usage",
 				icon,
-				label: cacheHitText
+				...reading(cacheHitText, null)
 			});
 			const total = billedInputTokens(usage) + usage.outputTokens;
-			const totalText = t("message.turnUsage.count", { count: formatTokens(total, t) });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DialogPill, {
 				stat: "usage",
 				icon,
-				label: joined$1(totalText, cacheHitText),
-				ariaLabel: cacheHitText === null ? totalText : `${totalText} · ${cacheHitText}`,
+				...reading(t("message.turnUsage.count", { count: formatTokens(total, t) }), cacheHitText),
 				title: t("stats.dialog.usageTitle"),
 				titleValue: exactCount(total, t),
 				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
@@ -7953,6 +10044,7 @@ window.__ModuleLoader__.load({
 				turn,
 				step,
 				blocks: [],
+				visibleByIndex: [],
 				visibleBlocks: 0,
 				firstVisibleSeq: void 0,
 				firstVisibleTime: void 0,
@@ -7968,11 +10060,6 @@ window.__ModuleLoader__.load({
 			if (block === void 0 || block.kind === "tool-call") return false;
 			if (block.kind === "text" || block.kind === "reasoning") return block.text.trim() !== "";
 			return true;
-		}
-		function countVisibleBlocks(blocks) {
-			let count = 0;
-			for (const block of blocks) if (blockIsVisible(block)) count++;
-			return count;
 		}
 		function hasVisibleContent(blocks) {
 			return blocks.some(blockIsVisible);
@@ -7997,36 +10084,40 @@ window.__ModuleLoader__.load({
 			const blocks = [...state.blocks];
 			let changedIndex = -1;
 			let previousVisible = false;
+			let nextVisible = false;
 			switch (chunk.type) {
 				case "block-start":
 					changedIndex = chunk.index;
-					previousVisible = blockIsVisible(blocks[chunk.index]);
+					previousVisible = state.visibleByIndex[chunk.index] === true;
 					blocks[chunk.index] = emptyAssistantBlock(chunk.blockType);
+					nextVisible = blockIsVisible(blocks[chunk.index]);
 					break;
 				case "text-delta": {
 					const previous = blocks[chunk.index];
 					changedIndex = chunk.index;
-					previousVisible = blockIsVisible(previous);
+					previousVisible = state.visibleByIndex[chunk.index] === true;
 					blocks[chunk.index] = {
 						kind: "text",
 						text: (previous?.kind === "text" ? previous.text : "") + chunk.text
 					};
+					nextVisible = previous?.kind === "text" && previousVisible || chunk.text.trim() !== "";
 					break;
 				}
 				case "reasoning-delta": {
 					const previous = blocks[chunk.index];
 					changedIndex = chunk.index;
-					previousVisible = blockIsVisible(previous);
+					previousVisible = state.visibleByIndex[chunk.index] === true;
 					blocks[chunk.index] = {
 						kind: "reasoning",
 						text: (previous?.kind === "reasoning" ? previous.text : "") + chunk.text
 					};
+					nextVisible = previous?.kind === "reasoning" && previousVisible || chunk.text.trim() !== "";
 					break;
 				}
 				case "tool-call-delta": {
 					const previous = blocks[chunk.index];
 					changedIndex = chunk.index;
-					previousVisible = blockIsVisible(previous);
+					previousVisible = state.visibleByIndex[chunk.index] === true;
 					blocks[chunk.index] = {
 						kind: "tool-call",
 						callId: (previous?.kind === "tool-call" ? previous.callId : "") || String(chunk.id),
@@ -8037,8 +10128,9 @@ window.__ModuleLoader__.load({
 				}
 				case "block-end":
 					changedIndex = chunk.index;
-					previousVisible = blockIsVisible(blocks[chunk.index]);
+					previousVisible = state.visibleByIndex[chunk.index] === true;
 					blocks[chunk.index] = toAssistantBlock(chunk.block);
+					nextVisible = blockIsVisible(blocks[chunk.index]);
 					break;
 				case "usage": return {
 					...state,
@@ -8046,11 +10138,18 @@ window.__ModuleLoader__.load({
 				};
 				default: return state;
 			}
-			const visibleBlocks = state.visibleBlocks - Number(previousVisible) + Number(blockIsVisible(blocks[changedIndex]));
+			const visibleBlocks = state.visibleBlocks - Number(previousVisible) + Number(nextVisible);
+			let visibleByIndex = state.visibleByIndex;
+			if (previousVisible !== nextVisible) {
+				const next = [...visibleByIndex];
+				next[changedIndex] = nextVisible;
+				visibleByIndex = next;
+			}
 			const firstToken = isTokenDelta(chunk);
 			return {
 				...state,
 				blocks,
+				visibleByIndex,
 				visibleBlocks,
 				...visibleBlocks > 0 && state.firstVisibleSeq === void 0 ? {
 					firstVisibleSeq: seq,
@@ -8061,10 +10160,12 @@ window.__ModuleLoader__.load({
 		}
 		function settleMessage(state, match, event) {
 			const blocks = toAssistantBlocks(event.data.message.content);
+			const visibleByIndex = blocks.map(blockIsVisible);
 			return {
 				...state,
 				blocks,
-				visibleBlocks: countVisibleBlocks(blocks),
+				visibleByIndex,
+				visibleBlocks: visibleByIndex.reduce((count, visible) => count + Number(visible), 0),
 				final: match,
 				usage: event.data.usage
 			};
@@ -8417,7 +10518,7 @@ window.__ModuleLoader__.load({
 			return location?.kind === "turn" || location?.kind === "step" ? location.turn.turn : void 0;
 		}
 		function samePresentation(left, right) {
-			return left === right || left !== void 0 && right !== void 0 && left.spec === right.spec && left.turn === right.turn && left.turnStarted === right.turnStarted && left.turnClosed === right.turnClosed && left.hasExternalProcess === right.hasExternalProcess && left.hasInterleavedInput === right.hasInterleavedInput && left.compactAnswer === right.compactAnswer;
+			return left === right || left !== void 0 && right !== void 0 && left.spec === right.spec && left.turn === right.turn && left.turnStarted === right.turnStarted && left.turnClosed === right.turnClosed && left.hasExternalProcess === right.hasExternalProcess && left.hasNonReplyProcess === right.hasNonReplyProcess && left.hasInterleavedInput === right.hasInterleavedInput;
 		}
 		function derivePresentation(turn, locations, nodes) {
 			const keys = locations.getTurn(turn);
@@ -8432,17 +10533,17 @@ window.__ModuleLoader__.load({
 				if (node !== void 0 && isAtOrOutside(node, "input") && (spec.controlAnchorSeq === location.turn.start?.seq || node.anchorSeq < spec.controlAnchorSeq)) openingHumanAnchor = Math.max(openingHumanAnchor ?? node.anchorSeq, node.anchorSeq);
 			}
 			let hasExternalProcess = false;
+			let hasNonReplyProcess = false;
 			let hasInterleavedInput = false;
-			let compactAnswer = true;
 			for (const key of keys) {
 				const node = nodes.get(key);
 				if (node === void 0 || !isVisibleChatNode(node) || node.kind === "turn-process") continue;
-				if (isAtOrOutside(node, "input") && (openingHumanAnchor === void 0 || node.anchorSeq > openingHumanAnchor)) {
-					hasInterleavedInput = true;
-					if (spec.answerAnchorSeq === null || node.anchorSeq < spec.answerAnchorSeq) compactAnswer = false;
-				}
+				if (isAtOrOutside(node, "input") && (openingHumanAnchor === void 0 || node.anchorSeq > openingHumanAnchor)) hasInterleavedInput = true;
 				if (isAtOrOutside(node, "turn") || node.anchorSeq < spec.processStartSeq || spec.answerAnchorSeq !== null && node.anchorSeq >= spec.answerAnchorSeq) continue;
-				if (node.kind !== "assistant-step" || spec.answerStep === null || node.data.step !== spec.answerStep) hasExternalProcess = true;
+				if (node.kind !== "assistant-step" || spec.answerStep === null || node.data.step !== spec.answerStep) {
+					hasExternalProcess = true;
+					if (node.kind !== "assistant-step" || node.data.blocks.some((block) => block.kind === "reasoning" && block.text.trim() !== "")) hasNonReplyProcess = true;
+				}
 			}
 			return {
 				turn,
@@ -8450,8 +10551,8 @@ window.__ModuleLoader__.load({
 				turnStarted: location.turn.start !== void 0,
 				turnClosed: location.turn.status === "closed",
 				hasExternalProcess,
-				hasInterleavedInput,
-				compactAnswer
+				hasNonReplyProcess,
+				hasInterleavedInput
 			};
 		}
 		/** Mutable projection of cross-Node process layout facts by Turn. */
@@ -8480,7 +10581,7 @@ window.__ModuleLoader__.load({
 					if (turn !== void 0) turns.add(turn);
 				}
 				const changed = /* @__PURE__ */ new Set();
-				for (const turn of new Set([...this.presentations.keys(), ...turns])) if (this.set(turn, turns.has(turn) ? derivePresentation(turn, locations, nodes) : void 0)) changed.add(turn);
+				for (const turn of /* @__PURE__ */ new Set([...this.presentations.keys(), ...turns])) if (this.set(turn, turns.has(turn) ? derivePresentation(turn, locations, nodes) : void 0)) changed.add(turn);
 				return changed;
 			}
 			/**
@@ -8688,7 +10789,7 @@ window.__ModuleLoader__.load({
 			}
 			publish() {
 				const dirty = [...this.dirtyKeys];
-				const dirtyBottom = new Set([...this.dirtyBottomKeys, ...dirty]);
+				const dirtyBottom = /* @__PURE__ */ new Set([...this.dirtyBottomKeys, ...dirty]);
 				const dirtyProcesses = [...this.dirtyProcessKeys];
 				const dirtyTurnKinds = [...this.dirtyTurnKinds];
 				this.dirtyKeys.clear();
@@ -8775,7 +10876,7 @@ window.__ModuleLoader__.load({
 		};
 		function updateIndex(previous, nextMutable) {
 			const next = /* @__PURE__ */ new Map();
-			const keys = new Set([...previous.keys(), ...nextMutable.keys()]);
+			const keys = /* @__PURE__ */ new Set([...previous.keys(), ...nextMutable.keys()]);
 			for (const key of keys) {
 				const before = previous.get(key) ?? EMPTY_KEYS;
 				const candidate = nextMutable.get(key) ?? EMPTY_KEYS;
@@ -9505,7 +11606,7 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region ../../core/session/src/surface.ts
 		/** Runtime counterpart of the message-producing event union. */
-		const SURFACE_EVENT_TYPES = new Set([
+		const SURFACE_EVENT_TYPES = /* @__PURE__ */ new Set([
 			"system/message",
 			"developer/message",
 			"user/message",
@@ -9837,7 +11938,7 @@ window.__ModuleLoader__.load({
 					},
 					currentClaimed: new Set(removed.map((message) => message.id)),
 					claimSeq: seq,
-					claimedHuman: removed.some((message) => message.source.kind === "user")
+					firstClaimedHuman: removed.find((message) => message.source.kind === "user")?.id
 				};
 			}
 			const currentClaimed = withoutInserted(previous?.state.currentClaimed ?? EMPTY_CURRENT_CLAIMED, inserted);
@@ -9851,7 +11952,7 @@ window.__ModuleLoader__.load({
 				},
 				currentClaimed,
 				claimSeq: previous?.state.claimSeq ?? -1,
-				claimedHuman: previous?.state.claimedHuman ?? false
+				firstClaimedHuman: previous?.state.firstClaimedHuman
 			};
 		}
 		function inboxDefinition(target) {
@@ -9900,6 +12001,18 @@ window.__ModuleLoader__.load({
 				form: contextForm(message.source)
 			};
 		}
+		/**
+		* Decide whether an input follows its Turn's process control in Chat order. The control anchors at the
+		* Turn's first process evidence, so the input follows it exactly when its Turn recorded evidence earlier;
+		* the nearest earlier evidence record then belongs to the input's own Turn.
+		* @param location - the input's Location.
+		* @param reader - strictly-backward Context lookup of the input's start.
+		* @returns whether Chat orders the input after the control.
+		*/
+		function followsProcessEvidence(location, reader) {
+			if (location.kind !== "turn" && location.kind !== "step") return false;
+			return reader.previous("process-evidence")?.state.turn === location.turn.turn;
+		}
 		/** User, steering, and injected-context message classification Definition. */
 		const messageDefinition = {
 			kind: "input-message",
@@ -9919,21 +12032,25 @@ window.__ModuleLoader__.load({
 					const nextStep = reader.previous("inbox-next-step")?.state;
 					const location = match.location;
 					const turnStart = location.kind === "step" ? location.turn.start?.seq : void 0;
-					const idleSteer = location.kind === "step" && location.step.step === 1 && turnStart !== void 0 && (nextStep?.claimSeq ?? -1) > turnStart && (nextTurn?.claimSeq ?? -1) < turnStart && nextStep?.claimedHuman === false && nextStep.currentClaimed.has(String(event.data.id));
+					const idleSteer = location.kind === "step" && location.step.step === 1 && turnStart !== void 0 && (nextStep?.claimSeq ?? -1) > turnStart && (nextTurn?.claimSeq ?? -1) < turnStart && nextStep !== void 0 && nextStep.firstClaimedHuman === void 0 && nextStep.currentClaimed.has(String(event.data.id));
 					return {
 						...contextMessage(event, event.data),
 						waking: nextTurn?.currentClaimed.has(String(event.data.id)) === true || idleSteer
 					};
 				}
-				return reader.previous("inbox-next-step")?.state.currentClaimed.has(String(event.data.id)) === true ? {
+				const id = String(event.data.id);
+				const claim = reader.previous("inbox-next-step")?.state;
+				return claim?.currentClaimed.has(id) === true ? {
 					kind: "steering",
 					messageId: event.data.id,
 					seq: event.seq,
 					time: event.time,
 					content: event.data.content,
-					source: event.data.source
+					source: event.data.source,
+					...claim.firstClaimedHuman === id && followsProcessEvidence(match.location, reader) ? { batchStart: true } : {}
 				} : {
 					kind: "user",
+					messageId: event.data.id,
 					seq: event.seq,
 					time: event.time,
 					content: event.data.content,
@@ -9997,6 +12114,8 @@ window.__ModuleLoader__.load({
 		* their step's input; in-history updates stay at their own positions. The
 		* request-prompt Definition owns replacement and later-series cards. Positional
 		* replacements advance the effective prompt without changing historical cards.
+		* A published node becomes `hidden` under the same key while a prepended replacement
+		* leaves its prompt order unknown, and `visible` again once older history resolves it.
 		* @param inspect - Pure surface interpretation supplied by uiConversation.
 		* @returns The Chat system-prompt Definition.
 		*/
@@ -10015,7 +12134,11 @@ window.__ModuleLoader__.load({
 				update: (context) => context.state,
 				buildViewNode: (context) => {
 					const state = context.state?.introduced;
-					if (state === void 0 || state.text === "" || context.start?.event.type !== "system/message" || context.start.event.surfaceOp !== "append") return null;
+					if (state === void 0 || state.text === "" || context.start?.event.type !== "system/message" || context.start.event.surfaceOp !== "append") {
+						const current = context.current.get("chat");
+						if (current?.kind !== "system-prompt") return null;
+						return chatNode(context, "system-prompt", current.anchorSeq, current.data, { visibility: "hidden" });
+					}
 					return chatNode(context, "system-prompt", state.update ? state.seq : requestPromptAnchor(context.start, void 0, true), {
 						text: state.text,
 						...state.update ? { update: true } : {}
@@ -10733,6 +12856,43 @@ window.__ModuleLoader__.load({
 				seq: event.seq
 			};
 		}
+		function durableEvidenceStep(event) {
+			if (processEvidence(event) === void 0) return void 0;
+			switch (event.type) {
+				case "assistant/message":
+				case "tool/call":
+				case "tool/result":
+				case "llm/retry": return {
+					turn: event.data.turn,
+					step: event.data.step
+				};
+				default: return;
+			}
+		}
+		/**
+		* State-only record of each Step whose durable events include process evidence, keyed by Turn and Step.
+		* An input follows its Turn's process control exactly when its Turn recorded evidence before it, so an
+		* input reads the nearest earlier record through `reader.previous`. A Step's evidence is logged before
+		* a later Step admits input, so the record a later input reads no longer changes; transient live chunks
+		* are not needed because a Step's durable settlement precedes the next Step's input.
+		*/
+		const processEvidenceDefinition = {
+			kind: "process-evidence",
+			match: (event) => {
+				const coordinates = durableEvidenceStep(event);
+				return coordinates === void 0 ? null : {
+					id: `${coordinates.turn}:${coordinates.step}`,
+					role: "start"
+				};
+			},
+			start: (_context, match) => {
+				const coordinates = durableEvidenceStep(match.event);
+				if (coordinates === void 0) throw new Error("process-evidence start requires durable process evidence");
+				return { turn: coordinates.turn };
+			},
+			update: (context) => context.state,
+			publication: () => "none"
+		};
 		function turnLocation$1(context) {
 			const location = context.start?.location ?? context.matches.at(-1)?.location;
 			return location?.kind === "turn" || location?.kind === "step" ? location.turn : void 0;
@@ -10891,7 +13051,7 @@ window.__ModuleLoader__.load({
 			}
 		};
 		/**
-		* Register the Turn-scoped process disclosure projection.
+		* Register the Turn-scoped process disclosure projection and its per-Step evidence record.
 		* @param ctx - owning UI Conversation context.
 		*/
 		function registerTurnProcess(ctx) {
@@ -10910,9 +13070,19 @@ window.__ModuleLoader__.load({
 					"turn/end": match
 				}
 			});
+			const evidence = processEvidenceDefinition.match.bind(processEvidenceDefinition);
+			ctx.uiConversation.events.register({
+				...processEvidenceDefinition,
+				match: {
+					"assistant/message": evidence,
+					"tool/call": evidence,
+					"tool/result": evidence,
+					"llm/retry": evidence
+				}
+			});
 		}
 		//#endregion
-		//#region ../../util/values/lib/index.js
+		//#region ../../../../../../node_modules/.pnpm/@deepseek-ai+dsh-util-values@0.2.2-alpha.3_@deepseek-ai+cordis@4.0.6-alpha.2/node_modules/@deepseek-ai/dsh-util-values/lib/index.js
 		/**
 		* Lazily scanned view of one JSON object's top-level fields, built from text
 		* that may still be streaming or from an already parsed object. Nothing is
@@ -11547,7 +13717,7 @@ window.__ModuleLoader__.load({
 			throw new Error(`unreachable variant${context ? ` in ${context}` : ""}: ${rendered}`);
 		}
 		//#endregion
-		//#region ../../llm/llm/lib/types/assistant-stream.js
+		//#region ../../../../../../node_modules/.pnpm/@deepseek-ai+dsh-llm@0.2.2-alpha.3_@deepseek-ai+cordis@4.0.6-alpha.2/node_modules/@deepseek-ai/dsh-llm/lib/types/assistant-stream.js
 		/**
 		* The last raw chunk of one never-packed type, scanning backwards and stopping at the first hit.
 		* @param stream - compact records from one durable Assistant settlement.
@@ -12451,7 +14621,7 @@ window.__ModuleLoader__.load({
 			}) }) }, `quota-notice-${String(notice.seq)}`);
 		}
 		//#endregion
-		//#region ../../../vendor/cosmokit/lib/index.js
+		//#region ../../../../../../node_modules/.pnpm/@deepseek-ai+cosmokit@1.8.7-alpha.2/node_modules/@deepseek-ai/cosmokit/lib/index.js
 		/** Return true when a value is `null` or `undefined`. */
 		function isNullable(value) {
 			return value === null || value === void 0;
@@ -13344,6 +15514,10 @@ window.__ModuleLoader__.load({
 		const COLLAPSE_TIMINGS = ["completion", "next-input"];
 		/** Preserve completion-time folding when no timing preference is saved. */
 		const DEFAULT_COLLAPSE_TIMING = "completion";
+		/** Field carrying which Assistant replies stay visible in a folded Turn. */
+		const FOLDED_REPLIES_FIELD = "foldedReplies";
+		/** Assistant replies kept visible while a completed Turn folds its process: every reply, or only the final answer. */
+		const FOLDED_REPLIES = ["all", "final"];
 		/** Work-details presentation modes a user can choose. */
 		const TRANSCRIPT_VIEW_MODES = [
 			"compact",
@@ -13375,6 +15549,7 @@ window.__ModuleLoader__.load({
 		/** Durable Chat schema; also the wire envelope the browser scope validates against. */
 		const ChatSettingsFields = {
 			[COLLAPSE_TIMING_FIELD]: Schema.union([...COLLAPSE_TIMINGS]).default(DEFAULT_COLLAPSE_TIMING),
+			[FOLDED_REPLIES_FIELD]: Schema.union([...FOLDED_REPLIES]).default("all"),
 			linkOpening: Schema.union(["sidebar", "new-tab"]).default(DEFAULT_LINK_OPENING),
 			performanceUsage: Schema.union([...PERFORMANCE_USAGE_MODES]).default(DEFAULT_PERFORMANCE_USAGE),
 			[TRANSCRIPT_VIEW_FIELD]: Schema.union([...TRANSCRIPT_VIEW_SETTING_VALUES]).loose()
@@ -13412,61 +15587,75 @@ window.__ModuleLoader__.load({
 				settledReasoningPreview: true
 			}
 		};
-		function withTiming(collapseTiming) {
+		function withTiming(collapseTiming, foldedReplies) {
 			return {
 				compact: {
 					...POLICIES.compact,
-					collapseTiming
+					collapseTiming,
+					foldedReplies
 				},
 				standard: {
 					...POLICIES.standard,
-					collapseTiming
+					collapseTiming,
+					foldedReplies
 				},
 				detailed: {
 					...POLICIES.detailed,
-					collapseTiming
+					collapseTiming,
+					foldedReplies
 				},
 				verbose: {
 					...POLICIES.verbose,
-					collapseTiming
+					collapseTiming,
+					foldedReplies
 				}
 			};
 		}
 		const TIMING_POLICIES = {
-			completion: withTiming("completion"),
-			"next-input": withTiming("next-input")
+			completion: {
+				all: withTiming("completion", "all"),
+				final: withTiming("completion", "final")
+			},
+			"next-input": {
+				all: withTiming("next-input", "all"),
+				final: withTiming("next-input", "final")
+			}
 		};
 		/**
-		* Resolve a stable policy for one detail mode and collapse timing.
+		* Resolve a stable policy for one detail mode, collapse timing, and folded-reply choice.
 		* @param mode - persisted work-details mode.
 		* @param collapseTiming - persisted timing; defaults to immediate completion folding.
-		* @returns the same policy object for the same pair of choices.
+		* @param foldedReplies - persisted folded-reply choice; defaults to keeping every reply visible.
+		* @returns the same policy object for the same choices.
 		*/
-		function presentationPolicyFor(mode, collapseTiming = "completion") {
-			return TIMING_POLICIES[collapseTiming][mode];
+		function presentationPolicyFor(mode, collapseTiming = "completion", foldedReplies = "all") {
+			return TIMING_POLICIES[collapseTiming][foldedReplies][mode];
 		}
 		/**
-		* Combine Host-backed detail and persisted timing without owning subscriptions.
+		* Combine Host-backed detail, persisted timing, and folded replies without owning subscriptions.
 		* @param mode - live work-details mode.
 		* @param collapseTiming - live Host-backed collapse timing.
-		* @returns observable policy whose subscriptions follow both preferences.
+		* @param foldedReplies - live Host-backed folded-reply choice.
+		* @returns observable policy whose subscriptions follow all three preferences.
 		*/
-		function derivePresentationPolicy(mode, collapseTiming) {
+		function derivePresentationPolicy(mode, collapseTiming, foldedReplies) {
 			return {
-				getSnapshot: () => presentationPolicyFor(mode.getSnapshot(), collapseTiming.getSnapshot()),
+				getSnapshot: () => presentationPolicyFor(mode.getSnapshot(), collapseTiming.getSnapshot(), foldedReplies.getSnapshot()),
 				subscribe: (listener) => {
 					const unsubscribeMode = mode.subscribe(listener);
 					const unsubscribeTiming = collapseTiming.subscribe(listener);
+					const unsubscribeReplies = foldedReplies.subscribe(listener);
 					return () => {
 						unsubscribeMode();
 						unsubscribeTiming();
+						unsubscribeReplies();
 					};
 				}
 			};
 		}
 		//#endregion
 		//#region \0dsh-css:packages/client/ui-chat/src/client/settings/PreferenceRow.module.css.mjs
-		const css = "._2XZxNq_row{border-bottom:.5px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}._2XZxNq_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}._2XZxNq_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}._2XZxNq_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}._2XZxNq_selector{border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}._2XZxNq_selector:hover{background:var(--dsw-alias-interactive-bg-hover)}._2XZxNq_chevron{flex:none}";
+		const css = "._2XZxNq_row{border-bottom:.5px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}._2XZxNq_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}@media (width<=767px){html:not([data-windows-titlebar]):not([data-platform=darwin]) ._2XZxNq_rowText{padding-right:16px}}._2XZxNq_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}._2XZxNq_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}._2XZxNq_selector{border-radius:var(--dsw-radius-md);background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}@media (hover:hover){._2XZxNq_selector:hover{background:var(--dsw-alias-interactive-bg-hover)}}._2XZxNq_chevron{flex:none}";
 		const tagId = "@deepseek-ai/dsh-client-ui-chat/PreferenceRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -13548,39 +15737,61 @@ window.__ModuleLoader__.load({
 			completion: "settings.collapse.completion",
 			"next-input": "settings.collapse.nextInput"
 		};
+		const FOLDED_REPLY_LABELS = {
+			all: "settings.foldedReplies.all",
+			final: "settings.foldedReplies.final"
+		};
 		/**
-		* Render the independent, Host-backed work-details and collapse-timing selectors.
+		* Render the independent, Host-backed work-details, collapse-timing, and folded-reply selectors.
+		* Verbose never folds a Turn, so it omits the folded-reply selector.
 		* @param props - composed Settings slot props.
 		* @returns the preference row.
 		*/
-		function TranscriptViewRow({ useTranscriptView, setTranscriptView, useCollapseTiming, setCollapseTiming, t }) {
+		function TranscriptViewRow({ useTranscriptView, setTranscriptView, useCollapseTiming, setCollapseTiming, useFoldedReplies, setFoldedReplies, t }) {
 			const mode = useTranscriptView((value) => value);
 			const timing = useCollapseTiming((value) => value);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
-				title: t("settings.transcript.title"),
-				description: t("settings.transcript.description"),
-				value: mode,
-				selectedLabel: t(LABELS[mode]),
-				options: TRANSCRIPT_VIEW_MODES.map((id) => ({
-					id,
-					label: t(LABELS[id])
-				})),
-				onSelect: (value) => {
-					setTranscriptView(value);
-				}
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
-				title: t("settings.collapse.title"),
-				description: t("settings.collapse.description"),
-				value: timing,
-				selectedLabel: t(COLLAPSE_LABELS[timing]),
-				options: COLLAPSE_TIMINGS.map((id) => ({
-					id,
-					label: t(COLLAPSE_LABELS[id])
-				})),
-				onSelect: (value) => {
-					setCollapseTiming(value);
-				}
-			})] });
+			const replies = useFoldedReplies((value) => value);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
+					title: t("settings.transcript.title"),
+					description: t("settings.transcript.description"),
+					value: mode,
+					selectedLabel: t(LABELS[mode]),
+					options: TRANSCRIPT_VIEW_MODES.map((id) => ({
+						id,
+						label: t(LABELS[id])
+					})),
+					onSelect: (value) => {
+						setTranscriptView(value);
+					}
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
+					title: t("settings.collapse.title"),
+					description: t("settings.collapse.description"),
+					value: timing,
+					selectedLabel: t(COLLAPSE_LABELS[timing]),
+					options: COLLAPSE_TIMINGS.map((id) => ({
+						id,
+						label: t(COLLAPSE_LABELS[id])
+					})),
+					onSelect: (value) => {
+						setCollapseTiming(value);
+					}
+				}),
+				mode !== "verbose" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PreferenceRow, {
+					title: t("settings.foldedReplies.title"),
+					description: t("settings.foldedReplies.description"),
+					value: replies,
+					selectedLabel: t(FOLDED_REPLY_LABELS[replies]),
+					options: FOLDED_REPLIES.map((id) => ({
+						id,
+						label: t(FOLDED_REPLY_LABELS[id])
+					})),
+					onSelect: (value) => {
+						setFoldedReplies(value);
+					}
+				})
+			] });
 		}
 		//#endregion
 		//#region src/client/transcript-view.ts
@@ -13594,6 +15805,8 @@ window.__ModuleLoader__.load({
 			mode;
 			/** Reactive collapse timing, defaulting to completion until Host settings arrive. */
 			collapseTiming = (0, _deepseek_ai_dsh_client_store.createSnapshotStore)(DEFAULT_COLLAPSE_TIMING);
+			/** Reactive folded-reply choice, keeping every reply until Host settings arrive. */
+			foldedReplies = (0, _deepseek_ai_dsh_client_store.createSnapshotStore)("all");
 			/**
 			* @param host - durable Chat settings scope.
 			* @param defaultMode - presentation used without an explicit saved mode.
@@ -13629,6 +15842,15 @@ window.__ModuleLoader__.load({
 				this.collapseTiming.set(timing);
 				this.host.set(COLLAPSE_TIMING_FIELD, timing);
 			}
+			/**
+			* Publish and persist which Assistant replies stay visible in a folded Turn.
+			* @param replies - every reply, or only the final answer.
+			*/
+			setFoldedReplies(replies) {
+				if (this.foldedReplies.getSnapshot() === replies) return;
+				this.foldedReplies.set(replies);
+				this.host.set(FOLDED_REPLIES_FIELD, replies);
+			}
 			/** Adopt the latest accepted Host section without writing it back. */
 			adopt() {
 				const section = this.host.getSnapshot().value;
@@ -13638,6 +15860,8 @@ window.__ModuleLoader__.load({
 				if (this.mode.getSnapshot() !== mode) this.mode.set(mode);
 				const timing = section.collapseTiming ?? "completion";
 				if (this.collapseTiming.getSnapshot() !== timing) this.collapseTiming.set(timing);
+				const replies = section.foldedReplies ?? "all";
+				if (this.foldedReplies.getSnapshot() !== replies) this.foldedReplies.set(replies);
 			}
 		};
 		//#endregion
@@ -13775,9 +15999,11 @@ window.__ModuleLoader__.load({
 			"uiConversation",
 			"locale",
 			"configForms",
+			"connection",
 			"remote",
 			"remote.session",
-			"sidebarRight"
+			"sidebarRight",
+			"fileDrag"
 		];
 		/**
 		* Mount all Chat-owned contributions.
@@ -13832,7 +16058,13 @@ window.__ModuleLoader__.load({
 			});
 			ctx.effect(() => ctx.locale.register(NS, {
 				zh,
-				en
+				en,
+				ja,
+				es,
+				fr,
+				de,
+				ru,
+				pt
 			}), "ui-chat: dictionaries");
 			const t = ctx.locale.bind(NS);
 			const chatStore = createChatStore();
@@ -13867,7 +16099,7 @@ window.__ModuleLoader__.load({
 				}, LinkOpeningRow));
 			});
 			const transcriptView = new TranscriptViewPolicy(chatSettings, "dshDesktop" in globalThis ? "standard" : DEFAULT_TRANSCRIPT_VIEW_MODE);
-			const presentation = derivePresentationPolicy(transcriptView.mode, transcriptView.collapseTiming);
+			const presentation = derivePresentationPolicy(transcriptView.mode, transcriptView.collapseTiming, transcriptView.foldedReplies);
 			const performancePolicy = new PerformanceUsagePolicy(chatSettings);
 			ctx.effect(() => () => {
 				transcriptView.dispose();
@@ -13904,28 +16136,30 @@ window.__ModuleLoader__.load({
 				inject: () => ({
 					hooks: {
 						transcriptView: transcriptView.mode,
-						collapseTiming: transcriptView.collapseTiming
+						collapseTiming: transcriptView.collapseTiming,
+						foldedReplies: transcriptView.foldedReplies
 					},
 					setTranscriptView: (mode) => {
 						transcriptView.setMode(mode);
 					},
 					setCollapseTiming: (timing) => {
 						transcriptView.setCollapseTiming(timing);
+					},
+					setFoldedReplies: (replies) => {
+						transcriptView.setFoldedReplies(replies);
 					}
 				})
 			}, TranscriptViewRow));
+			const connectionState = ctx.get("connection").state;
 			const nodeSources = (binding) => {
 				const chat = chatSource(binding);
 				const conversation = ctx.uiConversation.binding(binding);
-				return {
-					hooks: { presentation },
-					keyedHooks: {
-						chatNode: (key) => chat.getSnapshot().nodes.source(key),
-						chatNodeBottom: (key) => chat.getSnapshot().nodes.bottomSource(key),
-						chatNodeProcess: (key) => chat.getSnapshot().nodes.processSource(key),
-						chatGroup: (key) => conversation.snapshot.getSnapshot().views.grouped("chat")?.groupSource(key)
-					}
-				};
+				return { keyedHooks: {
+					chatNode: (key) => chat.getSnapshot().nodes.source(key),
+					chatNodeBottom: (key) => chat.getSnapshot().nodes.bottomSource(key),
+					chatNodeProcess: (key) => chat.getSnapshot().nodes.processSource(key),
+					chatGroup: (key) => conversation.snapshot.getSnapshot().views.grouped("chat")?.groupSource(key)
+				} };
 			};
 			ctx.slots.inject("conversation.chat.flow", () => ctx.slots.register({
 				name: "conversation.chat.flow",
@@ -13939,7 +16173,13 @@ window.__ModuleLoader__.load({
 				inject: (sessionId) => {
 					const binding = ctx.sessions.binding(sessionId);
 					if (binding === void 0) throw new Error(`ui-chat: unknown session "${sessionId}"`);
-					return nodeSources(binding);
+					return {
+						...nodeSources(binding),
+						hooks: {
+							presentation,
+							connectionState
+						}
+					};
 				}
 			}, ChatFlow));
 			ctx.slots.inject("conversation.view", () => {
@@ -13949,11 +16189,17 @@ window.__ModuleLoader__.load({
 					order: 0,
 					label: () => t("view.chat"),
 					locale: NS,
-					children: { "conversation.chat.flow": {
-						kind: "single",
-						scope: "session",
-						inject: CHAT_FLOW_INJECT
-					} },
+					children: {
+						"conversation.chat.flow": {
+							kind: "single",
+							scope: "session",
+							inject: CHAT_FLOW_INJECT
+						},
+						"conversation.chat.text-interaction": {
+							kind: "keyed",
+							scope: "session"
+						}
+					},
 					store: chatStore,
 					inject: (sessionId) => {
 						const binding = ctx.sessions.binding(sessionId);
@@ -13962,14 +16208,20 @@ window.__ModuleLoader__.load({
 						const chat = chatSource(binding);
 						return {
 							...nodeSources(binding),
-							fileMentions: (owner) => ctx.get("chatFileMentions")?.forClosing(owner, sessionId),
+							fileDrag: ctx.fileDrag.actions,
+							hooks: {
+								presentation,
+								interactionIds: ctx.uiConversation.interactions
+							},
+							dispatchInteraction: (gesture) => ctx.uiConversation.interactions.dispatch(sessionId, gesture),
 							openFile: async (path, options) => {
 								const cwd = ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd;
-								const url = fileAddressFor(sessionId, cwd, path);
+								const url = fileAddressFor(sessionId, cwd, resolveWorkspacePath(session.projections.faceOf("workingDirectory").getSnapshot() ?? void 0, path));
 								if (options?.line === void 0) ctx.sidebarRight.openResource(url);
 								else ctx.sidebarRight.openResource(url, { params: { line: options.line } });
 								await Promise.resolve();
 							},
+							resolveFilePath: sessionFilePath(ctx, sessionId),
 							openExternalLink: (url) => {
 								if (linkOpening.getSnapshot() === "sidebar" && ctx.get("sidebarRightTabs")?.get("browser") !== void 0) ctx.sidebarRight.openTab("browser", { params: { url } });
 								else window.open(url, "_blank", "noopener,noreferrer");

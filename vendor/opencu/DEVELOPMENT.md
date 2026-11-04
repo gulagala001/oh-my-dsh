@@ -2,11 +2,11 @@
 
 OpenCU 是 DSH 插件：新控制核心、浏览器／原生／扩展后端配合真实 REA 前端组件。AI 像使用其他工具一样调用电脑；页面、活动和监看自然呈现，没有单独的 CU 控制台。
 
-源码默认适配 DSH `0.2.1-rc.5`。`rc1`、`021rc2`、`021rc3` 分别使用精确匹配的 SDK、冻结依赖锁与宿主适配器；每份包只用于自己的完整宿主版本。
+源码默认适配 DSH `0.2.2-rc.1`。`rc1`、`021rc2`、`021rc3` 分别使用精确匹配的 SDK、冻结依赖锁与宿主适配器；每份包只用于自己的完整宿主版本。
 
 ## 加载
 
-各宿主分别精确匹配 SDK 与框架：DSH `0.2.1-rc.1`／`0.2.1-rc.2`／`0.2.1-rc.5` 均使用 Cordis `4.0.5`／Schemastery `3.18.5`。插件包根入口和 `opencu/dsh` 均为 Cordis Host 插件，依赖宿主真实 `tools` 和 `attachments` 服务。不需要另开 OpenCU 服务，也不接受外部 origin/token。由 DSH profile 加载：
+各宿主分别精确匹配 SDK 与框架：DSH `0.2.1-rc.1`／`0.2.1-rc.2`／`0.2.2-rc.1` 均使用 Cordis `4.1.0`／Schemastery `3.19.0`。插件包根入口和 `opencu/dsh` 均为 Cordis Host 插件，依赖宿主真实 `tools` 和 `attachments` 服务。不需要另开 OpenCU 服务，也不接受外部 origin/token。由 DSH profile 加载：
 
 ```yaml
 - insert:
@@ -54,7 +54,7 @@ Chrome／Edge 扩展沿用同一只读取消边界，覆盖清单、选择与输
 
 Chrome / Edge 扩展的 loopback bridge 由插件自动管理，监听本机 19390–19399 的首个可用端口，只服务扩展协议，不承载另一套网页或控制核心。扩展仅首次安装；AI 首次使用时自动弹「允许连接此浏览器？」窗口，单击「允许并记住」，不再复制连接信息。配对身份与凭据分别保存在私有数据目录和浏览器 local storage；固定扩展 ID，正常浏览器／DSH／电脑重启和保留身份、数据的更新后自动恢复。断开先取消并确认释放输入，然后暂停自动连接；撤销配对后需要重新允许。每次重连创建新 epoch，旧目标必须重新发现，不重放旧输入。多浏览器 profile 明确选择，不擅自连接全部。
 
-浏览器资源使用 Playwright 的共享缓存，不捆绑 Node、Chromium 或独立应用。宿主使用 Node >=22.19。缺少 Chromium 时，可从 DSH 的“电脑与浏览器”设置安装匹配的 Playwright 浏览器资源；由插件管理安装进程，关闭时终止尚未完成的安装。
+浏览器资源使用 Playwright 的共享缓存，不捆绑 Node、Chromium 或独立应用。宿主使用 Node >=24.9.0。缺少 Chromium 时，可从 DSH 的“电脑与浏览器”设置安装匹配的 Playwright 浏览器资源；由插件管理安装进程，关闭时终止尚未完成的安装。
 
 需要隔离检查页面渲染、WebGL 或截图时，可从 `opencu/browser` 导入 `withIsolatedBrowser(check, options)`。`check` 接收 `{ context, signal }`，可使用完整 Playwright 页面 API；把相关检查放在同一回调中复用浏览器。`options` 支持临时目录父路径 `directory`、`launchOptions`、检查时限 `timeoutMs` 和取消 `signal`。入口创建独立临时资料目录，保留 `--use-mock-keychain`／`--password-store=basic`，并在成功、抛错、检查超时或取消后关闭自己的浏览器及删除临时目录；自定义参数与默认参数过滤不会移除凭据隔离。CDP 和外部传入的浏览器上下文保持原有凭据与生命周期。直接启动 Chromium 时，独立资料目录与这两个隔离参数须同时保留，无头模式本身不隔离钥匙串。
 
@@ -128,7 +128,7 @@ AX 默认返回紧凑语义文本，保留元素身份、层级、值、状态�
 `scripts/build-targets.mjs` 从公开输入创建本地 SDK 和前端工作目录，始终使用 `--frozen-lockfile --ignore-scripts`，缺锁、清单不匹配或输入 SHA-256 不匹配即失败，不自动重新解析。构建前还核对安装后的完整解析锁和全部实际 DSH 包版本，拒绝混入另一宿主版本。固定输入的 SHA-256 见 `host/build-inputs/manifest.json`；包内 `lib/host-build.json` 与输出目录 `build.json` 保存所用输入哈希、实际 DSH 包清单与安装解析锁哈希，可直接对照公开源码。
 
 ```sh
-# NODE 为 Node >=22.19，PNPM 为 pnpm 11.28.5 的 pnpm.mjs 入口。
+# NODE 为 Node >=24.9.0，PNPM 为 pnpm 11.28.5 的 pnpm.mjs 入口。
 OPENCU_PNPM="$PNPM" "$NODE" scripts/build-targets.mjs
 ```
 
@@ -172,7 +172,7 @@ npm run cu:check
 npm run cu:verify
 ```
 
-`cu:verify` 默认选择 `full`，自动启用真实隔离 DSH smoke。SDK 从显式 `OPENCU_DSH_INSTALL`、本地 `.local/cu-dsh-sdk`、当前包或相邻 OMD 安装锚点发现，版本必须与包声明精确一致；缺少 SDK 时报告未完成。独立环境可运行 `npm install --prefix .local/cu-dsh-sdk --no-audit --no-fund --save-exact @deepseek-ai/dsh@0.2.1-rc.5 @deepseek-ai/dsh-attachment-local@0.2.1-rc.5 @deepseek-ai/dsh-system-prompt@0.2.1-rc.5 @deepseek-ai/dsh-tools@0.2.1-rc.5` 准备。`node scripts/cu-liveness.mjs help` 可查看命令入口。Linux CI 使用 `npx playwright install --with-deps chromium`；现有构建／归档及产物一致性检查保持，随后执行一次 `npm run cu:verify -- --profile full`。`cu:check` 已接入 `pretest` 与 `prepack`，打包时仍执行原文档、扩展分发和公开文件门禁；不会在打包前自动运行完整验证机。宿主变体 staging 通过 `OPENCU_SOURCE_ROOT` 指向原源码，`check` 据此核对原源码登记，避免把有意生成的宿主变体误认为未经审查的源码修改。
+`cu:verify` 默认选择 `full`，自动启用真实隔离 DSH smoke。SDK 从显式 `OPENCU_DSH_INSTALL`、本地 `.local/cu-dsh-sdk`、当前包或相邻 OMD 安装锚点发现，版本必须与包声明精确一致；缺少 SDK 时报告未完成。独立环境可运行 `npm install --prefix .local/cu-dsh-sdk --no-audit --no-fund --save-exact @deepseek-ai/dsh@0.2.2-rc.1 @deepseek-ai/dsh-attachment-local@0.2.2-rc.1 @deepseek-ai/dsh-system-prompt@0.2.2-rc.1 @deepseek-ai/dsh-tools@0.2.2-rc.1` 准备。`node scripts/cu-liveness.mjs help` 可查看命令入口。Linux CI 使用 `npx playwright install --with-deps chromium`；现有构建／归档及产物一致性检查保持，随后执行一次 `npm run cu:verify -- --profile full`。`cu:check` 已接入 `pretest` 与 `prepack`，打包时仍执行原文档、扩展分发和公开文件门禁；不会在打包前自动运行完整验证机。宿主变体 staging 通过 `OPENCU_SOURCE_ROOT` 指向原源码，`check` 据此核对原源码登记，避免把有意生成的宿主变体误认为未经审查的源码修改。
 
 | 命令或范围 | 实际执行内容 |
 | --- | --- |
@@ -221,3 +221,7 @@ node scripts/cu-direct.mjs --data-dir /absolute/isolated/cu/data --output-dir /a
 `scripts/cu-metrics.mjs` 可独立采样指定进程树：`node scripts/cu-metrics.mjs sample --root PID --output /absolute/isolated/cu/process.jsonl --summary /absolute/isolated/cu/summary.json --interval 500 --duration 30000`。记录 RSS、进程数、系统平滑 CPU、连续快照间实际观察到的 CPU 时间差、阶段与采样错误；调用记录只保留固定标签、耗时、字节数和状态，不保存代码、标题或正文。RSS 可能重复计入共享页；CPU 差值会遗漏新生、退出及采样间短命进程，不能据此比较不同宿主的 CU 独占开销。汇总的峰值、计数和总和精确，中位数在超过 1,024 个值后由固定容量样本估算；原始采样仍写入 JSONL。SIGINT／SIGTERM 只停止采样器并刷新汇总，不终止测量目标。
 
 隔离发行目录通过 `OPENCU_SOURCE_ROOT` 指向真实源码目录；文档检查从该目录读取 Git 清单，并核对当前构建目录的文档内容。
+
+### DSH 0.2.2-rc.1 构建输入
+
+`host/build-inputs/022rc1/` 锁定 rc.1 SDK 与 Electron。`source.json` 分别记录原始公开源码提交、官方 rc.1 桌面包及构建提交；七个原始桌面入口重建后必须与该官方包逐字节一致。随后在该独立源码目录执行 `node host/apply.mjs <source> --target 0.2.2-rc.1`，该入口核对 Git 来源、未改动源码和全部原始桌面入口摘要后才应用适配。不能更改旧源码的版本冒充新版来源。

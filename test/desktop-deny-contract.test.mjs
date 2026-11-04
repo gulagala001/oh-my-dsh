@@ -1,3 +1,4 @@
+import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
@@ -88,7 +89,7 @@ test('real OpenCU controller and official ToolRuntime reject before any syntheti
   const root = await directory(t), dataDir = join(root, 'opencu'); await mkdir(dataDir);
   const ctx = new Context(); t.after(() => ctx.fiber.dispose());
   ctx.reflect.provide('systemPrompt', { tools() {}, section() {}, getSectionOrder() { return 0; } });
-  await ctx.plugin(ToolRuntime);
+  await installTools(ctx);
   acquireOpenCU(ctx, { namespace: 'omd-opencu', config: { ...disabledBackends, dataDir } });
   const synthetic = syntheticBackend(root), lease = acquireBeforeStart(ctx, { dataDir }, synthetic);
   await warmTargets(lease, synthetic);
@@ -98,7 +99,7 @@ test('real OpenCU controller and official ToolRuntime reject before any syntheti
   // lease points at a different directory: actual inventory must use injection.
   await assert.rejects(warmTargets({ request: () => Promise.resolve({ ok: true, targets: [], errors: [] }) }, synthetic));
   installToolDefinitions(ctx, lease, 'unit-session');
-  const resultPromise = ctx.tools.execute({ callId, name: 'opencu_select', arguments: { reference: targetId }, signal: new AbortController().signal });
+  const resultPromise = executeTool(ctx, { callId, name: 'opencu_select', arguments: { reference: targetId }, signal: new AbortController().signal });
   const pending = await until(async () => { const value = await lease.request('appApprovals/pending', { conversationId: 'unit-session' }); return value.requests[0]; });
   const snapshot = {
     pending: [pending], approvals: (await lease.request('appApprovals/read')).approvals,

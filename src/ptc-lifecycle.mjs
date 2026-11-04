@@ -205,14 +205,6 @@ export function installPtcLifecycle(ctx, { cleanupMs = 5000, adaptiveBudgets = (
       if (descriptor) Object.defineProperty(runtime, 'run', descriptor); else delete runtime.run;
     });
   });
-  ctx.on('system-prompt/assemble', async (_initial, context, next) => {
-    const assembly = await next(), timeout = ctx.get('ptcRuntime')?.timeout;
-    if (!context?.agent || !adaptiveBudgets(context.agent.session) || !timeout) return assembly;
-    const policy = `OMD timeout policy: when timeoutMs is omitted, the initial ${timeout.defaultMs}ms budget can extend for actual nested tool timeout requests, up to ${timeout.maxMs}ms total. An explicitly supplied timeoutMs is a hard outer deadline and never extends. Cancellation and cleanup remain active. Use background jobs for work beyond that maximum.`;
-    return { ...assembly, tools: assembly.tools.map(tool => tool.name === 'run_code' && tool.parameters?.properties?.timeoutMs
-      ? { ...tool, parameters: { ...tool.parameters, properties: { ...tool.parameters.properties,
-        timeoutMs: { ...tool.parameters.properties.timeoutMs, description: policy } } } } : tool) };
-  }, { global: true });
   ctx.effect(() => () => {
     active = false;
     for (const run of runs) {

@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-btw",
-  "version": "0.1.5-dsh.0.2.1-rc.5",
+  "version": "0.1.6-dsh.0.2.2-rc.1",
   "description": "Ask side questions in DeepSeek Harness without interrupting the current task.",
   "type": "module",
   "license": "MIT",
@@ -11,8 +11,8 @@
     "./package.json": "./package.json"
   },
   "engines": {
-    "node": ">=22.19",
-    "dsh": "0.2.1-rc.5"
+    "node": ">=24.9.0",
+    "dsh": "0.2.2-rc.1"
   },
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -36,9 +36,9 @@
     "CHANGELOG.md"
   ],
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/dsh-session": "0.2.1-rc.5",
-    "@deepseek-ai/dsh-llm": "0.2.1-rc.5"
+    "@deepseek-ai/cordis": "4.1.0",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1"
   },
   "devDependencies": {
     "esbuild": "0.25.12",

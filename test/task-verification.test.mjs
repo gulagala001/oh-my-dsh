@@ -1,4 +1,6 @@
 import test from 'node:test';
+import { Context } from '@deepseek-ai/cordis';
+import { installTools } from './fixtures/alpha-tools.mjs';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -99,23 +101,27 @@ test('duplicate task selection executes a task once and a later run still reruns
 
 test('registered verification binds file lookup and every command to one work directory', async t => {
   const f = await fixture(t), other = join(f.cwd, 'other'); await mkdir(other);
-  let cwd = f.cwd; const calls = [], tools = new Map();
-  const ctx = { get: key => key === 'workingDirectory' ? { get: () => cwd } : undefined,
-    sessionProjections: { register() {} }, tools: {
-      register: tool => tools.set(tool.name, tool),
-      async execute(call) {
-        calls.push(call);
-        const text = await readFile(join(call.arguments.workdir, 'marker.txt'), 'utf8');
-        cwd = other;
-        return { isError: false, value: { kind: 'foreground', cwd: call.arguments.workdir, exitCode: 0, stdout: { text } } };
-      },
-    } };
+  let cwd = f.cwd; const calls = [], ctx = new Context();
+  t.after(() => ctx.fiber.dispose());
+  ctx.provide('workingDirectory', { get: () => cwd });
+  ctx.provide('sessionProjections', { register() {} });
+  ctx.provide('systemPrompt', { tools() {}, section() {}, getSectionOrder() { return 0; } });
+  await installTools(ctx);
+  for (const name of ['bash', 'pwsh']) ctx.tools.register({ name, description: 'Fixture shell',
+    parameters: { type: 'object', additionalProperties: true }, output: { schema: { type: 'object' }, render: () => [] },
+    async execute(args) {
+      calls.push(args);
+      const text = await readFile(join(args.workdir, 'marker.txt'), 'utf8');
+      cwd = other;
+      return { kind: 'foreground', cwd: args.workdir, exitCode: 0, stdout: { text } };
+    },
+  });
   await writeFile(join(f.cwd, 'marker.txt'), 'original workspace');
   await writeFile(join(other, 'marker.txt'), 'different workspace');
   registerTasks(ctx, f.store);
-  await tools.get('verify_link').execute({ op: 'run' }, { agent: { session: f.session }, callId: 'root-verification',
+  await ctx.tools.get('verify_link').execute({ op: 'run' }, { agent: { session: f.session }, callId: 'root-verification',
     token: {}, signal: new AbortController().signal });
-  assert.deepEqual(calls.map(call => call.arguments.workdir), [f.cwd, f.cwd]);
+  assert.deepEqual(calls.map(call => call.workdir), [f.cwd, f.cwd]);
   for (const task of f.recovered()) {
     assert.equal(task.links[0].lastRun.tail, 'original workspace');
     assert.equal(task.links[0].lastRun.execution.workdir, f.cwd);
@@ -137,8 +143,13 @@ test('Python uses one native execution deadline and never repeats a terminal res
 
 test('execution provenance retains the actual native receipt directory', async t => {
   const f = await fixture(t, { count: 1 }), actual = join(f.cwd, 'resolved');
-  const ctx = { tools: { execute: async () => ({ isError: false,
-    value: { kind: 'foreground', cwd: actual, exitCode: 0, stdout: { text: 'passed' } } }) } };
+  const ctx = new Context(); t.after(() => ctx.fiber.dispose());
+  ctx.provide('systemPrompt', { tools() {}, section() {}, getSectionOrder() { return 0; } });
+  await installTools(ctx);
+  for (const name of ['bash', 'pwsh']) ctx.tools.register({ name, description: 'Fixture shell',
+    parameters: { type: 'object', additionalProperties: true }, output: { schema: { type: 'object' }, render: () => [] },
+    execute: () => ({ kind: 'foreground', cwd: actual, exitCode: 0, stdout: { text: 'passed' } }),
+  });
   const result = await createVerificationRunner(ctx, { agent: { session: f.session }, signal: new AbortController().signal })('check', 300000);
   assert.equal(result.execution.workdir, actual);
 });

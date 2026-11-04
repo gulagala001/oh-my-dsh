@@ -1,89 +1,61 @@
-import { installPtcControlCompatibility, isPtcControl } from './ptc-control-compat.mjs';
-
+import { setPresentedExecutor } from './host/prompt-provider.mjs';
+import { projectToolDeclarations } from './cc-adaptation/adapter.mjs';
+import { readFile } from 'node:fs/promises';
+import { loadHostModule } from './host-component.mjs';
+import { createModule } from '../lib/host/ptc-native.factory.mjs';
+import { isPtcControl } from './ptc-control-compat.mjs';
 export const name = 'omd-ptc-presentation';
-export const inject = ['tools', 'ptcRuntime', 'omd', 'loader'];
+export const inject = ['tools', 'systemPrompt', 'ptcRuntime', 'omd', 'loader'];
 
-// Keep the host's registry, SDK and scheduler. Only this preset's wire catalog
-// and model-direct gate follow the matching host contract; nested SDK calls remain
-// visible and execute through the original policy and hooks.
-export function installPtcPresentation(ctx, directTools = () => [], mode = 'ptc', runtime = ctx.tools, scopes) {
-  if (typeof scopes?.scopeOf !== 'function' || typeof scopes?.scopeChainOf !== 'function')
-    throw new Error('The matching DSH scope component is required for PTC presentation');
-  const owner = scopes.scopeOf(ctx);
-  if (owner === undefined) throw new Error('PTC presentation requires its owning preset scope');
+// Keep the reviewed native batch scheduler, transport, language SDK,
+// cancellation and tool-set admission. Only direct controls are added.
+export function installPtcPresentation(ctx, Executor, directTools, scopes) {
+  const owner = scopes.scopeOf(ctx), sampled = new WeakMap();
+  if (owner === undefined) throw Error('PTC requires its owning preset scope');
   const owns = agent => agent !== undefined && scopes.scopeChainOf(agent).includes(owner);
-  const sampled = new WeakMap();
-  const admitted = (agent, name) => owns(agent) && sampled.get(agent)?.has(name) === true
-    && sampled.get(agent).get(name) === ctx.tools.get(name, agent);
-  if (mode === 'ptc') installPtcControlCompatibility(ctx, runtime, admitted);
-  ctx.tools.presentAs(mode);
-  const sample = agent => {
-    if (!owns(agent)) { sampled.delete(agent); return new Set(); }
-    if (runtime.modeFor(agent) === 'native') {
-      sampled.delete(agent);
-      return new Set(ctx.tools.schemas(agent).map(tool => tool.name));
-    }
+
+  const sample = (agent, toolSet) => {
     const requested = directTools(agent).filter(isPtcControl);
-    const visible = new Set(ctx.tools.schemas(agent).map(tool => tool.name));
-    const names = new Set(['run_code', ...requested.filter(name => visible.has(name))]);
-    sampled.set(agent, new Map([...names].map(name => [name, ctx.tools.get(name, agent)])));
-    if (runtime.modeFor(agent) === 'ptc') for (const name of names) {
-      if (name === 'run_code' || runtime.collapses(name, agent, false) === false) continue;
-      sampled.delete(agent);
-      throw Object.assign(new Error(`The DSH tools component cannot present direct PTC control "${name}" in this agent scope`),
-        { code: 'PTC_CONTROL_COMPAT_UNSUPPORTED' });
-    }
-    return names;
+    const visible = new Map(ctx.tools.definitions(agent, toolSet).map(tool => [tool.name, tool]));
+    const entries = requested.filter(name => visible.has(name)).map(name => [name, visible.get(name)]);
+    sampled.set(agent, new Map(entries));
+    return new Set(['run_code', ...entries.map(([name]) => name)]);
   };
-  const reason = exec => !owns(exec.agent) || runtime.modeFor(exec.agent) === 'native' || exec.parent !== undefined || exec.name === 'run_code'
-    || admitted(exec.agent, exec.name) ? undefined
-    : `unknown tool "${exec.name}": use run_code and the tools SDK to call this tool`;
-  // Reject before ordinary approval middleware; the monotonic guard also
-  // keeps another pre-policy's short circuit from permitting a direct call.
-  ctx.on('tools/pre-execute', (exec, next) => {
-    const denied = reason(exec);
-    return denied === undefined ? next() : { kind: 'deny', reason: denied, info: { code: 'UNKNOWN_TOOL' } };
-  }, { prepend: true });
-  ctx.tools.guard(reason);
+  ctx.tools.guard(exec => {
+    if (!owns(exec.agent) || exec.parent !== undefined || exec.name === 'run_code') return;
+    const admitted = sampled.get(exec.agent);
+    if (admitted?.has(exec.name) && admitted.get(exec.name) === ctx.tools.get(exec.name, exec.agent, exec.toolSet)) return;
+    return `unknown tool "${exec.name}": use run_code and the tools SDK to call this tool`;
+  });
+  const delegate = new Executor(ctx);
+  setPresentedExecutor(ctx, delegate, (model, definitions, context) => {
+    const agent = context.agent ?? context.scope, names = sample(agent, context.toolSet);
+    const projected = projectToolDeclarations(ctx, { ...model, schemas: model.schemas.filter(tool => names.has(tool.name)) }, definitions, context);
+    const timeout = ctx.get('ptcRuntime')?.timeout;
+    if (timeout && ctx.omd.config().ptcAdaptiveBudgets !== false) projected.schemas = projected.schemas.map(tool => tool.name === 'run_code' && tool.parameters?.properties?.timeoutMs
+      ? { ...tool, parameters: { ...tool.parameters, properties: { ...tool.parameters.properties, timeoutMs: { ...tool.parameters.properties.timeoutMs,
+        description: `When omitted, the ${timeout.defaultMs}ms default can extend for nested tool budgets up to ${timeout.maxMs}ms; an explicit timeoutMs remains a hard limit. Cancellation and cleanup stay active.` } } } } : tool);
+    return projected;
+  });
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
-    const assembly = await next();
-    // Public presentation probes use { scope: agent }, without the execution
-    // metadata. They must observe the same direct controls as a real request.
-    // Resolve locally: adding agent to the shared context would trigger other
-    // request-only hooks while a plugin is only inspecting presentation.
-    const agent = context?.agent ?? (context?.scope?.session && context.scope?.ctx ? context.scope : undefined);
-    if (!agent) return assembly;
-    if (!owns(agent)) { sampled.delete(agent); return assembly; }
-    if (runtime.modeFor(context.scope ?? agent) === 'native') {
-      sampled.delete(agent);
-      return assembly;
-    }
-    const names = sample(agent), controls = [...names].filter(name => name !== 'run_code');
-    const schemas = new Map(assembly.tools.map(tool => [tool.name, tool]));
-    for (const schema of ctx.tools.schemas(agent)) if (names.has(schema.name) && !schemas.has(schema.name)) schemas.set(schema.name, schema);
+    const assembly = await next(), agent = context?.agent ?? context?.scope;
+    if (!owns(agent)) return assembly;
+    const controls = [...(sampled.get(agent)?.keys() ?? [])];
     const text = controls.length
       ? `Use run_code and the tools SDK for business operations. These control tools are also callable directly: ${controls.join(', ')}. All other tools require run_code.`
-      : '`run_code` is the only tool you can call directly — a tool call naming any other tool fails. Reach every tool the SDK declares below from inside the program.';
-    return { ...assembly, tools: [...schemas.values()].filter(tool => names.has(tool.name)),
-      sections: assembly.sections.map(section => section.name === 'tools:ptc-only' ? { ...section, text } : section) };
+      : '`run_code` is the only tool you can call directly. Reach other tools through the program SDK.';
+    return { ...assembly, sections: assembly.sections.map(section => section.name === 'tools:ptc-only' ? { ...section, text } : section) };
   });
   return { sample };
 }
-
 export async function apply(ctx) {
   const entry = [...ctx.loader.entries()].find(row => row.options.name === '@deepseek-ai/dsh-tools');
-  if (!entry) throw new Error('The matching DSH tools component is missing');
-  const module = await entry.parent.tree.import('@deepseek-ai/dsh-tools');
-  const { symbols } = await entry.parent.tree.import('@deepseek-ai/cordis');
+  if (!entry) throw Error('The matching native tool registry is missing');
+  const specs = JSON.parse(await readFile(new URL('../lib/host/ptc-native.dependencies.json', import.meta.url), 'utf8'));
+  const { PtcExecutor } = await loadHostModule(ctx, 'tools', createModule, specs);
   const scopes = await entry.parent.tree.import('@deepseek-ai/dsh-scope');
-  const runtime = ctx.tools[symbols.original] ?? ctx.tools;
-  if (!(runtime instanceof (module.ToolRuntime ?? module.default))) throw new Error('The active tools registry does not match its DSH component');
-  const modes = (module.ToolRuntime ?? module.default)?.Config?.dict?.mode?.list?.map(choice => choice.value);
-  if (!Array.isArray(modes) || !modes.includes('native') || !modes.includes('ptc')) throw new Error('The DSH tools component did not expose its presentation modes');
-  const mode = modes.includes('both') ? 'both' : 'ptc';
-  installPtcPresentation(ctx, agent => {
+  installPtcPresentation(ctx, PtcExecutor, agent => {
     ctx.omd.prepareBackground(agent);
-    return ctx.omd.backgroundOptions(agent).interruptibleWait
-      ? ['job_output', 'job_list', 'job_kill', 'runtime_status'] : [];
-  }, mode, runtime, scopes);
+    return ctx.omd.backgroundOptions(agent).interruptibleWait ? ['job_output', 'job_list', 'job_kill', 'runtime_status'] : [];
+  }, scopes);
 }

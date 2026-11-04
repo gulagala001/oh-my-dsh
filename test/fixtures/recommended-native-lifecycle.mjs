@@ -1,4 +1,4 @@
-// Real locked rc.3 SDK lifecycle integration with synthetic package-manager I/O.
+// Real locked host SDK lifecycle integration with synthetic package-manager I/O.
 // No real install, download, archive extraction, desktop, or user profile is exercised.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -22,10 +22,10 @@ assert.equal(host('./package.json').version, hostVersion);
 for (const name of ['dsh-plugin-manager', 'dsh-app-boot', 'dsh-hmr']) {
   assert.equal(host(`@deepseek-ai/${name}/package.json`).version, hostVersion);
 }
-assert.equal(host('@deepseek-ai/cordis/package.json').version, '4.0.5');
+assert.equal(host('@deepseek-ai/cordis/package.json').version, require('../../package.json').devDependencies['@deepseek-ai/cordis']);
 const sdk = spec => import(pathToFileURL(host.resolve(spec)).href);
-// Cordis 4.0.5 declares a const enum, erased from its published JavaScript.
-// Fixed SDK 687f282e/vendor/cordis/src/fiber.ts: PENDING=0, LOADING=1, ACTIVE=2.
+// Cordis 4.1.0 declares a const enum, erased from its published JavaScript.
+// Reviewed source 05b1cae8/vendor/cordis/src/fiber.ts: PENDING=0, LOADING=1, ACTIVE=2.
 const ACTIVE = 2;
 const { boot, createRuntimeResolution, initProfile, loadProfileDirectory, PluginPackages, readProfileManifest, readProfilePatches } = await sdk('@deepseek-ai/dsh-app-boot');
 const { default: PluginManager } = await sdk('@deepseek-ai/dsh-plugin-manager');

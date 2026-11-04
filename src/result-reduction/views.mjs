@@ -1,3 +1,4 @@
+import { executeNativeTool } from "../host/native-tool-call.mjs";
 import { checkedTool } from '../tool-contract.mjs';
 import { randomUUID } from 'node:crypto';
 import { hash } from './evidence.mjs';
@@ -15,8 +16,8 @@ async function native(ctx, exec, name, args, observe) {
     if (actor?.name === name && actor.callId === callId && actor.agent === exec.agent && actor.parent === exec.token) observe(target, observation);
   });
   try {
-    const result = await ctx.tools.execute({ name, arguments: args, agent: exec.agent, signal: exec.signal,
-      callId, rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token });
+    const result = await executeNativeTool(ctx, { name, arguments: args, agent: exec.agent, signal: exec.signal,
+      callId, rootCallId: exec.rootCallId ?? exec.callId, parent: exec.token, toolSet: exec.toolSet });
     exec.signal.throwIfAborted();
     if (result.isError || result.value === undefined) throw Error(`原生 ${name} 未成功；没有绕过其权限或限制`);
     return result.value;

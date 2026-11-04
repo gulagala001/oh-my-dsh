@@ -6,7 +6,7 @@ import { hostClientSource, replaceExactly, clientRegistration } from './host-bui
 const root = new URL('../', import.meta.url);
 let { pkg, version, source } = await hostClientSource(root, '@deepseek-ai/dsh-client-ui-open-in-app');
 const hash = createHash('sha256').update(source).digest('hex');
-if (pkg.version !== version || !['0.2.1-rc.3', '0.2.1-rc.5'].includes(version) || hash !== '7a3adda611ea8318322e474294cba4c5a36be30f879c98dc52a41b57363cd6dc') throw Error('Unreviewed native open-in-app client');
+if (pkg.version !== version || !['0.2.2-alpha.3', '0.2.2-rc.1'].includes(version) || hash !== '461eefbd89bf448abce7215a2ec60355ed6cb06533833292fece150a8bde90f8') throw Error('Unreviewed native open-in-app client');
 const replaceOnce = (before, after) => { source = replaceExactly(source, before, after, pkg.name); };
 replaceOnce('const target = () => {', `const emptyDirectory = { subscribe: () => () => {}, getSnapshot: () => undefined };
       const directoryStore = id => ctx.sessions.binding(id)?.session.projections.faceOf('workingDirectory') ?? emptyDirectory;

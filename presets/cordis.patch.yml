@@ -8,50 +8,53 @@
         description: "通用单模型 Agent，配备项目摘要、上下文替换、任务验证、电脑操控、技能与按需子代理。"
         order: 0
         plugins:
+          - id: tool-executor
+            name: 'oh-my-dsh/native-executor'
+
           # Adapted from DSH 0.1.6-alpha.1 standard preset; see THIRD_PARTY_NOTICES.md.
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
               maxBytes: 65536
-          
+
           - id: tool-bash
             name: 'oh-my-dsh/host/tool-bash'
             disabled: !!js process.platform === 'win32'
             config:
               promoteOnTimeout: false
-          
+
           - id: tool-pwsh
             name: 'oh-my-dsh/host/tool-pwsh'
             disabled: !!js process.platform !== 'win32'
             config:
               promoteOnTimeout: false
-          
+
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
-          
+
           - id: tool-fs-search
             name: '@deepseek-ai/dsh-tool-fs-search'
             config:
               sampleOverCapGlobResults: false
-          
+
           - id: codegraph
             name: 'oh-my-dsh/codegraph'
-          
+
           - id: tool-jobs
             name: 'oh-my-dsh/host/tool-jobs'
-          
+
           - id: skill-filesystem
             name: '@deepseek-ai/dsh-skill-filesystem'
-          
+
           - id: tool-skill
             name: '@deepseek-ai/dsh-tool-skill'
-          
+
           - id: command-goal
             name: '@deepseek-ai/dsh-command-goal'
-          
+
           - id: tool-goal
             name: '@deepseek-ai/dsh-tool-goal'
-          
+
           - id: planning
             name: cordis:group
             group: true
@@ -63,13 +66,13 @@
                 config:
                   section: |
                         You are in plan mode. Stay in this mode until the user approves the plan through `exit_plan_mode` (`approved: true`) or the user changes the session mode. A successful tool call alone does not approve implementation. A conversational agreement settles a decision; it does not approve implementation.
-          
+
                         Explore the repository with non-mutating reads, searches, and checks. Do not edit files, change configuration, run rewriting tools, commit, or otherwise carry out the implementation. Mutation tools remain visible for catalog stability, not because their use is allowed in this mode. Do not use `todo_write` to track the planning phase.
-          
+
                         Resolve discoverable facts by inspection. Use `ask_user_question` for material choices only the user can make. Build a decision-complete plan: goal and success criteria, changes by subsystem, API/schema/data-flow effects, relevant failure cases, tests, acceptance checks, and assumptions. Prefer existing patterns.
-          
+
                         When ready, make `exit_plan_mode` the only and final tool call in that response, passing the complete plan Markdown with a `#` title. Do not substitute a plain-text final plan or a request to proceed through another channel. On approval, implement in a later step; on rejection, revise. If review is unavailable or aborted, stay in plan mode and explain how the user can change modes.
-          
+
           - id: compaction
             name: cordis:group
             group: true
@@ -78,8 +81,8 @@
             config:
               - id: oh-my-dsh-agent
                 name: 'oh-my-dsh/agent'
-          
-          
+
+
           - id: delegation
             name: cordis:group
             group: true
@@ -88,23 +91,20 @@
             config:
               - id: tool-subagent-control
                 name: '@deepseek-ai/dsh-tool-subagent-control'
-          
-              - id: tool-subagent-list-agents
-                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
-          
+
               - id: tool-subagent
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: spawn
                   toolName: subagent
                   modelSelectionSettings: true
-          
+
               - id: tool-subagent-fork
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: fork
                   toolName: subagent_fork
-          
+
               - id: workflow-ptc-original
                 name: '@deepseek-ai/dsh-workflow-ptc'
                 disabled: true
@@ -112,28 +112,28 @@
                 name: 'oh-my-dsh/host/workflow-ptc'
                 config:
                   provider: omd-workflow
-          
+
               - id: tool-workflow-original
                 name: '@deepseek-ai/dsh-tool-workflow'
                 disabled: true
               - id: tool-workflow
                 name: 'oh-my-dsh/host/tool-workflow'
-          
+
               - id: tool-ralph
                 name: '@deepseek-ai/dsh-tool-ralph'
                 config:
                   subagentProvider: spawn
                   maxRounds: 64
-          
+
           - id: tool-ask-user
             name: '@deepseek-ai/dsh-tool-ask-user'
-          
+
           - id: tool-web
             name: '@deepseek-ai/dsh-tool-web'
             config:
               fetch: true
               searchTimeoutMs: 60000
-          
+
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
     - id: preset-omd-ptc
@@ -144,50 +144,53 @@
         description: "完整 OMD 能力，通过 PTC 的 run_code 调用工具。"
         order: 1
         plugins:
+          - id: tool-executor
+            name: 'oh-my-dsh/ptc'
+
           # Adapted from DSH 0.1.6-alpha.1 standard preset; see THIRD_PARTY_NOTICES.md.
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
               maxBytes: 65536
-          
+
           - id: tool-bash
             name: 'oh-my-dsh/host/tool-bash'
             disabled: !!js process.platform === 'win32'
             config:
               promoteOnTimeout: false
-          
+
           - id: tool-pwsh
             name: 'oh-my-dsh/host/tool-pwsh'
             disabled: !!js process.platform !== 'win32'
             config:
               promoteOnTimeout: false
-          
+
           - id: tool-fs
             name: '@deepseek-ai/dsh-tool-fs'
-          
+
           - id: tool-fs-search
             name: '@deepseek-ai/dsh-tool-fs-search'
             config:
               sampleOverCapGlobResults: false
-          
+
           - id: codegraph
             name: 'oh-my-dsh/codegraph'
-          
+
           - id: tool-jobs
             name: 'oh-my-dsh/host/tool-jobs'
-          
+
           - id: skill-filesystem
             name: '@deepseek-ai/dsh-skill-filesystem'
-          
+
           - id: tool-skill
             name: '@deepseek-ai/dsh-tool-skill'
-          
+
           - id: command-goal
             name: '@deepseek-ai/dsh-command-goal'
-          
+
           - id: tool-goal
             name: '@deepseek-ai/dsh-tool-goal'
-          
+
           - id: planning
             name: cordis:group
             group: true
@@ -199,13 +202,13 @@
                 config:
                   section: |
                         You are in plan mode. Stay in this mode until the user approves the plan through `exit_plan_mode` (`approved: true`) or the user changes the session mode. A successful tool call alone does not approve implementation. A conversational agreement settles a decision; it does not approve implementation.
-          
+
                         Explore the repository with non-mutating reads, searches, and checks. Do not edit files, change configuration, run rewriting tools, commit, or otherwise carry out the implementation. Mutation tools remain visible for catalog stability, not because their use is allowed in this mode. Do not use `todo_write` to track the planning phase.
-          
+
                         Resolve discoverable facts by inspection. Use `ask_user_question` for material choices only the user can make. Build a decision-complete plan: goal and success criteria, changes by subsystem, API/schema/data-flow effects, relevant failure cases, tests, acceptance checks, and assumptions. Prefer existing patterns.
-          
+
                         When ready, make `exit_plan_mode` the only and final tool call in that response, passing the complete plan Markdown with a `#` title. Do not substitute a plain-text final plan or a request to proceed through another channel. On approval, implement in a later step; on rejection, revise. If review is unavailable or aborted, stay in plan mode and explain how the user can change modes.
-          
+
           - id: compaction
             name: cordis:group
             group: true
@@ -214,8 +217,8 @@
             config:
               - id: oh-my-dsh-agent
                 name: 'oh-my-dsh/agent'
-          
-          
+
+
           - id: delegation
             name: cordis:group
             group: true
@@ -224,23 +227,20 @@
             config:
               - id: tool-subagent-control
                 name: '@deepseek-ai/dsh-tool-subagent-control'
-          
-              - id: tool-subagent-list-agents
-                name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
-          
+
               - id: tool-subagent
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: spawn
                   toolName: subagent
                   modelSelectionSettings: true
-          
+
               - id: tool-subagent-fork
                 name: '@deepseek-ai/dsh-tool-subagent'
                 config:
                   provider: fork
                   toolName: subagent_fork
-          
+
               - id: workflow-ptc-original
                 name: '@deepseek-ai/dsh-workflow-ptc'
                 disabled: true
@@ -248,30 +248,27 @@
                 name: 'oh-my-dsh/host/workflow-ptc'
                 config:
                   provider: omd-workflow
-          
+
               - id: tool-workflow-original
                 name: '@deepseek-ai/dsh-tool-workflow'
                 disabled: true
               - id: tool-workflow
                 name: 'oh-my-dsh/host/tool-workflow'
-          
+
               - id: tool-ralph
                 name: '@deepseek-ai/dsh-tool-ralph'
                 config:
                   subagentProvider: spawn
                   maxRounds: 64
-          
+
           - id: tool-ask-user
             name: '@deepseek-ai/dsh-tool-ask-user'
-          
+
           - id: tool-web
             name: '@deepseek-ai/dsh-tool-web'
             config:
               fetch: true
               searchTimeoutMs: 60000
-          
+
           - id: present
             name: '@deepseek-ai/dsh-tool-present'
-          
-          - id: tool-presentation
-            name: 'oh-my-dsh/ptc'

@@ -40,12 +40,12 @@ test('document parsers preserve cells, paragraph/table positions and PDF page co
 });
 
 test('context_view uses the scoped byte provider, preserves extraction boundaries and never retries denied reads', async () => {
-  let reads = 0, denied = false, changed = false, stats = 0, archived;
+  let reads = 0, denied = false, changed = false, admitted = true, stats = 0, archived;
   const bytes = Buffer.from('name,value\ninvoice,001\n'), definitions = [];
   const fs = { async resolve(path, options) { assert.equal(options.cwd, '/approved'); return { targetKey: path }; },
     async stat() { return { type: 'file', size: bytes.length, version: changed ? ++stats : 1 }; },
     async readBytes(_target, signal, max) { reads++; signal.throwIfAborted(); assert.equal(max, 32 * 1024 * 1024); if (denied) throw Error('provider denied'); return bytes; }, processPath: () => '/approved/a.csv' };
-  const ctx = { tools: { get: () => ({}), register: tool => definitions.push(tool) }, get: name => name === 'fs' ? fs : { ensure: async () => '/approved' } };
+  const ctx = { tools: { executable: () => admitted ? {} : undefined, register: tool => definitions.push(tool) }, get: name => name === 'fs' ? fs : { ensure: async () => '/approved' } };
   const hub = { optimization: { enabled: () => true, limit: (_s, n) => n ?? 48000,
     archive: async (_exec, text, _rule, complete) => { archived = { text, complete }; return { ref: 'omd-raw:fixture', sourceHash: 'hash', complete }; }, finish: async (_exec, value) => value } };
   registerContextViews(ctx, hub);
@@ -53,6 +53,7 @@ test('context_view uses the scoped byte provider, preserves extraction boundarie
   const value = JSON.parse(await call({ file: 'a.csv', view: 'article' }));
   assert.match(value.text, /row 2.*invoice.*001/); assert.equal(value.document.format, 'csv'); assert.equal(value.rawComplete, false);
   assert.equal(archived.complete, false); assert.deepEqual(JSON.parse(archived.text).rows[1], ['invoice', '001']);
+  admitted = false; await assert.rejects(call({ file: 'a.csv', view: 'article' }), /没有文件读取工具/); assert.equal(reads, 1); admitted = true;
   denied = true; await assert.rejects(call({ file: 'a.csv', view: 'data' }), /provider denied/); assert.equal(reads, 2);
   denied = false; changed = true; await assert.rejects(call({ file: 'a.csv', view: 'data' }), /读取期间变化/);
 });

@@ -1,3 +1,4 @@
+import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Context } from '@deepseek-ai/cordis';
@@ -13,7 +14,7 @@ async function fixture(t) {
   const ctx = new Context();
   t.after(() => ctx.fiber.dispose());
   ctx.reflect.provide('systemPrompt', { tools() {}, section() {}, getSectionOrder() { return 0; } });
-  await ctx.plugin(ToolRuntime);
+  await installTools(ctx);
   await ctx.plugin((await component(createJobs, ['node:crypto', '@deepseek-ai/schemastery', '@deepseek-ai/dsh-scope', '@deepseek-ai/dsh-timeout', '@deepseek-ai/dsh-jobs'])).default);
   await ctx.plugin(await component(createControls, ['@deepseek-ai/schemastery', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-output-retention', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-jobs']));
   const done = Promise.withResolvers();
@@ -51,16 +52,16 @@ test('finite job_output cancellation is ABORTED with the caller reason, while ti
     if (exec.callId === 'cancel-wait') controller.abort({ kind: 'user' });
     return result;
   }, { global: true });
-  const cancelled = await f.ctx.tools.execute({ callId: 'cancel-wait', name: 'job_output', arguments: { job_id: f.id, wait: true, timeout_ms: 30000 }, signal: controller.signal });
+  const cancelled = await executeTool(f.ctx, { callId: 'cancel-wait', name: 'job_output', arguments: { job_id: f.id, wait: true, timeout_ms: 30000 }, signal: controller.signal });
   assert.equal(cancelled.error?.info?.code, 'ABORTED');
   assert.equal(cancelled.error?.message, 'tool call cancelled by user');
   assert.equal(f.cancelled(), 0);
   assert.equal(f.ctx.jobs.get(f.id).status, 'running');
-  const timeout = await f.ctx.tools.execute({ callId: 'timeout-wait', name: 'job_output', arguments: { job_id: f.id, wait: true, timeout_ms: 1 }, signal: new AbortController().signal });
+  const timeout = await executeTool(f.ctx, { callId: 'timeout-wait', name: 'job_output', arguments: { job_id: f.id, wait: true, timeout_ms: 1 }, signal: new AbortController().signal });
   assert.equal(timeout.isError, false);
   assert.equal(timeout.value.job.status, 'running');
   assert.match(timeout.value.text, /unread output/);
-  const stop = await f.ctx.tools.execute({ callId: 'stop-job', name: 'job_kill', arguments: { job_id: f.id, reason: 'explicit stop' }, signal: new AbortController().signal });
+  const stop = await executeTool(f.ctx, { callId: 'stop-job', name: 'job_kill', arguments: { job_id: f.id, reason: 'explicit stop' }, signal: new AbortController().signal });
   assert.equal(stop.isError, false);
   await f.ctx.jobs.wait(f.id, 1000);
   assert.equal(f.cancelled(), 1);
