@@ -18,6 +18,7 @@
 - 组件及价格同步命令会自动重新生成设置页与公开来源清单。手工修改其他来源输入后运行 `npm run credits:write`，并用 `npm run docs:check` 检查一致性。
 - 系统提示词原文与许可保存在 `src/prompt-styles/upstream/<来源>/`，`source.json` 固定提交、核对日期与原始字节哈希；公开样本必须注明非官方与核验边界。适配只处理真实宿主差异，不改写行为风格。修改来源后重建 `node scripts/check-prompt-styles.mjs --write`，再执行 `npm run prompts:check`；构建、CI 与 prepack 检查同一份原文、构建器和适配锚点。来源说明原位维护于提示词指南、第三方声明和项目目录，不新增内部维护流水。
 - 回退存储策略变更需同步独立插件、内置快照、使用指南及发行说明，并验证容量限制、低磁盘空间、并发写入和清理后的恢复。
+- Shell 与任务控制的适配在 `scripts/build-host.mjs` 校验固定宿主源码后应用。升级宿主时复核两种 Shell 的终止等待和任务控制的注册位置，运行 `node --test test/job-wait-cancel.test.mjs` 验证取消后的任务归属及回退锁隔离。
 - 独立聊天从创建到发送保持同一会话与目录，标题命名不改变文件位置。工作目录适配同时验证权限根、子代理、冷恢复、历史文件链接及 Finder 实际目标；`scripts/build-open-in-app.mjs` 在构建时核对 rc.3 原生客户端字节与两个选择器替换点。构建指纹不能代替真实目录验收。
 - 测试使用隔离数据目录与受控模型；个人配置、会话、密钥和原始用户报告不进入提交或安装包。
 - CU／BU 维护使用独立 OpenCU 源码的 `npm run cu:verify`；同步后用同一验证机的 `--root ./vendor/opencu --profile matrix`／`browser` 验证内置副本，不重复源码完整适配套件。实际安装包另用 `node scripts/check-opencu-delivery.mjs <actual-package.tgz>` 核对字节、来源清单、native 执行位与生成客户端；命令、构建前提、报告与有限覆盖边界见[开发说明](docs/development.md#按需测试)。超时、取消、缺失回执或运行期间源码变化不能算通过。

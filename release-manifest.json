@@ -2,6 +2,16 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.1.omd.1.3.6",
+      "severity": "normal",
+      "title": "Oh My DSH 1.3.6 · DSH 0.2.2-rc.1",
+      "notes": [
+        "修复大型非 Git 工作区因 Rewind 备份阻塞而连续触发工具超时的问题。备份超出预算时记录缺口，任务查询和停止可以独立运行。",
+        "修复停止生成后仍等待工作区快照或命令超时的问题。PowerShell 和 Bash 请求终止后最多额外等待 1 秒，仍在停止的进程由原生任务注册表跟踪。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.6.md"
+    },
+    {
       "version": "0.2.2-rc.1.omd.1.3.5",
       "severity": "normal",
       "title": "OMD 1.3.5 · DSH 0.2.2-rc.1",

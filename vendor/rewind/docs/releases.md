@@ -1,3 +1,39 @@
+# DSH Undo 0.1.9 · DSH 0.2.2-rc.1
+
+[中文](#zh-0-1-9-dsh-0-2-2-rc-1) · [English](#en-0-1-9-dsh-0-2-2-rc-1)
+
+<a id="zh-0-1-9-dsh-0-2-2-rc-1"></a>
+
+## 中文
+
+### 问题修复
+
+- 为工具前后的工作区备份增加可取消的时间预算。快照耗时过长时，跳过该段文件备份并记录缺口，工具继续执行。
+- 取消会中止扫描、读取和备份写入等待。未发布的备份不会进入索引或被后续快照当作完整备份。
+
+<a id="en-0-1-9-dsh-0-2-2-rc-1"></a>
+
+## English
+
+### Bug fixes
+
+- Give before-and-after workspace snapshots a cancellable time budget. Slow snapshots record a file-backup gap while tools continue.
+- Cancellation stops scanning, reading and waiting for backup writes. Unpublished data stays out of the index and later snapshots cannot mistake it for a complete backup.
+
+## 安装 / Installation
+
+| DSH | 固定安装包 / Fixed package | 校验 / Checksums |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [DSH Undo 0.1.9](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.9-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.9-dsh.0.2.2-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.9-dsh.0.2.2-rc.1/SHA256SUMS) |
+
+在 **插件 → 添加插件** 使用匹配的固定包。等当前任务结束后，按宿主提示重载。
+
+Use the matching fixed package in **Plugins → Add plugin**. Finish active tasks, then reload when prompted.
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-undo-plugin/blob/main/docs/install.md)
+
+---
+
 # DSH Undo 0.1.6 · DSH 0.2.1-rc.5
 
 ## DSH Undo 0.1.8 · DSH 0.2.2-rc.1

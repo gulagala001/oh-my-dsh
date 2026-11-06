@@ -1,13 +1,17 @@
-import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
+import { installTools, executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import { Context } from '@deepseek-ai/cordis';
-import { ToolRuntime } from '@deepseek-ai/dsh-tools';
 import { createModule as createJobs } from '../lib/host/jobs-local.factory.mjs';
 import { createModule as createControls } from '../lib/host/tool-jobs.factory.mjs';
+import { createModule as createPwsh } from '../lib/host/tool-pwsh.factory.mjs';
+import { createModule as createBash } from '../lib/host/tool-bash.factory.mjs';
+import { RewindEngine } from '../vendor/rewind/src/engine.mjs';
 
+const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
 async function component(factory, names) {
-  const modules = new Map(await Promise.all(names.map(async name => [name, await import(name)])));
+  const modules = new Map(await Promise.all(names.map(async name => [name, await import(name.startsWith('node:') ? name : host.resolve(name))])));
   return factory(name => name === '@deepseek-ai/schemastery' ? modules.get(name).default : { ...modules.get(name), __esModule: true });
 }
 async function fixture(t) {
@@ -67,4 +71,50 @@ test('finite job_output cancellation is ABORTED with the caller reason, while ti
   assert.equal(f.cancelled(), 1);
   assert.equal(f.ctx.jobs.get(f.id).status, 'killed');
   assert.match(f.ctx.jobs.get(f.id).detail, /explicit stop/);
+});
+
+test('actual job controls bypass Rewind admission by definition identity', async t => {
+  const f = await fixture(t), agent = { ctx: f.ctx, session: { id: 'controls' } };
+  const engine = new RewindEngine(f.ctx, 'unused');
+  for (const name of ['job_list', 'job_output', 'job_kill']) {
+    assert.ok(f.ctx.tools.get(name, agent));
+    assert.equal(engine.tracksTool({ agent, name }), false);
+  }
+  const replacement = { name: 'job_list' };
+  assert.equal(engine.tracksTool({ agent, name: 'job_list', toolSet: { view: () => new Map([['job_list', replacement]]) } }), true);
+});
+
+for (const [name, factory] of [['pwsh', createPwsh], ['bash', createBash]]) test(`cancelled ${name} call returns before a slow job settles, preserving job ownership`, async t => {
+  const f = await fixture(t), entered = Promise.withResolvers(), pending = Promise.withResolvers();
+  const controller = new AbortController();
+  let jobSignal;
+  f.ctx.reflect.provide('workingDirectory', { ensure: async () => process.cwd() });
+  f.ctx.reflect.provide('shellEnv', { collect: () => ({}) });
+  f.ctx.reflect.provide('shell', {
+    resolve: request => ({ ...request, workdir: process.cwd() }),
+    execute(spec) { jobSignal = spec.signal; entered.resolve(); return pending.promise; },
+  });
+  t.after(() => pending.reject(Error('test teardown')));
+  await f.ctx.plugin(await component(factory, ['node:path', '@deepseek-ai/schemastery', '@deepseek-ai/dsh-tools', '@deepseek-ai/dsh-llm', '@deepseek-ai/dsh-sandbox', '@deepseek-ai/dsh-shell']));
+  const result = executeTool(f.ctx, { callId: name, name, arguments: { command: 'blocked', description: 'Stop this test call', timeoutMs: 30000 }, signal: controller.signal });
+  const deadline = new AbortController();
+  const ready = AbortSignal.timeout(2000);
+  try {
+    await Promise.race([entered.promise, result.then(value => assert.fail(JSON.stringify(value))),
+      new Promise((_, reject) => ready.addEventListener('abort', () => reject(Error('Shell did not start')), { once: true }))]);
+    controller.abort({ kind: 'user' });
+    const cancelled = await Promise.race([result, new Promise((_, reject) => {
+      const timer = setTimeout(() => reject(Error('Turn still waiting on the shell')), 2500);
+      deadline.signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
+    })]);
+    assert.equal(cancelled.error?.info?.code, 'ABORTED');
+    assert.equal(jobSignal.aborted, true);
+    const stopping = f.ctx.jobs.list().find(job => job.kind === name);
+    assert.equal(stopping?.status, 'stopping');
+    pending.reject(Error('process settled'));
+    assert.equal((await f.ctx.jobs.wait(stopping.id, 1000)).status, 'killed');
+  } finally {
+    deadline.abort();
+    pending.reject(Error('test finished'));
+  }
 });

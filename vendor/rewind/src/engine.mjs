@@ -7,8 +7,12 @@ import { Store, hash, lease, TOOL_LOCK_WAIT_MS, isLockFailure } from './store.mj
 import { Files, difference, equal } from './files.mjs';
 import { eventsOf, snapshot, beforeMessage, userTarget, prepareReplay, appendPrepared, hidden, mergeRanges } from './conversation.mjs';
 
+const CAPTURE_MS = 4000;
+const RETRY_MS = 30000;
+const workspaceIndependent = Symbol.for('dsh-rewind-plus.workspace-independent');
+
 export class RewindEngine {
-  constructor(ctx,root,config={}) {this.ctx=ctx;this.store=new Store(root);this.files=new Files(root,config);this.plans=new Map();this.waves=new Map();this.busy=new Set();this.operations=new Map();}
+  constructor(ctx,root,config={}) {this.ctx=ctx;this.store=new Store(root);this.files=new Files(root,config);this.plans=new Map();this.waves=new Map();this.busy=new Set();this.operations=new Map();this.captureRetry=new Map();}
   projections(){return this.ctx.sessions.messageProjections || [];}
   backupGap(agent,error){
     this.ctx.logger?.warn?.('Rewind capture skipped: '+error.message);
@@ -23,8 +27,8 @@ export class RewindEngine {
   }
   owner(agent){let a=agent;const seen=new Set();while(a?.session.header.origin==='subagent' && a.session.header.parentSession && !seen.has(a.id)){seen.add(a.id);const parent=this.ctx.agents.get(a.session.header.parentSession);if(!parent)break;a=parent;}return a;}
   cwd(session){return this.ctx.get?.('workingDirectory')?.get(session) || session.header.cwd;}
-  async root(session){const cwd=this.cwd(session);if(!cwd)throw Error('会话没有本地工作目录');return this.files.workspace(cwd);}
-  async checkpoint(agent,messages=[]){
+  async root(session,signal){const cwd=this.cwd(session);if(!cwd)throw Error('会话没有本地工作目录');return this.files.workspace(cwd,signal);}
+  async checkpoint(agent,messages=[],signal){
     const owner=this.owner(agent),s=owner.session;
     if(owner.id!==agent.id)return;
     await this.store.lock(s.id,async()=>{
@@ -33,31 +37,71 @@ export class RewindEngine {
       if(!pending.length)return;
       // A message checkpoint only anchors the change log. File bytes are saved
       // immediately before tools can modify them, so plain chat costs no scan.
-      try {const root=await this.root(s);for(const e of pending)st.checkpoints[e.id]={root,coverage:'跟踪工具执行期间的文件变化；Git 忽略规则生效，不包含 .git、node_modules 或符号链接指向的外部内容。',changeIndex:st.changes.length,createdAt:Date.now()};}
-      catch(e){for(const m of pending)st.checkpoints[m.id]={error:e.message};}
+      try {const root=await this.root(s,signal);for(const e of pending)st.checkpoints[e.id]={root,coverage:'跟踪工具执行期间的文件变化；Git 忽略规则生效，不包含 .git、node_modules 或符号链接指向的外部内容。',changeIndex:st.changes.length,createdAt:Date.now()};}
+      catch(e){signal?.throwIfAborted();for(const m of pending)st.checkpoints[m.id]={error:e.message};}
       const keys=Object.keys(st.checkpoints);for(const key of keys.slice(0,-100))delete st.checkpoints[key];
       const indices=Object.values(st.checkpoints).map(c=>c.changeIndex).filter(Number.isInteger);
       const drop=indices.length?Math.min(...indices):0;
       if(drop>0){st.changes.splice(0,drop);for(const c of Object.values(st.checkpoints))if(Number.isInteger(c.changeIndex))c.changeIndex-=drop;}
       await this.store.save(st);
-    });
+    },{signal});
+  }
+  tracksTool(exec) {
+    return !!exec.agent && exec.parent === undefined
+      && this.ctx.get?.('tools')?.get(exec.name,exec.agent,exec.toolSet)?.[workspaceIndependent] !== true;
+  }
+  async capture(root,signal){
+    signal?.throwIfAborted();
+    if(this.captureRetry.get(root)>performance.now())throw Error('工作区文件备份超出时间预算，暂缓本次备份');
+    const budget=new AbortController();
+    const error=Error('工作区文件备份超出时间预算');
+    const timer=setTimeout(()=>budget.abort(error),CAPTURE_MS);
+    try {
+      const captureSignal=signal?AbortSignal.any([signal,budget.signal]):budget.signal;
+      const result=await this.files.capture(root,{signal:captureSignal});
+      captureSignal.throwIfAborted();
+      return result;
+    }catch(cause){
+      if(budget.signal.aborted&&!signal?.aborted){
+        if(this.captureRetry.size>=256)this.captureRetry.delete(this.captureRetry.keys().next().value);
+        this.captureRetry.set(root,performance.now()+RETRY_MS);
+        throw error;
+      }
+      throw cause;
+    }finally{clearTimeout(timer);}
   }
   async tool(exec,next){
-    if(!exec.agent || exec.parent)return next();
+    if(!this.tracksTool(exec))return next();
     const owner=this.owner(exec.agent);let root,wave;
-    try{root=await this.root(exec.agent.session);}catch(error){this.backupGap(exec.agent,error);return next();}
+    try{root=await this.root(exec.agent.session,exec.signal);}
+    catch(error){exec.signal?.throwIfAborted();this.backupGap(exec.agent,error);return next();}
     const deadline=performance.now()+TOOL_LOCK_WAIT_MS;
     try{await this.store.lock('workspace:'+root,async()=>{
       if(this.busy.has(root))throw Object.assign(Error('工作区正在回退或恢复，本次工具尚未执行，请稍后重试。'),{code:'REWIND_WORKSPACE_BUSY'});
       wave=this.waves.get(root);
-      if(!wave){const release=await lease(join(this.store.root,'workspace-locks',hash(root)+'.json'),{waitMs:Math.max(0,deadline-performance.now()),signal:exec.signal});wave={release,count:0,owners:new Set(),before:null,error:null};this.waves.set(root,wave);try{wave.before=await this.files.capture(root);}catch(e){wave.error=e.message;}}
+      if(!wave){
+        const release=await lease(join(this.store.root,'workspace-locks',hash(root)+'.json'),{waitMs:Math.max(0,deadline-performance.now()),signal:exec.signal});
+        wave={release,count:0,owners:new Set(),before:null,error:null};
+        try {
+          try{wave.before=await this.capture(root,exec.signal);}catch(error){wave.error=error.message;}
+          exec.signal?.throwIfAborted();
+          this.waves.set(root,wave);
+        }catch(error){await release();throw error;}
+      }
       wave.count++;wave.owners.add(owner.id);
     },{signal:exec.signal,waitMs:TOOL_LOCK_WAIT_MS});}catch(error){if(exec.signal?.aborted||isLockFailure(error))throw error;this.backupGap(exec.agent,error);return next();}
-    try {return await next();} finally {
+    let result;
+    try {result=await next();return result;} finally {
       try{await this.store.lock('workspace:'+root,async()=>{
+        if(exec.signal?.aborted||result?.error?.info?.cleanupPending){
+          wave.error??='工具执行已取消，文件改动未完成备份';
+        }
         if(--wave.count!==0)return;
         try{
-          let after,error=wave.error;if(!error)try{after=await this.files.capture(root);}catch(e){error=e.message;}
+          let after,error=wave.error;
+          if(!error)try{after=await this.capture(root,exec.signal);}catch(e){
+            error=exec.signal?.aborted?'工具执行已取消，文件改动未完成备份':e.message;
+          }
           const changes=!error?difference(wave.before.manifest,after.manifest):[];
           for(const id of wave.owners)await this.store.lock(id,async()=>{
             const st=await this.store.load(id);
@@ -190,7 +234,7 @@ export class RewindEngine {
       this.backupGap(agent,error);return next();
     }
     if(!op&&st.journal){op={recovery:true,start:agent.session.seq,queue:new Map(),resolve:()=>{},reject:()=>{}};this.operations.set(agent.id,op);}
-    if(!op||op.consumed){try{await this.checkpoint(agent,messages);}catch(error){if(st.journal)throw error;this.backupGap(agent,error);}return next();}
+    if(!op||op.consumed){try{await this.checkpoint(agent,messages,payload.signal);}catch(error){if(payload.signal?.aborted||st.journal)throw error;this.backupGap(agent,error);}return next();}
     op.consumed=true;op.turn=turn;
     // Claiming maintenance must never consume an already queued user prompt.
     for(const m of [...messages].reverse())if(m.id!==op.marker)agent.inbox.prepend(op.queue.get(m.id)||'next-turn',m);

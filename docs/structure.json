@@ -490,6 +490,12 @@
       "site": true
     },
     {
+      "path": "docs/release-1.3.6.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
+    },
+    {
       "path": "docs/release-1.3.5.md",
       "role": "release",
       "language": "bilingual",

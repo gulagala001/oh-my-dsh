@@ -1,4 +1,5 @@
 import { currentPtcBudget } from './ptc-lifecycle.mjs';
+import { REWIND_WORKSPACE_INDEPENDENT } from './ptc-control-compat.mjs';
 import { checkedTool } from './tool-contract.mjs';
 import { createHash } from 'node:crypto';
 import { activeRecords, liveSpan } from './context/core.mjs';
@@ -85,6 +86,7 @@ export function runtimeContext(agent, hub, options) {
 
 export function registerRuntimeStatus(ctx, hub) {
   ctx.tools.register(checkedTool({ name: 'runtime_status', description: 'Read a fresh snapshot of this turn, retained context estimates, registered background jobs, and the session budget when enabled. This does not wait, consume job output, or establish task success.',
+    [Symbol.for(REWIND_WORKSPACE_INDEPENDENT)]: true,
     parameters: { type: 'object', properties: {}, additionalProperties: false },
     output: { schema: { type: 'object', additionalProperties: true }, render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }] },
     execute(_args, { agent }) { const { changeKey, ...value } = collectRuntimeStatus(agent, hub); const executionBudget = currentPtcBudget(); return executionBudget ? { ...value, executionBudget } : value; },

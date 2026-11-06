@@ -30,7 +30,7 @@ Conversation history is append-only. Recovery survives restart and does not call
 
 ## Storage
 
-Before a tool starts, backup maintenance and workspace locks each wait at most 30 seconds. A timeout returns an error without running the tool without its lock; a workspace being restored also rejects new tools. Cancellation releases queued operations that have not started, while active backups finish their cleanup. Locks with uncertain ownership are retained rather than forcibly removed.
+Each automatic snapshot before or after a tool has a four-second budget. A timeout records a backup gap and defers another capture in that workspace for 30 seconds. Tools continue under the workspace lock. Cancellation stops queued or active snapshots, and an atomic commit already in progress finishes before the lock is released. Affected file changes cannot be safely rewound. Workspace lock contention still has a 30-second wait limit, and restores exclude concurrent file operations.
 
 Plain chat creates lightweight checkpoints without scanning the project. Files are captured before tools run. Unchanged content is reused; large files use 4 MiB chunks, SHA-256 deduplication and compression where useful.
 

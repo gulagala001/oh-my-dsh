@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.8-dsh.0.2.2-rc.1"><img alt="0.1.5" src="https://img.shields.io/badge/release-0.1.7-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.9-dsh.0.2.2-rc.1"><img alt="0.1.9" src="https://img.shields.io/badge/release-0.1.7-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-undo-plugin/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-undo-plugin/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-undo-plugin/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-undo-plugin?style=flat-square&amp;color=0969da"></a>
@@ -30,10 +30,10 @@ File restoration only covers retained checkpoints. Older messages may support co
 Open **Plugins → Add plugin** in the DSH instance you use, then paste:
 
 ```text
-https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.8-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.9-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.9-dsh.0.2.2-rc.1.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.8-dsh.0.2.2-rc.1/SHA256SUMS).
+Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.9-dsh.0.2.2-rc.1/SHA256SUMS).
 
 ### 2. Try this first
 

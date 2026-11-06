@@ -51,7 +51,7 @@ core.push(...[
   'auto-compact-retry', 'auto-compact-native-boundaries', 'recommended-update-native',
   'build-opencu-imports', 'conversation-controller-readiness',
 ].map(name => `test/${name}.test.mjs`));
-const builtChecks = ['test/opencu-delivery.test.mjs', 'test/titlebar-clearance.test.mjs'];
+const builtChecks = ['test/opencu-delivery.test.mjs', 'test/titlebar-clearance.test.mjs', 'test/job-wait-cancel.test.mjs'];
 
 const prebuilt = process.argv.includes('--built');
 const [command = 'run', suite = 'core', ...extra] = process.argv.slice(2).filter(arg => arg !== '--built');

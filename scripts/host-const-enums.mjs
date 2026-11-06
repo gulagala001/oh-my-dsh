@@ -284,7 +284,7 @@ export function assertHostEnumOutput(ts, text, filename, pins) {
   visit(source);
 }
 
-export async function createHostConstEnums({ root, snapshot, entryPoints, resolveImport, ts, manifest }) {
+export async function createHostConstEnums({ root, snapshot, entryPoints, resolveImport, adaptSource, ts, manifest }) {
   manifest ??= JSON.parse(await readFile(manifestUrl, 'utf8'));
   ts ??= await loadHostTypeScript(root, manifest);
   const pins = await loadHostEnumPins(ts, root, snapshot, manifest);
@@ -318,7 +318,8 @@ export async function createHostConstEnums({ root, snapshot, entryPoints, resolv
     build.onEnd(result => { graphDirectories.set(result, workingDir); });
     // This covers every source loaded by all host entries, not a tool-name list.
     build.onLoad({ filter: /\.[cm]?[jt]sx?$/, namespace: 'file' }, async args => {
-      const path = resolve(args.path), text = await readFile(path, 'utf8');
+      const path = resolve(args.path), original = await readFile(path, 'utf8');
+      const text = adaptSource?.(path, original) ?? original;
       const cached = transformed.get(path);
       if (cached?.source === text) return cached.output;
       if (!program.getSourceFile(path) || program.getSourceFile(path).text !== text) {

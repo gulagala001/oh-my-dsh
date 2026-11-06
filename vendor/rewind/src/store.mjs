@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, open, lstat, rmdir, unlink, statfs } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 export const hash = value => createHash('sha256').update(typeof value === 'string' || Buffer.isBuffer(value) ? value : JSON.stringify(value)).digest('hex');
 export async function ensureFreeSpace(directory,bytes,reserveBytes=512*1024**2) {
   const {bavail,bsize}=await statfs(directory,{bigint:true});
@@ -23,7 +24,7 @@ export async function atomic(file, value, {reserveBytes}={}) {
 export async function syncDirectory(directory) {
   let parent;try {parent=await open(directory,'r');await parent.sync();}catch(error){if(!['EINVAL','ENOTSUP','EPERM','EISDIR'].includes(error.code))throw error;}finally{await parent?.close();}
 }
-export async function read(file, fallback) { try { return JSON.parse(await readFile(file, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return fallback; throw e; } }
+export async function read(file, fallback, signal) { try { return JSON.parse(await readFile(file, {encoding:'utf8',signal})); } catch (e) { if (e.code === 'ENOENT') return fallback; throw e; } }
 export const TOOL_LOCK_WAIT_MS = 30000;
 export const lockTimeout = () => Object.assign(Error('等待工作区或备份锁超时，请等待其他操作结束后重试。'), {code:'REWIND_LOCK_TIMEOUT'});
 export const isLockFailure = error => ['REWIND_LOCK_TIMEOUT','REWIND_WORKSPACE_BUSY'].includes(error?.code);
@@ -97,7 +98,7 @@ export async function lease(file,{waitMs=0,signal}={}){
       }
       checkAbort(signal);
       if(performance.now()>=deadline)throw lockTimeout();
-      await new Promise(resolve=>setTimeout(resolve,25));
+      try{await delay(25,undefined,{signal});}catch(error){checkAbort(signal);throw error;}
     }
   }
 }
