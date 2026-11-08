@@ -42,10 +42,10 @@ OMD 已内置 OpenCU，不重复安装。不要把仓库 main 当成已发布安
 ### 2. 复制与你的 DSH 对应的地址
 
 
-**DSH 0.2.2-rc.1 → OMD 1.3.8：**
+**DSH 0.2.2-rc.1 → OMD 1.3.9：**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.8/oh-my-dsh-0.2.2-rc.1.omd.1.3.8.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.9/oh-my-dsh-0.2.2-rc.1.omd.1.3.9.tgz
 ```
 
 **DSH 0.2.1-rc.1 → OMD 0.100.0：**
@@ -92,7 +92,7 @@ OMD 默认安装配置包含完整文件／命令访问并关闭执行审批；�
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.8/oh-my-dsh-0.2.2-rc.1.omd.1.3.8.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.9/oh-my-dsh-0.2.2-rc.1.omd.1.3.9.tgz
 ```
 
 之后按原方式启动服务，保留原数据目录和端口。DSH 0.2.1-rc.1 使用上面的 rc.1 地址。
@@ -100,7 +100,7 @@ dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/d
 首次使用 Web（需要 Node.js ≥24.9.0；Windows 使用 PowerShell 7）：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.2-rc.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.8/oh-my-dsh-0.2.2-rc.1.omd.1.3.8.tgz
+npx --yes @deepseek-ai/dsh@0.2.2-rc.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.9/oh-my-dsh-0.2.2-rc.1.omd.1.3.9.tgz
 npx --yes @deepseek-ai/dsh@0.2.2-rc.1 --profile web
 ```
 
@@ -110,11 +110,11 @@ macOS 默认桌面安装位置的 CLI 示例（仅适用于实际 DSH 0.2.2-rc.1
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.8/oh-my-dsh-0.2.2-rc.1.omd.1.3.8.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.9/oh-my-dsh-0.2.2-rc.1.omd.1.3.9.tgz
 ```
 
 Windows 桌面建议直接用上面的插件界面；命令行路径以实际安装为准。Web CLI 不代替桌面 CLI。
 
 </details>
 
-**版本说明：** 本页的 DSH 0.2.2-rc.1 固定地址指向 OMD 1.3.8。其他宿主版本见[历史发行](releases.md)。固定 Release 不会随 main 后续修改而改变。安装之后看[第一次使用](getting-started.md)。
+**版本说明：** 本页的 DSH 0.2.2-rc.1 固定地址指向 OMD 1.3.9。其他宿主版本见[历史发行](releases.md)。固定 Release 不会随 main 后续修改而改变。安装之后看[第一次使用](getting-started.md)。

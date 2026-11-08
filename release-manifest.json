@@ -2,6 +2,15 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.1.omd.1.3.9",
+      "severity": "normal",
+      "title": "Oh My DSH 1.3.9 · DSH 0.2.2-rc.1",
+      "notes": [
+        "同步可选 OMAA 0.17.10 的版本目录与中英文组件文档，修复发行后的来源清单校验失败。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.9.md"
+    },
+    {
       "version": "0.2.2-rc.1.omd.1.3.8",
       "severity": "normal",
       "title": "Oh My DSH 1.3.8 · DSH 0.2.2-rc.1",
