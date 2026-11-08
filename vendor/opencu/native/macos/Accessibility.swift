@@ -72,6 +72,42 @@ private func accessibilityText(_ element: AXUIElement) -> [String: String] {
         description: axString(element, kAXDescriptionAttribute), help: axString(element, kAXHelpAttribute))
 }
 
+// Shared by private read snapshots: cancelling a read must not cause the next
+// read to restart Electron's activation debounce. Never turn another client's
+// accessibility support off, or infer readiness from AXManualAccessibility's
+// getter (Electron may report false for complete modes with additional flags).
+private final class ElectronAccessibilityActivation: @unchecked Sendable {
+    static let shared = ElectronAccessibilityActivation()
+    private let lock = NSLock()
+    private var requested: [String: Date] = [:]
+    func prepare(_ target: [String: Any], application: NSRunningApplication, deadline: Date, checkpoint: () throws -> Void) throws {
+        guard let bundle = application.bundleURL,
+              FileManager.default.fileExists(atPath: bundle.appendingPathComponent("Contents/Frameworks/Electron Framework.framework").path) else { return }
+        let identity = target["identity"] as? [String: Any] ?? [:]
+        let key = "\(application.processIdentifier):\(identity["processStart"] ?? ""):\(bundle.path)"
+        let element = AXUIElementCreateApplication(application.processIdentifier)
+        AXUIElementSetMessagingTimeout(element, 0.5)
+        lock.lock()
+        let readyAfter: Date
+        if let previous = requested[key] { readyAfter = previous }
+        else {
+            let result = AXUIElementSetAttributeValue(element, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+            if ![AXError.success, .attributeUnsupported, .notImplemented].contains(result) {
+                lock.unlock(); try checkedAX(result, "enable application accessibility"); return
+            }
+            readyAfter = Date(timeIntervalSinceNow: result == .success ? 2.1 : 0)
+            requested[key] = readyAfter
+        }
+        lock.unlock()
+        while Date() < readyAfter {
+            try checkpoint()
+            guard Date() < deadline else { throw NativeFailure("AX_INITIALIZING", "The application is enabling its accessibility tree; retry observation on this same window.") }
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        try checkpoint()
+    }
+}
+
 final class AccessibilityStore {
     var elements: [Int: ElementRecord] = [:]
     var nextID = 1
@@ -89,6 +125,12 @@ final class AccessibilityStore {
     func observe(_ target: [String: Any], targets: TargetStore, options: [String: Any], checkpoint: () throws -> Void = {}) throws -> [String: Any] {
         try checkpoint()
         try requireAX()
+        let deadline = Date(timeIntervalSinceNow: min(15, max(0.1, (options["timeoutMs"] as? Double ?? 5000) / 1000)))
+        // Electron defers its web accessibility tree until an assistive client
+        // requests it. This documented attribute enables semantics without focus
+        // or input; unsupported applications retain their ordinary AX behavior.
+        try ElectronAccessibilityActivation.shared.prepare(target, application: targets.app(target), deadline: deadline, checkpoint: checkpoint)
+        try checkpoint()
         let root = try targets.observationRoot(target)
         let id = target["id"] as? String ?? ""
         generation += 1
@@ -97,7 +139,6 @@ final class AccessibilityStore {
         let current = generation
         let maxNodes = min(3000, max(1, options["maxNodes"] as? Int ?? 1000))
         let maxDepth = min(80, max(1, options["maxDepth"] as? Int ?? 40))
-        let deadline = Date(timeIntervalSinceNow: min(15, max(0.1, (options["timeoutMs"] as? Double ?? 5000) / 1000)))
         AXUIElementSetMessagingTimeout(AXUIElementCreateApplication(pid_t(target["pid"] as? Int ?? 0)), 0.5)
         var lines: [String] = [], nodes: [[String: Any]] = [], visited: [CFHashCode: [AXUIElement]] = [:]
         var truncated = false

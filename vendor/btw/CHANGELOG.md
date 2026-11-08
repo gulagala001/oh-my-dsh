@@ -1,3 +1,39 @@
+# DSH BTW 0.1.8 · DSH 0.2.2-rc.1
+
+[中文](#zh-018) · [English](#en-018)
+
+<a id="zh-018"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复新版输入区内发送、停止、历史和关闭按钮的悬停提示偏移、跳动及裁切，提示统一在页面层定位。
+- 服务器返回纯文本或空错误时显示 HTTP 状态，保留问题草稿和重试能力。
+
+<a id="en-018"></a>
+
+## English
+
+### Bug Fixes
+
+- Fix displaced, jumping and clipped hover tooltips on Send, Stop, History and Close in the current composer. Position these tooltips in the document layer.
+- Report the HTTP status for plain-text or empty server errors, preserving the question draft and retry behavior.
+
+## 安装 / Installation
+
+精确宿主为 **DSH 0.2.2-rc.1**，Node.js **24.9.0+**。在 **插件 → 添加插件** 中使用固定安装包，沿用现有 profile、设置与会话，按宿主提示完整重启。
+
+Targets exactly **DSH 0.2.2-rc.1**, with Node.js **24.9.0+**. Add the fixed package in **Plugins → Add plugin**, keep the existing profile, settings and conversations, and fully restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [DSH BTW 0.1.8](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-btw-0.1.8-dsh.0.2.2-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-btw/blob/main/docs/install.zh.md)
+
+---
+
 # DSH BTW 0.1.7 · DSH 0.2.2-rc.1
 
 [中文](#zh-0-1-7-dsh-0-2-2-rc-1) · [English](#en-0-1-7-dsh-0-2-2-rc-1)

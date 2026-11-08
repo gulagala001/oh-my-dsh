@@ -1,3 +1,43 @@
+# OpenCU 2.2.11 · DSH 0.2.2-rc.1
+
+[中文](#zh-2211) · [English](#en-2211)
+
+<a id="zh-2211"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复 macOS Electron 原生窗口只有空分组、无法按按钮或标签后台点击的问题；按应用进程请求并等待辅助功能语义树，保持窗口身份核验与取消响应。
+- 坐标操作统一支持 [x,y] 与 {x,y}，按所见截图像素自动换算 Retina 坐标；非法参数在输入前明确提示，act 同时支持动作对象与动作名加参数。
+- 修复应用 ID 与 windowId 组合引用，多个窗口时明确返回候选，避免误选窗口。
+- 原生事件仅投递而效果未确认时自动显示回执；REPL 重复声明给出处理建议并保留已绑定句柄。
+
+<a id="en-2211"></a>
+
+## English
+
+### Bug Fixes
+
+- Fix empty accessibility groups in native macOS Electron windows. Request and await the application accessibility tree so buttons and tabs can use background semantic clicks, retaining window identity and cancellation checks.
+- Accept [x,y] and {x,y} consistently for coordinate operations, mapping displayed screenshot pixels to Retina windows. Reject invalid arguments before input; support both action objects and action-name/options calls.
+- Resolve application ID plus windowId to the exact window and report candidates for ambiguous multi-window applications.
+- Always display unconfirmed native event-delivery receipts. Explain REPL redeclaration errors while retaining existing target handles.
+
+## 安装 / Installation
+
+精确宿主为 **DSH 0.2.2-rc.1**，Node.js **24.9.0+**。在 **插件 → 添加插件** 中使用固定安装包，沿用现有 profile、设置与会话，按宿主提示完整重启。
+
+Targets exactly **DSH 0.2.2-rc.1**, with Node.js **24.9.0+**. Add the fixed package in **Plugins → Add plugin**, keep the existing profile, settings and conversations, and fully restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [OpenCU 2.2.11](https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [宿主适配源码 / Host adapter sources](https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/host-adapters.zip)
+
+---
+
 # OpenCU 2.2.7 · DSH 0.2.1-rc.5
 
 ## OpenCU 2.2.10 · DSH 0.2.2-rc.1

@@ -101,6 +101,7 @@ Roles: home · index · guide · development · sources · release · redirect. 
 | [docs/release-1.3.4.md](release-1.3.4.md) | release | bilingual | — |
 | [docs/release-1.3.5.md](release-1.3.5.md) | release | bilingual | — |
 | [docs/release-1.3.6.md](release-1.3.6.md) | release | bilingual | — |
+| [docs/release-1.3.7.md](release-1.3.7.md) | release | bilingual | — |
 | [docs/releases.md](releases.md) | release | zh | — |
 | [docs/runtime-state-background.md](runtime-state-background.md) | guide | zh | — |
 | [docs/showcase_EN.md](showcase_EN.md) | guide | zh | — |

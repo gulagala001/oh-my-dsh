@@ -72,8 +72,10 @@ export class SideChatStore {
       });
       controller.signal.throwIfAborted();
       if (!response.ok) {
-        const value = await response.json();
-        throw Error(value.error || '旁聊请求失败');
+        let value;
+        try { value = await response.json(); } catch { /* Host errors may be empty or plain text. */ }
+        controller.signal.throwIfAborted();
+        throw Error(typeof value?.error === 'string' && value.error || `旁聊请求失败（HTTP ${response.status}）`);
       }
       if (!response.body) throw Error('当前客户端不支持流式回答');
       this.patch(id, entry.id, { status: 'answering' });

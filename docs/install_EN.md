@@ -42,10 +42,10 @@ Read the **complete host version** in DSH's About/version information, for examp
 ### 2. Copy the URL for your host
 
 
-**DSH 0.2.2-rc.1 → OMD 1.3.6:**
+**DSH 0.2.2-rc.1 → OMD 1.3.7:**
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.6/oh-my-dsh-0.2.2-rc.1.omd.1.3.6.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.7/oh-my-dsh-0.2.2-rc.1.omd.1.3.7.tgz
 ```
 
 **DSH 0.2.1-rc.1 → OMD 0.100.0:**
@@ -92,7 +92,7 @@ Existing Web installation: stop the service and use its original CLI. This examp
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.6/oh-my-dsh-0.2.2-rc.1.omd.1.3.6.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.7/oh-my-dsh-0.2.2-rc.1.omd.1.3.7.tgz
 ```
 
 Restart through the original launch method, retaining the data directory and port. For DSH 0.2.1-rc.1, use the rc.1 URL above.
@@ -100,7 +100,7 @@ Restart through the original launch method, retaining the data directory and por
 First-time Web setup requires Node.js ≥24.9.0; use PowerShell 7 on Windows:
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.2-rc.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.6/oh-my-dsh-0.2.2-rc.1.omd.1.3.6.tgz
+npx --yes @deepseek-ai/dsh@0.2.2-rc.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.7/oh-my-dsh-0.2.2-rc.1.omd.1.3.7.tgz
 npx --yes @deepseek-ai/dsh@0.2.2-rc.1 --profile web
 ```
 
@@ -110,11 +110,11 @@ Default macOS desktop CLI example, only for an actual DSH 0.2.2-rc.1 installatio
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.6/oh-my-dsh-0.2.2-rc.1.omd.1.3.6.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.7/oh-my-dsh-0.2.2-rc.1.omd.1.3.7.tgz
 ```
 
 On Windows desktop, the plugin dialog is the simplest route; CLI paths depend on the installation. A Web CLI does not substitute for the desktop CLI.
 
 </details>
 
-**Release scope:** the DSH 0.2.2-rc.1 URL installs OMD 1.3.6. See [historical releases](releases.md) for other host versions. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).
+**Release scope:** the DSH 0.2.2-rc.1 URL installs OMD 1.3.7. See [historical releases](releases.md) for other host versions. Existing Release assets do not change with later main-branch fixes. Continue with [your first task](getting-started_EN.md).

@@ -39,7 +39,7 @@ You may install or upgrade the matching plugin and restart the affected DSH inst
 **DSH `0.2.2-rc.1`: copy this entire line:**
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.10-dsh.0.2.2-rc.1/opencu-2.2.10-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz
 ```
 
 **DSH `0.2.1-rc.1`: copy this entire line:**
@@ -66,13 +66,13 @@ Use the target DSH's bundled CLI or the same CLI that starts your existing Web s
 DSH `0.2.2-rc.1` desktop:
 
 ```sh
-dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.10-dsh.0.2.2-rc.1/opencu-2.2.10-dsh.0.2.2-rc.1.tgz'
+dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz'
 ```
 
 DSH `0.2.2-rc.1` Web:
 
 ```sh
-dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.10-dsh.0.2.2-rc.1/opencu-2.2.10-dsh.0.2.2-rc.1.tgz'
+dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz'
 ```
 
 DSH `0.2.1-rc.1` desktop:

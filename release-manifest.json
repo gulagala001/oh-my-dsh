@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.1.omd.1.3.7",
+      "severity": "normal",
+      "title": "Oh My DSH 1.3.7 · DSH 0.2.2-rc.1",
+      "notes": [
+        "修复 macOS Electron 原生窗口的辅助功能语义树初始化，使按钮与标签可以后台点击；保留目标身份核验、取消和历史释放义务隔离。",
+        "统一电脑操作的坐标参数与 Retina 截图换算，修复多窗口精确绑定，并明确显示未确认输入回执和 REPL 重复声明提示。",
+        "修复 BTW 发送、停止、历史及关闭按钮的悬停提示错位；修复内置旁聊服务被宿主生命周期卸载导致发送 404 的问题。",
+        "同步 OpenCU 2.2.11 与 DSH BTW 0.1.8。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.7.md"
+    },
+    {
       "version": "0.2.2-rc.1.omd.1.3.6",
       "severity": "normal",
       "title": "Oh My DSH 1.3.6 · DSH 0.2.2-rc.1",

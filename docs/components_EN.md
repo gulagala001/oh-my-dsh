@@ -12,7 +12,7 @@ This catalog covers independently maintained products, optional integrations, ho
 
 Computer and browser observation, interaction, annotations and previews Bundled plugin; also distributed independently。
 
-- Pinned source / version: [2.2.10-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- Pinned source / version: [2.2.11-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - License / attribution: See component notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -66,7 +66,7 @@ DeepSeek web workspace and conversation import Bundled workspace plugin。
 
 Side chats, local history, follow-ups and independent cancellation Bundled side-chat plugin。
 
-- Pinned source / version: [0.1.7-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
+- Pinned source / version: [0.1.8-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/LICENSE)
 
 ### DSH Theme

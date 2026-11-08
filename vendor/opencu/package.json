@@ -1,6 +1,6 @@
 {
   "name": "opencu",
-  "version": "2.2.10-dsh.0.2.2-rc.1",
+  "version": "2.2.11-dsh.0.2.2-rc.1",
   "description": "Computer-use plugin with original REA browser, annotation and monitoring components for DSH",
   "type": "module",
   "engines": {

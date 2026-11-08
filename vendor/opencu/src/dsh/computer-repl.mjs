@@ -13,7 +13,7 @@ import { clickParameters } from '../../extension/click-options.js';
 import { pressParameters } from '../../extension/key-options.js';
 import {scrollDirection,scrollDistance,scrollDeltas} from '../../extension/scroll.js';
 import { createInputReleaseState } from './input-release.mjs';
-import { controlFailure } from '../protocol.mjs';
+import { controlFailure, sameIdentity } from '../protocol.mjs';
 import { createTargetCapabilities, createBrowserCapabilities } from './browser-capabilities.mjs';
 import { createClipboardAPI } from '../browser/clipboard.mjs';
 
@@ -65,6 +65,12 @@ export function createComputerRepl(request, report = () => {}) {
       if (outcome.navigationObserved) {
         emit({targetId:args.targetId, inputDispatched:true, effectVerified:false,
           navigationObserved:outcome.navigationObserved, reselectRequired:true, notice:outcome.notice});
+        return displayed(projected);
+      }
+      if (endpoint === 'act' && outcome.delivery === 'process-posted' && outcome.effectVerified === false) {
+        emit({targetId:args.targetId, action:args.action, inputDispatched:outcome.inputDispatched,
+          delivery:outcome.delivery, effectVerified:false,
+          notice:'Input was posted to the application, but the application has not acknowledged its effect. Observe this same window to verify the result; do not treat this receipt as a successful UI change or blindly repeat the input.'});
         return displayed(projected);
       }
       return projected;
@@ -141,8 +147,22 @@ export function createComputerRepl(request, report = () => {}) {
       if (target.id !== payload.targetId || result.result?.observationRequired === true || ['navigate', 'back', 'forward', 'reload', 'closeTab'].includes(action)) { observations.reset(); last = undefined; navigationVersion++; }
       return result;
     };
-    const point = value => Array.isArray(value) ? { x: value[0], y: value[1] } : { elementId: value };
+    const invalidArgument = message => Object.assign(new TypeError(message), {code:'INVALID_ARGUMENT',details:{inputDispatched:false,retryable:false}});
+    const coordinate = value => {
+      const array = Array.isArray(value);
+      if (!(array ? value.length === 2 : value && typeof value === 'object' && Object.keys(value).length === 2 && 'x' in value && 'y' in value))
+        throw invalidArgument('Coordinates must be [x,y] or {x,y}, with two finite numbers in the latest screenshot pixels');
+      const [x,y] = array ? value : [value.x,value.y];
+      if (!Number.isFinite(x) || !Number.isFinite(y)) throw invalidArgument('Coordinates must be [x,y] or {x,y}, with two finite numbers in the latest screenshot pixels');
+      return {x,y};
+    };
+    const point = value => {
+      if (value && typeof value === 'object') return coordinate(value);
+      if (typeof value === 'string' && value.length || Number.isSafeInteger(value) && value >= 0) return {elementId:value};
+      throw invalidArgument('Use an observed element ID, [x,y], or {x,y}; coordinates use the latest screenshot pixels');
+    };
     const clickOptions = (options = {}, count = 1) => {
+      if (!options || typeof options !== 'object' || Array.isArray(options)) throw invalidArgument('Click options must be an object; pass coordinates as click([x,y], options) or click({x,y}, options)');
       const click = clickParameters(options, {mac: target.platform === 'darwin' || target.backend !== 'native' && process.platform === 'darwin', count});
       if (target.backend === 'native' && target.platform !== 'darwin' && click.transactional) throw Object.assign(new Error('Modified and timed native clicks currently require macOS'), {code:'UNSUPPORTED_ACTION',details:{inputDispatched:false,retryable:false}});
       if (count === 2 && click.count !== 2) throw Object.assign(new TypeError('doubleClick requires clickCount 2'), {code:'INVALID_ARGUMENT',details:{inputDispatched:false,retryable:false}});
@@ -289,7 +309,11 @@ export function createComputerRepl(request, report = () => {}) {
         if (typeof pixels !== 'number' || !Number.isFinite(pixels) || pixels < 0) throw new TypeError('Scroll distance must be non-negative');
         return act('scroll', {...point(value), deltaX: vector[0]*pixels, deltaY: vector[1]*pixels});
       },
-      drag: async (path, to) => act('drag', { path: to ? [path, to].map(p => ({x:p[0], y:p[1]})) : path.map(p => Array.isArray(p) ? {x:p[0],y:p[1]} : p) }),
+      drag: async (path, to) => {
+        const points = to === undefined ? path : [path,to];
+        if (!Array.isArray(points) || points.length < 2 || points.length > 256) throw invalidArgument('drag requires two endpoints or a path of 2–256 [x,y] / {x,y} points');
+        return act('drag', {path:points.map(coordinate)});
+      },
       navigate: async url => act('navigate', { url }),
       goto: async url => act('navigate', { url }),
       back: async () => act('back'), forward: async () => act('forward'), reload: async () => act('reload'),
@@ -299,7 +323,14 @@ export function createComputerRepl(request, report = () => {}) {
       ...(target.backend !== 'native' ? { getJsDialog, playwright: createPlaywrightAPI(async (action, args) => { const result = await act(action, args); return result.result?.value; }, (value, show) => { observations.reset(); if (show) emit(value); return displayed(value); }, {signal: () => activeExecution().signal,navigation})} : {}),
       ...(['browser', 'native'].includes(target.backend) ? {selectText,paste} : {}),
       ...(target.backend === 'native' ? {performSecondaryAction} : {}),
-      act: async args => act(args.action, args),
+      act: async (value, options) => {
+        const named = typeof value === 'string', args = named ? options ?? {} : value;
+        if (!args || typeof args !== 'object' || Array.isArray(args) || !named && options !== undefined || named && args.action !== undefined)
+          throw invalidArgument('Use act({action,...}) or act(actionName,{...}); actionName must be a non-empty string');
+        const action = named ? value : args.action;
+        if (typeof action !== 'string' || !action.trim()) throw invalidArgument('Use act({action,...}) or act(actionName,{...}); actionName must be a non-empty string');
+        return act(action,args);
+      },
     };
   }
   async function select(reference) {
@@ -340,6 +371,7 @@ export function createComputerRepl(request, report = () => {}) {
     const string = typeof reference==='string';
     if (!string && (!reference || typeof reference!=='object' || Array.isArray(reference))) invalid('getApp requires an inventory ID, live app reference, or absolute .app path');
     const ref=string?{}:{...reference};
+    if (ref.id !== undefined && ref.targetId !== undefined && ref.id !== ref.targetId) invalid('id and targetId must identify the same inventory target');
     if (ref.launch!==undefined && typeof ref.launch!=='boolean') invalid('launch must be a boolean');
     if (ref.launch===true && ['identity','id','targetId','pid','windowId'].some(key=>ref[key]!==undefined)) invalid('Launch a fresh app path or bundleId; launch cannot replace a saved process/window occurrence');
     const suppliedPath=string && reference.startsWith('/')?reference:ref.path;
@@ -363,6 +395,17 @@ export function createComputerRepl(request, report = () => {}) {
       return !!path || ['id','targetId','bundleId','title','name','pid','windowId'].some(key=>ref[key]!==undefined);
     };
     const choose=matches=>{
+      if (matches.length === 1 && matches[0].targetType === 'application') {
+        const app = matches[0];
+        if (ref.identity !== undefined && !sameIdentity(app.identity,ref.identity))
+          throw Object.assign(new Error('The saved application occurrence changed; rediscover it before binding a window'),{code:'TARGET_IDENTITY_CHANGED',details:{inputDispatched:false}});
+        const windows = native.filter(target => target.windowId != null &&
+          sameIdentity(Object.fromEntries(Object.entries(target.identity).filter(([key]) => key !== 'windowId')),app.identity));
+        if (windows.length) {
+          matches = windows;
+          if (ref.identity !== undefined && windows.length === 1) ref.identity = windows[0].identity;
+        }
+      }
       const windows=matches.filter(target=>target.targetType==='window'||target.windowId!=null);
       const candidates=windows.length?windows:matches;
       if (candidates.length!==1) {
@@ -378,6 +421,18 @@ export function createComputerRepl(request, report = () => {}) {
     let native=await nativeInventory();
     const exactId=string?reference:ref.targetId??ref.id;
     if (exactId!==undefined) {
+      const application = native.find(target => target.id === exactId && target.targetType === 'application');
+      if (application && !string && ref.windowId !== undefined) {
+        if (ref.identity !== undefined && !sameIdentity(application.identity,ref.identity))
+          throw Object.assign(new Error('The saved application occurrence changed; rediscover it before binding a window'),{code:'TARGET_IDENTITY_CHANGED',details:{inputDispatched:false}});
+        const window = native.find(target => String(target.windowId) === String(ref.windowId) &&
+          sameIdentity(Object.fromEntries(Object.entries(target.identity).filter(([key]) => key !== 'windowId')),application.identity));
+        if (!window) return choose([]);
+        if (ref.id !== undefined) ref.id = window.id;
+        if (ref.targetId !== undefined) ref.targetId = window.id;
+        if (ref.identity !== undefined) ref.identity = window.identity;
+        return choose(matchesReference(window) ? [window] : []);
+      }
       const exact=native.filter(target=>target.id===exactId && (!string?matchesReference(target):true));
       if (exact.length || !string) return choose(exact);
     }
@@ -549,6 +604,10 @@ export function createComputerRepl(request, report = () => {}) {
           return { ok: true, title: args.title ?? 'Computer use', outputs: [...outputs], images: [...new Map(images.map(image => [image.attachmentId, image])).values()],
             deliveries: [...new Map(deliveries.map(item => [item.file.attachmentId, item])).values()] };
         } catch (error) {
+          if (error?.name === 'SyntaxError' && /Identifier .+ has already been declared/.test(error.message)) {
+            error.code = 'REPL_BINDING_EXISTS';
+            error.message += '. Bindings persist across calls. Reuse the existing binding, assign to a mutable binding, or use a new name; use var for bindings you intend to redeclare. Existing handles are retained. Reset clears all handles and drains pending input, so it is not required for a naming conflict.';
+          }
           const failure = partialReplError(error, { outputs, images, deliveries, completedActions:current?.completedActions, actionCount:current?.actionCount,
             documentation: [...documentationInCell].map(computerDocumentation) });
           // A failed cell may not have delivered its documentation. Keep the loaded

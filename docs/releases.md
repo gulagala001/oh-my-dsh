@@ -1,5 +1,9 @@
 # 下载与版本 / Downloads and versions
 
+## OMD 1.3.7 · DSH 0.2.2-rc.1
+
+[中文更新说明](release-1.3.7.md#zh-137) · [English release notes](release-1.3.7.md#en-137)
+
 ## Oh My DSH 1.3.6 · DSH 0.2.2-rc.1
 
 [发行说明与固定安装包 / Release and fixed packages](release-1.3.6.md)

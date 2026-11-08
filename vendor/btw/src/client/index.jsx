@@ -17,7 +17,7 @@ const labels = {
   footnotes: '注释',
 };
 function Action({ label, icon: Icon, ...props }) {
-  return <Tooltip label={label} side="top"><Button size="sm" variant="ghost" className="dsh-btw-action" aria-label={label} {...props}><Icon size={16} /></Button></Tooltip>;
+  return <Tooltip portal label={label} side="top"><Button size="sm" variant="ghost" className="dsh-btw-action" aria-label={label} {...props}><Icon size={16} /></Button></Tooltip>;
 }
 
 function install(ctx) {
@@ -104,7 +104,7 @@ function install(ctx) {
           onChange={event => store.update(id, { draft: event.target.value, error: '' })} />
         {running
           ? <Action label="停止旁聊" icon={IconStopFillRegular} onClick={() => store.stop(id)} />
-          : <Tooltip label="发送" side="top"><Button type="submit" size="sm" variant="primary" className="dsh-btw-action" aria-label="发送" disabled={!state.draft.trim()}><IconSendOutlineRegular size={16} /></Button></Tooltip>}
+          : <Tooltip portal label="发送" side="top"><Button type="submit" size="sm" variant="primary" className="dsh-btw-action" aria-label="发送" disabled={!state.draft.trim()}><IconSendOutlineRegular size={16} /></Button></Tooltip>}
       </form>
       {state.error && <div role="alert">{state.error}</div>}
     </MenuSurface>;

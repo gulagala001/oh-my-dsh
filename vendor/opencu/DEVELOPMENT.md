@@ -68,7 +68,9 @@ Windows 原生 helper 由系统 Windows PowerShell 编译随包 C#，需要 Wind
 
 ### 后台操作
 
-选择目标与聚焦分离：`select`／`getApp`／`getTab` 不激活窗口或标签；只有显式 `focus`／`activate` 改变前台。输入默认 `inputMode: 'background'`，后台不可用时不自动降级为全局键鼠。目标的 `control` 字段（JavaScript 目标通过 `capabilities.control()`）说明路由和限制；`delivery` 仅说明提交方式，`effectVerified: false` 要求后续观察，不能当作界面变化已成功。
+选择目标与聚焦分离：`select`／`getApp`／`getTab` 不激活窗口或标签；只有显式 `focus`／`activate` 改变前台。`getApp({id:应用ID, windowId})` 与完整窗口 ID 绑定同一进程实例的精确窗口；应用有多个窗口时返回候选，不按列表顺序猜主窗口。输入默认 `inputMode: 'background'`，后台不可用时不自动降级为全局键鼠。目标的 `control` 字段（JavaScript 目标通过 `capabilities.control()`）说明路由和限制；`delivery` 仅说明提交方式，`effectVerified: false` 要求后续观察，不能当作界面变化已成功。原生 `process-posted` 的未确认回执会自动输出，即使代码丢弃动作返回值，也不会被后续截图隐藏。
+
+macOS Electron 的 AX 观察按 [Electron 辅助功能接口](https://www.electronjs.org/docs/latest/tutorial/accessibility) 请求语义树，在当前读取时限内等待其首次激活。请求按进程实例去重，取消后不会重新触发激活延迟，不聚焦窗口或关闭其他辅助客户端的支持；完整语义树仍受应用提供能力和原读取边界约束。截图坐标统一使用所见图片的像素，`click`、`doubleClick`、`move`、定点滚动及拖动同时接受 `[x,y]` 和 `{x,y}`，原生适配自动完成 Retina 换算；非法参数在派发前指出支持形式。`act` 接受动作对象或动作名与参数对象。REPL 保留跨调用绑定；需重复声明时使用 `var`，`let`／`const` 同名声明给出可操作错误并保留原句柄。
 
 - 内置、Playwright 和 Chrome／Edge 扩展浏览器使用目标页 CDP 与焦点模拟；AI 新建标签不激活，内置标签不展开侧栏或切走当前会话。释放只清理 AI 记录的目标输入，并撤销焦点模拟。后台页面暂停动画帧时返回 `visualDeferred`，不伪造游标到达，也不阻塞输入。
 - macOS 使用私有事件源和 `postToPid`，不移动系统鼠标；需要明确窗口。后台普通左键点击优先对支持的控件或其子元素执行 `AXPress`，禁用控件直接拒绝；否则，对已观察表格行、单元格或其文本在精确窗口内寻找最近行并使用可写 `AXSelected`，不支持时返回 `BACKGROUND_SELECTION_UNAVAILABLE`，不发送指针输入。多选表格中普通点击只保留目标行；持键、其他鼠标按钮及双击仍沿原事件路径。键盘仅发给应用内部当前键盘窗口，其他窗口用 AX 元素操作或返回 `BACKGROUND_KEYBOARD_UNAVAILABLE`。目标应用仍可能忽略事件或因自身行为激活窗口；这不是全应用无干扰保证。

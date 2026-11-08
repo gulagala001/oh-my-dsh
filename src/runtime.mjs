@@ -354,7 +354,7 @@ export async function apply(ctx, config) {
     hub.observe(session, event);
     if (isX(session)) hub.context.observe(session, event);
   }, { global: true });
-  ctx.inject(btwPlugin.inject, scope => scope.plugin(btwPlugin));
+  ctx.inject(btwPlugin.inject, async scope => { await scope.plugin(btwPlugin); });
   ctx.inject(['webServer'], web => {
     web.effect(() => web.webServer.register({ kind: 'prefix', path: '/oh-my-dsh/api', async handler(req, res) {
       try {

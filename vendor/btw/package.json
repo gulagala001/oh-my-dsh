@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-btw",
-  "version": "0.1.7-dsh.0.2.2-rc.1",
+  "version": "0.1.8-dsh.0.2.2-rc.1",
   "description": "Ask side questions in DeepSeek Harness without interrupting the current task.",
   "type": "module",
   "license": "MIT",

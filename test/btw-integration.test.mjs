@@ -29,7 +29,9 @@ test('bundled BTW serves a detached side reply with the parent prefix and no age
   ctx.reflect.provide('sessionQuery', {});
   ctx.reflect.provide('connection', { requestRejection: () => undefined });
   ctx.reflect.provide('webServer', { register(value) { assert.equal(route, undefined); route = value; return () => { route = undefined; }; } });
-  const owner = ctx.plugin(btw); await owner;
+  // Cordis treats an activation's return value as an effect. Await a nested
+  // fiber without returning its resolved value, or the injected route unloads.
+  const owner = ctx.inject(btw.inject, async scope => { await scope.plugin(btw); }); await owner;
   assert.equal(route.path, '/api/dsh-btw/ask');
   const req = new PassThrough(); req.method = 'POST';
   const chunks = [], res = new EventEmitter();
