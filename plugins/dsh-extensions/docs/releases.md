@@ -1,3 +1,41 @@
+# DSH Extensions 0.1.5 · DSH 0.2.2-rc.1
+
+[中文](#zh-015) · [English](#en-015)
+
+<a id="zh-015"></a>
+
+## 中文
+
+### 问题修复
+
+- MCP 连接状态跟随原生客户端的连接、断线和重连，连接错误与尚未确认的状态会显示在管理页。
+- 停止、删除或重连必须确认旧连接释放；失败时保留清理记录并提供重试释放，重新加载管理器也不会绕过旧连接。
+- 修复初始化尚未结束时停止操作等待请求超时的问题，保留工具限制和其他插件的 MCP 连接。
+
+<a id="en-015"></a>
+
+## English
+
+### Bug Fixes
+
+- Track native MCP connection, disconnect and reconnect events in the management page, including connection errors and unconfirmed states.
+- Require confirmation of old-connection cleanup before replacement. Retain failed cleanup across manager reloads and offer Retry cleanup.
+- Cancel unfinished initialization during shutdown instead of waiting for the request timeout, preserving tool restrictions and MCP connections owned by other plugins.
+
+## 安装 / Installation
+
+精确宿主为 **DSH 0.2.2-rc.1**，Node.js **24.9.0+**。在 **插件 → 添加插件** 使用固定包，保留现有 profile、配置与会话，按宿主提示完整重启。
+
+Targets exactly **DSH 0.2.2-rc.1**, with Node.js **24.9.0+**. Add the fixed package in **Plugins → Add plugin**, retain the existing profile, settings and conversations, and fully restart when requested.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [DSH Extensions 0.1.5](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-extensions/blob/main/docs/install.md)
+
+---
+
 # DSH Extensions 0.1.3 · DSH 0.2.1-rc.5
 
 ## DSH Extensions 0.1.4 · DSH 0.2.2-rc.1

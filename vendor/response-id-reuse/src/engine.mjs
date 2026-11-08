@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { plainReasoning, replayInput, storedReplayMode } from './replay.mjs';
-import { ContinuationHealth, FirstOutputTimeout, boundedErrorBody, errorDetails, outputEvent, sendAttempt } from './recovery.mjs';
+import { ContinuationHealth, FirstOutputTimeout, boundedErrorBody, errorDetails, outputEvent, sendAttempt, sseEvents } from './recovery.mjs';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
 const canonical = value => JSON.stringify(sort(value));
@@ -104,34 +104,33 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
   function observe(response, commit, finish, onPartial, onOutput) {
     const headers = new Headers(response.headers); headers.delete('content-length');
     const reader = response.body?.getReader();
-    if (!reader) { finish(); return response; }
+    if (!reader) { onPartial('empty-response'); finish(); return response; }
     const sse = headers.get('content-type')?.includes('text/event-stream');
-    let buffer = '', complete = false; const decoder = new TextDecoder();
+    let buffer = '', complete = false, cancelled = false, finished = false;
+    const decoder = new TextDecoder(), events = sseEvents();
+    const end = () => { if (!finished) { finished = true; finish(); } };
     const stream = new ReadableStream({
       async pull(controller) {
         try {
           const { value, done } = await reader.read();
-          if (done) {
-            if (!sse) { try { onOutput(); await commit(JSON.parse(buffer)); complete = true; } catch {} }
-            if (!complete) onPartial(); finish(); controller.close(); return;
-          }
-          buffer += decoder.decode(value, { stream: true });
-          if (buffer.length > 16 * 1024 * 1024) { onPartial(); buffer = ''; }
+          if (cancelled) return;
+          const text = decoder.decode(value, { stream: !done });
           if (sse) {
-            let pos;
-            while ((pos = buffer.indexOf('\n')) >= 0) {
-              const line = buffer.slice(0, pos); buffer = buffer.slice(pos + 1);
-              if (!line.startsWith('data:')) continue;
-              let event; try { event = JSON.parse(line.slice(5)); } catch { continue; }
+            for (const event of events.push(text, done)) {
               if (outputEvent(event)) onOutput();
-              if (event.type === 'response.completed') { await commit(event.response); complete = true; }
-              if (['response.failed', 'response.incomplete', 'error'].includes(event.type)) onPartial();
+              if (event.type === 'response.completed' && event.response?.status === 'completed') { await commit(event.response); complete = true; }
+              else if (['response.completed', 'response.failed', 'response.incomplete', 'error'].includes(event.type)) onPartial(event.type);
             }
+          } else buffer += text;
+          if (done) {
+            if (!sse) { try { const output = JSON.parse(buffer); onOutput(); await commit(output); complete = output?.status === 'completed'; } catch {} }
+            if (!complete) onPartial('incomplete-response'); end(); controller.close(); return;
           }
+          if (buffer.length + events.size > 16 * 1024 * 1024) { onPartial('response-too-large'); buffer = ''; events.reset(); }
           controller.enqueue(value);
-        } catch (error) { if (!complete) onPartial(); finish(); controller.error(error); }
+        } catch (error) { if (cancelled) return; if (!complete) onPartial('stream-error'); end(); controller.error(error); }
       },
-      async cancel(reason) { if (!complete) onPartial(); finish(); await reader.cancel(reason); },
+      async cancel(reason) { cancelled = true; if (!complete) onPartial(); end(); await reader.cancel(reason); },
     });
     return new Response(stream, { status: response.status, statusText: response.statusText, headers });
   }
@@ -277,8 +276,17 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
           eligible = false; finish();
           return useId ? boundedErrorBody(response, cancelAttempt, recovery.errorBodyWaitMs) : response;
         }
-        return observe(response, commit, finish, () => { eligible = false; }, markOutput);
-      } catch (error) { eligible = false; row.error = request.signal.aborted ? 'cancelled' : 'network'; finish(); throw error; }
+        return observe(response, commit, finish, reason => {
+          eligible = false;
+          if (reason && useId && !fallback && !request.signal.aborted) {
+            health.fail(lease); row.error = reason;
+          }
+        }, markOutput);
+      } catch (error) {
+        eligible = false; row.error = request.signal.aborted ? 'cancelled' : 'network';
+        if (useId && !fallback && !request.signal.aborted) health.fail(lease);
+        finish(); throw error;
+      }
     };
   }
   persist();

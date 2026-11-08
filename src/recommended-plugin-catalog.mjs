@@ -64,7 +64,7 @@ export const recommendedPlugins = [
     description: '在「设置 → OMAA」选择 Codex、Grok Build、Cursor、Pi Coding Agent 或 ZCode 预设，沿用 DSH 会话和工具。',
     category: '智能体', url: 'https://github.com/gulagala001/oh-my-agents-above-all', githubRelease: 'gulagala001/oh-my-agents-above-all',
     hostBuilds: {
-      '0.2.2-rc.1': {"version": "0.2.2-rc.1.omaa.0.17.9", "releaseTag": "v0.2.2-rc.1.omaa.0.17.9", "asset": "oh-my-agents-above-all-0.2.2-rc.1.omaa.0.17.9.tgz", "sha256": "a7f4762c55b214ed2f74b87af815cf00379dc446b800395870c101cce9124dce", "dsh": "0.2.2-rc.1", "allowPrerelease": false},
+      '0.2.2-rc.1': {"version": "0.2.2-rc.1.omaa.0.17.10", "releaseTag": "v0.2.2-rc.1.omaa.0.17.10", "asset": "oh-my-agents-above-all-0.2.2-rc.1.omaa.0.17.10.tgz", "sha256": "d4a5b4a96c788f021ca21ac4c6285699821273e94df7222261b34dd71200136d", "dsh": "0.2.2-rc.1", "allowPrerelease": false},
       '0.2.1-rc.5': {"version": "0.2.1-rc.5.omaa.0.17.7", "releaseTag": "v0.2.1-rc.5.omaa.0.17.7", "asset": "oh-my-agents-above-all-0.2.1-rc.5.omaa.0.17.7.tgz", "sha256": "0605bf8c744b38de06b5c84bf375bbdc8643557287b34487606d65b1daa8fa7b", "dsh": "0.2.1-rc.5", "allowPrerelease": false},
       '0.2.1-rc.3': { version: '0.2.1-rc.3.omaa.0.17.6', releaseTag: 'v0.2.1-rc.3.omaa.0.17.6', asset: 'oh-my-agents-above-all-0.2.1-rc.3.omaa.0.17.6.tgz', sha256: '8f230389085b6e4470349a19accacdad84086f7afbf6f64554869da9af128f67', dsh: '0.2.1-rc.3', allowPrerelease: false },
       '0.2.1-rc.2': { version: '0.2.1-rc.2.omaa.0.17.0', releaseTag: 'v0.2.1-rc.2.omaa.0.17.0', asset: 'oh-my-agents-above-all-0.2.1-rc.2.omaa.0.17.0.tgz', sha256: '4ecd4e4d0f7928729bf5074ea2e576d4e7bc655121add66147006a458143d7d4', dsh: '0.2.1-rc.2', allowPrerelease: false },

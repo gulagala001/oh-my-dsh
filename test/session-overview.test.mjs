@@ -44,15 +44,21 @@ test('durable source and output facts survive history windows; failed/read tools
   assert.deepEqual(state.calls, {});
 });
 
-test('background Workflow survives normal turn end; interrupted owner marks an unfinished run interrupted', () => {
+test('background Workflow survives its initiating turn and settles only on its own receipt', () => {
   let state = foldOverview(initial(), { seq: 0, type: 'turn/start', data: { turn: 1 } });
   state = foldOverview(state, { seq: 1, type: 'tool-workflow/run-start', data: { runId: 'run', name: '流程' } });
   state = foldOverview(state, { seq: 2, type: 'tool-workflow/agent-start', data: { runId: 'run', seq: 0, phase: '实现', label: '执行', childId: 'child' } });
   state = foldOverview(state, { seq: 3, type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } });
   assert.equal(state.workflows[0].data.status, 'running');
   state = foldOverview(state, { seq: 4, type: 'turn/end', data: { turn: 1, reason: { kind: 'interrupted' } } });
-  assert.equal(state.workflows[0].data.status, 'interrupted');
-  assert.equal(state.workflows[0].data.phases[0].members[0].status, 'interrupted');
+  assert.equal(state.workflows[0].data.status, 'running');
+  assert.equal(state.workflows[0].data.phases[0].members[0].status, 'running');
+  state = foldOverview(state, { seq: 5, type: 'turn/end', data: { turn: 1, reason: { kind: 'forked' } } });
+  assert.equal(state.workflows[0].data.status, 'running');
+  state = foldOverview(state, { seq: 6, type: 'tool-workflow/agent-end', data: { runId: 'run', seq: 0, outcome: 'cancelled' } });
+  state = foldOverview(state, { seq: 7, type: 'tool-workflow/run-end', data: { runId: 'run', stopReason: 'cancelled' } });
+  assert.equal(state.workflows[0].data.status, 'cancelled');
+  assert.equal(state.workflows[0].data.phases[0].members[0].status, 'cancelled');
 });
 
 test('a cleared native projection does not resurrect values from an older list summary', () => {

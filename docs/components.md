@@ -48,7 +48,7 @@
 
 管理技能、MCP、指令、命令与 Hooks 内置扩展管理插件。
 
-- 固定来源／版本: [0.1.4-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
+- 固定来源／版本: [0.1.5-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)
 
 ### DeepSeek Workbench
@@ -93,7 +93,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共装时共享一份运行实例。
 
-- 固定来源／版本: [0.1.6-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
+- 固定来源／版本: [0.1.7-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
 
 ## 可选集成与推荐

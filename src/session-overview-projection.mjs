@@ -61,8 +61,8 @@ export function foldOverview(state, event) {
   if (event.type === 'turn/end') {
     state = { ...state, outcome: data.reason?.kind ?? null };
     if (Object.keys(state.calls).length) state = { ...state, calls: {} };
-    if (['interrupted', 'forked'].includes(data.reason?.kind)) state = { ...state, workflows: state.workflows.map(run => run.turn === data.turn && run.data.status === 'running'
-      ? { ...run, data: { ...run.data, status: 'interrupted', phases: run.data.phases.map(phase => ({ ...phase, members: phase.members.map(member => member.status === 'running' ? { ...member, status: 'interrupted' } : member) })) } } : run) };
+    // Background runs belong to Jobs, not to their initiating turn. Only the
+    // run's own settlement can change its outcome or its members' outcomes.
   }
   if (event.type === 'tool-workflow/run-start') return { ...state, workflows: [...state.workflows, { id: data.runId, anchorSeq: event.seq, turn: state.turn, data: { name: data.name, status: 'running', phases: [] } }] };
   if (event.type.startsWith('tool-workflow/')) {
@@ -91,7 +91,7 @@ export function installOverviewProjection(ctx) {
   const view = z.object({ sources: z.array(z.any()), outputs: z.array(z.any()), workflows: z.array(z.any()),
     directories: z.array(z.object({ seq: z.number().int(), cwd: z.string() })), activity: z.string().optional(), outcome: z.string().nullable().optional() });
   const schema = view.extend({ inheritedEventCount: z.number(), turn: z.number().optional(), calls: z.record(z.string(), z.string()) });
-  ctx.sessionProjections.register({ key: 'omdOverview', stateVersion: 3, stateSchema: schema,
+  ctx.sessionProjections.register({ key: 'omdOverview', stateVersion: 4, stateSchema: schema,
     init: (header, inheritedEventCount) => ({ inheritedEventCount, sources: [], outputs: [], workflows: [], calls: {},
       directories: header.cwd ? [{ seq: -1, cwd: header.cwd }] : [] }), apply: foldOverview,
     wire: { viewSchema: view, view: ({ sources, outputs, workflows, directories, activity, outcome }) => ({ sources, outputs, workflows, directories, ...(activity ? { activity } : {}), ...(outcome !== undefined ? { outcome } : {}) }) },

@@ -57,6 +57,29 @@ export class FirstOutputTimeout extends Error {
   constructor(ms) { super(`Responses continuation produced no output within ${ms}ms`); this.name = 'FirstOutputTimeout'; }
 }
 
+// Both the first-output gate and the response observer consume complete SSE
+// events, including multi-line data and the final unterminated event at EOF.
+export function sseEvents() {
+  let buffer = '', data = [];
+  return {
+    get size() { return buffer.length + data.reduce((n, value) => n + value.length, 0); },
+    reset() { buffer = ''; data = []; },
+    push(text, final = false) {
+      buffer += text + (final ? '\n\n' : '');
+      const events = []; let end;
+      while ((end = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, end).replace(/\r$/, ''); buffer = buffer.slice(end + 1);
+        if (line.startsWith('data:')) data.push(line.slice(5).trimStart());
+        if (!line && data.length) {
+          const value = data.join('\n'); data = [];
+          try { events.push(JSON.parse(value)); } catch { if (value === '[DONE]') events.push({ type: 'sse.done' }); }
+        }
+      }
+      return events;
+    },
+  };
+}
+
 export function outputEvent(event) {
   if (!event || typeof event !== 'object') return false;
   if (typeof event.type === 'string' && event.type.endsWith('.delta') && typeof event.delta === 'string' && event.delta.length) return true;
@@ -69,7 +92,7 @@ export function outputEvent(event) {
     return true; // Do not hide an unfamiliar item which could represent server-side work.
   }
   // Terminal events must reach the native adapter even without visible text.
-  return ['response.completed', 'response.failed', 'response.incomplete', 'error'].includes(event.type);
+  return ['response.completed', 'response.failed', 'response.incomplete', 'error', 'sse.done'].includes(event.type);
 }
 
 // Hold only pre-output SSE metadata, so a timed-out attempt cannot leak one
@@ -99,23 +122,15 @@ export async function sendAttempt(baseFetch, request, body, headers, budgetMs, o
     if (budgetMs != null && response.ok && response.body && response.headers.get('content-type')?.includes('text/event-stream')) {
       reader = response.body.getReader();
       const chunks = [], decoder = new TextDecoder();
-      let pendingText = '', eventData = [], bytes = 0, ready = false, done = false, output = false;
+      const events = sseEvents();
+      let bytes = 0, ready = false, done = false, output = false;
       while (!ready && !done) {
         const next = await wait(reader.read());
         done = next.done;
-        if (done) break;
+        if (done) { output ||= events.push(decoder.decode(), true).some(outputEvent); break; }
         chunks.push(next.value); bytes += next.value.byteLength;
-        pendingText += decoder.decode(next.value, { stream: true });
-        let split;
-        while ((split = pendingText.indexOf('\n')) >= 0) {
-          const line = pendingText.slice(0, split).replace(/\r$/, ''); pendingText = pendingText.slice(split + 1);
-          if (line.startsWith('data:')) eventData.push(line.slice(5).trimStart());
-          if (!line && eventData.length) {
-            const data = eventData.join('\n'); eventData = [];
-            try { output ||= outputEvent(JSON.parse(data)); } catch { output ||= data === '[DONE]'; }
-            ready ||= output;
-          }
-        }
+        output ||= events.push(decoder.decode(next.value, { stream: true })).some(outputEvent);
+        ready ||= output;
         // An unusual large preamble cannot be safely hidden/replayed indefinitely.
         if (bytes > 128 * 1024) ready = true;
       }

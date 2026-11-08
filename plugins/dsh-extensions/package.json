@@ -1,6 +1,6 @@
 {
   "name": "dsh-extensions",
-  "version": "0.1.4-dsh.0.2.2-rc.1",
+  "version": "0.1.5-dsh.0.2.2-rc.1",
   "description": "在 DSH 插件页管理 Skill、MCP 服务器、指令文件、自定义命令和 Hooks。",
   "type": "module",
   "license": "MIT",

@@ -97,8 +97,8 @@
       "source": "plugins/dsh-extensions/package.json",
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md",
-      "version": "0.1.4-dsh.0.2.2-rc.1",
-      "sourceSha256": "a3c3ea7204fb12f51142b88b50fa44f2d0d3da10fb5ad199f673289f0ed236f2",
+      "version": "0.1.5-dsh.0.2.2-rc.1",
+      "sourceSha256": "2a054355a4e4e35c5740f28e9350bf1376b682110ef556d82f335f6f2c1c2281",
       "group": "products"
     },
     {
@@ -498,8 +498,8 @@
       "source": "vendor/response-id-reuse/package.json",
       "license": "MIT",
       "notice": "vendor/response-id-reuse/LICENSE",
-      "version": "0.1.6-dsh.0.2.2-rc.1",
-      "sourceSha256": "a89b745ac95279fd142a05f60e2172b907fc3025cc6894261a062f17852004bb",
+      "version": "0.1.7-dsh.0.2.2-rc.1",
+      "sourceSha256": "a6e0d1a78760b7c19d1aacb98e678f2d2d9b39d21b8ebfc6f32d1f4dc216b8db",
       "group": "products"
     },
     {

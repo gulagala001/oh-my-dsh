@@ -4,8 +4,8 @@ import { api, query } from './api.mjs';
 import { ActionsMenu, Confirm, Detail, Editor, Facts, Field, Group, Page, RefreshButton, Row, Search, Select, Status, TextArea,
   filter, useAction, useResource, useT } from './ui.jsx';
 
-const TONES = { connected: 'success', starting: 'info', failed: 'danger', disabled: 'quiet', invalid: 'warning' };
-const DOTS = { connected: 'done', starting: 'ongoing', failed: 'error', disabled: 'idle', invalid: 'warning' };
+const TONES = { connected: 'success', starting: 'info', disconnected: 'warning', unconfirmed: 'warning', stopping: 'info', 'cleanup-failed': 'danger', failed: 'danger', disabled: 'quiet', invalid: 'warning' };
+const DOTS = { connected: 'done', starting: 'ongoing', disconnected: 'warning', unconfirmed: 'warning', stopping: 'ongoing', 'cleanup-failed': 'error', failed: 'error', disabled: 'idle', invalid: 'warning' };
 const lines = text => text.split('\n').map(line => line.trim()).filter(Boolean);
 function pairs(text, separator) {
   const out = {};
@@ -29,7 +29,7 @@ export function McpPage() {
   const [search, setSearch] = useState(''), [open, setOpen] = useState(null), [editor, setEditor] = useState(null), [removing, setRemoving] = useState(null), [importing, setImporting] = useState(false);
   const list = useResource(() => api('/mcp'), []);
   const servers = list.data?.servers ?? [], managed = list.data?.managed ?? [];
-  const connecting = servers.some(server => server.status === 'starting');
+  const connecting = servers.some(server => server.enabled || ['starting', 'stopping', 'cleanup-failed'].includes(server.status));
   useEffect(() => {
     if (!connecting) return;
     const timer = setInterval(() => void list.reload({ quiet: true }), 2000);
@@ -44,8 +44,9 @@ export function McpPage() {
     const server = await action.run(() => api(query('/mcp/server', { name })));
     if (server) setEditor({ previous: name, name, raw: server.raw ?? {} });
   };
-  const menu = server => [{ id: 'edit', label: t('edit'), run: () => edit(server.name) },
-    server.status !== 'disabled' && server.status !== 'invalid' && { id: 'reconnect', label: t('mcp.reconnect'), run: () => write({ action: 'reconnect', name: server.name }) },
+  const menu = server => [server.configured && { id: 'edit', label: t('edit'), run: () => edit(server.name) },
+    server.status === 'cleanup-failed' ? { id: 'cleanup', label: t('mcp.cleanup'), run: () => write({ action: 'cleanup', name: server.name }) }
+      : server.enabled && server.status !== 'invalid' && { id: 'reconnect', label: t('mcp.reconnect'), run: () => write({ action: 'reconnect', name: server.name }) },
     { id: 'delete', label: t('delete'), run: () => setRemoving(server) }];
   const visible = useMemo(() => filter(servers, search, ['name', 'target']), [servers, search]);
   const current = open && servers.find(server => server.name === open);
@@ -57,9 +58,9 @@ export function McpPage() {
   </>;
   if (current) return <>
     <Detail title={current.name} tags={<StatusTag status={current.status}/>} onBack={() => setOpen(null)}
-      actions={<><Switch label={t('toggle', { name: current.name })} checked={current.status !== 'disabled'} disabled={action.busy || current.status === 'invalid'}
+      actions={<><Switch label={t('toggle', { name: current.name })} checked={current.enabled} disabled={action.busy || !current.configured || current.status === 'invalid'}
         onChange={value => write({ action: 'enable', name: current.name, enabled: value })}/>
-        <Button variant="outline" size="sm" onClick={() => edit(current.name)}>{t('edit')}</Button><ActionsMenu actions={menu(current).slice(1)}/></>}>
+        {current.configured && <Button variant="outline" size="sm" onClick={() => edit(current.name)}>{t('edit')}</Button>}<ActionsMenu actions={menu(current).slice(1)}/></>}>
       <Status error={action.error} notice={action.notice}/>
       <Facts rows={[[t('mcp.transport'), current.transport ? t(`mcp.transport.${current.transport}`) : '—'], [t('mcp.target'), <code>{current.target ?? '—'}</code>],
         current.envKeys.length > 0 && [t('mcp.env'), t('mcp.secrets', { keys: current.envKeys.join(', ') })],
@@ -87,7 +88,7 @@ export function McpPage() {
             title={server.name} tags={<StatusTag status={server.status}/>} muted={server.status === 'disabled'} onOpen={() => setOpen(server.name)}
             description={<code>{server.target ?? '—'}</code>}
             meta={server.error ? <span className="dshx-error-text">{reason(t, server)}</span> : server.status === 'connected' ? t('mcp.tools', { n: server.tools.filter(tool => tool.enabled).length }) : null}
-            end={<><Switch label={t('toggle', { name: server.name })} checked={server.status !== 'disabled'} disabled={action.busy || server.status === 'invalid'}
+            end={<><Switch label={t('toggle', { name: server.name })} checked={server.enabled} disabled={action.busy || !server.configured || server.status === 'invalid'}
               onChange={value => write({ action: 'enable', name: server.name, enabled: value })}/><ActionsMenu actions={menu(server)}/></>}/>)}
         </Group>}
         {managed.length > 0 && <Group title={t('mcp.managed')} count={managed.length} hint={t('mcp.managed.hint')}>

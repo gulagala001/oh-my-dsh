@@ -104,6 +104,7 @@ export class Extensions extends Service {
       case '/mcp#tool': await this.mcp.setTool(input.name, input.tool, input.enabled === true); return done();
       case '/mcp#import': return done({ names: await this.mcp.importJson(input.json) });
       case '/mcp#reconnect': await this.mcp.reconnect(input.name); return done();
+      case '/mcp#cleanup': await this.mcp.cleanup(input.name); return done();
       case '/mcp#managed': return done({ result: await this.mcp.setManaged(input.entryId, input.enabled === true) });
       case '/instructions#save': await this.instructions.save(scope(), input.path, input.content, signal); return done();
       case '/instructions#delete': await this.instructions.remove(scope(), input.path, signal); return done();

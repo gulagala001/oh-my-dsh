@@ -23,10 +23,10 @@
 在 **插件 → 添加插件** 中粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.6-dsh.0.2.2-rc.1/gulagala001-dsh-response-id-reuse-0.1.6-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.7-dsh.0.2.2-rc.1/gulagala001-dsh-response-id-reuse-0.1.7-dsh.0.2.2-rc.1.tgz
 ```
 
-[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.6-dsh.0.2.2-rc.1/SHA256SUMS)
+[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.7-dsh.0.2.2-rc.1/SHA256SUMS)
 
 ## 卸载
 

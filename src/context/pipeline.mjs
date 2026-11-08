@@ -488,9 +488,10 @@ export class ContextPipeline {
       const currentIndex = createSurfaceIndex(session);
       const changedIds = [...seenRecords].filter(([id, signature]) => signature !== recordSnapshot(session, s.records.find(r => r.id === id), currentIndex)).map(([id]) => id);
       const newerPending = s.pending && s.pending.id !== seenPendingId;
-      if (s.transaction || changedIds.length || newerPending) {
+      const changedRequest = seenRevision !== userRevision(session);
+      if (s.transaction || changedIds.length || newerPending || changedRequest) {
         stale = true; s.review.needed = s.review.newRecords > 0;
-        this.discardCoordinator(session, s, s.transaction ? 'transaction-in-progress' : changedIds.length ? 'records-changed' : 'newer-plan', changedIds);
+        this.discardCoordinator(session, s, s.transaction ? 'transaction-in-progress' : changedIds.length ? 'records-changed' : newerPending ? 'newer-plan' : 'user-request-changed', changedIds);
         return; // Preserve any newer pending plan. Never retry obsolete input.
       }
       const choices = normalizeChoices(decodeResult(result, COORDINATE_TOOL.name), s, session, seenInputIds);
@@ -548,10 +549,17 @@ export class ContextPipeline {
     // A prepared archive remains useful, but its automatic representation
     // decision belongs to the user request and effective route that made it.
     // Written transactions were handled above and retain their recovery contract.
-    if (!manual && plan.source === 'adaptive' && (plan.userRevision !== userRevision(session)
-      || (route && plan.routeKey !== adaptiveRouteKey(route)))) {
-      s.pending = null; s.adaptive ||= {};
-      s.adaptive.lastDecision = 'stale'; s.adaptive.reason = '用户要求或模型路由已变化，未应用旧结果';
+    if (!manual && (plan.userRevision !== userRevision(session)
+      || plan.source === 'adaptive' && route && plan.routeKey !== adaptiveRouteKey(route))) {
+      s.pending = null;
+      if (plan.source === 'adaptive') {
+        s.adaptive ||= {};
+        s.adaptive.lastDecision = 'stale'; s.adaptive.reason = '用户要求或模型路由已变化，未应用旧结果';
+      } else {
+        s.review.needed = true;
+        this.discardCoordinator(session, s, 'user-request-changed');
+        this.arm(agent, Math.max(1000, cfg.coordinatorMinGapMs), 'coordinate', Date.now(), { force: true });
+      }
       this.store.save(s); return null;
     }
     if (!manual) {

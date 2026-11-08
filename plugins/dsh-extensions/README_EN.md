@@ -7,7 +7,8 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.4-dsh.0.2.2-rc.1"><img alt="0.1.1" src="https://img.shields.io/badge/release-0.1.4-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.5-dsh.0.2.2-rc.1"><img alt="0.1.5" src="https://img.shields.io/badge/release-0.1.5-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-extensions/releases"><img alt="GitHub release downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-extensions/total?style=flat-square&amp;label=GitHub%20release%20downloads"></a>
   <a href="#install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-0969da?style=flat-square"></a>
 </p>
@@ -28,10 +29,10 @@ DSH already reads skills, MCP servers, AGENTS.md and similar extensions, but mos
 In the DSH instance you use, open **Plugins → + Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.4-dsh.0.2.2-rc.1/dsh-extensions-0.1.4-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz
 ```
 
-After active tasks finish, enable the plugin or restart the instance as the host asks. See the [installation guide](docs/install_EN.md) for other methods, upgrades and removal · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.4-dsh.0.2.2-rc.1/SHA256SUMS).
+After active tasks finish, enable the plugin or restart the instance as the host asks. See the [installation guide](docs/install_EN.md) for other methods, upgrades and removal · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/SHA256SUMS).
 
 ### 2. Try this first
 

@@ -33,6 +33,7 @@ Every page is a tab at the top of the **Plugins** page in the left sidebar: Skil
 - **Add server** supports local commands (stdio) and remote URLs (Streamable HTTP). **Paste JSON** adds every server from an MCP server's setup instructions at once.
 - Once connected, tools are offered to the model as `mcp__server__tool`. The detail view switches tools individually; switched-off tools are recorded in the server's `disabledTools`.
 - Switching a server off disconnects it and writes `"disabled": true`. Changed settings reconnect automatically; use **Reconnect** in the menu after a failure.
+- The page follows disconnect and reconnect events. If it shows **Cleanup unconfirmed**, select **Retry cleanup**. A replacement waits for the old connection to close; deleting its configuration or reloading the manager retains the pending cleanup record.
 - If another provider already owns the tool namespace, the connection reports a conflict. Failed or disabled connections do not apply their tool switches to other providers; reconnecting restores the saved switches.
 - After editing `mcp.json` by hand, return to the page or refresh to apply it.
 - MCP servers already defined in the profile configuration are listed under "Servers in profile configuration" and can only be switched on or off.

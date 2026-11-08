@@ -1,10 +1,12 @@
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { errorText, fail, tilde, writeAtomic } from './common.mjs';
+import { observeNativeMcp } from './mcp-lifecycle.mjs';
 
 export const MCP_MODULE = '@deepseek-ai/dsh-mcp-client';
 const SERVER_NAME = /^[A-Za-z0-9_-]{1,32}$/;
 const prefix = name => `mcp__${name}__`;
+const CLEANUP = Symbol.for('dsh-extensions.mcp-cleanup.v1');
 const strings = (value, label) => {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== 'object' || Array.isArray(value) || Object.values(value).some(item => typeof item !== 'string')) fail('invalid-server', `${label} must map names to text values`);
@@ -58,6 +60,8 @@ export class Mcp {
     this.file = join(homes.dsh, 'mcp.json');
     this.cacheFile = join(homes.dsh, 'dsh-extensions', 'mcp-tools.json');
     this.records = new Map(); this.servers = new Map(); this.toolCache = new Map(); this.restrictions = new Map();
+    // Outlive an unloaded manager until its old transport acknowledges closure.
+    this.quarantines = (ctx.root ?? ctx)[CLEANUP] ??= new Map();
     this.fileError = null; this.mtime = undefined; this.queue = Promise.resolve();
     ctx.effect(() => () => this.close());
   }
@@ -114,37 +118,71 @@ export class Mcp {
   }
   launch(server) {
     if (this.closed) return;
-    const record = { key: launchKey(server), status: 'starting', error: null, fiber: null, startedAt: Date.now() };
+    if (this.records.has(server.name)) throw Error('The previous MCP connection has not finished cleanup');
+    const record = { key: launchKey(server), server, status: 'starting', error: null, fiber: null, startedAt: Date.now() };
     this.records.set(server.name, record);
+    const blocked = this.quarantines.get(server.name);
+    if (blocked) { Object.assign(record, { blocked, status: 'cleanup-failed', error: 'The previous MCP transport has not confirmed closure; retry cleanup before reconnecting.' }); return; }
     if (server.transport === 'sse') { Object.assign(record, { status: 'failed', error: 'unsupported-transport' }); return; }
     if (this.conflict(server.name)) { Object.assign(record, { status: 'failed', error: 'name-in-use' }); return; }
     record.ready = (async () => {
       try {
-        const module = await import(MCP_MODULE);
-        if (this.closed || this.records.get(server.name) !== record) return;
+        record.lifecycle = await observeNativeMcp(patch => {
+          if (!this.closed && this.records.get(server.name) === record && !record.stopping) {
+            Object.assign(record, patch); this.observeTools(); this.applyRestriction();
+          }
+        });
+        if (this.closed || record.stopping || this.records.get(server.name) !== record) return;
         // The import yields: another provider may have claimed this namespace.
         if (this.conflict(server.name)) { Object.assign(record, { status: 'failed', error: 'name-in-use' }); return; }
-        record.fiber = this.ctx.plugin(module, clientConfig(server));
+        record.fiber = this.ctx.plugin(record.lifecycle.module, clientConfig(server));
         await record.fiber;
-        if (!this.closed && this.records.get(server.name) === record) {
-          record.status = 'connected'; record.connectedAt = Date.now(); this.observeTools(); this.applyRestriction();
+        if (!this.closed && !record.stopping && this.records.get(server.name) === record) {
+          if (record.lifecycle.connected) { record.status = 'connected'; record.connectedAt = Date.now(); }
+          this.observeTools(); this.applyRestriction();
         }
       } catch (error) {
         record.status = 'failed'; record.error = errorText(error);
-        const fiber = record.fiber; record.fiber = null;
-        try { await fiber?.dispose(); } catch (failure) { this.ctx.logger?.warn?.(`dsh-extensions: stopping MCP ${server.name}: ${errorText(failure)}`); }
+        try {
+          record.lifecycle?.stopping();
+          await record.fiber?.dispose(); await record.lifecycle?.close(); record.fiber = null;
+        } catch (failure) { record.status = 'cleanup-failed'; record.error = errorText(failure); this.quarantine(server.name, record); }
+      } finally {
+        if (!record.fiber) await record.lifecycle?.close().catch(error => { record.status = 'cleanup-failed'; record.error = errorText(error); this.quarantine(server.name, record); });
       }
     })();
   }
+  quarantine(name, record) {
+    record.stopping = true;
+    if (!this.quarantines.has(name)) this.quarantines.set(name, { record, retry: () => this.stop(name) });
+  }
   async stop(name) {
     const record = this.records.get(name);
-    this.records.delete(name);
-    this.applyRestriction();
-    if (record?.fiber) {
-      try { await record.fiber.dispose(); await record.fiber.await(); }
-      catch (error) { this.ctx.logger?.warn?.(`dsh-extensions: stopping MCP ${name}: ${errorText(error)}`); }
+    if (!record) return;
+    if (record.blocked) {
+      await record.blocked.retry();
+      if (this.records.get(name) === record) this.records.delete(name);
+      return;
     }
-    await record?.ready;
+    this.quarantine(name, record);
+    record.stopping = true; record.status = 'stopping'; record.lifecycle?.stopping();
+    this.applyRestriction();
+    try {
+      // Disposal cancels startup. Waiting for ready first can strand an
+      // unanswered initialize request until the native request timeout.
+      const results = await Promise.allSettled([record.ready, Promise.resolve().then(async () => {
+        await record.fiber?.dispose(); await record.fiber?.await();
+      })]);
+      const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+      try { await record.lifecycle?.close(); } catch (error) { errors.push(error); }
+      if (errors.length) throw new AggregateError(errors, 'MCP connection cleanup is not confirmed');
+      if (this.records.get(name) === record) this.records.delete(name);
+      if (this.quarantines.get(name)?.record === record) this.quarantines.delete(name);
+      this.applyRestriction();
+    } catch (error) {
+      record.status = 'cleanup-failed'; record.error = errorText(error);
+      throw error;
+    }
   }
   async close() {
     this.closed = true;
@@ -152,7 +190,9 @@ export class Mcp {
     for (const entry of this.restrictions.values()) entry.dispose();
     this.restrictions.clear();
     await this.queue.catch(() => {});
-    await Promise.all([...this.records.keys()].map(name => this.stop(name)));
+    const results = await Promise.allSettled([...this.records.keys()].map(name => this.stop(name)));
+    const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+    if (errors.length) throw new AggregateError(errors, 'MCP connections could not finish cleanup');
     if (this.cacheTimer) await this.saveToolCache();
     else await this.cacheWrite;
   }
@@ -189,9 +229,15 @@ export class Mcp {
     const known = new Set((this.ctx.get('tools')?.schemas() ?? []).map(schema => schema.name));
     const deny = [];
     for (const server of this.servers.values()) {
-      if (!server.enabled || this.records.get(server.name)?.status !== 'connected') continue;
+      const record = this.records.get(server.name);
+      if (!record?.fiber) continue;
+      if (!server.enabled || record.stopping) {
+        deny.push(...[...known].filter(name => name.startsWith(prefix(server.name)))); continue;
+      }
       for (const tool of server.disabledTools ?? []) if (known.has(prefix(server.name) + tool)) deny.push(prefix(server.name) + tool);
     }
+    for (const [name, record] of this.records) if (record.fiber && record.stopping && !this.servers.has(name))
+      deny.push(...[...known].filter(tool => tool.startsWith(prefix(name))));
     return deny.sort();
   }
   /** DSH only accepts tool restrictions per agent, so each session gets its own. */
@@ -231,9 +277,12 @@ export class Mcp {
   }
   async list() {
     await this.sync();
-    const servers = [...this.servers.values()].map(server => {
+    const configured = new Map(this.servers);
+    for (const [name, record] of this.records) if (!configured.has(name) && record.server) configured.set(name, { ...record.server, enabled: false });
+    const servers = [...configured.values()].map(server => {
       const record = this.records.get(server.name);
-      const status = server.invalid ? 'invalid' : !server.enabled ? 'disabled' : record?.status ?? 'starting';
+      const status = record?.status === 'cleanup-failed' || record?.status === 'stopping' ? record.status
+        : server.invalid ? 'invalid' : !server.enabled ? 'disabled' : record?.status ?? 'starting';
       const visible = record?.status === 'connected' ? this.visibleTools(server.name) : [];
       const hidden = new Set(server.disabledTools);
       const known = new Map((this.toolCache.get(server.name) ?? []).map(tool => [tool.name, tool]));
@@ -241,7 +290,7 @@ export class Mcp {
       return { name: server.name, transport: server.transport ?? null, status, error: server.invalid ?? record?.error ?? null,
         target: server.transport === 'stdio' ? [server.command, ...server.args].join(' ') : server.url ?? null,
         envKeys: Object.keys(server.env ?? {}), headerKeys: Object.keys(server.headers ?? {}), timeoutMs: server.timeoutMs ?? null,
-        connectedAt: record?.connectedAt ?? null,
+        enabled: server.enabled, configured: this.servers.has(server.name), connectedAt: record?.connectedAt ?? null,
         tools: [...known.values()].sort((a, b) => a.name.localeCompare(b.name)).map(tool => ({ ...tool, enabled: !hidden.has(tool.name) })) };
     });
     return { file: tilde(this.file), error: this.fileError, servers, managed: await this.managed().catch(() => []) };
@@ -313,6 +362,13 @@ export class Mcp {
       if (!server || server.invalid || !server.enabled) fail('server-missing', `No enabled MCP server named ${name}`, { name }, 404);
       await this.stop(name);
       this.launch(server);
+    });
+  }
+  async cleanup(name) {
+    return this.serial(async () => {
+      await this.stop(name);
+      const server = this.servers.get(name);
+      if (server?.enabled && !server.invalid && !this.closed) this.launch(server);
     });
   }
   async setManaged(entryId, enabled) {

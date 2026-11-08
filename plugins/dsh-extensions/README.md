@@ -7,7 +7,8 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.4-dsh.0.2.2-rc.1"><img alt="0.1.1" src="https://img.shields.io/badge/release-0.1.4-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.5-dsh.0.2.2-rc.1"><img alt="0.1.5" src="https://img.shields.io/badge/release-0.1.5-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-extensions/releases"><img alt="GitHub release downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-extensions/total?style=flat-square&amp;label=GitHub%20release%20downloads"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-0969da?style=flat-square"></a>
 </p>
@@ -28,10 +29,10 @@ DSH 已经能读取 Skill、MCP 服务器、AGENTS.md 等扩展，但大多只�
 打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.4-dsh.0.2.2-rc.1/dsh-extensions-0.1.4-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz
 ```
 
-等当前任务结束后，按宿主提示启用或重启该实例。其他方式、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.4-dsh.0.2.2-rc.1/SHA256SUMS)。
+等当前任务结束后，按宿主提示启用或重启该实例。其他方式、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/SHA256SUMS)。
 
 ### 2. 先试这一件事
 

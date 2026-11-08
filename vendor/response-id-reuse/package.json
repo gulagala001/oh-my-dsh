@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-response-id-reuse",
-  "version": "0.1.6-dsh.0.2.2-rc.1",
+  "version": "0.1.7-dsh.0.2.2-rc.1",
   "description": "Transparent, no-probe Responses ID continuation for DeepSeek Harness.",
   "type": "module",
   "license": "MIT",

@@ -7,7 +7,7 @@ import { Session } from '@deepseek-ai/dsh-session';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { ContextPipeline } from '../src/context/pipeline.mjs';
 import { createHostAdapter } from '../src/context/host.mjs';
-import { newRecord } from '../src/context/core.mjs';
+import { newRecord, normalizeChoices, userRevision } from '../src/context/core.mjs';
 import { DreamService } from '../src/dream/service.mjs';
 
 for (const lifecycle of ['released', 'replaced', 'retained']) test('a coordinator waiting for preparation respects the ' + lifecycle + ' agent', async t => {
@@ -73,6 +73,31 @@ async function fixture(t, settings = {}) {
   t.after(() => pipeline.dispose());
   return { hub, pipeline, agent, session, original, config };
 }
+
+test('a coordinator response cannot publish a decision for an earlier user request', async t => {
+  const { hub, pipeline, agent, session, original } = await fixture(t);
+  const entered = Promise.withResolvers(), reply = Promise.withResolvers();
+  hub.call = async () => { entered.resolve(); return reply.promise; };
+  const state = pipeline.state(session), record = newRecord(session, [original], { summary: 'Archived observations.', documents: [] }, state.binding, { state });
+  state.records.push(record); state.review.newRecords = 1;
+  const work = pipeline.coordinate(agent, true); await entered.promise;
+  session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Use the detailed observations for the new task.' }] }), { surfaceOp: 'append' });
+  reply.resolve({ blocks: [{ type: 'tool-call', name: 'submit_context_choices', arguments: { choices: [{ action: 'brief', ids: [record.id] }] } }] });
+  await work;
+  assert.equal(state.pending, null); assert.equal(state.records[0].mode, 'raw');
+  assert.equal(state.review.lastDiscard.reason, 'user-request-changed');
+});
+
+for (const source of ['coordinator', 'adaptive']) test(source + ' pending decisions expire when the user request changes', async t => {
+  const { pipeline, agent, session, original } = await fixture(t);
+  const state = pipeline.state(session), record = newRecord(session, [original], { summary: 'Archived observations.', documents: [] }, state.binding, { state });
+  state.records.push(record);
+  state.pending = { id: 'synthetic-plan', source, userRevision: userRevision(session), choices: normalizeChoices({ choices: [{ action: 'brief', ids: [record.id] }] }, state, session) };
+  session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Keep the detail for this new task.' }] }), { surfaceOp: 'append' });
+  assert.equal(await pipeline.applyReady(agent, { ignoreCooldown: true }), null);
+  assert.equal(state.pending, null); assert.equal(state.records[0].mode, 'raw');
+  assert.equal(state.transaction, null);
+});
 
 for (const kind of ['prepare', 'coordinate']) test('disabling automatic context cancels ' + kind + ' without publishing its late reply', async t => {
   const { hub, pipeline, agent, session, original, config } = await fixture(t);

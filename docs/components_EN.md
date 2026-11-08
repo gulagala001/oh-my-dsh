@@ -48,7 +48,7 @@ Personality import, management and global or per-chat selection Bundled personal
 
 Manage skills, MCP, instructions, commands and hooks Bundled extension management plugin。
 
-- Pinned source / version: [0.1.4-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
+- Pinned source / version: [0.1.5-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)
 
 ### DeepSeek Workbench
@@ -93,7 +93,7 @@ Animated character interface and whale visuals Theme component distributed with 
 
 Automatic Responses ID continuation and full-request fallback Bundled backend plugin with shared runtime ownership。
 
-- Pinned source / version: [0.1.6-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
+- Pinned source / version: [0.1.7-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
 
 ## Optional integrations and recommendations

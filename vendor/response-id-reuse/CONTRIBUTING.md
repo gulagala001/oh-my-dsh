@@ -10,6 +10,10 @@ npm pack
 
 The entry module scopes model calls, the engine handles continuation, replay verifies stored response history, recovery manages waiting and temporary cooldowns, and shared manages runtime ownership. Tests use synthetic requests, controlled responses and a loopback HTTP server.
 
+流内失败、异常 EOF 和网络故障也会使续传进入冷却，但不会透明重放已交付的内容。首字门禁与完成观察共用 SSE 事件解析；调用方取消保留原有健康状态，旧执行的迟到回执不能覆盖新故障。
+
+In-stream failure, unexpected EOF and transport errors also cool down continuation without transparently replaying delivered output. First-output admission and completion observation share SSE event framing. Caller cancellation preserves route health, and late receipts cannot overwrite a newer failure.
+
 插件发出的 ID 续传遇到 HTTP 5xx 或首个有效输出超时，沿用同一套历史回放表示，完整重试最多一次。5xx 不再等待错误正文；回退失败的错误正文也有读取时限与大小限制。流式续传按同路由／请求类型最近 16 次成功样本的 P90 自动估算首字预算（4 倍加 5 秒，限制在 15～60 秒；无样本默认 30 秒）；全量回退至少获得 30 秒。心跳、创建事件和空消息不算有效输出；开始输出后撤掉首字计时，继续沿用宿主流式时限，不重复已交付内容或工具调用。
 
 HTTP 5xx or a first-output timeout on plugin-managed ID continuation triggers at most one full replay with the same history representation. HTTP 5xx does not wait for an error body; failed replay error bodies have read-time and size limits. Streaming continuation automatically derives its first-output budget from the last 16 successful samples for the same route/request type: four times P90 plus five seconds, bounded to 15–60 seconds, defaulting to 30 seconds without samples. Full replay gets at least 30 seconds. Heartbeats, creation events and empty messages are not output. After real output starts, the first-output timer ends and host streaming limits apply; already-delivered content and tools are never replayed transparently.

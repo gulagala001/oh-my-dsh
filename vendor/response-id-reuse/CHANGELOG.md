@@ -1,3 +1,39 @@
+# Response ID Reuse 0.1.7 · DSH 0.2.2-rc.1
+
+[中文](#zh-017) · [English](#en-017)
+
+<a id="zh-017"></a>
+
+## 中文
+
+### 问题修复
+
+- 续传遇到流内失败、异常断流或网络故障后进入冷却，保留有效父响应 ID；恢复尝试失败会延长冷却。
+- 统一首字等待与完成回执的 SSE 解析，正确处理多行事件和末尾事件；调用方取消不记作渠道故障，已交付内容不自动重放。
+
+<a id="en-017"></a>
+
+## English
+
+### Bug Fixes
+
+- Cool down continuation after in-stream failures, unexpected EOF or transport failures while retaining valid parent response IDs. Failed recovery attempts extend the cooldown.
+- Use consistent SSE framing for first-output waits and completion receipts, including multiline and final events. Caller cancellation does not mark the route unhealthy, and delivered output is never automatically replayed.
+
+## 安装 / Installation
+
+精确宿主为 **DSH 0.2.2-rc.1**，Node.js **24.9.0+**。在 **插件 → 添加插件** 使用固定包，保留现有 profile、配置与会话，按宿主提示完整重启。
+
+Targets exactly **DSH 0.2.2-rc.1**, with Node.js **24.9.0+**. Add the fixed package in **Plugins → Add plugin**, retain the existing profile, settings and conversations, and fully restart when requested.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [Response ID Reuse 0.1.7](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.7-dsh.0.2.2-rc.1/gulagala001-dsh-response-id-reuse-0.1.7-dsh.0.2.2-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.7-dsh.0.2.2-rc.1/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-response-id-reuse/blob/main/README.md)
+
+---
+
 # Response ID Reuse 0.1.6 · DSH 0.2.2-rc.1
 
 [中文](#zh-0-1-6-dsh-0-2-2-rc-1) · [English](#en-0-1-6-dsh-0-2-2-rc-1)
