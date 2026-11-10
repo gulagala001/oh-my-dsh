@@ -1,3 +1,37 @@
+# Oh My DSH 1.3.12 · DSH 0.2.2-rc.1
+
+[中文](#zh-1312) · [English](#en-1312)
+
+<a id="zh-1312"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复外观设置里展开配色、字体等选项后，设置页无法滚动到底部的问题。
+
+<a id="en-1312"></a>
+
+## English
+
+### Bug Fixes
+
+- Fix the settings page not scrolling to the bottom after expanding color, font and other options in Appearance.
+
+## 安装 / Installation
+
+适用于 **DSH 0.2.2-rc.1**、Node.js **24.9.0+**。等当前任务结束后，按宿主提示重载。
+
+Requires **DSH 0.2.2-rc.1** and Node.js **24.9.0+**. Finish active tasks, then reload when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [Oh My DSH 1.3.12](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.12/oh-my-dsh-0.2.2-rc.1.omd.1.3.12.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.12/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md)
+
+---
+
 # Oh My DSH 1.3.11 · DSH 0.2.2-rc.1
 
 [中文](#zh-1311) · [English](#en-1311)

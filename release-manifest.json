@@ -2,6 +2,15 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.1.omd.1.3.12",
+      "severity": "normal",
+      "title": "Oh My DSH 1.3.12 · DSH 0.2.2-rc.1",
+      "notes": [
+        "修复外观设置里展开配色、字体等选项后，设置页无法滚动到底部的问题。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.12"
+    },
+    {
       "version": "0.2.2-rc.1.omd.1.3.11",
       "severity": "normal",
       "title": "Oh My DSH 1.3.11 · DSH 0.2.2-rc.1",
@@ -9,7 +18,7 @@
         "内置 DSH Undo 0.1.11，修复上下文压缩或提示替换后撤回确认不可用的问题。",
         "撤回按当前上下文位置完整选择区间，避免遗漏被替换后的节点或残留消息；撤销及中断恢复同步修复，保留早期对话、原生日志和文件保护。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.11.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.11"
     },
     {
       "version": "0.2.2-rc.1.omd.1.3.10",
@@ -21,7 +30,7 @@
         "修复提示已从内存移除时跳过残留事务恢复的问题；沿用原操作 ID 核对原生日志，保留原始消息和任务，未确认持久化时保留事务。",
         "内置 DSH Undo 0.1.10，修复撤回后残留“已完成分析／运行状态已注入”的问题；撤回包含当前输入的前置状态，旧撤回记录同步清理显示范围，并保留较早输入及完整撤销恢复。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.10.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.10"
     },
     {
       "version": "0.2.2-rc.1.omd.1.3.9",
@@ -30,7 +39,7 @@
       "notes": [
         "同步可选 OMAA 0.17.10 的版本目录与中英文组件文档，修复发行后的来源清单校验失败。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.9.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.9"
     },
     {
       "version": "0.2.2-rc.1.omd.1.3.8",
@@ -42,7 +51,7 @@
         "续传流内失败与断流进入冷却，保留父响应与取消语义；修复多行 SSE 终态识别。",
         "MCP 管理页跟随真实连接状态；旧连接释放失败时保留记录与重试入口，防止重复启动。内置 Response ID Reuse 0.1.7 与 DSH Extensions 0.1.5。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.8.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.8"
     },
     {
       "version": "0.2.2-rc.1.omd.1.3.7",
@@ -54,7 +63,7 @@
         "修复 BTW 发送、停止、历史及关闭按钮的悬停提示错位；修复内置旁聊服务被宿主生命周期卸载导致发送 404 的问题。",
         "同步 OpenCU 2.2.11 与 DSH BTW 0.1.8。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.7.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.7"
     },
     {
       "version": "0.2.2-rc.1.omd.1.3.6",
@@ -64,7 +73,7 @@
         "修复大型非 Git 工作区因 Rewind 备份阻塞而连续触发工具超时的问题。备份超出预算时记录缺口，任务查询和停止可以独立运行。",
         "修复停止生成后仍等待工作区快照或命令超时的问题。PowerShell 和 Bash 请求终止后最多额外等待 1 秒，仍在停止的进程由原生任务注册表跟踪。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.6.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.6"
     },
     {
       "version": "0.2.2-rc.1.omd.1.3.5",
@@ -113,7 +122,7 @@
         "减少流式回复时 Claude Desktop 主题重复扫描聊天内容的开销，并跳过隐藏浏览器标签的无效绘制。",
         "修复推荐插件下载失败后的恢复，以及冷启动时预设插件的安装。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.2.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.3.2"
     },
     {
       "version": "0.2.1-rc.5.omd.1.3.1",
@@ -125,7 +134,7 @@
         "集成 DSH Workflow 0.1.7 与 OpenCU 2.2.7；匹配的桌面宿主适配隔离原生符号，并修复终端、搜索和 Office 助手在重打包后丢失执行权限的同类问题。",
         "终端助手路径与启动失败经过显式检查，宿主打包验证实际终端收发、缩放、退出及原生错误返回。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.1.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.3.1"
     },
     {
       "version": "0.2.1-rc.5.omd.1.3.0",
@@ -138,7 +147,7 @@
         "统一链接、新标签页、下载、文件打开、文件内容复制和本地图片读取的 DSH 适配，保留发起会话，正确处理取消、准备失败及真实操作错误。",
         "补齐文件预览下载动作，清理不可用的云端菜单与宿主文案。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.3.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.3.0"
     },
     {
       "version": "0.2.1-rc.5.omd.1.2.3",
@@ -151,7 +160,7 @@
         "修复取消错误首行显示为对象或重复笼统错误的问题，保留调用已经产生的有效输出。",
         "同步匹配桌面宿主的 Office 生命周期、停止期间注册及欢迎页认证 Cookie 衔接修复。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.2.3.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.2.3"
     },
     {
       "version": "0.2.1-rc.5.omd.1.2.2",
@@ -160,7 +169,7 @@
       "notes": [
         "适配 DSH 0.2.1-rc.5 的原生思考正文与展示，完整同步精确宿主插件和批注显示修复。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.2.2.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.2.2"
     },
     {
       "version": "0.2.1-rc.3.omd.1.2.1",
@@ -170,7 +179,7 @@
       "notes": [
         "集成 OpenCU 2.2.3，修复 Linux CU／BU 验证机的进程查询与清理误报，并完善失败诊断。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.2.1.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.2.1"
     },
     {
       "version": "0.2.1-rc.3.omd.1.2.0",
@@ -183,7 +192,7 @@
         "聊天创建时即固定独立目录，首次及后续发送保持同一会话与目录；历史文件链接按消息当时的目录打开。",
         "集成 Response ID Reuse 0.1.4，续传首个输出自动限时，临时错误只完整回退一次，冷却后自动尝试恢复。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.2.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.2.0"
     },
     {
       "version": "0.2.1-rc.3.omd.1.1.2",
@@ -194,7 +203,7 @@
         "首次工作目录初始化静默完成，修复额外触发一次模型调用的问题。",
         "保留原生当前目录快照、权限根、会话身份、持久化和后续目录切换机制。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.1.2.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.1.2"
     },
     {
       "version": "0.2.1-rc.3.omd.1.1.1",
@@ -206,7 +215,7 @@
         "保留可复用的父响应 ID，修复重试、后台预处理和并发分支的不必要全量回传。",
         "合并检查流程，复用一次构建，文档发布不再重复安装浏览器。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.1.1.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.1.1"
     },
     {
       "version": "0.2.1-rc.3.omd.1.1.0",
@@ -221,7 +230,7 @@
         "思考内容交回 DSH 原生适配器，移除额外补空与格式改写。",
         "OMD 自有代码明确采用 MIT，第三方原许可证保持。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.1.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.1.0"
     },
     {
       "version": "0.2.1-rc.3.omd.1.0.2",
@@ -233,7 +242,7 @@
         "同时保留会话提示词风格与任务验证选择，支持 OMAA 及发送失败后的重试。",
         "修复首次启动引导自动关闭或重绘时，预检仍等待旧按钮造成的误报。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.0.2.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.0.2"
     },
     {
       "version": "0.2.1-rc.3.omd.1.0.1",
@@ -245,7 +254,7 @@
         "修复第三方固定包匹配及旧版更新入口，更新五项上游固定发行。",
         "需求理解 0.3.3 适配 rc.3 原生 SDK 与 profile，保留审查、自动模式和只读查证。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.0.1.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.0.1"
     },
     {
       "version": "0.2.1-rc.3.omd.1.0.0",
@@ -258,7 +267,7 @@
         "优化 Native／PTC 工具发现、结果精简、原文回查与执行开销。",
         "修复部分文件读取后的覆盖保护、PTC 等待预算和 Responses ID 续传恢复。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-1.0.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.1.0.0"
     },
     {
       "version": "0.2.1-rc.3.omd.0.104.0",
@@ -271,7 +280,7 @@
         "修复设置说明挤压、窄面板换行及分段控件的重复 ID。",
         "修复透明通知层、浏览器容器和装饰层拦截点击，以及通知 Portal 更换后引用旧容器的问题。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.104.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.104.0"
     },
     {
       "version": "0.2.1-rc.3.omd.0.103.0",
@@ -285,7 +294,7 @@
         "修复 rc.3 多主题顶栏中的标题挤压、按钮越界、视图标签间距和空占位，调整 macOS 顶栏预留。",
         "移除新建时复制当前会话整套设置的旧路径，并阻止全局草稿发送期间额外创建载体。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.103.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.103.0"
     },
     {
       "version": "0.2.1-rc.3.omd.0.102.0",
@@ -297,7 +306,7 @@
         "关闭时停用验证工具、证据要求和验证催促；开启时恢复完整验证，保留普通 Todo 和历史证据。",
         "统一 Native、PTC、提示词与界面状态，阻止旧验证调用和未开始的检查。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.102.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.102.0"
     },
     {
       "version": "0.2.1-rc.3.omd.0.101.1",
@@ -308,7 +317,7 @@
         "修复智能体预设目录固定包仍指向旧版的问题，同步 OMAA 0.17.3 与实际校验值。",
         "包含 0.101.0 全部浏览器交互、会话搜索与桌面适配改进。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.101.1.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.101.1"
     },
     {
       "version": "0.2.1-rc.3.omd.0.101.0",
@@ -321,7 +330,7 @@
         "成组修复浏览器导航、历史、iframe 对话框、WebMCP、关闭回执和人工活动识别。",
         "修复 macOS 菜单、模态操作与截图，以及展示窗口初始化和重试按钮。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.101.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.101.0"
     },
     {
       "version": "0.2.1-rc.3.omd.0.100.2",
@@ -333,7 +342,7 @@
         "修复检查更新误报已启用插件未启用的问题，更新检查不再依赖是否开启代理预设。",
         "修复 rc.3 固定发行识别和更新附件校验，保留精确宿主、配对版本与禁止降级保护。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.100.2.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.100.2"
     },
     {
       "version": "0.2.1-rc.3.omd.0.100.1",
@@ -344,7 +353,7 @@
         "对齐 rc.3 的原生更多菜单和草稿初始化；独立聊天找回匹配预设的未发送草稿，创建插件保留指定预设与追加语义。",
         "精确适配 DSH 0.2.1-rc.3，同步匹配的 SDK、组件与冻结依赖；每份安装包仅用于对应宿主版本。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.100.1.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.100.1"
     },
     {
       "version": "0.2.1-rc.2.omd.0.100.0",
@@ -357,7 +366,7 @@
         "首批预处理按有效事实材料满窗触发，统一预算等待、回退和重启恢复；多图失败重建请求后继续发送，不重复执行工具。",
         "更新内置 OpenCU 2.1.0、Workflow 0.1.4、Rewind 0.1.3 与 BTW 0.1.3；OpenCU 新增 Hyprland 原生控制。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.100.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.100.0"
     },
     {
       "version": "0.2.1-rc.1.omd.0.100.0",
@@ -370,7 +379,7 @@
         "首批预处理按有效事实材料满窗触发，统一预算等待、回退和重启恢复；多图失败重建请求后继续发送，不重复执行工具。",
         "更新内置 OpenCU 2.1.0、Workflow 0.1.4、Rewind 0.1.3 与 BTW 0.1.3；OpenCU 新增 Hyprland 原生控制。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.100.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.100.0"
     },
     {
       "version": "0.2.1-rc.2.omd.0.99.3",
@@ -382,7 +391,7 @@
         "问题修复：工作流收尾失败阻止继续派发，保留停止失败恢复锁并传回磁盘错误。",
         "其他变更：同步六项内置组件版本、分发清单和来源文档。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.3.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.99.3"
     },
     {
       "version": "0.2.1-rc.1.omd.0.99.3",
@@ -394,7 +403,7 @@
         "问题修复：工作流收尾失败阻止继续派发，保留停止失败恢复锁并传回磁盘错误。",
         "其他变更：同步六项内置组件版本、分发清单和来源文档。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.3.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.99.3"
     },
     {
       "version": "0.2.1-rc.2.omd.0.99.2",
@@ -406,7 +415,7 @@
         "问题修复：修复上下文预处理、真实文件路径、浏览器清理、迁移附件、回退与扩展配置生命周期。",
         "体验优化：显示实际预处理进度，更新来源设置和组件文档。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.2.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.99.2"
     },
     {
       "version": "0.2.1-rc.1.omd.0.99.2",
@@ -418,7 +427,7 @@
         "问题修复：修复上下文预处理、真实文件路径、浏览器清理、迁移附件、回退与扩展配置生命周期。",
         "体验优化：显示实际预处理进度，更新来源设置和组件文档。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.2.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.99.2"
     },
     {
       "version": "0.2.1-rc.2.omd.0.99.1",
@@ -430,7 +439,7 @@
         "体验优化：原生弹窗旁聊、历史、追问与独立停止。",
         "其他变更：同步组件来源与当前发行文档，保留用户数据。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.1.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.99.1"
     },
     {
       "version": "0.2.1-rc.1.omd.0.99.1",
@@ -442,7 +451,7 @@
         "体验优化：原生弹窗旁聊、历史、追问与独立停止。",
         "其他变更：同步组件来源与当前发行文档，保留用户数据。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.1.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.99.1"
     },
     {
       "version": "0.2.1-rc.2.omd.0.99.0",
@@ -455,7 +464,7 @@
         "问题修复：独立聊天、模型与 Ultra 保存、任务验证、Dream／原文生命周期、目标取消及真实输入释放。",
         "其他变更：oh-my-dsh 包名迁移、独立插件架构与共装、按 profile 的人格和独立功能数据、可选组件启动隔离、按需加载及固定工件交付。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.99.0"
     },
     {
       "version": "0.2.1-rc.1.omd.0.99.0",
@@ -468,7 +477,7 @@
         "问题修复：独立聊天、模型与 Ultra 保存、任务验证、Dream／原文生命周期、目标取消及真实输入释放。",
         "其他变更：oh-my-dsh 包名迁移、独立插件架构与共装、按 profile 的人格和独立功能数据、可选组件启动隔离、按需加载及固定工件交付。"
       ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/blob/main/docs/release-0.99.0.md"
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.99.0"
     },
     {
       "version": "0.2.1-rc.2.omd.0.18.8",

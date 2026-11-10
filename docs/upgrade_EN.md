@@ -10,7 +10,7 @@ For a first install, see the [installation guide](install_EN.md). This page is f
 
 Note the full DSH version, desktop or web, the data directory (`DSH_HOME`) and the profile. The desktop profile is `desktop`; the web version keeps the profile in your start command. The `dsh` on your terminal path may not be the one you actually use.
 
-OMD 1.3.11 is for DSH 0.2.2-rc.1. For older DSH versions, see the [older versions list](install_EN.md#older-dsh-versions). If there is no matching version, keep your setup as it is; do not downgrade DSH to install a plugin.
+OMD 1.3.12 is for DSH 0.2.2-rc.1. For older DSH versions, see the [older versions list](install_EN.md#older-dsh-versions). If there is no matching version, keep your setup as it is; do not downgrade DSH to install a plugin.
 
 <a id="backup"></a>
 

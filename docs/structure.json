@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "published": "0.2.2-rc.1.omd.1.3.11",
+  "published": "0.2.2-rc.1.omd.1.3.12",
   "repository": {
     "slug": "gulagala001/oh-my-dsh",
     "description": "DSH 插件，开箱即用。Ultra 工作流与任务编排 · 长上下文与 Dream 记忆 · AST／CodeGraph 代码理解 · 内置 OpenCU 电脑操作 · Skills／MCP／Hooks 扩展 · 人格与主题定制 — 为您的 DeepSeek Harness 注入强劲动力。最佳 LLM 代理体验，尽在此处。",

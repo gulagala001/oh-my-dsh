@@ -6,7 +6,7 @@
 
 [Install](install_EN.md) → [Getting started](getting-started_EN.md) → [Usage guide](usage_EN.md)
 
-The current version is OMD 1.3.11 for DSH 0.2.2-rc.1, with OpenCU 2.2.11 built in. For older DSH versions, use the matching older package; see the [installation guide](install_EN.md).
+The current version is OMD 1.3.12 for DSH 0.2.2-rc.1, with OpenCU 2.2.11 built in. For older DSH versions, use the matching older package; see the [installation guide](install_EN.md).
 
 <a id="version-and-scope"></a>
 <a id="find-what-you-need"></a>
