@@ -1,3 +1,39 @@
+# DSH Undo 0.1.11 · DSH 0.2.2-rc.1
+
+[中文](#zh-0111) · [English](#en-0111)
+
+<a id="zh-0111"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复上下文压缩或提示替换后撤回被完整性校验拒绝、确认按钮不可用的问题。撤回按当前上下文的位置选取完整区间，保留前面的消息。
+- 修复同一原因导致的部分消息撤回残留；撤销和中断恢复沿用同一修复，保留原生日志及文件保护。
+
+<a id="en-0111"></a>
+
+## English
+
+### Bug Fixes
+
+- Fix rewind being rejected and confirmation becoming unavailable after context compaction or prompt replacement. Select the complete range by its current context position while preserving earlier messages.
+- Fix partial message residue caused by the same ordering error. Undo and interrupted-operation recovery share the correction, preserving the native log and file safeguards.
+
+## 安装 / Installation
+
+适用于 **DSH 0.2.2-rc.1**、Node.js **24.9.0+**。等当前任务结束后，按宿主提示重载。
+
+Requires **DSH 0.2.2-rc.1** and Node.js **24.9.0+**. Finish active tasks, then reload when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [DSH Undo 0.1.11](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.11-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.11-dsh.0.2.2-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.11-dsh.0.2.2-rc.1/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-undo-plugin/blob/main/docs/install.md)
+
+---
+
 # DSH Undo 0.1.10 · DSH 0.2.2-rc.1
 
 [中文](#zh-0-1-10-dsh-0-2-2-rc-1) · [English](#en-0-1-10-dsh-0-2-2-rc-1)

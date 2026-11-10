@@ -42,8 +42,11 @@ export function prepareReplay(session,context,projections=[],activeTurn=false) {
   const normalized=item=>{const {id,...rest}=message(item);return JSON.stringify(rest);};
   let common=0;while(common<desired.length&&common<current.length&&normalized(desired[common])===normalized(current[common]))common++;
   const nodes=[...clone.surface.nodes];
-  const keptSeq=common?current[common-1].source:-1;
-  let tail=nodes.filter(seq=>seq>keptSeq);
+  // Replacement events keep the original surface position but receive a new
+  // log seq. Select a contiguous positional suffix, including empty nodes;
+  // comparing seq numbers can omit nodes or shadow the retained prefix.
+  const keptIndex=common?nodes.indexOf(current[common-1].source):-1;
+  let tail=nodes.slice(keptIndex+1);
   const callIds=new Map();
   for(const item of desired.slice(0,common))for(const b of message(item).content)if(b.type==='tool-call')callIds.set(b.id,b.id);
   desired.splice(0,common);

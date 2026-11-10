@@ -97,6 +97,7 @@ Roles: home · index · guide · development · sources · release · redirect. 
 | [docs/release-1.3.0.md](release-1.3.0.md) | release | bilingual | — |
 | [docs/release-1.3.1.md](release-1.3.1.md) | release | bilingual | — |
 | [docs/release-1.3.10.md](release-1.3.10.md) | release | bilingual | — |
+| [docs/release-1.3.11.md](release-1.3.11.md) | release | bilingual | — |
 | [docs/release-1.3.2.md](release-1.3.2.md) | release | bilingual | — |
 | [docs/release-1.3.3.md](release-1.3.3.md) | release | bilingual | — |
 | [docs/release-1.3.4.md](release-1.3.4.md) | release | bilingual | — |

@@ -4,7 +4,7 @@ Source builds target exactly DSH `0.2.2-rc.1`, with the matching SDK, components
 
 [简体中文](install.md) · [README](../README_EN.md#readme-install)
 
-**DSH 0.2.2-rc.1 · Node.js ≥24.9.0 · 0.1.10**
+**DSH 0.2.2-rc.1 · Node.js ≥24.9.0 · 0.1.11**
 
 File restoration only covers retained checkpoints. Older messages may support conversation-only rewind. External changes are checked before restoration; double Esc during generation retains the host Stop behavior.
 
@@ -13,12 +13,12 @@ File restoration only covers retained checkpoints. Older messages may support co
 Open **Plugins → Add plugin** in the instance you actually use and paste this fixed release address:
 
 ```text
-https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.10-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.10-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.11-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.11-dsh.0.2.2-rc.1.tgz
 ```
 
 Finish active tasks, follow the host’s activation/restart prompt, and keep your existing profile, DSH_HOME, model configuration and conversations.
 
-Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.10-dsh.0.2.2-rc.1/SHA256SUMS).
+Verify the archive with the release’s [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.11-dsh.0.2.2-rc.1/SHA256SUMS).
 
 ### First success check
 
@@ -32,7 +32,7 @@ A rewind list opens above the composer. Selecting an entry shows the affected sc
 Use the CLI belonging to the same DSH instance; replace `web` with its actual profile.
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.10-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.10-dsh.0.2.2-rc.1.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.11-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.11-dsh.0.2.2-rc.1.tgz"
 ```
 
 </details>
