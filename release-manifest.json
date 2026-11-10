@@ -4,7 +4,6 @@
     {
       "version": "0.2.2-rc.1.omd.1.3.10",
       "severity": "normal",
-      "unpublished": true,
       "title": "Oh My DSH 1.3.10 · DSH 0.2.2-rc.1",
       "notes": [
         "修复退出时在原生会话写入句柄关闭后仍移除运行时提示的问题。整宿主退出不再发起新的清理事务；热停用在会话所有者保护下完成清理，再释放插件资源。",
