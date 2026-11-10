@@ -2,11 +2,13 @@ import { hash, activeRecords, createSurfaceIndex, liveSpan, prepareCandidate, ca
 import { preparationRequest, preparationEvents } from './input-budget.mjs';
 import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL } from './prompts.mjs';
 import { decodeCachedPreparation } from './cached-preparation.mjs';
+import { cachedRouteKey } from './request-snapshots.mjs';
 
 export class AutoCompaction {
   constructor(pipeline) { this.pipeline = pipeline; this.signals = new WeakMap(); this.followups = new Set(); this.configuration = this.settingsKey(); }
   settingsKey(cfg = this.pipeline.config()) {
-    return JSON.stringify([cfg.autoCompactEnabled, cfg.autoCompactThreshold, cfg.autoCompactMode, cfg.memoryCacheEnabled, cfg.prepareInputTokens]);
+    return JSON.stringify([cfg.autoCompactEnabled, cfg.autoCompactThreshold, cfg.autoCompactMode, cfg.memoryCacheEnabled, cfg.prepareInputTokens,
+      cfg.digestWindow, cfg.digestLookback, cfg.digestMaxTokens, cfg.summaryTargetChars, cfg.backgroundMaxRetries]);
   }
   reconfigure(cfg) {
     const next = this.settingsKey(cfg);
@@ -19,7 +21,8 @@ export class AutoCompaction {
       const restart = () => {
         if (p.closed || p.agents.get(id) !== agent) return;
         const s = p.state(agent.session);
-        if (s.autoCompact) { delete s.autoCompact.lastKey; p.store.save(s); }
+        if (s.autoCompact) { delete s.autoCompact.lastKey; delete s.autoCompact.deferred; p.store.save(s); }
+        if (s.failures.autoCompact) { delete s.failures.autoCompact.key; p.store.save(s); }
         this.kick(agent);
       };
       if (job) void job.then(restart, restart); else restart();
@@ -28,8 +31,30 @@ export class AutoCompaction {
   threshold(session, cfg = this.pipeline.config()) { return Math.min(cfg.autoCompactThreshold, this.pipeline.adapter.safetyThreshold?.(session) ?? Infinity); }
   used(session) { return this.pipeline.adapter.measureContext?.(session)?.totalTokens ?? this.pipeline.hub.ctx.tokenMeter?.measure(session)?.totalTokens ?? 0; }
   fingerprint(session, state, cfg) {
-    return hash([session.surface.nodes, state.records.map(r => [r.id, r.version, r.mode, r.mergedInto]), cfg.autoCompactThreshold, cfg.autoCompactMode,
+    const p = this.pipeline, agent = p.agents.get(session.id);
+    const route = (agent && p.hub.route?.(agent, 'prepare')) ?? session.requestHeader?.()?.config ?? agent?.options ?? {};
+    return hash([session.surface.nodes, state.records.map(r => [r.id, r.version, r.mode, r.mergedInto]), this.settingsKey(cfg), cachedRouteKey(route),
+      p.adapter.inputLimit?.(session, route, cfg.prepareInputTokens), this.threshold(session, cfg),
       cfg.memoryCacheEnabled, cfg.memoryCacheEnabled ? this.pipeline.cachedPreparation.version(session) : null]);
+  }
+  clearFailure(state) {
+    if (!state.failures.autoCompact && !state.autoCompact?.error && !state.autoCompact?.deferred) return;
+    delete state.failures.autoCompact;
+    state.autoCompact = { ...state.autoCompact, error: null, deferred: null };
+    this.pipeline.store.save(state);
+  }
+  reconcile(session, state, cfg = this.pipeline.config()) {
+    if (state.transaction || this.pipeline.jobs.has(session.id + ':autoCompact')) return;
+    if (!state.failures.autoCompact && !state.autoCompact?.error && !state.autoCompact?.deferred) return;
+    // Manual/native compression and cold reloads must retire an obsolete
+    // threshold failure without erasing independent preparation failures.
+    if (this.used(session) < this.threshold(session, cfg)) { this.clearFailure(state); return; }
+    const failure = state.failures.autoCompact;
+    if (failure?.code === 'INPUT_BUDGET_EXCEEDED') {
+      delete state.failures.autoCompact;
+      state.autoCompact = { ...state.autoCompact, error: null, deferred: { reason: 'input-budget', at: failure.at, message: failure.message } };
+      this.pipeline.store.save(state);
+    }
   }
   idle(agent) {
     const signal = this.signals.get(agent);
@@ -54,9 +79,12 @@ export class AutoCompaction {
     }
     if (signal?.aborted || p.manualSessions.has(id)) return Promise.resolve(null);
     const s = p.state(session);
+    this.reconcile(session, s, cfg);
     if (s.transaction || s.manualQueue.length || this.used(session) < this.threshold(session,cfg)) return Promise.resolve(null);
-    if (s.autoCompact?.lastKey === this.fingerprint(session, s, cfg)) return Promise.resolve(null);
     const startedKey = this.fingerprint(session, s, cfg);
+    if (s.autoCompact?.lastKey === startedKey) { this.clearFailure(s); return Promise.resolve(null); }
+    if (s.autoCompact?.deferred?.key === startedKey) return Promise.resolve(null);
+    if (s.failures.autoCompact?.key === startedKey && s.failures.autoCompact.count > cfg.backgroundMaxRetries) return Promise.resolve(null);
     let checkedKey;
     const controller = new AbortController();
     const joined = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
@@ -79,7 +107,7 @@ export class AutoCompaction {
       if (this.used(session) < this.threshold(session,cfg)) return null;
       s.pending = null;
       if (resumeReview) s.review.needed = true;
-      s.autoCompact = { ...s.autoCompact, lastAt: Date.now(), mode: cfg.autoCompactMode, threshold: cfg.autoCompactThreshold, beforeTokens: this.used(session), error: null };
+      s.autoCompact = { ...s.autoCompact, lastAt: Date.now(), mode: cfg.autoCompactMode, threshold: cfg.autoCompactThreshold, beforeTokens: this.used(session), error: null, deferred: null };
       p.store.save(s);
       let result = null;
       // A threshold trigger bypasses cadence, cooldown and the ordinary recent
@@ -134,12 +162,23 @@ export class AutoCompaction {
     // Register the job before maintenance emits status or replacement events.
     const job = Promise.resolve().then(() => maintenance && agent.status === 'idle' && agent.runMaintenance ? agent.runMaintenance(run) : run())
       .then(result => {
-        s.autoCompact = { ...s.autoCompact, lastKey: checkedKey ?? startedKey }; p.store.save(s);
+        delete s.failures.autoCompact;
+        s.autoCompact = { ...s.autoCompact, lastKey: checkedKey ?? startedKey, error: null, deferred: null }; p.store.save(s);
         return result;
       }).catch(error => {
-        if (!joined.aborted && !p.closed) {
-          s.autoCompact = { ...s.autoCompact, error: error.message };
-          p.reportError(agent, 'autoCompact', error);
+        if (!reviewSignal.aborted && !p.closed) {
+          checkedKey = this.fingerprint(session, s, cfg);
+          if (error.code === 'INPUT_BUDGET_EXCEEDED') {
+            delete s.failures.autoCompact;
+            s.autoCompact = { ...s.autoCompact, error: null, deferred: { reason: 'input-budget', key: checkedKey, at: Date.now(), message: error.message } };
+            p.store.save(s);
+            p.hub.event?.(session, { kind: 'autoCompact', status: 'skip', title: 'Auto Compact 等待输入预算', detail: error.message });
+          } else {
+            s.autoCompact = { ...s.autoCompact, error: error.message };
+            if (s.failures.autoCompact?.key !== checkedKey) delete s.failures.autoCompact;
+            p.reportError(agent, 'autoCompact', error);
+            s.failures.autoCompact.key = checkedKey; p.store.save(s);
+          }
         }
         if (signal?.aborted) throw error;
         return null;

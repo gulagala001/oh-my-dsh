@@ -883,6 +883,7 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
   }
   view(session, { compact = false } = {}) {
     const s = this.state(session), index = createSurfaceIndex(session), cfg = this.config();
+    this.autoCompact.reconcile(session, s, cfg);
     const spans = new Map(s.records.map(record => [record, liveSpan(session, record, index)]));
     return { schema: 1, compressionMode: this.mode(session), bc: this.hub.bc?.view(session), autoCompact: { ...s.autoCompact, enabled: cfg.autoCompactEnabled,
       threshold: cfg.autoCompactThreshold, mode: cfg.autoCompactMode, running: this.jobs.has(session.id + ':autoCompact') },

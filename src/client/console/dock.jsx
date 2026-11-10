@@ -138,6 +138,7 @@ export function ContextDockItem(props) {
     <dl className="omc-kv">
       {bc && <><dt>BC 发送估算</dt><dd>{c.bc.status?.sentTokens == null ? '等待读数' : `≈${k(c.bc.status.sentTokens)} tokens`}</dd></>}
       <dt>未处理原文</dt><dd>{c.backlog?.events ?? 0} 条 · ≈{k(c.backlog?.estimatedTokens)}</dd>
+      {c.autoCompact?.deferred && <><dt>自动压缩</dt><dd>等待输入预算；可调整预算或使用 /compact-f</dd></>}
       <dt>分段摘要</dt><dd>{c.recordCount ?? (c.records || []).filter(r => !r.mergedInto).length} 段</dd>
       {c.estimate?.compact && !c.estimate.compact.error && <><dt>/compact-p 预计</dt><dd>−{k(c.estimate.compact.estimatedSavedTokens)}</dd></>}
       {last && <><dt>上次替换</dt><dd>{ago(last.at)} · 省 ≈{k(saved)}</dd></>}

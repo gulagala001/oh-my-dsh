@@ -24,7 +24,7 @@ function fixture(count = 12, recordCount = 4, mode = 'detail') {
     id: `r${seq}`, version: 1, mode, sourceSeqs: [seq], carrierSeq: seq,
     sourceHash: sourceHash(session, [seq]), summary: 'summary', documents: [], assets: [], ranges: [],
   }));
-  const state = { records, manualQueue: [], review: { newRecords: 0 },
+  const state = { records, failures: {}, manualQueue: [], review: { newRecords: 0 },
     binding: { project: 'synthetic', scope: 'session' } };
   const agent = { session, status: 'idle' };
   const config = { autoCompactEnabled: true, autoCompactThreshold: 50, autoCompactMode: 'brief',
