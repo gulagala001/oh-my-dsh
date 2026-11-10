@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
@@ -9,6 +9,8 @@ import { Session, SessionStore } from '@deepseek-ai/dsh-session';
 import * as Persistence from '@deepseek-ai/dsh-session-persistence-jsonl';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { mountRuntimeLifecycle } from '../src/runtime-lifecycle.mjs';
+
+await mkdir(resolve('.local'), { recursive: true });
 
 const load = file => import(process.env.OMD_RUNTIME_TEST_ROOT
   ? pathToFileURL(resolve(process.env.OMD_RUNTIME_TEST_ROOT, file)) : new URL('../' + file, import.meta.url));

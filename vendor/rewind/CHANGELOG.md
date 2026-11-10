@@ -1,3 +1,37 @@
+# DSH Undo 0.1.10 · DSH 0.2.2-rc.1 · 未发布 / Unreleased
+
+[中文](#zh-0-1-10-dsh-0-2-2-rc-1) · [English](#en-0-1-10-dsh-0-2-2-rc-1)
+
+<a id="zh-0-1-10-dsh-0-2-2-rc-1"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复撤回用户输入后仍显示“已完成分析／运行状态已注入”的问题。撤回范围包含该输入的前置状态，旧撤回记录同步过滤残留分组；保留同一步较早输入和前面步骤，撤销可以完整恢复。
+
+<a id="en-0-1-10-dsh-0-2-2-rc-1"></a>
+
+## English
+
+### Bug fixes
+
+- Fix “analysis complete / runtime state injected” residue after rewinding a user input. Include that input’s prologue in the rewind boundary and filter leftover groups from existing rewinds, while preserving earlier inputs in the same step, previous steps and full undo restoration.
+
+## 安装 / Installation
+
+本版尚未发布，目标为 **DSH 0.2.2-rc.1**、Node.js **24.9.0+**。公开安装入口仍指向 **DSH Undo 0.1.9**，不包含上述尚未发布的修复。
+
+This release is not published yet. It targets **DSH 0.2.2-rc.1** and Node.js **24.9.0+**. Public installation links still point to **DSH Undo 0.1.9**, without the unreleased fixes above.
+
+| DSH | 当前公开包 / Current public package | 校验 / Checksums |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [DSH Undo 0.1.9](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.9-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.9-dsh.0.2.2-rc.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.9-dsh.0.2.2-rc.1/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/dsh-undo-plugin/blob/main/docs/install.md)
+
+---
+
 # DSH Undo 0.1.9 · DSH 0.2.2-rc.1
 
 [中文](#zh-0-1-9-dsh-0-2-2-rc-1) · [English](#en-0-1-9-dsh-0-2-2-rc-1)
