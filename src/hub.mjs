@@ -11,6 +11,7 @@ import { homedir } from 'node:os';
 import { HubStore, projectOf } from './hub-store.mjs';
 import { Config, configSnapshot } from './config.mjs';
 import { ContextPipeline } from './context/pipeline.mjs';
+import { RuntimeRetirement } from './context/runtime-retirement.mjs';
 import { BillionContext } from './context/bc.mjs';
 import { createHostAdapter } from './context/host.mjs';
 import { createEffortResolver } from './effort.mjs';
@@ -44,6 +45,7 @@ export class Hub extends Service {
     this.monitor = new MonitorLedger(this.store.dir);
     this.pricing = new MonitorPricing(this.store.dir);
     this.context = new ContextPipeline(this, createHostAdapter(this));
+    this.runtimeRetirement = new RuntimeRetirement(this);
     this.bc = new BillionContext(this);
     this.efforts = createEffortResolver(ctx); this.agents = new Map();
     this.live = new Map(); this.calls = new Map(); this.requestStarts = new Map(); this.taskReviews = new Map();
@@ -54,10 +56,20 @@ export class Hub extends Service {
   }
   close() { return this.closing ??= this.shutdown(); }
   async shutdown() {
-    this.closed = true;
     const sessions = new Map([...this.agents.values(), ...this.context.agents.values(), ...this.calls.values()].map(owner => [owner.session.id, owner.session]));
-    const errors = [], calls = [...this.calls.values()], pending = [...this.context.jobs.values(), ...(this.context.runtimeRetirements?.values() || [])];
+    const errors = [];
+    const drained = Promise.withResolvers();
+    // Claim hot-unload maintenance before yielding. Registered owner-scope
+    // latches keep each writer alive until this same promise settles.
+    const retirements = this.runtimeRetirement.beginShutdown(drained.promise);
+    void drained.promise.catch(() => {});
     const collect = results => { for (const result of results) if (result.status === 'rejected') errors.push(result.reason); };
+    // Preserve admitted foreground preStep/model work and all its dependencies.
+    // Each ready owner holds native maintenance (or its disposing scope) until
+    // drained is released below. New OMD admissions are already closed.
+    if (retirements.length) collect(await Promise.allSettled([this.runtimeRetirement.quiescent()]));
+    this.closed = true;
+    const calls = [...this.calls.values()], pending = [...this.context.jobs.values(), ...(this.context.runtimeRetirements?.values() || [])];
     let retireDreamConsumers;
     this[DREAM_CONSUMERS].retired = new Promise(resolve => { retireDreamConsumers = resolve; });
     for (const call of this.calls.values()) call.controller.abort(Error('OMD 服务正在退出'));
@@ -71,11 +83,14 @@ export class Hub extends Service {
       const cleanup = await Promise.allSettled(calls.map(call => call.done));
       collect(cleanup);
       for (const result of cleanup) if (result.status === 'fulfilled') errors.push(...result.value);
-      collect(await Promise.allSettled([...sessions.values()].map(session => Promise.resolve().then(() => {
-        setRuntimeContext(session, () => null);
-        return this.context.stripRuntime(session);
-      }))));
+      if (errors.length) drained.reject(errors[0]); else drained.resolve();
+      collect(await Promise.allSettled(retirements));
+      // Root teardown never starts new writes. Hot unload uses only previously
+      // registered owner latches, never a stale Session registry reference.
+      for (const session of sessions.values()) setRuntimeContext(session, () => null);
     } finally {
+      drained.resolve();
+      collect(await Promise.allSettled(retirements));
       // Abort Dream immediately, but release its database only after the last
       // Context consumer (including in-flight runtime removal) has retired.
       collect(await Promise.allSettled([...(this.context.runtimeRetirements?.values() || [])]));

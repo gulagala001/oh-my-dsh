@@ -16,7 +16,7 @@ async function fixture(t) {
   const hub = { store: { dir: directory }, agents: new Map([[session.id, agent]]),
     scope: () => ({ mode: 'session', project: session.id }),
     config: () => ({ contextEnabled: false, stateHintsEnabled: true }),
-    ctx: { sessions: { async flush() {} } }, action() {}, event() {} };
+    ctx: { sessions: { async flush() { return true; } } }, action() {}, event() {} };
   const p = hub.context = new ContextPipeline(hub, createHostAdapter(hub));
   const state = p.state(session);
   state.migrationVersion = 1; p.store.save(state);

@@ -20,7 +20,7 @@ async function fixture(t, overrides = {}) {
     prepareContinueTokens: 1, coordinatorEvery: 999, flushIdleMs: 0, ...overrides });
   const session = Session.create('first-window'), agent = { session, status: 'running' }, calls = [];
   const hub = { store: { dir: directory }, config: () => cfg, scope: () => ({ mode: 'session', project: 'fixture' }),
-    ctx: { sessions: { async flush() {} } }, action() {}, event() {},
+    ctx: { sessions: { async flush() { return true; } } }, action() {}, event() {},
     async call(_agent, kind, request) {
       assert.equal(kind, 'prepare'); calls.push(JSON.parse(request.messages[0].content[0].text));
       return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: { summary: 'Observed task results.', documents: [] } }] };

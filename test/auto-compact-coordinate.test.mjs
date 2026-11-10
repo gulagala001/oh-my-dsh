@@ -20,7 +20,7 @@ for (const scenario of ['accumulating', 'due', 'interrupted', 'pending']) test('
   const hub = { store: { dir: directory }, scope: () => ({ mode: 'session', project: 'auto-coordinate' }),
     config: () => ({ memoryCacheEnabled: false, contextEnabled: true, traceEnabled: false, autoCompactEnabled: true, autoCompactThreshold: 1000, coordinatorEvery: 4, coordinatorMinGapMs: 0 }),
     action() {}, event() {},
-    ctx: { sessions: { async flush() {} }, tokenMeter: { measure(value) { return { totalTokens: Math.ceil(JSON.stringify(value.deriveMessages()).length / 4), nodes: [] }; } } },
+    ctx: { sessions: { async flush() { return true; } }, tokenMeter: { measure(value) { return { totalTokens: Math.ceil(JSON.stringify(value.deriveMessages()).length / 4), nodes: [] }; } } },
     async call(_agent, kind, request, signal) {
       calls.push(kind);
       if (kind === 'prepare') return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: { summary: 'Recorded observations retained.', documents: [] } }] };

@@ -27,7 +27,7 @@ async function fixture(t, overrides = {}) {
       decisions: [{ text: 'Preserve originals.', seq: requestUser.seq, quote: 'Preserve the original records.' }] }) }];
   const hub = { store: { dir }, config: () => cfg, scope: () => ({ mode: 'session', project: 'cache-probe' }),
     action() {}, event() {}, record(_session, kind, value) { records.push({ kind, ...value }); }, live: new Map(), calls: new Map(),
-    ctx: { sessions: { async flush() {} }, llm: { async prepareCall(config, signal, select) {
+    ctx: { sessions: { async flush() { return true; } }, llm: { async prepareCall(config, signal, select) {
       const finalConfig = select(config, { reasoning: { efforts: [{ id: 'high' }, { id: 'off' }] } });
       return { config: finalConfig, async *stream(request) {
         calls.push(request); ready.resolve(request);

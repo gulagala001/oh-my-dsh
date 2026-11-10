@@ -21,7 +21,7 @@ for (const lifecycle of ['released', 'replaced', 'retained']) test('a coordinato
   const original = add('existing'), ready = Promise.withResolvers(), late = Promise.withResolvers(), calls = [];
   const hub = { store: { dir: directory }, scope: () => ({ mode: 'session', project: 'release-test' }),
     config: () => ({ memoryCacheEnabled: false, contextEnabled: true, traceEnabled: false, keepTailEvents: 0, prepareContinueTokens: 1, coordinatorMinGapMs: 0, coordinatorEvery: 1 }),
-    action() {}, event() {}, ctx: { sessions: { async flush() {} } },
+    action() {}, event() {}, ctx: { sessions: { async flush() { return true; } } },
     async call(_agent, kind) {
       calls.push(kind);
       if (kind === 'prepare') { ready.resolve(); return late.promise; }

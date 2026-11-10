@@ -19,7 +19,7 @@ for (const failure of ['provider', 'cancel']) test(`Auto Compact retries unchang
   const hub = { store: { dir: directory }, scope: () => ({ mode: 'session', project: 'auto-retry' }),
     config: () => ({ memoryCacheEnabled: false, contextEnabled: false, traceEnabled: false, autoCompactEnabled: true, autoCompactThreshold: 1000 }),
     action() {}, event() {},
-    ctx: { sessions: { async flush() {} }, tokenMeter: { measure(value) { return { totalTokens: 2000 + Math.ceil(JSON.stringify(value.deriveMessages()).length / 4), nodes: [] }; } } },
+    ctx: { sessions: { async flush() { return true; } }, tokenMeter: { measure(value) { return { totalTokens: 2000 + Math.ceil(JSON.stringify(value.deriveMessages()).length / 4), nodes: [] }; } } },
     async call(_agent, _kind, _request, signal) {
       calls++;
       if (calls === 1) {

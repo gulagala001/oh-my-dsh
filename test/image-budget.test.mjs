@@ -31,7 +31,7 @@ function fixture(rule = DEFAULT_IMAGE_RULE, provider = 'cmdgoat-responses') {
   const attachments = { async readImageRequest(ref) { stats.reads++; return { bytes: ref.bytes }; } };
   const ctx = { on(name, fn) { hooks.set(name, fn); }, get: name => name === 'attachments' ? attachments : undefined,
     settings: { describe: () => [{ ns: 'llm-pi-ai', value: { providers: { [provider]: profile } } }] },
-    sessions: { get: id => id === session.id ? session : undefined, async flush() { stats.flushes++; } },
+    sessions: { get: id => id === session.id ? session : undefined, async flush() { stats.flushes++; return true; } },
     llm: { async resolveModelInfo() { return { inputModalities: ['text', 'image'] }; },
       imageRequestTarget(_p, _m, ref) { return { width: ref.width, height: ref.height, maxBytes: profile.requestImageMaxBytes ?? 1048576 }; } } };
   const hub = { config: () => config }, service = installImageBudget(ctx, () => true, hub);
@@ -171,7 +171,7 @@ test('native image offload preserves a prepared decision, detailed assets, expli
   const f = fixture(), events = f.append(100), record = newRecord(f.session, events, { summary: 'Observed UI.', documents: [] }, { scope: 'session', project: 'test' });
   const state = { records: [record], transaction: null, pending: null, traceSlot: null, steps: 1, manualQueue: [] };
   const store = { save() {}, update(s, patch) { Object.assign(s, patch); } };
-  const adapter = createHostAdapter({ ctx: { sessions: { async flush() {} }, tokenMeter: { measure: () => ({ nodes: [], totalTokens: 100 }) } } });
+  const adapter = createHostAdapter({ ctx: { sessions: { async flush() { return true; } }, tokenMeter: { measure: () => ({ nodes: [], totalTokens: 100 }) } } });
   const cfg = { traceEnabled: false, requireShorter: false, contextOptimizationEnabled: false };
   const plan = action => ({ id: action, source: 'manual', choices: normalizeChoices({ choices: [{ action, ids: [record.id] }] }, state, f.session) });
   const before = recordSnapshot(f.session, record), pending = plan('detail');

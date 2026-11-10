@@ -57,7 +57,7 @@ async function fixture(t) {
   const session = Session.create('bc-archive'); system(session); user(session, 'Keep all sources.'); exchange(session, 'Measured source material. '.repeat(400));
   const calls = [], config = { memoryCacheEnabled: false, contextEnabled: true, automaticReplace: true, autoCompactEnabled: true, autoCompactThreshold: 1, traceEnabled: false, keepTailEvents: 0, prepareContinueTokens: 1, coordinatorEvery: 1, coordinatorMinGapMs: 0 };
   const hub = { store: { dir }, scope: () => ({ mode: 'session', project: 'bc-test' }), config: () => config, action() {}, event() {}, agents: new Map(),
-    ctx: { sessions: { async flush() {} }, tokenMeter: { measure: s => ({ totalTokens: s.deriveMessages().reduce((n, m) => n + JSON.stringify(m.content).length, 0) }) }, logger: { warn() {} } },
+    ctx: { sessions: { async flush() { return true; } }, tokenMeter: { measure: s => ({ totalTokens: s.deriveMessages().reduce((n, m) => n + JSON.stringify(m.content).length, 0) }) }, logger: { warn() {} } },
     async call(_agent, kind) { calls.push(kind); return { blocks: [{ type: 'tool-call', name: 'prepare_segment', arguments: { summary: 'Measured the source material.', documents: [{ title: 'Measurement', text: 'Source material kept for exact reference.' }] } }] }; } };
   const p = hub.context = new ContextPipeline(hub, createHostAdapter(hub)); hub.bc = new BillionContext(hub);
   const agent = { session, status: 'idle' }; p.agents.set(session.id, agent); hub.agents.set(session.id, agent);

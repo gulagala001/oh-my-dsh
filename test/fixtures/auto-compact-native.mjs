@@ -36,7 +36,7 @@ export async function nativeCompactionFixture({ root = repositoryRoot, nodes = 3
     const hub = { store: { dir: directory }, scope: () => ({ mode: 'session', project: 'native-auto-index' }),
       config: () => ({ contextEnabled: false, traceEnabled: false, autoCompactEnabled: true,
         autoCompactMode: 'brief', autoCompactThreshold: threshold }), action() {}, event() {},
-      ctx: { sessions: { async flush() { flushes++; } }, tokenMeter: { measure: value => ({ totalTokens: estimate(value), nodes: [] }) } },
+      ctx: { sessions: { async flush() { flushes++; return true; } }, tokenMeter: { measure: value => ({ totalTokens: estimate(value), nodes: [] }) } },
       async call() { modelCalls++; throw Error('Offline fixture must not call a model'); } };
     pipeline = hub.context = new ContextPipeline(hub, createHostAdapter(hub));
     const agent = { session, status: 'idle', async runMaintenance(run) { return run(new AbortController().signal); } };

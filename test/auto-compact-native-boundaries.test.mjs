@@ -31,7 +31,7 @@ async function fixture(t) {
   const request = user('Keep this request.');
   const call = assistant([{ type: 'tool-call', id: 'completed-read', name: 'read', arguments: '{}' }]);
   const result = receipt('completed-read', 'Completed observations. '.repeat(600));
-  const controls = { calls: [], releases: [], pending: [], async flush() {}, async reply() { throw Error('Unexpected model seam call'); } };
+  const controls = { calls: [], releases: [], pending: [], async flush() { return true; }, async reply() { throw Error('Unexpected model seam call'); } };
   const hub = { store: { dir: directory }, scope: () => ({ mode: 'session', project: 'auto-native-boundary' }),
     config: () => ({ contextEnabled: false, traceEnabled: false, autoCompactEnabled: true,
       autoCompactMode: 'brief', autoCompactThreshold: 1000, coordinatorEvery: 999,
@@ -129,6 +129,7 @@ test('native Auto Compact cancellation at the native flush boundary preserves th
     if (!gated && f.session.snapshotEvents().some(event => event.type === 'compaction/end')) {
       gated = true; entered.resolve(); await release.promise;
     }
+    return true;
   };
   const controller = new AbortController(), reason = Error('Cancelled while native flush waits');
   const running = track(f, f.pipeline.autoCompact.check(f.agent, controller.signal));

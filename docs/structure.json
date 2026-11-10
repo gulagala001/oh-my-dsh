@@ -518,6 +518,12 @@
       "role": "release",
       "language": "bilingual",
       "site": true
+    },
+    {
+      "path": "docs/release-1.3.10.md",
+      "role": "release",
+      "language": "bilingual",
+      "site": true
     }
   ]
 }

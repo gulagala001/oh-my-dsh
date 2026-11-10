@@ -17,7 +17,7 @@ async function fixture(t) {
   t.after(() => rm(dir, { recursive: true, force: true }));
   const hub = { store: { dir }, scope: () => ({ mode: 'session', project: 'trace-test' }),
     config: () => ({ contextEnabled: false, traceEnabled: true }), action() {},
-    ctx: { sessions: { async flush() {} } } };
+    ctx: { sessions: { async flush() { return true; } } } };
   const adapter = createHostAdapter(hub), pipeline = hub.context = new ContextPipeline(hub, adapter);
   const session = Session.create('trace-recovery');
   const original = session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '保留这条用户原话及附件。' }] }), { surfaceOp: 'append' });

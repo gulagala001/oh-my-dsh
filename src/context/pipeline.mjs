@@ -711,16 +711,21 @@ export class ContextPipeline {
     this.start(agent);
     return result;
   }
-  stripRuntime(session) {
+  stripRuntime(session, options) {
     this.runtimeRetirements ||= new Map();
     if (this.runtimeRetirements.has(session.id)) return this.runtimeRetirements.get(session.id);
-    const job = Promise.resolve().then(() => this.applyRuntimeRemoval(session)).finally(() => { this.runtimeRetirements.delete(session.id); this.releaseState(session.id); });
+    const job = Promise.resolve().then(() => this.applyRuntimeRemoval(session, options)).finally(() => { this.runtimeRetirements.delete(session.id); this.releaseState(session.id); });
     this.runtimeRetirements.set(session.id, job); return job;
   }
-  async applyRuntimeRemoval(session) {
-    if (!session.deriveMessages().some(m => taskContextMeta(m)?.runtime)) return null;
+  async applyRuntimeRemoval(session, { admit = () => !this.closed } = {}) {
+    if (!admit()) return null;
+    // A failed final flush can leave the entire removal visible in memory.
+    // Recover its durable commit even when there is no runtime text left.
+    const pending = this.store.peek(session.id)?.transaction;
+    if (!pending && !session.deriveMessages().some(m => taskContextMeta(m)?.runtime)) return null;
     const s = this.state(session);
-    if (s.transaction) await applyTransaction(session, s, s.transaction, this.store, this.adapter);
+    const recovered = s.transaction ? await applyTransaction(session, s, s.transaction, this.store, this.adapter) : null;
+    if (!admit()) return recovered;
     const operations = session.surface.nodes.flatMap(seq => {
       const m = session.deriveEventMessage(session.eventAt(seq)), meta = taskContextMeta(m);
       if (!meta?.runtime) return [];
@@ -728,7 +733,7 @@ export class ContextPipeline {
       if (!restored) return [{ id, kind: 'delete', seqs: [seq], text: '', todoCleanup: true }];
       return [{ id, kind: 'todo-restore', seqs: [seq], message: { ...restored, id }, text: '' }];
     });
-    if (!operations.length) return null;
+    if (!operations.length) return recovered;
     const tx = { id: randomUUID(), planId: 'runtime-disable', source: 'runtime-disable', createdAt: Date.now(), operations,
       records: structuredClone(s.records), traceSlot: structuredClone(s.traceSlot), applied: {},
       inputChars: 0, outputChars: 0, userRevision: userRevision(session) };

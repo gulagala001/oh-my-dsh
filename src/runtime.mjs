@@ -1,3 +1,4 @@
+import { mountRuntimeLifecycle } from './runtime-lifecycle.mjs';
 import { forkParentOf, installForkProvenance } from './host/session-fork.mjs';
 import { installFileReadIntegrity } from './file-read-integrity.mjs';
 import { installOmaaEnhancement, omaaWorkflowComposition, omaaIdentityPrompt } from './omaa-enhancement.mjs';
@@ -69,6 +70,10 @@ import { closeToolComputations } from './compute.mjs';
 import { clearOriginalSearchCache } from './context/original-search.mjs';
 
 export async function apply(ctx, config) {
+  return mountRuntimeLifecycle(ctx, scope => applyRuntime(scope, config));
+}
+
+async function applyRuntime(ctx, config) {
   ctx.effect(() => () => { clearOriginalSearchCache(); return closeToolComputations(); });
   installLoaderLifecycleCompatibility(ctx);
   installFileUploadCompatibility(ctx);
@@ -225,7 +230,7 @@ export async function apply(ctx, config) {
       pendingSteps.delete(agent);
       const messages = pending.messages;
     hub.budgets.tick(agent.session, isX(agent.session) && !signal.aborted);
-    if (!isX(agent.session) && !signal.aborted && hub.agents.has(agent.session.id)) {
+    if (!isX(agent.session) && !signal.aborted) {
       publishDreamMemory(hub, agent.session, false);
       setRuntimeContext(agent.session, () => null);
       await hub.context.stripRuntime(agent.session);
@@ -236,6 +241,7 @@ export async function apply(ctx, config) {
       if (!hub.taskReminders(agent.session).verification) hub.todoStore?.retireVerificationReminders(agent.session);
       const state = hub.store.state(agent.session.id);
       if (state.memoryScope == null) { state.memoryScope = hub.config().memoryScope; hub.store.save(state); }
+      hub.runtimeRetirement.track(agent);
       hub.agents.set(agent.session.id, agent);
       hub.components.project(currentDirectory(ctx, agent.session));
       // A pending write-ahead transaction must finish before sending another request.

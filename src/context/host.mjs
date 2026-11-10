@@ -64,7 +64,12 @@ export function createHostAdapter(hub) {
         Math.max(0, budget.usable - budget.used) + credit)) : 0;
     },
     publish(session, text, kind) { return session.append('user/message', message(text, kind), { surfaceOp: 'append' }); },
-    flush(session) { return hub.ctx.sessions?.flush(session); },
+    async flush(session) {
+      // Native SessionStore.flush returns true only when a durability listener
+      // participated. An absent service/listener is not a durable checkpoint.
+      if (await hub.ctx.sessions?.flush(session) !== true) throw Error('会话持久化未确认；上下文事务已保留，停止发送');
+      return true;
+    },
     append(session, op, surfaceOp, sourceEventSeqs, { batchId } = {}) {
       if (op.kind === 'delete') return appendShadow(session, sourceEventSeqs, op.id);
       if (op.kind === 'todo-refresh' || op.kind === 'todo-restore') {

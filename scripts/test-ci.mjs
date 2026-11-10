@@ -7,7 +7,7 @@ const core = [
   'permission-presets', 'startup-isolation', 'metering-contract',
   'start', 'monitor-partial', 'monitor-read-cache', 'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget', 'task-budget-persistence',
   'file-upload-compat', 'search-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update', 'recommended-plugin-package', 'dsh-ops-compat',
-  'context-store-cache', 'context-coordinate-release',
+  'context-store-cache', 'context-coordinate-release', 'context-runtime-retirement',
   'model-reply', 'temporary-chat', 'prompt-optimizer-drafts',
   'dream-source-lifecycle', 'dream-job-control',
   'context-controls', 'settings-state',
