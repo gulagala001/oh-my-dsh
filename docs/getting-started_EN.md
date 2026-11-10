@@ -1,63 +1,58 @@
-# Your First Task
+# Getting started
 
-[简体中文](getting-started.md) · [Docs index](README_EN.md) · [Public installation](../README_EN.md#readme-install) · [Usage](usage_EN.md) · [Troubleshooting](troubleshooting_EN.md)
+[中文](getting-started.md) · [Docs](README_EN.md) · [Usage guide](usage_EN.md) · [Troubleshooting](troubleshooting_EN.md)
 
-Start with an installed, fully restarted, matching environment. This guide covers the 0.100.0 source; see [downloads](releases.md) for public availability. Current source **`0.2.1-rc.3.omd.0.101.2` / DSH `0.2.2-rc.1`** bundles OpenCU `2.1.0`. Check [installation and version matching](install_EN.md) first. Historical 0.10 users should follow their fixed-tag docs.
+This page assumes you installed OMD following the [installation guide](install_EN.md) and fully restarted DSH.
 
-## 1. Check Actual Versions and Model
+## 1. Check the version and model
 
-Open the version panel and read **Current version**. Latest version is remote information; public calculation excludes `unpublished`. Do not pair old public packages with newer hosts or choose across host versions using `latest`. Desktop/Web profiles differ: check full host, plugin enablement, actual data directory, and source.
+Open **Settings → Oh My DSH → About** and check that the current version is 1.3.11 and DSH is 0.2.2-rc.1. The desktop and web versions use different profiles, so make sure OMD is in the one you are using.
 
-OMD uses host models/credentials and supplies no account. File tasks need native tool calling; screenshot interpretation also requires image input. Text/file use does not require preparing desktop control or a Chrome extension first.
+OMD uses the models configured in DSH and comes with no account. Working with files needs a model that supports tool calls; reading screenshots needs image input.
 
-## 2. Choose Conversation, Directory, and Scope
+## 2. Create a session
 
-Choose **Oh My DSH** for a new session. Saved sessions keep their preset. Select an existing workspace, or clear its label with **×**. Projectless Chat prepares its directory when the chat is created and keeps the same session and directory for every send. Repeated creation reuses the unsent draft.
+Create a session and pick the **Oh My DSH** preset. Choose an existing workspace, or without a project use the global **New Session** and OMD creates a folder for the chat.
 
-Choose **Permissions → Memory scope** before sending; it then locks:
+Before the first message, choose a memory scope in **Permissions → Memory scope** under the input box. It is fixed once you send:
 
-| Scope | Purpose and boundary |
+| Scope | Good for |
 | --- | --- |
-| **Session isolation** | No automatic shared-memory injection/propagation; explicit historical recall remains. |
-| **Project sharing** | Project material and completed short memory for later conversations. |
-| **Global sharing** | Compact global memory and a paged project directory; detail read on demand. |
+| **Session isolation** | One-off work you do not want to share with other sessions |
+| **Project sharing** | A project you will work on over several sessions |
+| **Global sharing** | Habits you want the AI to remember everywhere |
 
-An automatic Chat file directory is **not a Dream project**. Descendants not added to a real workspace stay isolated. Directory changes/deletion do not expand sharing. [Dream (Chinese)](dream-memory.md)
+> By default OMD lets the AI read and write files and run commands without asking each time. Permissions you set in your profile take precedence. Memory scope only affects memory, not file permissions.
 
-Installation defaults to full file/command access and no execution approvals; **explicit profile overrides win**. Check current execution directory and actual permissions. Memory sharing is not filesystem access. Cold context/scope reads do not activate an Agent or create a ledger; saving rechecks whether the conversation started.
+## 3. Try a small task
 
-## 3. Complete a Small File Task
+In a directory that has a README, enter:
 
-In a usable installed environment, try:
+```text
+Read the README in this directory and explain what the project does, how to start it and what it needs. Only write what you actually read, mark anything missing as "not stated", save it as project-start.md and open it for me.
+```
 
-> Read the README in this directory and explain its purpose, startup steps, and requirements. Include only what you actually read; mark unspecified details as “not specified.” Save project-start.md and open it for inspection.
+Check three things: the right file was read, the answer quotes the README, and project-start.md opens. If the README does not say how to start the project, the AI should mark it "not stated" rather than make it up.
 
-Check the right file, successful actual tool result, and accessible deliverable. Do not invent startup instructions. Use a prepared non-sensitive file if there is no README. This checks model/file work, not every component, platform, or the new candidate.
+## 4. Common controls
 
-## 4. Find Common Controls
-
-| Control | Purpose/default |
+| Control | What it does |
 | --- | --- |
-| Star | Refine an unsent draft and keep versions; each call incurs usage. Automatic polish defaults off. |
-| **OMD Console** | The single right-sidebar entry: overview, context (prepare → hub → replace, compaction), memory (automatic Dream off; empty folder selection means all), call log, background log. `≥` is a lower bound; unknown is not zero; background calls also cost usage. New-session empty state is normal. |
-| Composer info bar | Native turn/token readings plus context and Dream job items; each opens the matching console section. |
-| **BT** | Task reminders start on. Verification offers Off / Default / On, initially Default. Off disables the verification tool and requirements; On also enables completion reminders. “View task evidence” retains existing records. |
-| Model/Fast | Ultra has Workflow / Agent Team / Free submodes and prefers `xhigh`, otherwise highest. Agent Team requires DSH to enable it. Fast needs actual matching Subscriptions/model support. |
-| **Appearance** | Glyph and five other themes, native DSH, 30 palettes, fonts, backgrounds and reduced motion. |
-| **View original** | Read a tool result by line or keyword; import/export original-result archives from Context. |
-| **Session personality** | Enabled by default; choose a personality in the main session permissions drawer, inherit the global one, or turn it off. |
-| **Plugins → Skills / MCP / Instructions / Commands / Hooks** | Manage available extensions and project instructions. |
-| `/侧栏` / `/侧栏（网页版）` | Start an independent temporary discussion without leaving the main conversation. |
-| **Base components** | CodeGraph readiness and retained native/third-party entries. |
+| **OMD Console** (right sidebar) | Tokens, context, memory, call log and background log |
+| Info bar under the input box | This turn's stats, with a jump into the console |
+| **BT** | To-do reminders and task verification |
+| Model panel | Normal levels and Ultra (Workflow, Agent Team, Free) |
+| **✨** | Polish, structure or break down your message before sending |
+| **View original** on a tool card | Page through a tool's raw result |
+| **Session personality** in the permissions menu | Change the personality for this session |
+| `/btw`, `/侧栏` | Ask a side question or open a temporary chat without interrupting the main task |
+| **Plugins → Skills / MCP / Instructions / Commands / Hooks** | Manage extensions and project instructions |
 
-Workbench uses native content tabs alongside files/terminals. Tools, evidence, CodeGraph, and Workflow follow the current directory. Ordinary OMD-PTC operations use `run_code`, with four direct background controls in matching scopes. [Full usage](usage_EN.md)
+Details for each are in the [usage guide](usage_EN.md).
 
-## 5. DeepSeek and CU Boundaries
+## 5. Web chat and computer use
 
-DeepSeek Workbench provides web chat and platform entries and imports extractable web history into native conversations. You send the next message; there is no auto-send. See [conditions and limitations (Chinese)](deepseek-workbench.md).
+- **DeepSeek Workbench**: open DeepSeek web chat inside DSH and import web history as DSH sessions; you send the next message yourself. See [DeepSeek Workbench](deepseek-workbench.md) (Chinese).
+- **Computer and browser**: open **Settings → Computer & Browser** and follow the prompts to grant system permissions, set up a browser or connect the Chrome or Edge extension. Start with a small task that involves no personal data. See [computer and browser](computer-use.md) (Chinese).
 
-New OpenCU is bundled by default. Open **Settings → Computer & browser** to inspect backends, OS permissions and browser resources; pair Chrome/Edge on first use if needed. The complete embedded browser and native monitor need matching host adapters. Plugin installation does not automatically patch stock DSH. Start with a nonsensitive task and check the actual page. [Setup and boundaries (Chinese)](computer-use.md)
-
-IUI, OMAA and Subscriptions remain separate plugins. Match complete versions and their [integration boundaries](plugin-compatibility_EN.md).
-
-Keep complete versions, actual entry, and the first complete error. Use [symptom troubleshooting (Chinese)](troubleshooting.md), rather than deleting data or bypassing version checks.
+If something goes wrong, start with [troubleshooting](troubleshooting_EN.md) and note the full versions and the first error. Do not clear your data to fix problems.

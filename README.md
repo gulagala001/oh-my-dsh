@@ -7,15 +7,13 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="docs/release-1.3.11.md"><img alt="OMD 1.3.11" src="https://img.shields.io/badge/release-OMD%201.3.11-0969da?style=flat-square"></a>
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub 累计下载量" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.11"><img alt="OMD 1.3.11" src="https://img.shields.io/badge/release-OMD%201.3.11-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub 下载量" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
 </p>
 
 <p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="docs/README.md">完整文档</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈</a></p>
-
-当前版本：[OMD 1.3.11](docs/release-1.3.11.md)。
 
 <p align="center"><a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/omd-hero-zh.png"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/omd-hero-zh.png" alt="Oh My DSH · 从对话到交付" width="880"></a></p>
 
@@ -23,166 +21,153 @@
 
 <a id="quickstart"></a>
 <a id="desktop"></a>
-<a id="features"></a>
-<a id="prompts"></a>
-<a id="themes"></a>
-<a id="computer-use"></a>
-<a id="memory"></a>
-<a id="tools"></a>
 <a id="support"></a>
-<a id="plugins"></a>
-<a id="docs"></a>
 <a id="readme-install"></a>
 
 ## 快速开始
 
-**适用环境：** DSH **0.2.2-rc.1**, Node.js **24.9.0+**.
-
-模型沿用 DSH 配置。默认安装配置包含完整文件／命令访问并关闭执行审批；已有 profile 的显式设置优先。OpenCU 已内置，完整内置浏览器与原生监看另需匹配的宿主适配及系统权限。
+**需要：** DSH **0.2.2-rc.1**，Node.js **24.9.0+**。模型用你在 DSH 里配好的。
 
 ### 1. 安装
 
-
-打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
+在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
 https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.11/oh-my-dsh-0.2.2-rc.1.omd.1.3.11.tgz
 ```
 
-等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.11/SHA256SUMS).
+等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。旧版 DSH、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.11/SHA256SUMS)。
 
-### 2. 先试这一件事
+> OMD 默认让 AI 直接读写文件、运行命令，不逐条询问。你在 profile 里设过的权限优先生效。
 
-新建会话，选择 **Oh My DSH**，使用已配置的模型，在一个可分享的项目中输入：
+### 2. 先试一件事
+
+新建会话，预设选 **Oh My DSH**，在一个项目目录里输入：
 
 ```text
-读取这个项目的 README，说明用途与启动步骤；只引用实际读到的信息，不修改文件。
+读一下这个项目的 README，告诉我它是做什么的、怎么启动。只根据读到的内容回答，不要改文件。
 ```
 
-**成功标志：** 回复包含真实读取结果；右侧 OMD 控制台可查看上下文与调用记录。
+回答应该引用 README 里的原话。打开右侧的 **OMD 控制台**，能看到这次用了多少上下文、调了哪些工具。
 
-## 组合工作台，也有独立插件
+<a id="features"></a>
 
-OMD 组合 **Workflow、Rewind、Persona、Extensions 和 DeepSeek Workbench**，配合 OpenCU，以及主题插件及其 Glyph 外观。你可以使用 OMD 组合好的完整工作台，也可以按需求选择已发布的独立产品。
+## 能做什么
 
-工作流负责执行与续跑，Rewind 负责对话和文件恢复，Persona 管人格，Extensions 管技能与工具接入，Workbench 管网页聊天和迁移。匹配的独立与内置入口协调服务和界面归属；可选组件启动失败时保留基础对话。独立插件的数据、版本和宿主要求分别管理。
+<a id="memory"></a>
 
-[插件架构、独立发行与共装说明](docs/architecture.md) · [升级与数据迁移](docs/upgrade.md)
+### 省上下文，也记得住
 
-## 从对话到交付
+- **上下文优化**（默认开启）：工具结果里的重复内容会被精简，同一个文件第二次读取时只发变化的部分，上下文和 Token 都更省。需要细节时，点工具卡片上的 **查看原文**，按行号或关键词翻原始结果。
+- **自动压缩**：上下文快满时整理历史，你的原话和任务清单原样保留。也可以改用 Billion Context 负责压缩，其他功能照常工作。
+- **Dream 记忆**：开启后在后台把对话整理成短记忆，分会话、项目、全局三级，新会话可以接着用。
+- 找代码用 AST 搜索和 CodeGraph，读网页只取正文，少走弯路。
 
-### 把工作过程放在同一处
+[上下文优化](docs/context-optimization.md) · [压缩与原文回查](docs/context-workflow.md) · [Dream](docs/dream-memory.md)
 
-会话总览集中展示产出、来源、后台进程、Workflow 和子智能体，点开成员即可继续侧栏对话。**Ultra** 提供 Workflow、Agent Team、自由三种协作方式；**Better Todo** 将原始需求、任务与验证结果关联，保留已完成检查和真实执行回执。
+### 过程看得见
 
-没有项目也能开始：新聊天提前准备独立目录，首次发送及后续对话始终复用；聊天标题与文件夹位置分开管理。输入框的 **✨** 提供轻润色、结构化和步骤规划，可保存要求预设、比较版本、撤销或重做。
+- **会话总览**：产出的文件、参考的来源、后台进程、Workflow 和子智能体都在一处，点开任一成员就能接着和它对话。
+- **Ultra**：复杂任务可以选 Workflow、Agent Team 或自由协作。
+- **Better Todo**：把你的原话、拆出来的任务和验证结果连在一起，做到哪一步一眼就清楚。
+- **OMD 控制台**：按日期、模型、组件、会话查看 Token 和费用。服务商没报用量的记为"未知"，不会算成 0。
 
-[日常使用](docs/usage.md) · [Ultra 与 Workflow](docs/workflow.md)
+[日常使用](docs/usage.md) · [Ultra 与 Workflow](docs/workflow.md) · [监控统计](docs/monitoring.md)
 
-### 长对话保留背景，精简结果仍能回查
+### 不用先建项目
 
-**上下文优化**默认开启：精简可识别的只读结果，对已有完整基线的重复读取提供引用或差异，保留工具真实执行与获准原文。工具卡片的**查看原文**支持行号、搜索、翻页和导出；原文档案可随会话迁移。
+新聊天会自动配一个独立文件夹，之后一直用它；改聊天标题不会挪动文件。输入框里的 **✨** 能把你写的话润色、理成结构或拆成步骤，不满意可以撤销。
 
-按需工具发现、文件与网页视图、AST 代码搜索和 CodeGraph 帮助定位材料。历史整理、Auto Compact 与 **Dream** 分别管理上下文和会话／项目／全局记忆；也可选用 Billion Context 管理压缩，Dream、回查、任务、侧问与分支继续协作。
+### 做错了能退回
 
+- 你发的每条消息旁边都有撤回按钮，对话和这之后 AI 改过的文件一起退回。退多了就点 **撤销撤回**。
+- `/btw` 问个题外话，主任务继续跑；`/侧栏` 开一个临时聊天，关掉就清空。
 
-工具调用也更高效：代码检索、网页正文读取、原文回查与截图传递减少重复处理；工具结果中的重复内容会被精简，减少上下文占用和 Token 消耗，需要细节时仍可查看完整原文。
+[侧问与撤回](docs/usage.md#侧问与回合回滚)
 
-[上下文优化与原文](docs/context-optimization.md) · [压缩与 BC](docs/context-workflow.md) · [Dream](docs/dream-memory.md)
+<a id="computer-use"></a>
 
-### 让界面和表达方式适合自己
+### 操作浏览器和电脑
 
-**Glyph 动态字符**用立体字符鲸鱼、局部波纹和字符控件组织工作空间。还可选择 DSH 原生、Codex Desktop、iOS Liquid Glass、Claude Desktop、Claude CLI、Google Material，搭配 **30 套配色**、背景、字体和分区颜色；已有外观选择继续保留。
+内置 OpenCU：AI 可以读网页、填表、点按钮，也能操作桌面应用。默认在后台进行，不抢你的窗口；你可以在页面上圈出位置，告诉它改哪里。DSH 桌面版里还能直接看到内嵌的浏览器画面。
 
-**人格管理**分为身份与人格、语言风格、沟通方式、回答呈现四个模块，支持多个预设、复制修改、JSON 导入导出和 AI 创作提示词。启用会话人设后，可为不同主会话单独选择、继承全局或关闭人格。
+[电脑与浏览器](docs/computer-use.md)
 
+<a id="themes"></a>
+<a id="prompts"></a>
 
-两种内置人格预设，按任务选择：
+### 换外观，也换说话方式
 
-- **精算**：追求省 Token、高效率和快速交付，直达结果，把用量花在有价值的内容上。**作者实测效率提升 50%。**
-- **超频**：追求更深入、完整的回答和交付，愿意为复杂问题投入更多推敲与细节，适合需要充分分析和打磨的任务。
+- **外观**：Glyph 动态字符、DSH 原生、Codex Desktop、iOS Liquid Glass、Claude Desktop、Claude CLI、Google Material 七套，另有 30 套配色，背景和字体也能换。
+- **人格**：按身份、语言风格、沟通方式、回答呈现四部分来写，可以导入导出 JSON，每个会话单独选。内置两套：
+  - **精算**：少说废话、省 Token，直接给结果。作者实测效率提升 50%。
+  - **超频**：多想一步，回答更完整，适合需要反复推敲的问题。
 
 <p align="center">
   <a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-token-usage.png"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-token-usage.png" alt="精算实测：Token 用量与缓存命中" width="320"></a>
   <a href="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-yellow-crane-tower.png"><img src="https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/economical-yellow-crane-tower.png" alt="精算实测作品：黄鹤楼体素场景" width="320"></a>
 </p>
 
-<p align="center">精算实测展示：用量统计与作品效果</p>
+<p align="center">用精算人格做黄鹤楼体素场景：用量统计和成品</p>
 
 ![外观示例](https://raw.githubusercontent.com/gulagala001/oh-my-dsh/main/docs/images/release/themes.jpg)
 
-[外观设置](docs/skins.md) · [人格与设置](docs/usage.md#人格预设与自定义身份)
+[外观设置](docs/skins.md) · [人格设置](docs/usage.md#人格预设与自定义身份)
 
-### 用好浏览器、电脑和扩展
+<a id="tools"></a>
+<a id="plugins"></a>
 
-内置 **OpenCU 2.2.0**，提供浏览器与应用发现、观察、后台优先操作、批注和浮动监看。停止与取消跟踪真实键鼠释放；读取挂起、授权超时和目标替换都有明确的处理结果。完整内嵌界面需匹配宿主适配及系统权限。
+### 扩展
 
-**扩展管理**在插件页集中管理 Skill、MCP、指令文件、命令和 Hooks。可选 **dsh-ops** 提供文件、文档、命令与按需工具能力，在第三方功能中安装匹配宿主的固定兼容包。
+- **扩展管理**：在插件页统一管理 Skill、MCP、指令文件、命令和 Hooks，不用手改配置文件。
+- **DeepSeek 网页聊天**：在 DSH 里用 DeepSeek 官网聊天，聊到一半可以转成 DSH 会话继续。
+- **dsh-ops**（第三方，可选）：更强的文件、文档和命令工具，在设置的第三方功能里安装。
 
-[电脑与浏览器](docs/computer-use.md) · [扩展管理](docs/extensions.md) · [dsh-ops](docs/dsh-ops.md)
+OMD 里的 Workflow、Rewind、Persona、Extensions、DeepSeek Workbench、OpenCU 和主题管理也都能单独安装，见下方项目表。[插件结构与共装](docs/architecture.md)
 
-### 临时讨论与实际用量，各有入口
-
-`/侧栏` 打开使用当前模型的临时文字聊天，关闭时停止并清空；`/侧栏（网页版）` 使用 DeepSeek 网页临时会话。普通网页聊天支持将可读取的历史和附件迁移到 DSH。`/btw` 可围绕主任务侧问，回合撤回支持恢复对话及已有检查点的文件改动。
-
-**OMD 控制台**汇总上下文、记忆、调用日志和后台工作，可按日期、模型、组件和会话筛选费用与用量。未知用量保留未知，`≥` 表示已知下界；优化估算与提供方实际账单分别展示。
-
-[临时聊天、侧问与撤回](docs/usage.md#侧问与回合回滚) · [DeepSeek Workbench](docs/deepseek-workbench.md) · [监控统计](docs/monitoring.md)
+<a id="docs"></a>
 
 ## 使用范围
 
-| 场景 | 条件 |
+| 功能 | 需要 |
 | --- | --- |
-| 对话、外观、任务和记忆 | 匹配版本的 DSH 与可用模型。 |
-| 浏览器／电脑操作 | OpenCU 后端与系统权限；完整内嵌 UI 另需匹配宿主适配。 |
-| 网页聊天与历史导入 | DeepSeek Workbench 对应桌面能力与官网登录；只迁移可读取的消息和附件。 |
-| 其他 DSH 版本 | 仅使用对应独立构建；rc.1 与 rc.2 不能混装。 |
+| 对话、外观、任务、记忆 | DSH 0.2.2-rc.1 和一个可用的模型 |
+| 浏览器和电脑操作 | 系统权限；内嵌浏览器画面需要配套的 DSH 桌面版 |
+| DeepSeek 网页聊天和历史导入 | DSH 桌面版，并登录 DeepSeek 官网账号 |
+| 旧版 DSH | 对应的旧版安装包，见[安装指南](docs/install.md) |
 
-源码主干可能包含尚未进入固定 Release 的改进。公共下载地址不会随着 `main` 改动而更新；当前安装包、校验值与升级说明见[发行包说明](docs/releases.md)。
+`main` 分支可能领先于正式版。安装请用上面的发布包。
 
 ## 常见问题
 
 <details>
-<summary>安装后没看到 Oh My DSH 或新设置？</summary>
+<summary>装好后找不到 Oh My DSH？</summary>
 
-确认安装的是当前实例对应的 profile，完整重启后检查插件启用状态。新会话选择 Oh My DSH；已有会话保留原预设。[症状排障](docs/troubleshooting.md)
-
-</details>
-
-<details>
-<summary>为什么装好插件后没有完整内置浏览器？</summary>
-
-内嵌浏览器、原生监看与侧栏批注依赖匹配的宿主适配。固定 Release 提供相关源码材料，不是完整桌面安装器。[Computer Use 条件](docs/computer-use.md)
+确认装进了你正在用的那个 DSH（桌面版和网页版用的是不同的 profile），完整重启后在插件页看它是否已启用。然后新建会话，在预设里选 Oh My DSH；已有的会话保持原来的预设。[排障](docs/troubleshooting.md)
 
 </details>
 
 <details>
-<summary>怎样升级或恢复？</summary>
+<summary>为什么没有内嵌浏览器？</summary>
 
-先等待任务结束并备份，使用同一宿主对应的固定包，保留原数据目录和 profile。不要以清空数据或改版本门禁解决安装问题。[升级说明](docs/upgrade.md)
+内嵌浏览器、悬浮预览和侧栏批注需要配套的 DSH 桌面版。只装插件时，AI 仍然可以通过 Chrome／Edge 扩展或独立浏览器操作网页。[电脑与浏览器](docs/computer-use.md)
 
 </details>
 
-## 参与与来源
+<details>
+<summary>怎么升级？</summary>
 
-欢迎提交最小复现、文档修订与实际使用示例。[贡献说明](CONTRIBUTING.md) · [开发与构建](docs/development.md)
+等任务跑完，先备份 DSH 数据目录，再用新版安装包覆盖安装。遇到安装问题不要清空数据，先看[升级说明](docs/upgrade.md)。
 
-OMD 自有代码采用 [MIT 许可证](LICENSE)。第三方代码、组件和素材继续遵循各自原许可证，详见[第三方声明](THIRD_PARTY_NOTICES.md)。OMD 是社区项目，与界面中提及的产品品牌无官方隶属或背书关系。
+</details>
 
-## 文档与支持
+## 参与和许可
 
-| 我想做什么 | 去哪里 |
-| --- | --- |
-| 安装、升级、卸载 | [安装指南](docs/install.md) |
-| 了解使用方法与边界 | [使用文档](docs/README.md) |
-| 查看版本变化 | [Releases](https://github.com/gulagala001/oh-my-dsh/releases) |
-| 反馈问题 | [Issues](https://github.com/gulagala001/oh-my-dsh/issues) |
+欢迎提交复现步骤、文档修正和使用案例：[贡献说明](CONTRIBUTING.md) · [开发与构建](docs/development.md)。反馈问题时请写明 DSH 和插件版本、操作步骤、期望和实际结果，日志和截图先去掉个人信息。
 
-反馈时请提供完整 DSH／插件版本、实际入口、最小复现步骤，以及预期和实际表现；日志与截图先移除私人数据。
+OMD 自己的代码用 [MIT 许可证](LICENSE)，第三方代码和素材沿用各自的许可，见[第三方声明](THIRD_PARTY_NOTICES.md)。OMD 是社区项目，与界面里出现的其他产品品牌没有官方关系。
 
 <p align="center"><a href="#readme-top">返回顶部</a> · <a href="https://github.com/gulagala001/oh-my-dsh/releases">版本与下载</a> · <a href="https://github.com/gulagala001/oh-my-dsh/issues">反馈</a></p>
-
-[文档结构与贡献](docs/documentation.md)
 
 <!-- project-credits:start -->
 ## 项目、组件与致谢

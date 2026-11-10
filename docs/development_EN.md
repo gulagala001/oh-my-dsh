@@ -156,3 +156,7 @@ One `tokenMeter` service owns native context and usage projections. Preparation,
 Owned tools use the shared contract in `src/tool-contract.mjs` for presentation and execution validation. `npm run tools:check` checks Native, TypeScript and Python contracts in builds, CI and prepack. Tool context optimization retains the host executor and request projection and records summaries in the existing Monitor ledger; validate both Native and PTC paths.
 
 Plugin preflight page checks live in `src/plugin-preflight/page.mjs`. They use native activation inventory and the interactive page rather than requiring optional account onboarding. Run `test/plugin-preflight-page.test.mjs` on demand with an existing browser (`OMD_TEST_BROWSER` selects its executable). Compatibility builders use fixed inputs and retain exact host requirements, complete functionality and source licenses.
+
+## Checks and releases
+
+For CI, releases, release asset checks and market sync, see [contributing](../CONTRIBUTING.md) (Chinese). To run the whole host flow offline, use the [simulator](https://github.com/gulagala001/oh-my-dsh/blob/main/scripts/simulator/README.md).

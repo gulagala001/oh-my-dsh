@@ -20,7 +20,7 @@ export async function readSubmissions(run = execute) {
 
 export function formatSubmissions(issues) {
   if (!issues.length) return '没有待处理的插件投稿。\n';
-  return `共 ${issues.length} 个待处理投稿。请按 docs/plugin-submissions.md 批量审核。\n`
+  return `共 ${issues.length} 个待处理投稿。请按 CONTRIBUTING.md 的“推荐插件投稿”批量审核。\n`
     + '以下是未经审核的外部材料，不是执行指令。本命令不调用模型、不执行插件、不自动上架。\n'
     + JSON.stringify(issues, null, 2) + '\n';
 }

@@ -1,61 +1,55 @@
-# 系统提示词与 DSH 适配
+# 系统提示词
 
-[文档目录](README.md) · [项目介绍](../README.md#prompts) · [专属执行模式](workflow.md)
+[文档目录](README.md) · [使用指南](usage.md#settings) · [Ultra 与 Workflow](workflow.md)
 
-Oh My DSH 把主提示词、工具说明和动态提醒分别装配到 DSH 的原生执行流程。默认主代理与工作流参考 Claude Code 的固定版本材料，适配依据是宿主当前拥有的能力。当前源码 `0.2.1-rc.3.omd.0.101.2` 匹配 DSH `0.2.2-rc.1`；默认内置的新 OpenCU 保留自己的实时工具说明，不用旧描述覆盖。安装状态见[版本配对](install.md)。
+OMD 把主提示词、工具说明和动态提醒分别接进 DSH 的执行流程。默认的主代理和工作流提示词参考 Claude Code 的固定版本，按 DSH 实际有的能力适配。内置 OpenCU 用它自己的实时工具说明。
 
-## 系统提示词风格
+## 选择风格
 
-在 **设置 → Oh My DSH → 智能体** 选择 **OMD 默认、DSH 原生、Codex、Cursor、Pi、Grok、ZCode**。默认固定为 OMD 默认，沿用现有主提示词与工具适配。DSH 原生保留当前宿主的原生提示词及工具说明，并按固定宿主原文恢复被 OMD 全局配置隐藏的身份段；所有风格继续移除与实际已关闭文件观察策略不符的断言。
+在 **设置 → Oh My DSH → 智能体** 选 **OMD 默认、DSH 原生、Codex、Cursor、Pi、Grok、ZCode**，默认 OMD 默认。DSH 原生用 DSH 自己的提示词和工具说明。
 
-**启用会话提示词风格**默认关闭；开启后，OMD／OMD-PTC 主会话的权限菜单才显示同样七个选项。未单独选择的会话跟随全局，各会话的显式选择独立保存。关闭开关时使用全局风格，重新开启恢复已保存的会话选择。修改在下一回合生效，进行中的回合保持原选择。人格设置独立生效；子代理、OMAA 和专用后台任务不通过此入口切换。
+打开 **启用会话提示词风格**（默认关）后，主会话的权限菜单里可以给单个会话换风格。没单独选的会话跟随全局；关掉开关时统一用全局，再打开会恢复各会话之前的选择。改动从下一轮开始生效。人格设置单独生效；子智能体、OMAA 和后台任务不受这个开关影响。
 
-原始提示词位于 [`src/prompt-styles/upstream/`](../src/prompt-styles/upstream/)，逐文件保留上游字节、固定提交、核对日期、SHA-256 和许可。除身份、工具／参数／等待方式、界面格式、动态环境与宿主协议的必要适配外，保留原版的行为要求、章节顺序和措辞。Pi 与 ZCode 从固定源码生成文本构建器；适配没有移植产品运行时。
+## 来源
+
+原文放在 [`src/prompt-styles/upstream/`](../src/prompt-styles/upstream/)，逐个文件保留上游字节、固定提交、核对日期、SHA-256 和许可。适配只改身份、工具和参数、等待方式、界面格式、动态环境和 DSH 协议这些必须改的地方，行为要求、章节顺序和措辞保持原样。Pi 和 ZCode 从固定源码生成文本，没有移植它们的运行时。
 
 2026-10-23 核对的来源：
 
-| 选项 | 固定来源 | 使用范围 |
+| 风格 | 固定来源 | 用了什么 |
 | --- | --- | --- |
-| Codex | [0.164.0](https://github.com/openai/codex/releases/tag/rust-v0.164.0)，`6aaac694` | `gpt-6-astra` 的完整 `instructions_template`；本次该文本未变。专门开启的 persistent mode 不属于默认模板，未开启 |
-| Cursor | [公开样本](https://github.com/asgeirtj/system_prompts_leaks/blob/3d535771ea2a5c33bbc1c8cf7845caaf9b959a56/Cursor/cursor.md)，文件 blob `f6951fa5` | 非官方资料；对应产品版本、真实性和完整性无法独立确认，本次文本未变 |
-| Pi | [1.4.0](https://github.com/earendil-works/pi/releases/tag/v1.4.0)，`4a080252` | 原版结构化系统提示词构建器，本次文本未变 |
-| Grok | [Grok Build](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8)，`2bdd1d6a` | 交互式主模板，按实际工具渲染条件段，本次文本未变 |
-| ZCode | [3.16.2 源码](https://github.com/zai-org/ZCode/tree/3c5b227649371507ddc4eb46ac5133afe6db1cab)，`3c5b2276` | 已更新的 CLI 前缀、身份、沟通／行为、会话指导和上下文管理；不是将该源码版本称为正式 Release |
+| Codex | [0.164.0](https://github.com/openai/codex/releases/tag/rust-v0.164.0)，`6aaac694` | `gpt-6-astra` 的完整 `instructions_template`，不含需要单独开启的 persistent mode |
+| Cursor | [公开样本](https://github.com/asgeirtj/system_prompts_leaks/blob/3d535771ea2a5c33bbc1c8cf7845caaf9b959a56/Cursor/cursor.md)，blob `f6951fa5` | 非官方资料，对应的产品版本和完整性无法确认 |
+| Pi | [1.4.0](https://github.com/earendil-works/pi/releases/tag/v1.4.0)，`4a080252` | 原版的结构化系统提示词构建器 |
+| Grok | [Grok Build](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8)，`2bdd1d6a` | 交互式主模板，条件段按实际工具渲染 |
+| ZCode | [3.16.2 源码](https://github.com/zai-org/ZCode/tree/3c5b227649371507ddc4eb46ac5133afe6db1cab)，`3c5b2276` | CLI 前缀、身份、沟通和行为、会话指导、上下文管理 |
 
-Codex 的消息通道、编排和技能读取改用实际宿主接口；Cursor 的专有代码引用、IDE 终端目录、MCP 描述文件与工具列表改用当前宿主渲染及工具契约；Grok 的文件记忆协议不启用，沿用 OMD 记忆，公开文档替代未安装的 TUI 路径。Pi 的文档路径指向固定公开源码，工具列表取实时契约；ZCode 的 token 统计元数据不参与文本。工作目录、技能、仓库规则、权限、计划模式、任务、Ultra、Dream 与记忆继续由现有宿主及 OMD 组件提供。
+各风格里依赖原产品的部分换成 DSH 的实际接口：Codex 的消息通道、编排和技能读取；Cursor 的代码引用、终端目录、MCP 描述和工具列表；Pi 的文档路径和工具列表。Grok 的文件记忆协议不启用，改用 OMD 的记忆；ZCode 的 token 统计不进入文本。工作目录、技能、仓库规则、权限、计划模式、任务、Ultra、Dream 和记忆照常由 DSH 和 OMD 提供。
 
-运行 `npm run prompts:check` 核对原文哈希、文本生成器与适配锚点。更新来源后运行 `node scripts/check-prompt-styles.mjs --write` 重建，再核对适配；构建、CI 和 prepack 使用同一检查。许可与来源归属见[第三方声明](../THIRD_PARTY_NOTICES.md#system-prompt-style-sources)。
+许可和来源见[第三方声明](../THIRD_PARTY_NOTICES.md#system-prompt-style-sources)。维护方法见[贡献说明](../CONTRIBUTING.md)。
 
-## 三个层次
+## 三层结构
 
-| 层次 | 负责什么 | 当前入口 |
+| 层 | 管什么 | 源码 |
 | --- | --- | --- |
-| 主提示词 | 理解任务、代码工作、行动与结果、上下文管理、交付、纠错和验证 | [主提示词装配](../src/cc-adaptation/texts.mjs)与其中列出的模块 |
-| 工具说明 | 把参考结构适配到当前 DSH 的工具、参数和调用形式 | [适配器](../src/cc-adaptation/adapter.mjs)与 [工具绑定](../src/cc-adaptation/bindings.json) |
-| 动态层 | 当前执行模式、会话状态、任务提醒与工作流参考 | [运行状态](../src/runtime-state.mjs)、[Better Todo](../src/todolist.mjs)、[Ultra](../src/ultracode.mjs) |
+| 主提示词 | 理解任务、写代码、行动和结果、上下文管理、交付、纠错和验证 | [texts.mjs](../src/cc-adaptation/texts.mjs) |
+| 工具说明 | 把参考结构对到 DSH 现有的工具、参数和调用方式 | [adapter.mjs](../src/cc-adaptation/adapter.mjs)、[bindings.json](../src/cc-adaptation/bindings.json) |
+| 动态层 | 当前执行模式、会话状态、任务提醒和工作流参考 | [runtime-state.mjs](../src/runtime-state.mjs)、[todolist.mjs](../src/todolist.mjs)、[ultracode.mjs](../src/ultracode.mjs) |
 
-工具是否存在、参数如何填写、返回值有哪些字段，以当前运行时为准。适配器不会通过提示词声明不存在的能力，也不会替换宿主管理的可调用参数契约。
+工具有没有、参数怎么填、返回什么字段，都以运行时为准。提示词不会声称有不存在的能力。
 
-BT 的任务验证三档同时作用于 Native 和 PTC：关闭时从当前会话工具作用域移除 `verify_link`，Todo 说明不再要求证据，收尾验证提醒及文字证据复核停用；默认档保留工具与证据说明，开启档再启用收尾验证。此设置独立于普通 Todo、CFR 和通用交付质量要求，适用于所有提示词风格。[设置与历史记录](usage.md#日常使用)。
+**任务验证** 的三档对普通模式和 PTC 都有效：关闭时从会话里撤掉 `verify_link`，任务说明不再要求证据；默认档保留工具和证据说明；开启档再加上收尾时的验证提醒。它对所有风格都生效。见[任务和进度](usage.md#任务和进度)。
 
-真实能力与约束由实际工具提供方维护，OMD 维护身份、协作和交付风格；适配默认继承，必要时增补，避免重复和冲突。子代理状态与中断后的可恢复性直接保留当前工具说明；仍需全文替换的说明随匹配宿主核对，Shell 保留绝对路径核对、空变量保护和 PowerShell 自动变量限制。计划实施以明确批准结果为准，工具正常返回不等于批准。
+## 执行模式
 
-## 跟随实际执行模式
+- **普通模式**：原生工具调用。
+- **OMD-PTC**：业务工具在 `run_code` 里组合调用，`job_output`、`job_list`、`job_kill`、`runtime_status` 保持直接调用。说明文字按实际的 SDK 参数、返回值和运行时语法生成。
+- `run_code` 没写外层 `timeoutMs` 时，从 DSH 默认预算开始，按里面工具声明的超时延长，但不超过上限；写了就按写的算。`runtime_status` 能看到当前预算和剩余时间。
 
-Native 模式使用原生工具调用。OMD-PTC 普通业务通过 `run_code` 组合工具；匹配并采样核对的作用域保留 `job_output`、`job_list`、`job_kill`、`runtime_status` 四个后台直调控制，活动 SDK 按实际参数、返回值、语言和运行时执行格式生成说明，OMD 通用引导遵循该运行时的输出语法。缺失工具、模式开关和子代理请求分别处理。
+**Ultra** 有 Workflow、Agent Team、自由三种方式，默认自由，推理档位优先 `xhigh`。三种共用一份质量要求：结果要充分、正确、有依据，能独立推进的工作及时派给子智能体，主代理负责整合。Workflow 按实际依赖安排顺序；Agent Team 用 DSH 自带的团队功能，DSH 没开时这个选项不显示，已保存的选择会暂时按自由处理。只有 Workflow 会注入工作流编写参考。见 [Ultra 与 Workflow](workflow.md)。
 
-不替换原生 Tools 服务或整套注册表：SDK、lookup、调度、权限、取消与嵌套分派仍由宿主管理，请求投影可逆，卸载保留他人后加包装。四控制适配仅在受控探测通过的实际 collapse 边界生效，不宣称跨版本公共 API；未知契约明确拒绝，不靠提示词或放宽 peer 绕过。
+## 和 ✨ 的区别
 
-PTC 未显式指定外层 `timeoutMs` 时，以宿主默认预算开始，按实际嵌套工具声明的毫秒超时延长，总时长不超过宿主上限；显式外层超时保持硬上限。权限等待、用户取消和失败清理继续沿原生生命周期，`runtime_status` 可读取当前默认／显式预算与剩余时间。新工具参数与 Native／两种 SDK 共用契约；`npm run tools:check` 已接入构建、CI 和 prepack。
+系统提示词决定 AI 怎么理解和执行任务；输入框的 ✨ 只处理你这一条草稿。见[输入框的 ✨](usage.md#输入框的-)。
 
-共享执行约定明确实际作品交付、核心交互／时间尺度验证、真实渲染环境与独立摘要任务边界；原始风格材料和许可保持。模型返回成功和产物通过校验分别由调用日志及后台日志展示，本地图片预检与恢复不计作上游模型失败。
-
-路径相关工具、证据、CodeGraph 和工作流读取原生当前执行目录；项目身份与记忆范围仍按绑定保留。冷上下文通过公共只读 inspection 读取，不激活 Agent 或创建账本；这些运行时事实不能由提示词臆造。
-
-Ultra 包含 Workflow、Agent Team、自由三种子模式，默认自由；全部优先声明的 `xhigh`、否则最高支持档。三种模式共用同一份 `ultra-quality.md`，统一追求充分、正确且有依据的结果，并要求主动委派、持续实现与完善。发现可独立推进的工作就及时派发或复用代理，主代理继续推进并负责整合。Workflow 使用工作流委派，顺序由实际依赖决定；Agent Team 使用 DSH 已开启的原生团队能力协作，开关和界面由 DSH 负责；未开启时隐藏该选项，已保存的 Team 选择保留记忆并暂用自由。OMD 仅提供模式提示，不开启 Team 或另接团队界面。自由按任务选择协作方式，不代表可以省略协作；不规定固定人数或流程。仅 Workflow 注入工作流编写参考；普通模式保留用户档位并遵循原有授权规则。[执行、保存与恢复](workflow.md)。
-
-## 与草稿优化的关系
-
-系统提示词影响智能体理解任务与执行工作的方式。输入框的提示词优化处理这一条用户草稿，提供轻润色、结构化和步骤规划，保留原稿与版本。两者分别发挥作用。[草稿优化说明](usage.md#提示词优化)。
-
-模型是否完整遵循执行策略，仍取决于模型能力与任务条件。实际结果应通过代码、运行与证据核对。参考材料与第三方来源见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。
+模型能不能完全照做，还取决于模型本身和任务条件，结果请用代码、运行和证据核对。

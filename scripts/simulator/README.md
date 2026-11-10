@@ -61,7 +61,7 @@ pnpm simulate --self-test
 
 每次运行使用新 HOME、DSH_HOME、profile、workspace、模拟凭证和本地模型，不复制日常配置或材料。默认 `--isolation native` 使用 macOS 外层沙箱限制写入与出网；不可用时失败，不静默降级。宿主内层 full 权限仅属于一次性测试 profile，不取消外层限制。
 
-`--isolation process` 使用模型路由校验和 Node 出网封锁，不提供 OS 沙箱，也不限制所有非 Node 子进程；外层沙箱同样不屏蔽所有可读文件。场景材料使用本次生成的数据。尚未验收的原生 PTY 在创建受控任务前拒绝（`SIM_CAPABILITY_UNVERIFIED`）。
+`--isolation process` 使用模型路由校验和 Node 出网封锁，不提供 OS 沙箱，也不限制所有非 Node 子进程；外层沙箱同样不屏蔽所有可读文件。场景材料使用本次生成的数据。尚未检查过的原生 PTY 在创建受控任务前拒绝（`SIM_CAPABILITY_UNVERIFIED`）。
 
 进程清理核对 PID、父进程、进程组和启动身份，审计中的 PID 不直接授予杀进程权限。正常收尾共用五秒预算，残留、强制清理或迟到清理错误记录为失败。
 

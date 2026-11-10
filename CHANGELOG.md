@@ -780,7 +780,7 @@ This release targets DSH **0.2.1-rc.3** exactly. Paste the fixed package URL int
 | --- | --- | --- |
 | 0.2.1-rc.3 | [OMD 1.1.2](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.2/oh-my-dsh-0.2.1-rc.3.omd.1.1.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.2/SHA256SUMS) |
 
-[安装指南](docs/install.md) · [Installation guide](docs/install_EN.md) · [版本与兼容范围 / Versions and compatibility](docs/releases.md) · [完整桌面 CU 安装条件 / Full desktop CU requirements](docs/install.md#computer-use)
+[安装指南](docs/install.md) · [Installation guide](docs/install_EN.md) · [版本与兼容范围 / Versions and compatibility](https://github.com/gulagala001/oh-my-dsh/releases) · [完整桌面 CU 安装条件 / Full desktop CU requirements](docs/install.md#computer-use)
 
 ---
 
@@ -836,7 +836,7 @@ This release targets DSH **0.2.1-rc.3** exactly. Paste the fixed package URL int
 | --- | --- | --- |
 | 0.2.1-rc.3 | [OMD 1.1.1](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.1/oh-my-dsh-0.2.1-rc.3.omd.1.1.1.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.3.omd.1.1.1/SHA256SUMS) |
 
-[安装指南](docs/install.md) · [Installation guide](docs/install_EN.md) · [版本与兼容范围 / Versions and compatibility](docs/releases.md) · [完整桌面 CU 安装条件 / Full desktop CU requirements](docs/install.md#computer-use)
+[安装指南](docs/install.md) · [Installation guide](docs/install_EN.md) · [版本与兼容范围 / Versions and compatibility](https://github.com/gulagala001/oh-my-dsh/releases) · [完整桌面 CU 安装条件 / Full desktop CU requirements](docs/install.md#computer-use)
 
 ---
 

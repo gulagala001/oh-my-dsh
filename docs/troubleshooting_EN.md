@@ -1,130 +1,109 @@
-# Installation and Usage Troubleshooting
+# Troubleshooting
 
-[简体中文](troubleshooting.md) · [Documentation](README_EN.md) · [First task](getting-started_EN.md) · [Installation](upgrade_EN.md)
+[中文](troubleshooting.md) · [Docs](README_EN.md) · [Getting started](getting-started_EN.md) · [Upgrade](upgrade_EN.md) · [Report a bug](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml)
 
-Keep the first complete error. Check the installed version, running version and data directory separately. Current source is **`0.2.1-rc.3.omd.1.0.0`**, bundling OpenCU `2.2.1`. Check [version matching and host prerequisites](install_EN.md) before changing the installation.
+Find your symptom below. Keep the full error from the first failure; reinstalling or deleting data again and again only makes the problem harder to find.
 
 <a id="check-the-running-environment"></a>
 
-## History blocked by a tool optimization record
+## Check that OMD is in the right place
 
-If the error names `plugin:oh-my-dsh/tool-optimization` and `not marked ignorable`, install OMD 1.0.0 or a later fixed release, restart after active tasks finish, and reopen the conversation. New events use the native plugin record API. Recovery first backs up the original log under `session-record-repair/<session ID>/` in the OMD data directory, acquires the native write lease, adds only the missing marker on recognized statistics records, and atomically publishes after full native validation.
-
-Messages, sequence numbers, tool results, branch references and statistics payloads stay unchanged. Live writer ownership, incomplete trailing frames, unrelated unknown events and identity mismatches retain the original file and report the reason. Do not delete the conversation or bypass native validation. Healthy histories require no repair scan or rewrite.
-
-
-## Check the Running Environment
-
-1. Read the actual DSH version and the version panel's **Current version**. Latest version is not installation success.
-2. Desktop uses the reserved `desktop` profile; Web uses its launch profile. Installation state is separate.
-3. Check the actual process's `DSH_HOME`. Web normally uses the user's `.dsh`; source runs default to repository `data/dsh/`, profile `oh-my-dsh`, and port 3083.
-4. After finishing active work, fully restart desktop or the original Web service. Choose OMD in a new conversation, and check old models, conversations, attachments, and themes after upgrading.
+1. **Version**: the current version in **Settings → Oh My DSH → About** is the OMD that is running; the latest version is only what is online. Check the DSH version separately. OMD 1.3.11 is for DSH 0.2.2-rc.1.
+2. **Desktop or web**: the desktop app installs into the `desktop` profile, the web version into the profile in its start command, and the two do not share plugins.
+3. **Data directory**: the web default is `.dsh` in your user folder. With `pnpm start` from source it is `data/dsh/` in the repository, profile `oh-my-dsh`, port 3083.
+4. **Fully restart and try once**: wait for tasks to finish, fully quit and reopen the desktop app or restart the web service. Create an Oh My DSH session and send a message; after an upgrade, also open an old session.
 
 <a id="package-source"></a>
 
-### Check the Installation Source
+### Check the install source
 
-Repository `gulagala001/oh-my-dsh`, package `oh-my-dsh`, preset `oh-my-dsh`. See [public pairs](upgrade_EN.md#versions-and-success-criteria). Display names do not establish identity; do not install an unrelated npm package with a similar name.
-
-The current candidate is not publicly released. Do not guess with `latest` or relabel a package for another host. New OpenCU is bundled, but its complete UI requires matching Host, Client and preload adapters.
+The repository is `gulagala001/oh-my-dsh` and the package is `oh-my-dsh`. Use the fixed package from the [installation guide](install_EN.md#gui). If the package name, repository or DSH version in the install log does not match, stop and check before updating the wrong target again.
 
 <a id="by-symptom"></a>
 
-## By Symptom
+## By symptom
 
-| Symptom | Action | Result to check |
-| --- | --- | --- |
-| pnpm missing / old Node | Prepare the matching Web/source environment; desktop uses its bundled host. | Correct environment at the actual launch entry. |
-| Incompatible DSH | Check the complete host and [matching package](upgrade_EN.md#versions-and-success-criteria); do not relax peers or use version exemptions. | Preserve a native refusal as a refusal; install only a matching build. |
-| Install scripts need approval | Inspect the exact package, profile, and [build approval](upgrade_EN.md#build-approval) result. | Script completion and the component's actual behavior, not only download completion. |
-| OMD controls missing | Check profile, enabled state, full restart, and preset. | A new OMD conversation shows Workbench. |
-| Current version unchanged | Restart desktop App and Host / fully quit, or restart the original Web backend. | Current version changes to the package actually installed. |
-| Models / old conversations missing | Check directory/profile and [migration](upgrade_EN.md#web-to-desktop). | Original data is visible; do not replace the profile with an empty one. |
-| History fails to load | Preserve logs, error, and ID; follow [recovery](upgrade_EN.md#legacy-history-failure). | Original messages/attachments load; remaining failures are recorded. |
-| Global background conflict | Read latest, compare/merge, then save. | Draft remains; save succeeds without overwriting unseen edits. |
-| Recommended installation fails | Distinguish network, integrity, script, and host-version errors; check whether already installed. | Actual refusal or failure recorded, profile intact, native execution still works. |
-| Monitoring shows `≥` or Unknown | Inspect the selected scope and missing receipts in [monitoring (Chinese)](monitoring.md). | Partial usage stays a lower bound; missing usage is not counted as zero. |
-| Dream job failed or shared memory looks wrong | Inspect source scope and the failed job in [Dream (Chinese)](dream-memory.md). | Private Chat stays private; successful progress is retained and unfinished work can resume. |
-| Theme makes the page unreadable | Use `?omd-skin=default` temporarily, then restore the default in Appearance. | Native controls remain usable; user settings/data are preserved. |
-| Old public CU browser / desktop component fails | Follow the [fixed 0.10 guide](https://github.com/gulagala001/oh-my-dsh/blob/v0.2.1-alpha.1.omd.0.10.0/docs/usage.md#computer-use) for that package. | Capture, input, and permissions checked separately; not a prerequisite for non-CU work. |
+| Symptom | What to do |
+| --- | --- |
+| `pnpm` not found, or Node is too old | The web version and source need Node.js 24.9.0+ and pnpm. The desktop app has its own runtime; install plugins inside the app and do not replace it with system Node |
+| Install says it is incompatible with DSH | Note the actual DSH version and use the matching package from the [installation guide](install_EN.md). Do not switch to `latest` or skip the version check |
+| Build scripts were not approved | See [install scripts were blocked](upgrade_EN.md#build-approval) |
+| Offline check reports missing `node_modules` or a broken manifest | Plain source packages have no offline dependencies. Prepare again on a computer with the same system and architecture, as in [offline install](#offline) |
+| Installed, but OMD does not appear | Check it is in the current profile and enabled, then fully restart. Create a session with Oh My DSH; old sessions keep their preset |
+| Updated, but the current version is unchanged | The version on disk differs from the one running. Fully quit and reopen the desktop app, or restart the web service; reloading the page is not enough |
+| Desktop says the service was updated and the interface version differs | Wait for tasks to finish, then use "Restart app and Host" or fully quit and reopen |
+| Old conversations or model settings are missing | Check `DSH_HOME` and the profile first; see [moving from web to desktop](upgrade_EN.md#web-to-desktop). Do not set everything up again in an empty environment |
+| An old session shows "History failed to load" | See [old sessions that fail to load](upgrade_EN.md#legacy-history-failure). Do not delete records or edit event numbers |
+| Error mentions `plugin:oh-my-dsh/tool-optimization` and `not marked ignorable` | Upgrade to the current version, fully restart and reopen the session. OMD backs up the original log to `oh-my-dsh/session-record-repair/<session ID>/` before repairing it; logs that are being written or cannot be recognized are left untouched with a reason |
+| Global background says another window changed it | Click **Read latest version**, compare and save again; reading never overwrites your draft |
+| A third-party feature fails to install or hangs | Note the error, refresh and check the actual state; do not keep retrying the install |
+| Fast does not appear or fails to save | Check that Subscription Login is installed and the selected model supports Fast |
+| Dream failed for one scope but others have results | Finished parts are kept. Fix the cause and click retry to continue the unfinished scopes. Do not clear the database. See [Dream](dream-memory.md) (Chinese) |
+| A chat is missing from a shared Dream project | Folders created for chats without a workspace are not projects and never share memory. Add a real workspace to share |
+| Global Dream skipped a folder | Check the folders selected for global Dream; selecting none means all. Excluding a folder does not delete existing memory |
+| Monitoring shows `≥`, `—` or an empty trend | `≥` is a known minimum and `—` means the provider did not report it. See [monitoring](monitoring.md) (Chinese) |
+| A relative path landed in another directory | Tools, CodeGraph and Workflow follow the current execution directory; check it first |
+| DeepSeek entry is there but the page or import does not work | The standard desktop app cannot embed web pages; open it in an external browser as prompted. See [DeepSeek Workbench](deepseek-workbench.md) (Chinese) |
+| A computer-use component reports an error | Check that component's error in **Settings → Oh My DSH → Components** and prepare it as prompted. One failing component does not affect other features |
 
-Backend conditions and platform limitations are listed in the [computer-use guide (Chinese)](computer-use.md).
+## Startup failure, blank page or endless `waiting for service`
 
-## Startup Failure, Blank Page, or `waiting for service`
+"Waiting for service" is usually a consequence. Look for the first `failed to import` or startup error and keep the error type, `cause`, package path and stack.
 
-Find the first `failed to import` or startup exception, preserving type, `cause`, package path, and stack.
+- **Desktop**: the error dialog shows a `Diagnostic report` path; keep that log. If it offers to disable third-party plugins and restart, use it to see whether a plugin is involved, but it does not fix dependencies, so do not click it repeatedly.
+- **Web**: keep the first error in the terminal that started the service. If the Plugins page opens, disable the failing plugin, restart and try a native session.
+- **Source**: check that the source, SDK and build output belong to the same DSH version. Test with a separate profile, data directory and port, never your everyday setup.
 
-Desktop: inspect Diagnostic report and use a provided third-party-disable recovery with backup if available. Web: inspect the original terminal and disable the suspect plugin if management opens. Source: check checkout, matching dependencies/build, and stale `link:` paths.
-
-After recovery, diagnose the combination. An OMD UI cannot repair host failure before plugin loading. [Back up first](upgrade_EN.md#2-stop-and-back-up); do not delete `.dsh` or overwrite it with another machine's dependencies. Disabling or uninstalling OMD should preserve native tools, other plugins, configuration, and user data; report a violation rather than deleting evidence.
-
-<details>
-<summary>`ERR_PNPM_MISSING_TARBALL_INTEGRITY`</summary>
-
-The package manager lacks remote archive integrity information. Recommended management verifies a fixed package before native local installation. For an old failed entry, obtain the matching package from that plugin's fixed Release, compare its checksum, and install locally in the current profile. Do not disable integrity checks. Investigate other dependencies' source/lockfiles separately.
-
-</details>
-
-<a id="offline"></a>
+If disabling a plugin fixes it, that only tells you the plugin is involved; the full error is still needed. Do not delete the whole `.dsh` or copy `node_modules` from another computer. Before rebuilding anything, make a [full backup](upgrade_EN.md#backup).
 
 <a id="native-dependencies"></a>
 
-## Missing Native Dependencies, `sharp`, or Windows `EPERM`
+### Missing `sharp` or other native dependencies, or Windows `EPERM`
 
-OMD loads its enhancement runtime separately from the basic Conversation/Chat providers. An enhancement import or initialization failure leaves the conversation UI available and displays the first error, its causes, paths, and stack. Undo, Computer Use, and workflow UI have independent lifecycles. CodeGraph and Computer Use load dependencies on demand; `sharp` loads when taking screenshots. Select another available Agent preset to continue chatting while repairing a failed enhancement. Damage to the host or basic conversation components still requires repairing that installation.
+If enhanced features fail to load, OMD keeps basic chat working and shows the first error in the interface. Rewind, computer use and Workflow load separately, and CodeGraph and `sharp` (for screenshots) only load when used.
 
-1. Fully quit the desktop application and its Host, then back up the actual profile, data, and configuration. A running process can hold native files open on Windows and cause `EPERM`. Stop further installation attempts after a failure and retain the first error.
-2. Reinstall the fixed OMD package matching the exact host version through the original plugin management entry, retaining optionalDependencies. A directory and manifest do not prove its entry, `.node`, or DLL files are intact. `--lockfile-only` updates the lockfile and does not repair disk files. Do not combine dependency files from different versions or platforms or permanently override the official conversation entries to hide a failure.
-3. With the same OS, architecture, and Node runtime as the affected host, run the read-only check against the installed directory (or use `pnpm runtime:check` in a source checkout):
+1. Fully quit DSH and back up the profile, data and settings. Windows reports `EPERM` when files are in use; stop installing at that point and keep the first error.
+2. Reinstall the fixed OMD package that matches your DSH from the original Plugins page. Do not mix dependencies from other versions or platforms.
+3. With the same system, architecture and Node version as the failing DSH, run this in the actual install directory (or `pnpm runtime:check` in the source directory):
 
    ```sh
    node /path/to/profile/node_modules/oh-my-dsh/scripts/check-runtime.mjs
    ```
 
-   It imports the plugin and deferred dependencies independently and generates a PNG with the actual `sharp` instance. Any failure returns a nonzero status with the original error chain. For desktop, run it with the corresponding bundled Node runtime. If only a system Node result is available, record the runtime difference; it does not establish that Electron's runtime works. Offline transfers still require the complete offline check below.
-4. Restart normally and check an existing conversation, a new conversation, and the affected feature. If it still fails, report the first error, exact versions, OS/architecture, profile, and dependency path without credentials or full conversations.
+   It loads the plugin and its deferred dependencies one by one and has `sharp` produce a PNG; any failure returns a non-zero exit code with the original error. For the desktop app, run it with the app's bundled Node.
+4. If it passes, restart as usual and try new and old sessions and the feature that failed. If it still fails, report the first error, full versions, system and architecture, profile and dependency path.
 
-## Offline Transfer and Local Installation
+<a id="offline"></a>
 
-Release `.tgz` files do not include every dependency/runtime. Prepare a complete directory online on the same operating system and architecture, then transfer it intact. Do not move it across platforms or zip an ordinary dependency tree containing absolute links.
+## Offline install
 
-<details>
-<summary>Prepare a portable directory</summary>
+The `.tgz` in a release is only the plugin, without dependencies. An offline package cannot move across systems or architectures; for Windows x64, prepare it on another Windows x64 computer. Do not just zip a directory after `pnpm install`, because its links break on another computer.
 
-Use the target source version, its pinned pnpm and matching lockfile. Prepare on the destination operating system and architecture, following the [source guide](development_EN.md#running-from-source). Choose a new output directory outside the source:
-
-```sh
-pnpm install --frozen-lockfile
-node scripts/prepare-offline.mjs /absolute/path/to/omd-offline
-```
-
-PowerShell:
+On an online computer with the same system and architecture as the target, get the OMD source, Node.js 24.9.0+ and pnpm 11.28.5, and run this from the source root. The output directory must be outside the source and must not exist yet:
 
 ```powershell
 pnpm install --frozen-lockfile
-if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
+if ($LASTEXITCODE -ne 0) { throw 'Dependency install failed' }
 node scripts/prepare-offline.mjs 'C:\omd-offline'
 if ($LASTEXITCODE -ne 0) { throw 'Offline preparation failed' }
 ```
 
-The script prepares distribution files, portable dependencies, builds, and import checks, without conversations or credentials. Failure produces no completed directory.
+On macOS / Linux, run `node scripts/prepare-offline.mjs /absolute/path/omd-offline`. The script takes only the release files, installs a fresh copy of dependencies without symbolic links, builds it and checks the OMD entry, `sharp` and CodeGraph. It never copies your settings, keys or conversations, and produces no directory if a check fails.
 
-1. Archive everything, including hidden content and `node_modules`, then extract to a fixed destination.
-2. Windows: `.\check-offline.cmd`. Other platforms: Node ≥22.19 with `node scripts/check-offline.mjs`.
-3. Desktop's local plugin entry: `link:ABSOLUTE_DIRECTORY`. Web: its matching host CLI with that directory. Retain the directory; a tgz is not the full offline environment.
-4. Match `offline-manifest.json`'s host, restart fully, and check a new conversation/tool call.
+1. Zip the whole output directory (including `node_modules`), copy it to the offline computer and unzip it to a fixed place such as `D:\omd-offline`. Do not split it up or overwrite DSH's own `node_modules`.
+2. On Windows, run `.\check-offline.cmd` in that directory; it uses the bundled runtime, so no Node install is needed. On other systems, run `node scripts/check-offline.mjs`.
+3. In the desktop app, enter `link:D:\omd-offline` (your actual path) under **Plugins → Install → Local**. **Link the whole directory; do not install a `.tgz` or `file:` package.** Keep the directory in place, and reinstall if you move it.
+4. Check that the DSH version matches `hostVersion` in `offline-manifest.json`, fully restart and try a new session with a tool call. For the web version, keep the same `DSH_HOME` and profile and add `link:/absolute/unzipped/path` from the command line, with `--offline` if needed.
 
-Model services must remain reachable; prepare optional components separately.
+Your model service must still be reachable. Browsers, Python, .NET and computer-use components need to be prepared separately.
 
-</details>
+## Reporting a problem
 
-## Reporting a Problem
+Use the [bug template](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml) and include:
 
-Use the [bug template](https://github.com/gulagala001/oh-my-dsh/issues/new?template=bug-report.yml):
+- System and architecture; desktop, web or source; DSH and OMD versions.
+- Install source and profile name; whether the data directory is custom (no need to show private paths).
+- The shortest steps to reproduce, what you expected and what happened, since which version, and whether it happens every time.
+- The first full error and related log lines, screenshots if useful, and what you already tried.
 
-- OS/architecture, desktop/Web/source, actual DSH and OMD current versions.
-- Source, profile, and whether the data directory is custom; omit private full paths.
-- Minimal steps, expected/actual result, frequency, and first affected version.
-- First complete redacted error, screenshots, attempted actions and their real results.
-
-Redact keys, tokens, and private text. Do not upload complete data or credentials. Write Unknown where needed.
+Before posting, hide API keys, sign-in tokens and private conversations. Do not upload the whole data directory or `.credentials.yaml`. Write "unknown" for anything you cannot find.

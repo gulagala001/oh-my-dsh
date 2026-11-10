@@ -10,7 +10,7 @@ This catalog covers independently maintained products, optional integrations, ho
 
 [Project](https://github.com/gulagala001/opencu) · gulagala001 and contributors
 
-Computer and browser observation, interaction, annotations and previews Bundled plugin; also distributed independently。
+Computer and browser observation, interaction, annotations and previews. Bundled plugin; also distributed independently.
 
 - Pinned source / version: [2.2.11-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - License / attribution: See component notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
@@ -19,7 +19,7 @@ Computer and browser observation, interaction, annotations and previews Bundled 
 
 [Project](https://github.com/gulagala001/dsh-workflow) · gulagala001 and contributors
 
-Task planning, execution, budgets and recovery Bundled workflow plugin。
+Task planning, execution, budgets and recovery. Bundled workflow plugin.
 
 - Pinned source / version: [0.1.8-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
@@ -28,7 +28,7 @@ Task planning, execution, budgets and recovery Bundled workflow plugin。
 
 [Project](https://github.com/gulagala001/dsh-undo-plugin) · gulagala001 and contributors
 
-Turn undo and conversation rewind Bundled undo plugin。
+Turn undo and conversation rewind. Bundled undo plugin.
 
 - Pinned source / version: [0.1.11-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/THIRD_PARTY_NOTICES.md)
@@ -37,7 +37,7 @@ Turn undo and conversation rewind Bundled undo plugin。
 
 [Project](https://github.com/gulagala001/dsh-persona-plugin) · gulagala001 and contributors
 
-Personality import, management and global or per-chat selection Bundled personality plugin。
+Personality import, management and global or per-chat selection. Bundled personality plugin.
 
 - Pinned source / version: [0.2.2-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/THIRD_PARTY_NOTICES.md)
@@ -46,7 +46,7 @@ Personality import, management and global or per-chat selection Bundled personal
 
 [Project](https://github.com/gulagala001/dsh-extensions) · gulagala001 and contributors
 
-Manage skills, MCP, instructions, commands and hooks Bundled extension management plugin。
+Manage skills, MCP, instructions, commands and hooks. Bundled extension management plugin.
 
 - Pinned source / version: [0.1.5-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)
@@ -55,7 +55,7 @@ Manage skills, MCP, instructions, commands and hooks Bundled extension managemen
 
 [Project](https://github.com/gulagala001/dsh-deepseek-workbench) · gulagala001 and contributors
 
-DeepSeek web workspace and conversation import Bundled workspace plugin。
+DeepSeek web workspace and conversation import. Bundled workspace plugin.
 
 - Pinned source / version: [0.1.5-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md)
@@ -64,7 +64,7 @@ DeepSeek web workspace and conversation import Bundled workspace plugin。
 
 [Project](https://github.com/gulagala001/dsh-btw) · gulagala001 and contributors
 
-Side chats, local history, follow-ups and independent cancellation Bundled side-chat plugin。
+Side chats, local history, follow-ups and independent cancellation. Bundled side-chat plugin.
 
 - Pinned source / version: [0.1.8-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/LICENSE)
@@ -73,7 +73,7 @@ Side chats, local history, follow-ups and independent cancellation Bundled side-
 
 [Project](https://github.com/gulagala001/dsh-theme-plugin) · gulagala001 and contributors
 
-Themes, colors, backgrounds, fonts and appearance management Independent product sharing appearance source with OMD。
+Themes, colors, backgrounds, fonts and appearance management. Independent product sharing appearance source with OMD.
 
 - Pinned source / version: [SHA256:435fe1335631e736f76c7c15d980b1bdabf2fc6ef8eba20600bcf0f719ea7277](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -82,7 +82,7 @@ Themes, colors, backgrounds, fonts and appearance management Independent product
 
 [Project](https://github.com/gulagala001/dsh-theme-plugin) · gulagala001 and contributors
 
-Animated character interface and whale visuals Theme component distributed with DSH Theme。
+Animated character interface and whale visuals. Theme component distributed with DSH Theme.
 
 - Pinned source / version: [1.0.0-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/glyph-theme/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)
@@ -91,7 +91,7 @@ Animated character interface and whale visuals Theme component distributed with 
 
 [Project](https://github.com/gulagala001/dsh-response-id-reuse) · gulagala001 and contributors
 
-Automatic Responses ID continuation and full-request fallback Bundled backend plugin with shared runtime ownership。
+Automatic Responses ID continuation and full-request fallback. Bundled backend plugin with shared runtime ownership.
 
 - Pinned source / version: [0.1.7-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
@@ -102,16 +102,16 @@ Automatic Responses ID continuation and full-request fallback Bundled backend pl
 
 [Project](https://github.com/ranxianglei/billion-context) · ranxianglei
 
-Long-context compression, original-content recovery and cache diagnostics. Optional recommendation; see compatibility guide for current support。
+Long-context compression, original-content recovery and cache diagnostics. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.1.202](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### dsh-ops
 
-[Project](https://github.com/T-Auto/dsh-ops) · 原作者：T-Auto · 兼容适配：gulagala001
+[Project](https://github.com/T-Auto/dsh-ops) · Original author: T-Auto · adapted by gulagala001
 
-Bounded file, document and shell tools with on-demand discovery. Optional recommendation; see compatibility guide for current support。
+Bounded file, document and shell tools with on-demand discovery. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.2.2-rc.1.ops.0.1.0 / 0.2.1-rc.5.ops.0.1.0 / 0.2.1-rc.3.ops.0.1.0 / 0.2.1-rc.2.ops.0.1.0 / 0.2.1-rc.1.ops.0.1.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -120,7 +120,7 @@ Bounded file, document and shell tools with on-demand discovery. Optional recomm
 
 [Project](https://github.com/gulagala001/dsh-intelligent-ui) · gulagala001
 
-Interactive charts, forms, calculators, simulations and games in answers. Optional recommendation; see compatibility guide for current support。
+Interactive charts, forms, calculators, simulations and games in answers. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.2.2-rc.1.iui.1.0.15 / 0.2.1-rc.5.iui.1.0.14 / 0.2.1-rc.3.iui.1.0.13 / 0.2.1-rc.2.iui.1.0.12 / 0.2.1-rc.1.iui.1.0.12](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -129,7 +129,7 @@ Interactive charts, forms, calculators, simulations and games in answers. Option
 
 [Project](https://github.com/gulagala001/oh-my-agents-above-all) · gulagala001
 
-Choose a Codex, Grok Build, Cursor, Pi Coding Agent or ZCode preset in Settings → OMAA to use with DSH sessions and tools. Optional recommendation; see compatibility guide for current support。
+Choose a Codex, Grok Build, Cursor, Pi Coding Agent or ZCode preset in Settings → OMAA to use with DSH sessions and tools. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.2.2-rc.1.omaa.0.17.10 / 0.2.1-rc.5.omaa.0.17.7 / 0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -138,25 +138,25 @@ Choose a Codex, Grok Build, Cursor, Pi Coding Agent or ZCode preset in Settings 
 
 [Project](https://github.com/V1ki/dsh-plugin-subscriptions) · V1ki
 
-Connect supported subscription providers and discover models. Optional recommendation; see compatibility guide for current support。
+Connect supported subscription providers and discover models. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.9.12](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### OpenDesign
 
-[Project](https://github.com/omegapaopao/dsh-open-design) · omegapaopao · 技能来源：nexu-io/open-design 及各技能作者
+[Project](https://github.com/omegapaopao/dsh-open-design) · omegapaopao · skill sources: nexu-io/open-design and the skill authors
 
-Design skills, templates and design systems. Optional recommendation; see compatibility guide for current support。
+Design skills, templates and design systems. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.1.0-omd.1.0.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
 
 ### Prompt Optimizer
 
-[Project](https://github.com/WestFox-AwA/dsh-prompt-optimizer) · 原作者：啃轮胎的西狐（WestFox-AwA） · 兼容适配：gulagala001
+[Project](https://github.com/WestFox-AwA/dsh-prompt-optimizer) · Original author: 啃轮胎的西狐 (WestFox-AwA) · adapted by gulagala001
 
-Review and clarify requests before sending. Optional recommendation; see compatibility guide for current support。
+Review and clarify requests before sending. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.2.2-rc.1.intent.0.3.4 / 0.2.1-rc.5.intent.0.3.4 / 0.2.1-rc.3.intent.0.3.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -165,7 +165,7 @@ Review and clarify requests before sending. Optional recommendation; see compati
 
 [Project](https://github.com/dsh-market/dsh-market) · dsh-market
 
-Browse and manage community plugins and themes. Optional recommendation; see compatibility guide for current support。
+Browse and manage community plugins and themes. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [1.70.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -174,7 +174,7 @@ Browse and manage community plugins and themes. Optional recommendation; see com
 
 [Project](https://github.com/Minglink/dsh-infinite-gen-4) · Minglink
 
-Prompt research and response-state presentation. Optional recommendation; see compatibility guide for current support。
+Prompt research and response-state presentation. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.4.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -183,7 +183,7 @@ Prompt research and response-state presentation. Optional recommendation; see co
 
 [Project](https://github.com/01Virex/dsh-status-rotator) · 01Virex
 
-Rotating activity text in the interface. Optional recommendation; see compatibility guide for current support。
+Rotating activity text in the interface. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.38.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -192,7 +192,7 @@ Rotating activity text in the interface. Optional recommendation; see compatibil
 
 [Project](https://github.com/sixtysevenlf/dsh-blender-plugin) · sixtysevenlf
 
-Connect DSH tools to Blender. Optional recommendation; see compatibility guide for current support。
+Connect DSH tools to Blender. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [2.6.1](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -201,7 +201,7 @@ Connect DSH tools to Blender. Optional recommendation; see compatibility guide f
 
 [Project](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget) · MeteorNOX
 
-Usage and balance widget with interactive characters. Optional recommendation; see compatibility guide for current support。
+Usage and balance widget with interactive characters. Optional recommendation; see compatibility guide for current support.
 
 - Pinned source / version: [0.4.2](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - License / attribution: See upstream license and notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -212,7 +212,7 @@ Usage and balance widget with interactive characters. Optional recommendation; s
 
 [Project](https://github.com/deepseek-ai/deepseek-harness) · DeepSeek and contributors
 
-Host, sessions, tools and UI components Host, source or asset; scope documented in provenance。
+Host, sessions, tools and UI components. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [0.2.2-alpha.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/dsh.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#dsh)
@@ -221,7 +221,7 @@ Host, sessions, tools and UI components Host, source or asset; scope documented 
 
 [Project](https://openai.com/codex/) · OpenAI; source extraction via REA
 
-Original frontend assets used by OpenCU and provenance Host, source or asset; scope documented in provenance。
+Original frontend assets used by OpenCU and provenance. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [SHA256:403d3944f678e3f56336100d54e21b7f046e5ae168fe8846872c9707c06ab3ce](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
@@ -230,7 +230,7 @@ Original frontend assets used by OpenCU and provenance Host, source or asset; sc
 
 [Project](https://github.com/sst/models.dev) · models.dev contributors
 
-Model pricing data Host, source or asset; scope documented in provenance。
+Model pricing data. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [SHA256:1e6f6274f532e79be26c37cab37a92352b74507f8893345792718c462a9f42ce](https://github.com/gulagala001/oh-my-dsh/blob/main/src/monitor-prices.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#modelsdev-api-pricing-data)
@@ -239,7 +239,7 @@ Model pricing data Host, source or asset; scope documented in provenance。
 
 [Project](https://github.com/linshenkx/prompt-optimizer) · linshenkx and contributors
 
-Prompt optimization templates Host, source or asset; scope documented in provenance。
+Prompt optimization templates. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [SHA256:7d9f0a65779aecd73282732ee6dc6d748ead29ca4da88b0ea6898e4bcef15120](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/prompt-optimizer/manifest.json)
 - License / attribution: MIT at pinned revision · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#prompt-optimizer-templates)
@@ -248,7 +248,7 @@ Prompt optimization templates Host, source or asset; scope documented in provena
 
 [Project](https://github.com/googlefonts/googlesans-flex) · Google and contributors
 
-Google Material typeface Host, source or asset; scope documented in provenance。
+Google Material typeface. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/google-material-expressive/assets/fonts.json)
 - License / attribution: OFL-1.1 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -257,7 +257,7 @@ Google Material typeface Host, source or asset; scope documented in provenance�
 
 [Project](https://github.com/googlefonts/googlesans-code) · Google and contributors
 
-Google Material monospace typeface Host, source or asset; scope documented in provenance。
+Google Material monospace typeface. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/google-material-expressive/assets/fonts.json)
 - License / attribution: OFL-1.1 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -266,7 +266,7 @@ Google Material monospace typeface Host, source or asset; scope documented in pr
 
 [Project](https://github.com/google/fonts) · Google and contributors
 
-Chinese font subsets Host, source or asset; scope documented in provenance。
+Chinese font subsets. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/google-material-expressive/assets/fonts.json)
 - License / attribution: OFL-1.1 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -275,7 +275,7 @@ Chinese font subsets Host, source or asset; scope documented in provenance。
 
 [Project](https://github.com/google/material-design-icons) · Google and contributors
 
-Google Material icons Host, source or asset; scope documented in provenance。
+Google Material icons. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/google-material-expressive/assets/fonts.json)
 - License / attribution: Apache-2.0 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -284,7 +284,7 @@ Google Material icons Host, source or asset; scope documented in provenance。
 
 [Project](https://github.com/JetBrains/JetBrainsMono) · JetBrains and contributors
 
-Claude CLI theme typeface Host, source or asset; scope documented in provenance。
+Claude CLI theme typeface. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [SHA256:a76abf002c49097d146e86740a3105a5d00450b1592e820a1109a8c5680cd697](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/claude-cli-terminal/assets/OFL.txt)
 - License / attribution: OFL-1.1 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#other-bundled-skin-fonts)
@@ -293,7 +293,7 @@ Claude CLI theme typeface Host, source or asset; scope documented in provenance�
 
 [Project](https://github.com/asgeirtj/system_prompts_leaks) · Anthropic; snapshot maintained by asgeirtj
 
-Pinned comparison source for agent prompt adaptation Host, source or asset; scope documented in provenance。
+Pinned comparison source for agent prompt adaptation. Host, source or asset; scope documented in provenance.
 
 - Pinned source / version: [SHA256:eeb4fd3517bf2b72b801c7afa3551eb97af08b998d89df078cea38293ceeb595](https://github.com/gulagala001/oh-my-dsh/blob/main/src/cc-adaptation/prompts/main/01-identity.md)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#codegraph)
@@ -302,7 +302,7 @@ Pinned comparison source for agent prompt adaptation Host, source or asset; scop
 
 [Project](https://github.com/openai/codex) · OpenAI and contributors
 
-Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+Pinned system prompt text and text construction. Necessary host adaptations; originals and licenses included.
 
 - Pinned source / version: [0.164.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/codex/source.json)
 - License / attribution: Apache-2.0 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -311,7 +311,7 @@ Pinned system prompt text and text construction Necessary host adaptations; orig
 
 [Project](https://github.com/asgeirtj/system_prompts_leaks) · asgeirtj collection; text attributed to Cursor
 
-Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+Pinned system prompt text and text construction. Necessary host adaptations; originals and licenses included.
 
 - Pinned source / version: [public sample 2026-06-04](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/cursor/source.json)
 - License / attribution: Collection license; third-party material unverified · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -320,7 +320,7 @@ Pinned system prompt text and text construction Necessary host adaptations; orig
 
 [Project](https://github.com/earendil-works/pi) · Mario Zechner and contributors
 
-Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+Pinned system prompt text and text construction. Necessary host adaptations; originals and licenses included.
 
 - Pinned source / version: [1.4.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/pi/source.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -329,7 +329,7 @@ Pinned system prompt text and text construction Necessary host adaptations; orig
 
 [Project](https://github.com/xai-org/grok-build) · xAI and contributors
 
-Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+Pinned system prompt text and text construction. Necessary host adaptations; originals and licenses included.
 
 - Pinned source / version: [2bdd1d6a](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/grok/source.json)
 - License / attribution: Apache-2.0 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -338,7 +338,7 @@ Pinned system prompt text and text construction Necessary host adaptations; orig
 
 [Project](https://github.com/zai-org/ZCode) · Z.ai and contributors
 
-Pinned system prompt text and text construction Necessary host adaptations; originals and licenses included。
+Pinned system prompt text and text construction. Necessary host adaptations; originals and licenses included.
 
 - Pinned source / version: [3.16.2 (source)](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/zcode/source.json)
 - License / attribution: Apache-2.0 · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -347,7 +347,7 @@ Pinned system prompt text and text construction Necessary host adaptations; orig
 
 [Project](https://github.com/Caho1/open-claude-ui) · Caho1 and contributors
 
-Design tokens and component styling for the Claude Desktop theme Pinned CDS visual adaptation on native DSH components。
+Design tokens and component styling for the Claude Desktop theme. Pinned CDS visual adaptation on native DSH components.
 
 - Pinned source / version: [1.0.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/claude-desktop/source.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#open-claude-ui)

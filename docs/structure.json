@@ -1,5 +1,34 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "published": "0.2.2-rc.1.omd.1.3.11",
+  "repository": {
+    "slug": "gulagala001/oh-my-dsh",
+    "description": "DSH 插件，开箱即用。Ultra 工作流与任务编排 · 长上下文与 Dream 记忆 · AST／CodeGraph 代码理解 · 内置 OpenCU 电脑操作 · Skills／MCP／Hooks 扩展 · 人格与主题定制 — 为您的 DeepSeek Harness 注入强劲动力。最佳 LLM 代理体验，尽在此处。",
+    "homepage": "",
+    "topics": [
+      "ai-agent",
+      "context-management",
+      "deepseek-harness",
+      "dsh",
+      "memory",
+      "plugin",
+      "dsh-plugin",
+      "deepseek-harness-plugin",
+      "dsh-bundle"
+    ]
+  },
+  "names": [
+    "Oh My DSH",
+    "OMD"
+  ],
+  "versions": {
+    "OpenCU": "2.2.11"
+  },
+  "maxPages": 48,
+  "limits": {
+    "README.md": 16000,
+    "README_EN.md": 16000
+  },
   "documents": [
     {
       "path": "CHANGELOG.md",
@@ -17,13 +46,15 @@
       "path": "README.md",
       "role": "home",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "README_EN.md"
     },
     {
       "path": "README_EN.md",
       "role": "home",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "README.md"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -35,25 +66,29 @@
       "path": "docs/README.md",
       "role": "index",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/README_EN.md"
     },
     {
       "path": "docs/README_EN.md",
       "role": "index",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/README.md"
     },
     {
       "path": "docs/architecture.md",
       "role": "development",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/architecture_EN.md"
     },
     {
       "path": "docs/architecture_EN.md",
       "role": "development",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/architecture.md"
     },
     {
       "path": "docs/claude-cli-terminal.md",
@@ -109,19 +144,15 @@
       "path": "docs/development.md",
       "role": "development",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/development_EN.md"
     },
     {
       "path": "docs/development_EN.md",
       "role": "development",
-      "language": "zh",
-      "site": true
-    },
-    {
-      "path": "docs/documentation.md",
-      "role": "development",
-      "language": "bilingual",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/development.md"
     },
     {
       "path": "docs/dream-memory.md",
@@ -133,13 +164,15 @@
       "path": "docs/dsh-ops.md",
       "role": "guide",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/dsh-ops_EN.md"
     },
     {
       "path": "docs/dsh-ops_EN.md",
       "role": "guide",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/dsh-ops.md"
     },
     {
       "path": "docs/extensions.md",
@@ -151,13 +184,15 @@
       "path": "docs/getting-started.md",
       "role": "guide",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/getting-started_EN.md"
     },
     {
       "path": "docs/getting-started_EN.md",
       "role": "guide",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/getting-started.md"
     },
     {
       "path": "docs/google-material-expressive.md",
@@ -169,13 +204,15 @@
       "path": "docs/install.md",
       "role": "guide",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/install_EN.md"
     },
     {
       "path": "docs/install_EN.md",
       "role": "guide",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/install.md"
     },
     {
       "path": "docs/ios-liquid-glass.md",
@@ -199,101 +236,19 @@
       "path": "docs/plugin-compatibility.md",
       "role": "guide",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/plugin-compatibility_EN.md"
     },
     {
       "path": "docs/plugin-compatibility_EN.md",
       "role": "guide",
-      "language": "zh",
-      "site": true
-    },
-    {
-      "path": "docs/plugin-submissions.md",
-      "role": "guide",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/plugin-compatibility.md"
     },
     {
       "path": "docs/prompt-adaptation.md",
       "role": "guide",
-      "language": "zh",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.100.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.100.1.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.100.2.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.101.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.101.1.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.101.2.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.102.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.103.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.99.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.99.1.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.99.2.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-0.99.3.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/releases.md",
-      "role": "release",
       "language": "zh",
       "site": true
     },
@@ -304,28 +259,18 @@
       "site": true
     },
     {
-      "path": "docs/showcase.md",
-      "role": "guide",
-      "language": "zh",
-      "site": true
-    },
-    {
-      "path": "docs/showcase_EN.md",
-      "role": "guide",
-      "language": "zh",
-      "site": true
-    },
-    {
       "path": "docs/site/README.md",
       "role": "guide",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/site/README_EN.md"
     },
     {
       "path": "docs/site/README_EN.md",
       "role": "guide",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/site/README.md"
     },
     {
       "path": "docs/skins.md",
@@ -334,46 +279,52 @@
       "site": true
     },
     {
-      "path": "docs/troubleshooting.md",
-      "role": "guide",
+      "path": "docs/skin-format.md",
+      "role": "development",
       "language": "zh",
       "site": true
     },
     {
-      "path": "docs/troubleshooting_EN.md",
+      "path": "docs/troubleshooting.md",
       "role": "guide",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/troubleshooting_EN.md"
+    },
+    {
+      "path": "docs/troubleshooting_EN.md",
+      "role": "guide",
+      "language": "en",
+      "site": true,
+      "translation": "docs/troubleshooting.md"
     },
     {
       "path": "docs/upgrade.md",
       "role": "guide",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/upgrade_EN.md"
     },
     {
       "path": "docs/upgrade_EN.md",
       "role": "guide",
-      "language": "zh",
-      "site": true
-    },
-    {
-      "path": "docs/upstream-patches/README.md",
-      "role": "guide",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/upgrade.md"
     },
     {
       "path": "docs/usage.md",
       "role": "guide",
       "language": "zh",
-      "site": true
+      "site": true,
+      "translation": "docs/usage_EN.md"
     },
     {
       "path": "docs/usage_EN.md",
       "role": "guide",
-      "language": "zh",
-      "site": true
+      "language": "en",
+      "site": true,
+      "translation": "docs/usage.md"
     },
     {
       "path": "docs/windows.md",
@@ -392,144 +343,26 @@
       "role": "development",
       "language": "zh",
       "site": false
+    }
+  ],
+  "allow": [
+    {
+      "path": "docs/dsh-ops.md",
+      "rule": "version",
+      "text": "v0.2.2-rc.1.omd.1.3.3/",
+      "reason": "dsh-ops 兼容包随 OMD 1.3.3 发行附件发布，后续 OMD 版本没有重新上传"
     },
     {
-      "path": "docs/release-0.104.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
+      "path": "docs/dsh-ops_EN.md",
+      "rule": "version",
+      "text": "v0.2.2-rc.1.omd.1.3.3/",
+      "reason": "dsh-ops 兼容包随 OMD 1.3.3 发行附件发布，后续 OMD 版本没有重新上传"
     },
     {
-      "path": "docs/release-1.0.2.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.0.1.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.0.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.1.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.1.1.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.1.2.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.2.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.2.1.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.2.2.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.2.3.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.0.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.1.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.2.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.3.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.4.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.6.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.5.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.7.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.8.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.9.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.10.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
-    },
-    {
-      "path": "docs/release-1.3.11.md",
-      "role": "release",
-      "language": "bilingual",
-      "site": true
+      "path": "docs/open-design.md",
+      "rule": "version",
+      "text": "opendesign-v0.1.0-omd.1.0.0",
+      "reason": "OpenDesign 技能包单独发在固定的 opendesign tag 下，不随 OMD 版本变化"
     }
   ]
 }

@@ -36,7 +36,6 @@
     "prepack": "npm run metering:check && npm run tools:check && npm run prompts:check && npm run docs:check && node scripts/check-public-files.mjs",
     "prompts:check": "node scripts/check-prompt-styles.mjs",
     "docs:check": "node scripts/check-docs.mjs && node scripts/build-credits.mjs",
-    "docs:write": "node scripts/check-docs.mjs --write",
     "release:check": "node scripts/check-release-assets.mjs",
     "market:check": "node scripts/check-market-release.mjs",
     "credits:write": "node scripts/build-credits.mjs --write",

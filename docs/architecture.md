@@ -1,67 +1,63 @@
-# 插件架构与安装方式
+# 插件结构与共装
 
-[English](architecture_EN.md) · [文档目录](README.md) · [插件共用](plugin-compatibility.md) · [0.100.0 更新说明](release-0.100.1.md#zh-01001)
+[English](architecture_EN.md) · [文档目录](README.md) · [插件兼容](plugin-compatibility.md) · [升级](upgrade.md)
 
-OMD 的功能与插件边界如下：工作流、回合撤回、人格、扩展管理与网页工作台都有各自的插件入口；主题管理和 Glyph 也有独立产品形态。OMD 继续提供组合好的工作台，独立插件则按自己的定位、宿主范围和版本发行。
+OMD 是一套装好就能用的组合。里面的 Workflow、撤回、人格、扩展管理、网页工作台等，也都能作为独立插件单独装。
 
-本页介绍 OMD 0.101.2 的插件结构与对应正式发行。Glyph 随主题插件提供。
+## 各部分也能单独装
 
-## 哪些能力可以独立选择
-
-| 产品 | 负责的能力 | 在 OMD 中怎样使用 | 独立分发状态 |
+| 产品 | 做什么 | 在 OMD 里 | 独立版 |
 | --- | --- | --- | --- |
-| **OpenCU** | 浏览器与原生应用操作、观察、批注、监看和来源 | 已内置，沿用独立插件与内置方共用的入口 | [2.0.8](https://github.com/gulagala001/opencu/releases/tag/v2.0.8-dsh.0.2.1-rc.2)，分别有 rc.1／rc.2 包 |
-| **DSH Workflow** · `dsh-workflow-plus` | 工作流脚本、子代理、阶段面板、后台执行、预算与续跑 | Ultra 的 Workflow 路径及工作流工具使用该能力；原生团队仍由 DSH 提供 | [0.1.2，DSH rc.2](https://github.com/gulagala001/dsh-workflow/releases/tag/v0.1.2-dsh.0.2.1-rc.2) |
-| **DSH Rewind** · `@gulagala001/dsh-undo-plugin` | 回合撤回、已有检查点的文件恢复、撤销撤回与草稿回填 | 已内置，通过消息按钮、双击 Esc、`/rewind` 与 `/undo` 使用 | [0.1.1，DSH rc.2](https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
-| **DeepSeek Workbench** · `dsh-deepseek-workbench` | 网页聊天、临时网页侧栏、开放平台及历史导入 | 在 **Oh My DSH → 功能** 中开关，保留网页聊天与账号入口 | [0.1.1，DSH rc.2](https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.1-dsh.0.2.1-rc.2) |
-| **Extensions** · `dsh-extensions` | Skill、MCP、指令文件、自定义命令和 Hooks | 默认内置启用，入口在插件页 | [0.1.0](https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
-| **Persona** · `@gulagala001/dsh-persona-plugin` | 人格预设、四个表达模块、文件交换及会话人设 | 在 OMD 设置中编辑，在主会话权限菜单选择 | [0.1.0](https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.1.0-dsh.0.2.1-rc.2) |
-| **dsh-theme-plugin** | 外观设置、主题管理、主题市场与安装预检 | 可另行选择主题管理产品；OMD 本身保留内置外观选择 | [0.2.2，DSH rc.2](https://github.com/gulagala001/dsh-theme-plugin/releases/tag/v0.2.2-dsh.0.2.1-rc.2) |
-| **DSH BTW** · `@gulagala001/dsh-btw` | 原生弹窗旁聊、历史、追问与独立取消 | 已内置，使用 `/btw`，主任务继续运行 | [0.1.2，DSH rc.2](https://github.com/gulagala001/dsh-btw/releases/tag/v0.1.2-dsh.0.2.1-rc.2) |
-| **Glyph** · `dsh-glyph-theme` | 字符鲸鱼、字符控件、波纹与思考强度动效 | OMD 外观中的可选主题，新外观配置默认采用 Glyph | 随 Theme 0.2.2 提供，本次无独立发行 |
+| [OpenCU](https://github.com/gulagala001/opencu/releases) | 操作浏览器和桌面应用、观察、批注、监看 | 内置 | 2.2.11 |
+| [DSH Workflow](https://github.com/gulagala001/dsh-workflow/releases) · `dsh-workflow-plus` | 工作流脚本、子智能体、阶段面板、后台执行、预算和续跑 | Ultra 的 Workflow 模式和工作流工具 | 0.1.8 |
+| [DSH Rewind](https://github.com/gulagala001/dsh-undo-plugin/releases) · `@gulagala001/dsh-undo-plugin` | 撤回消息和文件、撤销撤回、内容回填 | 内置：消息按钮、双击 Esc、`/rewind`、`/undo` | 0.1.11 |
+| [DeepSeek Workbench](https://github.com/gulagala001/dsh-deepseek-workbench/releases) · `dsh-deepseek-workbench` | 网页聊天、网页侧栏、开放平台和历史导入 | 在 **设置 → Oh My DSH → 功能** 开关 | 0.1.5 |
+| [DSH Extensions](https://github.com/gulagala001/dsh-extensions/releases) · `dsh-extensions` | Skill、MCP、指令文件、命令和 Hooks | 默认开启，在插件页 | 0.1.5 |
+| [DSH Persona](https://github.com/gulagala001/dsh-persona-plugin/releases) · `@gulagala001/dsh-persona-plugin` | 人格预设、四个模块、导入导出和会话人设 | 在 OMD 设置里编辑，在主会话权限菜单里选 | 0.2.2 |
+| [DSH Theme](https://github.com/gulagala001/dsh-theme-plugin/releases) · `@gulagala001/dsh-theme-plugin` | 外观设置、主题管理、主题市场和安装检查，含 Glyph | OMD 自带外观选择，主题管理可以另装 | 0.3.3 |
+| [DSH BTW](https://github.com/gulagala001/dsh-btw/releases) · `@gulagala001/dsh-btw` | 旁聊、历史、追问和单独停止 | 内置，用 `/btw` | 0.1.8 |
+| [DSH Response ID Reuse](https://github.com/gulagala001/dsh-response-id-reuse/releases) · `@gulagala001/dsh-response-id-reuse` | Responses 渠道的响应 ID 续传 | 内置，无需设置 | 0.1.7 |
 
-独立包按自己的版本更新。一个独立产品已经发布，不代表其旧固定包包含 OMD 当前源码的全部后续修复；请核对该产品的固定 Release 与完整宿主版本。
+独立版各自更新，表里是当前版本，都对应 DSH 0.2.2-rc.1。IUI、OMAA 一直是独立产品；dsh-ops 是第三方工具，在 OMD 的第三方功能页安装。
 
-Intelligent UI、OMAA 等继续按各自独立产品使用；它们不是这次才变为独立插件。dsh-ops 是第三方工具产品，通过 OMD 的第三方功能页选择匹配的兼容包。
+## 一起装时
 
-## 整套安装与共装
+- 要整套功能，装 OMD 就够了，不用再逐个补装里面已有的部分。
+- 只要某一项，按那个产品自己的安装说明装。
+- 同时装了 OMD 和某个独立插件时，两边会协调，不会出现重复的工具、服务或按钮。停用其中一个，另一个接着提供功能。
+- 在 OMD 里关掉一个功能，只关 OMD 这边的入口；另装的独立插件仍在 DSH 插件页管理。
+- 主题管理接管外观时，保留原来的主题和偏好；接管失败就保持现有外观并显示错误。
 
-- 需要 OMD 工作台时，安装对应完整宿主的 OMD 包即可使用其中已内置的能力，不必逐个补装同一功能。
-- 只需要某个独立产品时，按该产品的安装指南选择固定包。表中仅列 rc.2 的独立发行不能用 OMD 的 rc.1 支持范围替它担保。
-- OpenCU、Workflow、Rewind、BTW、Persona、Extensions 和 DeepSeek Workbench 在匹配版本与同一宿主作用域内协调运行时和界面归属，避免重复工具、服务或按钮。停用一方时，仍启用的一方继续持有其能力。
-- 在 OMD 内关闭一个功能，操作的是 OMD 的功能入口；另外安装的独立插件仍由 DSH 插件页管理。查看实际启用来源后再更新或卸载。
-- 主题基座接管外观管理时保留主题与用户偏好的归属；无法完成接管会保留现有外观并显示错误。Glyph 主题包与主题管理产品是不同的安装选择。
+## 基础聊天先启动
 
-## 核心对话与可选增强分开启动
+基础聊天先加载，电脑操作、撤回、Workflow 等功能各自加载。某个功能缺依赖或启动失败，只有它显示错误，聊天照常可用。
 
-基础 Chat／Conversation 先建立，可选的电脑操作、回合撤回、工作流及其他界面增强在各自作用域挂载。某个可选组件缺依赖或启动失败时，界面显示对应错误，并保留基础会话和恢复入口。
+有些功能还要看 DSH 本身：内嵌浏览器和原生监看需要配套的 DSH 桌面版，DeepSeek 网页的持久登录和下载需要桌面版。装插件不会升级或替换 DSH。
 
-能力仍受真实宿主服务与系统权限约束。例如，OpenCU 的内置浏览器和原生监看需要匹配宿主适配；DeepSeek 网页持久登录与下载依赖对应桌面能力。独立插件入口不会自动升级 DSH 或替换桌面程序。
+## 用到时才加载
 
-## 资源按使用场景加载
+较大的字体和样式、Glyph 动画、OpenCU 里较重的客户端都在用到时才加载，启动更快。只要截图的观察不做多余的界面结构读取；需要时才读取详细结构和差异。
 
-主题的较大字体／样式资源、Glyph 绘制器以及 OpenCU 中较重的客户端能力按需加载，减少启动时同步准备的内容。固定安装包携带匹配资源，切换主题和打开功能继续使用原有界面。
+## 原始记录和显示分开
 
-电脑观察按请求需要处理：只要截图的观察避免额外 AX 工作；需要 AX、差分或详情时仍保留相应信息。浮动监看复用已确认交付的图片，窗口重载或图片基线丢失时恢复完整画面。
+任务的完成状态从会话里的 `todo_write` 记录恢复，刷新、恢复会话或取消验证都不会被一份空清单覆盖。监控数据来自每次调用时服务商返回的用量。
 
-## 原生记录与展示视图分开
+上下文优化只改送给模型的内容：先存好原文，再发精简版、差异或引用，原始会话和附件都能回查。OMD 和 Billion Context 只在压缩上二选一，Dream、档案和其他功能照常工作。
 
-任务完成状态从原生会话中的 `todo/write` 恢复，需求摘录和验证结果沿同一任务记录关联；刷新、恢复会话或取消验证不会以另一份空清单覆盖原状态。监控根据真实调用回执生成概览与明细，价格或筛选变化后重新核对派生结果。
-
-上下文优化作用于送入模型的视图，先保存获准原文，再提供精简、差异或引用。PTC 的程序返回值保留原样，原始会话和附件仍可回查。OMD 与 BC 只协调被替代的压缩职责，Dream、档案及其他会话功能继续沿各自的数据边界工作。
+<a id="数据由对应功能保留"></a>
 
 ## 数据由对应功能保留
 
-独立化之后，完整备份应覆盖实际 `DSH_HOME`、profile、会话与附件，以及外部项目和浏览器本地偏好。
+完整备份要包括整个 `DSH_HOME`、profile、会话和附件，以及外部项目和浏览器里的本地偏好。
 
-| 数据 | 位置或归属 |
+| 数据 | 位置 |
 | --- | --- |
-| OMD 上下文、档案、Dream、监控 | `DSH_HOME/oh-my-dsh/`；会话原始记录和附件仍由 DSH 管理 |
-| 人格与会话人设 | `DSH_HOME/dsh-persona-plugin/` 下按 profile 区分；首次接入迁移已有 OMD 人格，同名冲突保留内容 |
-| 回合文件备份与恢复状态 | 默认 `DSH_HOME/rewind-plus/v1/`；自定义存储位置另行保留 |
-| Workflow | 原生会话／执行记录保留原归属；独立预算在 `DSH_HOME/dsh-workflow/`，脚本与 worktree 在相应项目中 |
-| 网页历史导入 | `DSH_HOME/deepseek-workbench/`；网站登录由桌面会话管理 |
-| 扩展配置 | MCP、命令、Hooks 使用对应 DSH 配置；Skill 与指令文件仍在其个人／项目目录 |
-| 外观与主题管理 | 浏览器本地外观／背景偏好，以及主题基座按 profile 保存的库与安装记录 |
+| OMD 上下文、档案、Dream、监控 | `DSH_HOME/oh-my-dsh/`；会话原文和附件由 DSH 管理 |
+| 人格和会话人设 | `DSH_HOME/dsh-persona-plugin/`，按 profile 分开 |
+| 撤回备份 | 默认 `DSH_HOME/rewind-plus/v1/`，自定义位置另外备份 |
+| Workflow | 预算在 `DSH_HOME/dsh-workflow/`，脚本和 worktree 在各自项目里 |
+| 网页历史导入 | `DSH_HOME/deepseek-workbench/`；网站登录由桌面版管理 |
+| 扩展配置 | MCP、命令、Hooks 在 DSH 配置里；Skill 和指令文件在个人或项目目录 |
+| 外观和主题 | 浏览器里的外观和背景偏好，以及主题管理按 profile 保存的主题库和安装记录 |
 
-停用插件保留用户数据。原生会话导出不等于导出了所有独立插件的数据：迁移精简结果的会话时同时携带原文档案，迁移人格时保留 Persona 数据或导出人格文件。详见[升级与备份](upgrade.md)。
+停用插件不会删数据。导出 DSH 会话不包括各插件的数据：迁移会话时把原文档案一起带上，迁移人格时保留 Persona 数据或导出人格文件。见[升级与备份](upgrade.md)。

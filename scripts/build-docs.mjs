@@ -15,7 +15,7 @@ const navigation = [
     ['docs/context-optimization.md', '上下文优化与原文'], ['docs/extensions.md', '扩展管理'], ['docs/deepseek-workbench.md', 'DeepSeek 工作台'],
     ['docs/usage.md#computer-use', '电脑操作'], ['docs/skins.md', '主题与定制'],
     ['docs/workflow.md', 'Ultra 与 Workflow'], ['docs/architecture.md', '插件架构与独立产品'], ['docs/plugin-compatibility.md', '插件兼容性'],
-    ['docs/plugin-submissions.md', '插件投稿'], ['docs/showcase.md', '演示来源'], ['docs/components.md', '项目、组件与致谢']]],
+    ['docs/components.md', '项目、组件与致谢']]],
   ['参与开发', [['docs/development.md', '开发指南'], ['CONTRIBUTING.md', '参与改进'], ['docs/site/README.md', '文档站']]],
 ];
 const englishNavigation = [
@@ -25,7 +25,7 @@ const englishNavigation = [
     ['docs/context-optimization.md#english', 'Context Optimization'], ['docs/extensions.md', 'Extensions'], ['docs/deepseek-workbench.md', 'DeepSeek Workbench'],
     ['docs/usage_EN.md#computer-use', 'Computer Use'], ['docs/skins.md', 'Themes'],
     ['docs/workflow.md', 'Ultra and Workflow'], ['docs/architecture_EN.md', 'Plugin Architecture'], ['docs/plugin-compatibility_EN.md', 'Plugin Compatibility'],
-    ['docs/plugin-submissions.md', 'Plugin Submissions'], ['docs/showcase_EN.md', 'Screenshots and Sources'], ['docs/components_EN.md', 'Projects and Credits']]],
+    ['docs/components_EN.md', 'Projects and Credits']]],
   ['Develop', [['docs/development_EN.md', 'Development Guide'], ['CONTRIBUTING.md', 'Contributing'], ['docs/site/README_EN.md', 'Documentation Site']]],
 ];
 const privateDocument = /^(?:AGENTS|CLAUDE|AI_README|PLAN|OMAA_HANDOFF|PROMPT_MAINTENANCE|PROMPT_CHANGES|COMPUTER_USE_(?:HANDOFF|BASELINE|ASSESSMENT)|WINDOWS_HANDOFF|claude-cli-skin-research|google-material-expressive-research|rea-development|dsh-0\.2-preparation)\.md$/i;
@@ -358,7 +358,6 @@ export async function buildDocs({ root = projectRoot, outDir = path.join(root, '
     ...await assetFiles(root, 'docs/images', file => imageExtensions.has(path.extname(file)) || file === 'docs/images/readme-screenshots.json'),
     ...await assetFiles(root, 'docs/site/media', file => imageExtensions.has(path.extname(file)) || ['.mp4', '.webm'].includes(path.extname(file)) || file === 'docs/site/media/manifest.json'),
     ...await assetFiles(root, 'docs/skin-font-licenses', file => file.endsWith('-OFL.txt')),
-    ...(await regularFile(root, 'docs/upstream-patches/dsh-alpha2-release-output.patch') ? ['docs/upstream-patches/dsh-alpha2-release-output.patch'] : []),
   ];
   for (const file of staticAssets) await regularFile(root, file, true);
   const assets = new Set(staticAssets), output = new Map(staticAssets.map(file => [file, null])), diagrams = [];

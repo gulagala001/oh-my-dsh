@@ -1,70 +1,73 @@
-# Using Other Plugins with OMD
+# Using OMD with other plugins
 
-[简体中文](plugin-compatibility.md) · [Documentation](README_EN.md) · [Installation](install_EN.md)
+[中文](plugin-compatibility.md) · [Docs](README_EN.md) · [Install](install_EN.md) · [Plugin structure](architecture_EN.md)
 
-OMD retains native DSH tools, skills, sessions and third-party entries. **Use plugins built for the complete host version.**
+OMD keeps DSH's native tools, skills, sessions and third-party plugin entries. **Use plugins that match your full DSH version.**
 
-## Match the artifacts
+## Versions must match
 
-The current release targets DSH `0.2.2-rc.1`: OMD `1.0.2` and standalone/bundled OpenCU `2.2.1`. Older rc.1/rc.2 hosts retain their fixed historical builds. Independent projects such as IUI and OMAA need their own matching builds; relabeling the same frontend is not adaptation.
+OMD 1.3.11 is for DSH 0.2.2-rc.1, with OpenCU 2.2.11 built in. Older DSH versions use their own older packages. IUI, OMAA and other separate projects also need the build for your DSH version.
 
-Do not replace current work with old packages, older HEAD or version exemptions. Back up actual data and retain explicit settings, accounts and third-party provenance.
+Do not overwrite an install with an old package or by turning off version checks. Back up your data first and keep your settings, accounts and third-party sources.
 
-## Native tools and ownership
+## Who owns the tools
 
-- The host owns registry, SDK, lookup, scheduling, permissions, cancellation and plugin scopes.
-- OMD provides PTC presentation only within its presets. Ordinary work uses `run_code`; matching scopes retain four direct background controls.
-- Visibility in `standard` is not visibility in every preset. Check actual scoped tools.
-- Request projection is reversible; removal withdraws owned contributions, retaining later third-party wrappers, registrations and public slots.
-- Loader removal preserves original user configuration rather than persisting the whole effective bundle patch.
+- DSH manages tool registration, the SDK, scheduling, permissions, cancellation and plugin scopes.
+- OMD only provides PTC inside its own presets: business tools go through `run_code`, and the four background-job tools stay directly callable.
+- A tool visible in `standard` is not necessarily visible in every preset; check the actual scope.
+- Removing OMD only withdraws what OMD added. Wrappers, registrations and shared slots added later by third parties stay, and your original settings are not rewritten.
 
-[System prompts and tool boundaries (Chinese)](prompt-adaptation.md)
+See [prompt sources](prompt-adaptation.md) (Chinese).
 
 <a id="opencu"></a>
 
-## New OpenCU is bundled
+## OpenCU is built in
 
-New OMD needs no second OpenCU installation. Standalone use remains available; coinstallation shares one core, tool set and presentation implementation. The frozen 1.3.0 transition snapshot has been replaced.
+With OMD installed there is no need to install OpenCU. You can also install OpenCU on its own; installed together, they share the same core and tools.
 
-The complete embedded browser, annotations and native monitor need matching Host, Client and preload adapters. Plugin installation does not automatically patch stock DSH. Text and file tasks do not require desktop control first. [Setup and boundaries (Chinese)](computer-use.md)
+The embedded browser, annotations and native live view need a matching DSH desktop build; installing the plugin never changes stock DSH. Plain text and file work does not need computer use set up first. See [computer and browser](computer-use.md) (Chinese).
 
-## Independent products and composed use
+## Separate plugins
 
-Workflow, Rewind, DeepSeek Workbench, Persona and Extensions have independent formal releases; Glyph is included in the theme plugin. OpenCU remains available independently, and theme management has its own product. See [plugin architecture](architecture_EN.md) for responsibilities, fixed releases and coinstallation. Each product has its own scope and host requirements.
+Workflow, Rewind, DeepSeek Workbench, Persona, Extensions, OpenCU and theme management are all available separately, and Glyph ships with the theme plugin. Each separate version has its own DSH requirement. See [plugin structure](architecture_EN.md).
 
-## Other plugins and integration boundaries
-
-| Project | Boundary |
+| Plugin | Relationship with OMD |
 | --- | --- |
-| **Intelligent UI** | Independent interactive-content capabilities. OMD maintains recommendations, matching artifacts, public slots and tool projection—not its implementation or data. |
-| **OMAA** | Independent presets/features, usable through supported workflow/mode boundaries. |
-| **Subscriptions** | Independent login, account pools, routing and persistent Fast settings. OMD supplies no accounts, quota or server-priority guarantees. |
-| **Intent / requirement understanding** | Independent and off by default, separate from OMD's system instructions and manual draft refinement. |
-| **[dsh-ops](dsh-ops_EN.md)** | File, document and shell tools by T-Auto, with progressive tool discovery and result references. Fixed rc.3 compatibility packages pin upstream `0.4.1`; native mode and PTC retain host permissions, sandbox policies and native tools. |
-| **DeepSeek Workbench** | Independent web-chat and migration product. OMD controls its included entry under Features; a separately installed package is managed by the native plugin page. |
-| **OpenDesign / standard plugins** | Retain independent skills, tools, UI ownership, account requirements and licenses. |
-| **Development-injected projects** | Follow their project instructions when no standard artifact exists; do not disguise them as directly installable packages. |
+| **Intelligent UI** | A separate interactive-content plugin. OMD provides the recommendation, version matching, shared slots and tool access, but not its implementation or data |
+| **OMAA** | Separate agent presets that work with OMD through workflow or mode entries |
+| **Subscription Login** | Separately handles sign-in, account pools, routing and Fast. OMD provides no accounts, quotas or priority |
+| **Intent assistant** | A separate plugin, off by default, unrelated to OMD's prompt enhancements and the ✨ optimizer |
+| **[dsh-ops](dsh-ops_EN.md)** | File, document and command tools by T-Auto, based on upstream 0.4.1; both normal mode and PTC keep DSH's permissions, sandbox and native tools |
+| **DeepSeek Workbench** | The built-in one is toggled under Features; a separately installed one is managed on the DSH Plugins page |
+| **OpenDesign and other standard plugins** | Keep their own skills, tools, interface, account requirements and licenses |
 
-## Recommendations, updates and data
+<a id="recommendations-updates-and-data"></a>
 
-Plugin preflight wraps the running host’s `pluginManager`, independently of marketplace names and without changing marketplace UI. `installBundle`, `setBundleEnabled`, and `setPluginEnabled` entries with an identifiable bundle use the same check. OMD recommended updates check their candidate before removing the old bundle. Checks reuse the selected bundles’ code and enablement, without copying private plugin configuration or accounts; plugins requiring external services may therefore receive an incomplete result. Onboarding follows the visible state and accepts a ready interface without account setup or API keys. Candidate entries must exist in native inventory and finish loading. Blank pages, failed scripts and runtime errors still fail; readiness timeouts are reported as incomplete. This validates basic operation, not every feature or delayed failure.
+## Third-party catalog
 
-On macOS/Linux, the controller and isolated host reuse modules within one temporary process, while the browser remains separate. Host startup, plugin activation, page loading, composer and Settings checks all remain in place; Windows retains its previous separate host process. Package preparation reuses existing native tool caches, including Corepack’s default cache; the trial runtime keeps its isolated environment. Passing requires all checks and process cleanup to finish. Early exits, abnormal exits and cleanup timeouts do not pass.
+**Settings → Oh My DSH → Third-party** lists each plugin's purpose, original author, fixed source, supported DSH version, SHA-256 and status. Entries without a matching DSH version, a package or a release show no install button. Installs use the current profile's plugin manager; the desktop app uses itself or its bundled command line.
 
-Current validation targets an isolated macOS DSH `0.2.2-rc.1` host, including native installation, the dsh-market desktop bridge and isolated startup through the desktop app’s packaged CLI; the running desktop app was not updated. On macOS/Linux, process-tree and temporary-directory sampling stops a check at approximately 2 GiB summed process memory or 1 GiB temporary files; sampling is not an OS hard quota. Windows uses process-tree termination and timeouts, has not been verified on a physical machine, and does not claim equivalent RSS/disk sampling. Other host builds and complete external CLI coverage need separate integration and validation. Preflight installs no resident daemon and does not rewrite the user’s command-line entry points.
+Current catalog: Billion Context 0.1.202, dsh-ops 0.1.0, Subscription Login 0.9.12, OpenDesign 0.1.0-omd.1.0.0, Intent assistant 0.3.4, Plugin Market 1.70.3, Infinite Gen 4 0.4.0, Status Rotator 0.38.0, DSH × Blender 2.6.1 and Balance Whale Widget 0.4.2. Set up accounts, Blender connections and paid requests as each plugin requires.
 
-The catalog lists purpose, original author, fixed source, full host, SHA-256 and state. Unknown hosts, missing artifacts and unpublished targets do not get invented installation entries. Use the current profile's native manager; on desktop, use the app or its bundled CLI.
+- Older or incompatible installs show an **Update** button.
+- Automatic updates are off by default and only handle installed, enabled catalog entries. They never cross DSH versions, approve scripts or restart.
+- dsh-ops only installs registered compatibility builds, never upstream latest. If you install another version from a market or the command line, check it yourself.
 
-Current fixed recommendations: BC 0.1.202, dsh-ops 0.1.0 (rc.3 build), Subscription Login 0.9.11, OpenDesign 0.1.0-omd.1.0.0, Intent Assistant 0.3.3 (rc.3 build), DSH Market 1.70.3, the fixed Infinite Gen 4 0.4.0 source, Status Rotator 0.38.0, DSH × Blender 2.6.1 and Balance Whale Widget 0.4.2. Sources and SHA-256 values are pinned in the catalog. Accounts, Blender connections and paid requests still need the respective plugin configuration.
+## Plugin install pre-check
 
-Older or incompatible installations show an available Update action even alongside an error. Intent Assistant uses the native profile and retains review/automatic modes, read-only checks and draft protection. [Release notes](release-1.0.1.md)
+When you install, update or enable a plugin from the DSH Plugins page, a tool call or the desktop dsh-market, OMD first tries it in a temporary DSH. The plugin has to appear in the plugin list and load; blank pages, script errors and runtime errors are stopped. If it takes too long, it is marked "pre-check incomplete". It checks that the plugin starts properly, not that every feature works.
 
-Automatic updates default off and apply only to eligible installed/enabled releases. They do not cross hosts, approve scripts or restart. Accounts, OAuth, Fast and paid behavior need separate confirmation.
+- The pre-check uses the plugin code and enabled state you selected and copies no third-party private settings or accounts, so plugins that need external services may only show "incomplete". No API key is needed.
+- If first launch shows onboarding it continues through it; going straight to the main screen also counts as normal.
+- On macOS / Linux, the check stops if the processes use about 2 GiB of memory combined or temporary files reach about 1 GiB. Windows uses process-tree termination and timeouts.
+- It passes only after every check and process cleanup has finished. Early exits, crashes or cleanup timeouts never pass.
+- The pre-check installs no background service and leaves your command-line entries alone.
+- For updates from npm sources, it runs once before the whole update. Cancelling it never removes the old version first, and restoring the old version after a failed update is not checked again.
 
-The dsh-ops third-party feature page provides an install/enable switch and selects a fixed compatibility package for the complete host version and runtime target. Disabling retains plugin data. Catalog updates use reviewed compatibility releases rather than upstream `latest`. Updates through an external plugin marketplace or CLI can bypass the catalog pin; check the matching version afterward. [Installation and usage](dsh-ops_EN.md)
+Plugins installed from the command line, npm / pnpm or by editing folders are not pre-checked.
 
-Disable/removal retains conversations, drafts, attachments, settings, short memory and companion data. A saved conversation missing its preset may need that plugin restored.
+## Disabling and removing
 
-Report full versions, loading order, profile, a minimal reproduction and the first redacted error. Do not clear data or disable every enhancement to conceal conflicts. [Troubleshooting](troubleshooting_EN.md) · [Sources and licensing](../THIRD_PARTY_NOTICES.md)
+Disabling or removing OMD keeps conversations, drafts, attachments, settings, short memory and separate plugins' data. Old sessions created with an OMD preset may need OMD installed again to open.
 
-On DSH 0.2.2-rc.1, registry updates use native `updateBundle` for replacement, cancellation and recovery. OMD runs one preflight before removal; cancelling it retains the previous package, and native restoration does not trigger another preflight or substitute the candidate. Fixed GitHub releases retain exact-host, source and digest checks.
+When reporting a conflict, include the full versions of the plugins involved, load order, profile, the shortest steps to reproduce and the first error (with private data removed). Do not clear data or turn off every enhancement to hide a conflict. See [troubleshooting](troubleshooting_EN.md) and [third-party notices](../THIRD_PARTY_NOTICES.md).

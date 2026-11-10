@@ -60,6 +60,7 @@ const dependencyList = [...dependencies.values()].sort((a,b) => (a.name + '@' + 
 const provenance = { lockFiles: Object.fromEntries(lockFiles.map(file => [file, digest(read(file))])), dependencies: dependencyList };
 function link(file) { return 'https://github.com/gulagala001/oh-my-dsh/blob/main/' + file; }
 const cell = text => String(text).replaceAll('|', '\\|').replaceAll('\n',' ');
+const enAuthors = text => String(text).replace('原作者：', 'Original author: ').replace('兼容适配：', 'adapted by ').replace('技能来源：', 'skill sources: ').replace(' 及各技能作者', ' and the skill authors').replace('（', ' (').replace('）', ')');
 function page(language) {
   const english = language === 'en';
   let value = `# ${english ? 'Projects, components and acknowledgements' : '项目、组件与致谢'}\n\n[${english ? '中文' : 'English'}](components${english ? '' : '_EN'}.md) · [${english ? 'Home' : '首页'}](../README${english ? '_EN' : ''}.md) · [${english ? 'Complete notices' : '完整许可声明'}](../THIRD_PARTY_NOTICES.md)\n\n`;
@@ -67,8 +68,8 @@ function page(language) {
   for (const [group,zh,title] of [['products','独立产品与内置组件','Independent products and bundled components'],['optional','可选集成与推荐','Optional integrations and recommendations'],['sources','宿主、数据与素材','Host, data and source assets']]) {
     value += `## ${english ? title : zh}\n\n`;
     for (const entry of projects.filter(p => p.group === group)) {
-      value += `### ${entry.name}\n\n[${english ? 'Project' : '项目'}](${entry.url}) · ${cell(entry.authors)}\n\n`;
-      value += `${entry.purpose[language]} ${entry.relationship[language]}。\n\n`;
+      value += `### ${entry.name}\n\n[${english ? 'Project' : '项目'}](${entry.url}) · ${cell(english ? enAuthors(entry.authors) : entry.authors)}\n\n`;
+      value += english ? `${entry.purpose.en.replace(/\.$/, "")}. ${entry.relationship.en.replace(/\.$/, "")}.\n\n` : `${entry.purpose.zh.replace(/。$/, "")}。${entry.relationship.zh.replace(/。$/, "")}。\n\n`;
       value += `- ${english ? 'Pinned source / version' : '固定来源／版本'}: [${entry.version}](${link(entry.source)})\n- ${english ? 'License / attribution' : '许可／归属'}: ${entry.license} · [${english ? 'Details' : '详细声明'}](${link(entry.notice)})\n\n`;
     }
   }

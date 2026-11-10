@@ -93,7 +93,7 @@ Persona 在独立仓库维护，`node scripts/sync-persona.mjs` 按实际 npm �
 
 Extensions 自定义命令在独立仓库维护，经 `scripts/sync-dsh-extensions.mjs` 同步。每代原生命令服务拥有自己的文件操作队列和注册记录，个人与项目命令按同一规则增量同步；原生 `definitionId` 区分自身注册和其他插件的同名命令，不借用无关会话判断冲突。注册表只保留菜单元数据，发送时读取当前文件并再次检查取消及注册归属；读取或解析失败不能使用旧模板。停用撤销全部所属注册，宿主重启从文件恢复。独立仓库检查模板与取消，OMD core 检查真实 rc.2 注册器的作用域、并发、启停与恢复。
 
-Skill 管理同样在独立 Extensions 维护。固定 rc.2 的 `SkillRegistry.listLayerCandidates` 提供全部原生候选，保留被同名条目覆盖的文件；默认预设经 `agentPresets.acquireScope` 读取并释放，不创建 Agent。文件系统提供方的 `roots`／`get` 统一目录、解析及候选发布检查，正文读取和新建／导入不再另维护发现规则或等待文件监听器。更新宿主时须同时核对这几个接口和 `FileSystemSkillProvider` 类型识别；不支持的宿主明确失败。文件替换、整包发布及注册归属检查由同一写队列收尾，直接使原生目录缓存失效。原生作用域、冷预设、只读正文、根目录保护和发布失败回归在 `test/extensions-skills-native.test.mjs`，进入 core CI；网页验收还应核对技能与指令保存后正文立即刷新。
+Skill 管理同样在独立 Extensions 维护。固定 rc.2 的 `SkillRegistry.listLayerCandidates` 提供全部原生候选，保留被同名条目覆盖的文件；默认预设经 `agentPresets.acquireScope` 读取并释放，不创建 Agent。文件系统提供方的 `roots`／`get` 统一目录、解析及候选发布检查，正文读取和新建／导入不再另维护发现规则或等待文件监听器。更新宿主时须同时核对这几个接口和 `FileSystemSkillProvider` 类型识别；不支持的宿主明确失败。文件替换、整包发布及注册归属检查由同一写队列收尾，直接使原生目录缓存失效。原生作用域、冷预设、只读正文、根目录保护和发布失败回归在 `test/extensions-skills-native.test.mjs`，进入 core CI；网页检查还应核对技能与指令保存后正文立即刷新。
 
 指令管理通过声明的 Loader 依赖导入宿主 `dsh-agent-instructions` 与 `dsh-scope`，从 Cordis 活跃 fiber 读取已校验配置，并调用 `discoverBaselineInstructionFiles`；不读取 profile 的首个声明或另设默认配置。默认预设租约及所选项目主会话的 scope chain 限定候选来源，提交前复查预设版本与取消状态。尚未创建的文件仍需同目录名称校验，项目根沿用共用的标记查找；这是公开发现接口只返回已有文件所需的适配。保存／删除共用一个队列和原子文件写入，链接编辑保留链接、删除不删目标；正文按编辑上限有界读取，JSON 请求预算覆盖转义膨胀。原生源文件上限与本页 1 MiB 编辑上限分别展示，总上下文预算与内容去重仍由宿主控制。`test/extensions-instructions-native.test.mjs` 在 core CI 检查配置、路径、启停、预设替换与恢复；宿主升级须复核 Loader／fiber／scope 和发现接口。
 
@@ -137,7 +137,7 @@ node ../opencu/scripts/cu-liveness.mjs verify --root ./vendor/opencu --profile b
 
 DeepSWE 的本地适配器位于 `scripts/deepswe/`，通过固定版本的 [Pier](https://github.com/datacurve-ai/pier) 在官方 Linux 任务环境中运行实际 DSH／OMD PTC。`snapshot.mjs <已安装 profile> <本地私有 bundle 目录>` 保存模型、插件和配置快照，不复制聊天或记忆；`run.py <评测目录> doctor` 核对环境，`run --task <任务名>`、`run --sample 10 --seed 0` 或 `run --all` 选择范围，`report` 查看回执。评测目录须包含固定的任务集、Pier 虚拟环境、Linux 运行包和 `config/local.json`；凭据、任务原文、参考答案、镜像与运行结果全部留在工作区 `.local/`。每题独立配置与数据，模型运行前比对实际 OMD 配置，官方评分器只在独立干净容器中验证提交的补丁。保留插件配置，但 Linux 环境不提供 macOS 桌面或 Blender 服务；网络遵循任务隔离规则，仅放行已选推理端点。Apple Silicon 上的本地 Colima 环境使用 QEMU，避免 Rosetta 执行宿主原生扩展时卡住；`start`／`stop` 管理专用评测虚拟机。默认串行、一次尝试，失败单列；真实调用消耗所选渠道额度，单题结果不代表全量成绩。该流程按需运行，不接入日常 CI。
 
-`order` 冻结仅依公开题面需求规模预估的难／易交替顺序；`run --concurrency 2` 按此顺序每批最多同时运行两题，已评分题只运行一次。执行异常时清理未评分结果并保留用量汇总，自动重跑一次；再次异常则停止派发，已启动的另一题允许完成。用户明确要求后也可用 `--retry-errors` 重跑未评分的异常或取消题，已评分题不重跑。`monitor` 启动仅监听 `127.0.0.1` 的只读看板（默认 8765，也可用 `--port` 指定），`report` 输出同口径 JSON。每题结束后独立审计，实时显示阶段通过率、费用／Token 趋势、缓存、耗时和队列；网关保留百炼 Session Cache 请求头；仅当本题已知续传返回特定 InvalidParameter 500 时，使用内存中本题已完成的上下文回退完整请求，保留模型、工具与强度；上下文缺失时拒绝回退。2 并发或异常重跑必须通过实际多轮续传及至少一次 500 回退验收。历史连通试跑与合成验收单列，不进入正式成绩。网关 POST 回执按请求去重，GET 回读不重复计费，缓存包含在输入、思考包含在输出；执行异常、取消及待审题不进入通过率分母，缺失用量单列，费用依据 `config/monitor.json`（默认 `monitor-defaults.json`）冻结的公开费率估算，不等同账户实扣。官方 max 为外部参考；图读成本、未公开 Token 及渠道差异明确标记，不冒充同条件实测。轻量离线验证：`python -m unittest discover -s scripts/deepswe -p test_monitor.py`。
+`order` 冻结仅依公开题面需求规模预估的难／易交替顺序；`run --concurrency 2` 按此顺序每批最多同时运行两题，已评分题只运行一次。执行异常时清理未评分结果并保留用量汇总，自动重跑一次；再次异常则停止派发，已启动的另一题允许完成。用户明确要求后也可用 `--retry-errors` 重跑未评分的异常或取消题，已评分题不重跑。`monitor` 启动仅监听 `127.0.0.1` 的只读看板（默认 8765，也可用 `--port` 指定），`report` 输出同口径 JSON。每题结束后独立审计，实时显示阶段通过率、费用／Token 趋势、缓存、耗时和队列；网关保留百炼 Session Cache 请求头；仅当本题已知续传返回特定 InvalidParameter 500 时，使用内存中本题已完成的上下文回退完整请求，保留模型、工具与强度；上下文缺失时拒绝回退。2 并发或异常重跑必须通过实际多轮续传及至少一次 500 回退检查。历史连通试跑与合成检查单列，不进入正式成绩。网关 POST 回执按请求去重，GET 回读不重复计费，缓存包含在输入、思考包含在输出；执行异常、取消及待审题不进入通过率分母，缺失用量单列，费用依据 `config/monitor.json`（默认 `monitor-defaults.json`）冻结的公开费率估算，不等同账户实扣。官方 max 为外部参考；图读成本、未公开 Token 及渠道差异明确标记，不冒充同条件实测。轻量离线验证：`python -m unittest discover -s scripts/deepswe -p test_monitor.py`。
 
 防作弊边界位于独立 TLS 网关和容器层：真实凭据不进入任务容器，只放行指定模型的 Responses 请求与本题响应回读；阻止托管搜索、远程媒体、跨题响应、更换主 PTC 强度及普通外网／DNS 出站。任务不能访问控制器、参考答案或 Docker 接口。配置与插件文件在结束时再次核验；官方测试报告在另一个无网络、只读容器中复算，可疑补丁、分数不一致和缺失证据单列待复核，不计可信通过，原始结果保留。可信通过率以请求的全部任务为分母。`probe.py <评测目录>`、`--positive`、`--scoring` 分别验证攻击边界、真实 OMD 调用及评分审计。此流程不保证识别所有运行时测试取巧。
 
@@ -161,12 +161,6 @@ DeepSWE 的本地适配器位于 `scripts/deepswe/`，通过固定版本的 [Pie
 
 插件预检的页面适配位于 `src/plugin-preflight/page.mjs`，按原生加载清单和实际可交互页面判断，不把可选账号引导作为必经步骤。改动此处可定点运行 `test/plugin-preflight-page.test.mjs`（已有浏览器，`OMD_TEST_BROWSER` 指定路径）；通常无需重复完整宿主矩阵。第三方适配包使用固定输入构建器，保持精确宿主声明、完整功能与来源许可。
 
-## 检查与发布流程
+## 检查与发布
 
-发布后运行 `npm run market:check -- --output .local/market-release`。检查器核对已发布的固定包、SHA256、完整宿主版本、Awesome 条目、已有更新 PR 和实际公开目录，并生成同宿主条目更新草稿。它不会自动提交 PR 或发送评论。按状态处理：`needs-entry-update` 提交原条目更新；`awaiting-review` 使用现有 PR；`awaiting-catalog` 等待目录实际发布；`installation-synced` 才表示安装入口生效。宿主发生变化或旧包宿主无法核实时，先核对兼容范围。发行附件 CI 保存状态回执，外部审核不阻止源码发行，也不能被当成已经同步。每次外部写入前重新读取市场贡献指南与已有反馈。
-
-源码 CI 先执行 `npm run build`，再执行 `node scripts/test-ci.mjs run core --built`，复用同一份产物并一次汇总回归失败；独立 `npm test` 会准备计量模块。真实安装包仍单独核验。Chromium 布局检查仅跟随相关 UI、宿主源码和依赖锁变更，手动 CI 可用 `layout` 开启。公开文件与文档结构共用快速工作流；main 的文档变更检查、构建并自动发布到 Pages。
-
-文档构建通过 `OMD_DOCS_CHROMIUM` 复用 runner 预装的 Chrome 渲染静态 Mermaid，不下载另一份浏览器。旧桌面／rc.2 热安装验收报告验证器不再随每次 PR 自动运行，真实宿主验收时按需调用；实际源码的 OpenCU 导入和会话控制器就绪检查已合并进 core。Release 附件工作流仅在发布／编辑 Release 或手动触发时核对对应 tag，不随无关源码推送重复下载旧包。
-
-DSH 0.2.2-rc.1 构建保留原始源码提交与 tag，并在 `vendor/host-artifacts.json` 单独记录目标官方 npm 工件。构建核对被复用模块的完整实现、类型声明及源文件与目标 SDK 的逐文件摘要；SDK、框架和锁仍精确匹配 rc.1。桌面适配前还须将未修改源码的七个桌面入口重建为官方 rc.1 的相同字节，不能将旧源码重新标为新版。
+CI、发版、Release 附件检查和市场同步见[贡献说明](../CONTRIBUTING.md#发版)。离线跑整套宿主流程用[模拟器](https://github.com/gulagala001/oh-my-dsh/blob/main/scripts/simulator/README.md)。

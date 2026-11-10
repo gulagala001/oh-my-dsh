@@ -22,7 +22,7 @@ Do not host the whole repository. Hosting only the source `docs` directory leave
 
 ## Publication Boundary
 
-`scripts/build-docs.mjs` uses `marked` and `htmlparser2` with an explicit list of public guides, release notes, and assets. It checks internal links and sections. Private document and work-data references, machine-local absolute links, symlinks, missing targets, and duplicate IDs stop the build. Raw research, internal implementation plans, handoffs, account configuration, and work records are excluded.
+`scripts/build-docs.mjs` uses `marked` and `htmlparser2` with an explicit list of public guides, release notes, and assets. It checks internal links and sections. Private document and work-data references, machine-local absolute links, symlinks, missing targets, and duplicate IDs stop the build. Raw research, internal plans, account configuration, and work records are excluded.
 
 Source and vendor references link to GitHub without publishing those trees in the static output. The presence of release notes does not mean an unpublished candidate has a public release package.
 
@@ -38,7 +38,7 @@ Diagrams use static labels and descriptions; scripts, interactive links, and rem
 
 The README and product page share the Oh My DSH character-whale hero image.
 
-`media/manifest.json` records screenshot hashes and the relationship between originals and cropped details. Screenshots show the same Launchpad sample task across requirements, browser actions, recall, and file checks. See [screenshots and sources (Chinese)](../showcase.md) for the demonstration limits. The static site does not execute model calls, authentication, or installation.
+`media/manifest.json` records screenshot hashes and the relationship between originals and cropped details. Screenshots show the same Launchpad sample task across requirements, browser actions, recall, and file checks. The static site does not execute model calls, authentication, or installation.
 
 ## Release Links
 

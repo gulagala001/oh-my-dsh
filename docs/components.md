@@ -10,7 +10,7 @@
 
 [项目](https://github.com/gulagala001/opencu) · gulagala001 and contributors
 
-电脑与浏览器观察、操作、批注和预览 内置插件；支持独立安装与共装。
+电脑与浏览器观察、操作、批注和预览。内置插件；支持独立安装与共装。
 
 - 固定来源／版本: [2.2.11-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - 许可／归属: See component notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
@@ -19,7 +19,7 @@
 
 [项目](https://github.com/gulagala001/dsh-workflow) · gulagala001 and contributors
 
-任务规划、执行、预算与恢复 内置工作流插件。
+任务规划、执行、预算与恢复。内置工作流插件。
 
 - 固定来源／版本: [0.1.8-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
@@ -28,7 +28,7 @@
 
 [项目](https://github.com/gulagala001/dsh-undo-plugin) · gulagala001 and contributors
 
-完整回合撤回与会话回退 内置撤回插件。
+完整回合撤回与会话回退。内置撤回插件。
 
 - 固定来源／版本: [0.1.11-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/THIRD_PARTY_NOTICES.md)
@@ -37,7 +37,7 @@
 
 [项目](https://github.com/gulagala001/dsh-persona-plugin) · gulagala001 and contributors
 
-人格导入、管理、全局和会话选择 内置人格插件。
+人格导入、管理、全局和会话选择。内置人格插件。
 
 - 固定来源／版本: [0.2.2-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/THIRD_PARTY_NOTICES.md)
@@ -46,7 +46,7 @@
 
 [项目](https://github.com/gulagala001/dsh-extensions) · gulagala001 and contributors
 
-管理技能、MCP、指令、命令与 Hooks 内置扩展管理插件。
+管理技能、MCP、指令、命令与 Hooks。内置扩展管理插件。
 
 - 固定来源／版本: [0.1.5-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)
@@ -55,7 +55,7 @@
 
 [项目](https://github.com/gulagala001/dsh-deepseek-workbench) · gulagala001 and contributors
 
-DeepSeek 网页工作台和历史导入 内置工作台插件。
+DeepSeek 网页工作台和历史导入。内置工作台插件。
 
 - 固定来源／版本: [0.1.5-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md)
@@ -64,7 +64,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 [项目](https://github.com/gulagala001/dsh-btw) · gulagala001 and contributors
 
-临时旁聊、历史、追问和独立停止 内置旁聊插件。
+临时旁聊、历史、追问和独立停止。内置旁聊插件。
 
 - 固定来源／版本: [0.1.8-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/LICENSE)
@@ -73,7 +73,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 [项目](https://github.com/gulagala001/dsh-theme-plugin) · gulagala001 and contributors
 
-主题、配色、背景、字体和外观管理 独立产品；OMD 与它共用外观源码。
+主题、配色、背景、字体和外观管理。独立产品；OMD 与它共用外观源码。
 
 - 固定来源／版本: [SHA256:435fe1335631e736f76c7c15d980b1bdabf2fc6ef8eba20600bcf0f719ea7277](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -82,7 +82,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 [项目](https://github.com/gulagala001/dsh-theme-plugin) · gulagala001 and contributors
 
-动态字符界面与字符鲸鱼视觉 主题组件；随主题插件提供。
+动态字符界面与字符鲸鱼视觉。主题组件；随主题插件提供。
 
 - 固定来源／版本: [1.0.0-dsh.0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/glyph-theme/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)
@@ -91,7 +91,7 @@ DeepSeek 网页工作台和历史导入 内置工作台插件。
 
 [项目](https://github.com/gulagala001/dsh-response-id-reuse) · gulagala001 and contributors
 
-Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共装时共享一份运行实例。
+Responses 响应 ID 自动续传与完整请求回退。内置后端插件；共装时共享一份运行实例。
 
 - 固定来源／版本: [0.1.7-dsh.0.2.2-rc.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
@@ -102,7 +102,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/ranxianglei/billion-context) · ranxianglei
 
-管理长会话的上下文压缩、原文恢复和缓存诊断；在 OMD 上下文页按会话切换。 可选安装／推荐；当前兼容范围见插件兼容说明。
+管理长会话的上下文压缩、原文恢复和缓存诊断；在 OMD 上下文页按会话切换。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.1.202](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -111,7 +111,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/T-Auto/dsh-ops) · 原作者：T-Auto · 兼容适配：gulagala001
 
-增强文件、文档与命令操作，按需加载工具并复用结果；支持普通模式和 PTC，保留原生工具。 可选安装／推荐；当前兼容范围见插件兼容说明。
+增强文件、文档与命令操作，按需加载工具并复用结果；支持普通模式和 PTC，保留原生工具。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.2.2-rc.1.ops.0.1.0 / 0.2.1-rc.5.ops.0.1.0 / 0.2.1-rc.3.ops.0.1.0 / 0.2.1-rc.2.ops.0.1.0 / 0.2.1-rc.1.ops.0.1.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -120,7 +120,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/gulagala001/dsh-intelligent-ui) · gulagala001
 
-在回答中使用交互图表、表单、计算器、模拟和小游戏。 可选安装／推荐；当前兼容范围见插件兼容说明。
+在回答中使用交互图表、表单、计算器、模拟和小游戏。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.2.2-rc.1.iui.1.0.15 / 0.2.1-rc.5.iui.1.0.14 / 0.2.1-rc.3.iui.1.0.13 / 0.2.1-rc.2.iui.1.0.12 / 0.2.1-rc.1.iui.1.0.12](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -129,7 +129,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/gulagala001/oh-my-agents-above-all) · gulagala001
 
-在「设置 → OMAA」选择 Codex、Grok Build、Cursor、Pi Coding Agent 或 ZCode 预设，沿用 DSH 会话和工具。 可选安装／推荐；当前兼容范围见插件兼容说明。
+在「设置 → OMAA」选择 Codex、Grok Build、Cursor、Pi Coding Agent 或 ZCode 预设，沿用 DSH 会话和工具。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.2.2-rc.1.omaa.0.17.10 / 0.2.1-rc.5.omaa.0.17.7 / 0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -138,7 +138,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/V1ki/dsh-plugin-subscriptions) · V1ki
 
-登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。 可选安装／推荐；当前兼容范围见插件兼容说明。
+登录 ChatGPT、Claude、Grok、Copilot 或 Antigravity 订阅，自动发现模型；支持 ChatGPT Fast、订阅额度及生图。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.9.12](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -147,7 +147,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/omegapaopao/dsh-open-design) · omegapaopao · 技能来源：nexu-io/open-design 及各技能作者
 
-使用 52 个设计技能、模板和设计系统，技能入口为 open-design。 可选安装／推荐；当前兼容范围见插件兼容说明。
+使用 52 个设计技能、模板和设计系统，技能入口为 open-design。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.1.0-omd.1.0.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -156,7 +156,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/WestFox-AwA/dsh-prompt-optimizer) · 原作者：啃轮胎的西狐（WestFox-AwA） · 兼容适配：gulagala001
 
-发送前梳理本轮需求，保留原话，支持审查、自动模式和只读查证；启用后可在输入框选择模式。 可选安装／推荐；当前兼容范围见插件兼容说明。
+发送前梳理本轮需求，保留原话，支持审查、自动模式和只读查证；启用后可在输入框选择模式。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.2.2-rc.1.intent.0.3.4 / 0.2.1-rc.5.intent.0.3.4 / 0.2.1-rc.3.intent.0.3.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -165,7 +165,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/dsh-market/dsh-market) · dsh-market
 
-在 DSH 内浏览、搜索和安装社区插件与主题，支持分类筛选、更新管理及配置备份。安装后在设置中打开插件市场。 可选安装／推荐；当前兼容范围见插件兼容说明。
+在 DSH 内浏览、搜索和安装社区插件与主题，支持分类筛选、更新管理及配置备份。安装后在设置中打开插件市场。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [1.70.3](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -174,7 +174,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/Minglink/dsh-infinite-gen-4) · Minglink
 
-用于提示词对抗研究和回复状态展示；启用后会向所有会话注入内容生成提示词。 可选安装／推荐；当前兼容范围见插件兼容说明。
+用于提示词对抗研究和回复状态展示；启用后会向所有会话注入内容生成提示词。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.4.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -183,7 +183,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/01Virex/dsh-status-rotator) · 01Virex
 
-把“深度求索中…”替换为轮换文案，支持打字机、彩色渐变、弹幕和主题词库，可在设置中编辑。 可选安装／推荐；当前兼容范围见插件兼容说明。
+把“深度求索中…”替换为轮换文案，支持打字机、彩色渐变、弹幕和主题词库，可在设置中编辑。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.38.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -192,7 +192,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/sixtysevenlf/dsh-blender-plugin) · sixtysevenlf
 
-让模型直接操控 Blender：查看视口、编辑场景、渲染、批量任务与事务回滚。需要 Blender 及配套连接插件。 可选安装／推荐；当前兼容范围见插件兼容说明。
+让模型直接操控 Blender：查看视口、编辑场景、渲染、批量任务与事务回滚。需要 Blender 及配套连接插件。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [2.6.1](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -201,7 +201,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget) · MeteorNOX
 
-在 DSH 界面显示 DeepSeek 余额、今日用量与每轮消耗，支持拖拽吸附、自定义角色和互动泡泡。 可选安装／推荐；当前兼容范围见插件兼容说明。
+在 DSH 界面显示 DeepSeek 余额、今日用量与每轮消耗，支持拖拽吸附、自定义角色和互动泡泡。可选安装／推荐；当前兼容范围见插件兼容说明。
 
 - 固定来源／版本: [0.4.2](https://github.com/gulagala001/oh-my-dsh/blob/main/src/recommended-plugin-catalog.mjs)
 - 许可／归属: See upstream license and notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/plugin-compatibility.md)
@@ -212,7 +212,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://github.com/deepseek-ai/deepseek-harness) · DeepSeek and contributors
 
-宿主、会话、工具与界面组件 宿主／来源／素材，具体使用范围见来源记录。
+宿主、会话、工具与界面组件。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [0.2.2-alpha.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/dsh.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#dsh)
@@ -221,7 +221,7 @@ Responses 响应 ID 自动续传与完整请求回退 内置后端插件；共�
 
 [项目](https://openai.com/codex/) · OpenAI; source extraction via REA
 
-OpenCU 使用的原始界面组件及来源记录 宿主／来源／素材，具体使用范围见来源记录。
+OpenCU 使用的原始界面组件及来源记录。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [SHA256:403d3944f678e3f56336100d54e21b7f046e5ae168fe8846872c9707c06ab3ce](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
@@ -230,7 +230,7 @@ OpenCU 使用的原始界面组件及来源记录 宿主／来源／素材，具
 
 [项目](https://github.com/sst/models.dev) · models.dev contributors
 
-模型价格数据 宿主／来源／素材，具体使用范围见来源记录。
+模型价格数据。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [SHA256:1e6f6274f532e79be26c37cab37a92352b74507f8893345792718c462a9f42ce](https://github.com/gulagala001/oh-my-dsh/blob/main/src/monitor-prices.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#modelsdev-api-pricing-data)
@@ -239,7 +239,7 @@ OpenCU 使用的原始界面组件及来源记录 宿主／来源／素材，具
 
 [项目](https://github.com/linshenkx/prompt-optimizer) · linshenkx and contributors
 
-提示词优化模板 宿主／来源／素材，具体使用范围见来源记录。
+提示词优化模板。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [SHA256:7d9f0a65779aecd73282732ee6dc6d748ead29ca4da88b0ea6898e4bcef15120](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/prompt-optimizer/manifest.json)
 - 许可／归属: MIT at pinned revision · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#prompt-optimizer-templates)
@@ -248,7 +248,7 @@ OpenCU 使用的原始界面组件及来源记录 宿主／来源／素材，具
 
 [项目](https://github.com/googlefonts/googlesans-flex) · Google and contributors
 
-Google Material 字体 宿主／来源／素材，具体使用范围见来源记录。
+Google Material 字体。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/google-material-expressive/assets/fonts.json)
 - 许可／归属: OFL-1.1 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -257,7 +257,7 @@ Google Material 字体 宿主／来源／素材，具体使用范围见来源记
 
 [项目](https://github.com/googlefonts/googlesans-code) · Google and contributors
 
-Google Material 等宽字体 宿主／来源／素材，具体使用范围见来源记录。
+Google Material 等宽字体。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/google-material-expressive/assets/fonts.json)
 - 许可／归属: OFL-1.1 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -266,7 +266,7 @@ Google Material 等宽字体 宿主／来源／素材，具体使用范围见来
 
 [项目](https://github.com/google/fonts) · Google and contributors
 
-中文字体子集 宿主／来源／素材，具体使用范围见来源记录。
+中文字体子集。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/google-material-expressive/assets/fonts.json)
 - 许可／归属: OFL-1.1 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -275,7 +275,7 @@ Google Material 等宽字体 宿主／来源／素材，具体使用范围见来
 
 [项目](https://github.com/google/material-design-icons) · Google and contributors
 
-Google Material 图标 宿主／来源／素材，具体使用范围见来源记录。
+Google Material 图标。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [SHA256:60df2acfe528583efd4f3757b5a023fada111b19292a0d853cbc9cd6e755f35c](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/google-material-expressive/assets/fonts.json)
 - 许可／归属: Apache-2.0 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
@@ -284,7 +284,7 @@ Google Material 图标 宿主／来源／素材，具体使用范围见来源记
 
 [项目](https://github.com/JetBrains/JetBrainsMono) · JetBrains and contributors
 
-Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源记录。
+Claude CLI 主题字体。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [SHA256:a76abf002c49097d146e86740a3105a5d00450b1592e820a1109a8c5680cd697](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/claude-cli-terminal/assets/OFL.txt)
 - 许可／归属: OFL-1.1 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#other-bundled-skin-fonts)
@@ -293,7 +293,7 @@ Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源�
 
 [项目](https://github.com/asgeirtj/system_prompts_leaks) · Anthropic; snapshot maintained by asgeirtj
 
-主代理提示词适配的固定比较来源 宿主／来源／素材，具体使用范围见来源记录。
+主代理提示词适配的固定比较来源。宿主／来源／素材，具体使用范围见来源记录。
 
 - 固定来源／版本: [SHA256:eeb4fd3517bf2b72b801c7afa3551eb97af08b998d89df078cea38293ceeb595](https://github.com/gulagala001/oh-my-dsh/blob/main/src/cc-adaptation/prompts/main/01-identity.md)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#codegraph)
@@ -302,7 +302,7 @@ Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源�
 
 [项目](https://github.com/openai/codex) · OpenAI and contributors
 
-系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+系统提示词风格的固定原文与文本构建。必要宿主适配；原文与许可随包保留。
 
 - 固定来源／版本: [0.164.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/codex/source.json)
 - 许可／归属: Apache-2.0 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -311,7 +311,7 @@ Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源�
 
 [项目](https://github.com/asgeirtj/system_prompts_leaks) · asgeirtj collection; text attributed to Cursor
 
-系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+系统提示词风格的固定原文与文本构建。必要宿主适配；原文与许可随包保留。
 
 - 固定来源／版本: [public sample 2026-06-04](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/cursor/source.json)
 - 许可／归属: Collection license; third-party material unverified · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -320,7 +320,7 @@ Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源�
 
 [项目](https://github.com/earendil-works/pi) · Mario Zechner and contributors
 
-系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+系统提示词风格的固定原文与文本构建。必要宿主适配；原文与许可随包保留。
 
 - 固定来源／版本: [1.4.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/pi/source.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -329,7 +329,7 @@ Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源�
 
 [项目](https://github.com/xai-org/grok-build) · xAI and contributors
 
-系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+系统提示词风格的固定原文与文本构建。必要宿主适配；原文与许可随包保留。
 
 - 固定来源／版本: [2bdd1d6a](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/grok/source.json)
 - 许可／归属: Apache-2.0 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -338,7 +338,7 @@ Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源�
 
 [项目](https://github.com/zai-org/ZCode) · Z.ai and contributors
 
-系统提示词风格的固定原文与文本构建 必要宿主适配；原文与许可随包保留。
+系统提示词风格的固定原文与文本构建。必要宿主适配；原文与许可随包保留。
 
 - 固定来源／版本: [3.16.2 (source)](https://github.com/gulagala001/oh-my-dsh/blob/main/src/prompt-styles/upstream/zcode/source.json)
 - 许可／归属: Apache-2.0 · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#system-prompt-style-sources)
@@ -347,7 +347,7 @@ Claude CLI 主题字体 宿主／来源／素材，具体使用范围见来源�
 
 [项目](https://github.com/Caho1/open-claude-ui) · Caho1 and contributors
 
-Claude Desktop 主题的设计令牌与组件视觉规范 固定版本的 CDS 样式适配；交互由 DSH 原生组件提供。
+Claude Desktop 主题的设计令牌与组件视觉规范。固定版本的 CDS 样式适配；交互由 DSH 原生组件提供。
 
 - 固定来源／版本: [1.0.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/claude-desktop/source.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#open-claude-ui)
