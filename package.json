@@ -3,7 +3,7 @@
   "version": "0.2.2-rc.1.omd.1.3.12",
   "private": true,
   "type": "module",
-  "description": "DSH 增强插件：长上下文、任务验证、提示词优化、代码理解、电脑操作，以及 DSH 原生界面与可选主题、配色和背景。",
+  "description": "DeepSeek Harness 增强插件：上下文压缩与 Dream 记忆、Ultra 多智能体、OpenCU 电脑操作、代码理解、扩展管理、人格和主题。",
   "packageManager": "pnpm@11.28.5",
   "repository": {
     "type": "git",
