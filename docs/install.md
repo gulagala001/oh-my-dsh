@@ -15,14 +15,14 @@
 3. 点左侧 **插件**，再点右上角 **＋ 添加插件**，粘贴：
 
    ```text
-   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.12/oh-my-dsh-0.2.2-rc.1.omd.1.3.12.tgz
+   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
    ```
 
 4. 点 **安装**，装完确认 Oh My DSH 已启用。
 5. 完整退出再打开桌面版；网页版要重启原来的 Web 服务，只刷新网页不算。
 6. 新建会话，预设选 **Oh My DSH**。
 
-安装包名里前半段是 DSH 版本，`omd.` 后面的才是 OMD 版本。请用上面的固定安装包，不要直接装仓库的 main 分支，也不用下载 Source code 或 host-adapters.zip。校验文件：[SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.12/SHA256SUMS)。
+安装包名里前半段是 DSH 版本，`omd.` 后面的才是 OMD 版本。请用上面的固定安装包，不要直接装仓库的 main 分支，也不用下载 Source code 或 host-adapters.zip。校验文件：[SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/SHA256SUMS)。
 
 安装报错时先核对 DSH 版本。提示"构建脚本未批准"时，看[安装脚本处理](upgrade.md#build-approval)。
 
@@ -64,7 +64,7 @@ OMD 默认让 AI 直接读写文件、运行命令，不逐条询问；你在 pr
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.12/oh-my-dsh-0.2.2-rc.1.omd.1.3.12.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
 ```
 
 然后按原来的方式启动，数据目录和端口都不变。
@@ -72,7 +72,7 @@ dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/d
 第一次用网页版（Windows 请用 PowerShell 7）：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.2-rc.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.12/oh-my-dsh-0.2.2-rc.1.omd.1.3.12.tgz
+npx --yes @deepseek-ai/dsh@0.2.2-rc.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
 npx --yes @deepseek-ai/dsh@0.2.2-rc.1 --profile web
 ```
 
@@ -82,7 +82,7 @@ macOS 桌面版默认位置的命令行：
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.12/oh-my-dsh-0.2.2-rc.1.omd.1.3.12.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
 ```
 
 Windows 桌面版建议直接用插件页安装。

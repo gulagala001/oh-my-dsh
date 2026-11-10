@@ -11,7 +11,7 @@
 | 桌面版 | 用应用里的插件页或应用自带的命令行安装。桌面版的 `desktop` profile 是单独的，网页版的命令行管不到它 |
 | 网页版或源码 | Node.js 24.9.0+、Git、PowerShell 7，以及仓库 `packageManager` 指定的 pnpm（当前 11.28.5） |
 
-当前 OMD 1.3.12 对应 DSH 0.2.2-rc.1。旧版 DSH 用对应的旧版安装包，见[安装指南](install.md)。
+当前 OMD 1.3.13 对应 DSH 0.2.2-rc.1。旧版 DSH 用对应的旧版安装包，见[安装指南](install.md)。
 
 ## 安装
 

@@ -1,3 +1,39 @@
+# Oh My DSH 1.3.13 · DSH 0.2.2-rc.1
+
+[中文](#zh-1313) · [English](#en-1313)
+
+<a id="zh-1313"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复自动压缩恢复后仍显示“整理异常”的问题，已有会话的过期错误会自动清除。
+- 输入预算不足时显示等待状态，避免反复重试和重复通知；调整预算、模型或上下文后可继续压缩。
+
+<a id="en-1313"></a>
+
+## English
+
+### Bug Fixes
+
+- Clear stale “organization error” indicators after automatic compaction recovers, including errors saved in existing conversations.
+- Wait when the input budget is insufficient instead of repeating requests and notifications. Compaction can resume after the budget, model or context changes.
+
+## 安装 / Installation
+
+适用于 **DSH 0.2.2-rc.1**、Node.js **24.9.0+**。等当前任务结束后，按宿主提示重载。
+
+Requires **DSH 0.2.2-rc.1** and Node.js **24.9.0+**. Finish active tasks, then reload when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.1 | [Oh My DSH 1.3.13](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/SHA256SUMS) |
+
+[安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md)
+
+---
+
 # Oh My DSH 1.3.12 · DSH 0.2.2-rc.1
 
 [中文](#zh-1312) · [English](#en-1312)

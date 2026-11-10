@@ -8,7 +8,7 @@ Find your symptom below. Keep the full error from the first failure; reinstallin
 
 ## Check that OMD is in the right place
 
-1. **Version**: the current version in **Settings → Oh My DSH → About** is the OMD that is running; the latest version is only what is online. Check the DSH version separately. OMD 1.3.12 is for DSH 0.2.2-rc.1.
+1. **Version**: the current version in **Settings → Oh My DSH → About** is the OMD that is running; the latest version is only what is online. Check the DSH version separately. OMD 1.3.13 is for DSH 0.2.2-rc.1.
 2. **Desktop or web**: the desktop app installs into the `desktop` profile, the web version into the profile in its start command, and the two do not share plugins.
 3. **Data directory**: the web default is `.dsh` in your user folder. With `pnpm start` from source it is `data/dsh/` in the repository, profile `oh-my-dsh`, port 3083.
 4. **Fully restart and try once**: wait for tasks to finish, fully quit and reopen the desktop app or restart the web service. Create an Oh My DSH session and send a message; after an upgrade, also open an old session.
