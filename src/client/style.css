@@ -48,6 +48,8 @@ html[data-omd-skin] .tx-app input[type=checkbox]{ accent-color: var(--omd-switch
 @container txpanel (max-width: 330px) { .tx-app h2 { font-size: 18px; } }
 @media (prefers-reduced-motion: reduce) { .tx-app *, .tx-app *::before, .tx-app *::after { animation: none !important; transition: none !important; } }
 
+/* The native settings container owns scrolling, including expanded controls. */
+.tx-app.omd-appearance { height: auto; min-height: 100%; overflow: visible; }
 .omd-appearance-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
 .omd-appearance-row :is(select,.omd-native-select) { width: min(260px, 100%); }
 .omd-appearance-row input[type=file] { max-width: 100%; width: 260px; }
