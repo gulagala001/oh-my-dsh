@@ -1,0 +1,11 @@
+[
+  "@deepseek-ai/dsh-tools",
+  "@deepseek-ai/dsh-tools/pipeline",
+  "@deepseek-ai/cordis",
+  "@deepseek-ai/dsh-brand",
+  "@deepseek-ai/dsh-llm",
+  "@deepseek-ai/dsh-sandbox",
+  "@deepseek-ai/dsh-util-values",
+  "@deepseek-ai/dsh-scope",
+  "@deepseek-ai/schemastery"
+]
