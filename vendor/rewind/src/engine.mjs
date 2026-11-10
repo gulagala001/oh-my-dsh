@@ -1,3 +1,4 @@
+import { inputBoundaries, expandedRanges } from './boundary.mjs';
 import { readNativeSession } from './session-read.mjs';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { appendPluginRecord } from '@deepseek-ai/dsh-session';
@@ -120,18 +121,15 @@ export class RewindEngine {
     }
   }
   state(st,events=this.ctx.sessions.get(st.id)?.snapshotEvents()||[]){
-    const internal=st.internalRanges||[];
-    const maintenanceTurns=[],hiddenTurns=[],hiddenStepSeqs=new Set();let turn,stepSeq,seenHuman=false;
+    const internal=st.internalRanges||[],ranges=expandedRanges(events,st.hiddenRanges);
+    const maintenanceTurns=[],hiddenTurns=[],hiddenStepSeqs=new Set();
     let maintenanceSteps=0;
     for(const e of events){
-      if(e.type==='turn/start'){turn=e.data.turn;stepSeq=undefined;seenHuman=false;if(hidden(internal,e.seq)){maintenanceTurns.push(turn);hiddenTurns.push(turn);}}
-      if(e.type==='step/start')stepSeq=e.seq;
+      if(e.type==='turn/start'){if(hidden(internal,e.seq))maintenanceTurns.push(e.data.turn);if(hidden(ranges,e.seq))hiddenTurns.push(e.data.turn);}
       if(e.type==='step/start'&&hidden(internal,e.seq))maintenanceSteps++;
-      if(e.type==='step/start'&&hidden(st.hiddenRanges,e.seq))hiddenStepSeqs.add(e.seq);
-      if(e.type==='user/message'&&e.data.source?.kind==='user'){if(hidden(st.hiddenRanges,e.seq)){if(!seenHuman)hiddenTurns.push(turn);if(stepSeq!==undefined)hiddenStepSeqs.add(stepSeq);}seenHuman=true;}
-      if(e.type==='step/end')stepSeq=undefined;
+      if(e.type==='step/start'&&hidden(ranges,e.seq))hiddenStepSeqs.add(e.seq);
     }
-    return {revision:st.revision,hiddenRanges:st.hiddenRanges,hiddenTurns:[...new Set(hiddenTurns)],hiddenSteps:hiddenStepSeqs.size,maintenanceTurns:maintenanceTurns.length,maintenanceSteps,undoAvailable:st.undo.length>0,busy:!!st.journal,warning:st.warning||null,pendingDraft:st.pendingDraft||null};
+    return {revision:st.revision,hiddenRanges:ranges,hiddenTurns:[...new Set(hiddenTurns)],hiddenSteps:hiddenStepSeqs.size,maintenanceTurns:maintenanceTurns.length,maintenanceSteps,undoAvailable:st.undo.length>0,busy:!!st.journal,warning:st.warning||null,pendingDraft:st.pendingDraft||null};
   }
 
   async acknowledge(id,token){return this.store.lock(id,async()=>{const st=await this.store.load(id);if(st.pendingDraft?.id===token){st.pendingDraft=null;await this.store.save(st);}return this.state(st);});}
@@ -170,6 +168,7 @@ export class RewindEngine {
       const s=this.session(id);let st=await this.store.load(id);if(st.journal)throw Error('存在未完成的撤回，请先恢复中断操作');
       const base=undo?st.undo.at(-1):null;if(undo&&!base)throw Error('没有可撤销的撤回');
       const target=undo?null:userTarget(s,seq,st.hiddenRanges),checkpoint=undo?null:st.checkpoints[s.eventAt(seq)?.data.id];
+      const boundary=undo?undefined:inputBoundaries(eventsOf(s)).get(seq)??seq;
       const warnings=['已发送消息、网站操作、数据库和其他外部副作用不会被撤销。'];
       let reason='',changes=[],root;
       if(undo){
@@ -193,18 +192,18 @@ export class RewindEngine {
           changes=[...map.values()].filter(c=>!equal(c.before,c.after));
         }
       }
-      if(!undo&&eventsOf(s).some(e=>e.seq>=seq&&e.type==='plugin:dsh-rewind-plus/backup-gap'&&!hidden(st.hiddenRanges,e.seq)))reason='这一段有文件变化未能完整备份，已保留现场，不能自动覆盖文件。';
+      if(!undo&&eventsOf(s).some(e=>e.seq>=boundary&&e.type==='plugin:dsh-rewind-plus/backup-gap'&&!hidden(st.hiddenRanges,e.seq)))reason='这一段有文件变化未能完整备份，已保留现场，不能自动覆盖文件。';
       const busy=this.waves.has(root)||this.ctx.agents.list().some(a=>a.status==='running'&&this.owner(a).id===id);
       if(busy)reason='会话仍在执行，请先停止并重新检查。';
       const foreign=this.ctx.agents.list().filter(a=>a.status==='running'&&this.owner(a).id!==id);
       for(const a of foreign){try{if(await this.root(a.session)===root)reason='同一工作区还有其他会话正在执行。';}catch{}}
       try{await this.files.validate(root,changes);}catch(e){reason=e.message;}
-      const context=undo?base.context:{atSeq:seq};
+      const context=undo?base.context:{atSeq:boundary};
       if(Array.isArray(context))warnings.push('这份旧撤销备份没有任务历史截点；对话和文件恢复后，任务清单保持现状。');
       // Preflight every native append before offering the confirmation.
       prepareReplay(s,context,this.projections());
       const plan={id:randomUUID(),sessionId:id,revision:st.revision,seq:s.seq,expires:Date.now()+5*60000,undo,target,root,changes,context,
-        metadata:undo?base.metadata:this.metadata(s,seq),ranges:undo?base.ranges:[...st.hiddenRanges,{start:seq,end:s.seq-1}],reason};
+        metadata:undo?base.metadata:this.metadata(s,boundary),ranges:undo?base.ranges:[...st.hiddenRanges,{start:boundary,end:s.seq-1}],reason};
       this.plans.set(plan.id,plan);await this.maintenance?.pin(plan);
       for(const [key,p]of this.plans)if(p.expires<Date.now()){this.plans.delete(key);await this.maintenance?.unpin(key);}
       while(this.plans.size>16){const key=this.plans.keys().next().value;this.plans.delete(key);await this.maintenance?.unpin(key);}

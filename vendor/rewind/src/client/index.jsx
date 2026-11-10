@@ -4,6 +4,7 @@ import {Button,Modal,Tooltip} from '@deepseek-ai/dsh-client-ui-primitives';
 import {decorateSlotComponent} from './slot-decoration.mjs';
 import {acquireShared} from '../shared.mjs';
 import {installEntryPoints} from './entry-points.mjs';
+import {hiddenNode,visibleGroup} from './visibility.mjs';
 export const name='dsh-undo-plugin-client';
 export const inject=['slots','sessions','conversation'];
 const EMPTY={revision:0,hiddenRanges:[],undoAvailable:false};
@@ -17,7 +18,6 @@ export function install(ctx){
   const useStateOf=id=>useSyncExternalStore(subscribe,()=>states.get(id)||EMPTY);
   const load=async id=>{try{update(id,await api('state',{sessionId:id}));}catch(error){update(id,{...(states.get(id)||EMPTY),error:error.message});}};
   const input=id=>ctx.conversation.input.for(ctx.sessions.scope(id));
-  const blocked=(node,ranges)=>contains(ranges,node?.anchorSeq??node?.data?.seq);
   const projectionAdapter=(props,state)=>{
     const cache=new Map();
     return key=>{const value=props.useProjection(key),old=cache.get(key);if(old&&old.input===value)return old.output;let output=value;
@@ -44,11 +44,9 @@ export function install(ctx){
     return function RewindFlow(props){
       const state=useStateOf(props.sessionId),nodes=props.useChat(s=>s.nodes),ranges=state.hiddenRanges;
       const useChatGroup=(key,selector)=>props.useChatGroup(key,group=>{
-        if(!group)return selector(group);
-        const members=group.members.filter(m=>!blocked(nodes.get(m.key),ranges));
-        return selector(members.length?{...group,members}:undefined);
+        return selector(visibleGroup(group,nodes,state));
       });
-      const entries=ranges.length?props.entries.filter(e=>e.kind!=='node'||!blocked(nodes.get(e.key),ranges)):props.entries;
+      const entries=ranges.length?props.entries.filter(e=>e.kind!=='node'||!hiddenNode(nodes.get(e.key),state)):props.entries;
       return <Original {...props} entries={entries} useChatGroup={useChatGroup}/>;
     };
   }));
