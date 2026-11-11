@@ -21,6 +21,7 @@ OMD 发行包不重复携带 OpenCU 的独立注册包 `vendor/opencu/lib/client
 ```sh
 git clone --branch v0.2.1-alpha.1.omd.0.10.0 https://github.com/gulagala001/oh-my-dsh.git
 cd oh-my-dsh
+node scripts/prepare-host-sdk.mjs
 pnpm install --frozen-lockfile
 pnpm build
 pnpm start
@@ -148,7 +149,7 @@ DeepSWE 的本地适配器位于 `scripts/deepswe/`，通过固定版本的 [Pie
 
 工具执行性能可用 `npm run perf:tools -- --root <源码根> --out <本地 .local/report.json> --repeats 7` 按需评测。先准备匹配 SDK 依赖及计量生成物；真实宿主 Workflow 场景还需模拟器已有构建，截图场景使用已安装 Chromium，不自动下载。基线和候选使用同一份评测工具、宿主、环境及 `size`／`repeats`／`idle-ms`，候选附 `--baseline <基线 JSON>`；`--cases` 可限定场景。报告分列新进程初始化后的首次操作与热操作，记录完整耗时、首个有效回执、局部阶段、事件循环延迟、CPU、采样进程树 RSS、闲置、取消清理和结果等价性；没有观测到的指标保留 null。21 个系列逐项注明实际覆盖层级，隔离宿主使用本地协议模型，不代表远端模型或 GUI 性能。嵌套阶段不可相加，小样本 p95 只描述本次样本，未清空操作系统缓存。`--idle-ms 31000 --cases article` 可观察正文计算 worker 的自动回收，显式关闭耗时另列；AST 场景会先执行取消检查，其闲置数据不单独证明自动回收。`node scripts/tool-performance/native-candidates.mjs --root <源码根> --out <本地 .local/candidates.json>` 单独测原生写入／编辑的大差异回执与持久 Bash 的实际轮询、就绪等待和取消；其中 worker 只是等价计算候选，不会安装到宿主。
 
-工具内部优化保持模型工具契约、提示词、agent loop、跨工具调度及 PTC 状态模式不变。大段 AST 和所有正文解析使用同一算法的单个懒加载计算 worker，闲置 30 秒回收；小段 AST 直接计算。正文依赖检查也执行同一个 worker 入口，避免桌面宿主的模块路由干扰 jsdom 内部加载。AST 树按内容和语言有界复用，取消会结束当前纯计算。原文查询仅缓存已确认深冻结的日志前缀，按原算法匹配和校验游标；缓存不保持整个 Session，最多三个有界前缀并在闲置后释放，可变快照仍完整扫描。DSH 0.2.2-rc.1 的匿名网页读取已使用原生共享 Undici dispatcher；OMD 不再包装 provider 或建立第二套连接池，连接复用、代理、跳转、字节上限、取消与超时均遵循当前原生实现。
+工具内部优化保持模型工具契约、提示词、agent loop、跨工具调度及 PTC 状态模式不变。大段 AST 和所有正文解析使用同一算法的单个懒加载计算 worker，闲置 30 秒回收；小段 AST 直接计算。正文依赖检查也执行同一个 worker 入口，避免桌面宿主的模块路由干扰 jsdom 内部加载。AST 树按内容和语言有界复用，取消会结束当前纯计算。原文查询仅缓存已确认深冻结的日志前缀，按原算法匹配和校验游标；缓存不保持整个 Session，最多三个有界前缀并在闲置后释放，可变快照仍完整扫描。DSH 0.2.2-rc.2 的匿名网页读取已使用原生共享 Undici dispatcher；OMD 不再包装 provider 或建立第二套连接池，连接复用、代理、跳转、字节上限、取消与超时均遵循当前原生实现。
 
 图片、上下文预算和空闲预处理见[上下文整理与原文回查](context-workflow.md)；来源与许可见[第三方声明](../THIRD_PARTY_NOTICES.md)。
 

@@ -180,10 +180,10 @@ export function apply(ctx: Context): void {
           try {
             const { signal: _signal, label, ...inputs } = request
             const nativeActivation = await ctx.subagents.startActivation({ provider: WORKFLOW_PROVIDER, childId,
-              label: label ?? 'Workflow child', request: inputs, signal, delivery: 'caller' })
+              label: label ?? 'Workflow child', ...inputs, signal, delivery: 'caller' })
             let disposal: Promise<void> | undefined
             let quiesced = false
-            const activation: WorkflowActivation = { get quiesced() { return quiesced }, childId: nativeActivation.childId, messageId: nativeActivation.messageId, result: nativeActivation.result,
+            const activation: WorkflowActivation = { get quiesced() { return quiesced }, childId: nativeActivation.childId, name: nativeActivation.name, messageId: nativeActivation.messageId, result: nativeActivation.result,
               dispose() {
                 disposal ??= (async () => {
                   // Native disposal joins owned descendants before a checkout is inspected.

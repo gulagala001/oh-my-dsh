@@ -1,7 +1,7 @@
 {
   "name": "@gulagala001/dsh-response-id-reuse",
-  "version": "0.1.7-dsh.0.2.2-rc.1",
-  "description": "Transparent, no-probe Responses ID continuation for DeepSeek Harness.",
+  "version": "0.1.8-dsh.0.2.2-rc.2",
+  "description": "Continue Responses API conversations in DeepSeek Harness by sending only new content and the previous response ID. No UI, no probe requests.",
   "type": "module",
   "license": "MIT",
   "author": "gulagala001",
@@ -12,7 +12,7 @@
   },
   "engines": {
     "node": ">=24.9.0",
-    "dsh": "0.2.2-rc.1"
+    "dsh": "0.2.2-rc.2"
   },
   "dsh": {
     "bundle": {
@@ -34,17 +34,16 @@
     "test": "node --test test/*.test.mjs",
     "check": "node --check src/index.mjs && node --check src/engine.mjs && node --check src/replay.mjs && node --check src/recovery.mjs && node --check src/shared.mjs",
     "docs:check": "node scripts/check-docs.mjs",
-    "docs:write": "node scripts/check-docs.mjs --write",
     "check:public": "node scripts/check-public-files.mjs",
     "prepack": "npm run check && npm run docs:check && npm run check:public"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.1"
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.2"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.1"
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.2"
   },
   "keywords": [
     "dsh-plugin",

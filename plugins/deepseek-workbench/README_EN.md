@@ -2,108 +2,95 @@
 
 <h1 align="center">DeepSeek Workbench</h1>
 
-<p align="center"><strong>Use DeepSeek web chat in DSH and bring history into native conversations.</strong><br>DeepSeek Harness plugin</p>
+<p align="center"><strong>Use DeepSeek web chat inside DSH, and turn a chat into a DSH conversation when you want to keep working on it.</strong><br>A DeepSeek Harness plugin</p>
 
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.5-dsh.0.2.2-rc.1"><img alt="0.1.2" src="https://img.shields.io/badge/release-0.1.5-0969da?style=flat-square"></a>
-  <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-deepseek-workbench/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.6-dsh.0.2.2-rc.2"><img alt="DeepSeek Workbench 0.1.6" src="https://img.shields.io/badge/release-0.1.6-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases"><img alt="GitHub downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-deepseek-workbench/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-deepseek-workbench/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-deepseek-workbench?style=flat-square&amp;color=0969da"></a>
 </p>
 
-<p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="docs/usage_EN.md">Docs</a> · <a href="https://github.com/gulagala001/dsh-deepseek-workbench/issues">Report an issue</a></p>
+<p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="docs/usage_EN.md">Full usage</a> · <a href="https://github.com/gulagala001/dsh-deepseek-workbench/issues">Feedback</a></p>
 
-<p align="center"><a href="docs/images/temporary-chat.png"><img src="docs/images/temporary-chat.png" alt="DeepSeek 临时侧栏聊天 / Temporary DeepSeek side chat" width="880"></a></p>
+<p align="center"><a href="docs/images/temporary-chat.png"><img src="docs/images/temporary-chat.png" alt="Temporary DeepSeek side chat" width="880"></a></p>
 
 <a name="readme-install"></a>
 
 ## Quick start
 
-**Required environment：** DSH **0.2.2-rc.1**, Node.js **24.9.0+**.
-
-Embedded web chat requires DSH Desktop. Persistent login, website downloads and extended platform pages need matching desktop adapters. DSH Web provides external links. Web-chat login and API-platform authorization are separate.
+**Requires:** the DSH **0.2.2-rc.2** desktop app and Node.js **24.9.0+**. In the browser version of DSH, web chat only opens in an external browser.
 
 ### 1. Install
 
-Open **Plugins → Add plugin** in the DSH instance you use, then paste:
+In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-deepseek-workbench-0.1.5-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.6-dsh.0.2.2-rc.2.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.5-dsh.0.2.2-rc.1/SHA256SUMS).
+When your current task finishes, enable the plugin or restart DSH when prompted. Your settings and conversations stay as they were. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.6-dsh.0.2.2-rc.2/SHA256SUMS).
 
-### 2. Try this first
+### 2. Try it
 
-Choose **DeepSeek web chat** in the sidebar, sign in to the official chat service and open a regular conversation.
+Click **DeepSeek web chat** in the left sidebar, sign in to `chat.deepseek.com`, open an earlier chat and click **Continue in DSH**.
 
-**Success looks like：** You can browse web history. “Continue in DSH” creates a native conversation; you decide when to send the next message.
+DSH creates a new conversation with that chat's messages and attachments. Whether to send the next message is up to you.
 
-## Connect web chat with native work
+## What it does
 
-- **Web chat**: browse website history, send messages and use deep thinking, web search and attachments in the main view.
-- **Temporary sidebar**: `/侧栏（网页版）` opens a separate temporary conversation alongside your main chat.
-- **Continue in DSH**: migrate readable history and attachments into a native conversation using DSH models and tools.
-- **API platform**: open the platform from account settings; matching host interfaces can reuse current API authorization.
+- **Web chat**: browse your DeepSeek history and send messages in the main DSH view, with DeepThink, web search and attachments.
+- **Temporary sidebar**: type `/侧栏（网页版）` to open a separate temporary chat beside the main one. Closing it deletes that DeepSeek conversation.
+- **Continue in DSH**: turn a web chat into a DSH conversation and carry on with the models and tools configured in DSH. The original web chat stays.
+- **API platform**: open the DeepSeek platform from **Settings → Account** to manage API keys.
 
-Regular web chat retains website history. Temporary side chat owns a separate website conversation and waits for deletion before closing. If deletion fails, the panel remains for retry. Main and other website conversations remain independent.
+The web chat account and the API platform account sign in separately.
 
-## Requirements
+## Scope
 
-| Scenario | Support and conditions |
+| Environment | What works |
 | --- | --- |
-| Standard rc.2 desktop embedding | Isolated pages and reading, with website chat login. |
-| Persistent login, downloads and extended platform pages | Matching desktop source adapters. |
-| Browser-based DSH | External website entry points. |
-| History migration | Only readable content; inaccessible attachments are reported. Website instructions and tools are not replayed. |
+| DSH desktop app | Web chat, temporary sidebar, Continue in DSH, platform entry. You sign in again after each restart, and DeepSeek downloads are unavailable |
+| DSH desktop with the desktop adaptation | All of the above, plus sign-in that survives restarts, DeepSeek downloads and an embedded platform page. See [desktop adaptation](docs/desktop-host_EN.md) |
+| DSH in a browser | Opens in an external browser only |
 
-[Desktop host requirements](docs/desktop-host_EN.md) · [Full usage](docs/usage_EN.md)
+Continue in DSH brings over only what it can read. You are told about attachments it cannot read, and instructions or tool calls in the web chat are never run again.
 
 ## FAQ
 
 <details>
-<summary>Why does website chat ask me to sign in again?</summary>
+<summary>Why do I have to sign in to DeepSeek after every restart?</summary>
 
-Website chat login and API-platform authorization are separate. Persistent login also depends on the matching desktop host’s storage capabilities. Follow the plugin’s actual capability notice.
-
-</details>
-
-<details>
-<summary>Why does closing a temporary sidebar take time?</summary>
-
-Closing first deletes this temporary website conversation. If cleanup fails, the panel stays open for retry; hiding a panel is not proof that the website record was deleted.
+The standard DSH desktop app does not keep sign-in state for these pages. To keep it across restarts, use DSH with the [desktop adaptation](docs/desktop-host_EN.md). The web chat and the API platform are separate accounts and need separate sign-ins.
 
 </details>
 
 <details>
-<summary>Will updating or uninstalling delete existing chats?</summary>
+<summary>Why does closing the temporary sidebar take a moment?</summary>
 
-Close temporary panels and confirm cleanup first, then update/remove the package and restart. Migrated DSH conversations and regular website history remain with their respective services. The desktop host manages website login data.
+It deletes this temporary DeepSeek conversation first and closes once that is done. If deletion fails, for example when offline, the panel stays open with an error. Close it again once you are back online.
+
+</details>
+
+<details>
+<summary>Do updates or uninstalling delete my chats?</summary>
+
+No. Converted conversations are stored in DSH, and normal web chats stay on DeepSeek. Before updating or uninstalling, close the temporary sidebar and make sure it finished cleaning up.
 
 </details>
 
 ## Development and license
 
+The package name is `dsh-deepseek-workbench`. Download it only from this repository's releases.
+
 ```bash
+node scripts/prepare-host-sdk.mjs
 pnpm install --frozen-lockfile --ignore-scripts --config.strict-dep-builds=false
 pnpm build
 ```
 
-Licensed under [MIT](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for sources.
+Code is [MIT](LICENSE) licensed; third-party sources are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## Documentation and support
-
-| I want to | Where to go |
-| --- | --- |
-| Install, update or remove | [Installation guide](docs/install_EN.md) |
-| Learn the features and limits | [Documentation](docs/usage_EN.md) |
-| Read release changes | [Releases](https://github.com/gulagala001/dsh-deepseek-workbench/releases) |
-| Report a problem | [Issues](https://github.com/gulagala001/dsh-deepseek-workbench/issues) |
-
-For a bug report, include the full DSH and plugin versions, the entry point, minimal reproduction steps, and expected versus actual behavior. Remove private data before sharing logs or screenshots.
-
-<p align="center"><a href="#readme-top">Back to top</a> · <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases">Versions and downloads</a> · <a href="https://github.com/gulagala001/dsh-deepseek-workbench/issues">Feedback</a></p>
-
-[Documentation structure and contributing](docs/documentation.md)
+When reporting a problem, include your DSH and plugin versions, the steps, and what you expected versus what happened. Remove personal data from logs and screenshots first: [Issues](https://github.com/gulagala001/dsh-deepseek-workbench/issues).

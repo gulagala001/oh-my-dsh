@@ -1,68 +1,44 @@
-# DSH Extensions — Installation and maintenance
+# Install DSH Extensions
 
-Source builds target the exact host in `package.json`, currently `0.2.2-rc.1`. Each build uses its matching SDK, components and dependency lock; choose an installation entry for the host named by the published package.
+[简体中文](install.md) · [Back to README](../README_EN.md)
 
-[简体中文](install.md) · [Back to README](../README_EN.md#install)
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**.
 
-**DSH 0.2.2-rc.1 · Node.js ≥24.9.0 · 0.1.0**
+## Install in DSH
 
-## Install into the current instance
-
-
-In the instance you use, open **Plugins → + Add plugin** and paste the pinned release URL:
+Open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-extensions-0.1.6-dsh.0.2.2-rc.2.tgz
 ```
 
-After active tasks finish, enable the plugin or restart as the host asks. The existing profile, DSH_HOME, model settings and conversations are kept.
+When your current task finishes, enable the plugin or restart DSH when prompted. Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/SHA256SUMS).
 
-You can check the download against [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/SHA256SUMS) from the same release.
+## Install from the command line
 
-### First check
-
-The **Plugins** page shows five tabs at the top: Skills, MCP, Instructions, Commands and Hooks. The Skills tab lists the skills available now.
-
-<details>
-<summary>Install from the command line</summary>
-
-Use the CLI of the same DSH instance and replace `web` with your profile.
+Use the CLI that belongs to the same DSH, replacing `web` with your profile (`desktop` for the desktop app):
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-extensions-0.1.6-dsh.0.2.2-rc.2.tgz"
 ```
 
-</details>
+## Upgrade and roll back
 
-## Upgrade, rollback and removal
+Back up your profile, then install the new package over the old one. DSH itself does not need to change. If the upgrade fails, your data is untouched; send the first error to [Issues](https://github.com/gulagala001/dsh-extensions/issues).
 
-Install the pinned build for your host to upgrade; installing the plugin never replaces or downgrades DSH. To roll back, install the earlier matching pinned package.
+To go back, install the previous package. Rolling back only replaces the code; data written by the newer version stays.
 
-Remove it from the Plugins page of the instance, or run:
+## Uninstall
+
+Remove it on the Plugins page, or run:
 
 ```bash
 dsh plugin --profile web remove dsh-extensions
 ```
 
-Restart the same instance afterwards. These files are your data and are kept on removal:
+Then restart DSH. The following is your data and stays when you uninstall:
 
-- Skill folders and their switches (read natively by DSH, still effective after removal);
-- AGENTS.md / CLAUDE.md and other instruction files (read natively by DSH);
-- `~/.dsh/mcp.json`, `~/.dsh/commands/`, `<project>/.dsh/commands/` and `~/.dsh/hooks.json` (no longer loaded after removal, restored on reinstall);
-- the MCP tool description cache in `~/.dsh/dsh-extensions/`, which can be deleted.
-
-When reporting a problem, include the full version, profile type and the first error with secrets removed.
-
-<a id="build-from-source"></a>
-
-## Build from source
-
-With Node.js 22.19+ and pnpm 11.28.5 installed, run from the repository:
-
-```sh
-pnpm install --frozen-lockfile
-pnpm build
-npm pack
-```
-
-Add the generated `dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz` through **Plugins → Add plugin** using its local absolute path.
+- Skill folders and their switch settings. DSH reads these itself, so they keep working.
+- Instruction files such as AGENTS.md and CLAUDE.md, which DSH also reads itself.
+- `~/.dsh/mcp.json`, `~/.dsh/commands/`, `<project>/.dsh/commands/` and `~/.dsh/hooks.json`. They stop loading after uninstalling and come back when you reinstall.
+- The MCP tool description cache in `~/.dsh/dsh-extensions/`, which you can delete.

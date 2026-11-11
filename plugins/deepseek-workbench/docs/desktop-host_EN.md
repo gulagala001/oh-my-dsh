@@ -1,29 +1,29 @@
-# Desktop host
+# DeepSeek Workbench desktop adaptation
 
-[简体中文](desktop-host.md) · [Home](../README_EN.md)
+[简体中文](desktop-host.md) · [Back to README](../README_EN.md)
 
-This release targets **DSH 0.2.1-rc.2** and **Cordis 4.0.5**. The plugin supplies its UI; the companion host bridge supplies Electron capabilities. Embedded use requires both.
+With just the plugin installed, the standard DSH desktop app gives you web chat, the temporary sidebar and Continue in DSH. The following three need a matching adaptation applied to the DSH desktop source, which you then build yourself:
 
-## Required capabilities
+- DeepSeek and API platform sign-in that survives restarts.
+- Downloading files from DeepSeek chats.
+- The API Keys platform page embedded in DSH.
 
-The host must expose `window.dshDesktop.browser` with isolated-page acquisition and release; standard rc.2 desktop already supplies these interfaces and page reading. The companion source adapter adds persistent profiles, restricted website downloads and extended platform pages. The plugin checks actual capabilities and explains unavailable features with an external-browser entry point. Reusing current API Platform authorization also requires `window.dshPlatform`.
+The adaptation script is `desktop/apply-host.mjs`, and it currently accepts only **DSH 0.2.1-rc.2** source. Build steps are in [desktop/README_EN.md](../desktop/README_EN.md).
 
-Installing the plugin in standard DSH does not modify the Electron main process, preloads or a signed application. Custom desktop distributors must apply the matching adapter in their own DSH rc.2 source copy, rebuild affected Host, Client, Web, desktop main and preload outputs, and package and sign using upstream platform workflows. The source entry point is `desktop/apply-host.mjs`; it checks real source and anchors and rejects incompatible inputs.
+## What works where
 
-## Sessions and security
-
-With the companion adapter, website chat and the API Platform use a persistent Chromium profile managed by the host. Releasing a page does not clear login storage. Sign out through the website's own controls.
-
-Navigation is restricted to official DeepSeek chat and platform pages. Required login and captcha resources follow explicit host policy. Chromium sandboxing, web security and context isolation remain enabled; Node integration stays disabled. Uploads use the manual file picker. Downloads require approved origins and redirects and a native save dialog.
-
-Temporary chat cleanup operates on its own website conversation and completes before closing. Releasing an ordinary page only releases browser resources; its website conversation remains in history.
-
-## Compatibility
-
-| Environment | Behavior |
+| Environment | What works |
 | --- | --- |
-| DSH rc.2 desktop with companion bridge | Embedded chat, temporary sidebar, website migration and platform entry points |
-| Standard DSH rc.2 desktop | Embedded chat, temporary sidebar and website migration; process-scoped sign-in and no website downloads |
-| DSH rc.2 browser UI | Website embedding and cross-origin restrictions apply; external entry point available |
+| DSH desktop with the adaptation | Web chat, temporary sidebar, Continue in DSH and the platform page, with sign-in kept across restarts and DeepSeek downloads |
+| Standard DSH desktop | Web chat, temporary sidebar and Continue in DSH. You sign in again after each restart, and DeepSeek downloads are unavailable |
+| DSH in a browser | DeepSeek's embedding restrictions limit it to an external browser |
 
-Desktop distributions for macOS, Windows and Linux each require a matching host build and platform verification. Checks on one platform or in isolation do not establish native validation on every platform.
+The plugin checks what the current DSH can do. When something is missing, the panel says so and offers an external browser link.
+
+## Sign-in and security
+
+With the adaptation, DeepSeek chat and the API platform use a separately stored browser profile, so closing the page does not sign you out. To sign out, use DeepSeek's own sign-out button.
+
+Pages can only open DeepSeek's official chat and platform addresses. The browser sandbox stays on, and web pages get no access to local Node features. Uploads require you to pick files by hand; downloads are checked for their origin and confirmed in the system save dialog.
+
+macOS, Windows and Linux each need their own build and signing.

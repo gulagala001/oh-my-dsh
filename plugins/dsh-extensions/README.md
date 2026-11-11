@@ -7,9 +7,9 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.5-dsh.0.2.2-rc.1"><img alt="0.1.5" src="https://img.shields.io/badge/release-0.1.5-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.6-dsh.0.2.2-rc.2"><img alt="0.1.6" src="https://img.shields.io/badge/release-0.1.6-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-extensions/releases"><img alt="GitHub release downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-extensions/total?style=flat-square&amp;label=GitHub%20release%20downloads"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-0969da?style=flat-square"></a>
 </p>
 
@@ -21,24 +21,23 @@ DSH 已经能读取 Skill、MCP 服务器、AGENTS.md 等扩展，但大多只�
 
 ## 快速开始
 
-**适用环境：** DSH **0.2.2-rc.1**，Node.js **24.9.0+**。
+**需要：** DSH **0.2.2-rc.2**，Node.js **24.9.0+**。
 
 ### 1. 安装
 
-
-打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
+在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-extensions-0.1.6-dsh.0.2.2-rc.2.tgz
 ```
 
-等当前任务结束后，按宿主提示启用或重启该实例。其他方式、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/SHA256SUMS)。
+等手头的任务跑完，按提示启用或重启 DSH。命令行安装、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/SHA256SUMS)。
 
-### 2. 先试这一件事
+### 2. 先试一件事
 
 打开 **插件 → Skill**，选一个 Skill 关掉开关，再新建一个会话。
 
-**成功标志：** 这个 Skill 不再出现在模型的 Skill 目录里；重新打开开关后恢复。
+这个 Skill 不再出现在模型的 Skill 目录里；重新打开开关后恢复。
 
 ## 功能
 
@@ -82,8 +81,15 @@ DSH 内置或由其他插件提供的 Skill 只读。可以复制到个人或项
 
 </details>
 
-## 许可
+## 开发和许可
 
-[MIT](LICENSE)
+安装包名是 `dsh-extensions`，只从本仓库的 Release 下载。需要 Node.js 24.9.0+ 和 pnpm 11.28.5：
 
-[文档结构与贡献](docs/documentation.md)
+```sh
+node scripts/prepare-host-sdk.mjs
+pnpm install --frozen-lockfile
+pnpm build
+npm pack
+```
+
+代码用 [MIT](LICENSE) 许可。反馈问题请写明 DSH 和插件版本、操作步骤、期望和实际结果，日志和截图先去掉个人信息：[Issues](https://github.com/gulagala001/dsh-extensions/issues)。

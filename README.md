@@ -7,9 +7,9 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.13"><img alt="OMD 1.3.13" src="https://img.shields.io/badge/release-OMD%201.3.13-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.2.omd.1.3.14"><img alt="OMD 1.3.14" src="https://img.shields.io/badge/release-OMD%201.3.14-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub 下载量" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
 </p>
 
@@ -26,17 +26,17 @@
 
 ## 快速开始
 
-**需要：** DSH **0.2.2-rc.1**，Node.js **24.9.0+**。模型用你在 DSH 里配好的。
+**需要：** DSH **0.2.2-rc.2**，Node.js **24.9.0+**。模型用你在 DSH 里配好的。
 
 ### 1. 安装
 
 在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/oh-my-dsh-0.2.2-rc.2.omd.1.3.14.tgz
 ```
 
-等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。旧版 DSH、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/SHA256SUMS)。
+等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。旧版 DSH、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/SHA256SUMS)。
 
 > OMD 默认让 AI 直接读写文件、运行命令，不逐条询问。你在 profile 里设过的权限优先生效。
 
@@ -131,7 +131,7 @@ OMD 里的 Workflow、Rewind、Persona、Extensions、DeepSeek Workbench、OpenC
 
 | 功能 | 需要 |
 | --- | --- |
-| 对话、外观、任务、记忆 | DSH 0.2.2-rc.1 和一个可用的模型 |
+| 对话、外观、任务、记忆 | DSH 0.2.2-rc.2 和一个可用的模型 |
 | 浏览器和电脑操作 | 系统权限；内嵌浏览器画面需要配套的 DSH 桌面版 |
 | DeepSeek 网页聊天和历史导入 | DSH 桌面版，并登录 DeepSeek 官网账号 |
 | 旧版 DSH | 对应的旧版安装包，见[安装指南](docs/install.md) |

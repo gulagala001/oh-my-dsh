@@ -1,0 +1,54 @@
+{
+  "version": "0.2.2-rc.2",
+  "commit": "ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c",
+  "cordis": "4.1.0",
+  "schema": "3.19.0",
+  "electron": "44.7.0",
+  "peers": {
+    "@deepseek-ai/cordis": "4.1.0",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.2",
+    "@deepseek-ai/dsh-attachment": "0.2.2-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.2-rc.2",
+    "@deepseek-ai/schemastery": "3.19.0"
+  },
+  "buildInputs": {
+    "packageManager": "pnpm@11.28.5",
+    "sha256": {
+      "package-lock.json": "aff598a05db39ae3f3babb42ad08b5d7d92ec164b711e9ab6aeef00557c941fa",
+      "package.json": "64d6e42fa8748e205e518936ef6a08c11b4589c57644aaa85973a94c8f3cb885",
+      "pnpm-lock.yaml": "d8a7c7761d0a5c76b0b72b3f7bf02b7e86615e52b91e93cc198e9d3479d2b858",
+      "pnpm-workspace.yaml": "48634086de4342b2298d8ec52b7439d615b99aa33fbe7c4ba0a2bd5637c6deea"
+    },
+    "frontendSha256": {
+      "package.json": "699f17b60a2c27537f8df26dfe455c04515c3aa36ec7996046a0f7cceb9f9450",
+      "pnpm-lock.yaml": "77293248eafc9e6fc61e45b94686bc1e991a285792a174c82aea2e8d1a621f4c"
+    },
+    "dshPackages": [
+      "@deepseek-ai/dsh-agent@0.2.2-rc.2",
+      "@deepseek-ai/dsh-attachment-local@0.2.2-rc.2",
+      "@deepseek-ai/dsh-attachment@0.2.2-rc.2",
+      "@deepseek-ai/dsh-brand@0.2.2-rc.2",
+      "@deepseek-ai/dsh-error@0.2.2-rc.2",
+      "@deepseek-ai/dsh-home-paths@0.2.2-rc.2",
+      "@deepseek-ai/dsh-lazy-require@0.2.2-rc.2",
+      "@deepseek-ai/dsh-llm@0.2.2-rc.2",
+      "@deepseek-ai/dsh-scope@0.2.2-rc.2",
+      "@deepseek-ai/dsh-session-persistence@0.2.2-rc.2",
+      "@deepseek-ai/dsh-session-projection@0.2.2-rc.2",
+      "@deepseek-ai/dsh-session@0.2.2-rc.2",
+      "@deepseek-ai/dsh-storage-domain@0.2.2-rc.2",
+      "@deepseek-ai/dsh-storage@0.2.2-rc.2",
+      "@deepseek-ai/dsh-system-prompt@0.2.2-rc.2",
+      "@deepseek-ai/dsh-timeout@0.2.2-rc.2",
+      "@deepseek-ai/dsh-tool-executor-native@0.2.2-rc.2",
+      "@deepseek-ai/dsh-tools@0.2.2-rc.2",
+      "@deepseek-ai/dsh-typert-protocol@0.2.2-rc.2",
+      "@deepseek-ai/dsh-user-approval@0.2.2-rc.2",
+      "@deepseek-ai/dsh-util-crypto@0.2.2-rc.2",
+      "@deepseek-ai/dsh-util-file-drag@0.2.2-rc.2",
+      "@deepseek-ai/dsh-util-values@0.2.2-rc.2",
+      "@deepseek-ai/dsh-workspace@0.2.2-rc.2"
+    ],
+    "installedLockSha256": "d8a7c7761d0a5c76b0b72b3f7bf02b7e86615e52b91e93cc198e9d3479d2b858"
+  }
+}

@@ -1,3 +1,37 @@
+# Oh My DSH 1.3.14 · DSH 0.2.2-rc.2
+
+[中文](#zh-1314) · [English](#en-1314)
+
+<a id="zh-1314"></a>
+
+## 中文
+
+### 问题修复
+
+- 创建独立聊天目录时意外退出，重启会接回该聊天自己的目录。同名的已有目录和符号链接会保留，已被替换的目录不会接管。
+- Dream 重试会合并同一目标；切换上下文后端或压缩模式会取消旧操作。更新、索引和任务提醒会显示实际进度，取消后可以重新操作。
+
+<a id="en-1314"></a>
+
+## English
+
+### Bug fixes
+
+- Recover the same chat directory after an interrupted creation. Existing directories and symlinks keep their contents, and a replaced directory stays under its original owner’s control.
+- Dream retries share one job per target. Switching context or compression cancels obsolete actions. Updates, indexing and task reminders reflect progress and allow retries after cancellation.
+
+## 安装 / Installation
+
+适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
+
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.2 | [Oh My DSH 1.3.14](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/oh-my-dsh-0.2.2-rc.2.omd.1.3.14.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/SHA256SUMS) |
+
+---
+
 # Oh My DSH 1.3.13 · DSH 0.2.2-rc.1
 
 [中文](#zh-1313) · [English](#en-1313)

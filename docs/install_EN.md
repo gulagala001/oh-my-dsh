@@ -2,7 +2,7 @@
 
 [中文](install.md) · [Home](../README_EN.md) · [Upgrade](upgrade_EN.md) · [Getting started](getting-started_EN.md)
 
-**Requires:** DSH **0.2.2-rc.1** and Node.js **24.9.0+**. OpenCU is built into OMD, so do not install it separately. If you do not have DSH yet, install [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) first.
+**Requires:** DSH **0.2.2-rc.2** and Node.js **24.9.0+**. OpenCU is built into OMD, so do not install it separately. If you do not have DSH yet, install [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) first.
 
 Pick one of the two methods below. If you already use OMD, back up your data first as described in [upgrade](upgrade_EN.md).
 
@@ -10,19 +10,19 @@ Pick one of the two methods below. If you already use OMD, back up your data fir
 
 ## Install from Add plugin
 
-1. Check the full DSH version in DSH's About screen, for example 0.2.2-rc.1. This is the DSH version, not the OMD version.
+1. Check the full DSH version in DSH's About screen, for example 0.2.2-rc.2. This is the DSH version, not the OMD version.
 2. Wait for your current task to finish.
 3. Click **Plugins** on the left, then **Add plugin** at the top right, and paste:
 
    ```text
-   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
+   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/oh-my-dsh-0.2.2-rc.2.omd.1.3.14.tgz
    ```
 
 4. Click **Install** and check that Oh My DSH is enabled.
 5. Fully quit and reopen the desktop app; for the web version, restart the original web service. Reloading the page is not enough.
 6. Create a session and pick the **Oh My DSH** preset.
 
-The first part of the package name is the DSH version; the number after `omd.` is the OMD version. Use the fixed package above rather than the repository's main branch, and do not download Source code or host-adapters.zip. Checksums: [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/SHA256SUMS).
+The first part of the package name is the DSH version; the number after `omd.` is the OMD version. Use the fixed package above rather than the repository's main branch, and do not download Source code or host-adapters.zip. Checksums: [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/SHA256SUMS).
 
 If installing fails, check the DSH version first. If you see a message about unapproved build scripts, see [build script approval](upgrade_EN.md#build-approval).
 
@@ -64,7 +64,7 @@ Existing web version: stop the service and install with its matching command lin
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/oh-my-dsh-0.2.2-rc.2.omd.1.3.14.tgz
 ```
 
 Then start it the way you did before; the data directory and port stay the same.
@@ -72,8 +72,8 @@ Then start it the way you did before; the data directory and port stay the same.
 First time using the web version (on Windows, use PowerShell 7):
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.2-rc.1 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
-npx --yes @deepseek-ai/dsh@0.2.2-rc.1 --profile web
+npx --yes @deepseek-ai/dsh@0.2.2-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/oh-my-dsh-0.2.2-rc.2.omd.1.3.14.tgz
+npx --yes @deepseek-ai/dsh@0.2.2-rc.2 --profile web
 ```
 
 Open the full sign-in link printed in the terminal. Data goes to `.dsh` in your user folder and the default port is 3080. If you already have DSH, do not use these commands to set up a second one.
@@ -82,7 +82,7 @@ Command line for the macOS desktop app in its default location:
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/oh-my-dsh-0.2.2-rc.2.omd.1.3.14.tgz
 ```
 
 On the Windows desktop app, installing from the Plugins page is simpler.

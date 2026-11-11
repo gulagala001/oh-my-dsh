@@ -1,3 +1,35 @@
+# Response ID Reuse 0.1.8 · DSH 0.2.2-rc.2
+
+[中文](#zh-018) · [English](#en-018)
+
+<a id="zh-018"></a>
+
+## 中文
+
+### 问题修复
+
+- 冷却探测未结算时可恢复续传；区分服务端错误、本地解析上限和正常截断。首字等待只使用续传请求的耗时。
+
+<a id="en-018"></a>
+
+## English
+
+### Bug fixes
+
+- Recover continuation after an unsettled cooldown probe. Server failures, local parsing limits and normal truncation are handled separately. First-output budgets use continuation requests only.
+
+## 安装 / Installation
+
+适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
+
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.2 | [Response ID Reuse 0.1.8](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.8-dsh.0.2.2-rc.2/gulagala001-dsh-response-id-reuse-0.1.8-dsh.0.2.2-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.8-dsh.0.2.2-rc.2/SHA256SUMS) |
+
+---
+
 # Response ID Reuse 0.1.7 · DSH 0.2.2-rc.1
 
 [中文](#zh-017) · [English](#en-017)

@@ -9,6 +9,7 @@ The site starts at the [English product page](https://gulagala001.github.io/oh-m
 From the repository root, prepare development dependencies and Chromium:
 
 ```sh
+node scripts/prepare-host-sdk.mjs
 pnpm install --frozen-lockfile
 pnpm exec playwright install chromium
 pnpm docs:build

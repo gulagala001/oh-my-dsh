@@ -7,9 +7,9 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.1.omd.1.3.13"><img alt="OMD 1.3.13" src="https://img.shields.io/badge/release-OMD%201.3.13-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.2.omd.1.3.14"><img alt="OMD 1.3.14" src="https://img.shields.io/badge/release-OMD%201.3.14-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub downloads" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
 </p>
 
@@ -26,17 +26,17 @@
 
 ## Quick start
 
-**Requires:** DSH **0.2.2-rc.1** and Node.js **24.9.0+**. OMD uses the models you configured in DSH.
+**Requires:** DSH **0.2.2-rc.2** and Node.js **24.9.0+**. OMD uses the models you configured in DSH.
 
 ### 1. Install
 
 In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/oh-my-dsh-0.2.2-rc.1.omd.1.3.13.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/oh-my-dsh-0.2.2-rc.2.omd.1.3.14.tgz
 ```
 
-Let running tasks finish, then enable OMD or restart DSH when prompted. Your settings and conversations stay. For older DSH versions, upgrading and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.1.omd.1.3.13/SHA256SUMS).
+Let running tasks finish, then enable OMD or restart DSH when prompted. Your settings and conversations stay. For older DSH versions, upgrading and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/SHA256SUMS).
 
 > By default OMD lets the AI read and write files and run commands without asking each time. Permissions you set in your profile take precedence.
 
@@ -131,7 +131,7 @@ Workflow, Rewind, Persona, Extensions, DeepSeek Workbench, OpenCU and theme mana
 
 | Feature | Needs |
 | --- | --- |
-| Conversations, appearance, tasks, memory | DSH 0.2.2-rc.1 and a working model |
+| Conversations, appearance, tasks, memory | DSH 0.2.2-rc.2 and a working model |
 | Browser and computer use | System permissions; the embedded browser view needs a matching DSH desktop build |
 | DeepSeek web chat and history import | The DSH desktop app and a DeepSeek website account |
 | Older DSH versions | The matching older package; see the [installation guide](docs/install_EN.md) |

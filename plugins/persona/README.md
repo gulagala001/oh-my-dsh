@@ -1,64 +1,101 @@
-# Persona
+<a name="readme-top"></a>
 
-[English](README_EN.md)
+<h1 align="center">DSH Persona</h1>
 
-**dsh-persona-plugin** 为 DeepSeek Harness 提供可创作、可分享的人格预设，让助手在身份、语气、过程沟通和回答呈现上保持一致。
+<p align="center"><strong>给 DSH 里的助手换个性格：身份、语气、沟通方式和回答格式都能自己定。</strong><br>DeepSeek Harness 插件</p>
 
-![Persona 人格设置](docs/images/persona.png)
+<p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
-## 功能
+<p align="center">
+  <a href="https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.2.3-dsh.0.2.2-rc.2"><img alt="DSH Persona 0.2.3" src="https://img.shields.io/badge/release-0.2.3-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-persona-plugin/releases"><img alt="GitHub 下载量" src="https://img.shields.io/github/downloads/gulagala001/dsh-persona-plugin/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-persona-plugin/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-persona-plugin?style=flat-square&amp;color=0969da"></a>
+</p>
 
-- 四个人格模块：身份与人格、语言风格、沟通方式、回答呈现；可按模块继承默认内容。
-- 内置默认、超频、精算和精算（英文版），支持多个人设的新建、复制、改名、更新与删除。
-- 复制创作提示词交给 AI，生成人格 JSON 文件后直接导入；支持导出备份与分享，同名导入自动改名。
-- 全局默认与会话独立选择；会话人设默认开启，在权限抽屉中切换，后续请求生效。
-- 人格设置集中在默认折叠的“高级”中，保存失败保留编辑草稿。
+<p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="docs/personality-format.md">人格文件格式</a> · <a href="https://github.com/gulagala001/dsh-persona-plugin/issues">反馈</a></p>
 
-## 安装
+<p align="center"><a href="docs/images/persona.png"><img src="docs/images/persona.png" alt="Persona 设置页" width="880"></a></p>
 
-在 **插件 → 添加插件** 中粘贴固定安装包地址：
+<a name="readme-install"></a>
+
+## 快速开始
+
+**需要：** DSH **0.2.2-rc.2**，Node.js **24.9.0+**。
+
+### 1. 安装
+
+在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.2-dsh.0.2.2-rc.1/gulagala001-dsh-persona-plugin-0.2.2-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/gulagala001-dsh-persona-plugin-0.2.3-dsh.0.2.2-rc.2.tgz
 ```
 
-[SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.2-dsh.0.2.2-rc.1/SHA256SUMS)
+等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/SHA256SUMS)。
 
-当前构建精确适配 **DSH 0.2.2-rc.1**、**Cordis 4.0.5**、**Node.js 22.19+**。
+<details>
+<summary>用命令行安装或卸载</summary>
 
-取得 `gulagala001-dsh-persona-plugin-0.2.2-dsh.0.2.2-rc.1.tgz` 后，通过 DSH **插件 → 添加插件**安装其本地绝对路径。也可执行：
+用同一个 DSH 自带的命令行，把 `desktop` 换成你的 profile：
 
 ```sh
-dsh plugin --profile desktop add /absolute/path/gulagala001-dsh-persona-plugin-0.2.2-dsh.0.2.2-rc.1.tgz
+dsh plugin --profile desktop add "https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/gulagala001-dsh-persona-plugin-0.2.3-dsh.0.2.2-rc.2.tgz"
+dsh plugin --profile desktop remove @gulagala001/dsh-persona-plugin
 ```
 
-将 `desktop` 换成目标实例实际使用的 profile，当前任务结束后重启该实例。
+装好或卸载后重启 DSH。
 
-## 使用
+</details>
 
-**超频**充分投入有价值的解释，追求质量、深度与完整性；**精算**减少无效文字与重复，精打细算地使用 token，同时保持交付质量。**精算（英文版）**提供相同取向的英文人格提示词，默认随用户语言回答。升级后已移除的内置人格全局选择回退为默认，会话选择回退全局；自定义内容及明确关闭的会话人设设置保留。
+### 2. 先试一件事
 
-打开 **设置 → Persona**，选择全局人格。展开**高级**，使用“新建人设”或“复制为新人设”编辑各模块。编辑对象与全局选择独立，保存不会意外切换全局人格。
+打开 **设置 → Persona**，把全局人格换成 **精算**，然后随便问一个问题，回答会明显变短、更直接。
 
-点击**复制创作提示词**，发给 AI 并描述你想要的助手。AI 按模板生成 JSON 文件后，点击**导入人格文件**，即可创建并选用新预设。**导出人格文件**保存当前编辑内容，便于继续创作或分享。
+## 能做什么
 
-**会话人设**默认开启，可在主会话的权限抽屉中选择“继承全局”、指定人格或“关闭人格”。关闭这项功能时统一使用全局人格，已保存的会话选择会保留。删除被会话引用的人格时，该会话回退到全局并提示。
+- **内置人格**：默认、**超频**（舍得花 token，把解释讲深讲全）、**精算**（少说废话省 token，质量不打折），以及精算的英文版提示词。
+- **四个模块**：身份与人格、语言风格、沟通方式、回答呈现，可以只改其中几项，其余沿用默认。
+- **自己做人格**：在 **高级** 里新建、复制、改名和删除人设。编辑哪个人设和全局选用哪个是分开的，保存不会顺手切换全局人格。
+- **让 AI 帮你写**：点 **复制创作提示词**，发给 AI 并描述你想要的助手，它会生成一个 JSON 文件，再点 **导入人格文件** 就能用。**导出人格文件** 可以备份或分享给别人。
+- **每个会话单独选**：在主会话的权限抽屉里，可以选继承全局、指定某个人格或关闭人格，从下一条消息开始生效。
 
-人格只调整身份与表达偏好。实际环境、权限、工具协议、任务控制和记忆处理仍由宿主管理。数据按 profile 保存；旧版人格文件可直接导入。
+人格只改变助手怎么说话，不影响它能用的工具、权限和任务流程。
 
-## 源码构建
+## 常见问题
+
+<details>
+<summary>升级后我选的内置人格不见了？</summary>
+
+旧版本里有的内置人格已经下线。选过它的全局设置会回到默认，会话设置回到跟随全局。你自己建的人设和导入的文件都不受影响。
+
+</details>
+
+<details>
+<summary>两个窗口同时改人格会互相覆盖吗？</summary>
+
+不会。保存时如果发现另一个窗口已经改过，会停下来显示最新内容，你的草稿还在，看过后再保存一次即可。
+
+</details>
+
+<details>
+<summary>删掉一个人格，正在用它的会话怎么办？</summary>
+
+这些会话会回到跟随全局，并提示你。
+
+</details>
+
+## 开发和许可
+
+安装包名是 `@gulagala001/dsh-persona-plugin`，只从本仓库的 Release 下载。
 
 ```sh
+node scripts/prepare-host-sdk.mjs
 npm install
 npm run build
 npm test
 npm pack
 ```
 
-打包前会检查公开文件、Git 历史与实际安装包。格式说明见[人格文件](docs/personality-format.md)。
+人格文件的字段和限制见[人格文件格式](docs/personality-format.md)。代码用 [MIT](LICENSE) 许可，第三方来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-## 许可
-
-[MIT](LICENSE)。宿主组件来源与许可见[第三方声明](THIRD_PARTY_NOTICES.md)。
-
-[文档结构与贡献](docs/documentation.md)
+反馈问题请写明 DSH 和插件版本、操作步骤、期望和实际结果，日志和截图先去掉个人信息：[Issues](https://github.com/gulagala001/dsh-persona-plugin/issues)。

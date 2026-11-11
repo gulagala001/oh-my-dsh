@@ -6,7 +6,7 @@
 
 ## 先确认装对了地方
 
-1. **版本**：**设置 → Oh My DSH → 关于** 里的"当前版本"才是正在运行的 OMD，"最新版本"只是线上记录。DSH 的版本另外看。当前 OMD 1.3.13 对应 DSH 0.2.2-rc.1。
+1. **版本**：**设置 → Oh My DSH → 关于** 里的"当前版本"才是正在运行的 OMD，"最新版本"只是线上记录。DSH 的版本另外看。当前 OMD 1.3.14 对应 DSH 0.2.2-rc.2。
 2. **桌面版还是网页版**：桌面版装在 `desktop` profile，网页版装在启动命令用的 profile，两边的插件互不相通。
 3. **数据目录**：网页版默认是用户目录下的 `.dsh`；用源码 `pnpm start` 启动时是仓库下的 `data/dsh/`，profile 为 `oh-my-dsh`，端口 3083。
 4. **完整重启后试一次**：等任务跑完，桌面版完整退出再打开，网页版重启服务。新建会话选 Oh My DSH 发一条消息；升级的用户再打开一个旧会话看看。
@@ -81,6 +81,7 @@ Release 里的 `.tgz` 只是插件本身，不带依赖。离线包不能跨系�
 在和目标电脑同系统、同架构的联网电脑上，准备 OMD 源码、Node.js 24.9.0+ 和 pnpm 11.28.5，在源码根目录运行。输出目录必须在源码目录外，而且还不存在：
 
 ```powershell
+node scripts/prepare-host-sdk.mjs
 pnpm install --frozen-lockfile
 if ($LASTEXITCODE -ne 0) { throw '安装依赖失败' }
 node scripts/prepare-offline.mjs 'C:\omd-offline'

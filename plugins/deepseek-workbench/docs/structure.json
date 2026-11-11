@@ -1,5 +1,24 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "published": "0.1.6-dsh.0.2.2-rc.2",
+  "repository": {
+    "slug": "gulagala001/dsh-deepseek-workbench",
+    "description": "在 DSH 里用 DeepSeek 网页聊天、临时侧栏和 API 开放平台，网页上的对话可以转成 DSH 会话接着聊。 DeepSeek web chat, a temporary sidebar chat and the API platform inside DeepSeek Harness. Continue web chats as DSH sessions.",
+    "homepage": "",
+    "topics": [
+      "chat",
+      "deepseek",
+      "deepseek-harness",
+      "dsh-plugin",
+      "sidebar",
+      "deepseek-harness-plugin",
+      "dsh-bundle"
+    ]
+  },
+  "names": [
+    "DeepSeek Workbench"
+  ],
+  "maxPages": 12,
   "documents": [
     {
       "path": "CHANGELOG.md",
@@ -9,12 +28,14 @@
     {
       "path": "README.md",
       "role": "home",
-      "language": "zh"
+      "language": "zh",
+      "translation": "README_EN.md"
     },
     {
       "path": "README_EN.md",
       "role": "home",
-      "language": "zh"
+      "language": "en",
+      "translation": "README.md"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -42,11 +63,6 @@
       "language": "zh"
     },
     {
-      "path": "docs/documentation.md",
-      "role": "development",
-      "language": "bilingual"
-    },
-    {
       "path": "docs/install.md",
       "role": "guide",
       "language": "zh"
@@ -57,11 +73,6 @@
       "language": "zh"
     },
     {
-      "path": "docs/releases.md",
-      "role": "release",
-      "language": "bilingual"
-    },
-    {
       "path": "docs/usage.md",
       "role": "guide",
       "language": "zh"
@@ -70,6 +81,32 @@
       "path": "docs/usage_EN.md",
       "role": "guide",
       "language": "zh"
+    }
+  ],
+  "allow": [
+    {
+      "path": "desktop/README.md",
+      "rule": "version",
+      "text": "0.2.1-rc.2",
+      "reason": "The desktop adapter script only accepts DSH 0.2.1-rc.2 source."
+    },
+    {
+      "path": "desktop/README_EN.md",
+      "rule": "version",
+      "text": "0.2.1-rc.2",
+      "reason": "The desktop adapter script only accepts DSH 0.2.1-rc.2 source."
+    },
+    {
+      "path": "docs/desktop-host.md",
+      "rule": "version",
+      "text": "0.2.1-rc.2",
+      "reason": "The desktop adapter script only accepts DSH 0.2.1-rc.2 source."
+    },
+    {
+      "path": "docs/desktop-host_EN.md",
+      "rule": "version",
+      "text": "0.2.1-rc.2",
+      "reason": "The desktop adapter script only accepts DSH 0.2.1-rc.2 source."
     }
   ]
 }

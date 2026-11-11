@@ -9,6 +9,7 @@ const reviewedSource = {
 const reviewedFactories = new Map(reviewedSource.commits.map(commit => [commit, reviewedSource.sha256]));
 reviewedFactories.set('f3803c96974ad4a94195fb97e5c637e9c2a3afe3', '7671998cd4560381656c42aafa427d761a4a7105c823bd6a857730c6b59298e6');
 reviewedFactories.set('05b1cae8db6e674c5685101494d4eec24652424a', '31fee6f283a3187b10a4aac465890cc0bc52553c0ebc3c92d5558fbd1db88526');
+reviewedFactories.set('ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c', '41ba7801797f1dfbeedcfc0a64dfc4553ea45f513a947815176f8f0bb341fdee');
 const before = '.EvIC1a_column:has(>.EvIC1a_older)>[data-slot="conversation.chat.flow"]>';
 const after = '.EvIC1a_column>.EvIC1a_older~[data-slot="conversation.chat.flow"]>';
 const empty = '.EvIC1a_flowItem:is(:empty,:has(>[data-slot="conversation.chat.node"]:empty))';
@@ -100,7 +101,7 @@ export function inlineFactoryAssets(client, assets) {
 
 /** Alpha's native sibling selector already avoids the former broad :has(). */
 export function adaptChatStyleFactory(client) {
-  gate(client.startsWith('window.__ModuleLoader__.load({') && client.trimEnd().endsWith('});'), 'expected native browser factory');
+  gate(client.trimStart().startsWith('window.__ModuleLoader__.load({') && client.trimEnd().endsWith('});'), 'expected native browser factory');
   const pattern = /^(\s*const css(?:\$\d+)? = )("(?:[^"\\]|\\.)*")(?=;\n\s*const tagId(?:\$\d+)? = "@deepseek-ai\/dsh-client-ui-chat\/ChatView\.module\.css";)/gm;
   const matches = [...client.matchAll(pattern)];
   gate(matches.length === 1, 'expected one native ChatView stylesheet');

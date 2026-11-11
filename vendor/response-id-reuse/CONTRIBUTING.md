@@ -1,6 +1,7 @@
 # Contributing / 贡献
 
 ```sh
+node scripts/prepare-host-sdk.mjs
 npm ci --ignore-scripts
 npm test
 npm pack
@@ -22,6 +23,6 @@ HTTP 5xx or a first-output timeout on plugin-managed ID continuation triggers at
 
 Temporary failures are tracked separately from storage support. Valid parent IDs remain available; the affected continuation route cools down for one minute, growing to at most 15 minutes after repeated failures. Ordinary requests send full context during cooldown; afterward, only one real request may try continuation. Only successful continuation restores health: successful full replay or a late older response cannot erase a newer failure. No provider allowlist, extra inference probes or user settings are needed. Caller cancellation, caller-owned IDs, unrelated 4xx and in-stream errors do not trigger automatic replay. Requests with server-side tools do not use the new timeout/5xx replay. Non-streaming calls retain host waiting behavior. Client cancellation does not guarantee immediate server termination; failed and replayed attempts may still be billed.
 
-文档结构变更同步 [清单](docs/structure.json)，执行 `npm run docs:write` 和 `npm run docs:check`；维护规则见 [文档规范](docs/documentation.md)。CI 和 prepack 检查文档、公开文件、Git 历史及实际安装包。发行从已提交源码打包，更新双语 [CHANGELOG](CHANGELOG.md) 和校验文件。
+改动文档结构时同步更新 [docs/structure.json](docs/structure.json)，提交前运行 `npm run docs:check`。CI 和 prepack 会检查文档、公开文件、Git 历史和安装包。发版从已提交的源码打包，只写双语 [CHANGELOG](CHANGELOG.md)，Release 正文由 `node scripts/check-docs.mjs --release-notes` 生成。
 
-Update the [manifest](docs/structure.json) for documentation changes, then run the documentation checks. CI and prepack validate documentation, public files, Git history and the archive. Release committed sources with bilingual notes and checksums.
+When the documentation structure changes, update [docs/structure.json](docs/structure.json) and run `npm run docs:check` before committing. CI and prepack check documentation, public files, Git history and the package. Releases are packed from committed sources; write only the bilingual CHANGELOG, and generate the release body with `node scripts/check-docs.mjs --release-notes`.

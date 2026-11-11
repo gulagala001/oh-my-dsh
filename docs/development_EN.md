@@ -21,6 +21,7 @@ The example runs the published fixed `0.10.0` source, not the current source ver
 ```sh
 git clone --branch v0.2.1-alpha.1.omd.0.10.0 https://github.com/gulagala001/oh-my-dsh.git
 cd oh-my-dsh
+node scripts/prepare-host-sdk.mjs
 pnpm install --frozen-lockfile
 pnpm build
 pnpm start

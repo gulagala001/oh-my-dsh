@@ -1,5 +1,21 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "published": "0.1.6-dsh.0.2.2-rc.2",
+  "repository": {
+    "slug": "gulagala001/dsh-extensions",
+    "description": "在 DSH 插件页管理 Skill、MCP 服务器、指令文件、自定义命令和 Hooks。 Manage skills, MCP servers, instruction files, custom commands and hooks in DeepSeek Harness.",
+    "homepage": "",
+    "topics": [
+      "deepseek-harness",
+      "deepseek-harness-plugin",
+      "dsh-bundle",
+      "dsh-plugin"
+    ]
+  },
+  "names": [
+    "DSH Extensions"
+  ],
+  "maxPages": 7,
   "documents": [
     {
       "path": "CHANGELOG.md",
@@ -9,17 +25,14 @@
     {
       "path": "README.md",
       "role": "home",
-      "language": "zh"
+      "language": "zh",
+      "translation": "README_EN.md"
     },
     {
       "path": "README_EN.md",
       "role": "home",
-      "language": "zh"
-    },
-    {
-      "path": "docs/documentation.md",
-      "role": "development",
-      "language": "bilingual"
+      "language": "en",
+      "translation": "README.md"
     },
     {
       "path": "docs/install.md",
@@ -30,11 +43,6 @@
       "path": "docs/install_EN.md",
       "role": "guide",
       "language": "zh"
-    },
-    {
-      "path": "docs/releases.md",
-      "role": "release",
-      "language": "bilingual"
     },
     {
       "path": "docs/usage.md",

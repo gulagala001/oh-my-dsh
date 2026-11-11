@@ -1,8 +1,10 @@
 # 人格文件 / Personality files
 
-源码构建以 `package.json` 的完整宿主版本为准，当前默认 `0.2.2-rc.1`；SDK、组件与依赖锁必须来自同一版本。
+[中文首页](../README.md) · [English](../README_EN.md)
 
-UTF-8 JSON，最大 1 MiB。UTF-8 JSON, up to 1 MiB.
+人格文件是 UTF-8 编码的 JSON，最大 1 MiB。
+
+A personality file is UTF-8 JSON, up to 1 MiB.
 
 ```json
 {
@@ -19,10 +21,22 @@ UTF-8 JSON，最大 1 MiB。UTF-8 JSON, up to 1 MiB.
 }
 ```
 
-`name` 为 1–80 字符，不含首尾空格或控制字符。`description` 可省略，最多 1000 字符。`modules` 仅接受上例的四个键，每项是最多 65536 字符的纯文本。省略模块使用默认内容，空字符串不添加该模块的偏好。文件不接受 ID、工具配置、权限、代码执行或额外字段。导入创建新的预设 ID，同名时自动改名，不覆盖现有人设。
+| 字段 | 规则 |
+| --- | --- |
+| `name` | 1–80 个字符，首尾不能有空格或控制字符 |
+| `description` | 可省略，最多 1000 个字符 |
+| `modules` | 只能用上例的四个键，每项是最多 65536 个字符的纯文本；省略的模块用默认内容，空字符串表示这一项不加偏好 |
 
-`name` contains 1–80 characters without surrounding whitespace or control characters. Optional `description` is limited to 1000 characters. `modules` accepts only the four keys above, each with up to 65536 characters of plain text. Omitted modules use defaults; empty strings add no preference for that module. IDs, tool configuration, permissions, executable code fields and unknown fields are not accepted. Import creates a new preset ID and renames duplicate names without replacing existing presets.
+文件里不能有 ID、工具配置、权限、可执行代码或其他字段。导入时会新建一个人设，重名时自动改名，不会覆盖已有的人设。
 
-多个窗口编辑人格时，保存会核对最初读取的设置。如果另一处已更改，当前保存会停止，显示最新设置并保留编辑草稿；核对后可再次保存。若正在编辑的预设已被删除，草稿仍可另存为新预设。
+| Field | Rule |
+| --- | --- |
+| `name` | 1–80 characters, no leading or trailing spaces or control characters |
+| `description` | Optional, up to 1000 characters |
+| `modules` | Only the four keys above, each plain text up to 65536 characters; omitted modules use defaults, and an empty string adds no preference for that module |
 
-When multiple windows edit personalities, each save checks the settings originally read by that editor. If another editor has saved changes, the stale save stops, loads the current settings and keeps the editing draft for review and an explicit retry. A draft whose preset was deleted can be saved as a new preset.
+Files cannot contain IDs, tool settings, permissions, executable code or any other fields. Importing creates a new preset and renames it if the name is taken, so existing presets are never overwritten.
+
+多个窗口同时编辑时，如果另一个窗口先保存了，这次保存会停下来，显示最新设置，草稿保留，看过后再保存即可。正在编辑的人设被删掉了，草稿也可以另存为新人设。
+
+If another window saves first while you are editing, your save stops and shows the latest settings. Your draft stays, so you can review it and save again. If the preset you are editing was deleted, you can still save the draft as a new preset.

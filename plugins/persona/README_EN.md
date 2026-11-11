@@ -1,64 +1,101 @@
-# Persona
+<a name="readme-top"></a>
 
-[简体中文](README.md)
+<h1 align="center">DSH Persona</h1>
 
-**dsh-persona-plugin** brings editable, shareable personality presets to DeepSeek Harness, keeping identity, voice, communication and answer presentation consistent.
+<p align="center"><strong>Give the assistant in DSH a personality of your choice: identity, tone, how it communicates and how it formats answers.</strong><br>A DeepSeek Harness plugin</p>
 
-![Persona settings](docs/images/persona.png)
+<p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
-## Features
+<p align="center">
+  <a href="https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.2.3-dsh.0.2.2-rc.2"><img alt="DSH Persona 0.2.3" src="https://img.shields.io/badge/release-0.2.3-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-persona-plugin/releases"><img alt="GitHub downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-persona-plugin/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-persona-plugin/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-persona-plugin?style=flat-square&amp;color=0969da"></a>
+</p>
 
-- Four modules: identity, language style, communication and answer presentation, with default inheritance.
-- Built-in Default, Overclock (超频), Economical (精算) and Economical English (精算（英文版）) personalities; create, copy, rename, update and delete your own presets.
-- Copy a creation prompt to an AI, then import its generated JSON file. Export personalities for backup or sharing; duplicate imports receive a new name.
-- A global default and independent conversation choices, enabled by default and available in the permissions drawer and applied to subsequent requests.
-- Detailed controls live under a collapsed Advanced section; failed saves retain editor drafts.
+<p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="docs/personality-format.md">Personality file format</a> · <a href="https://github.com/gulagala001/dsh-persona-plugin/issues">Feedback</a></p>
 
-## Installation
+<p align="center"><a href="docs/images/persona.png"><img src="docs/images/persona.png" alt="Persona settings" width="880"></a></p>
 
-In **Plugins → Add plugin**, paste the fixed package URL:
+<a name="readme-install"></a>
+
+## Quick start
+
+**Requires:** DSH **0.2.2-rc.2** and Node.js **24.9.0+**.
+
+### 1. Install
+
+In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.2-dsh.0.2.2-rc.1/gulagala001-dsh-persona-plugin-0.2.2-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/gulagala001-dsh-persona-plugin-0.2.3-dsh.0.2.2-rc.2.tgz
 ```
 
-[SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.2-dsh.0.2.2-rc.1/SHA256SUMS)
+When your current task finishes, enable the plugin or restart DSH when prompted. Your settings and conversations stay as they were. Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/SHA256SUMS).
 
-This build targets exactly **DSH 0.2.2-rc.1**, **Cordis 4.0.5** and **Node.js 22.19+**.
+<details>
+<summary>Install or remove from the command line</summary>
 
-Install `gulagala001-dsh-persona-plugin-0.2.2-dsh.0.2.2-rc.1.tgz` using its absolute local path in **Plugins → Add plugin**, or run:
+Use the CLI that belongs to the same DSH, replacing `desktop` with your profile:
 
 ```sh
-dsh plugin --profile desktop add /absolute/path/gulagala001-dsh-persona-plugin-0.2.2-dsh.0.2.2-rc.1.tgz
+dsh plugin --profile desktop add "https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/gulagala001-dsh-persona-plugin-0.2.3-dsh.0.2.2-rc.2.tgz"
+dsh plugin --profile desktop remove @gulagala001/dsh-persona-plugin
 ```
 
-Replace `desktop` with your instance's actual profile and restart that instance after its current work finishes.
+Restart DSH after installing or removing.
 
-## Usage
+</details>
 
-**Overclock** invests in useful explanations for quality, depth and completeness. **Economical** reduces unnecessary text and repetition while preserving deliverable quality. On upgrade, retired built-in global selections fall back to Default, and conversation selections fall back to the global choice. Custom content and explicitly disabled session personalities are preserved.
+### 2. Try it
 
-Open **Settings → Persona** to choose a global personality. Expand **Advanced**, then create a personality or copy an existing preset and edit its modules. The editor selection is independent of the global selection.
+Open **Settings → Persona**, switch the global personality to **Economical (精算)**, and ask anything. Answers get noticeably shorter and more direct.
 
-Use **Copy creation prompt** and give it to an AI with your character idea. Import the resulting JSON file to create and select a new preset. **Export personality file** saves the current editor content for sharing or further editing.
+## What it does
 
-**Session personalities** are enabled by default. Choose the global default, a specific personality or Off in a main conversation's permissions drawer. Disabling the feature uses the global personality while retaining saved conversation choices. Deleting a referenced preset falls back to the global selection with a notice.
+- **Built-in personalities**: Default, **Overclock (超频)** for thorough, in-depth explanations, **Economical (精算)** for fewer wasted words at the same quality, and an English-prompt version of Economical.
+- **Four modules**: identity, language style, communication and answer presentation. Change only the ones you want; the rest use defaults.
+- **Make your own**: create, copy, rename and delete presets under **Advanced**. The preset you are editing is separate from the one in global use, so saving never switches your global personality.
+- **Let an AI write one**: copy the creation prompt, send it to an AI with a description of the assistant you want, and import the JSON file it produces. Export a personality to back it up or share it.
+- **Per-conversation choice**: in the permissions drawer of a conversation, follow the global setting, pick a personality or turn personalities off. It applies from the next message.
 
-Personality controls identity and expression preferences. The host still manages the actual environment, permissions, tool protocols, task controls and memory processing. Data is stored per profile. Legacy personality files can be imported directly.
+A personality only changes how the assistant talks. Its tools, permissions and task flow stay the same.
 
-## Build from source
+## FAQ
+
+<details>
+<summary>The built-in personality I used is gone after upgrading?</summary>
+
+Some older built-in personalities were retired. A global setting that used one goes back to Default, and conversation settings go back to following the global one. Presets you created or imported are untouched.
+
+</details>
+
+<details>
+<summary>Do two windows editing personalities overwrite each other?</summary>
+
+No. If another window saved first, the save stops and shows the latest settings. Your draft stays, so you can review it and save again.
+
+</details>
+
+<details>
+<summary>What happens to conversations using a personality I delete?</summary>
+
+They go back to following the global setting, and you get a notice.
+
+</details>
+
+## Development and license
+
+The package name is `@gulagala001/dsh-persona-plugin`. Download it only from this repository's releases.
 
 ```sh
+node scripts/prepare-host-sdk.mjs
 npm install
 npm run build
 npm test
 npm pack
 ```
 
-Packaging checks public files, Git history and the actual installation archive. See the [file format](docs/personality-format.md).
+Fields and limits of personality files are in the [personality file format](docs/personality-format.md). Code is [MIT](LICENSE) licensed; third-party sources are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## License
-
-[MIT](LICENSE). Host component attribution is included in [third-party notices](THIRD_PARTY_NOTICES.md).
-
-[Documentation structure and contributing](docs/documentation.md)
+When reporting a problem, include your DSH and plugin versions, the steps, and what you expected versus what happened. Remove personal data from logs and screenshots first: [Issues](https://github.com/gulagala001/dsh-persona-plugin/issues).

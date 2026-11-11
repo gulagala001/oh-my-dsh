@@ -2,97 +2,82 @@
 
 <h1 align="center">DSH Rewind</h1>
 
-<p align="center"><strong>回退对话与已记录文件，再按需撤销回退。</strong><br>DeepSeek Harness 插件</p>
+<p align="center"><strong>把对话和 AI 改过的文件一起退回到某条消息之前，退错了还能撤销。</strong><br>DeepSeek Harness 插件</p>
 
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.11-dsh.0.2.2-rc.1"><img alt="0.1.11" src="https://img.shields.io/badge/release-0.1.11-0969da?style=flat-square"></a>
-  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases"><img alt="GitHub 累计下载量" src="https://img.shields.io/github/downloads/gulagala001/dsh-undo-plugin/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.12-dsh.0.2.2-rc.2"><img alt="DSH Rewind 0.1.12" src="https://img.shields.io/badge/release-0.1.12-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases"><img alt="GitHub 下载量" src="https://img.shields.io/github/downloads/gulagala001/dsh-undo-plugin/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-undo-plugin/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-undo-plugin?style=flat-square&amp;color=0969da"></a>
 </p>
 
-<p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="docs/usage.zh.md">完整文档</a> · <a href="https://github.com/gulagala001/dsh-undo-plugin/issues">反馈</a></p>
+<p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="docs/usage.zh.md">完整用法</a> · <a href="https://github.com/gulagala001/dsh-undo-plugin/issues">反馈</a></p>
 
-<p align="center"><a href="docs/images/rewind.jpg"><img src="docs/images/rewind.jpg" alt="原生消息回退列表 / Native rewind list" width="880"></a></p>
+<p align="center"><a href="docs/images/rewind.jpg"><img src="docs/images/rewind.jpg" alt="消息回退列表" width="880"></a></p>
 
 <a name="readme-install"></a>
 
 ## 快速开始
 
-**适用环境：** DSH **0.2.2-rc.1**, Node.js **24.9.0+**.
-
-文件恢复仅覆盖实际保留的检查点。旧消息可能只能回退对话；恢复前核对外部改动。正在生成时双击 Esc 仍执行宿主停止操作。
+**需要：** DSH **0.2.2-rc.2**，Node.js **24.9.0+**。
 
 ### 1. 安装
 
-打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
+在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.11-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.11-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.12-dsh.0.2.2-rc.2/gulagala001-dsh-undo-plugin-0.1.12-dsh.0.2.2-rc.2.tgz
 ```
 
-等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.11-dsh.0.2.2-rc.1/SHA256SUMS).
+等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。命令行安装、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.12-dsh.0.2.2-rc.2/SHA256SUMS)。
 
-### 2. 先试这一件事
+### 2. 先试一件事
 
-在一个用于尝试的空闲会话里输入 `/rewind`，或连续按两次 **Esc**。
+找一个没在运行的会话，连按两次 **Esc**，或输入 `/rewind`。
 
-**成功标志：** 输入框上方出现可回退消息列表；选择一项后先显示影响范围与确认框，不会立即恢复文件。
+输入框上方会列出可以退回的消息。选一条后会先弹出确认框，告诉你哪些文件会被恢复，确认后才动手。
 
-## 回到一条消息之前
+## 怎么用
 
-点击用户消息复制按钮旁的撤回箭头，检查受影响文件并确认。对话在原会话内回退，文字和附件回填输入框。需要恢复时，点击 **撤销撤回** 或输入 `/undo`。
+点你发过的某条消息旁边的撤回箭头（在复制按钮旁），看一眼确认框里列出的文件，确认。这条消息和之后的对话会被撤回，原来的文字和附件回到输入框里，方便你改完再发。
 
-- 检查点自动记录，不需要在每次操作前手动保存。
-- 回退前显示实际文件覆盖范围，并检查外部修改冲突。
-- 空闲时双击 Esc 或 `/rewind` 打开原生回退列表，所有恢复操作均需确认。
+退多了，点 **撤销撤回** 或输入 `/undo`，对话和文件都会回到撤回之前。
 
-## 实际范围
+- 不用手动存档：插件在 AI 每次调用工具前后自动记录文件变化。
+- 恢复前会检查文件在这期间有没有被别人改过，有冲突就停下来提醒你。
+- 正在生成回复时双击 Esc 还是 DSH 原来的"停止"，停下后再双击才打开回退列表。
 
-| 情况 | 行为 |
+## 能退回什么
+
+| 情况 | 结果 |
 | --- | --- |
-| 保留了文件检查点 | 恢复记录覆盖的文件，并回退对话。 |
-| 较早的消息没有文件快照 | 只回退对话，确认框说明实际范围。 |
-| 文件在外部发生变化 | 恢复前检查冲突，不把外部改动当作插件拥有的内容。 |
-| 正在生成回复 | 双击 Esc 保持 DSH 原生停止行为。 |
+| 安装插件之后的消息 | 对话和记录到的文件一起退回 |
+| 安装之前的消息，或备份已过期 | 只退回对话，确认框会标"仅对话" |
+| 文件在 DSH 之外被改过 | 先提示冲突，不会直接覆盖 |
+| 数据库、远程服务器、后台进程的改动 | 不在恢复范围内 |
 
-文件覆盖、保留与自动清理规则见[使用指南](docs/usage.zh.md)。它不是任意系统操作的完整快照，也不保证恢复未被记录的外部副作用。
+备份保留多久、占多少空间，见[使用指南](docs/usage.zh.md#存储)。
 
 ## 常见问题
 
 <details>
-<summary>为什么某条消息不能恢复文件？</summary>
+<summary>为什么有的消息只能退回对话？</summary>
 
-该消息可能早于插件安装，或相应快照已不在保留范围。查看确认框列出的实际范围；没有快照时只回退对话。
+那条消息早于插件安装，或者对应的文件备份已经过期清理。确认框会写明这次能恢复什么。
 
 </details>
 
 <details>
-<summary>撤回后还能回到刚才的状态吗？</summary>
+<summary>撤回之后还能回到刚才的状态吗？</summary>
 
-使用“撤销撤回”或 `/undo`，先检查确认框与冲突提示。撤销针对插件保留的上一次撤回记录。
+能。点 **撤销撤回** 或输入 `/undo`，先看一眼确认框和冲突提示再确认。撤销针对的是最近一次撤回。如果撤回后又发了新消息，要先撤回这条新消息，再撤销之前那次。
 
 </details>
 
-## 开发与许可
+## 开发和许可
 
-安装标识为 `@gulagala001/dsh-undo-plugin`，由固定 GitHub Release 分发。开发命令和存储说明见[使用指南](docs/usage.zh.md)。
+安装包名是 `@gulagala001/dsh-undo-plugin`，只从本仓库的 Release 下载。开发命令和存储说明见[使用指南](docs/usage.zh.md)。代码用 [MIT](LICENSE) 许可，来源和署名见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-采用 [MIT](LICENSE)，来源与署名见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-
-## 文档与支持
-
-| 我想做什么 | 去哪里 |
-| --- | --- |
-| 安装、升级、卸载 | [安装指南](docs/install.md) |
-| 了解使用方法与边界 | [使用文档](docs/usage.zh.md) |
-| 查看版本变化 | [Releases](https://github.com/gulagala001/dsh-undo-plugin/releases) |
-| 反馈问题 | [Issues](https://github.com/gulagala001/dsh-undo-plugin/issues) |
-
-反馈时请提供完整 DSH／插件版本、实际入口、最小复现步骤，以及预期和实际表现；日志与截图先移除私人数据。
-
-<p align="center"><a href="#readme-top">返回顶部</a> · <a href="https://github.com/gulagala001/dsh-undo-plugin/releases">版本与下载</a> · <a href="https://github.com/gulagala001/dsh-undo-plugin/issues">反馈</a></p>
-
-[文档结构与贡献](docs/documentation.md)
+反馈问题请写明 DSH 和插件版本、操作步骤、期望和实际结果，日志和截图先去掉个人信息：[Issues](https://github.com/gulagala001/dsh-undo-plugin/issues)。

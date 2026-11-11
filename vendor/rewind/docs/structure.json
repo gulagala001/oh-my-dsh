@@ -1,5 +1,27 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "published": "0.1.12-dsh.0.2.2-rc.2",
+  "repository": {
+    "slug": "gulagala001/dsh-undo-plugin",
+    "description": "撤回 DSH 里的对话和文件改动，撤回后还能恢复。 Rewind conversations and file changes in DeepSeek Harness, with undo.",
+    "homepage": "",
+    "topics": [
+      "checkpoint",
+      "cordis",
+      "deepseek-harness",
+      "dsh",
+      "dsh-plugin",
+      "rewind",
+      "undo",
+      "deepseek-harness-plugin",
+      "dsh-bundle"
+    ]
+  },
+  "names": [
+    "DSH Rewind",
+    "DSH Undo"
+  ],
+  "maxPages": 9,
   "documents": [
     {
       "path": "CHANGELOG.md",
@@ -9,7 +31,8 @@
     {
       "path": "README.md",
       "role": "home",
-      "language": "zh"
+      "language": "zh",
+      "translation": "README_EN.md"
     },
     {
       "path": "README.zh.md",
@@ -19,17 +42,13 @@
     {
       "path": "README_EN.md",
       "role": "home",
-      "language": "zh"
+      "language": "en",
+      "translation": "README.md"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
       "role": "sources",
       "language": "en"
-    },
-    {
-      "path": "docs/documentation.md",
-      "role": "development",
-      "language": "bilingual"
     },
     {
       "path": "docs/install.md",
@@ -40,11 +59,6 @@
       "path": "docs/install_EN.md",
       "role": "guide",
       "language": "zh"
-    },
-    {
-      "path": "docs/releases.md",
-      "role": "release",
-      "language": "bilingual"
     },
     {
       "path": "docs/usage.md",

@@ -2,6 +2,16 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.2.omd.1.3.14",
+      "severity": "normal",
+      "title": "Oh My DSH 1.3.14 · DSH 0.2.2-rc.2",
+      "notes": [
+        "创建独立聊天目录时意外退出，重启会接回该聊天自己的目录。同名的已有目录和符号链接会保留，已被替换的目录不会接管。",
+        "Dream 重试会合并同一目标；切换上下文后端或压缩模式会取消旧操作。更新、索引和任务提醒会显示实际进度，取消后可以重新操作。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.2.omd.1.3.14"
+    },
+    {
       "version": "0.2.2-rc.1.omd.1.3.13",
       "severity": "normal",
       "title": "Oh My DSH 1.3.13 · DSH 0.2.2-rc.1",

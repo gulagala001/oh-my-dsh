@@ -44,7 +44,7 @@ export function transformAssembly(assembly, context, options = {}) {
   const applied = new Set(), retained = [], missing = [], changedSchemas = new Map();
   for (const tool of known.values()) {
     // Native Team controls use member targets, not ordinary child ids.
-    if (['send_message', 'list_agents', 'interrupt_agent'].includes(tool.name) && known.has('spawn_teammate')) {
+    if (['send_message', 'list_agents', 'interrupt_agent'].includes(tool.name) && Object.hasOwn(known.get('send_message')?.parameters?.properties ?? {}, 'agent')) {
       retained.push({ name: tool.name, reason: 'native-team-control' }); continue;
     }
     if (tool.name === 'run_code') { retained.push({ name: tool.name, reason: 'runtime-owned-transport' }); continue; }

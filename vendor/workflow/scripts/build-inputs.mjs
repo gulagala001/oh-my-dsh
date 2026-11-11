@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 export const root = fileURLToPath(new URL('../', import.meta.url));
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 export const readJson = async path => JSON.parse(await readFile(path, 'utf8'));
-export const host = Object.freeze({ repository: 'https://github.com/deepseek-ai/deepseek-harness', version: '0.2.2-alpha.3', tag: 'dsh-v0.2.2-alpha.3', commit: '05b1cae8db6e674c5685101494d4eec24652424a' });
+export const host = Object.freeze({ repository: 'https://github.com/deepseek-ai/deepseek-harness', version: '0.2.2-rc.2', tag: 'dsh-v0.2.2-rc.2', commit: 'ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c' });
 
 export async function owned(path, directory = false) {
   try {
@@ -28,12 +28,12 @@ export async function outputPath(path) {
 }
 
 export async function validateInputs() {
-  const targetVersion = '0.2.2-rc.1';
+  const targetVersion = '0.2.2-rc.2';
   const { verifyHostArtifacts } = await import('./host-artifacts.mjs');
   await verifyHostArtifacts(root, await readJson(join(root, 'vendor/dsh.json')));
   const pkg = await readJson(join(root, 'package.json'));
   const requireBuild = createRequire(join(root, 'package.json'));
-  if (pkg.name !== 'dsh-workflow-plus' || !/^\d+\.\d+\.\d+-dsh\./.test(pkg.version) || !pkg.version.endsWith(`-dsh.${targetVersion}`) || pkg.engines?.node !== '>=24.9.0' || pkg.engines?.dsh !== targetVersion) throw Error('Package metadata must target dsh-workflow-plus and exact DSH 0.2.2-rc.1');
+  if (pkg.name !== 'dsh-workflow-plus' || !/^\d+\.\d+\.\d+-dsh\./.test(pkg.version) || !pkg.version.endsWith(`-dsh.${targetVersion}`) || pkg.engines?.node !== '>=24.9.0' || pkg.engines?.dsh !== targetVersion) throw Error('Package metadata must target dsh-workflow-plus and exact DSH 0.2.2-rc.2');
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 24 || major === 24 && minor < 9) throw Error('Node >=24.9.0 is required');
   for (const [name, version] of Object.entries({ '@deepseek-ai/dsh': targetVersion, '@deepseek-ai/cordis': '4.1.0', '@deepseek-ai/schemastery': '3.19.0', typescript: '6.0.3' })) {

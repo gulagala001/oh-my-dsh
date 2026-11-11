@@ -1,92 +1,61 @@
-# OpenCU 安装与升级
-
-旧桌面包中的终端、搜索和 Office 助手修复需要同时更新匹配宿主；仅安装本版插件不会修复旧应用的文件权限。详见 [2.2.7 更新说明](releases.md#zh-227)。
+# 安装 OpenCU
 
 [English](install_EN.md) · [返回首页](../README.md)
 
-**已经安装 OMD？不用再装 OpenCU。** OMD 已内置；请使用 [OMD 安装与升级指南](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md)。
+需要 DSH **0.2.2-rc.2** 和 Node.js **24.9.0+**。
 
-独立安装 OpenCU，可以选择下面任意一种方式。**还没有 DSH 时，先按 [DSH 官方说明](https://github.com/deepseek-ai/deepseek-harness) 安装 DSH**，再按实际完整版本选择插件包。OpenCU 本身不是 DSH 安装器。
+## 在 DSH 里安装
 
-## 方式一：整段复制给 AI
-
-把下面整段发送给能够操作你电脑的 AI：
+打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-请帮我在现有 DSH 中安装或升级独立 OpenCU。
-
-先阅读项目安装指南和更新日志（含各版本固定包地址）：
-https://github.com/gulagala001/opencu/blob/main/docs/install.md
-https://github.com/gulagala001/opencu/blob/main/CHANGELOG.md
-
-自动核对我要使用的桌面或 Web 实例、DSH 完整版本、实际 profile、DSH_HOME 和已有插件。若已安装 OMD，不要重复安装 OpenCU，转按 OMD 官方安装指南处理：
-https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md
-
-若没有 DSH，先说明需要安装 DSH，并按其官方安装说明处理；再根据实际安装版本选包。只安装发行清单中已经发布、与实际 DSH 完整版本精确匹配的固定 .tgz。0.2.1-rc.1、0.2.2-rc.1 和 0.2.0-rc.* 不可混用；没有匹配包就停止并说明，不用 main 源码、latest 或改包名代替正式发行。
-
-若有正在运行的任务，先告知我，不强行中断。先备份相关配置和数据。沿用原 profile、DSH_HOME 和 OpenCU 数据目录，保留会话、模型配置、浏览器配对及第三方插件，不重建或清空配置。不擅自修改 Host/Client/preload、跨版本安装或降级 DSH；需要宿主适配才能使用的功能，请说明限制。
-
-允许完成匹配插件的安装或升级，并重启受影响的 DSH 实例；不要重启其他实例。完成后做简短确认：插件已加载、电脑与浏览器设置能打开、原数据和第三方插件仍在。报告 DSH/OpenCU 版本、使用的固定包、重启的实例及仍需我授予的系统权限，不跑大规模测试。
+https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz
 ```
 
-## 方式二：在 DSH 插件界面安装
+等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/SHA256SUMS)。
 
-1. 打开要使用的 DSH 桌面应用或 Web 界面，在“关于”中查看**完整版本**。
-2. 打开 **插件 → 右上角「+ 添加插件」**。
-3. 将下方对应版本的完整 URL，粘贴到可输入“包名 / GitHub 仓库地址 / 本地路径”的输入框，点击 **安装**。桌面与 Web 使用相同的版本对应包；在各自要使用的实例中安装。
-4. 等待安装成功，桌面完整退出再打开；Web 重启对应 DSH 服务后重新打开页面。仅刷新网页不等于重启服务。打开 **设置 → 电脑与浏览器**，按提示准备浏览器资源、系统权限和所需的 Chrome／Edge 扩展配对。
+## 用命令行安装
 
-**DSH `0.2.2-rc.1`，复制这一整行：**
+用同一个 DSH 自带的命令行，把 `web` 换成你的 profile（桌面版是 `desktop`）：
+
+```bash
+dsh plugin --profile web add "https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz"
+```
+
+已经装了 OMD 的话不用再装，OMD 里已经带了 OpenCU。其他 DSH 版本请到 [Releases](https://github.com/gulagala001/opencu/releases) 找对应的包，版本不一致的包不要混装。
+
+## 装好之后
+
+打开 **设置 → 电脑与浏览器**，按提示准备浏览器文件、授予系统权限，或连接 Chrome、Edge 扩展。
+
+- **Chrome 或 Edge 扩展**：在设置页点显示扩展文件夹，到浏览器的扩展页打开开发者模式，选"加载已解压的扩展程序"并选中这个文件夹。AI 第一次用这个浏览器时会弹出"允许连接此浏览器？"，点 **允许并记住**，之后自动连上。
+- **macOS**：在 **系统设置 → 隐私与安全性** 里给 DSH 打开辅助功能和屏幕录制权限。
+- **DSH 内置浏览器**：需要在 DSH 桌面版源码上打配套适配后自己构建，Release 附带 `host-adapters.zip`，步骤见[开发文档](../DEVELOPMENT.md#构建和本地插件包)。只装插件不会改动 DSH 本身。
+
+## 复制给 AI
+
+也可以把下面这段发给 DSH 里的 AI，让它帮你装：
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz
+请把 OpenCU 安装到我现在用的 DSH profile：
+https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz
+先确认 DSH 是 0.2.2-rc.2、Node.js 是 24.9.0 以上；如果已经装了 OMD，就不要再装 OpenCU。
+保留原来的配置、会话、浏览器配对和其他插件，不要升级 DSH；需要重启时先确认没有任务在跑。
+装好后确认 设置 → 电脑与浏览器 能打开，并告诉我还需要授予哪些系统权限。
 ```
 
-**DSH `0.2.1-rc.1`，复制这一整行：**
+## 升级和回退
 
-```text
-https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/opencu-2.1.0-dsh.0.2.1-rc.1.tgz
+先备份 profile 和 `DSH_HOME/opencu`，再用新版安装包覆盖安装，DSH 本身不用动。升级失败时原有数据不受影响，把第一条报错发到 [Issues](https://github.com/gulagala001/opencu/issues)。
+
+想回到旧版，就装回之前的安装包。回退只换代码，新版写入的数据不会自动撤销。
+
+## 卸载
+
+在插件页移除，或运行：
+
+```bash
+dsh plugin --profile web remove opencu
 ```
 
-`0.2.2-rc.1` 与 `0.2.0-rc.2` 不是同一版本。其他宿主版本没有列在这里时，不要混用这些包。
-
-## 功能与升级边界
-
-- 两个固定 Release 提供插件和 `host-adapters.zip` 源码材料，**没有完整桌面安装器**。完整内置浏览器、原生监看及相关界面需要匹配的 Host、Client、preload 源码适配和构建；只装插件不会自动补齐宿主。需要源码适配时，由构建者参考[开发文档](../DEVELOPMENT.md#构建和本地插件包)。
-- Web 的能力取决于服务所在机器、后端和授权，不会直接获得访问网页的那台电脑的控制权。
-- 升级先备份，沿用原 profile、`DSH_HOME` 和数据目录，保留第三方插件；安装匹配包后重启受影响实例。不要为升级新建或重置配置。
-- 下载的完成、失败和取消结果保留，旧进度不会覆盖结果。重启后尚未被桌面确认仍在运行的下载暂不可操作，收到实时状态后恢复；不会自动重新下载。已完成文件丢失时保留历史并显示文件不可用，其他下载继续同步；清理历史不删除文件。暂停／继续的精确事件顺序需要同时更新对应宿主适配。
-- **主干源码更新不等于固定 Release 已更新。** 上述 URL 不会自动包含后来合入的修复；公开包和校验文件以[更新日志](../CHANGELOG.md)列出的 Release 附件为准。
-
-<details>
-<summary>CLI 补充（供 AI 或习惯命令行的用户参考）</summary>
-
-使用目标 DSH 自带或启动原 Web 服务的同一套 CLI，保持原 `DSH_HOME`。先运行 `dsh --version` 确认完整版本。以下为标准 `desktop`／`web` profile；自定义 profile 使用原名称。不要用另一个全局 CLI 或 `--from-default-profile` 重建配置。
-
-DSH `0.2.2-rc.1` 桌面：
-
-```sh
-dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz'
-```
-
-DSH `0.2.2-rc.1` Web：
-
-```sh
-dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz'
-```
-
-DSH `0.2.1-rc.1` 桌面：
-
-```sh
-dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/opencu-2.1.0-dsh.0.2.1-rc.1.tgz'
-```
-
-DSH `0.2.1-rc.1` Web：
-
-```sh
-dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/opencu-2.1.0-dsh.0.2.1-rc.1.tgz'
-```
-
-安装完成后按上文重启相应实例，保留原启动方式和环境。CLI 运行需要 Node.js ≥24.9.0；桌面应用使用其附带运行时。
-
-</details>
+然后重启 DSH。浏览器配对、下载记录和批注都在 `DSH_HOME/opencu` 里，会留着，不需要可以手动删除。Chrome 或 Edge 里的扩展要在浏览器的扩展页单独移除。

@@ -320,7 +320,7 @@ function apply(ctx) {
               provider: WORKFLOW_PROVIDER,
               childId,
               label: label ?? "Workflow child",
-              request: inputs,
+              ...inputs,
               signal,
               delivery: "caller"
             });
@@ -331,6 +331,7 @@ function apply(ctx) {
                 return quiesced;
               },
               childId: nativeActivation.childId,
+              name: nativeActivation.name,
               messageId: nativeActivation.messageId,
               result: nativeActivation.result,
               dispose() {

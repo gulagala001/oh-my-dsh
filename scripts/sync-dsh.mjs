@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { devNull } from 'node:os';
+import { clientRegistration } from './host-build-contracts.mjs';
 import { hostTarget } from './host-targets.mjs';
 
 const root = await realpath(fileURLToPath(new URL('../', import.meta.url)));
@@ -95,7 +96,7 @@ for (const name of ['ui-conversation', 'ui-chat']) {
   }
   await ownedSource(join(directory, 'lib/client.js')); await ownedSource(join(directory, 'lib/index.js'));
   const client = (await readFile(join(directory, 'lib/client.js'), 'utf8')).replace(/^\/\/# sourceMappingURL=.*\n?/gm, '');
-  if (!client.startsWith('window.__ModuleLoader__.load({') || !client.trimEnd().endsWith('});') || !client.slice(0, 150).includes(`id: "@deepseek-ai/dsh-client-${name}"`)) throw new Error(`Missing matching prebuilt ${name} artifact; build the pinned staging host first`);
+  clientRegistration(client, '@deepseek-ai/dsh-client-' + name);
   await readFile(join(directory, 'lib/index.js'));
 }
 // Collect both patches before replacing any snapshot, so patch discovery

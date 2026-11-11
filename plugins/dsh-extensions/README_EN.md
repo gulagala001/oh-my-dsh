@@ -7,38 +7,37 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.5-dsh.0.2.2-rc.1"><img alt="0.1.5" src="https://img.shields.io/badge/release-0.1.5-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.6-dsh.0.2.2-rc.2"><img alt="0.1.6" src="https://img.shields.io/badge/release-0.1.6-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-extensions/releases"><img alt="GitHub release downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-extensions/total?style=flat-square&amp;label=GitHub%20release%20downloads"></a>
-  <a href="#install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-0969da?style=flat-square"></a>
 </p>
 
-<p align="center"><a href="#install"><strong>Get started</strong></a> · <a href="docs/usage_EN.md">Documentation</a> · <a href="https://github.com/gulagala001/dsh-extensions/issues">Feedback</a></p>
+<p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="docs/usage_EN.md">Documentation</a> · <a href="https://github.com/gulagala001/dsh-extensions/issues">Feedback</a></p>
 
 DSH already reads skills, MCP servers, AGENTS.md and similar extensions, but most of them can only be changed by editing files. DSH Extensions adds five tabs next to Installed and Discover on the **Plugins** page. They use DSH's own interface components to view, switch and edit these extensions, and add custom commands and hooks to the runtime.
 
-<a name="install"></a>
+<a name="readme-install"></a>
 
-## Get started
+## Quick start
 
-**Requirements:** DSH **0.2.2-rc.1**, Node.js **24.9.0+**.
+**Requires:** DSH **0.2.2-rc.2** and Node.js **24.9.0+**.
 
 ### 1. Install
 
-
-In the DSH instance you use, open **Plugins → + Add plugin** and paste:
+In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-extensions-0.1.6-dsh.0.2.2-rc.2.tgz
 ```
 
-After active tasks finish, enable the plugin or restart the instance as the host asks. See the [installation guide](docs/install_EN.md) for other methods, upgrades and removal · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/SHA256SUMS).
+When your current task finishes, enable the plugin or restart DSH when prompted. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/SHA256SUMS).
 
-### 2. Try this first
+### 2. Try it
 
 Open **Plugins → Skills**, switch one skill off and start a new conversation.
 
-**Success:** the skill no longer appears in the model's skill catalog, and it returns when you switch it back on.
+The skill no longer appears in the model's skill catalog, and it returns when you switch it back on.
 
 ## Features
 
@@ -82,8 +81,15 @@ Skills bundled with DSH or provided by other plugins are read-only. Copy them to
 
 </details>
 
-## License
+## Development and license
 
-[MIT](LICENSE)
+The package name is `dsh-extensions`. Download it only from this repository's releases. You need Node.js 24.9.0+ and pnpm 11.28.5:
 
-[Documentation structure and contributing](docs/documentation.md)
+```sh
+node scripts/prepare-host-sdk.mjs
+pnpm install --frozen-lockfile
+pnpm build
+npm pack
+```
+
+Code is [MIT](LICENSE) licensed. When reporting a problem, include your DSH and plugin versions, the steps, and what you expected versus what happened. Remove personal data from logs and screenshots first: [Issues](https://github.com/gulagala001/dsh-extensions/issues).

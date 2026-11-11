@@ -94,10 +94,11 @@ export async function prepareNativeRuntime(directory, { platform = process.platf
   const changes = new Map();
   for (const pkg of packages) {
     if (pkg.name !== '@deepseek-ai/libreoffice-kit' && platform !== 'darwin') continue;
-    const expected = pkg.name === 'koffi' ? '3.1.1' : pkg.name === 'node-pty' ? '1.2.0-beta.15' : '0.1.5';
-    if (pkg.version !== expected) throw Error(`Unreviewed native runtime version: ${pkg.name}@${pkg.version}`);
+    const expected = pkg.name === 'koffi' ? ['3.1.1'] : pkg.name === 'node-pty' ? ['1.2.0-beta.15'] : ['0.1.5', '0.2.3'];
+    if (!expected.includes(pkg.version)) throw Error(`Unreviewed native runtime version: ${pkg.name}@${pkg.version}`);
     if (pkg.name === '@deepseek-ai/libreoffice-kit') {
-      for (const entry of ['lib/index.js', 'lib/cli.js']) {
+      const entries = pkg.version === '0.2.3' ? ['lib/index.js', 'lib/cli.js', 'lib/editor.js'] : ['lib/index.js', 'lib/cli.js'];
+      for (const entry of entries) {
         const file = await owned(join(pkg.root, entry));
         const source = await readFile(file, 'utf8');
         if (source.includes('// opencu-physical-native-engine:v1')) {

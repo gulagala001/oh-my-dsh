@@ -2,97 +2,82 @@
 
 <h1 align="center">DSH Rewind</h1>
 
-<p align="center"><strong>Rewind conversations and recorded files, with undo.</strong><br>DeepSeek Harness plugin</p>
+<p align="center"><strong>Roll a conversation and the files the AI changed back to before any message, and undo the rollback if you change your mind.</strong><br>A DeepSeek Harness plugin</p>
 
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.11-dsh.0.2.2-rc.1"><img alt="0.1.11" src="https://img.shields.io/badge/release-0.1.11-0969da?style=flat-square"></a>
-  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-undo-plugin/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.12-dsh.0.2.2-rc.2"><img alt="DSH Rewind 0.1.12" src="https://img.shields.io/badge/release-0.1.12-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases"><img alt="GitHub downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-undo-plugin/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-undo-plugin/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-undo-plugin?style=flat-square&amp;color=0969da"></a>
 </p>
 
-<p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="docs/usage.md">Docs</a> · <a href="https://github.com/gulagala001/dsh-undo-plugin/issues">Report an issue</a></p>
+<p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="docs/usage.md">Full usage</a> · <a href="https://github.com/gulagala001/dsh-undo-plugin/issues">Feedback</a></p>
 
-<p align="center"><a href="docs/images/rewind.jpg"><img src="docs/images/rewind.jpg" alt="原生消息回退列表 / Native rewind list" width="880"></a></p>
+<p align="center"><a href="docs/images/rewind.jpg"><img src="docs/images/rewind.jpg" alt="Message rewind list" width="880"></a></p>
 
 <a name="readme-install"></a>
 
 ## Quick start
 
-**Required environment：** DSH **0.2.2-rc.1**, Node.js **24.9.0+**.
-
-File restoration only covers retained checkpoints. Older messages may support conversation-only rewind. External changes are checked before restoration; double Esc during generation retains the host Stop behavior.
+**Requires:** DSH **0.2.2-rc.2** and Node.js **24.9.0+**.
 
 ### 1. Install
 
-Open **Plugins → Add plugin** in the DSH instance you use, then paste:
+In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.11-dsh.0.2.2-rc.1/gulagala001-dsh-undo-plugin-0.1.11-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.12-dsh.0.2.2-rc.2/gulagala001-dsh-undo-plugin-0.1.12-dsh.0.2.2-rc.2.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.11-dsh.0.2.2-rc.1/SHA256SUMS).
+When your current task finishes, enable the plugin or restart DSH when prompted. Your settings and conversations stay as they were. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.12-dsh.0.2.2-rc.2/SHA256SUMS).
 
-### 2. Try this first
+### 2. Try it
 
-In an idle test conversation, enter `/rewind` or press **Esc twice**.
+In a conversation that is not running, press **Esc** twice or type `/rewind`.
 
-**Success looks like：** A rewind list opens above the composer. Selecting an entry shows the affected scope and confirmation before any file restoration.
+A list of messages you can return to appears above the composer. Pick one and a confirmation dialog lists the files that will be restored. Nothing changes until you confirm.
 
-## Return to an earlier message
+## How to use it
 
-Click the rewind arrow beside a user message’s Copy button, inspect affected files and confirm. The conversation rewinds in place and restores text and attachments to the composer. Choose **Undo rewind** or enter `/undo` to restore the previous state.
+Click the rewind arrow next to the copy button on one of your messages, check the files in the dialog, and confirm. That message and everything after it are removed, and its text and attachments go back into the composer so you can edit and resend.
 
-- Checkpoints are recorded automatically; no manual save before every action is required.
-- The confirmation shows actual file coverage and checks for external changes.
-- Double Esc while idle or `/rewind` opens the native list; all restoration requires confirmation.
+Went too far? Click **Undo rewind** or type `/undo` to bring back the conversation and the files.
 
-## Actual coverage
+- No manual saves: the plugin records file changes before and after every AI tool call.
+- Before restoring, it checks whether files changed in the meantime and stops to warn you about conflicts.
+- While a reply is generating, double Esc still stops DSH as usual. Press it twice again afterwards to open the list.
 
-| Situation | Behavior |
+## What it can restore
+
+| Case | Result |
 | --- | --- |
-| File checkpoints remain available | Restores recorded files and rewinds the conversation. |
-| An older message has no file snapshot | Rewinds only the conversation, with the scope shown in confirmation. |
-| Files changed externally | Checks conflicts before restoration rather than treating external edits as owned changes. |
-| A response is running | Double Esc retains DSH’s native Stop behavior. |
+| Messages sent after the plugin was installed | The conversation and the recorded files roll back together |
+| Older messages, or backups that have expired | Only the conversation rolls back; the dialog marks it "conversation only" |
+| Files changed outside DSH | You get a conflict warning; nothing is overwritten |
+| Databases, remote servers, background processes | Not covered |
 
-See the [usage guide](docs/usage.md) for coverage, retention and automatic cleanup. This is not a complete snapshot of arbitrary system actions and cannot restore unrecorded external side effects.
+For how long backups are kept and how much space they use, see the [usage guide](docs/usage.md#storage).
 
 ## FAQ
 
 <details>
-<summary>Why can’t a message restore files?</summary>
+<summary>Why can some messages only roll back the conversation?</summary>
 
-It may predate installation or no longer have retained snapshots. Inspect the confirmation’s actual scope; without a snapshot, only the conversation rewinds.
+The message predates the plugin, or its file backup has expired. The dialog says what this rollback will restore.
 
 </details>
 
 <details>
-<summary>Can I undo a rewind?</summary>
+<summary>Can I get back to where I was after a rewind?</summary>
 
-Use Undo rewind or `/undo` and review the confirmation and conflict notice. Undo applies to the last rewind record still retained by the plugin.
+Yes. Click **Undo rewind** or type `/undo`, check the dialog and any conflict warnings, then confirm. Undo applies to the most recent rewind. If you sent a new message after rewinding, rewind that message first, then undo the earlier one.
 
 </details>
 
 ## Development and license
 
-The package is `@gulagala001/dsh-undo-plugin`, distributed through fixed GitHub Releases. Development commands and storage behavior are in the [usage guide](docs/usage.md).
+The package name is `@gulagala001/dsh-undo-plugin`. Download it only from this repository's releases. Development commands and storage details are in the [usage guide](docs/usage.md). Code is [MIT](LICENSE) licensed; sources and attributions are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Licensed under [MIT](LICENSE). Sources and attribution are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## Documentation and support
-
-| I want to | Where to go |
-| --- | --- |
-| Install, update or remove | [Installation guide](docs/install_EN.md) |
-| Learn the features and limits | [Documentation](docs/usage.md) |
-| Read release changes | [Releases](https://github.com/gulagala001/dsh-undo-plugin/releases) |
-| Report a problem | [Issues](https://github.com/gulagala001/dsh-undo-plugin/issues) |
-
-For a bug report, include the full DSH and plugin versions, the entry point, minimal reproduction steps, and expected versus actual behavior. Remove private data before sharing logs or screenshots.
-
-<p align="center"><a href="#readme-top">Back to top</a> · <a href="https://github.com/gulagala001/dsh-undo-plugin/releases">Versions and downloads</a> · <a href="https://github.com/gulagala001/dsh-undo-plugin/issues">Feedback</a></p>
-
-[Documentation structure and contributing](docs/documentation.md)
+When reporting a problem, include your DSH and plugin versions, the steps, and what you expected versus what happened. Remove personal data from logs and screenshots first: [Issues](https://github.com/gulagala001/dsh-undo-plugin/issues).

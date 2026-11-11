@@ -1,52 +1,39 @@
-# DeepSeek Workbench — 安装与维护
+# 安装 DeepSeek Workbench
 
-宿主构建以 `package.json` 的完整版本为准，当前源码默认 `0.2.2-rc.1`。每份构建对齐同版本 SDK、组件与依赖锁，安装入口按正式发行包的宿主版本选择。
+[English](install_EN.md) · [返回首页](../README.md)
 
-[English](install_EN.md) · [返回首页](../README.md#readme-install)
+需要 DSH **0.2.2-rc.2** 和 Node.js **24.9.0+**。
 
-**DSH 0.2.2-rc.1 · Node.js ≥24.9.0 · 0.1.0**
+## 在 DSH 里安装
 
-内嵌网页聊天需要 DSH 桌面版；跨重启登录、官网下载与扩展平台页面需要匹配的桌面适配。Web 版提供外部网页入口。官网聊天账号与 API 平台授权分别管理。
-
-## 安装到当前实例
-
-在实际使用的实例打开 **插件 → ＋ 添加插件**，粘贴固定发行地址：
+打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-deepseek-workbench-0.1.5-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.6-dsh.0.2.2-rc.2.tgz
 ```
 
-等当前任务结束后按宿主提示启用或重启，沿用原 profile、DSH_HOME、模型配置和会话。
+等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.6-dsh.0.2.2-rc.2/SHA256SUMS)。
 
-下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.5-dsh.0.2.2-rc.1/SHA256SUMS).
+## 用命令行安装
 
-### 首次成功检查
-
-点击左侧栏的 **DeepSeek 网页聊天**，完成官网聊天登录，打开一条普通官网会话。
-
-可查看官网历史；点击“在 DSH 中继续”后生成原生会话，由你决定是否发送下一条消息。
-
-<details>
-<summary>命令行安装</summary>
-
-使用同一 DSH 实例对应的 CLI，将 `web` 换成实际 profile。
+用同一个 DSH 自带的命令行，把 `web` 换成你的 profile（桌面版是 `desktop`）：
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-deepseek-workbench-0.1.5-dsh.0.2.2-rc.1.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.6-dsh.0.2.2-rc.2.tgz"
 ```
 
-</details>
+## 升级和回退
 
-## 升级、回退与卸载
+先备份 profile，再用新版安装包覆盖安装，DSH 本身不用动。升级失败时原有数据不受影响，把第一条报错发到 [Issues](https://github.com/gulagala001/dsh-deepseek-workbench/issues)。
 
-先备份现有 profile 与相关数据，再安装匹配宿主的固定版本；不为安装插件自动替换或降级 DSH。更新失败保留原数据和第一处错误。回退时选择此前匹配包并核对对应数据说明；只恢复代码不等于撤销数据变更。
+想回到旧版，就装回之前的安装包。回退只换代码，新版写入的数据不会自动撤销。
 
-在当前实例插件页移除，或使用：
+## 卸载
+
+在插件页移除，或运行：
 
 ```bash
 dsh plugin --profile web remove dsh-deepseek-workbench
 ```
 
-卸载前关闭临时侧栏并确认官网清理成功。已迁移 DSH 会话、普通官网历史分别由原服务保留；官网登录数据由桌面宿主管理。
-
-移除后重启同一实例。反馈提供完整版本、profile 类型和脱敏后的第一处错误。
+然后重启 DSH。转过来的 DSH 会话和普通官网聊天都会留着。卸载前先关掉临时侧栏，确认它已清理完。

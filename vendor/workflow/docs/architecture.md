@@ -1,33 +1,30 @@
 # 架构 / Architecture
 
-宿主模块工厂保留动态导入的延迟语义，由原组件 Loader 树在调用时解析；Windows 专用原生依赖不会在其他平台启动时预加载。
-
-Host factories preserve lazy dynamic imports through the original component Loader tree. Windows-only native dependencies are not preloaded at startup on other platforms.
-
-宿主构建以 `package.json` 的完整版本为准，当前源码默认 `0.2.2-rc.1`。每份构建对齐同版本 SDK、组件与依赖锁，安装入口按正式发行包的宿主版本选择。
-
 [中文首页](../README.md) · [English](../README_EN.md)
 
-DSH Workflow 是通过 profile bundle 安装的工作流插件。执行引擎基于 DSH **0.2.1-rc.2** 的 Workflow、PTC 和 tool-workflow，负责脚本编排、运行记录与续跑，并接入原生子代理、会话、Jobs、权限和取消生命周期。
+DSH Workflow 以 profile bundle 形式安装。执行引擎基于 DSH 自带的 Workflow、PTC 和 tool-workflow，负责编排脚本、保存运行记录和续跑，子代理、会话、后台任务、权限和取消都走 DSH 原有的机制。
 
-DSH Workflow installs as a profile bundle. Its engine builds on DSH **0.2.1-rc.2** Workflow, PTC and tool-workflow to coordinate scripts, persist run records and resume execution through native subagents, sessions, Jobs, permissions and cancellation.
+DSH Workflow installs as a profile bundle. Its engine builds on the Workflow, PTC and tool-workflow modules that ship with DSH. It orchestrates scripts, stores run records and resumes runs, while subagents, conversations, background jobs, permissions and cancellation use the existing DSH mechanisms.
 
-| 位置 / Location | 职责 / Responsibility |
+| 位置 / Location | 作用 / Purpose |
 | --- | --- |
-| `cordis.patch.yml` | 挂载增强引擎与工具 / Mount the enhanced engine and tool |
-| `src/runtime.mjs`, `budget.mjs`, `store.mjs` | 共享运行支持与持久预算 / Runtime support and durable budgets |
-| `src/engine.mjs`, `tool.mjs`, `spawn.mjs` | 宿主能力薄适配 / Thin host capability adapters |
-| `src/shared.mjs` | 共享组件的持有与释放 / Shared component ownership and disposal |
-| `src/client/` | 真实 REA 控件与原生阶段／成员视图 / REA components and native phase/member views |
-| `vendor/dsh/`, `vendor/dsh.json` | 固定的宿主源码基础与文件摘要 / Pinned host source foundation and checksums |
-| `scripts/build-*.mjs` | 宿主模块工厂与客户端构建 / Host module factories and client build |
+| `cordis.patch.yml` | 挂载引擎和工具 / Mounts the engine and tool |
+| `src/runtime.mjs`, `budget.mjs`, `store.mjs` | 运行支持与预算持久化 / Runtime support and budget storage |
+| `src/engine.mjs`, `tool.mjs`, `spawn.mjs` | 对接 DSH 的工作流、工具和子代理接口 / Connect to DSH workflow, tool and subagent APIs |
+| `src/shared.mjs` | 多个插件共装时的组件归属与释放 / Component ownership when several plugins share it |
+| `src/client/` | 工作流面板，复用 DSH 界面组件 / Workflow panel built from DSH UI components |
+| `vendor/dsh/`, `vendor/dsh.json` | 固定版本的 DSH 源码与文件摘要 / Pinned DSH sources and checksums |
+| `vendor/host-artifacts.json` | 目标 DSH 版本的 npm 工件摘要 / Checksums of the target DSH npm artifacts |
+| `scripts/build-*.mjs` | 构建宿主模块和前端 / Build host modules and the client |
 
-宿主侧模块通过原始 Loader 树取得服务依赖，核对精确宿主版本，避免独立打包出第二份运行时服务身份。运行中的子代理、后台工作与取消仍遵守宿主生命周期。客户端复用宿主 REA 组件。
+宿主模块在运行时通过 DSH 原有的 Loader 加载依赖，并核对 DSH 版本，避免出现第二份运行时服务。只在 Windows 上需要的原生依赖不会在其他平台启动时加载。
 
-Host modules resolve service dependencies through the original Loader tree and check the exact host version, avoiding a second set of runtime service identities. Active agents, background jobs and cancellation retain host lifecycle semantics. The client reuses host REA components.
+Host modules load their dependencies through the DSH Loader at run time and check the DSH version, so no second copy of runtime services is created. Windows-only native dependencies are not loaded on other platforms.
 
-上游来源、固定提交与许可证见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。
+构建以 `package.json` 的版本为准，每份构建使用同版本的 DSH SDK 和依赖锁。`vendor/host-artifacts.json` 把固定源码和目标 npm 工件分开记录，构建时逐个文件核对。
 
-See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) for upstream provenance, the pinned commit and licenses.
+Builds follow the version in `package.json` and use the matching DSH SDK and lockfile. `vendor/host-artifacts.json` records the pinned sources and target npm artifacts separately, and the build checks them file by file.
 
-DSH 0.2.2-rc.1 的构建输入在 `vendor/host-artifacts.json` 将原始固定源码与目标 npm 工件分开记录。构建逐文件核对实际 SDK 的实现、类型和源文件，原始源码 tag／commit 保持不变。
+上游来源、固定提交和许可见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。
+
+Upstream sources, pinned commits and licenses are listed in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).

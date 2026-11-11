@@ -9,6 +9,7 @@
 在仓库根目录准备开发依赖和本地 Chromium 后执行：
 
 ```sh
+node scripts/prepare-host-sdk.mjs
 pnpm install --frozen-lockfile
 pnpm exec playwright install chromium
 pnpm docs:build

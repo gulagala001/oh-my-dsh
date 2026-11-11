@@ -29,13 +29,12 @@ export function replaceExactly(source, before, after, label) {
 
 export function ownClientStyles(source, { moduleId, owner, namespace, count }) {
   const escaped = moduleId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const tags = new RegExp(`(const tagId(?:\\$\\d+)? = )"${escaped}/`, 'g');
-  const dataset = `tag.dataset.plugin = "${moduleId}"`;
-  const tagCount = [...source.matchAll(tags)].length, ownerCount = source.split(dataset).length - 1;
-  if (!Number.isSafeInteger(count) || count < 1 || tagCount !== count || ownerCount !== count)
-    fail(`${moduleId}: expected ${count} style tags/owners, found ${tagCount}/${ownerCount}`);
-  return source.replace(tags, (_match, prefix) => `${prefix}"${namespace}/`)
-    .replaceAll(dataset, `tag.dataset.plugin = "${owner}"`);
+  const tags = new RegExp('(?:const tagId(?:\\$\\d+)?\\s*=\\s*)["`]' + escaped + '/', 'g');
+  const dataset = new RegExp('tag\\.dataset\\.plugin\\s*=\\s*(["`])' + escaped + '\\1', 'g');
+  if (!Number.isSafeInteger(count) || count < 1 || [...source.matchAll(tags)].length !== count ||
+    [...source.matchAll(dataset)].length !== count) fail(moduleId + ': style owner count changed');
+  return source.replace(tags, match => match.replace(moduleId + '/', namespace + '/'))
+    .replace(dataset, match => match.replace(moduleId, owner));
 }
 
 // Preserve comments and factory bytes while removing only the loader call.
@@ -52,7 +51,9 @@ export function clientRegistration(source, moduleId) {
   const object = call.arguments[0], property = name => object.properties.filter(p => p.type === 'Property'
     && !p.computed && !p.method && p.kind === 'init' && (p.key.name ?? p.key.value) === name);
   const ids = property('id'), factories = property('factory');
-  if (object.properties.length !== 2 || ids.length !== 1 || ids[0].value.type !== 'Literal' || ids[0].value.value !== moduleId
+  const id = ids[0]?.value;
+  const staticId = id?.type === 'TemplateLiteral' && id.expressions.length === 0 ? id.quasis[0].value.cooked : id?.value;
+  if (object.properties.length !== 2 || ids.length !== 1 || staticId !== moduleId
       || factories.length !== 1 || !['ArrowFunctionExpression', 'FunctionExpression'].includes(factories[0].value.type)) fail(`${moduleId}: unexpected module identity or factory`);
   return source.slice(0, statement.start) + 'const registration = ' + source.slice(object.start, object.end) + ';' + source.slice(statement.end);
 }

@@ -1,54 +1,39 @@
-# DSH Workflow — 安装与维护
+# 安装 DSH Workflow
 
-[English](install_EN.md) · [返回首页](../README.md#readme-install)
+[English](install_EN.md) · [返回首页](../README.md)
 
-**DSH 0.2.2-rc.1 · Node.js ≥24.9.0 · 0.1.1**
+需要 DSH **0.2.2-rc.2** 和 Node.js **24.9.0+**。
 
-子代理沿用宿主模型与权限，并产生正常模型用量。续跑会重新执行成功前缀之后的调用；先核对已有产物与副作用。
+## 在 DSH 里安装
 
-## 安装到当前实例
-
-在实际使用的实例打开 **插件 → ＋ 添加插件**，粘贴固定发行地址：
+打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.8-dsh.0.2.2-rc.1/dsh-workflow-plus-0.1.8-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.9-dsh.0.2.2-rc.2/dsh-workflow-plus-0.1.9-dsh.0.2.2-rc.2.tgz
 ```
 
-等当前任务结束后按宿主提示启用或重启，沿用原 profile、DSH_HOME、模型配置和会话。
+等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.9-dsh.0.2.2-rc.2/SHA256SUMS)。
 
-下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.8-dsh.0.2.2-rc.1/SHA256SUMS).
+## 用命令行安装
 
-### 首次成功检查
-
-在配置好模型的会话中输入：
-
-```text
-使用 workflow 并行审查 auth 和 storage，汇总发现；不要修改文件。
-```
-
-会话工作流面板显示真实阶段、成员与状态，子代理在原生子会话中运行。
-
-<details>
-<summary>命令行安装</summary>
-
-使用同一 DSH 实例对应的 CLI，将 `web` 换成实际 profile。
+用同一个 DSH 自带的命令行，把 `web` 换成你的 profile（桌面版是 `desktop`）：
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.8-dsh.0.2.2-rc.1/dsh-workflow-plus-0.1.8-dsh.0.2.2-rc.1.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.9-dsh.0.2.2-rc.2/dsh-workflow-plus-0.1.9-dsh.0.2.2-rc.2.tgz"
 ```
 
-</details>
+## 升级和回退
 
-## 升级、回退与卸载
+先备份 profile 和 `DSH_HOME/dsh-workflow/`，再用新版安装包覆盖安装，DSH 本身不用动。升级失败时原有数据不受影响，把第一条报错发到 [Issues](https://github.com/gulagala001/dsh-workflow/issues)。
 
-先备份现有 profile 与相关数据，再安装匹配宿主的固定版本；不为安装插件自动替换或降级 DSH。更新失败保留原数据和第一处错误。回退时选择此前匹配包并核对对应数据说明；只恢复代码不等于撤销数据变更。
+想回到旧版，就装回之前的安装包。回退只换代码，新版写入的数据不会自动撤销。
 
-在当前实例插件页移除，或使用：
+## 卸载
+
+在插件页移除，或运行：
 
 ```bash
 dsh plugin --profile web remove dsh-workflow-plus
 ```
 
-不会主动删除脚本、运行记录或 worktree。运行与预算数据位于 `DSH_HOME/dsh-workflow/`，项目脚本／隔离目录仍使用 `.omd/workflows/`、`.omd/worktrees/`。
-
-移除后重启同一实例。反馈提供完整版本、profile 类型和脱敏后的第一处错误。
+然后重启 DSH。已保存的脚本（`.omd/workflows/`）、worktree（`.omd/worktrees/`）、运行记录和预算（`DSH_HOME/dsh-workflow/`）都会留着，不需要可以手动删除。

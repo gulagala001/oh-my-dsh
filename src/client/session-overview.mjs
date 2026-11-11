@@ -32,7 +32,7 @@ export function collectAgents(rootId, state, statuses) {
       discoveredWorkflows.set(node.id, node);
       for (const phase of node.data.phases ?? []) for (const member of phase.members ?? []) if (member.childId) workflowMembers.set(member.childId, { node, phase, member });
     }
-    if (team && (team.members?.length > 1 || team.tasks?.length || team.failure)) teams.push({ id: parentId, team });
+    if (team?.enabled && (team.tasks?.length || team.failure)) teams.push({ id: parentId, team });
     const members = new Map((team?.members ?? []).filter(m => m.role !== 'lead').map(m => [m.id, m]));
     const catalog = new Map((values.subagentCatalog ?? []).map(child => [child.id, child]));
     for (const member of members.values()) if (!catalog.has(member.id)) catalog.set(member.id, { id: member.id, label: member.name, mode: member.phase === 'active' ? 'continuable' : 'unknown' });
@@ -47,10 +47,10 @@ export function collectAgents(rootId, state, statuses) {
       const status = member?.phase === 'provisioning' ? 'provisioning' : member?.phase === 'failed' ? 'failed'
         : running ? 'running' : currentStatus ?? (workflow && ['failed', 'cancelled', 'interrupted'].includes(workflow.member.status) ? workflow.member.status
         : timing?.lastTurnCompleted === true ? 'completed' : timing?.lastTurnCompleted === false ? 'interrupted' : child.mode === 'external' ? 'external' : 'idle');
-      const group = member ? { kind: 'team', id: parentId, label: 'Agent Team' }
+      const group = member || team?.enabled && !workflow ? { kind: 'team', id: parentId, label: 'Agent Team' }
         : workflow ? { kind: 'workflow', id: workflow.node.id, label: workflow.node.data.name, phase: workflow.phase.phase } : inherited;
       rows.push({ ...child, parentId, depth, mode: childValues.subagent?.mode ?? child.mode,
-        label: member?.name || workflow?.member.label?.trim() || childValues.subagent?.label || child.label || summary?.title || child.id,
+        label: member?.name || workflow?.member.label?.trim() || childValues.subagent?.label || child.label || child.name || summary?.title || child.id,
         group, status, timing, model: childValues.modelSelection?.lastUsed, preview: childValues.omdOverview?.activity || summary?.title,
         error: member?.error, available: member?.phase !== 'provisioning' && member?.phase !== 'failed', color: whaleColor(child.id) });
       if (child.mode !== 'external' && member?.phase !== 'provisioning' && member?.phase !== 'failed') visit(child.id, depth + 1, group);

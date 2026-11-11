@@ -1,3 +1,35 @@
+# DSH Persona 0.2.3 · DSH 0.2.2-rc.2
+
+[中文](#zh-023) · [English](#en-023)
+
+<a id="zh-023"></a>
+
+## 中文
+
+### 问题修复
+
+- 切换人格时如果上一个实例仍在退出，新实例会在清理完成后重新挂载。
+
+<a id="en-023"></a>
+
+## English
+
+### Bug fixes
+
+- When the previous persona is still shutting down, activate the new instance once cleanup finishes.
+
+## 安装 / Installation
+
+适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
+
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.2 | [DSH Persona 0.2.3](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/gulagala001-dsh-persona-plugin-0.2.3-dsh.0.2.2-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/SHA256SUMS) |
+
+---
+
 # DSH Persona 0.2.2 · DSH 0.2.2-rc.1
 
 [中文](#zh-0-2-2-dsh-0-2-2-rc-1) · [English](#en-0-2-2-dsh-0-2-2-rc-1)

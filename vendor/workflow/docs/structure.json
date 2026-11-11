@@ -1,5 +1,24 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "published": "0.1.9-dsh.0.2.2-rc.2",
+  "repository": {
+    "slug": "gulagala001/dsh-workflow",
+    "description": "DSH 的 JavaScript 工作流：调度原生子智能体和后台任务，支持续跑、Token 目标和隔离工作区。 JavaScript workflows for DeepSeek Harness with native subagents and jobs, resumable runs, token targets and worktree isolation.",
+    "homepage": "",
+    "topics": [
+      "agent-orchestration",
+      "cordis-plugin",
+      "deepseek-harness",
+      "deepseek-harness-plugin",
+      "dsh-bundle",
+      "dsh-plugin",
+      "workflow"
+    ]
+  },
+  "names": [
+    "DSH Workflow"
+  ],
+  "maxPages": 8,
   "documents": [
     {
       "path": "CHANGELOG.md",
@@ -9,12 +28,14 @@
     {
       "path": "README.md",
       "role": "home",
-      "language": "zh"
+      "language": "zh",
+      "translation": "README_EN.md"
     },
     {
       "path": "README_EN.md",
       "role": "home",
-      "language": "zh"
+      "language": "en",
+      "translation": "README.md"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -27,11 +48,6 @@
       "language": "zh"
     },
     {
-      "path": "docs/documentation.md",
-      "role": "development",
-      "language": "bilingual"
-    },
-    {
       "path": "docs/install.md",
       "role": "guide",
       "language": "zh"
@@ -40,11 +56,6 @@
       "path": "docs/install_EN.md",
       "role": "guide",
       "language": "zh"
-    },
-    {
-      "path": "docs/releases.md",
-      "role": "release",
-      "language": "bilingual"
     },
     {
       "path": "docs/workflow.md",

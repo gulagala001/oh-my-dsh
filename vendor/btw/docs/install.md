@@ -1,42 +1,49 @@
 # Install DSH BTW
 
-宿主构建以 `package.json` 的完整版本为准，当前源码默认 `0.2.2-rc.1`。每份构建对齐同版本 SDK、组件与依赖锁，安装入口按正式发行包的宿主版本选择。
+[简体中文](install.zh.md) · [Back to README](../README_EN.md)
 
-[中文](install.zh.md)
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**.
 
-Requires **DSH 0.2.2-rc.1**, **Cordis 4.0.5** and **Node.js 22.19+**. This build targets that exact host version.
+## Install in DSH
 
-## Add Plugin
-
-Open **Plugins → Add Plugin**, paste the URL below and install:
+Open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-btw-0.1.8-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/gulagala001-dsh-btw-0.1.9-dsh.0.2.2-rc.2.tgz
 ```
 
-Keep your existing profile, configuration and data. Restart the corresponding instance after active tasks finish.
+When your current task finishes, enable the plugin or restart DSH when prompted. Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/SHA256SUMS).
 
-## Command line
+## Install from the command line
 
-Replace `web` with the profile used by your DSH instance:
+Use the CLI that belongs to the same DSH, replacing `web` with your profile (`desktop` for the desktop app):
 
-```sh
-dsh plugin --profile web add https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-btw-0.1.8-dsh.0.2.2-rc.1.tgz
+```bash
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/gulagala001-dsh-btw-0.1.9-dsh.0.2.2-rc.2.tgz"
 ```
 
-Package identity: `@gulagala001/dsh-btw`. Use the fixed archive URL; this release is distributed through GitHub Releases.
+## Ask the AI to install it
 
-## Ask your AI assistant
+You can also send this to the AI in DSH and let it do the install:
 
 ```text
-Install DSH BTW into my existing DSH profile using:
-https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-btw-0.1.8-dsh.0.2.2-rc.1.tgz
-First verify DSH 0.2.2-rc.1, Cordis 4.0.5 and Node.js 22.19+.
-Preserve my configuration and data. Restart only after active tasks finish.
+Install DSH BTW into the DSH profile I am using now:
+https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/gulagala001-dsh-btw-0.1.9-dsh.0.2.2-rc.2.tgz
+First check that DSH is 0.2.2-rc.2 and Node.js is 24.9.0 or later. Keep my existing settings and data, and restart only after the current task finishes.
 ```
 
-Verify a downloaded archive against the release attachment [SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/SHA256SUMS).
+## Upgrade and roll back
 
-After sending a main message, enter `/btw your question`. Enter `/btw` to reopen the popover and its history. Side history is stored only in the current window and is cleared on reload.
+Back up your profile, then install the new package over the old one. DSH itself does not need to change. If the upgrade fails, your data is untouched; send the first error to [Issues](https://github.com/gulagala001/dsh-btw/issues).
 
-Closing the popover only hides it. Stop cancels the current side request and preserves text already received. Only explicitly completed, untruncated replies enter follow-up context; failed or interrupted replies can be retried manually. Disabling the last side-chat entry cancels requests and clears history from window memory.
+To go back, install the previous package. Rolling back only replaces the code; data written by the newer version stays.
+
+## Uninstall
+
+Remove it on the Plugins page, or run:
+
+```bash
+dsh plugin --profile web remove @gulagala001/dsh-btw
+```
+
+Then restart DSH. Side-chat history lives only in window memory, so nothing is left behind.

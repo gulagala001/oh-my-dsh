@@ -1,40 +1,49 @@
 # 安装 DSH BTW
 
-[English](install.md)
+[English](install.md) · [返回首页](../README.md)
 
-要求 **DSH 0.2.2-rc.1**、**Cordis 4.0.5** 和 **Node.js 22.19+**。本包精确适配该宿主版本。
+需要 DSH **0.2.2-rc.2** 和 Node.js **24.9.0+**。
 
-## 添加插件
+## 在 DSH 里安装
 
-打开 **插件 → 添加插件**，粘贴以下地址并安装：
+打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-btw-0.1.8-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/gulagala001-dsh-btw-0.1.9-dsh.0.2.2-rc.2.tgz
 ```
 
-保留现有 profile、配置和数据，当前任务结束后重启对应实例。
+等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/SHA256SUMS)。
 
-## 命令行
+## 用命令行安装
 
-将 `web` 替换成该 DSH 实例实际使用的 profile：
+用同一个 DSH 自带的命令行，把 `web` 换成你的 profile（桌面版是 `desktop`）：
 
-```sh
-dsh plugin --profile web add https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-btw-0.1.8-dsh.0.2.2-rc.1.tgz
+```bash
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/gulagala001-dsh-btw-0.1.9-dsh.0.2.2-rc.2.tgz"
 ```
-
-安装标识为 `@gulagala001/dsh-btw`。使用上述固定地址，本次通过 GitHub Releases 分发。
 
 ## 复制给 AI
 
+也可以把下面这段发给 DSH 里的 AI，让它帮你装：
+
 ```text
-请把 DSH BTW 安装到我现有的 DSH profile：
-https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/gulagala001-dsh-btw-0.1.8-dsh.0.2.2-rc.1.tgz
-先核对 DSH 0.2.2-rc.1、Cordis 4.0.5 和 Node.js 22.19+。
-保留原配置和数据，等当前任务结束后再重启。
+请把 DSH BTW 安装到我现在用的 DSH profile：
+https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/gulagala001-dsh-btw-0.1.9-dsh.0.2.2-rc.2.tgz
+先确认 DSH 是 0.2.2-rc.2、Node.js 是 24.9.0 以上；保留原来的配置和数据，等当前任务结束再重启。
 ```
 
-下载后可用发行附件 [SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.8-dsh.0.2.2-rc.1/SHA256SUMS) 核对安装包。
+## 升级和回退
 
-在主会话发送过消息后，输入 `/btw 问题` 提问；输入 `/btw` 重新打开弹窗和历史列表。旁聊记录仅在当前窗口保存，刷新即清空。
+先备份 profile，再用新版安装包覆盖安装，DSH 本身不用动。升级失败时原有数据不受影响，把第一条报错发到 [Issues](https://github.com/gulagala001/dsh-btw/issues)。
 
-关闭弹窗只隐藏界面；停止会取消当前旁聊并保留已收到的文字。只有明确完成且未截断的回答会用于后续追问；失败或中断时可手动重试。停用最后一个旁聊入口会取消请求并清空窗口内存中的记录。
+想回到旧版，就装回之前的安装包。回退只换代码，新版写入的数据不会自动撤销。
+
+## 卸载
+
+在插件页移除，或运行：
+
+```bash
+dsh plugin --profile web remove @gulagala001/dsh-btw
+```
+
+然后重启 DSH。旁聊记录只存在窗口内存里，卸载后不留数据。

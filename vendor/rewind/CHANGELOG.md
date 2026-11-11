@@ -1,3 +1,35 @@
+# DSH Undo 0.1.12 · DSH 0.2.2-rc.2
+
+[中文](#zh-0112) · [English](#en-0112)
+
+<a id="zh-0112"></a>
+
+## 中文
+
+### 问题修复
+
+- 中断后再次打开撤回操作时，已经写入的事件不会重复追加。过期预览会释放，空闲会话可继续使用。
+
+<a id="en-0112"></a>
+
+## English
+
+### Bug fixes
+
+- Resume an interrupted rewind without appending events twice. Expired previews release their contents and idle conversations remain usable.
+
+## 安装 / Installation
+
+适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
+
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.2 | [DSH Undo 0.1.12](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.12-dsh.0.2.2-rc.2/gulagala001-dsh-undo-plugin-0.1.12-dsh.0.2.2-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.12-dsh.0.2.2-rc.2/SHA256SUMS) |
+
+---
+
 # DSH Undo 0.1.11 · DSH 0.2.2-rc.1
 
 [中文](#zh-0111) · [English](#en-0111)

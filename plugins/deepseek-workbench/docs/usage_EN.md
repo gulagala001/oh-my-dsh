@@ -1,38 +1,38 @@
-# User guide
+# DeepSeek Workbench usage
 
-[简体中文](usage.md) · [Home](../README_EN.md)
+[简体中文](usage.md) · [Back to README](../README_EN.md)
 
-## Ordinary web chat
+## Web chat
 
-Open **DeepSeek web chat** from the left sidebar to use chat in the main content area. Sign into `chat.deepseek.com` on first use. Chat login is separate from DSH API Platform authorization. Select website history or start a new conversation, then send messages, upload attachments and toggle DeepThink or Search.
+Click **DeepSeek web chat** in the left sidebar to open DeepSeek chat in the main view. The first time, sign in to `chat.deepseek.com`; this account is separate from the API platform account in DSH. Pick a chat from your history or start a new one to send messages, upload attachments and switch DeepThink and web search.
 
-Ordinary conversations remain in website history. Read panel errors and retry failed operations; a failed send retains its draft. The external-browser entry point opens the website outside the embedded view.
+Normal chats stay in your DeepSeek history. If loading or an action fails, follow the hint in the panel and try again; a failed send keeps what you typed. To leave the embedded page, open it in an external browser.
 
-## Temporary sidebar chat
+## Temporary sidebar
 
-Run `/侧栏（网页版）` in the DSH composer to open a separate temporary website conversation alongside the main chat.
+Type `/侧栏（网页版）` in the DSH composer to open a separate temporary chat, handy for questions while you read the main chat.
 
-Closing waits until its own website conversation is deleted. If login, connectivity or deletion fails, the panel remains open with an error. Restore connectivity and close again to retry. Cleanup only targets the conversation owned by that temporary panel. Ordinary web chats retain their history.
+When you click close, the panel deletes this DeepSeek conversation first and closes once that is done. If you are signed out, offline or deletion fails, the panel stays open with an error; close it again once the connection is back. Normal web chat history is not affected.
 
-Temporary means the panel cleans up its website conversation when it closes. Messages are still processed by the DeepSeek website while in use; this does not promise private browsing, immediate zero server retention or automatic cleanup after a power failure. Close the panel and confirm cleanup before quitting, force-stopping or uninstalling.
+"Temporary" means the conversation is deleted when you close the panel. While you chat, DeepSeek still processes the messages, so it is not a private browsing mode. Before quitting DSH, force-closing it or uninstalling the plugin, close the temporary sidebar and make sure it finished cleaning up.
 
-## Continue website history in DSH
+## Continue in DSH
 
-Open the intended ordinary website conversation, ensure its history has loaded, then click **Continue in DSH**. The plugin reads messages and accessible attachments, creates a new DSH conversation and opens the result.
+Open the chat you want in web chat, wait for its history to load and click **Continue in DSH**. The plugin reads the messages and the attachments it can access, creates a new DSH conversation and opens it.
 
-- Imports retain user and assistant roles, readable text, names and attachments.
-- Requests are limited to 48 MiB including attachment encoding. Text and decoded attachment content together are limited to 32 MiB.
-- Unreadable attachments produce warnings. Add necessary missing files before continuing. Files already read must be saved to DSH attachment storage; missing storage or a failed write stops the import instead of retaining only filenames.
-- Imported history does not replay website tools, send model requests or execute instructions contained in the text. The next new message uses the DSH conversation's model and tools.
-- The original website conversation remains available. After a failed import or lost receipt, keep the workbench panel open and click **Continue in DSH** again to retry the same messages and attachments. The plugin does not re-read the page to replace an unconfirmed request. Later website messages can be imported after that request succeeds.
-- DSH session storage must be available before the imported session is created. A successful receipt is returned after persistence completes. Closing the entire workbench panel or restarting the app loses the unconfirmed frontend request; check DSH history before importing again to avoid duplicates.
+- Imported content keeps user and assistant roles and the text, file names and attachments it could read.
+- Each import is limited to 48 MiB including encoded attachments, and 32 MiB of text plus decoded attachments.
+- You are told about attachments it cannot read; add the files you need and continue. Files it did read go into DSH's attachment storage. If storage fails, the whole import reports an error instead of keeping only file names.
+- Tool calls and written instructions in the web chat are never run again, and nothing is sent automatically. The next message uses the model and tools of the DSH conversation.
+- The original web chat stays. If an import fails, keep the panel open and click **Continue in DSH** again to retry the same content. Messages added on the web later can be imported again after this one succeeds.
+- If you closed the whole panel or restarted DSH during an import, check your DSH history for the conversation before trying again, to avoid a duplicate.
 
-Import indexes live in `$DSH_HOME/deepseek-workbench/imports/` (default `~/.dsh/deepseek-workbench/imports/`). DSH stores imported conversations and attachments in its native storage.
+The import index is stored in `$DSH_HOME/deepseek-workbench/imports/` (default `~/.dsh/deepseek-workbench/imports/`). DSH stores the conversation and attachments itself.
 
-## API Platform
+## API platform
 
-Open **Settings → Account → DeepSeek API Platform**. A compatible host account interface can reuse current DSH platform authorization. Otherwise use the separate website login or external-browser entry point. Platform authorization does not sign you into website chat.
+Open **Settings → Account → DeepSeek API Platform**. If your DSH supports it, the platform reuses your current DSH sign-in; otherwise sign in on the page or open it in an external browser. The platform account does not replace the web chat sign-in.
 
 ## Desktop and browser
 
-Embedded chat, history extraction and downloads require the [companion desktop host bridge](desktop-host_EN.md). The panel explains missing capabilities on a standard host. Browser-based DSH faces website embedding and cross-origin restrictions; use its external-browser entry point. Installing the plugin cannot remove those restrictions.
+Embedded chat needs the DSH desktop app. Sign-in that survives restarts and DeepSeek downloads need the [desktop adaptation](desktop-host_EN.md); the panel tells you when these are missing. In the browser version of DSH, DeepSeek's embedding restrictions mean web chat opens in an external browser only.

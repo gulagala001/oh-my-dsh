@@ -195,7 +195,7 @@ export class PtcWorkflowRun implements WorkflowRun {
   get worktrees(): WorktreeArtifact[] { return [...this.artifacts.values()].map(value => ({ ...value })) }
 
   constructor(
-    private readonly ctx: Context,
+    ctx: Context,
     private readonly subagents: SubagentService,
     private readonly runtime: PtcRuntime,
     readonly id: WorkflowRunId,
@@ -308,7 +308,8 @@ export class PtcWorkflowRun implements WorkflowRun {
     if (!cached && budget?.total !== null && budget?.total !== undefined && budget.spent >= budget.total) throw new Error('Workflow token target reached; no new agents can start')
     if (cached) {
       if (cached.worktree) this.artifacts.set(callId, cached.worktree)
-      const run: SubagentActivation = { childId: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), result: Promise.resolve(cached) as SubagentActivation['result'], dispose: async () => {} }
+      const cachedId = SessionId(cached.childId ?? `cached-${this.id}-${callId}`)
+      const run: SubagentActivation = { childId: cachedId, name: cachedId, result: Promise.resolve(cached) as SubagentActivation['result'], dispose: async () => {} }
       this.children.set(callId, { callId, run, cached: true })
       return { callId, childId: run.childId }
     }
@@ -340,7 +341,7 @@ export class PtcWorkflowRun implements WorkflowRun {
     this.requireActive()
     const run = this.provider === WORKFLOW_PROVIDER
       ? await (this.subagents.getProvider(this.provider) as WorkflowProvider).startWorkflow({ ...childInputs, label, signal: this.controller.signal }, workflow)
-      : await this.subagents.startActivation({ provider: this.provider, label, delivery: 'caller', signal: this.controller.signal, request: childInputs })
+      : await this.subagents.startActivation({ provider: this.provider, label, delivery: 'caller', signal: this.controller.signal, ...childInputs })
     const record: ChildRecord = { callId, run }
     this.children.set(callId, record)
     // A provider can publish after the signal fired while startup was pending.

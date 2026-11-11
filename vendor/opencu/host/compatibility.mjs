@@ -1,4 +1,5 @@
 export const hostTargets = Object.freeze({
+  "022rc2": {"version":"0.2.2-rc.2","commit":"ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c","cordis":"4.1.0","schema":"3.19.0","electron":"44.7.0"},
   "022rc1": {"sourceVersion":"0.2.2-alpha.3","sourceCommit":"05b1cae8db6e674c5685101494d4eec24652424a","sourceCordis":"4.0.6-alpha.2","sourceSchema":"3.18.6-alpha.2","version":"0.2.2-rc.1","commit":"c59d10aff167ad7eefead4b3a9082fb57c8fbfe8","cordis":"4.1.0","schema":"3.19.0","electron":"44.7.0"},
   "022a3": {"version":"0.2.2-alpha.3","commit":"05b1cae8db6e674c5685101494d4eec24652424a","cordis":"4.0.6-alpha.2","schema":"3.18.6-alpha.2","electron":"44.7.0"},
   '022a2': {"version": "0.2.2-alpha.2", "commit": "f3803c96974ad4a94195fb97e5c637e9c2a3afe3", "cordis": "4.0.6-alpha.1", "schema": "3.18.6-alpha.1", "electron": "44.7.0"},

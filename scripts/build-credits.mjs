@@ -44,10 +44,20 @@ for (const entry of projects) {
   if (!existsSync(resolve(root, entry.notice.split('#')[0]))) throw Error('Missing source notice: ' + entry.notice);
 }
 
-const lockFiles = ['pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml'];
+const lockFiles = ['pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/022rc2/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml'];
+const upstreamLock = 'https://github.com/deepseek-ai/deepseek-harness/blob/ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c/pnpm-lock.yaml';
+const sdkRoot = resolve(root, '../.local/dsh-sdk-ddac9676');
+const sdkLock = readFileSync(resolve(sdkRoot, 'pnpm-lock.yaml'), 'utf8');
+if (digest(sdkLock) !== 'be2834e3ef72341b8874a4b8c5359957449973585f0a49bc4fb4526298bca6a7') throw Error('Host source lock checksum mismatch');
 const dependencies = new Map();
-for (const file of lockFiles) {
-  const lock = parse(read(file));
+for (const file of [...lockFiles, upstreamLock]) {
+  const lock = parse(file === upstreamLock ? sdkLock : read(file));
+  if (file === upstreamLock) {
+    for (const directory of Object.keys(lock.importers)) {
+      const { name, version, private: internal } = JSON.parse(readFileSync(resolve(sdkRoot, directory, 'package.json')));
+      if (name && version && !internal) dependencies.set(name + '@' + version, {name, version, sources:[file]});
+    }
+  }
   for (const key of Object.keys(lock.packages || {})) {
     const id = key.replace(/\(.*/, ''), at = id.lastIndexOf('@');
     if (at <= 0) throw Error('Unsupported dependency identity: ' + key);
@@ -57,7 +67,7 @@ for (const file of lockFiles) {
   }
 }
 const dependencyList = [...dependencies.values()].sort((a,b) => (a.name + '@' + a.version).localeCompare(b.name + '@' + b.version, 'en'));
-const provenance = { lockFiles: Object.fromEntries(lockFiles.map(file => [file, digest(read(file))])), dependencies: dependencyList };
+const provenance = { lockFiles: {...Object.fromEntries(lockFiles.map(file => [file, digest(read(file))])), [upstreamLock]: digest(sdkLock)}, dependencies: dependencyList };
 function link(file) { return 'https://github.com/gulagala001/oh-my-dsh/blob/main/' + file; }
 const cell = text => String(text).replaceAll('|', '\\|').replaceAll('\n',' ');
 const enAuthors = text => String(text).replace('原作者：', 'Original author: ').replace('兼容适配：', 'adapted by ').replace('技能来源：', 'skill sources: ').replace(' 及各技能作者', ' and the skill authors').replace('（', ' (').replace('）', ')');
@@ -74,9 +84,9 @@ function page(language) {
     }
   }
   value += `## ${english ? 'Locked dependency inventory' : '完整锁定依赖清单'}\n\n`;
-  value += english ? `All ${dependencyList.length} distinct package versions in the OMD and embedded OpenCU host/frontend lockfiles are listed below, including direct, transitive, build and optional platform dependencies. These are dependency inputs, not a claim that every package is loaded at runtime. Package pages provide original maintainers and license metadata; distributed licenses remain authoritative. [Machine-readable inventory](dependencies.json).\n\n` : `下表列出 OMD 与内置 OpenCU 宿主／前端锁文件中的全部 ${dependencyList.length} 个不同包版本，覆盖直接、间接、构建和可选平台依赖。它们是依赖输入，不代表全部在运行时加载。包页面提供原作者／维护者与许可信息，实际随包许可为准。[机器可读清单](dependencies.json)。\n\n`;
+  value += english ? `All ${dependencyList.length} distinct package versions in the OMD, DSH SDK and embedded OpenCU host/frontend lockfiles are listed below, including direct, transitive, build and optional platform dependencies. These are dependency inputs, not a claim that every package is loaded at runtime. Package pages provide original maintainers and license metadata; distributed licenses remain authoritative. [Machine-readable inventory](dependencies.json).\n\n` : `下表列出 OMD、DSH SDK 与内置 OpenCU 宿主／前端锁文件中的全部 ${dependencyList.length} 个不同包版本，覆盖直接、间接、构建和可选平台依赖。它们是依赖输入，不代表全部在运行时加载。包页面提供原作者／维护者与许可信息，实际随包许可为准。[机器可读清单](dependencies.json)。\n\n`;
   value += `| ${english ? 'Package' : '依赖'} | ${english ? 'Version' : '版本'} | ${english ? 'Lockfile sources' : '来源锁文件'} |\n| --- | --- | --- |\n`;
-  for (const item of dependencyList) value += `| [${item.name}](https://www.npmjs.com/package/${item.name}/v/${item.version}) | ${item.version} | ${item.sources.map(source => `[${source}](${link(source)})`).join(' · ')} |\n`;
+  for (const item of dependencyList) value += `| [${item.name}](https://www.npmjs.com/package/${item.name}/v/${item.version}) | ${item.version} | ${item.sources.map(source => source === upstreamLock ? `[DSH SDK](${upstreamLock})` : `[${source}](${link(source)})`).join(' · ')} |\n`;
   value += `\n## ${english ? 'History and maintenance' : '历史与维护'}\n\n`;
   value += english ? 'The JasonQQ BTW implementation was used through OMD 0.99.0 and replaced by DSH BTW in 0.99.1. Historical release sources retain their applicable attribution. Current entries are generated from `src/project-catalog.json`, the recommendation catalog, component manifests and dependency lockfiles. Run `npm run credits:write` after changing these inputs; `npm run credits:check` rejects stale documentation or runtime catalog data.\n' : 'JasonQQ 的 BTW 实现在 OMD 0.99.0 及以前使用，0.99.1 已切换为自有 DSH BTW；历史发行来源保留对应署名。当前条目由 `src/project-catalog.json`、推荐目录、组件清单和依赖锁文件共同生成。改变输入后运行 `npm run credits:write`；`npm run credits:check` 会拒绝过期文档或运行时清单。\n';
   return value;

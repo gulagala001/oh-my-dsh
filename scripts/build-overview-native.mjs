@@ -13,57 +13,35 @@ function walk(node, callback) {
 const field = (node, name) => node?.properties?.find(p => p.key?.name === name || p.key?.value === name)?.value;
 const sources = [];
 const reviewed = {
-  'dsh-experimental-client-ui-agent-team': 'aa1450d2a58014adcc03a09d7309a371b98ddf35a0f2c1c5c9249fa5d1f1925b',
-  'dsh-client-ui-jobs': '14c57d9e46d6aba597e7a9eac94a6cab1a5a635bafa3427a9cfe57b6fe1d4608',
-  'dsh-client-ui-workflow-run': 'b1704958ad7a1fbe7e6497913b0967e4b711d3dded3b52708896a73db59156e3',
+  'dsh-client-ui-agent-team': '2efa878b397a8f1674f79ec1d60fa5c4e1be86b7833766135457fe9b277da328',
+  'dsh-client-ui-jobs': 'a8604ef9338c337fa9d9fc8e89bee740faa23f0d73b72f1f499e3b36bac71724',
+  'dsh-client-ui-workflow-run': 'c0f828af4c0093cc67a41eb9848992f7b322bf9a77a8d21fbce886b2c3e2b964',
 };
-for (const [name, exportName] of [['dsh-experimental-client-ui-agent-team', 'createTeamOverview'], ['dsh-client-ui-jobs', 'createJobsOverview'], ['dsh-client-ui-workflow-run', 'createWorkflowOverview']]) {
+for (const [name, exportName] of [['dsh-client-ui-agent-team', 'createTeamOverview'], ['dsh-client-ui-jobs', 'createJobsOverview'], ['dsh-client-ui-workflow-run', 'createWorkflowOverview']]) {
   let { source, version } = await hostClientSource(root, '@deepseek-ai/' + name);
   const hash = createHash('sha256').update(source).digest('hex');
-  // These reviewed packages contain byte-identical overview sources.
-  if (!['0.2.2-alpha.3', '0.2.2-rc.1'].includes(version) || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
+  // Bind the extracted seats to this exact host build.
+  if (version !== '0.2.2-rc.2' || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
   const ast = parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
   const functions = new Map(), duplicates = new Set();
   walk(ast, node => { if (node.type === 'FunctionDeclaration' && node.id) {
     if (functions.has(node.id.name)) duplicates.add(node.id.name);
     functions.set(node.id.name, node);
   } });
-  const required = name.includes('agent-team') ? ['TeamAction', 'TeamMemberRow', 'TaskCard']
+  const required = name.includes('agent-team') ? ['TeamBoard', 'TaskRow']
     : name.includes('workflow-run') ? ['WorkflowRunPanel', 'MemberRow', 'navigableMembers']
       : ['JobListAction', 'JobItem', 'isObservable', 'ordered', 'isLive'];
   for (const id of required) if (!functions.has(id) || duplicates.has(id)) throw Error(`Native ${name} must contain exactly one ${id}`);
   let extra;
   if (name.includes('agent-team')) {
-    const action = functions.get('TeamAction');
-    const bodies = [];
-    walk(action, node => {
-      if (node.type === 'CallExpression' && source.slice(field(node.arguments?.[1], 'className')?.start, field(node.arguments?.[1], 'className')?.end) === 'TeamAction_module_css_default.body') bodies.push(node);
-    });
-    const [body] = bodies;
-    if (bodies.length !== 1) throw Error('Native Team body changed');
-    const bodySource = replaceExactly(source.slice(body.start, body.end), 'member,\n', 'member, renderAvatar,\n', 'Team avatar prop');
-    extra = `function TeamPanel({sessionId, team, useSessions, useSessionStatus, openTeammate, renderAvatar, t}) {
-      const [error,setError] = react.useState(null); const opening = false, listing = false;
-      return ${bodySource};
-    }\nexports.TeamPanel = TeamPanel; exports.locale = {zh,en};`;
-    const member = functions.get('TeamMemberRow');
-    let text = source.slice(member.start, member.end);
-    const icons = [];
-    walk(member, node => {
-      if (node.type === 'ObjectExpression' && source.slice(field(node, 'className')?.start, field(node, 'className')?.end) === 'TeamAction_module_css_default.memberDot') icons.push(field(node, 'children'));
-    });
-    const [icon] = icons;
-    if (icons.length !== 1 || !icon) throw Error('Native Team member icon changed');
-    text = text.slice(0, icon.start - member.start) + `(renderAvatar?.(member.id) ?? (${source.slice(icon.start, icon.end)}))` + text.slice(icon.end - member.start);
-    text = replaceExactly(text, 'openTeammate, onError, t }', 'openTeammate, onError, renderAvatar, t }', 'Team member parameters');
-    source = source.slice(0, member.start) + text + source.slice(member.end);
+    extra = 'exports.TeamPanel = TeamBoard; exports.locale = {zh,en};';
   } else if (name.includes('workflow-run')) {
     if (!functions.has('WorkflowRunPanel') || !functions.has('MemberRow')) throw Error('Native workflow panel changed');
     const row = functions.get('MemberRow');
     const before = source.slice(row.start, row.end);
     const bodyOffset = row.body.start - row.start + 1;
     let after = before.slice(0, bodyOffset) + '\nconst renderAvatar = react.useContext(OverviewAvatarContext);\n' + before.slice(bodyOffset);
-    const icon = '(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, { state: dotState(member.status) })';
+    const icon = '(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot,{state:dotState(member.status)})';
     after = replaceExactly(after, icon, `(renderAvatar?.(member.childId) ?? ${icon})`, 'Workflow member icon');
     const nav = functions.get('navigableMembers');
     if (!nav) throw Error('Workflow navigation function missing');
@@ -94,10 +72,10 @@ for (const [name, exportName] of [['dsh-experimental-client-ui-agent-team', 'cre
       exports.JobsBody = JobsBody; exports.JobItem = JobItem; exports.isObservable = isObservable;
       exports.ordered = ordered; exports.isLive = isLive; exports.styles = JobListAction_module_css_default; exports.locale = {zh,en};`;
   }
-  source = replaceExactly(source, 'exports.apply = apply;', `${extra}\nexports.apply = apply;`, name + ' exports');
+  source = replaceExactly(source, 'exports.apply=apply;', `${extra}\nexports.apply = apply;`, name + ' exports');
   // These components live in OMD. Native plugin reloads must only remove the
   // native plugin's styles, even when both copies use identical CSS classes.
-  source = ownClientStyles(source, { moduleId: '@deepseek-ai/' + name, owner: 'oh-my-dsh', namespace: 'oh-my-dsh/overview/' + name, count: 1 });
+  source = ownClientStyles(source, { moduleId: '@deepseek-ai/' + name, owner: 'oh-my-dsh', namespace: 'oh-my-dsh/overview/' + name, count: name.includes('agent-team') ? 4 : 1 });
   sources.push(`// ${name} ${version}; upstream SHA-256 ${hash}\nexport function ${exportName}(require) {\n${clientRegistration(source, '@deepseek-ai/' + name)}\nreturn registration.factory(require); }`);
 }
 await mkdir(new URL('lib/host/', root), { recursive: true });

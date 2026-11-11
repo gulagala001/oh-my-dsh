@@ -35,6 +35,7 @@ jobs:
           cache: pnpm
       # CI skips README/docs-only PRs; check public files before building or deploying docs.
       - run: node scripts/check-public-files.mjs
+      - run: node scripts/prepare-host-sdk.mjs
       - run: pnpm install --frozen-lockfile
       - run: pnpm docs:check
       - name: Build documentation with the runner's existing Chrome

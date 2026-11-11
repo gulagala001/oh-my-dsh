@@ -1,3 +1,35 @@
+# DeepSeek Workbench 0.1.6 · DSH 0.2.2-rc.2
+
+[中文](#zh-016) · [English](#en-016)
+
+<a id="zh-016"></a>
+
+## 中文
+
+### 问题修复
+
+- 关闭官网临时聊天时可恢复未完成的清理。遇到损坏的记录或无法识别的回执，保留记录并提示实际状态。
+
+<a id="en-016"></a>
+
+## English
+
+### Bug fixes
+
+- Resume unfinished cleanup when closing temporary web chats. Preserve damaged records and report unrecognized receipts without marking the chat as removed.
+
+## 安装 / Installation
+
+适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
+
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.2 | [DeepSeek Workbench 0.1.6](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.6-dsh.0.2.2-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.6-dsh.0.2.2-rc.2/SHA256SUMS) |
+
+---
+
 # DeepSeek Workbench 0.1.5 · DSH 0.2.2-rc.1
 
 [中文](#zh-0-1-5-dsh-0-2-2-rc-1) · [English](#en-0-1-5-dsh-0-2-2-rc-1)
@@ -219,4 +251,4 @@ Install the fixed package matching the complete DSH version through **Plugins �
 - API Platform entry in account settings and website-history migration into native DSH conversations.
 - Exact DSH 0.2.1-rc.2 / Cordis 4.0.5 compatibility; companion desktop bridge required for embedded website capabilities.
 
-[中文 / English release notes](docs/releases.md)
+[中文 / English release notes](https://github.com/gulagala001/dsh-deepseek-workbench/releases)

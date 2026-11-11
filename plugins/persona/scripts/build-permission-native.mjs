@@ -14,20 +14,20 @@ const version = JSON.parse(await readFile(new URL('package.json', root), 'utf8')
 let source = await readFile(new URL('lib/client.js', pathToFileURL(manifest)), 'utf8');
 const hash = createHash('sha256').update(source).digest('hex');
 if (pkg.name !== '@deepseek-ai/dsh-client-ui-permission-presets' || pkg.version !== version
-    || !['0.2.2-alpha.3', '0.2.2-rc.1'].includes(version) || hash !== '012597974dbc75ac0c545946c3f3d26bbffac6aee56d75a1ca0b9cf1c6e4331b') {
+    || version !== '0.2.2-rc.2' || hash !== '99d6f706c65b8a832fd95cf2ff44b920d58f47384bc7fe5b0d0ed9d334a870ba') {
   throw Error(`Unreviewed native permission picker: ${pkg.version}`);
 }
 const replaceOnce = (before, after) => {
   if (source.split(before).length !== 2) throw Error('Native permission picker boundary changed');
-  source = source.replace(before, after);
+  source = source.replace(before, () => after);
 };
-replaceOnce('function PermissionSelect({ locked, select, usePermissionCatalog, useProjection, t })',
-  'function PermissionSelect({ locked, select, usePermissionCatalog, useProjection, t, MenuComponent = _deepseek_ai_dsh_client_ui_primitives.Menu })');
-replaceOnce('children: [(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {',
-  'children: [(0, react_jsx_runtime.jsx)(MenuComponent, {');
-replaceOnce('exports.apply = apply;', 'exports.PermissionSelect = PermissionSelect;');
-source = source.replace(/(const tagId(?:\$\d+)? = )"@deepseek-ai\/dsh-client-ui-permission-presets\//g, '$1"dsh-persona-plugin/permission/')
-  .replaceAll('tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-permission-presets"', 'tag.dataset.plugin = "dsh-persona-plugin"')
+replaceOnce('function PermissionSelect({locked,select,usePermissionCatalog,useProjection,t})',
+  'function PermissionSelect({locked,select,usePermissionCatalog,useProjection,t,MenuComponent=_deepseek_ai_dsh_client_ui_primitives.Menu})');
+replaceOnce('children:[(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu,{',
+  'children:[(0,react_jsx_runtime.jsx)(MenuComponent,{');
+replaceOnce('exports.apply=apply;', 'exports.PermissionSelect=PermissionSelect;');
+source = source.replace(/(const tagId(?:\$\d+)?=)`@deepseek-ai\/dsh-client-ui-permission-presets\//g, '$1`dsh-persona-plugin/permission/')
+  .replaceAll('tag.dataset.plugin=`@deepseek-ai/dsh-client-ui-permission-presets`', 'tag.dataset.plugin=`dsh-persona-plugin`')
   .replace(/^\/\/# sourceMappingURL=.*\n?/gm, '');
 await mkdir(new URL('lib/host/', root), { recursive: true });
 await writeFile(new URL('lib/host/permission-native.factory.mjs', root),

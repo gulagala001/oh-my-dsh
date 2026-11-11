@@ -1,3 +1,35 @@
+# DSH Workflow 0.1.9 · DSH 0.2.2-rc.2
+
+[中文](#zh-019) · [English](#en-019)
+
+<a id="zh-019"></a>
+
+## 中文
+
+### 问题修复
+
+- 停止工作流后，运行详情会显示停止请求；重新加载插件后，预算只计算一次会话事件。
+
+<a id="en-019"></a>
+
+## English
+
+### Bug fixes
+
+- Run details show a stop request as soon as it is accepted. Reloading the plugin keeps session events from being counted twice.
+
+## 安装 / Installation
+
+适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
+
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.2 | [DSH Workflow 0.1.9](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.9-dsh.0.2.2-rc.2/dsh-workflow-plus-0.1.9-dsh.0.2.2-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.9-dsh.0.2.2-rc.2/SHA256SUMS) |
+
+---
+
 # DSH Workflow 0.1.8 · DSH 0.2.2-rc.1
 
 [中文](#zh-0-1-8-dsh-0-2-2-rc-1) · [English](#en-0-1-8-dsh-0-2-2-rc-1)
@@ -285,7 +317,7 @@ Install the fixed package matching the complete DSH version through **Plugins �
 - Workflow plugin: saved scripts, one nested level, successful-prefix resume, shared output targets, worktrees, native Jobs and workflow panels.
 - Exact DSH 0.2.1-rc.2 support; package `dsh-workflow-plus`, MIT license and pinned GitHub Release distribution.
 
-完整双语发行说明 / Full bilingual release notes: [docs/releases.md](docs/releases.md).
+完整双语发行说明 / Full bilingual release notes: [docs/releases.md](https://github.com/gulagala001/dsh-workflow/releases).
 
 
 # DSH Workflow 未发布 / Unreleased · DSH 0.2.1-rc.3

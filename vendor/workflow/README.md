@@ -2,52 +2,53 @@
 
 <h1 align="center">DSH Workflow</h1>
 
-<p align="center"><strong>保存、组合与续跑工作流，沿用 DSH 原生子代理。</strong><br>DeepSeek Harness 插件</p>
+<p align="center"><strong>把多步任务写成脚本，交给多个子代理并行去做，中断了还能接着跑。</strong><br>DeepSeek Harness 插件</p>
 
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-workflow/releases/tag/v0.1.8-dsh.0.2.2-rc.1"><img alt="0.1.4" src="https://img.shields.io/badge/release-0.1.8-0969da?style=flat-square"></a>
-  <a href="https://github.com/gulagala001/dsh-workflow/releases"><img alt="GitHub 累计下载量" src="https://img.shields.io/github/downloads/gulagala001/dsh-workflow/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-workflow/releases/tag/v0.1.9-dsh.0.2.2-rc.2"><img alt="DSH Workflow 0.1.9" src="https://img.shields.io/badge/release-0.1.9-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-workflow/releases"><img alt="GitHub 下载量" src="https://img.shields.io/github/downloads/gulagala001/dsh-workflow/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-workflow/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-workflow?style=flat-square&amp;color=0969da"></a>
 </p>
 
-<p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="docs/workflow.md">完整文档</a> · <a href="https://github.com/gulagala001/dsh-workflow/issues">反馈</a></p>
+<p align="center"><a href="#readme-install"><strong>开始使用</strong></a> · <a href="docs/workflow.md">完整用法</a> · <a href="https://github.com/gulagala001/dsh-workflow/issues">反馈</a></p>
 
 <a name="readme-install"></a>
 
 ## 快速开始
 
-**适用环境：** DSH **0.2.2-rc.1**, Node.js **24.9.0+**.
-
-子代理沿用宿主模型与权限，并产生正常模型用量。续跑会重新执行成功前缀之后的调用；先核对已有产物与副作用。
+**需要：** DSH **0.2.2-rc.2**，Node.js **24.9.0+**。子代理用你在 DSH 里配好的模型和权限，按正常用量计费。
 
 ### 1. 安装
 
-打开实际使用的 DSH 实例，在 **插件 → ＋ 添加插件** 中粘贴：
+在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.8-dsh.0.2.2-rc.1/dsh-workflow-plus-0.1.8-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.9-dsh.0.2.2-rc.2/dsh-workflow-plus-0.1.9-dsh.0.2.2-rc.2.tgz
 ```
 
-等当前任务结束后，按宿主提示启用或完整重启该实例，沿用原 profile 与数据。其他宿主、升级和卸载见[安装指南](docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.8-dsh.0.2.2-rc.1/SHA256SUMS).
+等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。命令行安装、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.9-dsh.0.2.2-rc.2/SHA256SUMS)。
 
-### 2. 先试这一件事
+### 2. 先试一件事
 
-在配置好模型的会话中输入：
+在一个项目里输入：
 
 ```text
 使用 workflow 并行审查 auth 和 storage，汇总发现；不要修改文件。
 ```
 
-**成功标志：** 会话工作流面板显示真实阶段、成员与状态，子代理在原生子会话中运行。
+会话标题旁会出现工作流面板，列出每个阶段和子代理的进度。每个子代理在自己的子会话里运行，可以点开查看。
 
-## 把重复任务写成可以继续的工作流
+## 能做什么
 
-- **组合步骤**：用 `parallel()`、`pipeline()`、`phase()` 和 `log()` 表达实际依赖与执行状态。
-- **保存与复用**：直接传入脚本，或使用 `scriptPath` 与项目中的命名工作流。
-- **恢复与隔离**：从成功调用前缀续跑；需要文件隔离时使用 Git worktree，保留结果供检查和合并。
+- **组合步骤**：`parallel()` 并行，`pipeline()` 让每一项依次经过后面的阶段，`phase()` 和 `log()` 报告进度。
+- **保存复用**：直接传入脚本，或把脚本存进项目的 `.omd/workflows/`，以后按名字调用。
+- **中断续跑**：传入上次的 `resumeFromRunId`，前面已经成功、脚本也没改过的调用直接用上次的结果，从第一处变化或失败的地方重新跑。
+- **隔离改动**：子代理加上 `isolation: 'worktree'`，就在独立的 Git worktree 里改代码，改完留给你检查和合并。
+- **输出预算**：在消息末尾写 `+500k` 或 `+1m`，用量到了就不再派新任务。
+- **后台运行**：`run_in_background: true` 放到后台，用 `job_output` 看结果，用 `job_kill` 停止。
 
 ### 最小工作流
 
@@ -64,57 +65,41 @@ return await parallel([
 ]);
 ```
 
-会话标题旁的工作流入口展示阶段与成员；子代理由原生子会话承载。`run_in_background: true` 使用原生 Jobs，以 `job_output` 查看、`job_kill` 停止。[完整用法](docs/workflow.md)
+## 使用范围
 
-## 运行边界
-
-| 能力 | 条件与行为 |
+| 场景 | 说明 |
 | --- | --- |
-| 嵌套工作流 | 支持一层，沿用共享并发、总调用数、取消信号与预算。 |
-| `resumeFromRunId` | 在同会话内复用未变化且已成功的调用前缀，其后调用重新执行。 |
-| `isolation: 'worktree'` | 从当前 Git HEAD 创建独立目录；保留有改动结果，不自动合并。 |
-| 共享输出 Token 目标 | 用户消息末尾 `+500k`／`+1m`；达到目标停止新派发，已运行调用可收尾。 |
-
-缺少可信用量时停止继续派发；模型请求、网络和文件权限继续由宿主与工具提供方负责。
+| 嵌套工作流 | 最多一层，和外层共用并发数、预算和取消 |
+| 续跑 | 只在同一个会话内有效；第一处变化之后的调用都会重新执行 |
+| worktree 隔离 | 需要本地 Git 仓库；还没提交的改动不会带进 worktree |
+| 输出预算 | 到达目标后停止派新任务，正在跑的会跑完，所以实际用量可能略超 |
 
 ## 常见问题
 
 <details>
-<summary>续跑会重新做已经完成的操作吗？</summary>
+<summary>续跑会把做过的事再做一遍吗？</summary>
 
-只复用符合条件的成功调用前缀，之后的调用会重新执行。先核对已有产物和外部副作用，不把续跑当任意操作的事务重放。
+前面成功且没变的调用不会重跑，第一处变化之后的会。如果任务里有发消息、写数据库这类操作，续跑前先确认上次做到了哪一步。
 
 </details>
 
 <details>
-<summary>卸载会删除脚本或 worktree 吗？</summary>
+<summary>卸载会删掉脚本和 worktree 吗？</summary>
 
-插件不会主动删除已保存脚本、运行记录和 worktree。项目使用 `.omd/workflows/`、`.omd/worktrees/`，独立运行与预算数据位于 `DSH_HOME/dsh-workflow/`。
+不会。脚本在项目的 `.omd/workflows/`，worktree 在 `.omd/worktrees/`，运行记录和预算在 `DSH_HOME/dsh-workflow/`。
 
 </details>
 
-## 开发与许可
+## 开发和许可
 
-安装标识为 `dsh-workflow-plus`，通过固定 GitHub Release 分发；不要安装其他作者的 npm 同名近似包。
+安装包名是 `dsh-workflow-plus`，只从本仓库的 Release 下载；npm 上名字相近的包不是本项目。
 
 ```bash
+node scripts/prepare-host-sdk.mjs
 pnpm install --frozen-lockfile --ignore-scripts --config.strict-dep-builds=false
 pnpm build
 ```
 
-[架构](docs/architecture.md)。采用 [MIT](LICENSE)，第三方来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+[架构说明](docs/architecture.md)。代码用 [MIT](LICENSE) 许可，第三方来源见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-## 文档与支持
-
-| 我想做什么 | 去哪里 |
-| --- | --- |
-| 安装、升级、卸载 | [安装指南](docs/install.md) |
-| 了解使用方法与边界 | [使用文档](docs/workflow.md) |
-| 查看版本变化 | [Releases](https://github.com/gulagala001/dsh-workflow/releases) |
-| 反馈问题 | [Issues](https://github.com/gulagala001/dsh-workflow/issues) |
-
-反馈时请提供完整 DSH／插件版本、实际入口、最小复现步骤，以及预期和实际表现；日志与截图先移除私人数据。
-
-<p align="center"><a href="#readme-top">返回顶部</a> · <a href="https://github.com/gulagala001/dsh-workflow/releases">版本与下载</a> · <a href="https://github.com/gulagala001/dsh-workflow/issues">反馈</a></p>
-
-[文档结构与贡献](docs/documentation.md)
+反馈问题请写明 DSH 和插件版本、操作步骤、期望和实际结果，日志和截图先去掉个人信息：[Issues](https://github.com/gulagala001/dsh-workflow/issues)。

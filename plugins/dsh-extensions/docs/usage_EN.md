@@ -1,25 +1,24 @@
-# DSH Extensions — Usage
+# DSH Extensions usage
 
 [简体中文](usage.md) · [Back to README](../README_EN.md)
 
-Every page is a tab at the top of the **Plugins** page in the left sidebar: Skills, MCP, Instructions, Commands and Hooks. On the Skills, Instructions and Commands tabs, the scope picker at the top left switches to a workspace to show that project's files; the choice is shared across these tabs.
+Every page is a tab at the top of the **Plugins** page in the left sidebar: Skills, MCP, Instructions, Commands and Hooks. On the Skills, Instructions and Commands tabs, the picker at the top left switches from **Global** to a workspace to show that project's own files. The three tabs share this choice.
 
 ## Skills
 
-- Skills are grouped by source: project (`.dsh/skills`, `.agents/skills`), personal (`~/.dsh/skills`, `~/.agents/skills`), custom folders, bundled and plugin-provided.
-- DSH's native providers own discovery and frontmatter rules, including configured personal/custom directories and disabled default roots. Global shows the host and current default preset; a workspace also includes skills from its own open conversations, without borrowing another project's conversation. Default-preset files remain manageable before any conversation exists.
-- Same-name files remain individually manageable; DSH determines invocation precedence. Plugin skills without local files open through their provider and stay read-only. Incomplete discovery reports an error and can be retried with Refresh.
-- The row switch controls both "Model can invoke" and "You can invoke"; the detail view sets them separately. They are written to the `disable-model-invocation` and `user-invocable` frontmatter in `SKILL.md`.
-- **New skill** takes a name, description and instructions and creates `<folder>/<name>/SKILL.md`. Names use lowercase letters, digits and hyphens.
-- **Import** copies a folder containing `SKILL.md` (skipping `.git` and `node_modules`).
-- **Edit** changes the whole `SKILL.md`; `name` and `description` in the frontmatter are checked before saving.
-- Saves and imports validate candidate files through the actual provider, including invocation fields, before replacing existing content. Imports appear only after copying finishes; failures clean up staging so you can correct the source and try again. Writes are ordered within one host, and unloading prevents unpublished candidates from committing and waits for cleanup.
-- Creation and import require one unambiguous native personal/project directory; their buttons are unavailable when none is configured or several destinations conflict. Each individual invocation switch changes only its own field.
-- Deleting a directory bundle removes that folder; a flat Markdown skill removes only its file, and a linked folder removes only the link. Skill roots are protected. Bundled and plugin-provided skills are read-only.
+- Skills are grouped by source: project (`.dsh/skills`, `.agents/skills`), personal (`~/.dsh/skills`, `~/.agents/skills`), custom folders, bundled and plugin-provided. Which folders are read follows your DSH settings.
+- In a workspace, the list also shows skills used by conversations open in that project. You can manage files in the default folders even before the project has a conversation.
+- The row switch controls both "Model can invoke" and "You can invoke"; the detail view sets them separately. They are written to the `disable-model-invocation` and `user-invocable` frontmatter in `SKILL.md`, so they keep working after you uninstall the plugin.
+- **New skill**: enter a name, description and instructions to create `<folder>/<name>/SKILL.md`. Names use lowercase letters, digits and hyphens.
+- **Import**: copies a folder containing `SKILL.md`, skipping `.git` and `node_modules`.
+- **Edit**: change the whole `SKILL.md`. The frontmatter `name` and `description` are checked before saving, and an invalid file never replaces the original.
+- New and Import need one clear personal or project folder. If none or several are configured, the buttons are unavailable.
+- **Delete**: a folder skill removes the folder, a single Markdown skill removes that file, and a link removes only the link. Bundled and plugin-provided skills are read-only; copy them to a personal or project folder to edit.
+- Skills with the same name can be managed separately; DSH decides which one is used.
 
 ## MCP
 
-- Servers are saved in `~/.dsh/mcp.json` (`$DSH_HOME/mcp.json` when `DSH_HOME` is set) in the usual format:
+- Servers are saved in `~/.dsh/mcp.json` (`$DSH_HOME/mcp.json` when `DSH_HOME` is set), in the usual format:
 
   ```json
   {
@@ -30,26 +29,26 @@ Every page is a tab at the top of the **Plugins** page in the left sidebar: Skil
   }
   ```
 
-- **Add server** supports local commands (stdio) and remote URLs (Streamable HTTP). **Paste JSON** adds every server from an MCP server's setup instructions at once.
-- Once connected, tools are offered to the model as `mcp__server__tool`. The detail view switches tools individually; switched-off tools are recorded in the server's `disabledTools`.
+- **Add server** supports local commands (stdio) and remote URLs (Streamable HTTP); SSE is not supported yet. **Paste JSON** adds every server from an MCP server's setup instructions at once.
+- Once connected, tools reach the model as `mcp__server__tool`. The detail view can switch off individual tools; they are recorded in that server's `disabledTools`.
 - Switching a server off disconnects it and writes `"disabled": true`. Changed settings reconnect automatically; use **Reconnect** in the menu after a failure.
-- The page follows disconnect and reconnect events. If it shows **Cleanup unconfirmed**, select **Retry cleanup**. A replacement waits for the old connection to close; deleting its configuration or reloading the manager retains the pending cleanup record.
-- If another provider already owns the tool namespace, the connection reports a conflict. Failed or disabled connections do not apply their tool switches to other providers; reconnecting restores the saved switches.
-- After editing `mcp.json` by hand, return to the page or refresh to apply it.
+- **Cleanup unconfirmed** means the old connection has not confirmed it closed. Select **Retry cleanup**. No new connection starts until the old one is gone.
+- A tool name already used by another source shows as a conflict.
+- After editing `mcp.json` by hand, return to the page or click Refresh to apply it.
 - MCP servers already defined in the profile configuration are listed under "Servers in profile configuration" and can only be switched on or off.
-- Environment and header values are never shown.
+- Environment variable and header values are never shown.
 
 ## Instructions
 
-- Personal: `~/.dsh/AGENTS.md`; `~/.agents/AGENTS.md` is shown when it exists.
+- Personal: `~/.dsh/AGENTS.md`, plus `~/.agents/AGENTS.md` when it exists.
 - Project: from the project root (the directory containing `.git`) down to the workspace directory, the `AGENTS.md` and `CLAUDE.md` at each level plus the local files `AGENTS.local.md` and `CLAUDE.local.md`. A missing `AGENTS.md` in the workspace directory shows a **Create** button.
-- File names, root markers and source limits come from the default preset and the selected workspace's open main conversations. DSH discovers the candidates. Disabled instruction loading offers no guessed creation targets, and unrelated projects do not contribute their presets.
-- Details show the host source limits and this page's editing limit. The page edits at most 1 MiB and respects a lower host limit; differing limits among relevant presets are marked. DSH's total byte budget still controls inclusion and truncation in model context.
-- Saving a symbolic link updates its target; deleting removes only the link. Saves and deletions run in order within one host. Request cancellation, plugin shutdown or a changed preset prevents uncommitted changes and preserves the original file on failure. Full edits use the last successful save; external editors and other hosts are outside this queue.
+- Which file names are read and how large each file may be follow your current DSH settings. If instruction loading is turned off in DSH, the Create button goes away.
+- This page edits files up to 1 MiB, or less if DSH sets a lower limit. DSH decides how much of a file reaches the model.
+- Editing a symlink changes the file it points to; deleting removes only the link. A failed save leaves the original file unchanged.
 
 ## Commands
 
-- Personal commands are saved in `~/.dsh/commands/<name>.md` and project commands in `<project root>/.dsh/commands/<name>.md`. With the same name, the project command wins in that project's conversations.
+- Personal commands are saved as `~/.dsh/commands/<name>.md` and project commands as `<project root>/.dsh/commands/<name>.md`. When names match, the project command wins inside that project.
 - The file content is the prompt template, with optional frontmatter:
 
   ```markdown
@@ -58,18 +57,18 @@ Every page is a tab at the top of the **Plugins** page in the left sidebar: Skil
   argument-hint: <path>
   ---
 
-  Review the changes in $ARGUMENTS and list problems with suggested fixes.
+  Review the changes in $ARGUMENTS and list problems and suggested fixes.
   ```
 
-- Type `/name arguments` in the composer to send it. `$ARGUMENTS` becomes the whole input and `$1`…`$9` single space-separated words (quote words that contain spaces); when the template uses no arguments, they are appended. Attachments are sent along.
-- Commands cannot replace names already provided by DSH or another plugin in the same scope; conflicting files are marked. One conversation's preset does not reserve names in other projects. The global page shows global commands; a workspace also includes commands from that project's open conversations.
-- "From DSH and plugins" lists other commands in the selected scope, read-only. Refresh reconciles files with the menu and preserves unchanged registrations.
-- Each send reads the current file. Deleted, unreadable or malformed files report an error; an invalid project file never falls back to a personal template of the same name. Cancelling a request or disabling the plugin prevents messages not yet handed to the conversation. Use the conversation's Stop control for messages already accepted.
-- Within one host, saves, renames, deletions and refreshes run in order; only one concurrent creation of the same name succeeds. Re-enabling the plugin or restarting the host restores commands from existing files. The first command waits for project registration to finish.
+- Type `/name arguments` in the composer to send it. `$ARGUMENTS` becomes all arguments and `$1`…`$9` become single space-separated arguments (quote an argument that contains spaces). If the template uses no arguments, they are appended at the end. Attachments are sent along.
+- A command cannot reuse a name already taken by DSH or another plugin; such files are marked as conflicts.
+- "From DSH and plugins" lists commands from other sources, read-only.
+- Each send reads the current file. If the file was deleted, cannot be read or has invalid frontmatter, you get an error; the personal command with the same name is never sent instead.
+- Saved commands apply right away in every conversation, including ones already open in the same project.
 
 ## Hooks
 
-- Settings are saved in `~/.dsh/hooks.json` in the Claude Code structure:
+- The configuration lives in `~/.dsh/hooks.json`, with the same structure as Claude Code:
 
   ```json
   {
@@ -83,17 +82,18 @@ Every page is a tab at the top of the **Plugins** page in the left sidebar: Skil
 
 - Supported events:
 
-  | Event | Runs when | What it can do |
+  | Event | When it runs | What it can do |
   | --- | --- | --- |
-  | `SessionStart` | A session is created, resumed, cleared or compacted | Standard output becomes context; matches `startup`, `resume`, `clear`, `compact` |
-  | `UserPromptSubmit` | Before a message reaches the model | Exit code 2 blocks it; standard output becomes context |
-  | `PreToolUse` | Before a tool executes | Exit code 2 denies the call and tells the model standard error; JSON `permissionDecision` of `deny` or `ask` |
-  | `PostToolUse` | After a tool executes | Exit code 2 gives standard error as feedback; `additionalContext` adds context |
-  | `Stop` | The model is about to finish its turn | Exit code 2 or `"decision": "block"` makes it continue with the reason, up to 3 times per turn |
-  | `SessionEnd` | A session closes | Runs only; does not affect the session |
+  | `SessionStart` | A conversation is created, resumed, cleared or compacted | Standard output becomes context; matches `startup`, `resume`, `clear`, `compact` |
+  | `UserPromptSubmit` | Before a message goes to the model | Exit code 2 blocks it; standard output becomes context |
+  | `PreToolUse` | Before a tool runs | Exit code 2 denies it and tells the model the standard error; JSON `permissionDecision` can be `deny` or `ask` |
+  | `PostToolUse` | After a tool runs | Exit code 2 returns standard error as feedback; `additionalContext` adds context |
+  | `Stop` | When the model is about to end its turn | Exit code 2 or `"decision": "block"` makes it continue with your reason, up to 3 times per turn |
+  | `SessionEnd` | A conversation closes | Runs only; does not affect the conversation |
 
-- Commands run in the system shell with the event as JSON on standard input (`session_id`, `cwd`, `hook_event_name` and event fields such as `tool_name`, `tool_input`, `prompt`), in the session directory, with `DSH_PROJECT_DIR` and `CLAUDE_PROJECT_DIR` set. The default timeout is 60 seconds.
-- A `PreToolUse` `allow` never skips DSH's own approvals. Subagents do not run session, prompt or turn-stop hooks.
-- **Test run** in the editor runs the command once with sample data and affects no conversation. You can cancel a running test; closing the editor also cancels its request. Disabling the plugin cancels active Hooks and waits for their commands to exit. The bottom of the page lists the last 50 runs.
-- Configuration edits within one host are saved in order, reading the current file each time. Other fields already saved externally are retained; malformed files are never overwritten.
-- Each hook can be switched off on its own (written as `"enabled": false`); the switch at the top maps to `disableAllHooks`.
+- Commands run in the system shell with the conversation directory as the working directory. Event data arrives as JSON on standard input, including `session_id`, `cwd`, `hook_event_name` and event fields such as `tool_name`, `tool_input` and `prompt`. The environment also has `DSH_PROJECT_DIR` and `CLAUDE_PROJECT_DIR`. The default timeout is 60 seconds.
+- Matchers use DSH tool names. A `PreToolUse` result of `allow` does not skip DSH's own approval. Subagents do not trigger the conversation, message and end-of-turn events.
+- Hooks run commands directly as your system user, outside the DSH sandbox. You are asked to confirm the first time you add one; only add commands you trust.
+- **Test run** in the editor runs the command once with sample data and affects no conversation. You can cancel it midway. The bottom of the page lists the last 50 runs.
+- Each Hook can be switched off on its own (writes `"enabled": false`). The switch at the top maps to `disableAllHooks` and turns off all of them.
+- Saving keeps any other fields you added to the file by hand. If the file is malformed, it is not overwritten.

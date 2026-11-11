@@ -1,11 +1,11 @@
 {
   "name": "opencu",
-  "version": "2.2.11-dsh.0.2.2-rc.1",
-  "description": "Computer-use plugin with original REA browser, annotation and monitoring components for DSH",
+  "version": "2.2.12-dsh.0.2.2-rc.2",
+  "description": "Let the AI in DeepSeek Harness operate browsers and desktop apps, with live previews and annotations. You can step in at any time. macOS, Windows and Linux.",
   "type": "module",
   "engines": {
     "node": ">=24.9.0",
-    "dsh": "0.2.2-rc.1"
+    "dsh": "0.2.2-rc.2"
   },
   "exports": {
     ".": "./src/index.mjs",
@@ -70,7 +70,6 @@
     "test": "node --experimental-vm-modules --test test/*.test.mjs",
     "prepack": "npm run cu:check && node scripts/check-docs.mjs && node scripts/build.mjs && node scripts/check-extension-distribution.mjs && node scripts/check-public-files.mjs",
     "docs:check": "node scripts/check-docs.mjs",
-    "docs:write": "node scripts/check-docs.mjs --write",
     "release:check": "node scripts/check-release-assets.mjs",
     "pretest": "npm run cu:check",
     "cu:check": "node scripts/cu-liveness.mjs check",
@@ -93,15 +92,15 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-attachment": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-scope": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.2",
+    "@deepseek-ai/dsh-attachment": "0.2.2-rc.2",
+    "@deepseek-ai/dsh-scope": "0.2.2-rc.2",
     "@deepseek-ai/schemastery": "3.19.0"
   },
   "opencu": {
-    "host": "0.2.2-rc.1",
-    "adapterRevision": 2,
-    "sourceCommit": "c59d10aff167ad7eefead4b3a9082fb57c8fbfe8"
+    "host": "0.2.2-rc.2",
+    "sourceCommit": "ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c",
+    "adapterRevision": 2
   },
   "repository": {
     "type": "git",

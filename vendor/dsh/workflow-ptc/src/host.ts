@@ -23,13 +23,13 @@ import { WorkflowJournal, workflowPaths } from './journal.ts'
 import { serializeWorkflowSource } from './source.ts'
 import type { WorktreeArtifact } from './worktree.ts'
 import { WORKFLOW_PROVIDER } from './spawn.ts'
-import type { WorkflowProvider, WorkflowSpawnOptions } from './spawn.ts'
+import type { WorkflowActivation, WorkflowProvider, WorkflowSpawnOptions } from './spawn.ts'
 
 export interface WorkflowSupport {
   root: string
   resumeFromRunId?: string
   budget?(): { total: number | null; spent: number; unmetered?: number }
-  budgetOwner?: { sessionId: string; poolId: string }
+  budgetOwner?: { sessionId: string; poolId: string; runId?: string }
   loadWorkflow(reference: string | { scriptPath: string }, signal: AbortSignal): Promise<{ meta: WorkflowMeta; body: string }>
   childType?(id?: string): Promise<{ id?: string; fingerprint?: string }>
 }
@@ -184,7 +184,8 @@ export class PtcWorkflowRun implements WorkflowRun {
   private disposed: Promise<void> | undefined
   private readonly externalAbort: () => void
   private journal?: WorkflowJournal
-  private cleanupError?: unknown
+  private readonly settlementErrors: Error[] = []
+  private unquiesced = false
   private resultFault?: { error: unknown }
   readonly scriptPath?: string
   readonly transcriptDir?: string
@@ -194,7 +195,7 @@ export class PtcWorkflowRun implements WorkflowRun {
   get worktrees(): WorktreeArtifact[] { return [...this.artifacts.values()].map(value => ({ ...value })) }
 
   constructor(
-    private readonly ctx: Context,
+    ctx: Context,
     private readonly subagents: SubagentService,
     private readonly runtime: PtcRuntime,
     readonly id: WorkflowRunId,
@@ -240,6 +241,7 @@ export class PtcWorkflowRun implements WorkflowRun {
 
   private requireActive(): void {
     this.controller.signal.throwIfAborted()
+    if (this.settlementErrors.length) throw this.settlementErrors[0]
   }
 
   private track<T>(task: Promise<T>): Promise<T> {
@@ -306,11 +308,12 @@ export class PtcWorkflowRun implements WorkflowRun {
     if (!cached && budget?.total !== null && budget?.total !== undefined && budget.spent >= budget.total) throw new Error('Workflow token target reached; no new agents can start')
     if (cached) {
       if (cached.worktree) this.artifacts.set(callId, cached.worktree)
-      const run: SubagentActivation = { childId: SessionId(cached.childId ?? `cached-${this.id}-${callId}`), result: Promise.resolve(cached) as SubagentActivation['result'], dispose: async () => {} }
+      const cachedId = SessionId(cached.childId ?? `cached-${this.id}-${callId}`)
+      const run: SubagentActivation = { childId: cachedId, name: cachedId, result: Promise.resolve(cached) as SubagentActivation['result'], dispose: async () => {} }
       this.children.set(callId, { callId, run, cached: true })
       return { callId, childId: run.childId }
     }
-    if ((request.isolation || request.agentType) && this.provider !== 'omd-workflow') throw new Error('Workflow worktree/agentType options require the omd-workflow subagent provider')
+    if ((request.isolation || request.agentType) && this.provider !== WORKFLOW_PROVIDER) throw new Error('Workflow worktree/agentType options require the dsh-workflow subagent provider')
     const workflow: WorkflowSpawnOptions = {
       ...request.isolation === undefined ? {} : { isolation: request.isolation },
       ...request.agentType === undefined ? {} : { agentType: request.agentType },
@@ -335,9 +338,10 @@ export class PtcWorkflowRun implements WorkflowRun {
         },
       },
     }
+    this.requireActive()
     const run = this.provider === WORKFLOW_PROVIDER
       ? await (this.subagents.getProvider(this.provider) as WorkflowProvider).startWorkflow({ ...childInputs, label, signal: this.controller.signal }, workflow)
-      : await this.subagents.startActivation({ provider: this.provider, label, delivery: 'caller', signal: this.controller.signal, request: childInputs })
+      : await this.subagents.startActivation({ provider: this.provider, label, delivery: 'caller', signal: this.controller.signal, ...childInputs })
     const record: ChildRecord = { callId, run }
     this.children.set(callId, record)
     // A provider can publish after the signal fired while startup was pending.
@@ -393,16 +397,34 @@ export class PtcWorkflowRun implements WorkflowRun {
 
   private disposeChild(record: ChildRecord): Promise<void> {
     record.disposal ??= Promise.resolve().then(async () => {
-      await record.run.dispose()
-      const worktree = this.artifacts.get(record.callId)
-      if (record.result && worktree) record.result.worktree = { ...worktree }
-      if (record.result && !record.cached) await this.journal?.complete(record.callId, record.result)
-    }).catch((error: unknown) => {
-      this.cleanupError ??= error
-      this.ctx.logger.warn(`workflow-ptc: child dispose failed: ${renderThrown(error)}`)
-    }).finally(() => {
-      this.children.delete(record.callId)
+      let stopped = false
+      try {
+        await record.run.dispose()
+        stopped = true
+        const worktree = this.artifacts.get(record.callId)
+        if (record.result && worktree) record.result.worktree = { ...worktree }
+        if (record.result && !record.cached) await this.journal?.complete(record.callId, record.result)
+      } catch (error) {
+        // Native child ownership, not artifact persistence, determines whether
+        // resuming is safe. Both failures stop admission and remain visible.
+        const quiesced = stopped || (this.provider === WORKFLOW_PROVIDER && (record.run as Partial<WorkflowActivation>).quiesced === true)
+        if (!quiesced) this.unquiesced = true
+        const failure = new Error(`Workflow child #${record.callId} ${stopped ? 'journal write' : 'cleanup'} failed: ${renderThrown(error)}`, { cause: error })
+        this.settlementErrors.push(failure)
+        const previous = this.failures.get(record.callId)
+        this.failures.set(record.callId, {
+          seq: record.callId, childId: record.run.childId, cause: 'failed',
+          stopReason: stopped ? 'journal-error' : 'cleanup-error', ...previous,
+          reason: previous ? `${previous.reason}\n${failure.message}` : failure.message,
+        })
+        throw failure
+      } finally {
+        this.children.delete(record.callId)
+      }
     })
+    // Cancellation starts cleanup without awaiting here. Keep that call safe
+    // while returning the rejecting promise to the guest and settlement join.
+    void record.disposal.catch(() => {})
     return record.disposal
   }
 
@@ -486,19 +508,29 @@ export class PtcWorkflowRun implements WorkflowRun {
       // Disposing published children releases binding waits; pending starts may publish more.
       for (const record of this.children.values()) void this.disposeChild(record)
       while (this.pending.size > 0) await Promise.allSettled([...this.pending])
-      await Promise.all([...this.children.values()].map(record => this.disposeChild(record)))
+      await Promise.allSettled([...this.children.values()].map(record => this.disposeChild(record)))
       this.children.clear()
       for (const info of this.liveAgents.values()) this.endAgent({ ...info, outcome: 'cancelled' })
     }
-    if (this.cleanupError !== undefined) {
-      if (this.journal) unquiescedJournals.add(this.journal)
-      return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow cleanup failed${this.journal ? '; resume is locked until process exit' : ''}: ${renderThrown(this.cleanupError)}` }
+    const fail = (message: string): void => {
+      result = { value: null, stopReason: 'error', agentsStarted: this.started,
+        error: result.error === undefined ? message : result.error.includes(message) ? result.error : `${result.error}\n${message}` }
+    }
+    for (const error of this.settlementErrors) fail(error.message)
+    if (this.unquiesced) {
+      if (this.journal) {
+        unquiescedJournals.add(this.journal)
+        fail('Workflow child cleanup did not establish quiescence; resume is locked until process exit')
+      }
+      return result
     }
     if (this.resultFault !== undefined && this.cancelReason === undefined) {
-      result = { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow child result failed: ${renderThrown(this.resultFault.error)}` }
+      fail(`Workflow child result failed: ${renderThrown(this.resultFault.error)}`)
     }
     try { await this.journal?.close(result.stopReason, this.childFailures) }
-    catch (error) { return { value: null, stopReason: 'error', agentsStarted: this.started, error: `Workflow journal could not settle: ${renderThrown(error)}` } }
+    catch (error) {
+      if (!this.settlementErrors.some(failure => failure.cause === error)) fail(`Workflow journal could not settle: ${renderThrown(error)}`)
+    }
     return result
   }
 }

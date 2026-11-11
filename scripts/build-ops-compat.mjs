@@ -124,7 +124,7 @@ export async function buildOpsCompatibility(archive, host, output) {
     }
     const ptcPath = join(root, 'lib/ptc/index.js');
     let ptcSource = patchPtc(await readFile(ptcPath, 'utf8'));
-    if (host === '0.2.2-rc.1') {
+    if (['0.2.2-rc.1', '0.2.2-rc.2'].includes(host)) {
       // The modern waterfall carries presentation only. Declarations belong
       // to the executor and are added by assemble() after the hooks settle.
       const before = 'if (!entry || !heldPtc || isPtc(result))';
@@ -132,7 +132,7 @@ export async function buildOpsCompatibility(archive, host, output) {
       ptcSource = ptcSource.replace(before, 'if (!entry || !heldPtc || isPresentationProbe(context) || isPtc(await inspectPresentation(prompt, context.scope, context.signal)))');
     }
     await writeFile(ptcPath, ptcSource);
-    if (host === '0.2.2-rc.1') {
+    if (['0.2.2-rc.1', '0.2.2-rc.2'].includes(host)) {
       // Step admission freezes definitions before prompt/pre-step hooks in rc.1.
       // Finish only OPS-owned pending publication before that native snapshot.
       await writeFile(join(root, 'lib/host-admission.js'), `import { symbols } from '@deepseek-ai/cordis';

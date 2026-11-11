@@ -1,64 +1,76 @@
-# Usage
+# DSH Rewind usage guide
 
-English | [中文](usage.zh.md)
+[简体中文](usage.zh.md) · [Back to README](../README_EN.md)
 
 ## Rewind and undo
 
-Click the arrow beside Copy on a user message. Confirmation shows the working directory and affected files. Stop a running session and check again before restoring. Other sessions are not stopped automatically.
+Click the rewind arrow next to the copy button on one of your messages. The dialog shows the working directory and the files that will change. If the conversation is running, stop it first and check again; other conversations are not affected.
 
-The selected message and later conversation are withdrawn in place. Text, images and files return to the composer. Undo restores the previous conversation, files and composer draft. A draft edited while restoration is running is kept; refill the withdrawn content when ready. Unsent browser attachments follow the host's normal draft lifecycle.
+After you confirm, that message and everything after it are removed, and its text, images and files go back into the composer. **Undo rewind** brings back the conversation, the files and the draft you had at the time. A draft you write in the meantime is not overwritten.
 
-The native task list follows the same history cutoff, including completion flags, excerpts and evidence stored in its task record. Rewinding before the first task clears the current list; undo and interrupted recovery restore the corresponding full record. Evidence is restored as history, not rerun. Older message-only undo backups without a recorded event cutoff leave the current task list unchanged.
+The task list returns to the same point too, including completion state, your original wording and verification notes. Rewinding to before the first task clears the list.
 
-After sending new messages, rewind those messages before undoing an earlier withdrawal. Avoid running multiple history-changing rewind plugins together.
+If you sent a new message after rewinding, rewind that message first, then undo the earlier rewind. Do not enable another plugin that rewrites conversation history at the same time.
 
 ## Shortcuts and commands
 
-Press **Esc twice** in an idle conversation to open the native rewind list above the composer. **`/rewind`** opens the same list; **`/undo`** opens confirmation for restoring the last rewind. Commands are not sent to the model and accept no arguments. Selecting a message still requires confirmation.
+| Action | Effect |
+| --- | --- |
+| Press **Esc** twice while the conversation is idle | Open the rewind list |
+| `/rewind` | Open the same list |
+| `/undo` | Undo the most recent rewind (asks for confirmation first) |
 
-The list starts with recent messages, with up to 100 per page. Search the current page or browse older history, including messages from before compaction. Opening the list reads message metadata without scanning workspace files or creating file snapshots. Closing it preserves unsent text and attachments. Messages without a file checkpoint are marked as conversation-only.
+These commands are not sent to the model and take no arguments. The list starts with the latest message, shows up to 100 per page, can be searched, and goes back past compaction. Messages without a file backup are marked "conversation only". Opening the list does not scan files, and closing it keeps your draft and attachments.
 
-While running, double Esc keeps DSH’s Stop behavior; press it twice again after stopping to open the list. Menus, confirmations, IME composition, and terminals keep keyboard priority. Holding Esc does not count as two presses. Commands already owned by another plugin are not replaced; message buttons and the shortcut remain available.
+While a reply is generating, double Esc still stops DSH as usual; press it twice again afterwards to open the list. Menus, dialogs, input methods and the terminal handle their own keys first, and holding Esc does not count as a double press. If another plugin already owns `/rewind` or `/undo`, this plugin leaves it alone; the message button and the shortcut still work.
 
-## File coverage
+## Which files are backed up
 
-Captures cover synchronous tool changes, including shell commands and same-workspace subagents. Git workspaces include tracked files and non-ignored new files; ordinary directories exclude `.git` and `node_modules`. Binary contents, additions, deletions, symlinks themselves and portable permission bits are recorded.
+Before and after every AI tool call, the plugin records file changes in the working directory, including synchronous commands and subagents working in the same directory.
 
-Restoration checks for newer file changes before starting and again after reading the backup, immediately before each replacement or deletion. Interrupted recovery uses the same checks. Ambiguous concurrent edits and changes across different workspaces are not overwritten automatically. Detached background processes, databases and remote side effects are outside file recovery. Messages from before installation, or whose snapshots expired, retain conversation-only recovery.
+- Git repositories: tracked files and new files not ignored by `.gitignore`.
+- Other directories: everything except `.git` and `node_modules`.
+- Binary files, creations, deletions, symlinks themselves and the executable bit are recorded.
 
-Conversation history is append-only. Recovery survives restart and does not call a model. Incomplete transactions retain their backups; unresolved external changes stop restoration rather than overwrite the current files.
+Before restoring, the plugin checks whether files changed in the meantime, and checks again before replacing each file. Changes it cannot attribute, or changes in another working directory, are never overwritten automatically. Background processes that run outside a tool call, databases and remote operations are not covered.
+
+Restoring does not call the model, and the result survives restarts. The original DSH conversation log is only appended to, never deleted. If a restore is interrupted, its backup is kept so it can finish later.
 
 ## Storage
 
-Each automatic snapshot before or after a tool has a four-second budget. A timeout records a backup gap and defers another capture in that workspace for 30 seconds. Tools continue under the workspace lock. Cancellation stops queued or active snapshots, and an atomic commit already in progress finishes before the lock is released. Affected file changes cannot be safely rewound. Workspace lock contention still has a 30-second wait limit, and restores exclude concurrent file operations.
+| Item | Rule |
+| --- | --- |
+| Backup location | `$DSH_HOME/rewind-plus/v1`, kept on uninstall |
+| Per conversation | Up to 100 checkpoints and 20 undo records |
+| Expiry | File backups of idle conversations are cleaned up after about 30 days |
+| Space target | When idle, total usage is trimmed toward about 2 GiB, oldest records first |
+| Write limit | Backup content is capped at 4 GiB by default; new backups pause at the cap |
+| Free disk | New backups pause when less than 512 MiB is free |
 
-Plain chat creates lightweight checkpoints without scanning the project. Files are captured before tools run. Unchanged content is reused; large files use 4 MiB chunks, SHA-256 deduplication and compression where useful.
+Chat-only turns create tiny checkpoints and do not scan the project. Unchanged files reuse existing backups, and large files are split into 4 MiB chunks, deduplicated and compressed when useful.
 
-Up to 100 checkpoints and 20 undo records are retained per session. Idle session file backups expire after about 30 days. During idle time, unreferenced backups are collected and older records roll off toward a 2 GiB target covering backup content, indexes and recovery metadata. Open confirmations, incomplete transactions and the latest active recovery take priority. The soft target itself does not reject captures. A separate default 4 GiB write ceiling checks physical backup content and indexes under the shared writer lock, bounding new data from large workspaces and concurrent instances. Reaching it stops that capture and records a backup gap while normal tools continue. Existing recovery records are not forcibly deleted to meet the ceiling; recovery metadata and compaction temporary copies are separate.
+Each automatic backup gets at most 4 seconds; after a timeout the same directory is retried 30 seconds later. When a backup times out, runs out of space or hits the write limit, changes from that period are not backed up, and the dialog shows which messages can only roll back the conversation. The AI keeps working normally.
 
-This is a soft target, not a limit on the whole DSH directory. Captures before and after tools cover the entire eligible workspace. Unchanged files may be written to backups before idle collection releases them, so a large workspace can temporarily exceed the target. Native conversation logs and temporary filesystem overhead are separate. Original host logs are not deleted. Backups live under `$DSH_HOME/rewind-plus/v1`; uninstalling retains them. Do not remove that directory during recovery.
+2 GiB is a cleanup target, not a hard cap. Backing up a large project can push usage above it for a while until idle cleanup brings it down. Do not delete the backup directory by hand while a restore is in progress.
 
-Idle collection is scheduled even after short operations, which do not postpone an existing cleanup deadline; a busy peer instance triggers a later retry. Backup pack writes, compaction and restore temporary files check available disk space and reserve at least 512 MiB. Low space stops new backups without blocking normal tools and records that the affected file changes cannot be safely rewound. A restore interrupted by low space retains its recovery transaction. Unreferenced packs are deleted first; compaction that needs a temporary copy waits for sufficient space. Canonical paths prevent symbolic links or directory junctions from bypassing workspace/backup overlap protection.
+## Update and uninstall
 
-## Update and remove
-
-Install the new fixed Release package into the same profile and restart after active tasks finish. Remove it through the Plugins page or run:
+To update, install the new package in the same profile and restart DSH after your task finishes. To uninstall, remove it on the Plugins page or run:
 
 ```sh
 dsh plugin --profile web remove @gulagala001/dsh-undo-plugin
 ```
 
-Removal preserves existing backups. Complete any pending recovery before removing the plugin if you still need to undo a rewind. Avoid running multiple conversation-history rewind plugins together.
+Uninstalling keeps existing backups. If you still want to undo an earlier rewind, do it before uninstalling.
 
 ## Development
 
 ```sh
+node scripts/prepare-host-sdk.mjs
 npm ci
 npm run build
 npm test
 npm pack
 ```
 
-Use an isolated DSH profile for development. From the installed plugin directory, `node scripts/cleanup.mjs` previews cleanup; add `--apply` to run it manually.
-
-This release targets DSH 0.2.1-rc.3. Native installation, recovery and browser interaction were verified on macOS; Windows and Linux device workflows have not been verified.
+Use a separate DSH profile for development. In the install directory, `node scripts/cleanup.mjs` previews a cleanup; add `--apply` to run it.

@@ -170,9 +170,8 @@ export function applySessionOverview(ctx, openCU) {
       if (!data) return <div role="status" style={{ padding: 20 }}>正在加载会话总览…</div>;
       const panels = [];
       if (props.variant === 'agents') {
-        for (const { id, team } of data.teams) panels.push({ id: `team-${id}`, groupId: id, memberIds: team.members.map(member => member.id), title: `Agent Team${id === props.sessionId ? '' : ' · ' + (data.rows.find(row => row.id === id)?.label || id)}`, content: <teamNative.TeamPanel sessionId={id} team={team}
-          useSessions={props.useSessions} useSessionStatus={props.useSessionStatus} t={scope.locale.bind('omdOverviewTeam')} renderAvatar={id => <Whale id={id}/>}
-          openTeammate={(_, childId) => { const row = data.rows.find(row => row.id === childId); if (row) openAgent(row); else scope.uiWorkspace.openSession(childId); }}/> });
+        for (const { id, team } of data.teams) panels.push({ id: `team-${id}`, groupId: id, memberIds: [], title: `Agent Team${id === props.sessionId ? '' : ' · ' + (data.rows.find(row => row.id === id)?.label || id)}`, content: <teamNative.TeamPanel sessionId={id}
+          useProjection={() => team} useSessions={props.useSessions} t={scope.locale.bind('omdOverviewTeam')}/> });
         for (const node of data.workflows) panels.push({ id: `workflow-${node.id}`, groupId: node.id, memberIds: node.data.phases.flatMap(phase => phase.members.map(member => member.childId)), title: `Workflow · ${node.data.name}`, content: React.createElement(workflowNative.WorkflowPanel, {
           ...data.context, sessionId: node.ownerId ?? props.sessionId, node, renderAvatar: id => <Whale id={id}/>, t: scope.locale.bind('workflowRun'), openSession: target => {
             const id = typeof target === 'string' ? target : target.childSessionId;

@@ -1,3 +1,35 @@
+# OpenCU 2.2.12 · DSH 0.2.2-rc.2
+
+[中文](#zh-2212) · [English](#en-2212)
+
+<a id="zh-2212"></a>
+
+## 中文
+
+### 问题修复
+
+- 浏览器对话框、文件选择器和下载在出错或重启后可继续处理。并发操作各自显示运行状态，断开的扩展会从连接列表移除。
+
+<a id="en-2212"></a>
+
+## English
+
+### Bug fixes
+
+- Retry browser dialogs and file pickers after errors, and recover downloads saved before a restart. Concurrent actions keep their own status and disconnected extensions leave the connection list.
+
+## 安装 / Installation
+
+适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
+
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.2 | [OpenCU 2.2.12](https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/SHA256SUMS) |
+
+---
+
 # OpenCU 2.2.11 · DSH 0.2.2-rc.1
 
 [中文](#zh-2211) · [English](#en-2211)

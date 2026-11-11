@@ -2,117 +2,109 @@
 
 <h1 align="center">OpenCU</h1>
 
-<p align="center"><strong>Browser and desktop actions you can observe and guide.</strong><br>DeepSeek Harness plugin</p>
+<p align="center"><strong>Let the AI operate your browser and desktop apps while you watch and step in whenever you like.</strong><br>A DeepSeek Harness plugin</p>
 
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.2.11-dsh.0.2.2-rc.1"><img alt="OpenCU 2.2.11" src="https://img.shields.io/badge/release-OpenCU%202.2.11-0969da?style=flat-square"></a>
-  <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.2-rc.1" src="https://img.shields.io/badge/DSH-0.2.2--rc.1-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.2.12-dsh.0.2.2-rc.2"><img alt="OpenCU 2.2.12" src="https://img.shields.io/badge/release-2.2.12-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub downloads" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>
 </p>
 
-<p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="DEVELOPMENT.md">Docs</a> · <a href="https://github.com/gulagala001/opencu/issues">Report an issue</a></p>
+<p align="center"><a href="#readme-install"><strong>Get started</strong></a> · <a href="docs/install_EN.md">Installation guide</a> · <a href="https://github.com/gulagala001/opencu/issues">Feedback</a></p>
 
-<p align="center"><a href="docs/images/browser-annotations.jpg"><img src="docs/images/browser-annotations.jpg" alt="浏览器现场与批注 / Browser view and annotations" width="880"></a></p>
+<p align="center"><a href="docs/images/browser-annotations.jpg"><img src="docs/images/browser-annotations.jpg" alt="Browser view and annotations" width="880"></a></p>
 
 <a id="install"></a>
 <a name="readme-install"></a>
 
 ## Quick start
 
-**Required environment：** DSH **0.2.2-rc.1**, Node.js **24.9.0+**.
-
-The full in-app browser, sidebar annotations and native monitoring require matching Host/Client/preload adapters. Installing the plugin does not patch the host. Chrome/Edge extensions require pairing; desktop control requires OS permissions.
+**Requires:** DSH **0.2.2-rc.2** and Node.js **24.9.0+**. If you already use OMD, skip this: OMD includes OpenCU.
 
 ### 1. Install
 
-Open **Plugins → Add plugin** in the DSH instance you use, then paste:
+In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz
 ```
 
-Wait for active tasks to finish, then follow the host’s activation/restart prompt. Keep your existing profile and data. See the [installation guide](docs/install_EN.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/SHA256SUMS).
+When your current task finishes, fully restart DSH when prompted. Your settings and conversations stay as they were. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/SHA256SUMS).
 
-### 2. Try this first
+### 2. Try it
 
-Open **Settings → Computer & Browser**, confirm an available backend, then ask:
+Open **Settings → Computer & Browser**, check that it shows as available, then ask in a conversation:
 
 ```text
-Open https://example.com in a browser and read its title and main text. Do not fill in or submit anything.
+Open https://example.com in the browser, read the page title and main text, and do not fill in or submit anything.
 ```
 
-**Success looks like：** The tool returns actual page content; matching host adapters also display an in-conversation preview and activity.
+The AI returns what is actually on the page, and the conversation shows the page it opened and each step it took.
 
-## Observe, act and verify
+## What it does
 
-OpenCU uses native DSH tool calls to operate real browsers and desktop applications. Pages, activity and previews stay with the conversation. Watch the target, point to a specific location, or hide the preview and continue reading.
+The AI operates real browsers and desktop apps the same way it calls any other tool. Pages, each action and a live view stay in the conversation. You can watch, or mark a spot on the view to show it what to change.
 
-- **Browsers**: discover tabs, read content, navigate, fill forms and handle file selection and downloads.
-- **Desktop apps**: observe and act through accessibility APIs and input routing, with actual capabilities reported by the backend.
-- **Feedback**: web, image and text annotations retain their locations and context. Saving an annotation and submitting it to the conversation are separate actions.
+- **Browsers**: find tabs, read content, navigate, fill in forms, pick files to upload, download.
+- **Desktop apps**: view and operate app windows through the system accessibility interfaces. What works depends on the system and the app.
+- **Annotations**: mark up web pages, images and text, with position and context kept. Saving an annotation and sending it to the AI are separate steps, so you decide when to send.
 
-## Choose a browser path
+<a id="background-operation"></a>
 
-| Path | Requirements |
+### Works in the background by default
+
+Selecting a window or tab does not bring it to the front or take over your mouse and keyboard, so you can keep working. When an action only works in the foreground, the AI asks first and switches only with your consent.
+
+If you change a page yourself, the AI looks again before continuing. When a task stops, any keys or mouse buttons it was holding are released.
+
+## Which browser to use
+
+| Browser | Notes |
 | --- | --- |
-| DSH in-app browser | Matching desktop Host, Client and preload adapters. |
-| Managed Chromium | An independent browser environment; prepare missing browser resources in settings. |
-| Chrome/Edge extension | Your selected profile, paired on first use. Revoking the pairing requires authorization again. |
+| Chrome or Edge extension | Your own browser and sign-ins. Install the extension and allow the connection once; it reconnects automatically after that |
+| Managed Chromium | A separate, clean browser that never touches your profile. If browser files are missing, set them up from Settings in one click |
+| DSH built-in browser | Pages show right in the DSH sidebar. Needs a DSH desktop build with the matching adaptation; see [development](DEVELOPMENT.md) |
 
-Target selection and actions prefer the background. Binding or viewing a target does not activate its window. Unsupported background actions return a specific limitation; foreground actions require the user’s consent. After manual interaction, observe again. Cancellation releases held input; dispatch alone does not prove success.
+## Supported systems
 
-When opening a preview, scrolling, resizing, or changing focus prevents an action from continuing, the existing session is retained. If input has started, OpenCU confirms release of that target's held input and requires a fresh observation before continuing; it never automatically replays the action. Waiting for application or browser approval does not consume the execution deadline or clear bindings. Unconfirmed input release and target identity changes remain protected.
+- macOS: uses Accessibility, which you grant in System Settings.
+- Windows: uses UI Automation, on Windows 10 1703 or later.
+- Linux: uses AT-SPI and X11; Hyprland and Wayland work in part.
 
-## Scope
+What can be operated depends on system permissions and how much the target app supports. When you open DSH Web in a browser, the AI controls the machine running DSH, not the computer in front of you.
 
-macOS uses Accessibility and targeted input, Windows uses UI Automation, and Linux uses AT-SPI/X11, Hyprland IPC or Wayland portals.
-Capabilities depend on the backend, OS permissions and application. A Web deployment operates the server’s machine, not automatically the computer viewing its page.
-
-Mixed-scale multi-monitor operation, audio, account cloud services and complete Playwright equivalence are outside the current scope. Full real-device coverage is not complete across platforms; installation alone does not establish support for every application.
+Not supported yet: multiple displays with different scaling, audio, and everything Playwright can do.
 
 ## FAQ
 
 <details>
-<summary>Why can OpenCU observe a target but not type in the background?</summary>
+<summary>Why can the AI see a window but not type into it in the background?</summary>
 
-Observation and input are separate capabilities. Follow the returned limitation and choose a supported target. When foreground input is necessary, obtain consent and explicitly focus the target rather than hiding failure behind global input.
-
-</details>
-
-<details>
-<summary>Does closing a preview stop the task?</summary>
-
-Closing it only hides the viewing target. The task and operation binding continue. Use the native Stop action to cancel; reopen the preview to see the current state.
+Some apps only accept input in the foreground. The AI explains this and asks whether it may switch; it switches only if you agree.
 
 </details>
 
 <details>
-<summary>Will updating remove pairings and history?</summary>
+<summary>Does closing the preview stop the task?</summary>
 
-Back up, install a matching package and retain the same profile, DSH_HOME and OpenCU data directory. A normal restart preserving identity and data can restore extension pairings. [Installation and maintenance](docs/install_EN.md)
+No. It only hides the view, and the task keeps going. To stop the task, use the stop button in the conversation. Reopen the preview to see the current view.
 
 </details>
 
-## Development and attribution
+<details>
+<summary>Does upgrading remove the browser pairing?</summary>
 
-`computer_use` provides a persistent JavaScript environment with documentation and observations supplied when a browser or app is selected. [API contract](src/dsh/computer-docs.mjs) · [Development](DEVELOPMENT.md)
+No. Your profile and OpenCU data stay, and the extension reconnects after a restart. Back up before upgrading; see the [installation guide](docs/install_EN.md).
 
-The frontend uses components sourced through REA and thin adapters. Rights and source-specific terms are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The repository does not declare a single open-source license covering all materials; third-party UI assets are not original-project grants.
+</details>
 
-## Documentation and support
+## Development and sources
 
-| I want to | Where to go |
-| --- | --- |
-| Install, update or remove | [Installation guide](docs/install_EN.md) |
-| Learn the features and limits | [Documentation](DEVELOPMENT.md) |
-| Read release changes | [Releases](https://github.com/gulagala001/opencu/releases) |
-| Report a problem | [Issues](https://github.com/gulagala001/opencu/issues) |
+The AI works through the `computer_use` tool, documented in [computer-docs.mjs](src/dsh/computer-docs.mjs). Build, packaging and tests are in [development](DEVELOPMENT.md), and interface behavior is in the [technical reference](docs/technical-reference.md).
 
-For a bug report, include the full DSH and plugin versions, the entry point, minimal reproduction steps, and expected versus actual behavior. Remove private data before sharing logs or screenshots.
+Sources and licenses of the interface components are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). This repository has no single open-source license covering everything, and third-party interface assets must not be treated as original work of this project.
 
-<p align="center"><a href="#readme-top">Back to top</a> · <a href="https://github.com/gulagala001/opencu/releases">Versions and downloads</a> · <a href="https://github.com/gulagala001/opencu/issues">Feedback</a></p>
-
-[Documentation structure and contributing](docs/documentation.md)
+When reporting a problem, include your DSH and plugin versions, operating system, which browser you used, the steps, and what you expected versus what happened. Remove personal data from logs and screenshots first: [Issues](https://github.com/gulagala001/opencu/issues).

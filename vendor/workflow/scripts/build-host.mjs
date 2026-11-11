@@ -1,13 +1,14 @@
 import { build } from 'esbuild';
 import { createRequire, isBuiltin } from 'node:module';
 import { readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import { createHostConstEnums } from './host-const-enums.mjs';
 import { root, outputPath, validateInputs } from './build-inputs.mjs';
 import { finishHostFactory } from './host-factory-imports.mjs';
 
 const { snapshot } = await validateInputs();
 const requireBuild = createRequire(import.meta.url);
+const requireHost = createRequire(requireBuild.resolve('@deepseek-ai/dsh/package.json'));
 const source = path => join(root, 'vendor/dsh', path);
 const modules = { 'workflow-ptc': 'workflow-ptc/src/index.ts', 'tool-workflow': 'tool-workflow/src/index.ts', 'workflow-spawn': 'workflow-ptc/src/spawn.ts' };
 const aliases = { '@deepseek-ai/dsh-tools': 'tools/src/json-schema.ts', '@deepseek-ai/dsh-workflow': 'workflow/src/index.ts', '@deepseek-ai/dsh-llm': 'llm/src/error.ts' };
@@ -18,20 +19,23 @@ const acorn = { name: 'workflow-acorn', setup(b) {
 } };
 const guestEnums = await createHostConstEnums({ root, snapshot, entryPoints: [source('workflow-ptc/src/guest.ts')], resolveImport: name => aliases[name] && source(aliases[name]) });
 const hostEnums = await createHostConstEnums({ root, snapshot, ts: guestEnums.ts, entryPoints: Object.values(modules).map(source), resolveImport: localImport });
-const guest = await build({ absWorkingDir: root, entryPoints: [source('workflow-ptc/src/guest.ts')], platform: 'node', target: 'node22', format: 'esm', bundle: true, write: false, metafile: true,
+const guest = await build({ tsconfigRaw: {}, absWorkingDir: root, entryPoints: [source('workflow-ptc/src/guest.ts')], platform: 'node', target: 'node22', format: 'esm', bundle: true, write: false, metafile: true,
   plugins: [{ name: 'workflow-guest-helpers', setup(b) {
     b.onResolve({ filter: /^@deepseek-ai\/dsh-(tools|workflow|llm)$/ }, args => ({ path: source(aliases[args.path]), sideEffects: false }));
+    b.onResolve({ filter: /^@deepseek-ai\/dsh-error$/ }, args => ({ path: requireHost.resolve(args.path) }));
   } }, acorn, guestEnums.plugin] });
 guestEnums.assertExternal(guest);
 await guestEnums.assertOutput(guest);
 const externals = result => [...new Set(Object.values(result.metafile.outputs).flatMap(output => output.imports.filter(item => item.external).map(item => item.path)))].sort();
 const invalid = externals(guest).filter(name => !isBuiltin(name));
 if (invalid.length) throw Error(`Workflow guest has external packages: ${invalid.join(', ')}`);
-const guestSource = guest.outputFiles[0].text.replace(/^\/\/ (?:.*\/)?node_modules\//gm, '// node_modules/');
+const sdkRoot = dirname(dirname(dirname(requireBuild.resolve('@deepseek-ai/dsh/package.json'))));
+const sdkPrefix = '// ' + relative(root, sdkRoot).split(sep).join('/') + '/';
+const guestSource = guest.outputFiles[0].text.replaceAll(sdkPrefix + 'packages/', '// deepseek-harness/packages/').replaceAll(sdkPrefix + 'vendor/', '// deepseek-harness/vendor/').replace(/^\/\/ (?:.*\/)?node_modules\//gm, '// node_modules/');
 const dependencies = {};
 for (const [name, entry] of Object.entries(modules)) {
   const outfile = await outputPath(join(root, 'lib/host', name + '.factory.mjs'));
-  const result = await build({ absWorkingDir: root, entryPoints: [source(entry)], outfile, platform: 'node', target: 'node22', format: 'cjs', bundle: true, packages: 'external', metafile: true,
+  const result = await build({ tsconfigRaw: {}, absWorkingDir: root, entryPoints: [source(entry)], outfile, platform: 'node', target: 'node22', format: 'cjs', bundle: true, packages: 'external', metafile: true,
     legalComments: 'eof',
     banner: { js: 'export function createModule(require, importHostModule) { const module = { exports: {} }; const exports = module.exports;' }, footer: { js: 'return module.exports; }' },
     plugins: [{ name: 'workflow-host', setup(b) {

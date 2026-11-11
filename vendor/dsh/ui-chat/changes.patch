@@ -1,8 +1,17 @@
 diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
-index 5eaf0b2a..acc3765e 100644
+index 7df6b6f5..4fe3d617 100644
 --- a/packages/client/tsdown.client.ts
 +++ b/packages/client/tsdown.client.ts
-@@ -869,7 +869,7 @@ function clientConfig(
+@@ -805,7 +805,7 @@ function clientConfig(
+     // compressor stays off: the browser worker image lowers `yield*` only as a
+     // whole statement, and a compressor that folds statements into expressions
+     // hides it.
+-    minify: { compress: false, mangle: false },
++    minify: false, // Keep reviewed adapter seams readable in the embedded factories.
+     clean: false,
+     deps: {
+       neverBundle: isRequested,
+@@ -878,7 +878,7 @@ function clientConfig(
          const source = await readFile(fileId)
          const stylesheetAssets = assets.urlRewrite(this, fileId)
          const { code, exports: cssExports } = transform({
@@ -11,7 +20,7 @@ index 5eaf0b2a..acc3765e 100644
            code: source,
            cssModules: { pattern: '[hash]_[local]' },
            minify: true,
-@@ -895,7 +895,7 @@ function clientConfig(
+@@ -904,7 +904,7 @@ function clientConfig(
          this.addWatchFile(fileId)
          const source = await readFile(fileId)
          const stylesheetAssets = assets.urlRewrite(this, fileId)
@@ -20,7 +29,7 @@ index 5eaf0b2a..acc3765e 100644
          return `export default ${stylesheetSource(code.toString(), stylesheetAssets.references)};`
        },
      }, {
-@@ -911,7 +911,7 @@ function clientConfig(
+@@ -920,7 +920,7 @@ function clientConfig(
          this.addWatchFile(fileId)
          const source = await readFile(fileId)
          const stylesheetAssets = assets.urlRewrite(this, fileId)
@@ -30,7 +39,7 @@ index 5eaf0b2a..acc3765e 100644
        },
      }, assets.plugin],
 diff --git a/packages/client/ui-chat/src/client/apply.ts b/packages/client/ui-chat/src/client/apply.ts
-index d3a6df8b..3e0acfea 100644
+index 7e4a3a5f..08781358 100644
 --- a/packages/client/ui-chat/src/client/apply.ts
 +++ b/packages/client/ui-chat/src/client/apply.ts
 @@ -1,4 +1,5 @@
@@ -39,7 +48,7 @@ index d3a6df8b..3e0acfea 100644
  /** Register the Chat Conversation target, renderers, stats, and details surface. */
  import type {} from '@deepseek-ai/dsh-client-ui-file-drag/client'
  import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
-@@ -85,7 +86,7 @@ export const inject = [
+@@ -86,7 +87,7 @@ export const inject = [
   * Mount all Chat-owned contributions.
   * @param ctx - Client root context.
   */
@@ -48,7 +57,7 @@ index d3a6df8b..3e0acfea 100644
    const quotaNotice = createSnapshotStore<QuotaNoticeState | null>(null)
    let quotaNoticeSeq = 0
    // Each hold is its own token, so a release can only drop the hold it was
-@@ -140,7 +141,7 @@ export function apply(ctx: Context): void {
+@@ -141,7 +142,7 @@ export function apply(ctx: Context): void {
    const t = ctx.locale.bind(NS)
    const chatStore = createChatStore()
    const chatScrollPositions = new Map<SessionId, ChatScrollPosition>()
@@ -132,7 +141,7 @@ index ba58b53e..a7ea236f 100644
 +
 +.count { flex: none; font-size: 11px; color: var(--dsw-alias-label-tertiary); }
 diff --git a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
-index f219a5ae..a417313f 100644
+index 49d8f123..5cb9cc76 100644
 --- a/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
 +++ b/packages/client/ui-chat/src/client/chat/ChatGroupSeat.tsx
 @@ -1,5 +1,5 @@
@@ -141,7 +150,7 @@ index f219a5ae..a417313f 100644
 +import { memo, useCallback, useEffect, useLayoutEffect, useId, useRef, useState, type ComponentProps, type ReactNode } from 'react'
  import {
    IconAgentPresetOutlineRegular, IconApiOutlineRegular, IconBrowseOutlineRegular, IconChevronDownOutlineRegular,
-   IconChevronUpOutlineRegular, IconCodeOutlineRegular, IconEditOutlineRegular, IconGlobeOutlineRegular,
+   IconChevronUpOutlineRegular, IconCodeOutlineRegular, IconContextInjectionOutlineRegular, IconEditOutlineRegular,
 @@ -12,7 +12,6 @@ import type { ChatStoreState } from '../contract/store.ts'
  import type { ChatFlowSlotProps } from '../contract/slots.ts'
  import { turnProcessOpen } from '../stores.ts'
@@ -158,7 +167,7 @@ index f219a5ae..a417313f 100644
    thinking: <IconThinkOutlineRegular />,
    read: <IconBrowseOutlineRegular size={14} />,
    readImage: <IconBrowseOutlineRegular size={14} />,
-@@ -99,7 +99,8 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+@@ -100,7 +100,8 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
    readonly toggle: () => void
  }) {
    const data = useChatGroup(groupKey, group => group?.data)
@@ -168,7 +177,7 @@ index f219a5ae..a417313f 100644
    const live = useStableLiveProcessTitle({
      activity: data?.summary.running ?? 'thinking',
      detail: data?.summary.runningDetail ?? '',
-@@ -111,9 +112,9 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+@@ -112,9 +113,9 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
        : t(`message.stepProcess.${live.activity}`)
    const detail = detailed && !data.closed ? live.detail : ''
    const title = detail === '' ? label : `${label}${t('message.turnProcess.separator')}${detail}`
@@ -180,7 +189,7 @@ index f219a5ae..a417313f 100644
        data-process-activity={activity} onClick={(event) => { event.currentTarget.focus(); toggle() }}>
        <span className={css.leading} aria-hidden="true">
          <span className={css.activityIcon} data-step-process-icon>{PROCESS_ICONS[activity]}</span>
-@@ -121,9 +122,12 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
+@@ -122,9 +123,12 @@ const ProcessGroupHeader = memo(function ProcessGroupHeader({ groupKey, useChatG
            {open ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
          </span>
        </span>
@@ -194,7 +203,7 @@ index f219a5ae..a417313f 100644
      </button>
    )
  })
-@@ -164,9 +168,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -165,9 +169,11 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
    const headerRef = useRef<HTMLDivElement>(null)
    const deferCompletedTurns = props.usePresentation(policy => policy.collapseTiming === 'next-input')
    useGroupHeaderAction(headerRef, !grouped || (deferCompletedTurns && outerHidden))
@@ -209,7 +218,7 @@ index f219a5ae..a417313f 100644
    const reveal = useCallback(() => { setOpen(true) }, [setOpen])
    const bodyRef = props.useGroupAction(grouped && !open, reveal)
    const contentRef = useRef<HTMLDivElement>(null)
-@@ -187,7 +193,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -188,7 +194,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
    const classes = [css.body, !capped ? css.expandedBody : '',
      capped && edges.canScrollUp ? css.fadeTop : '', capped && edges.canScrollDown ? css.fadeBottom : '']
    return (
@@ -218,7 +227,7 @@ index f219a5ae..a417313f 100644
        data-chat-flow-key={groupKey} data-chat-anchor-key={`group:${groupKey}`} data-chat-turn={turn}
        data-chat-paging-anchor={grouped && !open || undefined}
        data-step-process data-group-expanded-mode={!grouped || undefined}>
-@@ -195,7 +201,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
+@@ -196,7 +202,7 @@ export const ChatGroupSeat = memo(function ChatGroupSeat({ groupKey, useChatGrou
          <ProcessGroupHeader groupKey={groupKey} useChatGroup={useChatGroup}
            usePresentation={props.usePresentation} t={props.t} open={open} bodyId={bodyId} toggle={toggle} />
        </div>
@@ -304,24 +313,28 @@ index a91ef3a1..e02c218e 100644
    const preview = usePresentation(policy => !expanded && summary !== ''
      && (running || policy.settledReasoningPreview))
 diff --git a/packages/client/ui-chat/src/client/contract/process-groups.ts b/packages/client/ui-chat/src/client/contract/process-groups.ts
-index 1c2cddb6..ae21c47e 100644
+index fd772b8e..28696972 100644
 --- a/packages/client/ui-chat/src/client/contract/process-groups.ts
 +++ b/packages/client/ui-chat/src/client/contract/process-groups.ts
-@@ -1,9 +1,11 @@
- /** Business data for Chat process groups; source Nodes remain in the Chat store. */
- export type ProcessActivity = 'read' | 'readImage' | 'search' | 'write' | 'edit' | 'commands' | 'code'
--  | 'webSearch' | 'webFetch' | 'subagents' | 'plan' | 'questions' | 'tools'
-+  | 'webSearch' | 'webFetch' | 'subagents' | 'plan' | 'questions' | 'tools' | 'computer'
+@@ -2,13 +2,15 @@
  
- /** Distinct-call category ranking and the current live task detail. */
+ /** Process-group category ranked by distinct calls; `context` names a group whose members are all Context. */
+ export type ProcessActivity = 'read' | 'readImage' | 'search' | 'write' | 'edit' | 'commands' | 'code'
+-  | 'webSearch' | 'webFetch' | 'subagents' | 'plan' | 'questions' | 'tools' | 'context'
++  | 'webSearch' | 'webFetch' | 'subagents' | 'plan' | 'questions' | 'tools' | 'computer' | 'context'
+ 
+ /** Categories a live tool call can report. */
+ export type RunningProcessActivity = Exclude<ProcessActivity, 'context'>
+ 
+ /** Category ranking by distinct calls, or by member count for an all-Context group, and the current live task detail. */
  export interface ProcessActivitySummary {
 +  readonly failures?: number
 +  readonly stopped?: number
    readonly counts: readonly { readonly kind: ProcessActivity; readonly count: number }[]
-   readonly running: ProcessActivity | undefined
+   readonly running: RunningProcessActivity | undefined
    readonly runningDetail: string
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.md b/packages/client/ui-chat/src/client/conversation-nodes/README.md
-index f3cc0552..bc257de4 100644
+index e62de7df..eea15318 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.md
 @@ -97,6 +97,8 @@ Trigger titles and icons use the recorded `source.kind`: `schedule`, `tool-jobs`
@@ -351,7 +364,7 @@ index f3cc0552..bc257de4 100644
  
  All three stages share the tool-name classification below. A preparing Tool node uses its category's preparation label: read files for `read`, read images for `read_image`, write files for `write`, edit files for `edit` and `apply_patch`, and update the plan for `todo_write` and goal tools. Standard mode appends available argument detail using the same readers as dispatched calls. It contributes one call and renders one non-expandable row. A named live delta can create this node; historical calls start directly from tool/call without replaying preparation.
  
-@@ -191,7 +193,7 @@ Group headers show a category icon, replace it with a down arrow on hover or key
+@@ -192,7 +194,7 @@ Group headers show a category icon, replace it with a down arrow on hover or key
  
  An open capped group follows content growth only while its own scroll position is at the bottom. Scrolling away pauses that group's following; returning to the bottom resumes it, independently of outer transcript following. Manually opening an unclosed group starts at the bottom and follows growth; manually opening a closed group starts at the top with following disabled, even when its initial content fits without scrolling. Closing the group in the data or restoring its height cap through a mode change does not reset an already-open reader's position. Browser find retains its own reveal position.
  
@@ -360,14 +373,14 @@ index f3cc0552..bc257de4 100644
  
  Switching modes retains manually opened groups and inner disclosures. It changes visibility and sizing without recreating the message rows. Detailed and Verbose do not open every individual disclosure. Only Verbose keeps the whole Turn open.
  
-@@ -335,3 +337,5 @@ The priority list is shared by every tool, not specialized per category. For exa
+@@ -336,3 +338,5 @@ The priority list is shared by every tool, not specialized per category. For exa
  | No usable field yet | Empty while arguments can grow; otherwise the tool name. |
  
  All live detail collapses whitespace, trims its ends, and is limited to 160 grapheme clusters, including a final `…` when truncated. String arguments initially supply at most 512 decoded UTF-16 units; normalization expands that prefix only when whitespace or multi-unit clusters leave too little text to determine truncation. Each truncation pass reads at most 161 clusters. A closed group's published summary clears its live category and detail while retaining category counts.
 +
 +When every tool in the last step completes, the header exposes final counts and outcome badges while the step may still be running; the later Assistant reply remains in the same group.
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
-index 21ecd722..491fd9c3 100644
+index 41a69c34..b47e7d03 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/README.zh.md
 @@ -97,6 +97,8 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
@@ -397,7 +410,7 @@ index 21ecd722..491fd9c3 100644
  
  三个阶段共用下方工具名分类。准备中的 Tool 节点使用对应类别的准备文案；`read` 为「准备读取文件」，`read_image` 为「准备读取图片」，`write` 为「准备写入文件」，`edit` 和 `apply_patch` 为「准备编辑文件」，`todo_write` 及目标工具为「准备更新计划」。标准模式通过与已派发调用相同的读器追加可用参数详情。它计为一次调用，只渲染不可展开的一行。具名实时 delta 可以创建该节点；历史调用直接从 tool/call 开始，不重现准备过程。
  
-@@ -191,7 +193,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
+@@ -192,7 +194,7 @@ description: "Chat 过程分组与活动摘要的明细业务规则。"
  
  已展开的限高组仅在自己的滚动位置处于底部时跟随内容增长。滚离底部暂停该组跟随，滚回底部后恢复，与外层文本记录的跟随状态独立。手动展开未关闭的组时定位到底部并跟随增长；手动展开已关闭的组时从顶部开始且不启用跟随，即使初始内容无需滚动即可容纳。数据中的组变为已关闭，或通过模式切换恢复限高时，不重置已展开组的阅读位置。浏览器查找沿用自身的展开定位。
  
@@ -406,25 +419,25 @@ index 21ecd722..491fd9c3 100644
  
  切换模式保留手动展开的组和内部开合状态，只改变显隐与尺寸，不重建消息行。详细和完全展开都不表示自动打开每个内部控件；只有完全展开模式始终展开整轮。
  
-@@ -335,3 +337,5 @@ TurnProcess 和 TurnTail 保留工具参数 Match，作为 Turn 起始事件在
+@@ -336,3 +338,5 @@ TurnProcess 和 TurnTail 保留工具参数 Match，作为 Turn 起始事件在
  | 暂无可用字段 | 参数仍可增长时留空，否则使用工具名。 |
  
  所有实时详情都合并空白、去除首尾空白，并限制为 160 个字素簇；截断时末尾的 `…` 计入上限。字符串参数起初最多提供 512 个已解码 UTF-16 单元；只有空白或包含多个单元的字素簇使文本不足以判定截断时，规范化才扩大该前缀。每次截断遍历最多读取 161 个字素簇。已结束组发布的摘要清空实时类别和详情，保留类别次数。
 +
 +组内最后一个步骤的工具全部完成后，组立即显示最终计数和结果标记；步骤状态仍可运行，后续助手回答属于同组。
 diff --git a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
-index 785ea85f..b4064210 100644
+index 81d0085a..e5fd8270 100644
 --- a/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
 +++ b/packages/client/ui-chat/src/client/conversation-nodes/process-activity.ts
 @@ -7,6 +7,7 @@ import { isRunningTool } from '../contract/chat-nodes.ts'
  import type { ToolCallBlock } from '../contract/snapshot.ts'
  
- function activity(name: string): ProcessActivity {
+ function activity(name: string): RunningProcessActivity {
 +  if (/^computer_use(?:_|$)/.test(name.split(/[./]/).at(-1) ?? '')) return 'computer'
    if (name === 'read') return 'read'
    if (name === 'read_image') return 'readImage'
    if (name === 'grep' || name === 'glob' || name.endsWith('_inspect')) return 'search'
-@@ -139,9 +140,16 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
+@@ -140,9 +141,16 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
    let runningDetail = ''
    let runningTime = -Infinity
    let preparing: boolean | undefined
@@ -441,9 +454,9 @@ index 785ea85f..b4064210 100644
      const call = isRunningTool(tool) ? tool : tool.call
      if (call !== null) {
        const kind = activity(call.name)
-@@ -160,6 +168,8 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
-   }
+@@ -162,6 +170,8 @@ export function processActivity(nodes: readonly ChatNode[]): ProcessActivitySumm
    if (running === undefined) runningDetail = liveReasoningDetail(nodes)
+   if (nodes.length > 0 && nodes.every(node => node.kind === 'context')) counts.set('context', nodes.length)
    return {
 +    ...(failures > 0 ? { failures } : {}),
 +    ...(stopped > 0 ? { stopped } : {}),
@@ -493,7 +506,7 @@ index 3ed7b86d..b23a0e09 100644
  }
  
 diff --git a/packages/client/ui-chat/src/client/locale.ts b/packages/client/ui-chat/src/client/locale.ts
-index 6f0e6eda..8ee2e2d5 100644
+index 4d22cff8..c0c31e4f 100644
 --- a/packages/client/ui-chat/src/client/locale.ts
 +++ b/packages/client/ui-chat/src/client/locale.ts
 @@ -32,13 +32,19 @@ export const zh = {
@@ -517,7 +530,7 @@ index 6f0e6eda..8ee2e2d5 100644
    'message.stepProcess.done.code': '运行了代码',
    'message.stepProcess.done.webSearch': '已搜索网页',
    'message.stepProcess.done.webFetch': '已访问网页',
-@@ -234,6 +240,12 @@ export const en = {
+@@ -246,6 +252,12 @@ export const en = {
    'message.stepProcess.prepare.plan': 'Preparing to update the plan',
    'message.stepProcess.prepare.questions': 'Preparing questions',
    'message.stepProcess.prepare.tools': 'Preparing tool calls',
@@ -530,7 +543,7 @@ index 6f0e6eda..8ee2e2d5 100644
    'message.stepProcess.done.thinking': 'Analysis completed',
    'message.stepProcess.done.read': 'Read files',
    'message.stepProcess.done.readImage': 'Read images',
-@@ -406,6 +418,13 @@ export const en = {
+@@ -430,6 +442,13 @@ export const en = {
  
  /** Japanese copy, checked against the English keys. */
  export const ja = {
@@ -544,7 +557,7 @@ index 6f0e6eda..8ee2e2d5 100644
    'message.stepProcess.thinking': 'リクエストを分析中',
    'message.stepProcess.read': 'ファイルを読み取り中',
    'message.stepProcess.readImage': '画像を読み取り中',
-@@ -605,6 +624,13 @@ export const ja = {
+@@ -641,6 +660,13 @@ export const ja = {
  
  /** Spanish dictionary, checked against the English keys. */
  export const es = {
@@ -558,7 +571,7 @@ index 6f0e6eda..8ee2e2d5 100644
    'message.stepProcess.thinking': 'Analizando la solicitud',
    'message.stepProcess.read': 'Leyendo archivos',
    'message.stepProcess.readImage': 'Leyendo imágenes',
-@@ -804,6 +830,13 @@ export const es = {
+@@ -852,6 +878,13 @@ export const es = {
  
  /** French dictionary, checked against the English keys. */
  export const fr = {
@@ -572,7 +585,7 @@ index 6f0e6eda..8ee2e2d5 100644
    'message.stepProcess.thinking': 'Analyser la demande',
    'message.stepProcess.read': 'Lecture de fichiers',
    'message.stepProcess.readImage': 'Lire des images',
-@@ -1003,6 +1036,13 @@ export const fr = {
+@@ -1063,6 +1096,13 @@ export const fr = {
  
  /** German dictionary, checked against the English keys. */
  export const de = {
@@ -586,7 +599,7 @@ index 6f0e6eda..8ee2e2d5 100644
    'message.stepProcess.thinking': 'Analyse der Anfrage',
    'message.stepProcess.read': 'Dateien lesen',
    'message.stepProcess.readImage': 'Bilder lesen',
-@@ -1202,6 +1242,13 @@ export const de = {
+@@ -1274,6 +1314,13 @@ export const de = {
  
  /** Russian dictionary, checked against the English keys. */
  export const ru = {
@@ -600,7 +613,7 @@ index 6f0e6eda..8ee2e2d5 100644
    'message.stepProcess.thinking': 'Анализ запроса',
    'message.stepProcess.read': 'Чтение файлов',
    'message.stepProcess.readImage': 'Чтение изображений',
-@@ -1401,6 +1448,13 @@ export const ru = {
+@@ -1485,6 +1532,13 @@ export const ru = {
  
  /** Portuguese dictionary, checked against the English keys. */
  export const pt = {

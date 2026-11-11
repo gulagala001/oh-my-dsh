@@ -18,7 +18,7 @@ OMD is a ready-to-use bundle. Workflow, rewind, personalities, extension managem
 | [DSH BTW](https://github.com/gulagala001/dsh-btw/releases) · `@gulagala001/dsh-btw` | Side chats, history, follow-ups and separate stop | Built in, via `/btw` | 0.1.8 |
 | [DSH Response ID Reuse](https://github.com/gulagala001/dsh-response-id-reuse/releases) · `@gulagala001/dsh-response-id-reuse` | Response ID continuation for Responses channels | Built in, nothing to set up | 0.1.7 |
 
-Separate versions update on their own schedule; the table shows the current ones, all for DSH 0.2.2-rc.1. IUI and OMAA have always been separate products, and dsh-ops is a third-party tool installed from OMD's third-party page.
+Separate versions update on their own schedule; the table shows the current ones, all for DSH 0.2.2-rc.2. IUI and OMAA have always been separate products, and dsh-ops is a third-party tool installed from OMD's third-party page.
 
 ## Running them together
 

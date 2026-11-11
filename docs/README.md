@@ -6,7 +6,7 @@
 
 [安装](install.md) → [首次使用](getting-started.md) → [使用指南](usage.md)
 
-当前版本是 OMD 1.3.13，对应 DSH 0.2.2-rc.1，内置 OpenCU 2.2.11。旧版 DSH 用对应的旧版安装包，见[安装指南](install.md)。
+当前版本是 OMD 1.3.14，对应 DSH 0.2.2-rc.2，内置 OpenCU 2.2.11。旧版 DSH 用对应的旧版安装包，见[安装指南](install.md)。
 
 <a id="版本与文档范围"></a>
 <a id="按需查阅"></a>

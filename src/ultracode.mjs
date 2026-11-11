@@ -48,9 +48,9 @@ export function foldUltracodeEvents(events) {
 }
 export function hasNativeTeamTools(schemas = []) {
   const tools = new Map(schemas.map(tool => [tool.name, tool]));
-  return ['spawn_teammate', 'send_message', 'list_agents', 'wait_agent',
+  return ['send_message', 'list_agents', 'wait_agent',
     'team_task_create', 'team_task_list', 'team_task_get', 'team_task_update'].every(name => tools.has(name))
-    && Object.hasOwn(tools.get('send_message').parameters?.properties ?? {}, 'target');
+    && Object.hasOwn(tools.get('send_message').parameters?.properties ?? {}, 'agent');
 }
 function modeView(state, route, mode, eligible, teamAvailable = false) {
   const selected = route ? { provider: route.provider, model: route.model, ...(route.reasoningEffort === undefined ? {} : { reasoningEffort: route.reasoningEffort }) } : null;
@@ -109,13 +109,13 @@ export class UltracodeControl {
     return Boolean(agent.ctx.get('tools')?.schemas(agent).find(tool => tool.name === 'workflow')?.parameters?.properties?.resumeFromRunId);
   }
   teamAvailable(agent) {
-    return Boolean(agent && hasNativeTeamTools(agent.ctx.get('tools')?.schemas(agent)));
+    return Boolean(agent && this.ctx.get('agentTeams')?.isEnabled(agent) && hasNativeTeamTools(agent.ctx.get('tools')?.schemas(agent)));
   }
-  coldTeamAvailable() {
+  coldTeamAvailable(events) {
     // Native Team tools are installed per live Agent. For a cold session only
     // read DSH's existing service and active plugin; never hydrate or enable it.
-    return Boolean(this.ctx.get('agentTeams') && [...this.ctx.get('loader')?.entries() ?? []].some(entry =>
-      entry.options.name === '@deepseek-ai/dsh-experimental-tool-agent-team' && !entry.disabled && entry.fiber?.state === 2));
+    return Boolean(events.findLast(event => event.type === 'team/mode')?.data.enabled && this.ctx.get('agentTeams') && [...this.ctx.get('loader')?.entries() ?? []].some(entry =>
+      entry.options.name === '@deepseek-ai/dsh-tool-agent-team' && !entry.disabled && entry.fiber?.state === 2));
   }
   view(session, agent = this.ctx.agents.get(session.id)) {
     const state = this.fold(session);
@@ -201,7 +201,7 @@ export class UltracodeControl {
     const preset = state.preset === undefined ? header.agentPreset : state.preset;
     const capability = await this.coldCapability(preset, signal); signal?.throwIfAborted();
     const route = state.pendingModel ?? state.request?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
-    return { ...modeView(state, route, stored?.ultracode, capability.eligible, this.coldTeamAvailable()), ...capability, cold: true, archivedOnly: false, preset: preset ?? null };
+    return { ...modeView(state, route, stored?.ultracode, capability.eligible, this.coldTeamAvailable(events)), ...capability, cold: true, archivedOnly: false, preset: preset ?? null };
   }
   select(sessionId, input) { return this.writeSelection(sessionId, input); }
   // Compensation restores intent, including a remembered Team whose native

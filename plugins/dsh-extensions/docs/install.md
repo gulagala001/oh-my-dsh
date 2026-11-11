@@ -1,68 +1,44 @@
-# DSH Extensions — 安装与维护
+# 安装 DSH Extensions
 
-宿主构建以 `package.json` 的完整版本为准，当前源码默认 `0.2.2-rc.1`。每份构建对齐同版本 SDK、组件与依赖锁，安装入口按正式发行包的宿主版本选择。
+[English](install_EN.md) · [返回首页](../README.md)
 
-[English](install_EN.md) · [返回首页](../README.md#readme-install)
+需要 DSH **0.2.2-rc.2** 和 Node.js **24.9.0+**。
 
-**DSH 0.2.2-rc.1 · Node.js ≥24.9.0 · 0.1.0**
+## 在 DSH 里安装
 
-## 安装到当前实例
-
-
-在实际使用的实例打开 **插件 → ＋ 添加插件**，粘贴固定发行地址：
+打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-extensions-0.1.6-dsh.0.2.2-rc.2.tgz
 ```
 
-等当前任务结束后按宿主提示启用或重启，沿用原 profile、DSH_HOME、模型配置和会话。
+等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/SHA256SUMS)。
 
-下载后可核对同一发行版的 [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/SHA256SUMS)。
+## 用命令行安装
 
-### 首次成功检查
-
-打开 **插件** 页，顶部出现 Skill、MCP、指令、命令、Hooks 五个标签页；Skill 页列出当前可用的 Skill。
-
-<details>
-<summary>命令行安装</summary>
-
-使用同一 DSH 实例对应的 CLI，将 `web` 换成实际 profile。
+用同一个 DSH 自带的命令行，把 `web` 换成你的 profile（桌面版是 `desktop`）：
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.5-dsh.0.2.2-rc.1/dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.6-dsh.0.2.2-rc.2/dsh-extensions-0.1.6-dsh.0.2.2-rc.2.tgz"
 ```
 
-</details>
+## 升级和回退
 
-## 升级、回退与卸载
+先备份 profile，再用新版安装包覆盖安装，DSH 本身不用动。升级失败时原有数据不受影响，把第一条报错发到 [Issues](https://github.com/gulagala001/dsh-extensions/issues)。
 
-安装匹配宿主的固定版本即可升级；不为安装插件自动替换或降级 DSH。回退时选择此前匹配的固定包。
+想回到旧版，就装回之前的安装包。回退只换代码，新版写入的数据不会自动撤销。
 
-在当前实例插件页移除，或使用：
+## 卸载
+
+在插件页移除，或运行：
 
 ```bash
 dsh plugin --profile web remove dsh-extensions
 ```
 
-移除后重启同一实例。以下文件属于你的数据，卸载时保留：
+然后重启 DSH。下面这些是你的数据，卸载时都会留着：
 
-- Skill 文件夹与其中的开关设置（DSH 原生读取，卸载后仍生效）；
-- AGENTS.md／CLAUDE.md 等指令文件（DSH 原生读取）；
-- `~/.dsh/mcp.json`、`~/.dsh/commands/`、`<项目>/.dsh/commands/`、`~/.dsh/hooks.json`（卸载后不再加载，重新安装后恢复）；
-- `~/.dsh/dsh-extensions/` 中的 MCP 工具描述缓存，可直接删除。
-
-反馈时请提供完整版本、profile 类型和脱敏后的第一处错误。
-
-<a id="build-from-source"></a>
-
-## 从源码构建
-
-安装 Node.js 22.19+ 与 pnpm 11.28.5 后，在仓库目录执行：
-
-```sh
-pnpm install --frozen-lockfile
-pnpm build
-npm pack
-```
-
-在 **插件 → 添加插件** 中输入生成的 `dsh-extensions-0.1.5-dsh.0.2.2-rc.1.tgz` 的本地绝对路径。
+- Skill 文件夹和其中的开关设置，DSH 自己会读，卸载后照样生效。
+- AGENTS.md、CLAUDE.md 等指令文件，DSH 自己会读。
+- `~/.dsh/mcp.json`、`~/.dsh/commands/`、`<项目>/.dsh/commands/`、`~/.dsh/hooks.json`：卸载后不再加载，重新安装后恢复。
+- `~/.dsh/dsh-extensions/` 里的 MCP 工具描述缓存，可以直接删除。

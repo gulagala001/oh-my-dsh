@@ -1,5 +1,24 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "published": "0.1.9-dsh.0.2.2-rc.2",
+  "repository": {
+    "slug": "gulagala001/dsh-btw",
+    "description": "在 DSH 里随时问个侧问，不打断正在跑的任务，还能复用当前的提示词缓存。 Ask side questions in DeepSeek Harness without interrupting the current task, reusing the prompt cache.",
+    "homepage": "",
+    "topics": [
+      "btw",
+      "deepseek",
+      "deepseek-harness",
+      "deepseek-harness-plugin",
+      "dsh-plugin",
+      "prompt-caching",
+      "dsh-bundle"
+    ]
+  },
+  "names": [
+    "DSH BTW"
+  ],
+  "maxPages": 6,
   "documents": [
     {
       "path": "CHANGELOG.md",
@@ -9,7 +28,8 @@
     {
       "path": "README.md",
       "role": "home",
-      "language": "zh"
+      "language": "zh",
+      "translation": "README_EN.md"
     },
     {
       "path": "README.zh.md",
@@ -19,67 +39,20 @@
     {
       "path": "README_EN.md",
       "role": "home",
-      "language": "zh"
-    },
-    {
-      "path": "docs/documentation.md",
-      "role": "development",
-      "language": "bilingual"
+      "language": "en",
+      "translation": "README.md"
     },
     {
       "path": "docs/install.md",
       "role": "guide",
-      "language": "zh"
+      "language": "en",
+      "translation": "docs/install.zh.md"
     },
     {
       "path": "docs/install.zh.md",
       "role": "guide",
-      "language": "zh"
-    },
-    {
-      "path": "docs/releases/v0.1.0-dsh.0.2.1-rc.2.md",
-      "role": "release",
-      "language": "bilingual"
-    },
-    {
-      "path": "docs/releases/v0.1.1-dsh.0.2.1-rc.2.md",
-      "role": "release",
-      "language": "bilingual"
-    },
-    {
-      "path": "docs/releases/v0.1.2-dsh.0.2.1-rc.2.md",
-      "role": "release",
-      "language": "bilingual"
-    },
-    {
-      "path": "docs/releases/v0.1.3-dsh.0.2.1-rc.2.md",
-      "role": "release",
-      "language": "bilingual"
-    },
-    {
-      "path": "docs/releases/v0.1.4-dsh.0.2.1-rc.3.md",
-      "role": "release",
-      "language": "bilingual"
-    },
-    {
-      "path": "docs/releases/v0.1.5-dsh.0.2.1-rc.5.md",
-      "role": "release",
-      "language": "bilingual"
-    },
-    {
-      "path": "docs/releases/v0.1.6-dsh.0.2.2-rc.1.md",
-      "role": "release",
-      "language": "bilingual"
-    },
-    {
-      "path": "docs/releases/v0.1.7-dsh.0.2.2-rc.1.md",
-      "role": "release",
-      "language": "bilingual"
-    },
-    {
-      "path": "docs/releases/v0.1.8-dsh.0.2.2-rc.1.md",
-      "role": "release",
-      "language": "bilingual"
+      "language": "zh",
+      "translation": "docs/install.md"
     }
   ]
 }

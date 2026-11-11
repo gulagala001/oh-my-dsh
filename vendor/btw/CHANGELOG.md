@@ -1,3 +1,35 @@
+# DSH BTW 0.1.9 · DSH 0.2.2-rc.2
+
+[中文](#zh-019) · [English](#en-019)
+
+<a id="zh-019"></a>
+
+## 中文
+
+### 问题修复
+
+- 停止侧问后，等服务端确认停止即可再次提问，避免下一条问题被拒绝。
+
+<a id="en-019"></a>
+
+## English
+
+### Bug fixes
+
+- Ask another side question as soon as the server confirms cancellation of the previous one.
+
+## 安装 / Installation
+
+适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
+
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
+
+| DSH | 固定安装包 / Fixed package | SHA256SUMS |
+| --- | --- | --- |
+| 0.2.2-rc.2 | [DSH BTW 0.1.9](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/gulagala001-dsh-btw-0.1.9-dsh.0.2.2-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.9-dsh.0.2.2-rc.2/SHA256SUMS) |
+
+---
+
 # DSH BTW 0.1.8 · DSH 0.2.2-rc.1
 
 [中文](#zh-018) · [English](#en-018)

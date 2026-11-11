@@ -1,5 +1,22 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "published": "0.1.8-dsh.0.2.2-rc.2",
+  "repository": {
+    "slug": "gulagala001/dsh-response-id-reuse",
+    "description": "续聊时只发新内容和上一条回复的 ID，不再每次重传整段历史。没有界面，也不额外发探测请求。 Continue Responses API conversations in DeepSeek Harness by sending only new content and the previous response ID. No UI, no probe requests.",
+    "homepage": "",
+    "topics": [
+      "deepseek-harness",
+      "dsh-plugin",
+      "responses-api",
+      "response-id"
+    ]
+  },
+  "names": [
+    "DSH Response ID Reuse",
+    "Response ID Reuse"
+  ],
+  "maxPages": 4,
   "documents": [
     {
       "path": "README.md",
@@ -20,11 +37,6 @@
     },
     {
       "path": "CONTRIBUTING.md",
-      "role": "development",
-      "language": "bilingual"
-    },
-    {
-      "path": "docs/documentation.md",
       "role": "development",
       "language": "bilingual"
     }

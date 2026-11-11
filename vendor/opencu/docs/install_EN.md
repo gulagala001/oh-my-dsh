@@ -1,92 +1,61 @@
-# Install and upgrade OpenCU
+# Install OpenCU
 
-The terminal, search and Office helper fixes for older desktop packages require updating the matching host. Installing the plugin alone does not repair permissions inside an older app. See the [2.2.7 release notes](releases.md#en-227).
+[简体中文](install.md) · [Back to README](../README_EN.md)
 
-[简体中文](install.md) · [Home](../README_EN.md)
+Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**.
 
-**Already using OMD? Do not install OpenCU separately.** OMD includes it. Follow the [OMD installation and upgrade guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md).
+## Install in DSH
 
-For standalone OpenCU, choose either method below. **If DSH is not installed, install it first using the [official DSH instructions](https://github.com/deepseek-ai/deepseek-harness)**, then choose the plugin for its actual full version. OpenCU is not a DSH installer.
-
-## Option 1: Copy the whole instruction to AI
-
-Send the entire block to an AI that can operate your computer:
+Open **Plugins → Add plugin** and paste:
 
 ```text
-Please install or upgrade standalone OpenCU in my DSH setup.
-
-First read the project's canonical installation guide and changelog (with fixed package URLs for each version):
-https://github.com/gulagala001/opencu/blob/main/docs/install_EN.md
-https://github.com/gulagala001/opencu/blob/main/CHANGELOG.md
-
-Identify the desktop or Web instance I use, its full DSH version, actual profile, DSH_HOME and existing plugins. If OMD is installed, do not install OpenCU again; follow the OMD installation guide instead:
-https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md
-
-If DSH is missing, explain that it must be installed first and follow its official installation instructions; then select the package for the actual installed version. Install only an already published fixed .tgz listed for that exact full DSH version. Do not mix 0.2.1-rc.1, 0.2.2-rc.1 or 0.2.0-rc.*. If no matching package exists, stop and explain; do not substitute main-branch source, latest or a renamed package for a Release.
-
-If tasks are running, tell me before interrupting them. Back up the relevant configuration and data first. Keep the original profile, DSH_HOME and OpenCU data directory, including conversations, model configuration, browser pairing and third-party plugins. Do not recreate or clear configuration. Do not change Host/Client/preload, install across host versions or downgrade DSH without permission; explain any features that require host adapters.
-
-You may install or upgrade the matching plugin and restart the affected DSH instance; do not restart other instances. Afterwards, briefly confirm that the plugin loads, Computer & browser settings open, and existing data and third-party plugins remain. Report DSH/OpenCU versions, the fixed package used, the instance restarted and any OS permissions I still need to grant. Do not run a large test suite.
+https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz
 ```
 
-## Option 2: Install through DSH's plugin interface
+When your current task finishes, enable the plugin or restart DSH when prompted. Checksums: [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/SHA256SUMS).
 
-1. Open the DSH desktop app or Web interface you use and check its **full version** in About.
-2. Open **Plugins → “+ Add plugin” in the top right**.
-3. Paste the complete matching URL below into the input for a **package name / GitHub repository address / local path**, then click **Install**. Desktop and Web use the same package for a given host version; install in the instance you intend to use.
-4. Wait for success. Fully quit and reopen desktop; for Web, restart the corresponding DSH service and reopen the page. Refreshing a page does not restart the service. Open **Settings → Computer & browser** and follow the prompts for browser resources, OS permissions and any Chrome/Edge extension pairing you need.
+## Install from the command line
 
-**DSH `0.2.2-rc.1`: copy this entire line:**
+Use the CLI that belongs to the same DSH, replacing `web` with your profile (`desktop` for the desktop app):
+
+```bash
+dsh plugin --profile web add "https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz"
+```
+
+If you already use OMD, skip this: OMD includes OpenCU. For other DSH versions, find the matching package on [Releases](https://github.com/gulagala001/opencu/releases); do not mix packages built for different versions.
+
+## After installing
+
+Open **Settings → Computer & Browser** and follow the prompts to set up browser files, grant system permissions or connect the Chrome or Edge extension.
+
+- **Chrome or Edge extension**: click the button in Settings to show the extension folder, turn on developer mode on the browser's extensions page, choose "Load unpacked" and select that folder. The first time the AI uses this browser, it asks "Allow connection to this browser?". Click **Allow and remember**, and it reconnects automatically from then on.
+- **macOS**: in **System Settings → Privacy & Security**, turn on Accessibility and Screen Recording for DSH.
+- **DSH built-in browser**: apply the matching adaptation to the DSH desktop source and build it yourself. The release includes `host-adapters.zip`; steps are in [development](../DEVELOPMENT.md#构建和本地插件包). Installing the plugin alone never changes DSH itself.
+
+## Ask the AI to install it
+
+You can also send this to the AI in DSH and let it do the install:
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz
+Install OpenCU into the DSH profile I am using now:
+https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz
+First check that DSH is 0.2.2-rc.2 and Node.js is 24.9.0 or later. If OMD is already installed, do not install OpenCU.
+Keep my settings, conversations, browser pairing and other plugins, and do not upgrade DSH. Before restarting, make sure no task is running.
+Afterwards, confirm that Settings → Computer & Browser opens, and tell me which system permissions I still need to grant.
 ```
 
-**DSH `0.2.1-rc.1`: copy this entire line:**
+## Upgrade and roll back
 
-```text
-https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/opencu-2.1.0-dsh.0.2.1-rc.1.tgz
+Back up your profile and `DSH_HOME/opencu`, then install the new package over the old one. DSH itself does not need to change. If the upgrade fails, your data is untouched; send the first error to [Issues](https://github.com/gulagala001/opencu/issues).
+
+To go back, install the previous package. Rolling back only replaces the code; data written by the newer version stays.
+
+## Uninstall
+
+Remove it on the Plugins page, or run:
+
+```bash
+dsh plugin --profile web remove opencu
 ```
 
-`0.2.2-rc.1` and `0.2.0-rc.2` are different versions. Do not use these packages with an unlisted host.
-
-## Features and upgrades
-
-- Both fixed Releases include the plugin and `host-adapters.zip` source materials, **not a complete desktop installer**. The full embedded browser, native monitoring and related UI need matching Host, Client and preload source adapters and a host build. Installing the plugin does not supply those host changes. Builders can follow the [developer instructions (Chinese)](../DEVELOPMENT.md#构建和本地插件包).
-- Web capabilities depend on the service machine, backend and permissions. They do not directly grant control over the computer visiting the page.
-- Before upgrading, back up and keep the original profile, `DSH_HOME`, data directory and third-party plugins. Install the matching package and restart the affected instance. Do not create or reset configuration for an upgrade.
-- Completed, failed and canceled download results survive late progress reports. After a restart, unfinished downloads remain unavailable until the desktop confirms their live state; they are not downloaded again automatically. Missing completed files retain their history and show a file error without blocking other downloads. Clearing history keeps the files. Exact pause/resume ordering also requires the updated host adapter.
-- **Main-branch updates do not update fixed Releases.** These URLs do not automatically include later fixes. See the [changelog](../CHANGELOG.md) for published packages and checksums.
-
-<details>
-<summary>CLI supplement (for AI or users who prefer the terminal)</summary>
-
-Use the target DSH's bundled CLI or the same CLI that starts your existing Web service, retaining the original `DSH_HOME`. Run `dsh --version` first. The commands use the standard `desktop`/`web` profiles; use your original name for a custom profile. Do not substitute another global CLI or recreate configuration with `--from-default-profile`.
-
-DSH `0.2.2-rc.1` desktop:
-
-```sh
-dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz'
-```
-
-DSH `0.2.2-rc.1` Web:
-
-```sh
-dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.2.11-dsh.0.2.2-rc.1/opencu-2.2.11-dsh.0.2.2-rc.1.tgz'
-```
-
-DSH `0.2.1-rc.1` desktop:
-
-```sh
-dsh plugin --profile desktop add 'https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/opencu-2.1.0-dsh.0.2.1-rc.1.tgz'
-```
-
-DSH `0.2.1-rc.1` Web:
-
-```sh
-dsh plugin --profile web add 'https://github.com/gulagala001/opencu/releases/download/v2.1.0-dsh.0.2.1-rc.1/opencu-2.1.0-dsh.0.2.1-rc.1.tgz'
-```
-
-Restart the corresponding instance as described above, keeping its launch method and environment. The CLI needs Node.js ≥24.9.0; desktop uses its bundled runtime.
-
-</details>
+Then restart DSH. Browser pairing, download history and annotations live in `DSH_HOME/opencu` and stay; delete it by hand if you no longer need it. Remove the Chrome or Edge extension from the browser's extensions page separately.
