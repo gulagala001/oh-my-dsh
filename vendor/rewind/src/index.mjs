@@ -39,11 +39,15 @@ export async function install(ctx,config={}) {
   ctx.effect(()=>{const key=Symbol.for('dsh-rewind-plus.engine');ctx.root[key]=engine;return()=>{if(ctx.root[key]===engine)delete ctx.root[key];};});
   ctx.on('agent/pre-step',(payload,next)=>maintenance.run(()=>engine.preStep(payload,next),error=>{if(payload.signal?.aborted||isLockFailure(error))throw error;engine.backupGap(payload.agent,error);return next();},{signal:payload.signal}),{prepend:true});
   ctx.on('session/event',(session,event)=>engine.finish(session,event));
+  ctx.on('agent/inbox/discarded',({agent,message})=>{
+    if(engine.operations.get(agent.id)?.marker===message.id)engine.abandon(agent,'撤回维护请求已取消');
+  });
+  ctx.on('agent/disposed',({agent})=>engine.abandon(agent,'会话已释放，撤回请求未执行'));
   ctx.on('tools/execute',(exec,next)=>{
     if(!engine.tracksTool(exec))return next();
     return maintenance.run(()=>engine.tool(exec,next),error=>{if(exec.signal?.aborted||isLockFailure(error))throw error;engine.backupGap(exec.agent,error);return next();},{signal:exec.signal});
   },{prepend:true});
-  ctx.effect(()=>()=>{for(const [id,op]of engine.operations){const agent=ctx.agents.get(id);agent?.inbox.remove(op.marker);agent?.cancel({kind:'user'},{keepInbox:true});op.reject(Error('撤回插件已卸载；未完成操作的备份已保留'));}engine.operations.clear();});
+  ctx.effect(()=>()=>{clearTimeout(engine.planTimer);engine.plans.clear();for(const [id,op]of engine.operations){clearTimeout(op.claimTimer);const agent=ctx.agents.get(id);agent?.inbox.remove(op.marker);agent?.cancel({kind:'user'},{keepInbox:true});op.reject(Error('撤回插件已卸载；未完成操作的备份已保留'));}engine.operations.clear();});
   const operations=['state','candidates','preview','apply','undo-preview','undo','stop','recover','ack','attachment'];
   for(const operation of operations)ctx.effect(()=>ctx.webServer.register({kind:'exact',path:`/api/dsh-rewind/${operation}`,handler:async(req,res)=>{
     const rejection=ctx.connection.requestRejection(req);if(rejection!==undefined){res.writeHead(rejection);res.end();return;}

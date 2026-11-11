@@ -152,3 +152,33 @@ test('self-update accepts fresh Cordis traces of the same native manager', async
   assert.equal(f.state.probes, 1);
   assert.equal(f.service.snapshot().phase, 'restart-required');
 });
+
+test('repeat after verified install returns its receipt without invoking the installer again', async t => {
+  const f = await fixture(t, 'self');
+  const installing = f.start(); await f.entered.promise; f.release.resolve(); await installing;
+  assert.equal(f.service.snapshot().phase, 'restart-required');
+  await f.start();
+  assert.equal((await f.service.status()).targetVersion, '2.0.0');
+  assert.deepEqual(f.calls, ['install']);
+});
+for (const choice of ['cancel', 'timeout', 'continue']) test(`self update exposes a retained decision and its ${choice} receipt`, async t => {
+  const f = await fixture(t, 'self');
+  if (choice === 'timeout') t.mock.timers.enable({ apis: ['setTimeout'] });
+  f.preflight.subscribe(state => f.service.progress(state));
+  const pending = f.start();
+  await f.entered.promise;
+  f.release.reject(Error('fixture denied'));
+  while (f.preflight.snapshot().phase !== 'decision') await new Promise(setImmediate);
+  assert.equal((await f.service.status()).phase, 'decision');
+  if (choice === 'timeout') t.mock.timers.tick(300000);
+  else f.preflight.decide(f.preflight.job.id, choice);
+  await pending;
+  if (choice === 'continue') {
+    assert.equal(f.service.snapshot().phase, 'restart-required');
+    assert.deepEqual(f.calls, ['install']);
+  } else {
+    assert.equal(f.service.snapshot().phase, 'cancelled');
+    assert.match(f.service.snapshot().error, choice === 'timeout' ? /超时/ : /取消/);
+    assert.deepEqual(f.calls, []);
+  }
+});

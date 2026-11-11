@@ -10,8 +10,7 @@ export class WorkflowRuntime extends Service {
     super(ctx, 'dshWorkflow');
     this.store = new WorkflowStore(join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'dsh-workflow'));
     this.workflowBudget = new WorkflowBudget(this.store);
-    this.embeddedBudgets = new Set();
-    this.embeddedSupports = new Set();
+    this.embeddedRuns = new Map();
     // These pools belong only to this runtime. Embedded OMD pools are selected
     // at dispatch and continue to be observed by their existing owner.
     ctx.on('agent/pre-step', async ({ agent, turn, step }, next) => {
@@ -24,22 +23,18 @@ export class WorkflowRuntime extends Service {
       this.workflowBudget.observe(session, event);
       // Captured background pools outlive an embedding plugin's lease.
       // Sequence watermarks make observing alongside OMD idempotent.
-      for (const budget of this.embeddedBudgets) budget.observe(session, event);
+      for (const support of new Set(this.embeddedRuns.values())) support.workflowBudget.observe(session, event);
     }, { global: true });
   }
   support(session, owner) {
-    if (owner) {
-      for (const support of this.embeddedSupports) {
-        if (support.store.peek(owner.sessionId)?.workflowBudget?.pools?.[owner.poolId]) return support;
-      }
-    }
+    if (owner?.runId) return this.embeddedRuns.get(owner.runId) ?? this;
     const omd = this.ctx.get('omd');
-    if (omd?.workflowBudget?.owner(session)) {
-      this.embeddedBudgets.add(omd.workflowBudget);
-      this.embeddedSupports.add(omd);
-      return omd;
-    }
-    return this;
+    return omd?.workflowBudget?.owner(session) ? omd : this;
+  }
+  retain(runId, support) {
+    if (support === this) return;
+    this.embeddedRuns.set(runId, support);
+    return () => this.embeddedRuns.delete(runId);
   }
   scope() { return { mode: 'session' }; }
 }

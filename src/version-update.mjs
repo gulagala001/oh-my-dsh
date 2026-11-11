@@ -66,6 +66,7 @@ export class VersionUpdater {
     if (this.closed) throw failure('更新服务已停止，请重新打开 DSH。', 503);
     if (this.job) throw failure('更新正在进行，请稍候。');
     versionInstallSpec(version);
+    if (this.state.phase === 'restart-required') return Promise.resolve(this.snapshot());
     this.state = { phase: 'checking', targetVersion: version, error: '' };
     this.requestId = randomUUID();
     this.job = this.run(version).catch(error => {
@@ -74,7 +75,7 @@ export class VersionUpdater {
     return this.job;
   }
   progress({ requestId, phase }) {
-    if (this.job && requestId === this.requestId && ['installing', 'applying'].includes(phase)) this.state.phase = phase;
+    if (this.job && requestId === this.requestId && ['decision', 'installing', 'applying'].includes(phase)) this.state.phase = phase;
   }
   async run(version) {
     const admit = async checkedRelease => {
@@ -92,6 +93,12 @@ export class VersionUpdater {
       if (this.isRunning()) throw failure('有任务正在运行，请等任务结束后更新。');
       return inventory;
     };
+    const initial = await this.inventory();
+    if (initial.bundle?.installed && initial.bundle.version && compareVersions(initial.bundle.version, version) === 0 &&
+        compareVersions(version, this.versions.snapshot().currentVersion) !== 0) {
+      this.state = {phase:'restart-required', targetVersion:initial.bundle.version, error:''};
+      return;
+    }
     const { manager, bundle } = await admit(await this.versions.check(true));
     const options = { enabled: bundle.enabled, requestId: this.requestId }, spec = versionInstallSpec(version);
     this.state.phase = 'installing';
@@ -102,6 +109,10 @@ export class VersionUpdater {
         || current.bundle.enabled !== options.enabled) throw failure('插件管理或启用状态在预检期间改变，请重新检查更新。');
       return manager.installBundle(spec, options);
     });
+    if (result?.application === 'cancelled') {
+      this.state = { phase: 'cancelled', targetVersion: version, error: result.error?.diagnostic || '更新已取消' };
+      return;
+    }
     requirePluginChange(result);
     if (result.bundle !== PACKAGE) throw Error('未能确认更新结果，请到 DSH 的“插件”页面检查。');
     const installed = (await manager.listBundles()).find(row => row.name === PACKAGE);

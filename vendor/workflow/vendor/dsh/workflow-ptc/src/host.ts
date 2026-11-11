@@ -29,7 +29,7 @@ export interface WorkflowSupport {
   root: string
   resumeFromRunId?: string
   budget?(): { total: number | null; spent: number; unmetered?: number }
-  budgetOwner?: { sessionId: string; poolId: string }
+  budgetOwner?: { sessionId: string; poolId: string; runId?: string }
   loadWorkflow(reference: string | { scriptPath: string }, signal: AbortSignal): Promise<{ meta: WorkflowMeta; body: string }>
   childType?(id?: string): Promise<{ id?: string; fingerprint?: string }>
 }

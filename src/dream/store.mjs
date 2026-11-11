@@ -166,6 +166,8 @@ export class DreamStore {
       }
       const latest = decode(this.db.prepare('SELECT data FROM jobs WHERE scope=? AND target=? ORDER BY created DESC,rowid DESC LIMIT 1').get(scope,target));
       if (automatic && latest?.state==='paused') return latest;
+      if (automatic && latest?.state==='failed' && latest.automatic)
+        return this.updateJob(latest.id, { ...extra, state: 'queued' });
       const value = { id: randomUUID(), scope, target, automatic, state:'queued', createdAt:this.now(), done:0, calls:0, ...extra };
       this.db.prepare('INSERT INTO jobs VALUES(?,?,?,?,?,?,?)').run(value.id,scope,target,value.state,Number(automatic),value.createdAt,encode(value));
       return value;
@@ -182,7 +184,12 @@ export class DreamStore {
   updateJobIf(id, states, patch) {
     return this.tx(()=>{
       const job=this.job(id);if(!job)throw Error('Dream 作业不存在');
-      return states.includes(job.state)?this.updateJob(id,patch):job;
+      if (!states.includes(job.state)) return job;
+      if (patch.state === 'queued') {
+        const active = this.db.prepare("SELECT data FROM jobs WHERE scope=? AND target=? AND id<>? AND state IN ('queued','running','budget') LIMIT 1").get(job.scope, job.target, id);
+        if (active) throw Error('同一目标已有活动 Dream 作业');
+      }
+      return this.updateJob(id,patch);
     });
   }
   resumeDueJobs(now) {

@@ -174,12 +174,16 @@ export class BillionContext {
     if (!['omd', 'bc'].includes(backend)) throw Error('上下文管理请选择 OMD 或 BC');
     if (session.header?.origin === 'subagent') throw Error('请在主会话选择上下文管理方式');
     const selection = {}; this.selections.set(session.id, selection);
-    if (backend === this.backend(session) && !this.state(session).pendingBackend) return { queued: false, backend };
+    if (backend === this.backend(session)) {
+      const state = this.state(session);
+      if (state.pendingBackend || state.backendError) this.hub.context.store.update(state, { pendingBackend: undefined, backendError: undefined });
+      return { queued: false, backend };
+    }
     if (backend === 'bc') await this.connect();
     if (this.selections.get(session.id) !== selection) return { queued: Boolean(this.state(session).pendingBackend), backend: this.backend(session), superseded: true };
     const s = this.state(session);
     this.hub.context.store.update(s, { pendingBackend: backend, backendError: undefined });
-    if (agent && agent.status !== 'idle') return { queued: true, backend: this.backend(session), pendingBackend: backend };
+    if (this.hub.context.manualSessions.has(session.id) || agent && agent.status !== 'idle') return { queued: true, backend: this.backend(session), pendingBackend: backend };
     const run = signal => this.applyChoice(session, signal);
     if (agent?.runMaintenance) await agent.runMaintenance(run); else await run();
     return { queued: Boolean(s.pendingBackend), backend: this.backend(session), pendingBackend: s.pendingBackend };

@@ -57,6 +57,7 @@
     "html-to-text": "10.0.1",
     "htmlparser2": "10.1.0",
     "jsdom": "26.1.0",
+    "koffi": "3.1.1",
     "marked": "18.0.12",
     "playwright": "1.63.0",
     "sharp": "0.35.5",

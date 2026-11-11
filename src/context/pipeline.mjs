@@ -35,7 +35,7 @@ const iso = n => n == null ? '时间未记录' : new Date(n).toISOString();
 export class ContextPipeline {
   constructor(hub, adapter) {
     this.hub = hub; this.adapter = adapter; this.activeCalls = 0; this.callWaiters = []; this.manualSessions = new Map(); this.store = new ContextStore(hub.store.dir);
-    this.agents = new Map(); this.releasing = new Set(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.cacheResuming = new Set(); this.closed = false;
+    this.agents = new Map(); this.releasing = new Set(); this.jobs = new Map(); this.timers = new Map(); this.reviewTimers = new Map(); this.idleSince = new Map(); this.controllers = new Map(); this.closed = false;
     this.adaptive = new AdaptiveCompaction(this);
     this.autoCompact = new AutoCompaction(this);
     this.cachedPreparation = new CachedPreparation(this);
@@ -48,6 +48,7 @@ export class ContextPipeline {
     const s = this.state(session);
     if (s.transaction || this.manualSessions.has(session.id)) throw Error('当前压缩尚未完成，请完成后切换模式');
     if (this.mode(session) === mode) return this.view(session);
+    if (s.manualQueue.length) throw Error('已有手动压缩操作排队，请等待结算后再切换模式');
     const preparedHandoff = mode === 'pipeline' && s.pending?.source === 'adaptive' && this.agents.has(session.id);
     this.store.update(s, { compressionMode: mode, compressionModeRevision: (s.compressionModeRevision || 0) + 1,
       adaptive: {}, pending: ['coordinator', 'adaptive'].includes(s.pending?.source) ? null : s.pending,
@@ -237,7 +238,6 @@ export class ContextPipeline {
     const agent = this.agents.get(session.id);
     if (agent && !this.closed && !delegated(session) && this.cachedPreparation.confirm(session, route)) {
       if (this.config().autoCompactEnabled) this.autoCompact.kick(agent);
-      this.resumeCachedPreparation(agent);
     }
     if (!agent || this.closed || delegated(session) || !this.config().contextEnabled) return;
     if (this.mode(session) === 'adaptive') { this.adaptive.confirm(agent, route); return; }
@@ -254,28 +254,6 @@ export class ContextPipeline {
       }
       void this.resumeMainSuccess(agent, kind);
     }
-  }
-  resumeCachedPreparation(agent) {
-    const session = agent.session, id = session.id, cache = this.cachedPreparation;
-    const eligible = () => this.agents.get(id) === agent && !this.closed && this.config().contextEnabled
-      && this.config().memoryCacheEnabled && this.mode(session) !== 'adaptive' && !this.manualSessions.has(id);
-    if (!cache.waiting.has(id) || !eligible() || this.cacheResuming.has(id)) return;
-    this.cacheResuming.add(id);
-    let version = cache.version(session);
-    const resume = () => {
-      if (!eligible()) return;
-      const waiting = cache.waiting.get(id);
-      if (!waiting) return;
-      cache.waiting.delete(id); version = cache.version(session);
-      return this.prepare(agent, waiting.force, { retry: waiting.retry });
-    };
-    const running = this.jobs.get(id + ':prepare');
-    void Promise.resolve(running ? running.then(resume) : resume())
-      .catch(error => this.hub.ctx.logger?.warn?.(`记忆缓存预处理：${error.message}`))
-      .finally(() => {
-        this.cacheResuming.delete(id);
-        if (cache.version(session) !== version) this.resumeCachedPreparation(agent);
-      });
   }
   async resumeMainSuccess(agent, kind) {
     const id = agent.session.id, key = id + ':' + kind;
@@ -325,6 +303,16 @@ export class ContextPipeline {
       data: { count: s.failures[kind].count, recoverable: s.failures[kind].recoverable, code: s.failures[kind].code, ...(s.failures[kind].details ? {details:s.failures[kind].details} : {}) } });
     this.hub.ctx.logger?.warn?.(`上下文${kind}：${error.message}`);
   }
+  resumeBackend(agent) {
+    const { session } = agent;
+    if (!this.state(session).pendingBackend) return;
+    setImmediate(() => {
+      if (this.closed || this.agents.get(session.id) !== agent || agent.status !== 'idle' || !this.state(session).pendingBackend) return;
+      const apply = signal => this.hub.bc.applyChoice(session, signal);
+      Promise.resolve().then(() => agent.runMaintenance ? agent.runMaintenance(apply) : apply())
+        .catch(error => this.hub.ctx.logger?.warn?.(error.message));
+    });
+  }
   async prepare(agent, force = false, { retry = false, mainSuccess, handoff = false } = {}) {
     if (this.mode(agent.session) === 'adaptive') return this.adaptive.check(agent, { force });
     if (this.closed || delegated(agent.session) || this.manualSessions.has(agent.session.id) || (!handoff && !this.config().contextEnabled)) return;
@@ -360,20 +348,19 @@ export class ContextPipeline {
         const events = preparationEvents(this, agent, s, cfg, { minimumEvents });
         const workload = preparationWorkload(session, s, events || []);
         if (workload.events < minimumEvents || events && workload.estimatedTokens < cfg.prepareContinueTokens) {
-          this.cachedPreparation.clearWaiting(session);
           s.prepareDeferred = { ...workload, minimumEvents, inputBudget: cfg.prepareInputTokens, reason: workload.events < minimumEvents
             ? events?.inputLimited ? 'first-window-budget' : 'first-window' : 'below-minimum', at: Date.now() };
           s.prepareBacklog = backlogView(session, s, cfg); this.store.touch(s); break;
         }
         delete s.prepareDeferred;
-        if (!events) { this.cachedPreparation.clearWaiting(session); this.store.touch(s); break; }
+        if (!events) { this.store.touch(s); break; }
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
         if (s.failures.prepare) {
           inputs.previous_rejection = s.failures.prepare.message;
           if (s.failures.prepare.details) inputs.previous_rejection_details = s.failures.prepare.details;
         }
-        const cached = cfg.memoryCacheEnabled ? this.cachedPreparation.build(agent, events, inputs, { force, retry }) : null;
+        const cached = cfg.memoryCacheEnabled ? this.cachedPreparation.build(agent, events, inputs) : null;
         // A reusable prefix is optional; cold or over-budget sessions use the same bounded segment.
         const admit = () => this.admitMainSuccess(agent, 'prepare', mainSuccess, controller);
         const execute = () => {
@@ -656,7 +643,7 @@ export class ContextPipeline {
     } catch (error) {
       if (!joined.aborted) this.reportError(agent, operation === 'full' ? 'compactFull' : 'compactProcessed', error);
       throw error;
-    } finally { this.manualSessions.delete(id); this.controllers.delete(key); this.releaseState(id); }
+    } finally { this.manualSessions.delete(id); this.resumeBackend(agent); this.controllers.delete(key); this.releaseState(id); }
   }
   async preStep(agent, signal, route) {
     if (delegated(agent.session)) return;
@@ -799,10 +786,6 @@ export class ContextPipeline {
       const agent = this.agents.get(id);
       if (agent) this.arm(agent, cfg.flushIdleMs, 'idle', since);
     }
-    for (const id of [...this.cachedPreparation.waiting.keys()]) {
-      const agent = this.agents.get(id);
-      if (agent) this.resumeCachedPreparation(agent);
-    }
     // Re-evaluate material already waiting on a setting the user has relaxed.
     // This does not wake sessions without deferred work or bypass their cadence.
     if (cfg.contextEnabled) for (const agent of this.agents.values()) {
@@ -886,7 +869,9 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
     this.autoCompact.reconcile(session, s, cfg);
     const spans = new Map(s.records.map(record => [record, liveSpan(session, record, index)]));
     return { schema: 1, compressionMode: this.mode(session), bc: this.hub.bc?.view(session), autoCompact: { ...s.autoCompact, enabled: cfg.autoCompactEnabled,
-      threshold: cfg.autoCompactThreshold, mode: cfg.autoCompactMode, running: this.jobs.has(session.id + ':autoCompact') },
+      threshold: cfg.autoCompactThreshold, mode: cfg.autoCompactMode, running: this.jobs.has(session.id + ':autoCompact'),
+      retry: !s.failures.autoCompact ? null : s.failures.autoCompact.count > cfg.backgroundMaxRetries &&
+        s.failures.autoCompact.key === this.autoCompact.fingerprint(session, s, cfg) ? 'waiting-change' : 'retrying' },
       adaptive: { running: this.jobs.has(session.id + ':adaptive'), lastAt: s.adaptive?.lastAt ?? null,
       lastDecision: s.adaptive?.lastDecision ?? null, reason: s.adaptive?.reason ?? null, error: s.adaptive?.error ?? null,
       waitingReason: s.adaptive?.waitingReason ?? null, cacheReadTokens: s.adaptive?.cacheReadTokens ?? null }, scope: s.binding, steps: s.steps, pending: s.pending, lastReplacement: s.lastReplacement || null, todoRefresh: s.todoRefresh || null,
@@ -896,7 +881,7 @@ ${r.summary}`).join('\n\n') || 'No matching saved summaries.';
       }) }),
       backlog: backlogView(session, s, cfg, index, spans), eventsSincePrepare: s.eventsSincePrepare || 0, prepareDeferred: s.prepareDeferred || null,
       prepareProgress: { current: s.eventsSincePrepare || 0, target: cfg.digestEvery, initial: !s.records.length, enabled: cfg.contextEnabled },
-      memoryCache: { ...s.memoryCache, enabled: cfg.memoryCacheEnabled },
+      memoryCache: { cacheReadTokens: s.memoryCache?.cacheReadTokens ?? null, enabled: cfg.memoryCacheEnabled },
       limits: { batchWindows: cfg.prepareBatchWindows, concurrency: cfg.backgroundConcurrency, continueTokens: cfg.prepareContinueTokens },
       failures: s.failures, retry: Object.fromEntries(['prepare', 'coordinate'].map(kind => [kind, !s.failures[kind] ? null : this.waitsForMain(s, kind) ? 'waiting-main' : s.failures[kind].count > cfg.backgroundMaxRetries ? kind === 'prepare' && s.failures[kind].validation ? 'waiting-events' : 'manual' : 'retrying'])), notices: s.notices, trace: s.traceSlot ? { sourceSeq: s.traceSlot.sourceSeq, sourceAt: s.traceSlot.sourceAt, truncated: s.traceSlot.truncated } : null,
       preparing: this.jobs.has(session.id + ':prepare'), coordinating: this.jobs.has(session.id + ':coordinate'), transactionPending: Boolean(s.transaction),

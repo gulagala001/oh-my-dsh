@@ -21,7 +21,7 @@ async function fixture(t) {
 async function interruptBeforeDirectory(t, f) {
   const mkdir = fs.mkdir;
   const injected = t.mock.method(fs, 'mkdir', async (directory, options) => {
-    if (directory === f.cwd) throw Object.assign(Error('synthetic disk failure'), { code: 'ENOSPC' });
+    if (path.basename(directory).startsWith('.omd-')) throw Object.assign(Error('synthetic disk failure'), { code: 'ENOSPC' });
     return mkdir(directory, options);
   });
   await assert.rejects(f.service.prepare(f.input), /synthetic disk failure/);
@@ -54,15 +54,15 @@ test('occupied user names do not accumulate allocation claims', async t => {
   assert.deepEqual(await fs.readdir(path.dirname(f.claimFile)), [hash(result.cwd) + '.json']);
 });
 
-test('pending recovery checks the final mkdir exclusively, including a competing creator', async t => {
+test('pending recovery publishes the final directory exclusively, including a competing creator', async t => {
   const f = await fixture(t);
   await interruptBeforeDirectory(t, f);
   const mkdir = fs.mkdir; let raced = false;
   t.mock.method(fs, 'mkdir', async (directory, options) => {
-    if (directory === f.cwd && !raced) {
+    if (path.basename(directory).startsWith('.omd-') && !raced) {
       raced = true;
-      await mkdir(directory);
-      await fs.writeFile(path.join(directory, 'user.txt'), 'created during recovery');
+      await mkdir(f.cwd);
+      await fs.writeFile(path.join(f.cwd, 'user.txt'), 'created during recovery');
     }
     return mkdir(directory, options);
   });
@@ -74,7 +74,7 @@ test('pending recovery checks the final mkdir exclusively, including a competing
   assert.equal(await fs.readFile(path.join(f.cwd, 'user.txt'), 'utf8'), 'created during recovery');
 });
 
-test('failed completion publication keeps the unconfirmed directory intact and retries safely', async t => {
+test('failed completion publication reopens the directory matching its saved allocation proof', async t => {
   const f = await fixture(t), rename = fs.rename;
   const injected = t.mock.method(fs, 'rename', async (from, to) => {
     if (to === f.requestFile && JSON.parse(await fs.readFile(from, 'utf8')).state === 'ready')
@@ -85,9 +85,9 @@ test('failed completion publication keeps the unconfirmed directory intact and r
   injected.mock.restore();
   assert.equal(await f.service.resolve(f.input), null);
   const result = await f.reopen().prepare(f.input);
-  assert.notEqual(result.cwd, f.cwd);
+  assert.equal(result.cwd, f.cwd);
   assert.equal((await fs.stat(f.cwd)).isDirectory(), true);
-  assert.equal(await f.service.owns(f.cwd), false);
+  assert.equal(await f.service.owns(f.cwd), true);
   assert.equal(await f.service.owns(result.cwd), true);
 });
 
@@ -146,4 +146,72 @@ test('legacy named directories retain provenance without a naming operation', as
   assert.equal(await reopened.owns(named, { sessionId: 'other' }), false);
   assert.deepEqual(await reopened.prepare({ ...f.input, prompt: 'New title' }), allocated);
   assert.equal(await fs.readFile(path.join(named, 'result.txt'), 'utf8'), 'keep');
+});
+
+test('a replaced ready directory is never returned or classified as managed', async t => {
+  const f = await fixture(t);
+  await f.service.prepare(f.input);
+  await fs.rename(f.cwd, f.cwd + '-moved');
+  await fs.mkdir(f.cwd);
+  await fs.writeFile(path.join(f.cwd, 'mine'), 'keep');
+  const reopened = f.reopen();
+  assert.equal(await reopened.resolve(f.input), null);
+  assert.equal(await reopened.owns(f.cwd), false);
+  assert.equal(await reopened.owns(f.cwd, { requireDirectory: false }), false);
+  await assert.rejects(reopened.prepare(f.input), /replaced/);
+  assert.equal(await fs.readFile(path.join(f.cwd, 'mine'), 'utf8'), 'keep');
+});
+
+test('a directory exchanged between publication and ready recovery cannot inherit the pending claim', async t => {
+  const f = await fixture(t);
+  const rename = fs.rename;
+  const inject = t.mock.method(fs, 'rename', async (from, to) => {
+    if (to === f.requestFile && JSON.parse(await fs.readFile(from, 'utf8')).state === 'ready') {
+      await rename(f.cwd, f.cwd + '-moved');
+      await fs.mkdir(f.cwd);
+      throw Error('interrupted');
+    }
+    return rename(from, to);
+  });
+  await assert.rejects(f.service.prepare(f.input), /interrupted/);
+  inject.mock.restore();
+  const recovered = await f.reopen().prepare(f.input);
+  assert.notEqual(recovered.cwd, f.cwd);
+  assert.equal(await f.service.owns(f.cwd), false);
+  assert.deepEqual(await fs.readdir(f.cwd), []);
+});
+
+test('a process killed after publishing the directory leaves one recoverable workspace', async t => {
+  const { spawnSync } = await import('node:child_process');
+  const f = await fixture(t);
+  const module = new URL('../src/projectless-workspaces.mjs', import.meta.url);
+  const script = `
+    import fs from 'node:fs/promises';
+    import { createProjectlessWorkspaceService } from ${JSON.stringify(module.href)};
+    const rename = fs.rename;
+    fs.rename = async (from, to) => {
+      if (to === ${JSON.stringify(f.requestFile)} && JSON.parse(await fs.readFile(from)).state === 'ready') process.exit(77);
+      return rename(from, to);
+    };
+    await createProjectlessWorkspaceService({ root: ${JSON.stringify(f.root)}, storeDir: ${JSON.stringify(f.storeDir)},
+      now: () => new Date(2026, 9, 23) }).prepare(${JSON.stringify(f.input)});
+  `;
+  const child = spawnSync(process.execPath, ['--input-type=module', '-e', script], { timeout: 10000 });
+  assert.equal(child.status, 77, String(child.stderr));
+  const recovered = await f.reopen().prepare(f.input);
+  assert.equal(recovered.cwd, f.cwd);
+  assert.deepEqual(await fs.readdir(path.dirname(f.cwd)), [f.prompt]);
+  assert.equal(await f.reopen().owns(f.cwd), true);
+});
+
+test('legacy path-only history cannot authorize a live same-name directory', async t => {
+  const f = await fixture(t);
+  await f.service.prepare(f.input);
+  const record = JSON.parse(await fs.readFile(f.requestFile));
+  delete record.identity;
+  await fs.writeFile(f.requestFile, JSON.stringify(record));
+  assert.equal(await f.service.owns(f.cwd, { requireDirectory: false }), true);
+  assert.equal(await f.service.owns(f.cwd, { sessionId: f.requestId }), false);
+  assert.equal(await f.service.resolve(f.input), null);
+  await assert.rejects(f.service.prepare(f.input), /no physical ownership record/);
 });

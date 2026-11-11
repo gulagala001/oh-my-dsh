@@ -65,6 +65,10 @@ export function createBrowserPairing(directory) {
     async allow(origin, value) {
       await ready;
       const candidate = candidates.get(key(origin, value.instanceId));
+      if (candidate && candidate.challenge === value.challenge && Date.now() - candidate.lastSeen > 35000) {
+        candidates.delete(key(origin, value.instanceId));
+        if (demand?.candidate === candidate && (!value.requestId || demand.id === value.requestId)) { demand.stale = true; wake(); }
+      }
       if (closed || !candidate || candidate.challenge !== value.challenge || Date.now() - candidate.lastSeen > 35000) fail('STALE_PAIRING', 'Connection request expired; retry discovery.');
       if (value.authorized !== true || value.debuggerConsent !== true) fail('CONSENT_REQUIRED', 'Click Allow in the browser connection window.');
       if (typeof value.token !== 'string' || value.token.length < 32 || value.token.length > 256) fail('INVALID_TOKEN', 'A random browser pairing credential is required.');
@@ -103,12 +107,13 @@ export function createBrowserPairing(directory) {
         return {available: true, browsers};
       }
       if (demand) fail('PAIRING_IN_PROGRESS', 'A browser connection request is already waiting for approval.');
-      const current = demand = {id: randomUUID(), browser: choices[0].instanceId, denied: new Set(), connected: false};
+      const current = demand = {id: randomUUID(), browser: choices[0].instanceId, candidate: choices[0], denied: new Set(), connected: false};
       const expires = Date.now() + waitMs; wake();
       let endWaiting;
       try {
         endWaiting = onWaiting?.({kind: 'browser', requestId: current.id, appDisplayName: choices[0].label});
         while (!closed && !current.connected && Date.now() < expires) {
+          if (current.stale) fail('STALE_PAIRING', 'Connection request expired; retry discovery.');
           if (choices.every(item => current.denied.has(key(item.origin, item.instanceId)))) fail('PAIRING_DECLINED', 'Browser connection was declined.');
           await wait(Math.max(1, expires - Date.now()), signal);
         }

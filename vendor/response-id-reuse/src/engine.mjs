@@ -93,7 +93,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       stats.storageReads++;
       const mode = await storedReplayMode(request, sample, baseFetch);
       if (!closed) {
-        capability(key, meta, capabilities.get(key)?.state ?? 'unconfirmed', capabilities.get(key)?.reason ?? 'storage-readback');
+        if (!capabilities.has(key)) capability(key, meta, 'unconfirmed', 'storage-readback');
         Object.assign(capabilities.get(key), { replayCheckedAt: now(), ...(mode ? { replayMode: mode } : {}) });
       }
       return mode;
@@ -106,7 +106,10 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
     const reader = response.body?.getReader();
     if (!reader) { onPartial('empty-response'); finish(); return response; }
     const sse = headers.get('content-type')?.includes('text/event-stream');
-    let buffer = '', complete = false, cancelled = false, finished = false;
+    let buffer = '', complete = false, cancelled = false, finished = false, observationEnded = false;
+    const partial = reason => { if (!observationEnded) onPartial(reason); observationEnded = true; };
+    const partialReason = value => value?.status === 'incomplete' && value.incomplete_details?.reason === 'max_output_tokens'
+      ? 'output-limit' : 'incomplete-response';
     const decoder = new TextDecoder(), events = sseEvents();
     const end = () => { if (!finished) { finished = true; finish(); } };
     const stream = new ReadableStream({
@@ -114,19 +117,23 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         try {
           const { value, done } = await reader.read();
           if (cancelled) return;
+          if (observationEnded) {
+            if (done) { end(); controller.close(); } else controller.enqueue(value);
+            return;
+          }
           const text = decoder.decode(value, { stream: !done });
           if (sse) {
             for (const event of events.push(text, done)) {
               if (outputEvent(event)) onOutput();
               if (event.type === 'response.completed' && event.response?.status === 'completed') { await commit(event.response); complete = true; }
-              else if (['response.completed', 'response.failed', 'response.incomplete', 'error'].includes(event.type)) onPartial(event.type);
+              else if (['response.completed', 'response.failed', 'response.incomplete', 'error'].includes(event.type)) partial(event.type === 'response.incomplete' ? partialReason(event.response) : event.type);
             }
           } else buffer += text;
           if (done) {
-            if (!sse) { try { const output = JSON.parse(buffer); onOutput(); await commit(output); complete = output?.status === 'completed'; } catch {} }
-            if (!complete) onPartial('incomplete-response'); end(); controller.close(); return;
+            if (!sse) { try { const output = JSON.parse(buffer); onOutput(); await commit(output); complete = output?.status === 'completed'; if (!complete) partial(partialReason(output)); } catch {} }
+            if (!complete) partial('incomplete-response'); end(); controller.close(); return;
           }
-          if (buffer.length + events.size > 16 * 1024 * 1024) { onPartial('response-too-large'); buffer = ''; events.reset(); }
+          if (buffer.length + events.size > 16 * 1024 * 1024) { partial('response-too-large'); buffer = ''; events.reset(); }
           controller.enqueue(value);
         } catch (error) { if (cancelled) return; if (!complete) onPartial('stream-error'); end(); controller.error(error); }
       },
@@ -204,11 +211,12 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         endAttempt(); health.release(lease); request.signal.removeEventListener('abort', releaseLease);
         stats.last = row; persist();
       };
+      const staleContinuation = () => useId && !fallback && lease.epoch !== route.epoch;
       const commit = async output => {
-        if (closed || !eligible || request.signal.aborted || row.committed
+        if (closed || !eligible || staleContinuation() || request.signal.aborted || row.committed
             || output?.status !== 'completed') return;
+        if (body.stream === true && useId && !fallback && lease.epoch === route.epoch) health.sample(route, attempt?.firstOutputMs);
         if (!fallback) health.success(lease);
-        if (body.stream === true) health.sample(route, attempt?.firstOutputMs);
         if (typeof output.id !== 'string' || !output.id || output.id.length > 262144 || output.store !== true || !Array.isArray(output.output)) {
           // One unstored response cannot establish a chain, but it does not
           // reject storage for later requests or invalidate other chains.
@@ -217,7 +225,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         const reasoningIds = output.output.filter(plainReasoning).map(item => item.id).filter(id => typeof id === 'string');
         if (reasoningIds.length && output.output.some(item => item.type !== 'reasoning'))
           replayMode = await resolveReplay(capabilityKey, meta, request, { id: output.id, reasoningIds }, baseFetch);
-        if (closed || !eligible || request.signal.aborted || row.committed) return;
+        if (closed || !eligible || staleContinuation() || request.signal.aborted || row.committed) return;
         const replayedOutput = replayMode === 'omit-plain' ? output.output.filter(item => !plainReasoning(item)) : output.output;
         const prefix = [...hashes(replayInput(allInput, meta.replayHistory, replayMode)), ...hashes(replayedOutput)];
         const candidateKey = chainKey + ':' + sha(prefix.join(':'));
@@ -247,12 +255,12 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
           else throw error;
         }
         if (response && !response.ok) why = rejection(response.status, await errorDetails(response));
+        const temporary = why === 'server-error' || why === 'first-output-timeout';
+        if (temporary && useId && !request.signal.aborted) health.fail(lease);
         if (why && (useId || why === 'unsupported') && !request.signal.aborted
             && (replaySafe || !['server-error', 'first-output-timeout'].includes(why))) {
-            const temporary = why === 'server-error' || why === 'first-output-timeout';
             // An upstream failure does not invalidate an immutable parent or
             // establish that storage is unsupported. Temporarily avoid this path.
-            if (temporary) health.fail(lease);
             if (!temporary && priorKey) for (const [key, candidate] of chains)
               if (candidate.chainKey === chainKey && candidate.id === prior.id) chains.delete(key);
             cancelAttempt?.(); endAttempt();
@@ -278,7 +286,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
         }
         return observe(response, commit, finish, reason => {
           eligible = false;
-          if (reason && useId && !fallback && !request.signal.aborted) {
+          if (reason && !['output-limit', 'response-too-large'].includes(reason) && useId && !fallback && !request.signal.aborted) {
             health.fail(lease); row.error = reason;
           }
         }, markOutput);

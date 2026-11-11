@@ -49,7 +49,28 @@ function execute(command, input, { cwd, timeout = 60, signal }) {
     const started = Date.now(), windows = process.platform === 'win32';
     let stdout = '', stderr = '', timedOut = false, settled = false, child, aborted = false;
     const finish = value => { if (settled) return; settled = true; clearTimeout(timer); signal?.removeEventListener('abort', abort); resolve({ stdout, stderr, timedOut, durationMs: Date.now() - started, ...value }); };
-    const kill = () => { try { if (!windows && child?.pid) process.kill(-child.pid, 'SIGKILL'); else child?.kill('SIGKILL'); } catch {} };
+    let cleanup;
+    const kill = () => {
+      if (!windows) { try { if (child?.pid) process.kill(-child.pid, 'SIGKILL'); } catch {} return; }
+      if (cleanup) return;
+      cleanup = true;
+      let killer, ended = false;
+      const complete = error => {
+        if (ended) return;
+        ended = true; clearTimeout(limit);
+        child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy();
+        if (error) child.kill();
+        finish({code:null, ...(error ? {cleanupError:error} : {}), ...(error || aborted ? {error:error || 'aborted'} : {})});
+      };
+      const limit = setTimeout(() => { killer?.kill(); complete('Hook process tree cleanup timed out'); }, 3000);
+      if (!child?.pid || child.exitCode !== null || child.signalCode) { complete('Hook shell already exited; descendant cleanup unconfirmed'); return; }
+      try {
+        killer = spawn(join(process.env.SystemRoot, 'System32', 'taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'],
+          {windowsHide:true, stdio:'ignore'});
+        killer.once('error', error => complete('Hook cleanup: ' + error.message));
+        killer.once('exit', code => complete(code === 0 ? null : 'Hook process tree cleanup unconfirmed: ' + code));
+      } catch (error) { complete(error.message); }
+    };
     const abort = () => { aborted = true; kill(); };
     const timer = setTimeout(() => { timedOut = true; kill(); }, timeout * 1000);
     try {
@@ -62,7 +83,7 @@ function execute(command, input, { cwd, timeout = 60, signal }) {
     child.stdin.on('error', () => {});
     child.stdin.end(JSON.stringify(input));
     child.on('error', error => finish({ code: null, error: errorText(error) }));
-    child.on('close', code => finish({ code, ...aborted ? { error: 'aborted' } : {} }));
+    child.on('close', code => !cleanup && finish({ code, ...aborted ? { error: 'aborted' } : {} }));
     if (signal?.aborted) abort();
   });
 }
@@ -109,7 +130,11 @@ export class Hooks {
     const signal = options.signal ? AbortSignal.any([options.signal, this.controller.signal]) : this.controller.signal;
     const task = execute(command, input, { ...options, signal });
     this.running.add(task);
-    try { const result = await task; signal.throwIfAborted(); return result; }
+    try {
+      const result = await task;
+      if (result.cleanupError) this.ctx.logger?.warn?.('Hook cleanup: ' + result.cleanupError);
+      signal.throwIfAborted(); return result;
+    }
     finally { this.running.delete(task); }
   }
   async close() {

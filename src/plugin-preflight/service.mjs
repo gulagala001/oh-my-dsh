@@ -11,7 +11,9 @@ import { readJsonBody, rejectUntrusted, sendJson } from '../http.mjs';
 const TRANSACTION = Symbol.for('omd.plugin-preflight.transaction.v1');
 const untrace = value => value?.[symbols.original] || value;
 const unavailable = code => /unavailable|timeout|resource|preparation|cleanup|environment|ENOENT|ENOMEM/.test(code || '');
-const cancelled = target => ({ application: 'cancelled', changed: false, stage: 'install', target });
+const stageOf = action => action === 'install' ? 'install' : 'enable';
+const cancelled = job => ({ application: 'cancelled', changed: false, stage: stageOf(job.action), target: job.target,
+  error: { code: 'cancelled', diagnostic: job.abort.signal.reason?.message || job.cancelReason || '预检已取消' } });
 function readBounded(read, signal) {
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
@@ -103,7 +105,7 @@ export class PluginPreflight {
     this.wrap('cancelInstall', original => async function (requestId) {
       const queued = self.queue.find(job => job.requestId === requestId);
       if (queued) {
-        self.queue.splice(self.queue.indexOf(queued), 1); queued.resolve(cancelled(queued.target));
+        self.queue.splice(self.queue.indexOf(queued), 1); queued.resolve(cancelled(queued));
         return { status: 'cancelled' };
       }
       const job = self.job;
@@ -138,7 +140,7 @@ export class PluginPreflight {
     if (inherited && inherited.target === target && action === 'install') return perform();
     if (action === 'install' && (typeof target !== 'string' || !target.trim() || target.startsWith('-'))) return perform();
     if (!this.getEnabled()) return perform();
-    if (inherited || this.queue.length >= 16) return Promise.resolve({ application: 'failed', changed: false, stage: action === 'install' ? 'install' : 'enable', target,
+    if (inherited || this.queue.length >= 16) return Promise.resolve({ application: 'failed', changed: false, stage: stageOf(action), target,
       error: { code: 'operation-error', diagnostic: inherited ? '不能在当前安装事务中嵌套安装另一插件' : '插件安装队列已满，请稍后重试。' } });
     const job = { id: randomUUID(), action, target, requestId: options.requestId, phase: 'preparation', abort: new AbortController(), options, perform, extra };
     job.promise = new Promise(resolve => { job.resolve = resolve; });
@@ -148,18 +150,18 @@ export class PluginPreflight {
   start(job) {
     this.job = job;
     void Promise.resolve().then(() => {
-      if (this.closed || job.abort.signal.aborted) return cancelled(job.target);
+      if (this.closed || job.abort.signal.aborted) return cancelled(job);
       if (this.getEnabled()) return this.execute(job, job.options, job.perform, job.extra);
       job.phase = 'applying'; return job.perform();
     }).then(job.resolve,
-      error => job.resolve({ application: 'failed', changed: false, stage: 'install', target: job.target,
+      error => job.resolve({ application: 'failed', changed: false, stage: stageOf(job.action), target: job.target,
         error: { code: 'operation-error', diagnostic: redact(error.message) } })).finally(() => {
       if (this.job === job) { this.job = null; this.publish({ active: false }); }
       if (!this.closed && this.queue.length) this.start(this.queue.shift());
     });
   }
   async execute(job, options, perform, extra) {
-    const state = phase => ({ active: true, id: job.id, action: job.action, target: redact(job.target), hostVersion: this.hostVersion, phase });
+    const state = phase => ({ active: true, id: job.id, requestId: job.requestId, action: job.action, target: redact(job.target), hostVersion: this.hostVersion, phase });
     this.publish(state('正在准备插件安装预检'));
     try {
       let stamp;
@@ -183,19 +185,19 @@ export class PluginPreflight {
         job.abort.signal.throwIfAborted();
         if (await read(() => profileStamp(this.profile)) !== stamp) throw problem('environment-changed', '预检期间安装环境发生变化，请重新操作以检查当前组合');
       } catch (error) {
-        if (job.abort.signal.aborted || this.closed) return cancelled(job.target);
+        if (job.abort.signal.aborted || this.closed) return cancelled(job);
         const failure = { kind: unavailable(error.code) ? 'unavailable' : 'failed', code: error.code || 'probe-failed',
           message: redact(error.message), details: redact(error.details || error.stack) };
         const view = { ...state(this.state.phase), failure };
         job.phase = 'decision';
         const approved = new Promise(resolve => { job.decision = resolve; });
         this.publish({ ...view, phase: 'decision', failedPhase: view.phase, canContinue: error.code !== 'cleanup-failed', repair: repairPrompt(view) });
-        const timer = setTimeout(() => job.decision?.(false), LIMITS.decisionMs);
+        const timer = setTimeout(() => { job.cancelReason = '等待预检确认超时'; job.decision?.(false); }, LIMITS.decisionMs);
         const onAbort = () => job.decision?.(false); job.abort.signal.addEventListener('abort', onAbort, { once: true });
         let proceed;
         try { proceed = await approved; }
         finally { clearTimeout(timer); job.abort.signal.removeEventListener('abort', onAbort); job.decision = undefined; }
-        if (!proceed || job.abort.signal.aborted || this.closed) return cancelled(job.target);
+        if (!proceed || job.abort.signal.aborted || this.closed) return cancelled(job);
         // Permission applies only to this retained request, not other versions.
         job.forced = true; job.checked = undefined;
       }
@@ -203,8 +205,8 @@ export class PluginPreflight {
       job.phase = 'applying'; this.publish({ ...state('applying'), active: false });
       return await this.local.run(job, perform);
     } catch (error) {
-      if (job.abort.signal.aborted) return cancelled(job.target);
-      return { application: 'failed', changed: false, stage: 'install', target: job.target,
+      if (job.abort.signal.aborted) return cancelled(job);
+      return { application: 'failed', changed: false, stage: stageOf(job.action), target: job.target,
         error: { code: 'operation-error', diagnostic: redact(error.message) } };
     }
   }
@@ -216,7 +218,7 @@ export class PluginPreflight {
   }
   async close() {
     this.closed = true;
-    for (const job of this.queue.splice(0)) job.resolve(cancelled(job.target));
+    for (const job of this.queue.splice(0)) job.resolve(cancelled(job));
     for (const restore of this.restores.reverse()) restore(); this.restores = [];
     // Await cleanup before disposing, but never wait on the native HMR operation
     // which may itself be disposing this OMD instance during its own update.
@@ -228,7 +230,7 @@ export class PluginPreflight {
   }
 }
 
-export function mountPluginPreflight(ctx, hub) {
+export function mountPluginPreflight(ctx, hub, progress) {
   if (process.env.OMD_PLUGIN_PREFLIGHT === '1') return;
   ctx.inject(['pluginManager', 'profileContext', 'webServer', 'connection'], scope => {
     const profile = scope.profileContext;
@@ -248,6 +250,9 @@ export function mountPluginPreflight(ctx, hub) {
       getEntryStates: async () => (await scope.pluginManager.listPlugins()).filter(row => typeof row.patchId === 'string' && !row.enabled)
         .map(row => ({ id: row.patchId, disabled: true })),
     }).bind();
+    scope.effect(() => service.subscribe(state => {
+      if (state.requestId && ['decision', 'applying'].includes(state.phase)) progress?.(state);
+    }));
     const streams = new Set();
     scope.effect(() => {
       void sweep(service.directory).catch(error => scope.logger.warn('预检临时目录清理未完成：%s', error.message));

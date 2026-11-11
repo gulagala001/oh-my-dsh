@@ -188,3 +188,21 @@ test('real automatic failures remain visible with correct automatic attribution'
   assert.equal(f.store.memory('session:session'), null);
   assert.deepEqual(f.events.map(event => [event.status, event.data.auto]), [['error', true]]);
 });
+
+test('automatic scheduling reuses failed work and rejects a conflicting resume', async t => {
+  const f = await fixture(t), job = f.enqueue(true);
+  for (let i = 0; i < 4; i++) {
+    f.store.updateJob(job.id, {state:'failed', error:'offline', done:2});
+    const retry = f.enqueue(true);
+    assert.equal(retry.id, job.id); assert.equal(retry.done, 2);
+  }
+  assert.equal(f.store.jobs().length, 1);
+  const paused = f.service.pause(job.id), other = f.enqueue(false);
+  assert.notEqual(other.id, paused.id);
+  assert.throws(() => f.service.resume(paused.id), /活动/);
+  assert.equal(f.store.job(paused.id).state, 'paused');
+  f.store.setMeta('autoNotice', '自动 Dream 等待固定后台模型');
+  f.store.setMeta('lastError', 'read failure');
+  f.config.dreamAutoEnabled = false;
+  assert.equal(f.service.status().notice, 'read failure');
+});

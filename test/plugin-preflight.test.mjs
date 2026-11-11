@@ -375,3 +375,15 @@ test('native update rechecks installed identity after a queued or asynchronous p
   assert.equal(result.step, 'check'); assert.equal(result.result.application, 'failed');
   assert.deepEqual(f.calls, []); assert.equal(f.installed(), '1.5.0');
 });
+
+test('cancelled entry and bundle enable both retain the host enable stage', async t => {
+  const f = await fixture(t, async () => {throw failure;});
+  for (const [method, id] of [['setBundleEnabled','fixture'], ['setPluginEnabled','include:one']]) {
+    const pending = f.manager[method](id, true);
+    await until(() => f.service.snapshot().phase === 'decision' && f.service.job?.target === id && f.service.job?.decision);
+    f.service.decide(f.service.job.id, 'cancel');
+    const value = await pending;
+    assert.deepEqual([value.stage, value.application, value.changed, value.target], ['enable','cancelled',false,id]);
+  }
+  assert.deepEqual(f.calls, []);
+});

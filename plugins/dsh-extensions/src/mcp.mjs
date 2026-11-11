@@ -142,7 +142,7 @@ export class Mcp {
           this.observeTools(); this.applyRestriction();
         }
       } catch (error) {
-        record.status = 'failed'; record.error = errorText(error);
+        record.startError = error; record.status = 'failed'; record.error = errorText(error);
         try {
           record.lifecycle?.stopping();
           await record.fiber?.dispose(); await record.lifecycle?.close(); record.fiber = null;
@@ -171,7 +171,11 @@ export class Mcp {
       // Disposal cancels startup. Waiting for ready first can strand an
       // unanswered initialize request until the native request timeout.
       const results = await Promise.allSettled([record.ready, Promise.resolve().then(async () => {
-        await record.fiber?.dispose(); await record.fiber?.await();
+        await record.fiber?.dispose();
+        try { await record.fiber?.await(); } catch (error) {
+          await record.ready;
+          if (error !== record.startError) throw error;
+        }
       })]);
       const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
       try { await record.lifecycle?.close(); } catch (error) { errors.push(error); }
@@ -288,6 +292,7 @@ export class Mcp {
       const known = new Map((this.toolCache.get(server.name) ?? []).map(tool => [tool.name, tool]));
       for (const tool of visible) known.set(tool.name, tool);
       return { name: server.name, transport: server.transport ?? null, status, error: server.invalid ?? record?.error ?? null,
+        startError: record?.startError ? errorText(record.startError) : undefined,
         target: server.transport === 'stdio' ? [server.command, ...server.args].join(' ') : server.url ?? null,
         envKeys: Object.keys(server.env ?? {}), headerKeys: Object.keys(server.headers ?? {}), timeoutMs: server.timeoutMs ?? null,
         enabled: server.enabled, configured: this.servers.has(server.name), connectedAt: record?.connectedAt ?? null,

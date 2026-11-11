@@ -328,7 +328,8 @@ export function createPluginRuntime(options = {}) {
     args = authorized.args;
     signal?.throwIfAborted();
     onControlStart?.(authorized.target);
-    if (active.has(endpoint)) { revision++; activity = { endpoint, targetId: args.targetId ?? null, at: new Date().toISOString(), status: 'running' }; }
+    let operation;
+    if (active.has(endpoint)) { revision++; operation = activity = { endpoint, targetId: authorized.target?.id ?? args.targetId ?? null, at: new Date().toISOString(), status: 'running' }; }
     try {
       let result;
       if (endpoint === 'preview') return runtime.preview(args);
@@ -403,7 +404,7 @@ export function createPluginRuntime(options = {}) {
     } finally {
       acceptingCaptures = false;
       captures.clear();
-      if (active.has(endpoint)) { revision++; activity = { ...activity, status: 'settled', finishedAt: new Date().toISOString() }; }
+      if (operation && activity === operation) { revision++; activity = { ...operation, status: 'settled', finishedAt: new Date().toISOString() }; }
     }
   }
   return {

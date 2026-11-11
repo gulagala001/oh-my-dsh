@@ -95,7 +95,7 @@ async function applyRuntime(ctx, config) {
   const liveConfig = hub.getConfig;
   let importing = true;
   hub.getConfig = () => ({ ...liveConfig(), ...(importing ? legacy.current() : {}) });
-  hub.persona = acquirePersona(ctx, { legacy: hub });
+  hub.persona = await acquirePersona(ctx, { legacy: hub });
   legacy.persist(() => { importing = false; });
   ctx.effect(() => { void hub.dream.start().catch(error => hub.dream.notice(error)); });
   hub.budgets = new TaskBudgets(hub);
@@ -162,7 +162,7 @@ async function applyRuntime(ctx, config) {
   mountComponents(ctx, hub.components);
   ctx.effect(() => { hub.components.start(); return () => hub.components.close(); });
   mountRecommendedPlugins(ctx, hub);
-  mountPluginPreflight(ctx, hub);
+  mountPluginPreflight(ctx, hub, versionUpdater.progress);
   installForkProvenance(ctx, hub.store);
   const isX = session => isOmdPreset(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));

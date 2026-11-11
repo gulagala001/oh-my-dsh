@@ -102,7 +102,7 @@ for (const scenario of ['missing','unconfirmed','incomplete','oversized']) test(
   await f.pipeline.prepare(f.agent,true);
   assert.equal(f.calls.length,1);assert.equal(f.calls[0].tools[0].name,'prepare_segment');
   assert.ok(measureRequest(f.calls[0]).tokens<=f.cfg.prepareInputTokens);
-  assert.equal(f.state.records.length,1);assert.equal(f.pipeline.cachedPreparation.waiting.size,0);
+  assert.equal(f.state.records.length,1);
 });
 
 test('source paths exclude recall/task payloads, and generated tool calls never execute or publish', async t => {

@@ -1,3 +1,4 @@
+import { DatabaseSync } from 'node:sqlite';
 import {uploadFiles} from '../browser/upload-files.mjs';
 import { randomUUID, timingSafeEqual, createHash } from 'node:crypto';
 import { mkdir, readFile, appendFile, writeFile, rename, open, unlink } from 'node:fs/promises';
@@ -15,10 +16,20 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
   if (!dataDir) throw failure('INVALID_DATA_DIR', 'A private dataDir is required for persistent download events.');
   const dir = resolve(dataDir), eventsFile = join(dir, 'extension-downloads.jsonl');
   const sessions = new Map(), pending = new Map(), downloads = new Map(), eventIds = new Set();
-  const retired = new Set(), retirementsFile = join(dir, 'extension-retirements.json');
+  let history;
+  const retirementsFile = join(dir, 'extension-retirements.json');
   const releaseLeases = new Map(), releaseLeasesFile = join(dir, 'extension-release-leases.json');
   const digest = value => createHash('sha256').update(value).digest('hex');
   const connectionKey = ({ instanceId, browserInstanceId, epoch }) => JSON.stringify([instanceId, browserInstanceId, epoch]);
+  // Retain exact anti-replay evidence in an indexed, fixed-size digest row.
+  // Outstanding leases still carry the full owner and credential until confirmed.
+  const address = key => Buffer.from(digest(key), 'hex');
+  const proofDigest = lease => Buffer.from(digest(JSON.stringify([lease.origin, lease.credentialDigest, lease.ticketDigest])), 'hex');
+  const retired = { has: key => Boolean(history.prepare('SELECT 1 FROM retired WHERE id=?').get(address(key))) };
+  function rememberRetired(key, lease) {
+    history.prepare('INSERT INTO retired VALUES(?,?) ON CONFLICT(id) DO UPDATE SET proof=coalesce(retired.proof,excluded.proof)')
+      .run(address(key), lease ? proofDigest(lease) : null);
+  }
   let retirements = Promise.resolve();
   const deliveryStore = createDeliveryStore(dir), importing = new Map(), importErrors = new Map();
   function retainDownload(download) {
@@ -35,10 +46,17 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
   const ready = (async () => {
     await deliveryStore;
     await mkdir(dir, { recursive: true, mode: 0o700 });
-    try { for (const key of JSON.parse(await readFile(retirementsFile, 'utf8'))) retired.add(key); }
-    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    history = new DatabaseSync(join(dir, 'extension-release-history.sqlite'));
+    history.exec('CREATE TABLE IF NOT EXISTS retired(id BLOB PRIMARY KEY, proof BLOB) WITHOUT ROWID');
     try { for (const lease of JSON.parse(await readFile(releaseLeasesFile, 'utf8'))) releaseLeases.set(lease.key, lease); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
+    try {
+      for (const key of JSON.parse(await readFile(retirementsFile, 'utf8'))) rememberRetired(key, releaseLeases.get(key));
+      await unlink(retirementsFile);
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    let compacted = false;
+    for (const key of releaseLeases.keys()) if (retired.has(key)) { releaseLeases.delete(key); compacted = true; }
+    if (compacted) await persistPrivate(releaseLeasesFile, [...releaseLeases.values()]);
     let text = '';
     try { text = await readFile(eventsFile, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
     needsSeparator = !!text && !text.endsWith('\n');
@@ -66,11 +84,16 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
   }
   async function retireNow(session) {
     const key = connectionKey(session);
-    if (retired.has(key)) return;
-    await persistPrivate(retirementsFile, [...retired, key]);
-    retired.add(key);
+    const lease = releaseLeases.get(key);
+    rememberRetired(key, lease);
+    releaseLeases.delete(key);
   }
-  function retire(session) { return retirementWork(() => retireNow(session)); }
+  function retire(session) {
+    return retirementWork(async () => {
+      await retireNow(session);
+      await persistPrivate(releaseLeasesFile, [...releaseLeases.values()]);
+    });
+  }
   async function acceptConnection(session, value, authentication) {
     return retirementWork(async () => {
       if (closed || closing) throw failure('CLOSING', 'Extension backend is shutting down.');
@@ -79,8 +102,10 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       // A fresh credential or another extension installation cannot certify an old owner.
       for (const receipt of receipts) {
         if (!receipt || typeof receipt !== 'object' || receipt.instanceId !== session.instanceId || typeof receipt.ticket !== 'string' || receipt.ticket.length > 256) throw failure('INVALID_RELEASE_RECEIPT', 'Release receipt ownership is invalid.');
-        const lease = releaseLeases.get(connectionKey(receipt));
-        if (!lease || lease.origin !== session.origin || lease.credentialDigest !== authentication.credentialDigest || lease.ticketDigest !== digest(receipt.ticket)) throw failure('INVALID_RELEASE_RECEIPT', 'Release receipt does not match its original connection and credential.');
+        const key = connectionKey(receipt), lease = releaseLeases.get(key);
+        const supplied = {origin:session.origin, credentialDigest:authentication.credentialDigest, ticketDigest:digest(receipt.ticket)};
+        const proof = lease ? proofDigest(lease) : history.prepare('SELECT proof FROM retired WHERE id=?').get(address(key))?.proof;
+        if (!proof || !timingSafeEqual(proof, proofDigest(supplied))) throw failure('INVALID_RELEASE_RECEIPT', 'Release receipt does not match its original connection and credential.');
       }
       const key = connectionKey(session);
       if (retired.has(key) || releaseLeases.has(key)) throw failure('STALE_CONNECTION', 'Use a fresh connection epoch.');
@@ -95,6 +120,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       await persistPrivate(releaseLeasesFile, [...releaseLeases.values(), lease]);
       releaseLeases.set(key, lease);
       for (const existing of sessions.values()) if (existing.instanceId === session.instanceId) expire(existing, 'Extension reconnected.');
+      session.acknowledgedReleases = [...new Set(acknowledgedReleases)];
       sessions.set(session.sessionId, session); pairing?.connected(session.instanceId);
       return { releaseTicket, acknowledgedReleases: [...new Set(acknowledgedReleases)] };
     });
@@ -107,8 +133,9 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     }
     session.waiter?.({ commands: [], disconnected: true }); session.waiter = null;
   }
+  const live = session => Date.now() - session.lastSeen <= 25000;
   const sweep = setInterval(() => {
-    for (const session of sessions.values()) if (!closing && !session.releaseError && !session.targetReleaseErrors?.size && Date.now() - session.lastSeen > 25000) expire(session, 'Extension heartbeat expired; reconnect and select again.');
+    for (const session of sessions.values()) if (!closing && !session.releaseError && !session.targetReleaseErrors?.size && !live(session)) expire(session, 'Extension heartbeat expired; reconnect and select again.');
   }, 5000);
   sweep.unref();
 
@@ -177,7 +204,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     const identity = parseTarget(value);
     if (retired.has(targetId(identity))) throw failure('TARGET_CLOSED', 'This reviewed browser target has been retired.');
     const session = [...sessions.values()].find(s => s.instanceId === identity.instanceId && s.browserInstanceId === identity.browserInstanceId && s.epoch === identity.epoch);
-    if (!session) throw failure('STALE_TARGET', 'Browser connection changed; listTargets() and select again.');
+    if (!session || !live(session)) throw failure('STALE_TARGET', 'Browser connection changed; listTargets() and select again.');
     return { session, identity };
   }
   function cancelControlRequests(session, error, scope) {
@@ -193,7 +220,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     method === 'act' && (['domSnapshot','getDOM','hitTest'].includes(params.action?.type) ||
       params.action?.type === 'locator' && ['count','innerText','textContent','allTextContents','isVisible','isEnabled','getAttribute','waitFor'].includes(params.action.method));
   function request(session, method, params = {}, timeout = requestTimeoutMs, monitoring = false) {
-    if (closed || !sessions.has(session.sessionId)) return Promise.reject(failure('DISCONNECTED', 'Extension is disconnected.'));
+    if (closed || !sessions.has(session.sessionId) || !live(session)) return Promise.reject(failure('DISCONNECTED', 'Extension is disconnected.'));
     if (closing && !['release', 'releaseReviewed', 'disconnect'].includes(method)) return Promise.reject(failure('CLOSING', 'Extension backend is shutting down; retry close before using control.'));
     const scope = params.identity ? String(params.identity.tabId) : undefined;
     const blocked = session.releaseError ?? session.targetReleaseErrors?.get(scope);
@@ -296,7 +323,18 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         send(res, 200, { protocol: PROTOCOL_VERSION, sessionId: session.sessionId, pollIntervalMs: 500, ...releases }, origin); return;
       }
       const session = sessions.get(value.sessionId);
-      if (!session || session.origin !== origin || session.credentialDigest !== authentication.credentialDigest || session.epoch !== value.epoch || authentication.pair && session.instanceId !== value.instanceId) throw failure('STALE_CONNECTION', 'The connection epoch expired; reconnect and observe the browser again.');
+      if (!session || !live(session) || session.origin !== origin || session.credentialDigest !== authentication.credentialDigest || session.epoch !== value.epoch || authentication.pair && session.instanceId !== value.instanceId) throw failure('STALE_CONNECTION', 'The connection epoch expired; reconnect and observe the browser again.');
+      // A request bearing this new sessionId proves the connect reply arrived.
+      // Repeated tickets are allowed only until their acknowledgement is delivered.
+      if (session.acknowledgedReleases?.length) {
+        const confirm = history.prepare('UPDATE retired SET proof=NULL WHERE id=?');
+        history.exec('BEGIN');
+        try {
+          for (const key of session.acknowledgedReleases) confirm.run(address(key));
+          history.exec('COMMIT');
+          session.acknowledgedReleases = [];
+        } catch (error) { history.exec('ROLLBACK'); throw error; }
+      }
       session.lastSeen = Date.now();
       if (routeName === 'poll') {
         const ack = await persistEvents(session, value.events);
@@ -358,17 +396,16 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       const identities = targets.map(target => ({ identity: parseTarget(target), id: targetId(parseTarget(target)) }));
       return retirementWork(async () => {
         if (closed || closing) throw failure('CLOSING', 'Extension backend is shutting down.');
-        for (const {identity} of identities) if ([...sessions.values()].some(session => session.instanceId === identity.instanceId && session.browserInstanceId === identity.browserInstanceId)) throw failure('BROWSER_STILL_CONNECTED', 'This browser instance is connected; disconnect and release it normally.');
+        for (const {identity} of identities) if ([...sessions.values()].some(session => live(session) && session.instanceId === identity.instanceId && session.browserInstanceId === identity.browserInstanceId)) throw failure('BROWSER_STILL_CONNECTED', 'This browser instance is connected; disconnect and release it normally.');
         // A settings confirmation covers the reviewed documents only. Protocol
         // release tickets still cover an entire authenticated connection epoch.
         const ids = identities.map(value => value.id);
-        await persistPrivate(retirementsFile, [...new Set([...retired, ...ids])]);
-        for (const id of ids) retired.add(id);
+        for (const id of ids) rememberRetired(id);
         return { released: true, retiredTargetIds: [...new Set(identities.map(value => value.id))], confirmation: 'human-confirmed-browser-closed' };
       });
     },
     connections() {
-      return [...sessions.values()].map(({ instanceId, browserInstanceId, epoch, label, lastSeen, origin }) => ({
+      return [...sessions.values()].filter(live).map(({ instanceId, browserInstanceId, epoch, label, lastSeen, origin }) => ({
         instanceId, browserInstanceId, epoch, label, lastSeen, extensionId: new URL(origin).hostname,
       }));
     },
@@ -405,7 +442,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
     },
     async listTargets() {
       await ready;
-      const inventories = await Promise.all([...sessions.values()].map(async session => {
+      const inventories = await Promise.all([...sessions.values()].filter(live).map(async session => {
         const tabs = await request(session, 'listTargets');
         return tabs.map(tab => ({ ...tab, kind: 'tab', backend: 'extension', browserId: `extension:${session.instanceId}`,
           id: targetId({ ...session, ...tab }), identity: { instanceId: session.instanceId, browserInstanceId: session.browserInstanceId,
@@ -535,7 +572,10 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
       }
       return records;
     },
-    getDiagnostics() { return { connectedBrowsers: sessions.size, pendingCommands: pending.size, routeIntegrationRequired: !!server && !mounted }; },
+    getDiagnostics() { return { connectedBrowsers: backend.connections().length, offlineReleaseErrors: [...sessions.values()].filter(s =>
+      !live(s) && (s.releaseError || s.targetReleaseErrors?.size)).map(s => ({
+        instanceId:s.instanceId, epoch:s.epoch, error:s.releaseError?.message, targets:[...(s.targetReleaseErrors?.keys() ?? [])]
+      })), pendingCommands: pending.size, routeIntegrationRequired: !!server && !mounted }; },
     close() {
       if (closed) return Promise.resolve();
       if (closeWork) return closeWork;
@@ -553,7 +593,7 @@ export function createExtensionBackend({ server, token, dataDir, pairing, reques
         }
         await persistence; await retirements; await Promise.allSettled([...importing.values()]); await (await deliveryStore).flush();
         if (errors.length) throw new ExtensionError('RELEASE_FAILED', 'Some extension targets could not acknowledge release.', { errors });
-        closed = true; clearInterval(sweep); if (mounted) server.off('request', listener);
+        closed = true; history.close(); clearInterval(sweep); if (mounted) server.off('request', listener);
       })().finally(() => { closeWork = undefined; });
       return closeWork;
     },

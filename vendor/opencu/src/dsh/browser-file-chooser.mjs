@@ -31,6 +31,7 @@ export function createFileChooserWait(context,options) {
           if (state.status === 'ready') {
             handedOff = true;
             return Object.freeze({
+              cancel: () => context.track(() => command('fileChooserCancel')),
               isMultiple: () => state.multiple,
               setFiles(files,value) {
                 const paths = filePaths(files,{allowString:true}), {timeoutMs} = options(value,['timeoutMs']);

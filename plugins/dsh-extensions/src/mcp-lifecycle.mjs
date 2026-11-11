@@ -56,6 +56,14 @@ export async function observeNativeMcp(changed, { closeWaitMs = 5500 } = {}) {
           entry.closed = true; live.delete(entry); receipt.resolve();
         }
       };
+      // Negotiated stdio can use a disposable probe before starting the supplied transport.
+      // Only a never-started transport (or a failed stdio spawn without a PID) can give a silent close receipt.
+      const start = transport.start;
+      if (typeof start === 'function') transport.start = async function (...args) {
+        entry.startAttempted = true;
+        try { const result = await start.apply(this, args); entry.started = true; return result; }
+        catch (error) { entry.noProcess = ['ENOENT', 'EACCES'].includes(error.code) && 'pid' in this && this.pid == null; throw error; }
+      };
       const priorClose = client.onclose, priorError = client.onerror, transportClose = transport.onclose;
       client.onerror = error => { publish(entry, 'unconfirmed', error.message); return priorError?.call(client, error); };
       const request = client.request;
@@ -72,8 +80,13 @@ export async function observeNativeMcp(changed, { closeWaitMs = 5500 } = {}) {
       // Closing that probe is not a disconnect of the final Client transport.
       transport.onclose = (...args) => { entry.initialClosed = true; settled(); return transportClose?.apply(transport, args); };
       try { const value = await connect(); if (!entry.closed && client.transport) publish(entry, 'connected'); return value; }
-      catch (error) { publish(entry, 'disconnected', error.message); throw error; }
-      finally { entry.connecting = false; settled(); }
+      catch (error) {
+        const original = !client.transport || client.transport === transport;
+        entry.neverOpened = original && (entry.noProcess || typeof start === 'function' && !entry.startAttempted && !transport.pid && !transport.sessionId);
+        publish(entry, 'disconnected', error.message);
+        throw error;
+      }
+      finally { if (typeof start === 'function') transport.start = start; entry.connecting = false; settled(); }
     },
     module: { ...native, async apply(ctx, config) { return current.run(owner, () => native.apply(ctx, config)); } },
     get connected() { return Boolean(latest && latest.status === 'connected' && !latest.closed && !latest.connecting && latest.client.transport); },
@@ -86,7 +99,12 @@ export async function observeNativeMcp(changed, { closeWaitMs = 5500 } = {}) {
         try {
           const cleanup = (async () => {
             await entry.client.close();
-            if (!entry.client.transport && !entry.initialClosed) await entry.transport.close();
+            if (!entry.initialClosed && (!entry.client.transport || entry.neverOpened && entry.client.transport === entry.transport)) {
+              await entry.transport.close();
+              if (!entry.connecting && entry.neverOpened && !entry.started) {
+                entry.closed = true; live.delete(entry); entry.receipt.resolve();
+              }
+            }
             await entry.receipt.promise;
           })();
           await Promise.race([cleanup, new Promise((_, reject) => {

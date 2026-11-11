@@ -71,6 +71,7 @@ export async function handleDreamApi({hub,ctx,req,res,url,send,readBody}){
     const next=contextConfig({...hub.config(),...input});
     if(Boolean(next.dreamProvider)!==Boolean(next.dreamModel))throw Error('固定后台提供方与模型需要一起填写，或一起留空');
     await ctx.settings.update('oh-my-dsh',input);
+    if (!next.dreamAutoEnabled) hub.dream.store.setMeta('autoNotice',null);
     hub.dream.store.setMeta('nextAutoAt',0);void hub.dream.tick().catch(e=>hub.dream.notice(e));
     send(res,200,{...hub.dream.status(id).settings,folders:folderPayload()});return true;
   }

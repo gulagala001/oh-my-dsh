@@ -7452,6 +7452,7 @@ var PtcWorkflowEngine = class extends import_dsh_workflow3.WorkflowEngine {
     const subagents = runCtx.subagents;
     const hub = workflowSupport(runCtx, request.parent.session);
     const budget = hub?.workflowBudget?.capture(request.parent.session);
+    const runtime = runCtx.get("dshWorkflow");
     const run = new PtcWorkflowRun(
       runCtx,
       subagents,
@@ -7481,11 +7482,13 @@ var PtcWorkflowEngine = class extends import_dsh_workflow3.WorkflowEngine {
         root: this.config.stateDirectory ?? (0, import_node_path5.join)(hub?.store.dir ?? (0, import_node_path5.join)(process.env.DSH_HOME ?? (0, import_node_path5.join)((0, import_node_os.homedir)(), ".dsh"), "oh-my-dsh"), "workflows"),
         ...request.resumeFromRunId === void 0 ? {} : { resumeFromRunId: request.resumeFromRunId },
         budget: budget?.snapshot ?? (() => ({ total: null, spent: 0 })),
-        ...budget?.owner === void 0 ? {} : { budgetOwner: budget.owner },
+        ...budget?.owner === void 0 ? {} : { budgetOwner: { ...budget.owner, runId: id } },
         loadWorkflow: (reference, signal) => this.loadSource(reference, request.parent, signal),
         childType: (type) => workflowAgentType(this.ctx, type)
       } : void 0
     );
+    const release = hub && budget?.owner && runtime?.retain?.(id, hub);
+    if (release) void run.result.then(release, release);
     this.emitWorkflowEvent("workflow/start", info);
     void run.result.then((settled) => {
       this.emitWorkflowEvent("workflow/end", info, {

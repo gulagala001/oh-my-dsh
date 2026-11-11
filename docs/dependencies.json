@@ -1,6 +1,6 @@
 {
   "lockFiles": {
-    "pnpm-lock.yaml": "9b24a08bf45b1475f9bc9e14d02af39453797dc509ca7092a92f38ca47a26bdb",
+    "pnpm-lock.yaml": "eb37ef966acae04821d6633c53726d8bf9e7e73479e4175cf68754de24c234bf",
     "vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml": "df6e43a1bdc827729275c7e65345ed7c84a671eae787197f3a99c468a14b9113",
     "vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml": "98aa09fc8a2abd6789fe7b4c18dc12cec0094119d738a0a3f56a186ef1bd316e",
     "vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml": "77293248eafc9e6fc61e45b94686bc1e991a285792a174c82aea2e8d1a621f4c"

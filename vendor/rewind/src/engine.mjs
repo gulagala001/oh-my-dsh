@@ -204,11 +204,29 @@ export class RewindEngine {
       prepareReplay(s,context,this.projections());
       const plan={id:randomUUID(),sessionId:id,revision:st.revision,seq:s.seq,expires:Date.now()+5*60000,undo,target,root,changes,context,
         metadata:undo?base.metadata:this.metadata(s,boundary),ranges:undo?base.ranges:[...st.hiddenRanges,{start:boundary,end:s.seq-1}],reason};
-      this.plans.set(plan.id,plan);await this.maintenance?.pin(plan);
+      await this.maintenance?.pin(plan);
+      this.plans.set(plan.id,plan);
+      this.schedulePlanExpiry();
       for(const [key,p]of this.plans)if(p.expires<Date.now()){this.plans.delete(key);await this.maintenance?.unpin(key);}
       while(this.plans.size>16){const key=this.plans.keys().next().value;this.plans.delete(key);await this.maintenance?.unpin(key);}
       return {workspace:root,planId:plan.id,revision:st.revision,target,files:changes.map(c=>({path:c.path,kind:!c.before?'delete':!c.after?'restore':'modify'})),warnings,canApply:!reason,reason,conversationOnly:!undo&&(!checkpoint||!!checkpoint.error)};
     });
+  }
+  schedulePlanExpiry(){
+    clearTimeout(this.planTimer);
+    if(!this.plans.size)return;
+    const expires=Math.min(...[...this.plans.values()].map(plan=>plan.expires));
+    this.planTimer=setTimeout(()=>{
+      for(const [id,plan] of this.plans)if(plan.expires<=Date.now()){this.plans.delete(id);void this.maintenance?.unpin(id);}
+      this.schedulePlanExpiry();
+    },Math.max(0,expires-Date.now()));
+    this.planTimer.unref?.();
+  }
+  abandon(agent,reason){
+    const op=this.operations.get(agent.id);
+    if(!op||op.agent!==agent||op.consumed)return;
+    this.operations.delete(agent.id);clearTimeout(op.claimTimer);
+    try{agent.inbox.remove?.(op.marker);}finally{op.reject(Error(reason));void this.maintenance?.idle();}
   }
   async execute(id,planId,draft){return this.launch(id,{planId,draft});}
   async launch(id,request){
@@ -221,20 +239,42 @@ export class RewindEngine {
       const s=this.session(id),plan=this.plans.get(request.planId);
       if(!request.recovery&&(!plan||plan.sessionId!==id||plan.expires<Date.now()||plan.seq!==s.seq))throw Error('确认已过期或会话已变化，请重新检查');
       const marker=createUserMessage({source:{kind:'dsh-rewind-plus'},content:[{type:'text',text:'Rewind maintenance'}]});
-      this.operations.set(id,{...request,undo:plan?.undo,marker:marker.id,start:s.seq,queue:new Map([...a.inbox.nextTurn.map(m=>[m.id,'next-turn']),...a.inbox.nextStep.map(m=>[m.id,'next-step'])]),resolve,reject});
-      a.steer(marker);
+      if(this.operations.has(id))throw Error('撤回正在执行');
+      const operation={...request,agent:a,undo:plan?.undo,marker:marker.id,start:s.seq,queue:new Map([...a.inbox.nextTurn.map(m=>[m.id,'next-turn']),...a.inbox.nextStep.map(m=>[m.id,'next-step'])]),resolve,reject};
+      this.operations.set(id,operation);
+      operation.claimTimer=setTimeout(()=>this.abandon(a,'撤回维护请求未被认领，请重新检查'),30000);
+      operation.claimTimer.unref?.();
+      try{a.steer(marker);}catch(error){this.abandon(a,error.message);throw error;}
     });
     return done;
   }
   async preStep(payload,next){
-    const {agent,messages,turn}=payload;let op=this.operations.get(agent.id);
+    const {agent,turn}=payload;let op=this.operations.get(agent.id);
+    const stale=m=>m.source?.kind==='dsh-rewind-plus'&&m.id!==op?.marker;
+    const messages=payload.messages.filter(m=>!stale(m));
+    if(messages.length!==payload.messages.length){
+      if(!messages.length)return {kind:'reject'};
+      const downstream=next;
+      next=async()=>{
+        const result=await downstream();
+        return result.kind==='enter'?{...result,messages:result.messages.filter(m=>!stale(m))}:result;
+      };
+    }
+    if(op?.marker&&!op.consumed){
+      if(op.agent!==agent||!messages.some(m=>m.id===op.marker)){
+        if(op.agent!==agent||![...agent.inbox.nextTurn,...agent.inbox.nextStep].some(m=>m.id===op.marker))
+          this.abandon(op.agent,'撤回维护请求已丢弃');
+        return next();
+      }
+      op.consumed=true;op.turn=turn;clearTimeout(op.claimTimer);
+    }
     let st;try{st=await this.store.load(agent.id);}catch(error){
       if(op){op.error=error;op.consumed=true;op.turn=turn;return {kind:'reject'};}
       this.backupGap(agent,error);return next();
     }
     if(!op&&st.journal){op={recovery:true,start:agent.session.seq,queue:new Map(),resolve:()=>{},reject:()=>{}};this.operations.set(agent.id,op);}
-    if(!op||op.consumed){try{await this.checkpoint(agent,messages,payload.signal);}catch(error){if(payload.signal?.aborted||st.journal)throw error;this.backupGap(agent,error);}return next();}
-    op.consumed=true;op.turn=turn;
+    if(!op||op.consumed&&op.turn!==turn||op.executing){try{await this.checkpoint(agent,messages,payload.signal);}catch(error){if(payload.signal?.aborted||st.journal)throw error;this.backupGap(agent,error);}return next();}
+    op.consumed=true;op.executing=true;op.turn=turn;
     // Claiming maintenance must never consume an already queued user prompt.
     for(const m of [...messages].reverse())if(m.id!==op.marker)agent.inbox.prepend(op.queue.get(m.id)||'next-turn',m);
     try{
@@ -295,10 +335,14 @@ export class RewindEngine {
     if(!locked){if(this.waves.has(j.root)||this.busy.has(j.root))throw Error('工作区正在执行操作，请先停止后再恢复');const release=await lease(join(this.store.root,'workspace-locks',hash(j.root)+'.json'));this.busy.add(j.root);try{return await this.recover(s,st,activeTurn,true);}finally{this.busy.delete(j.root);await release();}}
     const committed=eventsOf(s).some(e=>e.type==='plugin:dsh-rewind-plus/commit'&&e.data.id===j.id);
     if(committed){await this.ctx.sessions.flush(s);j.after.journal=null;await this.store.save(j.after);return;}
-    await this.files.recover(j.root,j.changes,'after');
-    const start=j.nativeStart,replay=prepareReplay(s,j.context,this.projections(),activeTurn);appendPrepared(s,replay);
+    const recovered=eventsOf(s).findLast(e=>e.type==='plugin:dsh-rewind-plus/recovered'&&e.data.id===j.id);
+    if(!recovered){
+      await this.files.recover(j.root,j.changes,'after');
+      const replay=prepareReplay(s,j.context,this.projections(),activeTurn);appendPrepared(s,replay);
     if(j.metadata.cwd)s.append('working-directory/change',{cwd:j.metadata.cwd});s.append('plan/mode',{active:j.metadata.plan});
-    const internal={start,end:s.seq-1};st.hiddenRanges=mergeRanges([...st.hiddenRanges,internal]);st.internalRanges=mergeRanges([...(st.internalRanges||[]),internal]);await this.ctx.sessions.flush(s);st.journal=null;await this.store.save(st);
+      appendPluginRecord(s,'plugin:dsh-rewind-plus/recovered',{id:j.id});
+    }
+    const internal={start:j.nativeStart,end:recovered?.seq??s.seq-1};st.hiddenRanges=mergeRanges([...st.hiddenRanges,internal]);st.internalRanges=mergeRanges([...(st.internalRanges||[]),internal]);await this.ctx.sessions.flush(s);st.journal=null;await this.store.save(st);
   }
 }
 function previousDraft(op){return op?.draft || {text:'',attachments:[]};}

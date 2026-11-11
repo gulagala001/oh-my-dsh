@@ -3,7 +3,7 @@ import { api, qs, usePoll, Card, Stat, Tag, Select, Search, Table, Pager, Empty,
 import { toneOf, k, clock, ago, statusOf, eventKindLabel, EVENT_KINDS, savedOf } from './model.mjs';
 
 const SIZE = 20;
-const STATUSES = [['all', '全部状态'], ['success', '成功'], ['error', '失败'], ['skip', '保留'], ['stale', '已过期']];
+const STATUSES = [['all', '全部状态'], ['success', '成功'], ['error', '失败'], ['skip', '保留'], ['stale', '已过期'], ['local', '本地预检'], ['recovered', '已恢复']];
 const CHOICE = { keep: '保留', detail: '详细', brief: '简略' };
 
 export function EventsSection({ sessionId, visible, range, period, params }) {

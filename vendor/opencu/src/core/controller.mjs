@@ -286,7 +286,7 @@ export async function createController({dataDir, browser, native} = {}) {
     if (pending.length && !releaseErrors.length) releaseErrors = [{backend:'browser',released:false,
       failures:pending.map(item => ({targetId:item.id,code:'STALE_TARGET',message:'This saved browser target still requires its own release receipt'}))}];
     releasePending = releaseErrors.length > 0;
-    recoveryIsolated = true;
+    recoveryIsolated = releasePending;
     await persist(); checkOperation(operationEpoch);
     return {release:{released:true},releasedTargetIds};
   }

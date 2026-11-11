@@ -159,6 +159,11 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
   if (path === '/context/prepare' || path === '/context/coordinate') {
     if (req.method !== 'POST') { send(res, 405, { error: '请使用 POST' }); return true; }
     if (!agent) throw new Error('先继续一次会话以建立后台执行路由');
+    const kind = path.endsWith('/coordinate') ? 'coordinate' : hub.context.mode(agent.session) === 'adaptive' ? 'adaptive' : 'prepare';
+    if (hub.context.jobs.has(agent.session.id + ':' + kind) || hub.context.manualSessions.has(agent.session.id) ||
+        kind === 'coordinate' && hub.context.jobs.has(agent.session.id + ':prepare')) {
+      send(res, 409, { queued: false, error: '当前后台操作仍在运行，请在结束后重新检查' }); return true;
+    }
     if (path.endsWith('/prepare')) void hub.context.prepare(agent, true);
     else void hub.context.coordinate(agent, true);
     send(res, 202, { queued: true }); return true;

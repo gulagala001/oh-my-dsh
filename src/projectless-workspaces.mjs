@@ -1,7 +1,10 @@
 import fs from 'node:fs/promises';
 import { constants } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+
+import { publishWorkspace } from './workspace-publish.mjs';
 
 const queues = new Map();
 const deviceName = /^(con|prn|aux|nul|clock\$|conin\$|conout\$|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i;
@@ -82,6 +85,24 @@ async function writeJson(file, data, exclusive = false) {
 }
 
 async function withLock(storeDir, run) {
+  // SQLite owns the inter-process lock, including release on process death.
+  // Keep the previous pid lock protocol inside it for older running hosts.
+  const db = new DatabaseSync(path.join(storeDir, 'allocation.sqlite'));
+  try {
+    const deadline = Date.now() + 10_000;
+    while (true) {
+      try { db.exec('BEGIN IMMEDIATE'); break; }
+      catch (error) {
+        if (error.errcode !== 5) throw error;
+        if (Date.now() >= deadline) throw fail('workspace allocation is busy; retry the same requestId');
+        await pause(20);
+      }
+    }
+    return await withLegacyLock(storeDir, run);
+  } finally { db.close(); }
+}
+
+async function withLegacyLock(storeDir, run) {
   const lockFile = path.join(storeDir, 'allocation.lock');
   const token = randomUUID();
   const deadline = Date.now() + 10_000;
@@ -145,12 +166,28 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
     return record;
   }
 
+  async function directoryIdentity(cwd) {
+    const stat = await fs.lstat(cwd, { bigint: true }).catch(error => {
+      if (error.code !== 'ENOENT') throw error;
+    });
+    if (!stat) return null;
+    if (!stat.isDirectory() || stat.ino === 0n) return false;
+    return [stat.dev, stat.ino, stat.birthtimeNs].join('/');
+  }
+
+  async function matches(record, cwd) {
+    if (!await safeDirectory(path.dirname(cwd))) return false;
+    const identity = await directoryIdentity(cwd);
+    if (!identity) return false;
+    return identity === record.identity;
+  }
+
   async function resolve({ requestId } = {}) {
     const id = requestKey(requestId);
     const record = await load(id);
     if (!record || record.state !== 'ready') return null;
     const workspace = result(record, id);
-    return await safeDirectory(workspace.cwd) ? workspace : null;
+    return await matches(record, workspace.cwd) ? workspace : null;
   }
 
   async function owns(cwd, { requireDirectory = true, sessionId } = {}) {
@@ -180,7 +217,9 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
     if (claimedCwd !== cwd && (!validStoredName(record.workingName) || path.join(claimedCwd, record.workingName) !== cwd)) return false;
     // Saved allocation provenance remains private after its files are removed.
     // UI and file operations still require the original safe directory.
-    return requireDirectory ? await safeDirectory(cwd) : true;
+    if (!requireDirectory && (!record.identity || (await directoryIdentity(claimedCwd)) === null)) return true;
+    if (!await matches(record, claimedCwd)) return false;
+    return claimedCwd === cwd || await safeDirectory(cwd);
   }
 
   async function prepare({ requestId } = {}) {
@@ -193,13 +232,13 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
         let record = await load(id);
         if (record?.state === 'ready') {
           const workspace = result(record, id);
-          await safeDirectory(workspace.cwd, true);
-          return workspace;
+          if (await matches(record, workspace.cwd)) return workspace;
+          if (await directoryIdentity(workspace.cwd) !== null) {
+            throw fail(record.identity ? 'confirmed workspace directory was replaced' : 'existing workspace has no physical ownership record');
+          }
+          // A removed workspace may be recreated, but only by exclusive publication.
         }
-        // A pending record reserves a name, not ownership of a directory. A
-        // crash can occur on either side of mkdir, so recovery must use the
-        // same exclusive allocation as a first attempt, never adopt an entry.
-        const baseName = record?.name ?? '新聊天';
+        const baseName = '新聊天';
         let date = record?.date;
         if (!date) {
           const instant = now();
@@ -212,28 +251,54 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
         const releaseClaim = async file => {
           if ((await readJson(file))?.requestHash === requestHash) await fs.unlink(file);
         };
-        await safeDirectory(path.join(root, date), true);
-        for (let suffix = 1; suffix <= 100_000; suffix++) {
-          const name = suffix === 1 ? baseName : `${baseName}-${suffix}`;
-          const cwd = path.join(root, date, name);
-          const claimFile = path.join(claimsDir, `${hash(cwd)}.json`);
-          // Check before claiming so ordinary name collisions make no writes.
-          const occupied = await fs.lstat(cwd).catch((error) => { if (error.code === 'ENOENT') return null; throw error; });
-          if (occupied) { await releaseClaim(claimFile); continue; }
+        const parent = path.join(root, date);
+        await safeDirectory(parent, true);
+        const privateStage = path.join(storeDir, 'staging');
+        await safeDirectory(privateStage, true);
+        const sameVolume = (await fs.stat(privateStage)).dev === (await fs.stat(parent)).dev;
+        const stageParent = sameVolume ? privateStage : parent;
+        let stage, identity;
+        if (record?.state === 'pending' && record.stage && /^[.]omd-[0-9a-f-]{36}$/.test(record.stage)) {
+          const previous = result(record, id);
+          const claim = await readJson(path.join(claimsDir, hash(previous.cwd) + '.json'));
+          if (claim?.requestHash === requestHash && record.identity && await matches(record, previous.cwd)) {
+            await writeJson(fileFor(id), { ...record, state: 'ready', stage: undefined });
+            return previous;
+          }
+          const candidate = path.join(stageParent, record.stage);
+          if (record.identity && await directoryIdentity(candidate) === record.identity) {
+            stage = candidate;
+            identity = record.identity;
+          }
+        }
+        // The private prepared directory's identity is durable before its
+        // public name can exist. Never derive ownership from that public path.
+        const firstSuffix = Number(/^新聊天-(\d+)$/.exec(record?.name)?.[1]) || 1;
+        for (let suffix = firstSuffix; suffix <= 100_000; suffix++) {
+          const name = suffix === firstSuffix && record?.name ? record.name : suffix === 1 ? baseName : baseName + '-' + suffix;
+          const cwd = path.join(parent, name);
+          const claimFile = path.join(claimsDir, hash(cwd) + '.json');
+          if (await directoryIdentity(cwd) !== null) { await releaseClaim(claimFile); continue; }
           try { await writeJson(claimFile, { requestHash }, true); }
           catch (error) {
             if (error.code !== 'EEXIST') throw error;
             if ((await readJson(claimFile))?.requestHash !== requestHash) continue;
           }
-          record = { version: 1, requestId: id, root, date, name, state: 'pending' };
-          await writeJson(fileFor(id), record);
-          try { await fs.mkdir(cwd, { mode: 0o700 }); }
-          catch (error) {
-            if (error.code === 'EEXIST') { await releaseClaim(claimFile); continue; }
-            throw error;
+          if (!stage) {
+            const stageName = '.omd-' + randomUUID();
+            stage = path.join(stageParent, stageName);
+            record = { version: 1, requestId: id, root, date, name, state: 'pending', stage: stageName };
+            await writeJson(fileFor(id), record);
+            await fs.mkdir(stage, { mode: 0o700 });
+            identity = await directoryIdentity(stage);
+            if (!identity) throw fail('cannot identify prepared directory');
           }
-          await safeDirectory(cwd);
-          await writeJson(fileFor(id), { ...record, state: 'ready' });
+          record = { version: 1, requestId: id, root, date, name, state: 'pending', stage: path.basename(stage), identity };
+          await writeJson(fileFor(id), record);
+          if (await directoryIdentity(stage) !== identity) throw fail('prepared workspace directory was replaced');
+          if (!await publishWorkspace(stage, cwd)) { await releaseClaim(claimFile); continue; }
+          if (!await matches(record, cwd)) throw fail('published workspace directory was replaced');
+          await writeJson(fileFor(id), { ...record, stage: undefined, state: 'ready' });
           return result(record, id);
         }
         throw fail('too many workspaces with the same name');

@@ -183,3 +183,12 @@ test('a late reconciliation failure cannot repopulate a chat closed in the meant
   release.resolve(); await sending;
   assert.equal(f.entry.error, ''); assert.equal(f.entry.draft, ''); assert.deepEqual(f.entry.messages, []);
 });
+
+test('simultaneous stop and close return the original request boundary', async t => {
+  const {service} = fixture(); t.after(()=>service.dispose());
+  const {id} = service.open('main');
+  const work = service.send(id, 1, 'wait', () => {}); const ended = assert.rejects(work);
+  await new Promise(setImmediate);
+  const stopped = service.stop(id,1); await service.close(id);
+  assert.deepEqual(await stopped,{requestId:1,committed:false}); await ended;
+});

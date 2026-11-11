@@ -62,6 +62,9 @@ importers:
       jsdom:
         specifier: 26.1.0
         version: 26.1.0
+      koffi:
+        specifier: 3.1.1
+        version: 3.1.1
       mammoth:
         specifier: 1.13.0
         version: 1.13.0

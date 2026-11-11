@@ -4,9 +4,10 @@ import { deepFreeze } from '@deepseek-ai/dsh-util-values';
 export const TODOLIST_EVENT = 'todo/write';
 export const passedTest = task => (task.links ?? []).some(link => link.kind === 'test' && link.lastRun?.pass === true);
 export const textOnly = task => !passedTest(task) && (task.links ?? []).some(link => link.kind === 'text');
+export const taskStatus = task => task.done ? 'completed' : task.inProgress ? 'in_progress' : 'pending';
 export const todosOf = (tasks, verification = true) => tasks.map(task => ({
   content: verification && textOnly(task) ? `${task.title} ⚠ text-only` : task.title,
-  status: task.done ? 'completed' : 'pending',
+  status: taskStatus(task),
 }));
 
 const invalid = () => { throw Error('任务清单格式无效；原始会话记录已保留，未创建空清单'); };
@@ -40,7 +41,7 @@ export function normalizeTaskSnapshot(value) {
     if (!Array.isArray(value.todos) || value.todos.some(task => !object(task) || typeof task.content !== 'string'
       || !['pending', 'in_progress', 'completed'].includes(task.status))) invalid();
     tasks = value.todos.map((task, index) => ({ id: `T${index + 1}`, title: task.content,
-      done: task.status === 'completed', anchor: null, links: [], legacySource: task.source ?? '',
+      done: task.status === 'completed', ...(task.status === 'in_progress' ? { inProgress: true } : {}), anchor: null, links: [], legacySource: task.source ?? '',
       ...(task.verification ? { legacyVerification: structuredClone(task.verification) } : {}) }));
   }
   uniqueIds(excerpts); uniqueIds(tasks);

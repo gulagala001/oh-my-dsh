@@ -67,7 +67,7 @@ export function decodeCachedPreparation(result) {
 export class CachedPreparation {
   constructor(pipeline) {
     this.pipeline = pipeline;
-    this.active = new Map(); this.waiting = new Map(); this.enabled = false;
+    this.active = new Map(); this.enabled = false;
     this.snapshots = new RequestSnapshots(id => this.active.get(id)?.abort(Error('主会话模型路由已改变')),
       snapshot => pipeline.hub.images?.snapshotReason(snapshot), pipeline.adapter.measureRequest, pipeline.adapter.routeStamp);
     this.pending = this.snapshots.pending; this.requests = this.snapshots.requests;
@@ -89,40 +89,19 @@ export class CachedPreparation {
     return this.snapshots.confirm(session, route);
   }
   version(session) { return this.snapshots.version(session); }
-  defer(session, reason, resume) {
-    const p = this.pipeline, state = p.state(session);
-    if (resume) {
-      const previous = this.waiting.get(session.id);
-      this.waiting.set(session.id, previous ? { force: previous.force || resume.force, retry: previous.retry && resume.retry } : resume);
-    }
-    if (state.memoryCache?.waitingReason !== reason) {
-      state.memoryCache = { ...state.memoryCache, waitingReason: reason }; p.store.save(state);
-    }
-    return null;
-  }
-  clearWaiting(session) {
-    this.waiting.delete(session.id);
-    const p = this.pipeline, state = p.state(session);
-    if (state.memoryCache?.waitingReason) {
-      state.memoryCache.waitingReason = null; p.store.save(state);
-    }
-  }
-  build(agent, events, inputs, resume) {
+  build(agent, events, inputs) {
     if (!this.configure()) return null;
     const p = this.pipeline, session = agent.session;
-    let reason;
     for (const snapshot of this.snapshots.candidates(session)) {
       const built = this.buildRequest(session, snapshot, inputs);
-      if (!built.request) { reason ??= built.reason; continue; }
+      if (!built.request) continue;
       const sourceSignature = hash(imageSourceValue(events.map(summaryMessageReader(session))));
-      this.waiting.delete(session.id);
       const state = p.state(session);
       state.memoryCache = { ...state.memoryCache, waitingReason: null, cacheReadTokens: null }; p.store.save(state);
       const current = () => !p.closed && this.configure() && p.agents.get(session.id) === agent
         && this.snapshots.current(snapshot) && hash(imageSourceValue(events.map(summaryMessageReader(session)))) === sourceSignature;
       return { request: built.request, current };
     }
-    this.clearWaiting(session);
     return null;
   }
   buildRequest(session, snapshot, inputs) {
@@ -153,10 +132,10 @@ export class CachedPreparation {
     } finally { if (this.active.get(id) === controller) this.active.delete(id); }
   }
   drop(id) {
-    const ids = id ? [id] : new Set([...this.active.keys(), ...this.waiting.keys()]);
+    const ids = id ? [id] : [...this.active.keys()];
     for (const key of ids) {
       this.active.get(key)?.abort(Error('记忆缓存预处理快照已释放'));
-      this.active.delete(key); this.waiting.delete(key);
+      this.active.delete(key);
     }
     this.snapshots.drop(id);
   }

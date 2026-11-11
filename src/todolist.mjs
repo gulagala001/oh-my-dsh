@@ -1,7 +1,7 @@
 import { sourceName } from './message-source.mjs';
 import { appendShadow } from './context/shadow.mjs';
 import { TODO_META, TASK_CONTEXT_META, taskContextMeta, latestTaskContext, withoutRuntime, isTaskVerificationReminder } from './task-context.mjs';
-import { TODOLIST_EVENT, readTaskSnapshot, passedTest, textOnly, todosOf } from './task-ledger.mjs';
+import { TODOLIST_EVENT, readTaskSnapshot, normalizeTaskSnapshot, passedTest, textOnly, todosOf } from './task-ledger.mjs';
 import { promptText } from './cc-adaptation/texts.mjs';
 import { withoutTaskVerification } from './task-verification.mjs';
 // Task ledger carried over from the earlier OMD ledger: preserve excerpts, anchors, item operations and evidence.
@@ -206,9 +206,19 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS, verificationEna
     const scope = { turn: turn ?? start?.data.turn, start: start?.seq ?? -1, input: input?.seq ?? -1 }
     let control = turnControls.get(session)
     if (!control || Object.keys(scope).some(key => control[key] !== scope[key])) {
-      control = { ...scope, paused: false, reminders: new Set() }
+      control = { ...scope, paused: false, reminders: new Set(), checkedThrough: events.length }
       turnControls.set(session, control)
     }
+    if (turn === undefined || control.paused) return control
+    const progress = tasks => JSON.stringify(tasks.map(t => [t.id, t.title, t.done, t.links.some(qualified)]))
+    if (control.reminders.size) {
+      for (let i = control.checkedThrough; i < events.length; i++) {
+        if (events[i].type !== TODOLIST_EVENT) continue
+        if (progress(normalizeTaskSnapshot(events[i].data).tasks) !== control.progress) { control.reminders.clear(); break }
+      }
+    }
+    control.progress = progress(readTaskSnapshot(session).record.tasks)
+    control.checkedThrough = events.length
     return control
   }
   const getRec = session => readTaskSnapshot(session).record
@@ -412,6 +422,7 @@ export function createTodoStore({ runTimeoutMs = RUN_TIMEOUT_MS, verificationEna
       if (typeof u?.id !== 'string' || typeof u?.done !== 'boolean') return err('Rejected: every update needs id and done.')
       const t = next.tasks.find(x => x.id === u.id)
       if (!t) return err(`Rejected: unknown task id ${u.id}.`)
+      delete t.inProgress
       t.done = u.done
       seen.push([t.id, u.done])
     }

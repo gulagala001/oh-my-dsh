@@ -31,7 +31,10 @@ async function target(ctx, id) {
 export function acquirePersona(ctx, { legacy } = {}) {
   const root = ctx.root;
   let entry = roots.get(root);
-  if (entry?.retiring) throw Error('Persona 正在停用，请稍后重试');
+  if (entry?.retiring) return entry.retiring.then(() => {
+    ctx.fiber?.assertActive();
+    return acquirePersona(ctx, { legacy });
+  });
   if (!entry) {
     const profile = root.get('profileContext'), homeValue = root.get('dshHomePath');
     const home = profile?.home || (typeof homeValue === 'function' ? homeValue() : homeValue);
@@ -82,11 +85,13 @@ export function acquirePersona(ctx, { legacy } = {}) {
   ctx.effect(() => async () => {
     entry.leases.delete(lease);
     if (entry.leases.size) return;
-    entry.retiring = true;
-    entry.service.store.close();
-    try { await entry.api.dispose(); }
-    finally { roots.delete(root); entry.offPrompt(); entry.unprovide(); }
+    entry.retiring = Promise.resolve().then(async () => {
+      entry.service.store.close();
+      await entry.api.dispose();
+      entry.offPrompt(); entry.unprovide(); roots.delete(root);
+    });
+    await entry.retiring;
   });
   return entry.service;
 }
-export function apply(ctx) { acquirePersona(ctx); }
+export async function apply(ctx) { await acquirePersona(ctx); }

@@ -189,7 +189,7 @@ export class AutoCompaction {
         const followup = this.followups.delete(id);
         if (followup && !signal?.aborted && !p.closed && p.agents.get(id) === agent && p.config().autoCompactEnabled
           && this.fingerprint(session, s, p.config()) !== (checkedKey ?? startedKey)) this.kick(agent);
-        p.resumeCachedPreparation?.(agent);
+        p.resumeBackend?.(agent);
         if (followup && !signal?.aborted && !p.closed && p.agents.get(id) === agent && p.config().contextEnabled && p.mode(session) === 'adaptive')
           void p.adaptive.check(agent).catch(error => p.hub.ctx.logger?.warn?.(`主动异步整理：${error.message}`));
         // Threshold maintenance does not consume the coordinator's turn.

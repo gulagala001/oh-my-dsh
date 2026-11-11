@@ -206,3 +206,27 @@ test('work still resolving its project path cannot populate a stopped generation
   assert.equal(runtime.projects.size, 0);
   await runtime.dispose();
 });
+
+test('close retries only unconfirmed connections and shares the next attempt', async () => {
+  const runtime = new CodegraphRuntime(), entry = connection(), failure = Error('close failed');
+  let calls = 0;
+  entry.client.close = async () => { if (++calls === 1) throw failure; };
+  runtime.processes.add(entry);
+  await assert.rejects(runtime.stop(), /close failed/);
+  assert.equal(entry.closeError, failure);
+  assert.equal(runtime.processes.has(entry), true);
+  assert.equal(entry.closed, false);
+  await Promise.all([runtime.close(entry), runtime.close(entry)]);
+  assert.equal(calls, 2); assert.equal(entry.closed, true);
+  assert.equal(runtime.processes.size, 0);
+});
+
+test('a cancelled manual index leaves the next independent tool preparation runnable', async () => {
+  const runtime = new CodegraphRuntime(), abort = new AbortController();
+  let attempts = 0;
+  runtime.buildIndex = async () => { if (++attempts === 1) abort.abort(Error('stop indexing')); };
+  await assert.rejects(runtime.index({}, {cwd, signal:abort.signal}), /stop indexing/);
+  await runtime.ensureProject(cwd);
+  assert.equal(attempts, 2);
+  await runtime.dispose();
+});

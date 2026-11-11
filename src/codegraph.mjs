@@ -238,10 +238,15 @@ export class CodegraphRuntime {
 
   async close(connection) {
     connection.closeRequested = true;
-    if (!connection.closing) connection.closing = (async () => {
-      try { await connection.client.close(); }
-      finally { connection.closed = true; this.processes.delete(connection); }
-    })();
+    if (!connection.closing) connection.closing = Promise.resolve().then(() => connection.client.close()).then(() => {
+      connection.closed = true;
+      delete connection.closeError;
+      this.processes.delete(connection);
+    }).catch(error => {
+      connection.closeError = codegraphFailure(error);
+      connection.closing = null;
+      throw connection.closeError;
+    });
     await connection.closing;
   }
 
@@ -295,7 +300,7 @@ export class CodegraphRuntime {
     throwIfAborted(combined);
     const connectionKey = JSON.stringify([directory, sessionKey]);
     let entry = this.connections.get(connectionKey);
-    if (!entry || entry.connection?.closed) {
+    if (!entry || entry.connection?.closed || entry.connection?.closeRequested) {
       const previous = entry, owner = this.controller.signal;
       clearTimeout(previous?.timer);
       entry = { busy: 0, timer: null };
@@ -309,7 +314,10 @@ export class CodegraphRuntime {
       }).then(connection => entry.connection = connection).catch(error => {
         // The producer owns eviction even if all its callers already cancelled.
         clearTimeout(entry.timer);
-        if (this.connections.get(connectionKey) === entry) this.connections.delete(connectionKey);
+        if (this.connections.get(connectionKey) === entry) {
+          if (previous?.connection?.closeError && this.processes.has(previous.connection)) this.connections.set(connectionKey, previous);
+          else this.connections.delete(connectionKey);
+        }
         throw error;
       });
       this.connections.set(connectionKey, entry);
@@ -336,8 +344,9 @@ export class CodegraphRuntime {
       entry.busy--;
       if (!entry.busy && this.connections.get(connectionKey) === entry) {
         entry.timer = setTimeout(() => {
-          this.connections.delete(connectionKey);
-          void entry.ready.then(connection => this.close(connection)).catch(() => {});
+          void entry.ready.then(connection => this.close(connection)).then(() => {
+            if (this.connections.get(connectionKey) === entry) this.connections.delete(connectionKey);
+          }).catch(() => {});
         }, this.idleMs);
         entry.timer.unref();
       }
@@ -365,7 +374,9 @@ export class CodegraphRuntime {
       state.status = 'ready'; return result;
     }).catch(error => {
       const failure = codegraphFailure(error);
-      state.status = 'error'; state.error = failure.message; throw failure;
+      if (signal.aborted && this.projects.get(directory) === state) this.projects.delete(directory);
+      else { state.status = 'error'; state.error = failure.message; }
+      throw failure;
     }).finally(() => { state.pending = null; });
     return state.pending;
   }
@@ -411,13 +422,19 @@ export class CodegraphRuntime {
     });
   }
 
-  dispose() { return this.disposing ??= this.shutdown(); }
+  dispose() { return this.disposing ??= this.shutdown().catch(error => { this.disposing = null; throw error; }); }
 
   async shutdown() {
     this.disposed = true;
     this.catalogController.abort(new Error('CodeGraph 已停止。'));
     await Promise.allSettled([this.stop(), this.preparing, this.catalogJob?.promise,
       ...[...this.processes].filter(p => p.catalog).map(p => p.child ? p.done : this.close(p))]);
+    this.checkCleanup();
+  }
+
+  checkCleanup(include = () => true) {
+    const errors = [...this.processes].filter(include).map(entry => entry.closeError).filter(Boolean);
+    if (errors.length) throw new AggregateError(errors, 'CodeGraph 关闭未完成：' + errors[0].message);
   }
 
   stop() { return this.stopping ??= this.stopWork().finally(() => { this.stopping = null; }); }
@@ -430,5 +447,6 @@ export class CodegraphRuntime {
     this.connections.clear();
     this.projects.clear();
     await Promise.allSettled([...pending, ...[...this.processes].filter(p => !p.catalog).map(process => process.child ? process.done : this.close(process))]);
+    this.checkCleanup(entry => !entry.catalog);
   }
 }

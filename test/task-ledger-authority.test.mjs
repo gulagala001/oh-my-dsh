@@ -115,3 +115,16 @@ test('new task writes do not create a second persistent ledger in the OMD sideca
   Hub.prototype.observe.call({ store: { state: () => ({}), save: () => writes++ } }, s, event);
   assert.equal(writes, 0);
 });
+
+test('native task statuses survive import, quiet projection, and re-opening a blocker', () => {
+  const session = Session.create('legacy-status'), store = createTodoStore();
+  const rows = ['pending','in_progress','completed'].map(status => ({content:status, status}));
+  session.append('todo/write', {todos:rows});
+  assert.deepEqual(currentTasks(session).map(t => t.status), rows.map(t => t.status));
+  const control = store.turnControl(session, 1); control.reminders.add('blocked');
+  session.append('todo/write', {todos:rows});
+  assert.ok(store.turnControl(session, 1).reminders.has('blocked'));
+  session.append('todo/write', {todos:rows.map(t => ({...t,status:'completed'}))});
+  session.append('todo/write', {todos:rows});
+  assert.equal(store.turnControl(session, 1).reminders.size, 0);
+});

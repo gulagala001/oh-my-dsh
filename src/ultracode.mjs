@@ -255,8 +255,7 @@ export class UltracodeControl {
     finally { if (this.writes.get(sessionId) === operation) this.writes.delete(sessionId); }
   }
   claimed(agent, message) {
-    const pending = this.claims.get(agent) ?? [];
-    pending.push(message); this.claims.set(agent, pending);
+    if (human(message)) this.claims.set(agent, {});
   }
   lifecycle(agent, source) { if (source === 'clear' || source === 'compact') this.fresh.add(agent); }
   prepare(agent, force = false) {
@@ -287,13 +286,12 @@ export class UltracodeControl {
     const last = this.store.peek(agent.session.id)?.ultracode?.delivery;
     const submode = active.submode === 'team' && !this.teamAvailable(agent) ? 'free' : active.submode;
     const guide = this.guides[submode];
-    const pending = this.claims.get(agent) ?? [];
-    this.claims.delete(agent);
+    const claim = this.claims.get(agent);
     const on = active.mode === 'ultra';
     const kind = on ? 'on' : 'off';
     const emit = this.fresh.has(agent) || last?.kind !== kind || last?.submode !== submode || last?.guideHash !== guide.hash
-      || pending.some(human) && state.humans - (last?.humanCount ?? 0) >= 10;
-    this.frames.set(agent, { kind, mode: active.mode, submode, emit,
+      || Boolean(claim) && state.humans - (last?.humanCount ?? 0) >= 10;
+    this.frames.set(agent, { claim, humanCount: state.humans, kind, mode: active.mode, submode, emit,
       revision: this.fold(agent.session).model?.seq ?? -1, turn: state.turn, guideHash: guide.hash });
     // Fuse the selected Team prompt into DSH's existing policy section. The
     // native identity, tool contracts, registration and UI remain DSH-owned.
@@ -310,10 +308,11 @@ export class UltracodeControl {
     }
     if (event.type !== 'request/header') return;
     const agent = this.ctx.agents.get(session.id), frame = agent && this.frames.get(agent);
-    if (!frame?.emit || !frame.kind) return;
+    if (!frame) return;
+    if (frame.claim === this.claims.get(agent)) this.claims.delete(agent);
+    if (!frame.emit || !frame.kind) return;
     // No extra model call; durable accounting follows actual request admission.
-    const state = this.fold(session);
-    const delivery = { kind: frame.kind, mode: frame.mode, submode: frame.submode, revision: frame.revision, guideHash: frame.guideHash, turn: frame.turn, humanCount: state.humans };
+    const delivery = { kind: frame.kind, mode: frame.mode, submode: frame.submode, revision: frame.revision, guideHash: frame.guideHash, turn: frame.turn, humanCount: frame.humanCount };
     try { this.persist(session, { delivery }); frame.emit = false; this.fresh.delete(agent); }
     catch (error) { this.ctx.logger?.warn?.('Ultra reminder accounting failed: ' + error.message); }
   }

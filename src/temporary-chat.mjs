@@ -89,14 +89,14 @@ export class TemporaryChats {
       operation.abort.abort(Error('回复已停止'));
       await operation.done.catch(error => { if (error?.cleanup) throw error; });
     }
-    return receipt(this.get(id), requestId);
+    return receipt(chat, requestId);
   }
   async close(id) {
     const chat = this.chats.get(id);
     if (!chat) return;
     chat.closed = true; chat.active?.abort.abort(Error('临时聊天已关闭'));
     try { await chat.active?.done?.catch(error => { if (error?.cleanup) throw error; }); }
-    finally { chat.turns.length = 0; this.chats.delete(id); }
+    finally { this.chats.delete(id); }
   }
   async dispose() {
     this.closed = true; clearInterval(this.timer);

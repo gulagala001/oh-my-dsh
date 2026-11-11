@@ -49,7 +49,7 @@ export function install(ctx) {
       res.once('close', disconnect);
       let key, timer, heartbeat;
       const emit = event => {
-        if (res.destroyed || res.writableEnded) return;
+        if (controller.signal.aborted || res.destroyed || res.writableEnded) return;
         if (res.writableLength > 1024 * 1024) throw Error('旁聊连接无法及时接收回答');
         res.write(JSON.stringify(event) + '\n');
       };
@@ -59,7 +59,13 @@ export function install(ctx) {
           || typeof data.clientId !== 'string' || !/^[\w-]{1,64}$/.test(data.clientId)) throw Error('无效会话');
         validateQuestion(data.question);
         const requestKey = `${data.clientId}:${data.sessionId}`;
-        if (running.has(requestKey)) throw Error('这个会话的旁聊正在回答，请先停止或等待完成');
+        const previous = running.get(requestKey);
+        if (previous) {
+          if (typeof data.replaces !== 'string' || previous.requestId !== data.replaces)
+            throw Error('这个会话的旁聊正在回答，请先停止或等待完成');
+          previous.abort(Error('已停止上一条旁聊'));
+        }
+        controller.requestId = data.requestId;
         key = requestKey;
         running.set(key, controller);
         timer = setTimeout(() => controller.abort(Error('旁聊请求超时，请重试')), 660000);

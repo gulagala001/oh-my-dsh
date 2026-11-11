@@ -41,7 +41,7 @@ export function liveWorkflowData(node, runs, jobs, sessionId) {
   if (data.status !== 'interrupted' || !run?.jobId || run.ended) return data;
   const job = jobs?.find(row => row.id === run.jobId && row.kind === 'workflow' && row.owner === sessionId);
   if (!job || !['running', 'stopping'].includes(job.status)) return data;
-  return { ...data, status: 'running', phases: data.phases.map(phase => ({
+  return { ...data, status: job.status, phases: data.phases.map(phase => ({
     ...phase, members: phase.members.map(member => member.status === 'interrupted' ? { ...member, status: 'running' } : member),
   })) };
 }

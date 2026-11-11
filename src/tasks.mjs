@@ -7,7 +7,7 @@ import { renderToolsSdk, renderToolsSdkPy } from '@deepseek-ai/dsh-tool-executor
 import { beforeToolResolution, presentationTools } from './host/prompt-provider.mjs';
 import { randomUUID } from 'node:crypto';
 import { createTodoStore } from './todolist.mjs';
-import { normalizeTaskSnapshot, readTaskSnapshot, taskSnapshotFromEvents, todosOf } from './task-ledger.mjs';
+import { normalizeTaskSnapshot, readTaskSnapshot, taskSnapshotFromEvents, todosOf, taskStatus } from './task-ledger.mjs';
 import { isDeepStrictEqual } from 'node:util';
 import { currentDirectory } from './working-directory.mjs';
 import { scopeOf } from '@deepseek-ai/dsh-scope';
@@ -98,7 +98,7 @@ export function currentTasks(session, cached, events) {
   const record = currentTaskSnapshot(session, cached, events);
   return record.tasks.map(t => {
     const excerpt = record.excerpts.find(e => e.id === t.anchor?.excerpt);
-    return { ...t, content: t.title, status: t.done ? 'completed' : 'pending',
+    return { ...t, content: t.title, status: taskStatus(t),
       source: excerpt ? excerpt.text.slice(t.anchor.start, t.anchor.end) : t.legacySource || '',
       sourceMessage: excerpt?.msg, sourceExcerpt: excerpt?.id,
       verification: t.legacyVerification,

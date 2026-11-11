@@ -9,8 +9,12 @@ export class ContinuationHealth {
     let route = this.routes.get(key);
     if (!route) {
       route = { provider: meta.provider, model: meta.model, samples: [], failures: 0, until: 0, epoch: 0, probe: null };
+      if (this.routes.size >= 512) {
+        const victim = [...this.routes].find(([, value]) => value.until <= this.now() && !(value.probe?.expiresAt > this.now()));
+        if (!victim) return { ...route, until: Infinity };
+        this.routes.delete(victim[0]);
+      }
       this.routes.set(key, route);
-      while (this.routes.size > 512) this.routes.delete(this.routes.keys().next().value);
     }
     return route;
   }
@@ -20,9 +24,10 @@ export class ContinuationHealth {
     return Math.min(this.maxWaitMs, Math.max(this.minWaitMs, estimate));
   }
   enter(route) {
+    if (route.probe && route.probe.expiresAt <= this.now()) this.release(route.probe);
     if (route.until > this.now() || route.probe) return null;
     const lease = { route, epoch: route.epoch };
-    if (route.failures) route.probe = lease;
+    if (route.failures) { lease.expiresAt = this.now() + this.maxWaitMs; route.probe = lease; }
     return lease;
   }
   fail(lease) {
@@ -38,7 +43,7 @@ export class ContinuationHealth {
     Object.assign(lease.route, { failures: 0, until: 0, probe: null });
   }
   release(lease) {
-    if (lease?.route.probe === lease) lease.route.probe = null;
+    if (lease && lease.route.probe === lease) { lease.route.probe = null; lease.route.epoch++; }
   }
   sample(route, ms) {
     if (Number.isFinite(ms) && ms >= 0) {
@@ -48,7 +53,7 @@ export class ContinuationHealth {
   }
   inspect() {
     return [...this.routes.values()].map(route => ({ provider: route.provider, model: route.model,
-      state: route.probe ? 'probing' : route.until > this.now() ? 'cooling' : route.failures ? 'retry-ready' : 'healthy',
+      state: route.probe?.expiresAt > this.now() ? 'probing' : route.until > this.now() ? 'cooling' : route.failures ? 'retry-ready' : 'healthy',
       retryAfterMs: Math.max(0, route.until - this.now()), firstOutputBudgetMs: this.budget(route) }));
   }
 }

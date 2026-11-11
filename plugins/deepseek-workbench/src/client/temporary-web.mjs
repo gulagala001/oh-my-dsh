@@ -58,7 +58,7 @@ export async function temporaryPageCommand(command) {
         if (typeof id === 'string' && /^[a-zA-Z0-9_-]+$/.test(id)
           && ['api', 'pre_create'].includes(result.source)) state.id = id;
         return result;
-      } finally { state.pending = null; if (!state.id) state.started = false; }
+      } finally { state.pending = null; }
     };
     service.createSession = wrapped;
     return { ready: true };
@@ -74,8 +74,13 @@ export const temporaryScript = command => `(${temporaryPageSource})(${JSON.strin
 const ledgerKey = 'dsh-deepseek-workbench.pending-temporary.v1';
 export const liveTemporaryOwners = new Set();
 function pending(storage) {
-  try { return JSON.parse(storage.getItem(ledgerKey) || '[]').filter(item => chatIdentity(item.url)?.id === item.id); }
-  catch { return []; }
+  const raw = storage.getItem(ledgerKey);
+  if (raw == null) return [];
+  try {
+    const rows = JSON.parse(raw);
+    if (!Array.isArray(rows) || rows.some(item => !item || !chatIdentity(item.url) || chatIdentity(item.url).id !== item.id)) throw Error();
+    return rows;
+  } catch { throw Error('临时聊天清理记录损坏，原记录已保留，请恢复记录后重试。'); }
 }
 function save(storage, rows) {
   if (rows.length) storage.setItem(ledgerKey, JSON.stringify(rows));
@@ -95,18 +100,23 @@ export class TemporaryWebChat {
   observe(url) {
     this.lastUrl = url;
     // A navigation is never ownership evidence. Only the official create receipt is.
-    if (!this.closed && this.armed && !this.owned.size && this.adapter) void this.capture().catch(() => {});
+    if (!this.closed && this.armed && !this.persisted && this.adapter) void this.capture().catch(error => { this.error = error.message; this.publish(); });
   }
   async capture(wait = false) {
-    if (this.closed || !this.armed || this.owned.size || !this.adapter) return;
-    const receipt = await this.adapter.extract(temporaryScript({ type: 'owned', token: this.token, wait }));
-    if (this.closed) return;
-    if (!/^[a-zA-Z0-9_-]+$/.test(receipt?.id || '')) return;
-    const identity = { id: receipt.id, url: chatIdentity(this.lastUrl)?.id === receipt.id
-      ? this.lastUrl : `https://chat.deepseek.com/a/chat/s/${receipt.id}` };
-    this.owned.set(identity.id, identity);
+    if (this.closed || !this.armed || this.persisted || !this.adapter) return;
+    let identity = this.owned.values().next().value;
+    if (!identity) {
+      const receipt = await this.adapter.extract(temporaryScript({ type: 'owned', token: this.token, wait }));
+      if (this.closed) return;
+      if (!/^[a-zA-Z0-9_-]+$/.test(receipt?.id || '')) return;
+      identity = { id: receipt.id, url: chatIdentity(this.lastUrl)?.id === receipt.id
+        ? this.lastUrl : `https://chat.deepseek.com/a/chat/s/${receipt.id}` };
+      this.owned.set(identity.id, identity);
+    }
     const rows = pending(this.storage);
     save(this.storage, [...rows.filter(row => row.id !== identity.id), { ...identity, owner: this.token }]);
+    this.persisted = true;
+    this.error = '';
   }
   async run(type, extra = {}) {
     if (this.closing || this.closed || this.pending) throw Error('临时会话正在处理，请稍候。');
@@ -148,13 +158,17 @@ export class TemporaryWebChat {
         await this.capture(true);
         if (this.armed && !this.owned.size) {
           const receipt = await this.adapter.extract(temporaryScript({ type: 'owned', token: this.token }));
-          if (receipt.pending) throw Error('本次发送结果尚未确认，请等待官网完成后重试关闭。');
+          if (receipt.pending) throw Error('官网创建仍未结束，请等待后重试关闭。');
+          if (receipt.started) throw Error('官网创建结果未知，请保留此页，在官网历史中核对本次会话；未执行删除。');
           // No successful official creation means there is nothing owned to delete.
         }
         if (this.owned.size && !this.adapter) throw Error('网页尚未就绪，无法确认删除；请重新加载后重试关闭。');
         for (const item of this.owned.values()) {
-          const receipt = await this.adapter.extract(temporaryScript({ type: 'delete', id: item.id }));
-          if (!receipt?.deleted || receipt.id !== item.id) throw Error('临时聊天删除回执不匹配。');
+          if (!item.deleted) {
+            const receipt = await this.adapter.extract(temporaryScript({ type: 'delete', id: item.id }));
+            if (!receipt?.deleted || receipt.id !== item.id) throw Error('临时聊天删除回执不匹配。');
+            item.deleted = true;
+          }
           save(this.storage, pending(this.storage).filter(row => row.id !== item.id));
           this.owned.delete(item.id);
         }

@@ -25,7 +25,7 @@
     "docs/structure.json": "dedd144431f77b9919a1d8dd1a65c7d09fefa266302f136518def7577a84e935",
     "docs/usage_EN.md": "1831e2268d78fb85888f87470908eb1a8ce8ed7b67b5f0b7c4ac83003e15d8db",
     "docs/usage.md": "37f476debe00d1cfebd53d128ad9037da216ff59ce8e81d8d545adc52e98ce64",
-    "lib/client.js": "5bee4554d97a547decd1f88823cd0cb325bd277db8990ad25d04b257212a19a9",
+    "lib/client.js": "fc52125531a97470fbd84cbc12c09c7115d16e4d1e6cb1989d43459ac1895610",
     "package.json": "75e53cb5e9cd4ef958ade2415578ef3224f81a316561acb3b41a4b905a57d1a5",
     "scripts/build.mjs": "70869d27e396cda01e08625aff9bd24fd856326c8f15cb987276422062fd54cb",
     "scripts/check-docs.mjs": "e50c5dee78e220f2fe4761a5e6a75695250bca124e705a6a7ecf52b1efc57cf2",
@@ -45,7 +45,7 @@
     "src/client/platform-page.jsx": "33e8af6eaa6d48835ee204795387b5c5798e49ebdb39e87498246d1b8bdc1483",
     "src/client/style.css": "da81f6f0862ada78b1635ab06b0d4eac0cfcc77b1f0c0884c6a7a08a2f19036d",
     "src/client/temporary-sidebar.jsx": "34142a71cfa0f88399d34517f591c3d132a4e4a84b1995ac5bbda539c6a02275",
-    "src/client/temporary-web.mjs": "af5bfe85a95ce1138fd4f8d7a5e206cb561059ef99ef5071e4ad402fc102273e",
+    "src/client/temporary-web.mjs": "06783d00cb9c56c92894e3f04abeff9338bdb7931986eba059429f157c8c20e1",
     "src/import.mjs": "20520bde14ac07877b85b5a16c5b133a33d9c587999ae5b1c1346014e46edc3b",
     "src/index.mjs": "ffb68ae4b56605babfddb5e95066b8c58143fbad7e6aabf16f5c2ad883c908e9"
   }

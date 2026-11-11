@@ -42,8 +42,10 @@ export class Maintenance {
       if(!this.active&&!this.engine.operations.size&&['ENOSPC','EDQUOT'].includes(error.code)){
         await unlink(this.ownerFile).catch(e=>{if(e.code!=='ENOENT')throw e;});this.lastSweep=0;this.schedule();
       }
+      else if(!this.active&&!this.engine.operations.size){this.idleDirty=true;this.schedule();}
       throw error;
     }
+    this.idleDirty=false;
     if(!this.active&&!this.engine.operations.size)this.schedule();
   }
   async idle(){await this.engine.store.lock('maintenance-owner',()=>this.writeIdle()).catch(error=>this.warn(error));}
@@ -60,6 +62,7 @@ export class Maintenance {
   async collect(){
     return this.engine.store.lock('maintenance-owner',async()=>{
       if(this.disposed||this.active||this.engine.operations.size)return;
+      if(this.idleDirty)await this.writeIdle();
       const result=await collectGarbage(this.engine.store.root,{apply:true,
         targetBytes:this.config.storageTargetBytes??2*1024**3,
         retentionMs:(this.config.retentionDays??30)*86400000,

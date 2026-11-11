@@ -123,3 +123,25 @@ test('BC current-state protection never duplicates image payloads and its meter 
   hub.bc.meters.set(session.id, { conversationId: session.id, replaceGeneration:session.surface.replaceGeneration,route:JSON.stringify(session.requestHeader?.()?.config), sentTokens: 200, hostTokens: 1000 });
   assert.equal(hub.bc.effectiveTokens(session, 1150), 350);
 });
+
+test('a pending choice settles after manual ownership retires and superseded choices stay retired', async t => {
+  const {p, hub, session, agent} = await fixture(t);
+  p.manualSessions.set(session.id, 'auto-compact');
+  assert.equal((await hub.bc.choose(session, 'omd', agent)).queued, true);
+  p.manualSessions.delete(session.id); p.resumeBackend(agent);
+  await new Promise(setImmediate); await new Promise(setImmediate);
+  assert.equal(hub.bc.backend(session), 'omd');
+  hub.bc.connect = async () => {};
+  p.manualSessions.set(session.id, 'auto-compact');
+  await hub.bc.choose(session, 'bc', agent);
+  p.manualSessions.delete(session.id); p.resumeBackend(agent);
+  await hub.bc.choose(session, 'omd', agent);
+  await new Promise(setImmediate);
+  assert.equal(hub.bc.backend(session), 'omd');
+  p.store.update(p.state(session), {backendError:'former failure'});
+  await hub.bc.choose(session, 'omd', agent);
+  assert.equal(hub.bc.view(session).switchError, null);
+  p.queueManual(session, {operation:'processed'});
+  assert.throws(() => p.setMode(session, 'adaptive'), /排队/);
+  assert.equal(p.state(session).manualQueue.length, 1);
+});

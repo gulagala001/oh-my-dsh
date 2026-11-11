@@ -102,7 +102,7 @@ export function monitorEventQuery(params, now = Date.now()) {
   const get = key => params instanceof URLSearchParams ? params.get(key) : params?.[key];
   const base = monitorQuery({ range: get('range'), period: get('period'), limit: get('limit') ?? 20, session: get('session') }, now);
   const status = get('status') || 'all', kind = get('kind') || '', query = get('query') || '', offset = Number(get('offset') || 0);
-  if (!['all', 'success', 'error', 'skip', 'stale', 'running', 'info'].includes(status)) throw Error('事件筛选无效');
+  if (!['all', 'success', 'error', 'skip', 'stale', 'running', 'info', 'local', 'recovered'].includes(status)) throw Error('事件筛选无效');
   if (kind.length > 64 || query.length > 200) throw Error('事件筛选过长');
   if (!Number.isInteger(offset) || offset < 0 || offset > 1e6) throw Error('事件分页无效');
   return { ...base, status, kind: kind === 'all' ? '' : kind, query, offset };

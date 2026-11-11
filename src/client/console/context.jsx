@@ -20,7 +20,7 @@ function preparationStep(c) {
     ? `本轮新增 ${progress.current}/${progress.target} 条 · 还差 ${progress.target - progress.current} 条` : null;
   const waiting = c.manualOperation || c.transactionPending ? '等待当前整理完成'
     : progress?.enabled === false ? '自动预处理已关闭'
-      : c.memoryCache?.enabled && c.memoryCache.waitingReason || preparationWait(c.prepareDeferred, c.limits?.continueTokens) || cadenceWait;
+      : preparationWait(c.prepareDeferred, c.limits?.continueTokens) || cadenceWait;
   return { key: 'prepare', title: '预处理', running: c.preparing, tone: c.preparing ? 'blue' : failure ? 'red' : 'gray',
     text: c.preparing ? '正在生成摘要' : failure ? `${retryText(c.retry?.prepare) || '失败'}：${failure.message}`
       : waiting || (c.backlog?.events ? '等待可整理的完整片段' : '等待新内容'),
@@ -121,6 +121,7 @@ export function ContextSection({ sessionId, visible, go, params }) {
       </Card>
       <Card title={bc ? '资料归档与 BC 压缩' : adaptive ? '主动异步整理' : '预处理 → 中枢 → 替换'} icon="hub">
         <Steps steps={pipelineSteps(c)}/>
+        {c.autoCompact?.retry && <p role="status">Auto Compact · {c.autoCompact.retry === 'waiting-change' ? '已暂停，等待输入或设置变化' : '等待重试'}：{c.autoCompact.error}</p>}
         {!adaptive && c.memoryCache?.enabled && <p className="omc-hint">记忆缓存模式 · 最近预处理缓存读取：{c.memoryCache.cacheReadTokens == null ? '渠道未返回' : `${k(c.memoryCache.cacheReadTokens)} tokens`}。</p>}
         {pending && !pending.error ? <div className="omc-callout omc-callout-green">
           <div><strong>{pending.selectedRecords} 段可替换 · {pending.currentMessages} 条消息</strong><span>预计节省 ≈{k(pending.estimatedSavedTokens)} tokens</span></div>

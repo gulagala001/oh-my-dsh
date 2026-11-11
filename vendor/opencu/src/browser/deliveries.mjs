@@ -85,6 +85,10 @@ export async function createDeliveryStore(dataDir) {
       || record.path !== join(directory, record.id + '-' + storedName(record.name)) || record.status !== 'complete'
       || !Number.isSafeInteger(record.bytes) || record.bytes < 0 || !/^[a-f0-9]{64}$/.test(record.sha256 || '')) throw new Error('Invalid pending download import');
     uncommitted.set(record.sourceId, record);
+    if (record.sourceId === 'capture:' + record.id) {
+      try { await recoverImport(record); }
+      catch (error) { await update({...record, status:'interrupted', error:error.message}); }
+    }
   }
   async function save(download, targetId) {
     const id = randomUUID();
@@ -93,13 +97,29 @@ export async function createDeliveryStore(dataDir) {
     const record = {id, targetId, name, url: download.url(), path, createdAt: new Date().toISOString(), status: 'pending'};
     await update(record);
     try {
-      await download.saveAs(path);
-      await chmod(path, 0o600);
+      // Local Playwright exposes completed browser-owned bytes before saveAs.
+      // A durable digest lets restart verify even a crash immediately after copying.
+      const source = await download.path?.().catch(() => null);
+      const capture = {...record, sourceId:'capture:' + id, status:'complete'};
+      let proof;
+      if (source) {
+        proof = {...capture, bytes:(await stat(source)).size, sha256:await hashFile(source)};
+        await rememberImport(proof);
+      }
+      await download.saveAs(path + '.part');
+      await chmod(path + '.part', 0o600);
       const failure = await download.failure();
       if (failure) throw new Error(failure);
-      const info = await stat(path);
-      await update({...record, status: 'complete', bytes: info.size, sha256: await hashFile(path)});
+      const info = await stat(path + '.part');
+      const sha256 = await hashFile(path + '.part');
+      if (proof && (proof.bytes !== info.size || proof.sha256 !== sha256)) throw Error('Saved download differs from browser receipt');
+      if (!proof) { proof = {...capture, bytes:info.size, sha256}; await rememberImport(proof); }
+      await rename(path + '.part', path);
+      await update(proof);
+      await forgetImport(proof);
     } catch (error) {
+      if (uncommitted.has('capture:' + id)) throw error;
+      await unlink(path + '.part').catch(e => { if (e.code !== 'ENOENT') throw e; });
       await update({...record, status: 'failed', error: error.message});
     }
     return records.find(item => item.id === id);

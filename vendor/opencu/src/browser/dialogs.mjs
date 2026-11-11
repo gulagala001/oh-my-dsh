@@ -106,12 +106,22 @@ export function createPageDialogs(page, generation) {
       if (promptText !== undefined && descriptor.type !== 'prompt') fail('INVALID_ARGUMENT','promptText is only valid for prompt dialogs',{inputDispatched:false});
       entry.handling = true;
       try {
-        if (accept) await entry.dialog.accept(promptText);
+        if (entry.retryViaProtocol) await session.send('Page.handleJavaScriptDialog', {accept, ...(promptText !== undefined ? {promptText} : {})});
+        else if (accept) await entry.dialog.accept(promptText);
         else await entry.dialog.dismiss();
         if (current === entry) invalidate();
         return {handled:true};
       } catch (error) {
         if (!read() || current !== entry) stale();
+        if (session) {
+          await session.send('Target.getTargetInfo');
+          if (!read() || current !== entry) stale();
+          if (awaitingClose.some(opening => opening.entry === entry && !opening.closed)) {
+            entry.descriptor = {...entry.descriptor, id:randomUUID()};
+            entry.retryViaProtocol = true;
+            entry.handling = false;
+          }
+        }
         const failure = openError(entry.descriptor, true);
         failure.details.cause = error.message;
         throw failure;

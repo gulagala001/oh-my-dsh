@@ -36,7 +36,9 @@ export function createInputReleaseState() {
     checkpoint: () => ({epoch: releaseEpoch, sequence}),
     acceptRelease: (details, checkpoint) => checkpoint ? acceptedRelease(details, checkpoint) : false,
     async request(endpoint, args, dispatch) {
-      sequence++;
+      const frontier = {epoch:releaseEpoch, sequence:++sequence};
+      const targetCurrent = () => frontier.epoch === releaseEpoch && (targetInputs.get(args?.targetId) ?? 0) <= frontier.sequence;
+      const allCurrent = () => frontier.epoch === releaseEpoch && frontier.sequence === sequence;
       if (endpoint === 'act' && typeof args?.targetId === 'string') targetInputs.set(args.targetId, sequence);
       const control = ['select','act','focus','openTarget','resume'].includes(endpoint) ? {} : null;
       if (control) activeControls.add(control);
@@ -65,18 +67,18 @@ export function createInputReleaseState() {
         const result = await dispatch();
         if (result?.ok === false) {
           const state = result.state;
-          if (['faulted', 'stopped', 'recovery_required'].includes(state?.mode) && state.releasePending === false && !state.releaseErrors?.length) clear();
-          else if (!acceptedRelease(result.error?.details)) retain(result.error?.details);
+          if (['faulted', 'stopped', 'recovery_required'].includes(state?.mode) && state.releasePending === false && !state.releaseErrors?.length && allCurrent()) clear();
+          else if (!acceptedRelease(result.error?.details, frontier)) retain(result.error?.details);
           if (result.error?.code === 'RELEASE_FAILED') failedRelease();
           return result;
         }
         retain();
         if (['keyUp', 'key_up', 'mouseUp', 'mouse_up'].includes(action)) held.delete(key);
-        if (releasesAll) clear();
+        if (releasesAll && allCurrent()) clear();
         if (inputReleased(result?.release)) {
-          if (result.state?.releasePending === false && !result.state.releaseErrors?.length) clear();
+          if (result.state?.releasePending === false && !result.state.releaseErrors?.length && allCurrent()) clear();
           else {
-            acceptedRelease(result);
+            acceptedRelease(result, frontier);
             // Explicit recovery supersedes this session's failed global-stop
             // retry. The controller keeps unrelated browser debts quarantined;
             // held/uncertain inputs on other owned targets remain pending here.
@@ -84,17 +86,17 @@ export function createInputReleaseState() {
           }
         }
         const outcome = result?.result ?? result;
-        if (inputReleased(outcome?.release)) clearTarget(args?.targetId);
+        if (targetCurrent() && inputReleased(outcome?.release)) clearTarget(args?.targetId);
         if (outcome?.releasePending === true || outcome?.pendingDialog && outcome.inputDispatched === true)
           held.add(JSON.stringify([args?.targetId, 'release']));
-        if (action === 'handleDialog' && outcome?.handled && !outcome.releasePending) {
+        if (targetCurrent() && action === 'handleDialog' && outcome?.handled && !outcome.releasePending) {
           clearTarget(args.targetId);
         }
         return result;
       } catch (error) {
         const state = error?.details?.control;
-        if (['faulted','stopped','recovery_required'].includes(state?.mode) && state.releasePending === false && !state.releaseErrors?.length) clear();
-        else if (!acceptedRelease(error?.details)) retain(error?.details);
+        if (['faulted','stopped','recovery_required'].includes(state?.mode) && state.releasePending === false && !state.releaseErrors?.length && allCurrent()) clear();
+        else if (!acceptedRelease(error?.details, frontier)) retain(error?.details);
         if (error?.code === 'RELEASE_FAILED') failedRelease();
         throw error;
       } finally { if (attempt) pendingDown.delete(attempt); if (control) activeControls.delete(control); }

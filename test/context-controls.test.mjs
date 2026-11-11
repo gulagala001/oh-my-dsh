@@ -127,3 +127,12 @@ test('disposal during backend handoff cannot recreate the released session cache
   await assert.rejects(running, /上下文已释放/);
   assert.equal(p.agents.has(session.id), false); assert.equal(p.store.cache.has(session.id), false);
 });
+
+test('panel force checks explicitly reject busy prepare and coordinate instead of reporting admission', async t => {
+  const {handleContextApi}=await import('../src/context/api.mjs'), {hub,agent,p}=await fixture(t);
+  for(const kind of ['prepare','coordinate']) {
+    const key=agent.session.id+':'+kind; p.jobs.set(key,Promise.resolve());let result;
+    await handleContextApi({hub,ctx:hub.ctx,req:{method:'POST'},res:{},url:new URL('http://localhost/oh-my-dsh/api/context/'+kind),agent,session:agent.session,send:(_,code,data)=>{result={code,data};}});
+    assert.equal(result.code,409);assert.equal(result.data.queued,false);p.jobs.delete(key);
+  }
+});

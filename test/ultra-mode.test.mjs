@@ -227,3 +227,18 @@ test('queued mode choices conflict without replay and native changes during flus
   assert.equal(f.control.view(f.session).mode, 'off');
   assert.equal(f.control.writes.size, 0);
 });
+
+test('periodic human claims survive an uncommitted assembly and retire on the native header', async () => {
+  const f = fixture(); await f.select('ultra', 'free'); f.turn(1);
+  const assemble = () => f.control.assemble(f.agent, async () => ({sections:[]}));
+  await assemble(); f.control.committed(f.session, {type:'request/header'});
+  for (let i = 0; i < 10; i++) {
+    const message = {id:'input-' + i, source:{kind:'user'}};
+    f.events.push({seq:f.events.length, type:'user/message', data:message});
+    f.control.claimed(f.agent, message);
+  }
+  await assemble(); assert.ok(f.control.frames.get(f.agent).emit);
+  await assemble(); assert.ok(f.control.frames.get(f.agent).emit);
+  f.control.committed(f.session, {type:'request/header'});
+  await assemble(); assert.equal(f.control.frames.get(f.agent).emit, false);
+});

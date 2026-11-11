@@ -99,6 +99,8 @@ test('persistent ordinary errors exhaust a bounded retry allowance without hidin
   for (let i = 0; i < 8; i++) await p.autoCompact.check(agent);
   assert.equal(control.calls, 3);
   assert.equal(p.view(session).failures.autoCompact.count, 3);
+  assert.equal(p.view(session).autoCompact.retry, 'waiting-change');
+  assert.equal(control.calls, 3);
   assert.equal(p.state(session).notices.length, 3);
   control.route.model = 'recovered'; control.error = null;
   await p.autoCompact.check(agent);

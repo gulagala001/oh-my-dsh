@@ -8,15 +8,15 @@ async function updateApi(version, signal) {
   if (response.status === 404) throw Error('更新服务尚未加载，请重启 DSH 后重试。');
   const data = await response.json();
   if (!response.ok) throw Error(data.error || `更新请求失败（HTTP ${response.status}）`);
-  if (!['idle', 'checking', 'installing', 'applying', 'restart-required', 'failed'].includes(data.phase)) throw Error('无法读取更新状态，请稍后重试。');
+  if (!['idle', 'checking', 'decision', 'installing', 'applying', 'restart-required', 'cancelled', 'failed'].includes(data.phase)) throw Error('无法读取更新状态，请稍后重试。');
   return data;
 }
 
 export function VersionUpdate({ version, stale }) {
   const { state, error, requestError, pending, act } = usePollingAction(updateApi, 1500);
-  const installing = pending || ['checking', 'installing', 'applying'].includes(state?.phase);
+  const installing = pending || ['checking', 'decision', 'installing', 'applying'].includes(state?.phase);
   const restart = state?.phase === 'restart-required';
-  const progress = state?.phase === 'checking' ? '正在确认更新版本…' : state?.phase === 'applying' ? '正在保存安装配置…' : '正在下载并安装更新…';
+  const progress = state?.phase === 'decision' ? '正在等待你确认预检结果…' : state?.phase === 'checking' ? '正在确认更新版本…' : state?.phase === 'applying' ? '正在保存安装配置…' : '正在下载并安装更新…';
   const desktop = window.location.protocol === 'dsh-app:';
   if (!version && !installing && !restart && state?.phase !== 'failed') return null;
   return <div className="omd-version-update">

@@ -67,7 +67,8 @@ export class SideChatStore {
     try {
       response = await this.fetch('/api/dsh-btw/ask', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId: this.clientId, sessionId: id, question, history }),
+        body: JSON.stringify({ clientId: this.clientId, sessionId: id, requestId: entry.id,
+          replaces: state.entries.at(-1)?.status === 'stopped' ? state.entries.at(-1).id : undefined, question, history }),
         signal: controller.signal,
       });
       controller.signal.throwIfAborted();

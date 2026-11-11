@@ -9,8 +9,8 @@ import css from './workflow-header.css';
 
 const empty = { subscribe: () => () => {}, getSnapshot: () => undefined };
 const useStore = store => useSyncExternalStore(useCallback(fn => store.subscribe(fn), [store]), useCallback(() => store.getSnapshot(), [store]));
-const statuses = { running: '运行中', completed: '已完成', failed: '失败', cancelled: '已取消', interrupted: '已中断' };
-const dots = { running: 'ongoing', completed: 'done', failed: 'error', cancelled: 'warning', interrupted: 'warning' };
+const statuses = { stopping: '正在停止', running: '运行中', completed: '已完成', failed: '失败', cancelled: '已取消', interrupted: '已中断' };
+const dots = { stopping: 'warning', running: 'ongoing', completed: 'done', failed: 'error', cancelled: 'warning', interrupted: 'warning' };
 
 function WorkflowProgress({ ctx, ...props }) {
   const { sessionId, useChat, renderPanel } = props;

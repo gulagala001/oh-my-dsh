@@ -60,6 +60,10 @@ export function createFileChoosers(record) {
           stale(task,'The file chooser belongs to an unprepared frame; observe the target before a new subscription');return;
         }
         clearTimeout(task.timer);
+        task.timer = setTimeout(() => {
+          if (current === task && task.status === 'ready') stale(task,'The unused file chooser handle expired');
+        }, timeoutMs || 300000);
+        task.timer.unref?.();
         task.route = route;task.backendNodeId = event.backendNodeId;task.multiple = event.mode === 'selectMultiple';task.status = 'ready';
       };
       try {
