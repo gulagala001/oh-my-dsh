@@ -1,3 +1,31 @@
+# Oh My DSH 1.3.16 · DSH 0.2.2-rc.2
+
+[中文](#zh-1316) · [English](#en-1316)
+
+<a id="zh-1316"></a>
+
+## 中文
+
+### 问题修复
+
+- 内置网页聊天现在显示已安装的组件版本。
+
+<a id="en-1316"></a>
+
+## English
+
+### Bug fixes
+
+- The built-in Web Chat now reports its installed version.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.2** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.16/oh-my-dsh-0.2.2-rc.2.omd.1.3.16.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.16/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.15 · DSH 0.2.2-rc.2
 
 [中文](#zh-1315) · [English](#en-1315)

@@ -57,7 +57,7 @@
 
 DeepSeek 网页工作台和历史导入。内置工作台插件。
 
-- 固定来源／版本: [0.1.7-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
+- 固定来源／版本: [0.1.8-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md)
 
 ### DSH BTW

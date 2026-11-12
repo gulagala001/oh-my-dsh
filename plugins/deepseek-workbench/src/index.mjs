@@ -5,9 +5,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { ConversationImporter, MAX_IMPORT_BYTES } from './import.mjs';
 import { saveAccountProbe } from './account-probe.mjs';
 
+import manifest from '../package.json' with { type: 'json' };
+
 export const name = 'deepseek-workbench';
 export const inject = ['agents', 'sessions', 'llm', 'webServer', 'connection'];
-export const VERSION = '0.1.2-dsh.0.2.1-rc.2';
+export const VERSION = manifest.version;
 
 function send(res, status, value) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });

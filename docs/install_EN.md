@@ -15,14 +15,14 @@ Pick one of the two methods below. If you already use OMD, back up your data fir
 3. Click **Plugins** on the left, then **Add plugin** at the top right, and paste:
 
    ```text
-   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.15/oh-my-dsh-0.2.2-rc.2.omd.1.3.15.tgz
+   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.16/oh-my-dsh-0.2.2-rc.2.omd.1.3.16.tgz
    ```
 
 4. Click **Install** and check that Oh My DSH is enabled.
 5. Fully quit and reopen the desktop app; for the web version, restart the original web service. Reloading the page is not enough.
 6. Create a session and pick the **Oh My DSH** preset.
 
-The first part of the package name is the DSH version; the number after `omd.` is the OMD version. Use the fixed package above rather than the repository's main branch, and do not download Source code or host-adapters.zip. Checksums: [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.15/SHA256SUMS).
+The first part of the package name is the DSH version; the number after `omd.` is the OMD version. Use the fixed package above rather than the repository's main branch, and do not download Source code or host-adapters.zip. Checksums: [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.16/SHA256SUMS).
 
 If installing fails, check the DSH version first. If you see a message about unapproved build scripts, see [build script approval](upgrade_EN.md#build-approval).
 
@@ -64,7 +64,7 @@ Existing web version: stop the service and install with its matching command lin
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.15/oh-my-dsh-0.2.2-rc.2.omd.1.3.15.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.16/oh-my-dsh-0.2.2-rc.2.omd.1.3.16.tgz
 ```
 
 Then start it the way you did before; the data directory and port stay the same.
@@ -72,7 +72,7 @@ Then start it the way you did before; the data directory and port stay the same.
 First time using the web version (on Windows, use PowerShell 7):
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.2-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.15/oh-my-dsh-0.2.2-rc.2.omd.1.3.15.tgz
+npx --yes @deepseek-ai/dsh@0.2.2-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.16/oh-my-dsh-0.2.2-rc.2.omd.1.3.16.tgz
 npx --yes @deepseek-ai/dsh@0.2.2-rc.2 --profile web
 ```
 
@@ -82,7 +82,7 @@ Command line for the macOS desktop app in its default location:
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.15/oh-my-dsh-0.2.2-rc.2.omd.1.3.15.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.16/oh-my-dsh-0.2.2-rc.2.omd.1.3.16.tgz
 ```
 
 On the Windows desktop app, installing from the Plugins page is simpler.

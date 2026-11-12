@@ -9,17 +9,17 @@
 打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.7-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.7-dsh.0.2.2-rc.2.tgz
+https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.8-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.8-dsh.0.2.2-rc.2.tgz
 ```
 
-等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.7-dsh.0.2.2-rc.2/SHA256SUMS)。
+等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.8-dsh.0.2.2-rc.2/SHA256SUMS)。
 
 ## 用命令行安装
 
 用同一个 DSH 自带的命令行，把 `web` 换成你的 profile（桌面版是 `desktop`）：
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.7-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.7-dsh.0.2.2-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.8-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.8-dsh.0.2.2-rc.2.tgz"
 ```
 
 ## 升级和回退

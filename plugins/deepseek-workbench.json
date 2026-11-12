@@ -1,13 +1,13 @@
 {
   "package": "dsh-deepseek-workbench",
-  "version": "0.1.7-dsh.0.2.2-rc.2",
+  "version": "0.1.8-dsh.0.2.2-rc.2",
   "host": "0.2.2-rc.2",
   "source": "../deepseek-workbench",
   "files": {
-    "CHANGELOG.md": "ef113cb0f75aa79f9716c30ff0efd9a5a3c5d64413965b918880c301881a4582",
+    "CHANGELOG.md": "34c572d54234e6c35b871a25f47c4cd8e2cf6a6744b39dc9b942f2cb4e6429e4",
     "LICENSE": "34afbe3ace726d5a23cd5c54a95cf1e0ae2777153afc33959f55ac3e4bf6c187",
-    "README_EN.md": "07c40143061e4e1b6dee0f7e39f2686479aac8d45df4175f7d29419211e58279",
-    "README.md": "8bf1bb2ff62011835133e6e2de3fcece3155e1e7e9d17fd2447af7b4a1e7aa3e",
+    "README_EN.md": "e0144b8bc778bd72a89c8ee41c6e1f237c0574cbe804f3651b0eb7d593808573",
+    "README.md": "dcf99292543b28546c2c0290eec2c012eaf2a2b057648f1cbd1099002da0da5e",
     "THIRD_PARTY_NOTICES.md": "fd3a9f2e63b55321f2893f6da29508753dff5467bd72e11cd5e31f93bcf35e6d",
     "cordis.patch.yml": "f5e8623847bf4d11754487b9b74415a8588d22de54c3b858c5ba90b87de4bca6",
     "desktop/apply-host.mjs": "a45a952b98f9fa13441868e5499dbd4c337748a05cc6fd12f07aa6c68e5010b7",
@@ -18,13 +18,13 @@
     "docs/desktop-host_EN.md": "2aa9272be6b33f4a7430722551a12052b42afc5d38b60937ba7762b438ef412b",
     "docs/desktop-host.md": "a0bff28e552753b896ccf20f08670fb9fe5d3625b9a889746bb9c7667847ddcd",
     "docs/images/temporary-chat.png": "d01c44e39d7cc438725bebeb3940bd0489cad10788a82e403429698c071b4b84",
-    "docs/install_EN.md": "ec958ddc08844120ffc309a0804890d14b2b3b46bf03893c57d56762f3219634",
-    "docs/install.md": "ed375b1816edcd9bcf5fddde9420772e4653e6e7f95eb7c8cef54388a6c8fa26",
-    "docs/structure.json": "c6fd4a8c1f6f8bafbb0e6bb3c23854f8c42687b04b690f92470c46e53a07ff39",
+    "docs/install_EN.md": "5a1abdf878d31d3ae8d7e3c368510b7dfb10b102ca7fd7e1d38dc6b884d9db8f",
+    "docs/install.md": "180532e5ea85cf324ba69249b51206b5d5842840ec20acf744e4bb6564408a5a",
+    "docs/structure.json": "4ab80110fac7cf90872b401020ac2cf693e1b136f1b82ee1a9d996a9d7816519",
     "docs/usage_EN.md": "24fe069426da8a4a64f158254766944e9161f8e3ebc2769c5671641b02dbc660",
     "docs/usage.md": "b70a2395d33cef5081bae29cb06a32a5be85cac0af02cefce79a5836465682bd",
     "lib/client.js": "647941770683aa1d656a1d7fca6901cfed43e9961aab2252aa12a55b4341e291",
-    "package.json": "f9b3cd5fd4dcadfcc9e90ef80dbe8e93e2a0366653c47e1bd5a1b2a4ae01c5ec",
+    "package.json": "29fae380843a58ed33ce3b6bf3461d3cc58693f134101a250e523397d9a36be3",
     "scripts/build.mjs": "70869d27e396cda01e08625aff9bd24fd856326c8f15cb987276422062fd54cb",
     "scripts/check-docs.mjs": "6c062fc1534c6a55951bccc2bd2818e0bc72752b5daf98c8665338f79ef68133",
     "scripts/check-public-files.mjs": "2b5a86a744852fd0add41ba4a022388d605ce8d918af5eab63dcc64768c0e922",
@@ -46,6 +46,6 @@
     "src/client/temporary-sidebar.jsx": "34142a71cfa0f88399d34517f591c3d132a4e4a84b1995ac5bbda539c6a02275",
     "src/client/temporary-web.mjs": "06783d00cb9c56c92894e3f04abeff9338bdb7931986eba059429f157c8c20e1",
     "src/import.mjs": "20520bde14ac07877b85b5a16c5b133a33d9c587999ae5b1c1346014e46edc3b",
-    "src/index.mjs": "ffb68ae4b56605babfddb5e95066b8c58143fbad7e6aabf16f5c2ad883c908e9"
+    "src/index.mjs": "9ba46f0254bdfd5d58d7791c506536cc2be99360cdd09ed0eece1f726527e138"
   }
 }

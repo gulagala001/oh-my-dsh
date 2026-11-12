@@ -1,3 +1,31 @@
+# DeepSeek Workbench 0.1.8 · DSH 0.2.2-rc.2
+
+[中文](#zh-018) · [English](#en-018)
+
+<a id="zh-018"></a>
+
+## 中文
+
+### 问题修复
+
+- 网页聊天状态显示当前安装的版本，升级后可以直接核对。
+
+<a id="en-018"></a>
+
+## English
+
+### Bug fixes
+
+- Web Chat reports the currently installed version after an update.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.2** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.8-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.8-dsh.0.2.2-rc.2.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-deepseek-workbench/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.8-dsh.0.2.2-rc.2/SHA256SUMS)
+
+---
+
 # DeepSeek Workbench 0.1.7 · DSH 0.2.2-rc.2
 
 [中文](#zh-017) · [English](#en-017)
