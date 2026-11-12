@@ -9,7 +9,7 @@ import { runInNewContext } from 'node:vm';
 import { transformSync } from 'esbuild';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { chromium } from 'playwright';
-import { adaptChatStyleFactory } from '../scripts/chat-style-adapter.mjs';
+import { adaptChatStyleFactory, inlineFactoryAssets } from '../scripts/chat-style-adapter.mjs';
 
 const require = createRequire(import.meta.url), React = require('react');
 const raw = (await readFile(new URL('../vendor/dsh/ui-chat/lib/client.js', import.meta.url), 'utf8')).replace(/^\/\/# sourceMappingURL=.*\n?/gm, '');
@@ -70,7 +70,13 @@ test('native and themed process headers keep status badges whole while long titl
   assert.ok(before.badges.some(item => item.lines > 1), 'the unadapted native header reproduces the reported vertical badge');
   const evidence = process.env.OMD_HEADER_EVIDENCE;
   if (evidence) { await mkdir(evidence, { recursive: true }); await page.locator('main').screenshot({ path: evidence + '/before.png' }); }
-  const css = headerCSS(adaptChatStyleFactory(raw).code);
+  const source = new URL('../vendor/dsh/ui-chat/', import.meta.url);
+  const snapshot = JSON.parse(await readFile(new URL('../vendor/dsh/ui-chat.json', import.meta.url)));
+  const assets = {};
+  for (const path of Object.keys(snapshot.files).filter(path => path.startsWith('lib/assets/'))) {
+    assets['plugins/@deepseek-ai/dsh-client-ui-chat/' + path.slice(4).split('/').map(encodeURIComponent).join('/')] = 'data:image/png;base64,' + (await readFile(new URL(path, source))).toString('base64');
+  }
+  const css = headerCSS(adaptChatStyleFactory(inlineFactoryAssets(raw, assets)).code);
   const cases = [
     {}, { stopped: 2 }, { language: 'en', count: 1234, failures: 234, stopped: 56 },
     { width: 240, language: 'en', stopped: 2, font: 22 }, { width: 160, stopped: 99 },

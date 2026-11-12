@@ -1,3 +1,4 @@
+import { setHostStyle } from '../../../plugins/glyph-theme/src/shared/host-styles.mjs';
 import { observeSurfaces as observeHostSurfaces } from './surfaces.mjs';
 export const BACKGROUND_DB = 'omd.appearance.background.v1';
 export const MAX_BACKGROUND_BYTES = 15 * 1024 * 1024;
@@ -28,7 +29,7 @@ async function prepareImage(file) {
 export function createBackgroundRuntime(css, changed, { recovery = false, enabled = true, observeSurfaces = observeHostSurfaces } = {}) {
   let disposed = false, db, opening, objectUrl = '', imageId, sequence = 0, uploadSequence = 0, reduced = false;
   let state = { ...backgroundDefaults, name: '', url: '', loading: false, error: '' };
-  const style = document.createElement('style'); style.dataset.omdBackgroundStyle = ''; style.textContent = css;
+  const style = document.createElement('style'); style.dataset.omdBackgroundStyle = '';
   const layer = document.createElement('div'); layer.dataset.omdBackgroundLayer = ''; layer.setAttribute('aria-hidden', 'true');
   const image = document.createElement('img'); image.alt = ''; image.draggable = false; layer.append(image);
   let channel;
@@ -59,7 +60,7 @@ export function createBackgroundRuntime(css, changed, { recovery = false, enable
     if (disposed || enabled === value) return;
     enabled = value;
     if (enabled) {
-      document.head.append(style); document.body.prepend(layer);
+      setHostStyle(style, css); document.head.append(style); document.body.prepend(layer);
       stopObserving = follow(); render();
     } else {
       stopObserving?.(); layer.remove(); style.remove();
@@ -68,7 +69,7 @@ export function createBackgroundRuntime(css, changed, { recovery = false, enable
     }
   };
   if (enabled) {
-    document.head.append(style); document.body.prepend(layer);
+    setHostStyle(style, css); document.head.append(style); document.body.prepend(layer);
     stopObserving = follow();
   }
   const open = () => {

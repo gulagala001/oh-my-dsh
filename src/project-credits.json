@@ -117,8 +117,8 @@
       "source": "plugins/deepseek-workbench/package.json",
       "license": "MIT",
       "notice": "plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.6-dsh.0.2.2-rc.2",
-      "sourceSha256": "be03476aad34480128fc9706ac92e1abf5caa26714ca41c770408e9659675c54",
+      "version": "0.1.7-dsh.0.2.2-rc.2",
+      "sourceSha256": "f9b3cd5fd4dcadfcc9e90ef80dbe8e93e2a0366653c47e1bd5a1b2a4ae01c5ec",
       "group": "products"
     },
     {
@@ -157,8 +157,8 @@
       "source": "src/client/skins/runtime.mjs",
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
-      "version": "SHA256:435fe1335631e736f76c7c15d980b1bdabf2fc6ef8eba20600bcf0f719ea7277",
-      "sourceSha256": "435fe1335631e736f76c7c15d980b1bdabf2fc6ef8eba20600bcf0f719ea7277",
+      "version": "SHA256:da333a79321d9e622a6f42831e5ff973ce5770fd4b9f2dff9f2afb9ca1e062e2",
+      "sourceSha256": "da333a79321d9e622a6f42831e5ff973ce5770fd4b9f2dff9f2afb9ca1e062e2",
       "group": "products"
     },
     {
@@ -574,7 +574,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.2.2-rc.2.iui.1.0.16 / 0.2.2-rc.1.iui.1.0.15 / 0.2.1-rc.5.iui.1.0.14 / 0.2.1-rc.3.iui.1.0.13 / 0.2.1-rc.2.iui.1.0.12 / 0.2.1-rc.1.iui.1.0.12",
+      "version": "0.2.2-rc.2.iui.1.0.17 / 0.2.2-rc.1.iui.1.0.15 / 0.2.1-rc.5.iui.1.0.14 / 0.2.1-rc.3.iui.1.0.13 / 0.2.1-rc.2.iui.1.0.12 / 0.2.1-rc.1.iui.1.0.12",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"
@@ -593,7 +593,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.2.2-rc.2.omaa.0.17.11 / 0.2.2-rc.1.omaa.0.17.10 / 0.2.1-rc.5.omaa.0.17.7 / 0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5",
+      "version": "0.2.2-rc.2.omaa.0.17.12 / 0.2.2-rc.1.omaa.0.17.10 / 0.2.1-rc.5.omaa.0.17.7 / 0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"

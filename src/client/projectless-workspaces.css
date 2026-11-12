@@ -5,3 +5,8 @@ button[aria-haspopup="menu"]:hover ~ [data-slot="conversation.hero.workspace"] .
 .omd-projectless-picker { display:none; }
 @media (hover:none) { .omd-workspace-clear:not(:disabled) { opacity:1;pointer-events:auto; } }
 @media (prefers-reduced-motion:reduce) { .omd-workspace-clear { transition:none; } }
+
+[role="treeitem"][data-row-key="workspace:"] > :has(> .omd-ungrouped-create) { display:inline-flex; }
+.omd-ungrouped-create { display:inline-grid; place-items:center; padding:0; width:24px; height:24px; border:0; border-radius:var(--dsw-radius-sm,6px); background:transparent; color:inherit; cursor:pointer; }
+.omd-ungrouped-create:hover { background:var(--dsw-alias-interactive-bg-hover); }
+.omd-ungrouped-create:focus-visible { outline:2px solid var(--dsw-focus-ring-color); }

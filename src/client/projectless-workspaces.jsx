@@ -1,9 +1,32 @@
+import { createPortal } from 'react-dom';
+import { IconNewChatOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { Icon } from './native-icons.jsx';
 import { Button } from './native-controls.jsx';
 import React, { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ProjectlessDrafts } from './projectless-state.mjs';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import css from './projectless-workspaces.css';
+
+// The host has extension slots for session rows. The ungrouped header has no
+// Workspace resource or group-action slot, so attach only to its own action strip.
+function UngroupedCreate({ wide, useRemoteAccess, actions, startSession, t }) {
+  const marker = useRef(null), [target, setTarget] = useState(null);
+  const allowed = useRemoteAccess('session/create');
+  useLayoutEffect(() => {
+    if (!wide || !allowed) { setTarget(null); return; }
+    const region = marker.current.parentElement;
+    const locate = () => setTarget(region.querySelector('[role="treeitem"][data-row-key="workspace:"] > [class*="_rowActions"]'));
+    const observer = new MutationObserver(locate);
+    observer.observe(region, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-row-key'] });
+    locate(); return () => observer.disconnect();
+  }, [wide, allowed]);
+  const label = t('actions.newSession.aria', { name: t('group.ungrouped') });
+  return <><span hidden ref={marker}/>{allowed && wide && target && createPortal(
+    <button type="button" className="omd-ungrouped-create" title={label} aria-label={label}
+      onClick={event => { event.stopPropagation(); actions.setGroupExpanded('', true); startSession(); }}>
+      <IconNewChatOutlineRegular size={14}/>
+    </button>, target)}</>;
+}
 
 export function applyProjectlessWorkspaces(ctx, { onError = error => console.error('新会话创建失败', error) } = {}) {
   const drafts = new ProjectlessDrafts(ctx);
@@ -20,6 +43,12 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
       return <Original {...props}/>;
     };
   }));
+  ctx.effect(() => decorateSlotComponent(ctx.slots, 'sidebar.workspaces',
+    (_key, entry) => entry.locale === 'workspace' && entry.children?.['sidebar.workspaces.session.row.action']?.kind === 'list',
+    entry => {
+      const Original = entry.component;
+      return function WorkspaceBrowser(props) { return <><Original {...props}/><UngroupedCreate {...props}/></>; };
+    }));
   const useDrafts = () => useSyncExternalStore(drafts.subscribe, drafts.getSnapshot);
   ctx.effect(() => {
     const style = document.createElement('style'); style.dataset.plugin = 'omd-projectless'; style.textContent = css; document.head.append(style);
@@ -46,20 +75,7 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
     workspace.startSession = start;
     const openWorkspace = (id, beforeOpen, options) => drafts.startDraft(drafts.current(), options, id, beforeOpen);
     workspace.openWorkspace = openWorkspace;
-    // The native Ungrouped row renders a create button but its onCreate skips
-    // groups without a Workspace. Keep that row and route only its button to
-    // the existing projectless draft flow, without inheriting a Workspace.
-    const onUngroupedCreate = event => {
-      if (event.defaultPrevented || event.button !== 0 || !(event.target instanceof Element)) return;
-      const button = event.target.closest('button');
-      if (!button || button.disabled || !button.closest('[class*="_rowActions"]')
-        || button.closest('[role="treeitem"]')?.dataset.rowKey !== 'workspace:') return;
-      event.preventDefault(); event.stopPropagation();
-      void start();
-    };
-    document.addEventListener('click', onUngroupedCreate, true);
     return () => {
-      document.removeEventListener('click', onUngroupedCreate, true);
       if (workspace.startSession === start) workspace.startSession = original;
       if (workspace.openWorkspace === openWorkspace) workspace.openWorkspace = originalOpen;
       if (workspace.restoreSelection === restore) workspace.restoreSelection = originalRestore;

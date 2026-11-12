@@ -8,15 +8,15 @@ OMD 是一套装好就能用的组合。里面的 Workflow、撤回、人格、�
 
 | 产品 | 做什么 | 在 OMD 里 | 独立版 |
 | --- | --- | --- | --- |
-| [OpenCU](https://github.com/gulagala001/opencu/releases) | 操作浏览器和桌面应用、观察、批注、监看 | 内置 | 2.2.11 |
-| [DSH Workflow](https://github.com/gulagala001/dsh-workflow/releases) · `dsh-workflow-plus` | 工作流脚本、子智能体、阶段面板、后台执行、预算和续跑 | Ultra 的 Workflow 模式和工作流工具 | 0.1.8 |
-| [DSH Rewind](https://github.com/gulagala001/dsh-undo-plugin/releases) · `@gulagala001/dsh-undo-plugin` | 撤回消息和文件、撤销撤回、内容回填 | 内置：消息按钮、双击 Esc、`/rewind`、`/undo` | 0.1.11 |
-| [DeepSeek Workbench](https://github.com/gulagala001/dsh-deepseek-workbench/releases) · `dsh-deepseek-workbench` | 网页聊天、网页侧栏、开放平台和历史导入 | 在 **设置 → Oh My DSH → 功能** 开关 | 0.1.5 |
-| [DSH Extensions](https://github.com/gulagala001/dsh-extensions/releases) · `dsh-extensions` | Skill、MCP、指令文件、命令和 Hooks | 默认开启，在插件页 | 0.1.5 |
-| [DSH Persona](https://github.com/gulagala001/dsh-persona-plugin/releases) · `@gulagala001/dsh-persona-plugin` | 人格预设、四个模块、导入导出和会话人设 | 在 OMD 设置里编辑，在主会话权限菜单里选 | 0.2.2 |
+| [OpenCU](https://github.com/gulagala001/opencu/releases) | 操作浏览器和桌面应用、观察、批注、监看 | 内置 | 2.2.12 |
+| [DSH Workflow](https://github.com/gulagala001/dsh-workflow/releases) · `dsh-workflow-plus` | 工作流脚本、子智能体、阶段面板、后台执行、预算和续跑 | Ultra 的 Workflow 模式和工作流工具 | 0.1.9 |
+| [DSH Rewind](https://github.com/gulagala001/dsh-undo-plugin/releases) · `@gulagala001/dsh-undo-plugin` | 撤回消息和文件、撤销撤回、内容回填 | 内置：消息按钮、双击 Esc、`/rewind`、`/undo` | 0.1.12 |
+| [DeepSeek Workbench](https://github.com/gulagala001/dsh-deepseek-workbench/releases) · `dsh-deepseek-workbench` | 网页聊天、网页侧栏、开放平台和历史导入 | 在 **设置 → Oh My DSH → 功能** 开关 | 0.1.7 |
+| [DSH Extensions](https://github.com/gulagala001/dsh-extensions/releases) · `dsh-extensions` | Skill、MCP、指令文件、命令和 Hooks | 默认开启，在插件页 | 0.1.6 |
+| [DSH Persona](https://github.com/gulagala001/dsh-persona-plugin/releases) · `@gulagala001/dsh-persona-plugin` | 人格预设、四个模块、导入导出和会话人设 | 在 OMD 设置里编辑，在主会话权限菜单里选 | 0.2.3 |
 | [DSH Theme](https://github.com/gulagala001/dsh-theme-plugin/releases) · `@gulagala001/dsh-theme-plugin` | 外观设置、主题管理、主题市场和安装检查，含 Glyph | OMD 自带外观选择，主题管理可以另装 | 0.3.3 |
-| [DSH BTW](https://github.com/gulagala001/dsh-btw/releases) · `@gulagala001/dsh-btw` | 旁聊、历史、追问和单独停止 | 内置，用 `/btw` | 0.1.8 |
-| [DSH Response ID Reuse](https://github.com/gulagala001/dsh-response-id-reuse/releases) · `@gulagala001/dsh-response-id-reuse` | Responses 渠道的响应 ID 续传 | 内置，无需设置 | 0.1.7 |
+| [DSH BTW](https://github.com/gulagala001/dsh-btw/releases) · `@gulagala001/dsh-btw` | 旁聊、历史、追问和单独停止 | 内置，用 `/btw` | 0.1.9 |
+| [DSH Response ID Reuse](https://github.com/gulagala001/dsh-response-id-reuse/releases) · `@gulagala001/dsh-response-id-reuse` | Responses 渠道的响应 ID 续传 | 内置，无需设置 | 0.1.8 |
 
 独立版各自更新，表里是当前版本，都对应 DSH 0.2.2-rc.2。IUI、OMAA 一直是独立产品；dsh-ops 是第三方工具，在 OMD 的第三方功能页安装。
 

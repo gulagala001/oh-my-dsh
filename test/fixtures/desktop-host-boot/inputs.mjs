@@ -8,7 +8,7 @@ import { clientComponents } from './client-identity.mjs';
 
 // Deliberately narrower than the legacy non-CU fixture's parent-of-repo root.
 export const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
-export const hostVersion = '0.2.1-rc.2';
+export const hostVersion = '0.2.2-rc.2';
 export const inside = (root, path) => path === root || path.startsWith(root + sep);
 export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sdkNames = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host', '@deepseek-ai/dsh-app-boot',
@@ -88,7 +88,7 @@ export async function desktopInputs(env = process.env, platform = process.platfo
   const manifest = JSON.parse(files.get('package/package.json'));
   const source = JSON.parse(await readFile(new URL('../../../package.json', import.meta.url)));
   assert.equal(manifest.name, 'oh-my-dsh'); assert.equal(manifest.version, source.version);
-  assert.match(manifest.version, /^0\.2\.1-rc\.2\.omd\.\d+\.\d+\.\d+$/);
+  assert.match(manifest.version, /^0\.2\.2-rc\.2\.omd\.\d+\.\d+\.\d+$/);
   assert.equal(manifest.engines.dsh, hostVersion);
   assert.equal(manifest.devDependencies['@deepseek-ai/dsh'], hostVersion);
   assert.deepEqual(manifest.dsh.client.inject, source.dsh.client.inject);

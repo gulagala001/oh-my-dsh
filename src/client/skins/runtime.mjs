@@ -1,3 +1,4 @@
+import { setHostStyle } from '../../../plugins/glyph-theme/src/shared/host-styles.mjs';
 import { advancedDefaults, normalizeAdvanced, advancedTokens, advancedCss, prepareLogo, OMD_BRAND } from './advanced.mjs';
 import { bundledSkins, bundledAssets } from './bundled.mjs';
 import { validateSkin, compileSkinCss } from './format.mjs';
@@ -14,7 +15,9 @@ export const STORAGE_KEY = 'omd.skins.v1';
 // differences are options. assetUrl maps a bundled skin file to its route.
 export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', observeSurfaces, layoutBaseCss = '', options = {}) {
   const { storageKey = STORAGE_KEY, defaultSkin = 'glyph-motion', owner = { id: 'omd', priority: 0 }, tokenOwner = 'oh-my-dsh/skin',
-    brand = OMD_BRAND, assetUrl = file => `oh-my-dsh/api/skins/${file}` } = options;
+    brand: ownBrand = OMD_BRAND, companionBrand, assetUrl = file => `oh-my-dsh/api/skins/${file}` } = options;
+  const coordinator = appearanceCoordinator();
+  let usesCompanion = false, brand = ownBrand, storedBrand, brandEdited = false;
   const defaults = () => advancedDefaults(brand);
   const recovery = new URLSearchParams(location.search).get('omd-skin') === 'default';
   let state = { active: false, skins: [], palettes: paletteCatalog([]), selected: 'default', palette: 'theme', reduceEffects: false, advanced: defaults(), background: { ...backgroundDefaults, name: '', url: '', loading: false, error: '' }, error: '' };
@@ -47,6 +50,8 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   let prepared = new Map();
   const emit = () => { state = { ...state }; for (const fn of listeners) fn(); };
   const read = () => {
+    usesCompanion = Boolean(companionBrand && coordinator.hasProvider(companionBrand.owner));
+    brand = usesCompanion ? companionBrand.brand : ownBrand;
     const next = { ...state, skins: [], selected: 'default', palette: 'theme', reduceEffects: false, advanced: defaults(), error: '' };
     const ready = new Map(bundled), savedIds = new Set();
     try {
@@ -64,6 +69,20 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       if (ready.has(saved.palette) || extraPalettes.some(p => p.id === saved.palette)) next.palette = saved.palette;
       next.reduceEffects = saved.reduceEffects === true;
       next.advanced = normalizeAdvanced(saved.advanced, brand);
+      storedBrand = saved.advanced?.brand;
+      brandEdited = saved.brandEdited === true;
+      if (usesCompanion && !brandEdited) {
+        const prior = JSON.parse(localStorage.getItem(companionBrand.storageKey) || '{}');
+        const inherited = normalizeAdvanced(prior.advanced, brand).brand;
+        // A theme choice and the global brand are independent. Older theme
+        // snapshots wrote product defaults even when nobody edited the brand.
+        if (!storedBrand?.logo || storedBrand.logo === 'theme') {
+          Object.assign(next.advanced.brand, { logo: inherited.logo, name: inherited.name, image: inherited.image });
+        }
+        if (!storedBrand?.title || storedBrand.title === 'native' && storedBrand.logo === 'theme') {
+          Object.assign(next.advanced.brand, { title: inherited.title, titleText: inherited.titleText });
+        }
+      }
     } catch { next.error = '无法读取皮肤记录，已使用默认外观。'; }
     if (recovery) { next.selected = 'default'; next.palette = 'theme'; next.advanced = defaults(); next.advanced.brand = { ...next.advanced.brand, logo: 'native', title: 'native' }; }
     next.skins = [...ready.values()].map(item => item.skin);
@@ -116,7 +135,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     // Native appearance needs the same interaction contract as selected skins.
     // Keep it for this owner's lifetime, including palette-only customization.
     windowStyle = document.createElement('style'); windowStyle.dataset.omdWindowChrome = '';
-    windowStyle.textContent = windowChromeCss; document.head.append(windowStyle);
+    setHostStyle(windowStyle, windowChromeCss); document.head.append(windowStyle);
     const root = document.documentElement;
     if (active?.css === null) load(active);
     const source = state.palettes.find(p => p.id === state.palette);
@@ -132,15 +151,15 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
       if (active) { root.classList.add('omd'); root.dataset.omdSkin = active.skin.id; }
       if (active?.skin.layout) root.dataset.omdLayout = active.skin.layout;
       style = document.createElement('style'); style.dataset.omdSkinStyle = active?.skin.id || 'default';
-      style.textContent = (active ? layoutBaseCss + '\n' : '') + tokenCss(composed, 'html[data-omd-colors]') + '\n' + adapterCss + '\n' + (active?.css || '')
-        + (active?.skin.layout ? '\n' + (layouts[active.skin.layout] || '') : '');
+      setHostStyle(style, (active ? layoutBaseCss + '\n' : '') + tokenCss(composed, 'html[data-omd-colors]') + '\n' + adapterCss + '\n' + (active?.css || '')
+        + (active?.skin.layout ? '\n' + (layouts[active.skin.layout] || '') : ''));
       document.head.append(style);
     }
     const overrides = advancedTokens(state.advanced);
     if (state.advanced.enabled) {
       root.dataset.omdCustom = '';
       customStyle = document.createElement('style'); customStyle.dataset.omdCustomStyle = '';
-      customStyle.textContent = customTokenCss(overrides) + '\n' + advancedCss(state.advanced);
+      setHostStyle(customStyle, customTokenCss(overrides) + '\n' + advancedCss(state.advanced));
       document.head.append(customStyle);
     }
     if (composed && !disposeTokens) disposeTokens = ctx.theme.overrideTokens(tokenOwner, liveHostTokens());
@@ -148,9 +167,11 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     // refresh metadata from the body's newly computed CSS variable palette.
     else ctx.emit('theme/change', ctx.theme.getTheme());
   };
-  const save = next => {
-    try { localStorage.setItem(storageKey, JSON.stringify({ skins: next.skins.filter(skin => !skin.builtin), selected: next.selected, palette: next.palette, reduceEffects: next.reduceEffects, advanced: next.advanced })); }
+  const save = (next, editBrand = false) => {
+    const nextBrand = editBrand ? next.advanced.brand : storedBrand;
+    try { localStorage.setItem(storageKey, JSON.stringify({ skins: next.skins.filter(skin => !skin.builtin), selected: next.selected, palette: next.palette, reduceEffects: next.reduceEffects, advanced: { ...next.advanced, brand: nextBrand }, brandEdited: brandEdited || editBrand })); }
     catch { throw new Error('浏览器存储不可用或空间不足，未更改皮肤。请移除不用的皮肤后重试。'); }
+    storedBrand = nextBrand; brandEdited ||= editBrand;
     state = { ...next, palettes: paletteCatalog(next.skins), error: '' }; apply(); emit();
   };
   read();
@@ -158,15 +179,18 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   // Appearance handoff must not silently restore movement in model controls.
   syncEffects();
   const offTheme = ctx.on('theme/change', syncMode);
-  const unregisterAppearance = appearanceCoordinator().register({ ...owner,
+  const unregisterAppearance = coordinator.register({ ...owner,
     select: () => ({ key: 'omd-global' }),
     mount: () => {
       state = { ...state, active: true }; apply(); emit();
       return () => { state = { ...state, active: false }; release(); emit(); };
     },
   });
+  const offCompanion = companionBrand && coordinator.subscribe(() => {
+    if (usesCompanion !== coordinator.hasProvider(companionBrand.owner)) { read(); apply(); emit(); }
+  });
   const onStorage = event => {
-    if (event.key === storageKey || event.key === null) { read(); apply(); emit(); }
+    if (event.key === storageKey || event.key === null || usesCompanion && event.key === companionBrand.storageKey) { read(); apply(); emit(); }
   };
   window.addEventListener('storage', onStorage);
   // The phone layout presents navigation as a full sheet. Use the host action
@@ -188,7 +212,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   return {
     getSnapshot: () => state,
     background,
-    brand,
+    get brand() { return brand; },
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
     getAppearance: () => ctx.theme.getTheme().preference,
     async setAppearance(value) {
@@ -225,14 +249,15 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     },
     setAdvanced(value) {
       const advanced = normalizeAdvanced(value, brand);
-      if (JSON.stringify(advanced.brand) !== JSON.stringify(state.advanced.brand)) ++logoSequence;
-      save({ ...state, advanced });
+      const changed = JSON.stringify(advanced.brand) !== JSON.stringify(state.advanced.brand);
+      if (changed) ++logoSequence;
+      save({ ...state, advanced }, changed);
     },
     async uploadLogo(file) {
       const seq = ++logoSequence, image = await prepareLogo(file);
-      if (!disposed && seq === logoSequence) save({ ...state, advanced: { ...state.advanced, brand: { ...state.advanced.brand, logo: 'custom', image } } });
+      if (!disposed && seq === logoSequence) save({ ...state, advanced: { ...state.advanced, brand: { ...state.advanced.brand, logo: 'custom', image } } }, true);
     },
-    resetAdvanced() { ++logoSequence; save({ ...state, advanced: defaults() }); },
+    resetAdvanced() { ++logoSequence; save({ ...state, advanced: defaults() }, true); },
     reduceEffects: value => save({ ...state, reduceEffects: value }),
     reset() {
       const next = { ...state, selected: 'default' };
@@ -241,7 +266,7 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     },
     dispose() {
       if (disposed) return; disposed = true; ++logoSequence;
-      unregisterAppearance();
+      offCompanion?.(); unregisterAppearance();
       offTheme(); window.removeEventListener('storage', onStorage); document.removeEventListener('click', onNavigation, true);
       state = { ...state, selected: 'default', palette: 'theme', advanced: defaults() }; apply(); background.dispose(); listeners.clear();
       effectsMarkers.dispose();

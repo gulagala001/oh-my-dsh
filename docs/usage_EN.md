@@ -43,6 +43,8 @@ When you hand over a task, state the goal, material, scope and what counts as do
 
 ## Models, Ultra and Fast
 
+Click the reasoning level to expand **Enable Agent Teams**. In Ultra, open **More model options**.
+
 The model panel keeps DSH's own levels and adds **Ultra**. Slide to Ultra and click the **Ultra** button at the top of the panel to pick one of three ways of working together:
 
 - **Workflow**: runs a plan in stages. See [Ultra and Workflow](workflow.md).

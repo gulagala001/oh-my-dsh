@@ -8,15 +8,15 @@ OMD is a ready-to-use bundle. Workflow, rewind, personalities, extension managem
 
 | Product | What it does | In OMD | Separate version |
 | --- | --- | --- | --- |
-| [OpenCU](https://github.com/gulagala001/opencu/releases) | Operate browsers and desktop apps, observe, annotate, live view | Built in | 2.2.11 |
-| [DSH Workflow](https://github.com/gulagala001/dsh-workflow/releases) · `dsh-workflow-plus` | Workflow scripts, subagents, stage panel, background runs, budgets and resuming | Ultra's Workflow mode and workflow tools | 0.1.8 |
-| [DSH Rewind](https://github.com/gulagala001/dsh-undo-plugin/releases) · `@gulagala001/dsh-undo-plugin` | Rewind messages and files, undo a rewind, refill the input | Built in: message button, double Esc, `/rewind`, `/undo` | 0.1.11 |
-| [DeepSeek Workbench](https://github.com/gulagala001/dsh-deepseek-workbench/releases) · `dsh-deepseek-workbench` | Web chat, web side panel, open platform and history import | Toggle in **Settings → Oh My DSH → Features** | 0.1.5 |
-| [DSH Extensions](https://github.com/gulagala001/dsh-extensions/releases) · `dsh-extensions` | Skills, MCP, instruction files, commands and Hooks | On by default, on the Plugins page | 0.1.5 |
-| [DSH Persona](https://github.com/gulagala001/dsh-persona-plugin/releases) · `@gulagala001/dsh-persona-plugin` | Personality presets, four modules, import/export and per-session personalities | Edit in OMD settings, pick in the main session's permissions menu | 0.2.2 |
+| [OpenCU](https://github.com/gulagala001/opencu/releases) | Operate browsers and desktop apps, observe, annotate, live view | Built in | 2.2.12 |
+| [DSH Workflow](https://github.com/gulagala001/dsh-workflow/releases) · `dsh-workflow-plus` | Workflow scripts, subagents, stage panel, background runs, budgets and resuming | Ultra's Workflow mode and workflow tools | 0.1.9 |
+| [DSH Rewind](https://github.com/gulagala001/dsh-undo-plugin/releases) · `@gulagala001/dsh-undo-plugin` | Rewind messages and files, undo a rewind, refill the input | Built in: message button, double Esc, `/rewind`, `/undo` | 0.1.12 |
+| [DeepSeek Workbench](https://github.com/gulagala001/dsh-deepseek-workbench/releases) · `dsh-deepseek-workbench` | Web chat, web side panel, open platform and history import | Toggle in **Settings → Oh My DSH → Features** | 0.1.7 |
+| [DSH Extensions](https://github.com/gulagala001/dsh-extensions/releases) · `dsh-extensions` | Skills, MCP, instruction files, commands and Hooks | On by default, on the Plugins page | 0.1.6 |
+| [DSH Persona](https://github.com/gulagala001/dsh-persona-plugin/releases) · `@gulagala001/dsh-persona-plugin` | Personality presets, four modules, import/export and per-session personalities | Edit in OMD settings, pick in the main session's permissions menu | 0.2.3 |
 | [DSH Theme](https://github.com/gulagala001/dsh-theme-plugin/releases) · `@gulagala001/dsh-theme-plugin` | Appearance settings, theme management, theme market and install checks, including Glyph | OMD has its own appearance picker; theme management can be added | 0.3.3 |
-| [DSH BTW](https://github.com/gulagala001/dsh-btw/releases) · `@gulagala001/dsh-btw` | Side chats, history, follow-ups and separate stop | Built in, via `/btw` | 0.1.8 |
-| [DSH Response ID Reuse](https://github.com/gulagala001/dsh-response-id-reuse/releases) · `@gulagala001/dsh-response-id-reuse` | Response ID continuation for Responses channels | Built in, nothing to set up | 0.1.7 |
+| [DSH BTW](https://github.com/gulagala001/dsh-btw/releases) · `@gulagala001/dsh-btw` | Side chats, history, follow-ups and separate stop | Built in, via `/btw` | 0.1.9 |
+| [DSH Response ID Reuse](https://github.com/gulagala001/dsh-response-id-reuse/releases) · `@gulagala001/dsh-response-id-reuse` | Response ID continuation for Responses channels | Built in, nothing to set up | 0.1.8 |
 
 Separate versions update on their own schedule; the table shows the current ones, all for DSH 0.2.2-rc.2. IUI and OMAA have always been separate products, and dsh-ops is a third-party tool installed from OMD's third-party page.
 

@@ -4,7 +4,7 @@ import { createAttributeMarkers } from '../../attribute-markers.mjs';
 import { acquireOverlayInert } from '../../overlay-inert.mjs';
 import { ClaudeMediaControls } from './media.jsx';
 
-const handles = '.pI_x6G_handle[data-side]';
+const handles = '[data-side][class*="_handle"]';
 const visible = element => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden';
 const focusables = element => [...element.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),[tabindex="0"]')].filter(visible);
 
@@ -14,7 +14,7 @@ export function bindClaudeResize(frame, store) {
   if (!store?.actions?.setRightbar || !store.actions.setSidebar) return () => {};
   const attributes = new Map(['role', 'tabindex', 'aria-label', 'aria-orientation', 'aria-valuenow', 'aria-valuemin', 'aria-valuemax'].map(name => [name, createAttributeMarkers(name)]));
   let drag, pendingRestore, stopped = false, restoreFrame;
-  const width = side => frame.querySelector(side === 'sidebar' ? '.pI_x6G_sidebarCol' : '[data-rightbar-col]')?.getBoundingClientRect().width ?? 0;
+  const width = side => frame.querySelector(side === 'sidebar' ? '[class*="_sidebarCol"]' : '[data-rightbar-col]')?.getBoundingClientRect().width ?? 0;
   const setWidth = (side, value) => side === 'sidebar' ? store.actions.setSidebar(value) : store.actions.setRightbar(value);
   const snap = side => setWidth(side, side === 'sidebar' ? 280 : (frame.clientWidth - width('sidebar')) / 2);
   const sync = () => {
@@ -75,7 +75,7 @@ export function bindClaudeResize(frame, store) {
   for (const [name, listener] of Object.entries(events)) frame.addEventListener(name, listener, true);
   const unsubscribe = store.subscribe(sync), observer = new MutationObserver(sync);
   const resize = new ResizeObserver(sync);
-  for (const element of [frame, ...frame.querySelectorAll(':scope > .pI_x6G_sidebarCol,:scope > [data-rightbar-col]')]) resize.observe(element);
+  for (const element of [frame, ...frame.querySelectorAll(':scope > [class*="_sidebarCol"],:scope > [data-rightbar-col]')]) resize.observe(element);
   observer.observe(frame, { childList: true }); sync();
   return () => {
     stopped = true; cancelAnimationFrame(restoreFrame);
@@ -105,7 +105,7 @@ function ClaudeShell({ ctx }) {
     const frame = ref.current?.closest('[data-shell-overlay]')?.parentElement;
     if (!frame) return;
     const releaseResize = bindClaudeResize(frame, entry?.store?.create?.());
-    const narrow = matchMedia('(max-width: 600px)'), column = frame.querySelector('.pI_x6G_sidebarCol');
+    const narrow = matchMedia('(max-width: 600px)'), column = frame.querySelector('[class*="_sidebarCol"]');
     const roles = new Map(['role','aria-modal','aria-label'].map(name => [name, createAttributeMarkers(name)]));
     let modal = false, previousFocus, releaseInert = () => {}, raf, disposed = false;
     let portalTargets = [];
@@ -123,7 +123,7 @@ function ClaudeShell({ ctx }) {
       for (const [name, marker] of roles) marker.update(new Map(open ? [[column, { role: 'dialog', 'aria-modal': 'true', 'aria-label': '侧栏导航' }[name]]] : []));
       if (open) {
         previousFocus = document.activeElement;
-        releaseInert = acquireOverlayInert([...frame.querySelectorAll(':scope > .pI_x6G_centerCol,:scope > .pI_x6G_rightbarCol')]);
+        releaseInert = acquireOverlayInert([...frame.querySelectorAll(':scope > [class*="_centerCol"],:scope > [data-rightbar-col]')]);
         if (!otherOverlay()) column.querySelector('[data-omd-nav-part="toggle"]')?.focus({ preventScroll: true });
       } else if (previousFocus?.isConnected && !otherOverlay()) previousFocus.focus({ preventScroll: true });
     };

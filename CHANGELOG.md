@@ -1,3 +1,33 @@
+# Oh My DSH 1.3.15 · DSH 0.2.2-rc.2
+
+[中文](#zh-1315) · [English](#en-1315)
+
+<a id="zh-1315"></a>
+
+## 中文
+
+### 问题修复
+
+- 未分组行可以直接新建独立会话。模型与思考强度使用同一入口，点击强度名称即可展开智能体团队协作。
+- 侧栏、主题和自定义品牌会跟随外观设置。网页聊天按钮随侧栏一起展开和收起。
+
+<a id="en-1315"></a>
+
+## English
+
+### Bug fixes
+
+- Create a standalone chat from the Ungrouped row. Open the reasoning level in the model picker to change Agent Teams.
+- Sidebar layouts and custom branding follow appearance settings. The web chat button expands and collapses with the sidebar.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.2** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.15/oh-my-dsh-0.2.2-rc.2.omd.1.3.15.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.15/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.14 · DSH 0.2.2-rc.2
 
 [中文](#zh-1314) · [English](#en-1314)
@@ -20,15 +50,7 @@
 - Recover the same chat directory after an interrupted creation. Existing directories and symlinks keep their contents, and a replaced directory stays under its original owner’s control.
 - Dream retries share one job per target. Switching context or compression cancels obsolete actions. Updates, indexing and task reminders reflect progress and allow retries after cancellation.
 
-## 安装 / Installation
-
-适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
-
-Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
-
-| DSH | 固定安装包 / Fixed package | SHA256SUMS |
-| --- | --- | --- |
-| 0.2.2-rc.2 | [Oh My DSH 1.3.14](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/oh-my-dsh-0.2.2-rc.2.omd.1.3.14.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.14/SHA256SUMS) |
+已撤回。 / Withdrawn.
 
 ---
 

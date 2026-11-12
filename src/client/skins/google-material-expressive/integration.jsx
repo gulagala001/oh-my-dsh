@@ -71,11 +71,11 @@ function Navigation({ ctx }) {
 function SettingsNavigation() {
   const ref = useRef(null), [overview, setOverview] = useState(false), [label, setLabel] = useState('设置');
   useEffect(() => {
-    const panel = ref.current?.closest('.VOzbGW_panel'), nav = panel?.querySelector('.VOzbGW_nav');
+    const panel = ref.current?.closest('[data-shortcut-modal="settings"]'), nav = panel?.querySelector('nav');
     if (!panel || !nav) return;
     const sync = () => setLabel(nav.querySelector('[aria-current="true"]')?.textContent?.trim() || '设置');
     const onSelect = event => {
-      if (!(event.target instanceof Element) || !event.target.closest('.VOzbGW_navCell')) return;
+      if (!(event.target instanceof Element) || !event.target.closest('nav button')) return;
       setOverview(false);
       if (matchMedia('(max-width: 839px)').matches) queueMicrotask(() => ref.current?.focus());
     };
@@ -86,9 +86,9 @@ function SettingsNavigation() {
     return () => { observer.disconnect(); nav.removeEventListener('click', onSelect); panel.removeEventListener('keydown', onKey); };
   }, []);
   useEffect(() => {
-    const panel = ref.current?.closest('.VOzbGW_panel');
+    const panel = ref.current?.closest('[data-shortcut-modal="settings"]');
     if (!overview || !panel) return;
-    panel.querySelector('.VOzbGW_nav [aria-current="true"]')?.focus();
+    panel.querySelector('nav [aria-current="true"]')?.focus();
     const back = event => { if (event.key === 'Escape' && matchMedia('(max-width: 839px)').matches) { event.preventDefault(); event.stopPropagation(); setOverview(false); ref.current?.focus(); } };
     panel.addEventListener('keydown', back, true); return () => panel.removeEventListener('keydown', back, true);
   }, [overview]);

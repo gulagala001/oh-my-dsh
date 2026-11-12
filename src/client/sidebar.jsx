@@ -30,6 +30,7 @@ function createNavMarkers() {
       for (const element of sidebar?.querySelectorAll('[class]') ?? []) {
         const part = [...element.classList].filter(token => prefixes.has(prefix(token)))
           .map(token => navParts.get(token.slice(token.lastIndexOf('_') + 1))).find(Boolean);
+        if (part === 'create' && element.parentElement !== sidebar) continue;
         if (part) next.set(element, part);
       }
       markers.update(next);

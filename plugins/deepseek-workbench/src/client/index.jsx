@@ -178,9 +178,9 @@ export function findAccountRoot(doc = document) {
 export function findNewSessionAnchor(doc = document) {
   const sidebar = doc.querySelector('[data-slot="sidebar"]') ?? doc.querySelector('[data-omd-surface="sidebar"]');
   if (!sidebar) return null;
-  const marked = sidebar.querySelector('button[data-omd-nav-part="create"]');
-  if (marked) return marked;
-  return Array.from(sidebar.querySelectorAll('button[class]')).find(button => Array.from(button.classList).some(token => token.endsWith('_newSession'))) ?? null;
+  return Array.from(sidebar.querySelectorAll('button[data-omd-nav-part="create"],button[class*="_newSession"]'))
+    .find(button => !button.closest('[data-deepseek-workbench-portal]') &&
+      (button.dataset.omdNavPart === 'create' || Array.from(button.classList).some(token => token.endsWith('_newSession')))) ?? null;
 }
 function PortalSurfaces({ ctx, openChat, notices, platform }) {
   const [notice, setNotice] = useState(null);
@@ -204,8 +204,12 @@ function PortalSurfaces({ ctx, openChat, notices, platform }) {
           }
         }
         next[kind] = own.get(kind)?.container ?? null;
+        if (kind === 'sidebar' && root) {
+          next.buttonClass = Array.from(root.classList).find(token => token.endsWith('_newSession'));
+          next.wide = Boolean(root.querySelector('[class*="_newSessionLabel"][class*="_wide"]'));
+        }
       }
-      setTargets(old => old.account === next.account && old.sidebar === next.sidebar ? old : next);
+      setTargets(old => old.account === next.account && old.sidebar === next.sidebar && old.wide === next.wide && old.buttonClass === next.buttonClass ? old : next);
     };
     const anchors = '[data-shortcut-modal="settings"], [data-slot="settings.section"], section[aria-label], [data-slot="sidebar"], [data-omd-surface="sidebar"], button[data-omd-nav-part="create"], button[class*="_newSession"]';
     const containsAnchor = node => node.nodeType === 1 && (node.matches(anchors) || (node.firstElementChild && node.querySelector(anchors)));
@@ -215,7 +219,8 @@ function PortalSurfaces({ ctx, openChat, notices, platform }) {
       if (!mounts.some(({ container, root }) => !container.isConnected || !root.isConnected)
         && !records.some(record => record.type === 'attributes'
           ? record.target.matches(anchors) || mounts.some(({ root }) => record.target.contains(root))
-          : [...record.addedNodes, ...record.removedNodes].some(containsAnchor))) return;
+          : mounts.some(({ root }) => root.tagName === 'BUTTON' && root.contains(record.target)) ||
+            [...record.addedNodes, ...record.removedNodes].some(containsAnchor))) return;
       queued = true; queueMicrotask(reconcile);
     });
     observer.observe(document.body, { childList: true, subtree: true, attributes: true,
@@ -223,7 +228,7 @@ function PortalSurfaces({ ctx, openChat, notices, platform }) {
     reconcile();
     return () => { stopped = true; observer.disconnect(); for (const entry of own.values()) entry.container.remove(); };
   }, []);
-  return <>{notice && createPortal(<div className="dswb-toast" role={notice.error ? "alert" : "status"}><div><strong>{notice.title}</strong><button type="button" aria-label="关闭迁移通知" onClick={() => setNotice(null)}>×</button></div><WarningList warnings={notice.warnings}/></div>, document.body)}{targets.account && createPortal(<AccountPanel ctx={ctx} platform={platform}/>, targets.account)}{targets.sidebar && createPortal(<SidebarEntry openChat={openChat}/>, targets.sidebar)}</>;
+  return <>{notice && createPortal(<div className="dswb-toast" role={notice.error ? "alert" : "status"}><div><strong>{notice.title}</strong><button type="button" aria-label="关闭迁移通知" onClick={() => setNotice(null)}>×</button></div><WarningList warnings={notice.warnings}/></div>, document.body)}{targets.account && createPortal(<AccountPanel ctx={ctx} platform={platform}/>, targets.account)}{targets.sidebar && createPortal(<SidebarEntry openChat={openChat} buttonClass={targets.buttonClass} wide={targets.wide}/>, targets.sidebar)}</>;
 }
 export function accountSettingsAction(ctx) {
   const entries = ctx.slots?.entries?.('settings.section');
@@ -252,9 +257,20 @@ function waitForPlatform(signal) {
     if (signal.aborted) abort(); else check();
   });
 }
-function SidebarEntry({ openChat }) {
+function SidebarEntry({ openChat, buttonClass, wide }) {
   const [error, setError] = useState('');
-  return <><button type="button" className="dswb-sidebar-entry" title="DeepSeek 网页聊天" aria-label="DeepSeek 网页聊天" onClick={() => { try { if (!openChat.current) throw new Error('当前宿主尚未提供原生内容标签页，请等待会话加载后重试。'); openChat.current(); setError(''); } catch (failure) { setError(failure.message); } }}><Icon/><span>DeepSeek 网页聊天</span></button>{error && <div className="dswb-sidebar-error" role="alert">{error}</div>}</>;
+  const prefix = buttonClass?.slice(0, -'newSession'.length);
+  const open = () => {
+    try {
+      if (!openChat.current) throw new Error('当前宿主尚未提供原生内容标签页，请等待会话加载后重试。');
+      openChat.current(); setError('');
+    } catch (failure) { setError(failure.message); }
+  };
+  return <><button type="button" className={`dswb-sidebar-entry ${buttonClass ?? ''}`} title="DeepSeek 网页聊天" aria-label="DeepSeek 网页聊天" onClick={open}>
+    <span className={prefix && prefix + 'newSessionLabelMask'}><span className={prefix && prefix + 'newSessionContent'}>
+      <Icon size={wide ? 14 : 18}/>{wide && <span className={prefix && prefix + 'newSessionLabel'}>DeepSeek 网页聊天</span>}
+    </span></span>
+  </button>{error && <div className="dswb-sidebar-error" role="alert">{error}</div>}</>;
 }
 function mountClient(ctx) {
   let stopped = false;

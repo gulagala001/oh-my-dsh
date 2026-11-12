@@ -80,7 +80,7 @@ test('serialized main identity reads installed resources without an import callb
   const appRoot = join(root, 'identity-app.asar'), anchor = join(appRoot, 'dsh', 'package.json');
   await mkdir(join(appRoot, 'dsh'), { recursive: true });
   await writeFile(anchor, JSON.stringify({ name: 'isolated-runtime-anchor', private: true }));
-  const expected = { appRoot, hostVersion: '0.2.1-rc.2', cordisVersion: '4.0.5',
+  const expected = { appRoot, hostVersion: '0.2.2-rc.2', cordisVersion: '4.1.0',
     sdkNames: ['@deepseek-ai/dsh'],
     clientComponents: clientComponents(['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-ui-renderer']) };
   const packages = [...expected.sdkNames, ...expected.clientComponents.dynamic, '@deepseek-ai/cordis'];
@@ -130,7 +130,7 @@ test('serialized main identity reads installed resources without an import callb
   assert.equal(result.manifests['@deepseek-ai/dsh-client-ui-slots'], undefined);
   await assert.rejects(evaluate({ app }, { ...expected, clientComponents: clientComponents(['@deepseek-ai/dsh-client-missing']) }), /Cannot find module/);
   const sdkDirectory = join(appRoot, 'dsh', 'node_modules', '@deepseek-ai/dsh');
-  await writeFile(join(sdkDirectory, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '0.2.1-rc.1' }));
+  await writeFile(join(sdkDirectory, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: '0.2.2-rc.1' }));
   await assert.rejects(evaluate({ app }, expected), /Actual SDK identity mismatch/);
   const foreign = join(root, 'outside-resources'); await mkdir(foreign);
   await writeFile(join(foreign, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh', version: expected.hostVersion }));
@@ -142,7 +142,7 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   const slotsName = '@deepseek-ai/dsh-client-ui-slots', primitivesName = '@deepseek-ai/dsh-client-ui-primitives';
   const rendererName = '@deepseek-ai/dsh-client-ui-renderer', connectionName = '@deepseek-ai/dsh-client-connection';
   const conversationName = '@deepseek-ai/dsh-client-ui-conversation', chatName = '@deepseek-ai/dsh-client-ui-chat';
-  const expected = { stage: 'stock', appVersion: '0.2.1-rc.2', hostVersion: '0.2.1-rc.2',
+  const expected = { stage: 'stock', appVersion: '0.2.2-rc.2', hostVersion: '0.2.2-rc.2',
     publicComponents: [slotsName, primitivesName, rendererName, connectionName] };
   assert.deepEqual(clientComponents(expected.publicComponents), { static: [slotsName, primitivesName], dynamic: [rendererName, connectionName] });
   class Context {}
@@ -194,7 +194,7 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   const identity = JSON.parse(JSON.stringify((await window.__OMD_DESKTOP_HOST_BOOT__()).identity));
   assertClientIdentity(identity, expected);
   for (const [mutate, message] of [
-    [value => { value.release.version = '0.2.1-rc.1'; }, /boot module release/],
+    [value => { value.release.version = '0.2.2-rc.1'; }, /boot module release/],
     [value => { delete value.seeds[slotsName]; }, /Required shell seed/],
     [value => { value.seeds[slotsName].sameAsFactory = false; }, /shell factory export/],
     [value => { value.dynamic = value.dynamic.filter(row => row.id !== connectionName); }, /Required dynamic client module/],
@@ -270,7 +270,7 @@ test('installed UI identity requires the exact disabled originals and active rep
 
 test('rc.2 input accepts only the frozen current bundle and its exact isolated paths', async t => {
   const env = await fixture(t), value = await desktopInputs(env, 'win32', 'x64');
-  assert.equal(value.hostVersion, '0.2.1-rc.2'); assert.equal(value.manifest.version, source.version);
+  assert.equal(value.hostVersion, '0.2.2-rc.2'); assert.equal(value.manifest.version, source.version);
   assert.equal(value.archive, env.OMD_PLUGIN_ARCHIVE);
   assert.equal(await realpath(repoRoot), await realpath(new URL('../', import.meta.url)));
 });
@@ -288,8 +288,8 @@ test('wrong rc pairing, SDK peers, digest and parent-of-repo roots fail closed',
   const env = await fixture(t);
   await assert.rejects(desktopInputs({ ...env, OMD_PLUGIN_ARCHIVE_SHA256: '0'.repeat(64) }, 'win32', 'x64'), /Frozen tgz SHA-256/);
   await assert.rejects(desktopInputs({ ...env, OMD_DESKTOP_TEST_ROOT: join(repoRoot, '..') }, 'win32', 'x64'), /checkout\/\.cache/);
-  const rc1 = await fixture(t, { ...source, engines: { ...source.engines, dsh: '0.2.1-rc.1' } });
-  await assert.rejects(desktopInputs(rc1, 'win32', 'x64'), /0\.2\.1-rc\.1/);
+  const rc1 = await fixture(t, { ...source, engines: { ...source.engines, dsh: '0.2.2-rc.1' } });
+  await assert.rejects(desktopInputs(rc1, 'win32', 'x64'), /0\.2\.2-rc\.1/);
   const peer = await fixture(t, { ...source, peerDependencies: { ...source.peerDependencies, '@deepseek-ai/dsh-tools': '0.2.1-alpha.2' } });
   await assert.rejects(desktopInputs(peer, 'win32', 'x64'), /@deepseek-ai\/dsh-tools/);
 });

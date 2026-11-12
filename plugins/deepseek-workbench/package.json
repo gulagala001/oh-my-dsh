@@ -1,6 +1,6 @@
 {
   "name": "dsh-deepseek-workbench",
-  "version": "0.1.6-dsh.0.2.2-rc.2",
+  "version": "0.1.7-dsh.0.2.2-rc.2",
   "description": "在 DSH 里用 DeepSeek 网页聊天、临时侧栏和 API 开放平台，网页上的对话可以转成 DSH 会话接着聊。",
   "type": "module",
   "license": "MIT",

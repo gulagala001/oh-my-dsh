@@ -5,6 +5,7 @@ import { whaleSvg } from './brand.mjs';
 import { brandDocumentTitle } from './document-title.mjs';
 
 export function applyAppearanceBrand(ctx, getRuntime) {
+  ctx.provide('omdAppearanceBrand', { Name: BrandNameWithVersion, Mark: BrandMark });
   function Mark({ size = 32 }) {
     const runtime = getRuntime(), { advanced } = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot);
     return advanced.brand.logo === 'custom' && advanced.brand.image

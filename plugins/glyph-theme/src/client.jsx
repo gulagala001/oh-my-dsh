@@ -1,3 +1,4 @@
+import { setHostStyle } from './shared/host-styles.mjs';
 import React, { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Switch } from '@deepseek-ai/dsh-client-ui-primitives';
@@ -27,7 +28,7 @@ export function apply(ctx) {
     const previous=names.map(name=>[name,root.getAttribute(name)]);
     root.setAttribute('data-glyph-owner','standalone');root.setAttribute('data-omd-layout','glyph-motion');root.setAttribute('data-omd-skin','glyph-motion');
     const sync=()=>{root.dataset.appearance=ctx.theme.getTheme().active.colorScheme;};sync();
-    const style=document.createElement('style');style.dataset.glyphStyles='standalone';style.textContent=paletteCss+'\n'+nativeCss+'\n'+layout+'\n'+windowChrome;document.head.append(style);
+    const style=document.createElement('style');style.dataset.glyphStyles='standalone';setHostStyle(style, paletteCss+'\n'+nativeCss+'\n'+layout+'\n'+windowChrome);document.head.append(style);
     const disposeTokens=ctx.theme.overrideTokens('dsh-glyph-theme',Object.fromEntries(Object.entries(aliases).map(([alias,key])=>[`--dsw-alias-${alias}`,{light:`var(--omd-${key})`,dark:`var(--omd-${key})`}])));
     const offTheme=ctx.on('theme/change',sync),nav=createAttributeMarkers('data-omd-nav-part');
     let pending, sidebar;

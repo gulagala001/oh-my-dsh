@@ -28,7 +28,7 @@ const inUltraMenu = target => Boolean(target?.closest?.('[role="menu"]')?.queryS
 function Chevron({ back = false }) { return <Icon name="chevron" size={14} className={back ? 'omd-model-back' : undefined}/>; }
 function Reset() { return <Icon name="refresh" size={16}/>; }
 
-function ModelPanel({ ctx, sessionId, locked, available, directory, load, renderSlot, rememberModel, preferredUltraEffort, additive = false }) {
+function ModelPanel({ ctx, sessionId, locked, available, directory, load, select, renderSlot, hasOptions = false, rememberModel, preferredUltraEffort, additive = false }) {
   const state = useStore(directory);
   const faces = useMemo(() => {
     const projections = ctx.sessions.binding(sessionId)?.session.projections;
@@ -40,6 +40,8 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   const [draft, setDraft] = useState(null), [dragging, setDragging] = useState(false);
   const [submodeDraft, setSubmodeDraft] = useState(null);
   const [submodeOpen, setSubmodeOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const headingButton = useRef(null);
   const [position, setPosition] = useState({ visibility: 'hidden' });
   const trigger = useRef(null), panel = useRef(null), slider = useRef(null), search = useRef(null), modelButton = useRef(null);
   const live = useRef(true), ticket = useRef(0), writing = useRef(false), draggingRef = useRef(false), draftRef = useRef(null), commitTimer = useRef();
@@ -80,7 +82,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   const renderModelLabel = (providerGroup, catalogModel, placement) => {
     if (!providerGroup || !catalogModel) return modelName;
     const provider = providerGroup.provider ?? { id: providerGroup.id, name: providerGroup.name };
-    return <span data-provider-id={provider.id} data-model-id={catalogModel.id}>{renderSlot
+    return <span data-provider-id={provider.id} data-model-id={catalogModel.id}>{renderSlot && !additive
       ? renderSlot('conversation.input.model.label', { provider, model: catalogModel, placement,
         selected: sameRoute(selected, { provider: providerGroup.id, model: catalogModel.id }) }, { fallback: catalogModel.name })
       : catalogModel.name}</span>;
@@ -90,6 +92,8 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   const busy = saving || state.pending !== null, sliderDisabled = busy || !modeReady || !model || choices.length < 2;
   useEffect(() => { if (open && state.status === 'ready' && state.routable === false) setPane('model'); }, [open, state.status, state.routable]);
   useEffect(() => { if (!open || pane !== 'effort' || level?.mode !== 'ultra') setSubmodeOpen(false); }, [open, pane, level?.mode]);
+
+  useEffect(() => { setOptionsOpen(false); }, [open, pane, level?.mode]);
 
   const close = (focus = false) => { clearTimeout(commitTimer.current); gestureRevision.current = null; focusAfterSave.current = null; setSubmodeOpen(false); setOpen(false); setDraft(null); draftRef.current = null; setDragging(false); draggingRef.current = false; if (focus) trigger.current?.focus(); };
   useLayoutEffect(() => {
@@ -187,6 +191,9 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
     void save({ provider: selected.provider, model: selected.model }, 'ultra', undefined, next, true);
   };
   const chooseUltraOption = next => {
+    if (next === 'model-options') {
+      setSubmodeOpen(false); setOptionsOpen(true); return;
+    }
     if (!next.startsWith('effort:')) return chooseSubmode(next);
     const effort = next.slice('effort:'.length);
     if (busy || locked || !modeReady || !ultraEfforts.some(choice => choice.id === effort)) return;
@@ -210,6 +217,17 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
   const chooseModel = async (provider, next) => {
     const effort = activeMode === 'ultra' ? undefined
       : sameRoute(selected, {provider, model:next.id}) ? selected.reasoningEffort : next.reasoning?.defaultEffort;
+    if (busy || locked) return;
+    if (!modeReady) {
+      if (!select) return;
+      try {
+        const result = await select({ provider, model: next.id, reasoningEffort: effort });
+        if (!live.current) return;
+        if (result?.ok) { setPane('effort'); void refresh(); }
+        else if (result) setError(result.error.message);
+      } catch (failure) { if (live.current) setError(failure.message); }
+      return;
+    }
     const origin = document.activeElement;
     if (await save({provider,model:next.id}, activeMode, effort)
       && panel.current && (document.activeElement === panel.current || document.activeElement === origin)) setPane('effort');
@@ -222,6 +240,10 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
       return;
     }
     if (inUltraMenu(event.target)) return;
+    if (event.key === 'Escape' && optionsOpen) {
+      event.preventDefault(); event.stopPropagation(); setOptionsOpen(false);
+      headingButton.current?.focus({ preventScroll: true }); return;
+    }
     if (event.key === 'Escape') {
       event.preventDefault(); event.stopPropagation();
       if (pane === 'model') { setPane('effort'); queueMicrotask(() => modelButton.current?.focus()); } else close(true);
@@ -251,18 +273,25 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
                 label:<span className="omd-ultra-menu-option" data-omd-ultra-option={item.id}><strong>{item.label}</strong><small>{item.description}</small></span>})),
                 { type:'separator', id:'effort:separator' }, { type:'label', id:'effort:title', text:'思考强度' },
                 ...ultraEfforts.length ? ultraEfforts.map(choice => ({ id:`effort:${choice.id}`, disabled:busy || locked || !modeReady,
-                  label:`${choice.label}（${choice.id}）` })) : [{ type:'label', id:'effort:default', text:'由模型提供方决定' }]]}
+                  label:`${choice.label}（${choice.id}）` })) : [{ type:'label', id:'effort:default', text:'由模型提供方决定' }],
+                ...(hasOptions ? [{ type:'separator', id:'options:separator' }, { id:'model-options', label:'更多模型选项' }] : [])]}
               onSelect={chooseUltraOption}
-              anchor={<Button type="button" variant="ghost" size="sm" className="omd-ultra-mode-button"
+              anchor={<Button ref={headingButton} type="button" variant="ghost" size="sm" className="omd-ultra-mode-button"
                 disabled={locked || !mode || !selected || state.pending !== null} aria-label={`Ultra 协作方式与思考强度：${submode.label} · ${effective ?? '默认'}`}
                 aria-haspopup="menu" aria-expanded={submodeOpen} title={`当前：${submode.label} · ${effective ?? '默认'} · 点击选择协作方式与思考强度`}
                 onClick={() => setSubmodeOpen(value => !value)}>Ultra<Icon name="down" size={12}/></Button>}/>
-              : label}
+              : hasOptions ? <Button ref={headingButton} type="button" variant="ghost" size="sm" className="omd-effort-options-button"
+                  aria-expanded={optionsOpen} aria-controls={id + '-options'} onClick={() => setOptionsOpen(value => !value)}>
+                  {label}<Icon name="down" size={12}/>
+                </Button> : label}
           </h2>
           <Button size="sm" variant="ghost" type="button" className="omd-model-reset" aria-label="恢复默认思考强度" title="恢复默认思考强度" disabled={busy || !model || !modeReady}
             onClick={() => void save({provider:selected.provider,model:selected.model}, 'off', model.reasoning?.defaultEffort)}><Reset/></Button>
           <Button size="sm" variant="ghost" ref={modelButton} type="button" className="omd-model-current" onClick={() => { setPane('model'); setQuery(''); }}><span>{renderModelLabel(group, model, 'menu')}</span><Chevron/></Button>
         </header>
+        {hasOptions && optionsOpen && <div id={id + '-options'} className="omd-native-model-options">
+          {renderSlot('conversation.input.model.options', { locked: Boolean(locked || busy), dismiss: () => close(true), reportFailure: setError })}
+        </div>}
         <div className="omd-effort-control" data-effort-value={value} data-effort-max={choices.length - 1} data-ultra={level?.mode === 'ultra' || undefined} data-dragging={dragging || undefined} style={{'--effort-progress':`${choices.length > 1 ? value / (choices.length - 1) * 100 : 0}%`,'--effort-ratio':choices.length > 1 ? value / (choices.length - 1) : 0}}>
           <div className="omd-effort-track" aria-hidden="true"><div className="omd-effort-fill"><i className="omd-effort-glow"/>{particles.map((style,i) => <i key={i} className="omd-effort-particle" style={style}/>)}</div>
             <div className="omd-effort-ticks">{choices.map((_,i) => <i key={i} data-selected={i<=value||undefined} style={{left:`${choices.length > 1 ? i/(choices.length-1)*100 : 0}%`}}/>)}</div>
@@ -280,7 +309,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, render
         <div className="omd-model-search"><Button size="sm" variant="ghost" type="button" aria-label="返回思考强度" onClick={() => setPane('effort')}><Chevron back/></Button><Input ref={search} type="search" aria-label="搜索模型" placeholder="搜索模型" value={query} onChange={e=>setQuery(e.target.value)}/></div>
         {state.routable === false && <p className="omd-model-error">已保存的模型渠道 {selected?.provider} / {selected?.model} 当前不可选，请重新选择。草稿内容已保留。</p>}
         <div className="omd-model-options" role="listbox" aria-label="模型">
-          {state.groups.map(group => { const models = group.models.filter(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase())); return !models.length ? null : <div role="group" aria-label={group.name} key={group.id}><div className="omd-model-provider">{group.name}</div>{models.map(item => <Button size="sm" variant="ghost" type="button" role="option" aria-selected={sameRoute(selected,{provider:group.id,model:item.id})} key={item.id} disabled={busy || !modeReady} onClick={() => void chooseModel(group.id,item)}><span>{renderModelLabel(group, item, 'option')}</span>{sameRoute(selected,{provider:group.id,model:item.id}) && <span aria-hidden="true">✓</span>}</Button>)}</div>; })}
+          {state.groups.map(group => { const models = group.models.filter(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase())); return !models.length ? null : <div role="group" aria-label={group.name} key={group.id}><div className="omd-model-provider">{group.name}</div>{models.map(item => <Button size="sm" variant="ghost" type="button" role="option" aria-selected={sameRoute(selected,{provider:group.id,model:item.id})} key={item.id} disabled={locked || busy || (!modeReady && !select)} onClick={() => void chooseModel(group.id,item)}><span>{renderModelLabel(group, item, 'option')}</span>{sameRoute(selected,{provider:group.id,model:item.id}) && <span aria-hidden="true">✓</span>}</Button>)}</div>; })}
           {state.status === 'loading' && <p className="omd-model-status">正在加载模型…</p>}
           {state.status !== 'loading' && !state.groups.some(group => group.models.some(item => `${group.name} ${item.name} ${item.id}`.toLowerCase().includes(query.toLowerCase()))) && <p className="omd-model-status">没有匹配的模型</p>}
         </div>
@@ -329,19 +358,20 @@ export function applyModelPanel(ctx, { rememberModel, preferredUltraEffort } = {
     let stopped = false;
     const nativeEntries = new WeakSet();
     const isNative = entry => {
-      const children = entry?.children, label = children?.[`${name}.label`];
-      const nativeChildren = !children || (Object.keys(children).length === 1
-        && label?.kind === 'single' && label.scope === 'session' && label.inline === true);
-      return entry?.component.name === 'ModelSelect' && entry.locale === 'model'
-        && typeof entry.inject === 'function' && nativeChildren;
+      const children = entry?.children, label = children?.[name + '.label'], options = children?.[name + '.options'];
+      return entry?.component.name === 'ModelSelect' && entry.locale === 'model' && typeof entry.inject === 'function'
+        && Object.keys(children ?? {}).length === 2 && label?.kind === 'single' && label.scope === 'session' && label.inline === true
+        && options?.kind === 'list' && options.scope === 'session';
     };
     // Keep the native entry identity: its renderSlot binding authorizes the
-    // label child and cannot be transferred to a shadow registration.
+    // label and options children and cannot be transferred to a shadow registration.
     const dispose = decorateSlotComponent(ctx.slots, name, (_key, entry) => isNative(entry), original => {
       nativeEntries.add(original);
       return function Panel(props) {
         const main = useMainConversation(props);
-        return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} rememberModel={rememberModel} preferredUltraEffort={preferredUltraEffort}/> : null;
+        const hasOptions = useSyncExternalStore(fn => ctx.slots.subscribe(name + '.options', fn),
+          () => ctx.slots.entriesOfSlot(name + '.options').length > 0);
+        return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} hasOptions={hasOptions} rememberModel={rememberModel} preferredUltraEffort={preferredUltraEffort}/> : null;
       };
     });
     const reconcile = () => {
@@ -358,7 +388,7 @@ export function applyModelPanel(ctx, { rememberModel, preferredUltraEffort } = {
     inject: sessionId => {
       const directory = ctx.get('modelDirectories')?.directoryFor(sessionId);
       const available = Boolean(directory) && ctx.sessions.subagentAddress(sessionId) === undefined;
-      return { directory: directory?.store ?? emptyStore, available,
+      return { directory: directory?.store ?? emptyStore, available, select: selection => directory?.select(selection),
         load: () => { if (available) directory.load().catch(() => {}); } };
     },
   }, function ModeEntry(props) {

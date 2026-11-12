@@ -12,16 +12,16 @@ import {prepareWaves,ULTRA_DURATION,ULTRA_INTERVAL,ULTRA_RELEASE,CLICK_DURATION}
 // The host owns every hit target, editor, setting and session. Only visible
 // chrome is rendered with characters; icons live in their native DOM bounds.
 const EXTERNAL = NATIVE_CONTENT+', .omd-glyph-canvas, .omd-glyph-chrome';
-const PANEL = 'dialog, [role="dialog"], [role="alertdialog"], [aria-modal="true"], [role="menu"], [role="listbox"], [role="tooltip"], [popover], [data-menu-material], .VOzbGW_panel, .omd-model-panel, [data-sonner-toast], .iui-actions-popover, .iui-new-session-notice';
-const BOX = '[data-composer-card], [data-omd-nav-part="create"], [class$="_newSession"], [role="treeitem"][aria-selected="true"], .Sixlwa_bubble, .tx-cu-user-bubble, pre, fieldset, '+PANEL;
+const PANEL = 'dialog, [role="dialog"], [role="alertdialog"], [aria-modal="true"], [role="menu"], [role="listbox"], [role="tooltip"], [popover], [data-menu-material], [data-shortcut-modal="settings"], .omd-model-panel, [data-sonner-toast], .iui-actions-popover, .iui-new-session-notice';
+const BOX = '[data-composer-card], [data-omd-nav-part="create"], [class$="_newSession"], [role="treeitem"][aria-selected="true"], [data-chat-flow-kind="user"] [class*="_bubble"], .tx-cu-user-bubble, pre, fieldset, '+PANEL;
 const CONTROL = 'button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], input, textarea, select, [role="switch"], [role="checkbox"], [role="radio"]';
 const COMPOSER = '[data-content-phase="active"] [data-composer-seat]';
-const READABLE = '[data-composer-card], '+COMPOSER+', .Sixlwa_bubble, .tx-cu-user-bubble, [data-chat-flow-kind="assistant-step"], [data-chat-flow-kind] pre, [data-chat-flow-kind] table, [data-message-attachments]';
+const READABLE = '[data-composer-card], '+COMPOSER+', [data-chat-flow-kind="user"] [class*="_bubble"], .tx-cu-user-bubble, [data-chat-flow-kind="assistant-step"], [data-chat-flow-kind] pre, [data-chat-flow-kind] table, [data-message-attachments]';
 const FLOATING = '[class*="_headline"], [class*="_heroWorkspaceRow"]';
 // Grid tracks retain their normal width in fullscreen, and floating hosts can
 // be zero-sized. Only the actual docked/floating surfaces describe coverage.
-const WORKBENCH = '[data-dockkit-pane], [data-dockkit-float], [data-dockkit-empty], .P3OORG_tabBody';
-const DOCKED = '[data-sidebar-right-panel][data-sidebar-right-open] :is([data-dockkit-pane], [data-dockkit-empty], .P3OORG_tabBody)';
+const WORKBENCH = '[data-dockkit-pane], [data-dockkit-float], [data-dockkit-empty], [data-sidebar-right-panel] [class$="_tabBody"]';
+const DOCKED = '[data-sidebar-right-panel][data-sidebar-right-open] :is([data-dockkit-pane], [data-dockkit-empty], [data-sidebar-right-panel] [class$="_tabBody"])';
 const GEOMETRY = /^(transform|translate|scale|rotate|opacity|visibility|clipPath|(?:min|max)?(?:Width|Height)|width|height|left|top|right|bottom|inset|gridTemplate|margin|padding)/;
 
 export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
@@ -192,7 +192,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
     rightDivider=candidates(DOCKED).map(el=>({el,r:visible(el)}))
       .filter(v=>v.r&&shell?.contains(v.el)&&!v.el.closest('[data-dockkit-float]'))
       .sort((a,b)=>a.r.left-b.r.left)[0]?.el;
-    header=shell?.querySelector('.wSkVaW_header');
+    header=shell?.querySelector('[data-slot="conversation.session.header"],[class$="_header"]:has([data-slot^="conversation.session.header"])');
     const solid=new Map();
     for(const panel of candidates(PANEL)) {
       if(!visible(panel))continue;
@@ -206,7 +206,7 @@ export function mountGlyphRenderer(canvas, { reduced = false } = {}) {
       const r=visible(el),small=el.dataset.glyphSize==='small';
       return {el,r,small,clip:small?r:fieldRect,scene:small?r:fieldRect||r};
     }).filter(v=>v.r);
-    obstacles=candidates(READABLE+', .wSkVaW_header, '+PANEL).map(el=>visible(el)).filter(Boolean);
+    obstacles=candidates(READABLE+', [data-slot="conversation.session.header"],[class$="_header"]:has([data-slot^="conversation.session.header"]), '+PANEL).map(el=>visible(el)).filter(Boolean);
     // Other streamed/tool rows still protect their text while letting the
     // water pass through the surrounding gaps.
     for(const row of candidates('[data-chat-flow-kind]')){

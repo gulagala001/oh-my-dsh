@@ -58,12 +58,12 @@ test('model trigger, current menu value and options preserve native inline label
 test('native model decoration preserves entry identity and its child render authority across mount/unmount', () => {
   const { applyModelPanel } = load('model'), name = 'conversation.input.model';
   function ModelSelect() {}
-  const native = { options: { name, children: { [name + '.label']: { kind: 'single', scope: 'session', inline: true } } },
+  const native = { options: { name, children: { [name + '.label']: { kind: 'single', scope: 'session', inline: true }, [name + '.options']: { kind: 'list', scope: 'session' } } },
     component: ModelSelect, locale: 'model', inject() {} };
   native.children = native.options.children;
   const listeners = new Set(), entries = [native], cleanups = [];
   const slots = {
-    entries: key => key === name ? entries : [], entriesOfSlot: key => key === name ? entries : [],
+    entries: key => key === name ? entries : [], entriesOfSlot: key => key === name ? entries : key === name + '.options' ? [{ component: () => null }] : [],
     subscribe(_name, fn) { listeners.add(fn); return () => listeners.delete(fn); },
     register(options) {
       const entry = { options, component: () => null }; entries.push(entry);
@@ -79,7 +79,7 @@ test('native model decoration preserves entry identity and its child render auth
   const decorated = native.component({ sessionId: 'one', renderSlot });
   // The helper's transparent wrapper delegates through the original entry.
   const panel = decorated.type(decorated.props);
-  assert.equal(panel.props.renderSlot, renderSlot);
+  assert.equal(panel.props.renderSlot, renderSlot); assert.equal(panel.props.hasOptions, true);
   cleanups.reverse().forEach(fn => fn());
   assert.equal(native.component, ModelSelect); assert.equal(entries.length, 1); assert.equal(listeners.size, 0);
 });

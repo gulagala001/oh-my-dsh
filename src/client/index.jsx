@@ -1,3 +1,4 @@
+import { setHostStyle } from '../../plugins/glyph-theme/src/shared/host-styles.mjs';
 import { Icon } from './native-icons.jsx';
 import { applyAppearanceBrand } from './appearance-brand.jsx';
 import { createPoller } from './polling.mjs';
@@ -165,7 +166,7 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
   }
   const getAppearanceRuntime = applySkins(ctx);
   ctx.effect(() => {
-    const tag = document.createElement('style'); tag.dataset.plugin = 'oh-my-dsh'; tag.textContent = css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss; document.head.appendChild(tag);
+    const tag = document.createElement('style'); tag.dataset.plugin = 'oh-my-dsh'; setHostStyle(tag, css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss); document.head.appendChild(tag);
     const runtime = getAppearanceRuntime();
     // Feature integration scope only; native DSH never installs the selectable skin base.
     const sync = () => document.documentElement.classList.toggle('omd-shell', runtime.getSnapshot().active !== false);
