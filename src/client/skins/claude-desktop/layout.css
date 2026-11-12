@@ -292,10 +292,10 @@ html.omd[data-omd-layout="claude-desktop"][data-omd-reduce-effects] :is(._54WpYG
 }
 @media (max-width: 600px) {
   html.omd[data-omd-layout="claude-desktop"] {
-    & .pI_x6G_frame { grid-template-columns: 48px minmax(0, 1fr) 0 !important; }
-    & .pI_x6G_frame:not([data-sidebar-collapsed="true"]) .pI_x6G_sidebarCol { position: absolute; inset: 0; z-index: 12; }
-    & .pI_x6G_frame:not([data-sidebar-collapsed="true"]) .pI_x6G_centerCol { visibility: hidden; }
-    & .pI_x6G_frame:not([data-sidebar-collapsed="true"]) .hHd-Xa_root { width: 100%; }
+    & .pI_x6G_frame:not([data-sidebar-drawer]) { grid-template-columns: 48px minmax(0, 1fr) 0 !important; }
+    & .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]) .pI_x6G_sidebarCol { position: absolute; inset: 0; z-index: 12; }
+    & .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]) .pI_x6G_centerCol { visibility: hidden; }
+    & .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]) .hHd-Xa_root { width: 100%; }
     & .hHd-Xa_root.hHd-Xa_collapsed { padding: 8px 6px; }
     & :is(.YDXeBa_sessionRow,.hHd-Xa_panelRow) { min-height: 42px; }
     & :is(.wSkVaW_root,.wSkVaW_body) { --dsh-chat-content-width: max(160px, calc(var(--dsh-conversation-column-width, 342px) - 40px)); --dsh-composer-side-clearance: 4px; }

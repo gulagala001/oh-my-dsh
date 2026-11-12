@@ -238,9 +238,9 @@ html.omd[data-omd-layout="codex-desktop"] {
   html.omd[data-omd-layout="codex-desktop"] {
     /* A full-width native navigation sheet when expanded; a compact native
        rail when collapsed. The host toggle and session actions remain real. */
-    & .pI_x6G_frame:not([data-sidebar-collapsed="true"]):not([data-rightbar-fullscreen]) { grid-template-columns: 100% 0 0 !important; }
-    & .pI_x6G_frame:not([data-sidebar-collapsed="true"]):not([data-rightbar-fullscreen]) .hHd-Xa_root { width: 100% !important; }
-    & .pI_x6G_frame:not([data-sidebar-collapsed="true"]):not([data-rightbar-fullscreen]) .pI_x6G_centerCol { visibility: hidden; }
+    & .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]):not([data-rightbar-fullscreen]) { grid-template-columns: 100% 0 0 !important; }
+    & .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]):not([data-rightbar-fullscreen]) .hHd-Xa_root { width: 100% !important; }
+    & .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]):not([data-rightbar-fullscreen]) .pI_x6G_centerCol { visibility: hidden; }
     & .pI_x6G_centerCol { border-radius: 0; }
     & .wSkVaW_header { min-height: 46px; padding: 6px 8px; flex-wrap: wrap; gap: 4px; }
     & .wSkVaW_titleRow { display: flex; flex-basis: 100%; }

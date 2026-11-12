@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { UltracodeControl, savedUltraMode, hasNativeTeamTools } from '../src/ultracode.mjs';
 
-const teamTools = ['spawn_teammate', 'send_message', 'list_agents', 'wait_agent', 'interrupt_agent',
+const teamTools = ['send_message', 'list_agents', 'wait_agent', 'interrupt_agent',
   'team_task_create', 'team_task_list', 'team_task_get', 'team_task_update'].map(name =>
-    ({ name, parameters: { properties: name === 'send_message' ? { target: { type: 'string' } } : {} } }));
+    ({ name, parameters: { properties: name === 'send_message' ? { agent: { type: 'string' } } : {} } }));
 
 function fixture(saved, teamEnabled = false) {
   const events = [{ seq: 0, type: 'model/selection', data: { provider: 'local', model: 'main', reasoningEffort: 'xhigh' } }];
@@ -15,7 +15,7 @@ function fixture(saved, teamEnabled = false) {
   const store = { peek: () => state, state: () => state, update: (_state, patch) => Object.assign(state, patch), save: next => Object.assign(state, next) };
   const ctx = { agents: { get: () => agent }, sessions: { flush: async () => {} },
     llm: { resolveModelInfo: async () => ({ reasoning: { efforts: [{ id: 'xhigh' }, { id: 'max' }] } }) },
-    get: name => name === 'sessionController' ? { selectModel: async input => {
+    get: name => name === 'agentTeams' ? { isEnabled: () => teamEnabled } : name === 'sessionController' ? { selectModel: async input => {
       const { sessionId, ...selected } = input;
       events.push({ seq: events.length, type: 'model/selection', data: selected }); return { selected };
     } } : undefined };

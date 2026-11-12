@@ -189,16 +189,16 @@ html.omd[data-omd-layout="ios-liquid"] :is([role=tooltip],.tx-cu-live-banner) { 
   html.omd[data-omd-layout="ios-liquid"] .wSkVaW_titleCluster { flex-wrap: wrap; gap: 3px 10px; }
 }
 @media (max-width: 600px) {
-  html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame:not([data-sidebar-collapsed="true"]) {
+  html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]) {
     grid-template-columns: 0 minmax(0, 1fr) 0 !important;
   }
-  html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame:not([data-sidebar-collapsed="true"]) .pI_x6G_sidebarCol {
+  html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]) .pI_x6G_sidebarCol {
     position: fixed; inset: 0; z-index: 12; overflow: visible;
   }
-  html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame:not([data-sidebar-collapsed="true"]) .pI_x6G_centerCol {
+  html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]) .pI_x6G_centerCol {
     grid-column: 2; grid-row: 1; visibility: hidden;
   }
-  html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame:not([data-sidebar-collapsed="true"]) .pI_x6G_rightbarCol {
+  html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame:not([data-sidebar-drawer]):not([data-sidebar-collapsed="true"]) .pI_x6G_rightbarCol {
     grid-column: 3; grid-row: 1;
   }
   /* The original six sidebar actions become a floating bottom dock on phones. */

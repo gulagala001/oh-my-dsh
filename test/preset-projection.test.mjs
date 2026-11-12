@@ -32,7 +32,7 @@ test('native preset label and picker follow live projection across stale summari
   // Execute the matching host's real preset renderers; only surrounding store
   // transport and Menu/Icon primitives are reduced for this DOM-level check.
   const client = readFileSync(host.resolve('@deepseek-ai/dsh-client-ui-agent-preset/client'), 'utf8')
-    .replace('return module.exports;', 'return { AgentPresetLabel, AgentPresetSeat };');
+    .replace(/return module\.exports;?(?=\s*\}\s*\}\s*\))/, 'return { AgentPresetLabel, AgentPresetSeat };');
   runInNewContext(client, { window: { __ModuleLoader__: { load: registration => {
     native = registration.factory(name => name === 'react' ? React : name === 'react/jsx-runtime' ? require(name)
       : name.includes('primitives') ? { IconAgentPresetOutlineRegular: () => null, IconChevronDownOutlineRegular: () => null,

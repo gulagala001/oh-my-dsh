@@ -324,6 +324,7 @@ async function nativeUpdateFixture(t, { probe, failTarget = false } = {}) {
       versions: [{ version: '2.0.0', bundle: true }], attempts: [], omitted: 0 }),
     listBundles: async () => [{ name: 'fixture', version: installed, installed: true, enabled: false,
       availability: 'profile', official: false, source: 'fixture@' + installed, updatable: true, rows: [] }],
+    checkRegistryUpdate: PluginManager.prototype.checkRegistryUpdate,
     updateBundle: PluginManager.prototype.updateBundle,
     async installBundle(spec, options) {
       calls.push(['install', spec, options]);

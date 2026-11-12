@@ -28,8 +28,9 @@ function createNavMarkers() {
         [...row?.classList ?? []].find(token => /_(row|projectRow|sessionRow|searchResultRow)$/.test(token)),
       ].filter(Boolean).map(prefix));
       for (const element of sidebar?.querySelectorAll('[class]') ?? []) {
-        const part = [...element.classList].filter(token => prefixes.has(prefix(token)))
-          .map(token => navParts.get(token.slice(token.lastIndexOf('_') + 1))).find(Boolean);
+        const parts = [...element.classList].filter(token => prefixes.has(prefix(token)))
+          .map(token => navParts.get(token.slice(token.lastIndexOf('_') + 1)));
+        const part = parts.includes('toggle') ? 'toggle' : parts.find(Boolean);
         if (part === 'create' && element.parentElement !== sidebar) continue;
         if (part) next.set(element, part);
       }
@@ -49,7 +50,7 @@ function bindNarrowSidebar(ctx, frame, column) {
   const otherOverlay = () => [...document.querySelectorAll('[role="dialog"],[role="menu"]')].some(el => el !== column && el.getClientRects().length);
   const close = () => { if (open && frame.dataset.sidebarCollapsed !== 'true') ctx.layout.toggleSidebar(); };
   const sync = () => {
-    const next = narrow.matches && document.documentElement.classList.contains('omd-shell')
+    const next = narrow.matches && !frame.hasAttribute('data-sidebar-drawer') && document.documentElement.classList.contains('omd-shell')
       && !document.documentElement.hasAttribute('data-omd-layout')
       && frame.dataset.sidebarCollapsed !== 'true' && !frame.hasAttribute('data-rightbar-fullscreen');
     if (next) {

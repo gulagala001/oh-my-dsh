@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
+import { createRequire, findPackageJSON } from 'node:module';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
@@ -9,7 +9,7 @@ import { installCommandCodeCompatibility } from '../src/commandcode-compat.mjs';
 const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
 const adapterPath = host.resolve('@deepseek-ai/dsh-llm-pi-ai');
 const { PiAiAdapter } = await import(adapterPath);
-const apiDirectory = join(dirname(adapterPath), '../../../@earendil-works/pi-ai/dist/api');
+const apiDirectory = join(dirname(findPackageJSON('@earendil-works/pi-ai', pathToFileURL(adapterPath))), 'dist/api');
 const { convertResponsesMessages } = await import(pathToFileURL(join(apiDirectory, 'openai-responses-shared.js')));
 
 for (const [provider, baseURL] of [['bailian-responses', 'https://example.test/v1'], ['cmdgoat-responses', 'https://api.commandcode.ai/v1']]) {

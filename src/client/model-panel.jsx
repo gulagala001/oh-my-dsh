@@ -32,9 +32,10 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, select
   const state = useStore(directory);
   const faces = useMemo(() => {
     const projections = ctx.sessions.binding(sessionId)?.session.projections;
-    return { mode: projections?.faceOf('omdUltracode') ?? emptyStore, preset: projections?.faceOf('agentPreset') ?? emptyStore };
+    return { mode: projections?.faceOf('omdUltracode') ?? emptyStore, preset: projections?.faceOf('agentPreset') ?? emptyStore,
+      team: projections?.faceOf('agentTeam') ?? emptyStore };
   }, [ctx, sessionId]);
-  const projected = useStore(faces.mode), preset = useStore(faces.preset);
+  const projected = useStore(faces.mode), preset = useStore(faces.preset), teamEnabled = useStore(faces.team)?.enabled;
   const [mode, setMode] = useState(null), [error, setError] = useState(''), [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false), [pane, setPane] = useState('effort'), [query, setQuery] = useState('');
   const [draft, setDraft] = useState(null), [dragging, setDragging] = useState(false);
@@ -55,7 +56,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, select
     try { const next = await modeApi(sessionId); if (live.current && revision === ticket.current) { setMode(next); if (!preserveError) setError(''); } }
     catch (e) { if (live.current && revision === ticket.current) setError(current => preserveError && current ? current : e.message); }
   }, [sessionId, available]);
-  useEffect(() => { void refresh(); }, [refresh, projected, preset,
+  useEffect(() => { void refresh(); }, [refresh, projected, preset, teamEnabled,
     state.current?.provider, state.current?.model, state.current?.reasoningEffort]);
   useEffect(() => ctx.modules?.entries.state.subscribe(() => { void refresh(); }), [ctx, refresh]);
   useEffect(() => { if (!available || locked) setOpen(false); }, [available, locked]);

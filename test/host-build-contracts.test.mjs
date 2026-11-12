@@ -21,7 +21,7 @@ test('native overview builds with actual pinned inputs in a hoisted layout', asy
   await copyFile(host.resolve('@deepseek-ai/dsh/package.json'), join(dir, 'node_modules/@deepseek-ai/dsh/package.json'));
   for (const file of ['build-overview-native.mjs', 'host-build-contracts.mjs']) await copyFile(new URL('scripts/' + file, root), join(dir, 'scripts', file));
   await symlink(dirname(require.resolve('acorn/package.json')), join(dir, 'node_modules/acorn'), process.platform === 'win32' ? 'junction' : 'dir');
-  for (const name of ['dsh-experimental-client-ui-agent-team', 'dsh-client-ui-jobs', 'dsh-client-ui-workflow-run']) {
+  for (const name of ['dsh-client-ui-agent-team', 'dsh-client-ui-jobs', 'dsh-client-ui-workflow-run']) {
     const manifest = host.resolve('@deepseek-ai/' + name + '/package.json'), target = join(dir, 'node_modules/@deepseek-ai', name);
     await mkdir(join(target, 'lib'), { recursive: true });
     await copyFile(manifest, join(target, 'package.json'));
@@ -58,5 +58,5 @@ test('style owner edits reject zero, duplicate and mismatched registrations', ()
   const options = { moduleId: '@fixture/ui', owner: 'omd', namespace: 'omd/body', count: 1 };
   assert.equal(ownClientStyles(source, options), 'const tagId = "omd/body/body"; tag.dataset.plugin = "omd";');
   for (const bad of ['', source + source, source.replace('tag.dataset.plugin', 'otherOwner')])
-    assert.throws(() => ownClientStyles(bad, options), /style tags\/owners/);
+    assert.throws(() => ownClientStyles(bad, options), /style owner count changed/);
 });

@@ -37,7 +37,7 @@ function Navigation({ ctx }) {
         const right = frame.style.gridTemplateColumns.match(/(\d+(?:\.\d+)?px)\s*$/)?.[1] || '0px';
         if (frame.style.getPropertyValue('--gm-host-right-width') !== right) frame.style.setProperty('--gm-host-right-width', right);
       }
-      const open = Boolean(frame && sidebar && narrow.matches && frame.dataset.sidebarCollapsed !== 'true' && !frame.hasAttribute('data-rightbar-fullscreen'));
+      const open = Boolean(frame && sidebar && narrow.matches && !frame.hasAttribute('data-sidebar-drawer') && frame.dataset.sidebarCollapsed !== 'true' && !frame.hasAttribute('data-rightbar-fullscreen'));
       setExpanded(open);
       if (open === modal) return;
       modal = open;

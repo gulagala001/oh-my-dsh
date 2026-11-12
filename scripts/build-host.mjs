@@ -71,6 +71,12 @@ for (const [directory, manifest] of [['vendor/dsh', snapshot], ['vendor/dsh/ui-c
 const modules = ['jobs-local', 'tool-jobs', 'tool-bash', 'tool-pwsh', 'bash-sandbox', 'pwsh-sandbox'];
 const hostEntry = name => `${root}vendor/dsh/${name}/src/index.ts`;
 function adaptHostTool(name, source) {
+  if (name === 'jobs-local') {
+    // Preserve the caller's abort identity. The native deadline still owns
+    // timeout and settlement, and cancelling a wait never stops its job.
+    source = replaceExactly(source, 'if (signal?.aborted) throw waitAborted()', 'if (signal?.aborted) throw signal.reason ?? waitAborted()', name);
+    return replaceExactly(source, 'reject(waitAborted())', 'reject(signal?.reason ?? waitAborted())', name);
+  }
   if (name === 'tool-jobs') {
     const first = "ctx.tools.register(defineTool({\n    name: 'job_output',";
     source = replaceExactly(source, first, `const registerWorkspaceIndependent = (tool: ReturnType<typeof defineTool>) =>
@@ -95,7 +101,7 @@ const localHostImport = specifier => {
 const hostEnums = await createHostConstEnums({ root, snapshot,
   entryPoints: [...modules.map(hostEntry), `${root}src/session-migration-support.ts`], resolveImport: localHostImport,
   adaptSource(path, source) {
-    const name = ['tool-jobs', 'tool-bash', 'tool-pwsh'].find(name => path === hostEntry(name));
+    const name = ['jobs-local', 'tool-jobs', 'tool-bash', 'tool-pwsh'].find(name => path === hostEntry(name));
     if (name) return adaptHostTool(name, source);
   },
 });

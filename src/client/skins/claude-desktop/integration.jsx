@@ -117,7 +117,7 @@ function ClaudeShell({ ctx }) {
       const media = [...document.querySelectorAll('._backdrop_19zw2_2[role="dialog"] > ._stage_19zw2_9 > img._image_19zw2_26')];
       portalTargets = [...next, ...media];
       setImages(previous => previous.length === media.length && previous.every((el,i) => el === media[i]) ? previous : media);
-      const open = Boolean(column && narrow.matches && frame.dataset.sidebarCollapsed !== 'true' && !frame.hasAttribute('data-rightbar-fullscreen'));
+      const open = Boolean(column && narrow.matches && !frame.hasAttribute('data-sidebar-drawer') && frame.dataset.sidebarCollapsed !== 'true' && !frame.hasAttribute('data-rightbar-fullscreen'));
       if (open === modal) return;
       modal = open; releaseInert(); releaseInert = () => {};
       for (const [name, marker] of roles) marker.update(new Map(open ? [[column, { role: 'dialog', 'aria-modal': 'true', 'aria-label': '侧栏导航' }[name]]] : []));
