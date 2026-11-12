@@ -14,7 +14,7 @@ export const STORAGE_KEY = 'omd.skins.v1';
 // OMD and the standalone theme manager ship this file unchanged; product
 // differences are options. assetUrl maps a bundled skin file to its route.
 export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss = '', observeSurfaces, layoutBaseCss = '', options = {}) {
-  const { storageKey = STORAGE_KEY, defaultSkin = 'glyph-motion', owner = { id: 'omd', priority: 0 }, tokenOwner = 'oh-my-dsh/skin',
+  const { storageKey = STORAGE_KEY, defaultSkin = 'default', owner = { id: 'omd', priority: 0 }, tokenOwner = 'oh-my-dsh/skin',
     brand: ownBrand = OMD_BRAND, companionBrand, assetUrl = file => `oh-my-dsh/api/skins/${file}` } = options;
   const coordinator = appearanceCoordinator();
   let usesCompanion = false, brand = ownBrand, storedBrand, brandEdited = false;

@@ -40,10 +40,14 @@ test('appearance owners keep paint-only portals neutral and controls interactive
       const theme = { active: { colorScheme: 'light' }, preference: 'system' };
       const ctx = { theme: { getTheme: () => theme, overrideTokens: () => () => {} }, on: () => () => {}, emit() {} };
       window.createAppearance = (id, priority) => AppearanceReplay.createSkinRuntime(ctx, '', {}, '', undefined, '', {
-        defaultSkin: 'default', storageKey: id, owner: { id, priority },
+        storageKey: id, owner: { id, priority },
       });
       window.first = createAppearance('chrome-first', 0);
     });
+    assert.deepEqual(await page.evaluate(() => {
+      const { selected, advanced } = first.getSnapshot();
+      return [selected, advanced.brand.logo, advanced.brand.title];
+    }), ['default', 'native', 'native']);
     const expected = {
       canvas: 'none', wallpaper: 'none', leading: 'none', actions: 'none', utilities: 'none', corner: 'none',
       button: 'no-drag', input: 'no-drag', editor: 'no-drag', link: 'no-drag', focusable: 'no-drag', 'drag-source': 'no-drag', splitter: 'no-drag', modal: 'no-drag', dialog: 'no-drag',

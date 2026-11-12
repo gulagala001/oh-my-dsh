@@ -117,8 +117,8 @@
       "source": "plugins/deepseek-workbench/package.json",
       "license": "MIT",
       "notice": "plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.8-dsh.0.2.2-rc.2",
-      "sourceSha256": "29fae380843a58ed33ce3b6bf3461d3cc58693f134101a250e523397d9a36be3",
+      "version": "0.1.9-dsh.0.2.2-rc.2",
+      "sourceSha256": "8e77df73cdff2f254b062dbd72c047b6e0da674001d9659c5a02961420df6970",
       "group": "products"
     },
     {
@@ -157,8 +157,8 @@
       "source": "src/client/skins/runtime.mjs",
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
-      "version": "SHA256:da333a79321d9e622a6f42831e5ff973ce5770fd4b9f2dff9f2afb9ca1e062e2",
-      "sourceSha256": "da333a79321d9e622a6f42831e5ff973ce5770fd4b9f2dff9f2afb9ca1e062e2",
+      "version": "SHA256:fbd3ddfd65e0e5d7acc8c208935dd092d126f6dae179c85114d8f0dfc8df7c87",
+      "sourceSha256": "fbd3ddfd65e0e5d7acc8c208935dd092d126f6dae179c85114d8f0dfc8df7c87",
       "group": "products"
     },
     {

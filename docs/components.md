@@ -57,7 +57,7 @@
 
 DeepSeek 网页工作台和历史导入。内置工作台插件。
 
-- 固定来源／版本: [0.1.8-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
+- 固定来源／版本: [0.1.9-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md)
 
 ### DSH BTW
@@ -75,7 +75,7 @@ DeepSeek 网页工作台和历史导入。内置工作台插件。
 
 主题、配色、背景、字体和外观管理。独立产品；OMD 与它共用外观源码。
 
-- 固定来源／版本: [SHA256:da333a79321d9e622a6f42831e5ff973ce5770fd4b9f2dff9f2afb9ca1e062e2](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
+- 固定来源／版本: [SHA256:fbd3ddfd65e0e5d7acc8c208935dd092d126f6dae179c85114d8f0dfc8df7c87](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
 
 ### Glyph

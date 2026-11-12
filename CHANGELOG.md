@@ -1,3 +1,33 @@
+# Oh My DSH 1.3.17 · DSH 0.2.2-rc.2
+
+[中文](#zh-1317) · [English](#en-1317)
+
+<a id="zh-1317"></a>
+
+## 中文
+
+### 体验优化
+
+- 首次安装沿用 DSH 的主题、标识和窗口标题，升级时保留已保存的外观选择。
+- DeepSeek 网页聊天位于侧栏「插件」上方，随侧栏展开和收起。
+
+<a id="en-1317"></a>
+
+## English
+
+### Improvements
+
+- New installations use the DSH theme, logo and window title. Upgrades keep your saved appearance choices.
+- Open DeepSeek Web Chat from the sidebar row above Plugins.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.2** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.17/oh-my-dsh-0.2.2-rc.2.omd.1.3.17.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.17/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.16 · DSH 0.2.2-rc.2
 
 [中文](#zh-1316) · [English](#en-1316)

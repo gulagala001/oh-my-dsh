@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "published": "0.1.8-dsh.0.2.2-rc.2",
+  "published": "0.1.9-dsh.0.2.2-rc.2",
   "repository": {
     "slug": "gulagala001/dsh-deepseek-workbench",
     "description": "在 DSH 里用 DeepSeek 网页聊天、临时侧栏和 API 开放平台，网页上的对话可以转成 DSH 会话接着聊。 DeepSeek web chat, a temporary sidebar chat and the API platform inside DeepSeek Harness. Continue web chats as DSH sessions.",

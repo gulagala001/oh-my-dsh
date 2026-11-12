@@ -1,3 +1,31 @@
+# DeepSeek Workbench 0.1.9 · DSH 0.2.2-rc.2
+
+[中文](#zh-019) · [English](#en-019)
+
+<a id="zh-019"></a>
+
+## 中文
+
+### 体验优化
+
+- DeepSeek 网页聊天现在位于侧栏「插件」上方，可直接打开、取消固定，或在「更多」中重新固定。
+
+<a id="en-019"></a>
+
+## English
+
+### Improvements
+
+- DeepSeek Web Chat now appears above Plugins in the sidebar. Open it there, unpin it, or pin it again from More.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.2** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.9-dsh.0.2.2-rc.2/dsh-deepseek-workbench-0.1.9-dsh.0.2.2-rc.2.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-deepseek-workbench/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.9-dsh.0.2.2-rc.2/SHA256SUMS)
+
+---
+
 # DeepSeek Workbench 0.1.8 · DSH 0.2.2-rc.2
 
 [中文](#zh-018) · [English](#en-018)

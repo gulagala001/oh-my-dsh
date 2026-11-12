@@ -20,8 +20,11 @@ export const numberFields = {
 };
 // Product wording/defaults differ between OMD and the standalone theme manager.
 // productTitle: null means that product has no own browser-title option.
-export const OMD_BRAND = { themeLogo: '默认标识（Oh My DSH）', productLogo: 'Oh My DSH', productTitle: 'Oh My DSH', placeholder: 'Oh My DSH' };
-export const advancedDefaults = (product = OMD_BRAND) => ({ enabled: false, common: {}, light: {}, dark: {}, brand: { logo: 'theme', name: '', image: '', title: product.productTitle ? 'omd' : 'native', titleText: '' } });
+export const OMD_BRAND = { defaultLogo: 'native', themeLogo: '跟随主题', productLogo: 'Oh My DSH', productTitle: 'Oh My DSH', placeholder: 'Oh My DSH' };
+export const advancedDefaults = (product = OMD_BRAND) => ({
+  enabled: false, common: {}, light: {}, dark: {},
+  brand: { logo: product.defaultLogo ?? 'theme', name: '', image: '', title: 'native', titleText: '' },
+});
 const colorKeys = new Set(colorGroups.flatMap(([, fields]) => Object.keys(fields)));
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const cleanText = value => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 60) : '';

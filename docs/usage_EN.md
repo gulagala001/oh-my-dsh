@@ -122,7 +122,7 @@ Each personality has four modules: identity and personality, language style, com
 
 ## Appearance
 
-Seven looks: Glyph, DSH native, Codex Desktop, iOS Liquid Glass, Claude Desktop, Claude CLI and Google Material, plus 30 color schemes. Background, section colors, fonts and sizes, logo and title can each be changed, and motion can be reduced. See [appearance](skins.md).
+New installs use the DSH theme, logo and title. Upgrades keep your choices. In **Settings → Appearance**, choose from seven themes and 30 color schemes, or customize your background, fonts, branding and motion. See [appearance](skins.md).
 
 ## Monitoring
 

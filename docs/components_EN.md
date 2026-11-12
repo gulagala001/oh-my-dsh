@@ -57,7 +57,7 @@ Manage skills, MCP, instructions, commands and hooks. Bundled extension manageme
 
 DeepSeek web workspace and conversation import. Bundled workspace plugin.
 
-- Pinned source / version: [0.1.8-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
+- Pinned source / version: [0.1.9-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md)
 
 ### DSH BTW
@@ -75,7 +75,7 @@ Side chats, local history, follow-ups and independent cancellation. Bundled side
 
 Themes, colors, backgrounds, fonts and appearance management. Independent product sharing appearance source with OMD.
 
-- Pinned source / version: [SHA256:da333a79321d9e622a6f42831e5ff973ce5770fd4b9f2dff9f2afb9ca1e062e2](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
+- Pinned source / version: [SHA256:fbd3ddfd65e0e5d7acc8c208935dd092d126f6dae179c85114d8f0dfc8df7c87](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
 
 ### Glyph

@@ -6,7 +6,7 @@ OMD keeps DSH's native tools, skills, sessions and third-party plugin entries. *
 
 ## Versions must match
 
-OMD 1.3.16 is for DSH 0.2.2-rc.2, with OpenCU 2.2.12 built in. Older DSH versions use their own older packages. IUI, OMAA and other separate projects also need the build for your DSH version.
+OMD 1.3.17 is for DSH 0.2.2-rc.2, with OpenCU 2.2.12 built in. Older DSH versions use their own older packages. IUI, OMAA and other separate projects also need the build for your DSH version.
 
 Do not overwrite an install with an old package or by turning off version checks. Back up your data first and keep your settings, accounts and third-party sources.
 

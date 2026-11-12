@@ -4,7 +4,7 @@
 
 ## Web chat
 
-Click **DeepSeek web chat** in the left sidebar to open DeepSeek chat in the main view. The first time, sign in to `chat.deepseek.com`; this account is separate from the API platform account in DSH. Pick a chat from your history or start a new one to send messages, upload attachments and switch DeepThink and web search.
+Click **DeepSeek web chat** above **Plugins** in the left sidebar to open DeepSeek chat in the main view. The first time, sign in to `chat.deepseek.com`; this account is separate from the API platform account in DSH. Pick a chat from your history or start a new one to send messages, upload attachments and switch DeepThink and web search.
 
 Normal chats stay in your DeepSeek history. If loading or an action fails, follow the hint in the panel and try again; a failed send keeps what you typed. To leave the embedded page, open it in an external browser.
 
