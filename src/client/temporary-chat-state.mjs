@@ -18,7 +18,15 @@ function acceptReceipt(entry, turn, value) {
 
 async function settle(entry, turn, request) {
   const { id } = await entry.created;
-  const value = await request('stop', { id, requestId: turn.id });
+  let value;
+  try { value = await request('stop', { id, requestId: turn.id }); }
+  catch (error) {
+    if (error.status !== 410 || !ownsTurn(entry, turn)) throw error;
+    await entry.reopen();
+    if (!ownsTurn(entry, turn)) return;
+    entry.messages = []; entry.draft = turn.text; entry.turn = null;
+    entry.error = '旧临时聊天已结束，已打开新聊天并保留草稿。'; refresh(entry); return;
+  }
   acceptReceipt(entry, turn, value);
 }
 

@@ -206,3 +206,12 @@ test('automatic scheduling reuses failed work and rejects a conflicting resume',
   f.config.dreamAutoEnabled = false;
   assert.equal(f.service.status().notice, 'read failure');
 });
+
+test('automatic retry removes diagnostics belonging to a previous attempt', async t => {
+  const {store}=await fixture(t,{});
+  const job=store.enqueue('global','global',true),epoch=store.acquire();
+  store.claimJob(epoch);store.settleJob(job.id,{state:'failed',code:'AUTH',httpStatus:401,failure:{message:'expired'}},epoch);
+  store.enqueue('global','global',true);store.claimJob(epoch);store.settleJob(job.id,{state:'complete'},epoch);
+  const row=store.job(job.id);assert.equal(row.state,'complete');assert.equal(row.httpStatus,null);assert.equal(row.failure,null);
+  store.release(epoch);
+});

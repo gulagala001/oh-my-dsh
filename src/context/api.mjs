@@ -1,3 +1,4 @@
+import { reserveMaintenance } from '../host/maintenance.mjs';
 import { Session } from '@deepseek-ai/dsh-session';
 import { catalogPage } from './catalog.mjs';
 import { sendAttachment, withRequestSignal } from '../http.mjs';
@@ -183,7 +184,9 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
     if (!agent || agent.status !== 'idle') send(res, 202, hub.context.queueManual(session, args));
     else {
       const run = signal => { signal?.throwIfAborted(); return hub.context.applyReady(agent, { manual: true, ids: args.ids, mode: args.mode || 'detail' }); };
-      const result = agent.runMaintenance ? await agent.runMaintenance(run) : await run();
+      const reservation = reserveMaintenance(agent, run);
+      if (!reservation) { send(res, 202, hub.context.queueManual(session, args)); return true; }
+      const result = await reservation.work;
       send(res, 200, { changed: Boolean(result), queued: false, result, message: result ? '已应用预处理结果' : '没有可应用的已完成摘要；原文保留' });
     }
     return true;

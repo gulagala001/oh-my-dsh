@@ -14,6 +14,9 @@ const workspaceIndependent = Symbol.for('dsh-rewind-plus.workspace-independent')
 
 export class RewindEngine {
   constructor(ctx,root,config={}) {this.ctx=ctx;this.store=new Store(root);this.files=new Files(root,config);this.plans=new Map();this.waves=new Map();this.busy=new Set();this.operations=new Map();this.captureRetry=new Map();}
+  async flush(session){
+    if(await this.ctx.sessions.flush(session)!==true)throw Error('会话持久化未确认；请启用会话存储后恢复撤回。');
+  }
   projections(){return this.ctx.sessions.messageProjections || [];}
   backupGap(agent,error){
     this.ctx.logger?.warn?.('Rewind capture skipped: '+error.message);
@@ -260,13 +263,14 @@ export class RewindEngine {
         return result.kind==='enter'?{...result,messages:result.messages.filter(m=>!stale(m))}:result;
       };
     }
+    const restoreInput=()=>{for(const m of [...messages].reverse())if(m.id!==op.marker)agent.inbox.prepend(op.queue.get(m.id)||'next-turn',m);};
     if(op?.marker&&!op.consumed){
       if(op.agent!==agent||!messages.some(m=>m.id===op.marker)){
         if(op.agent!==agent||![...agent.inbox.nextTurn,...agent.inbox.nextStep].some(m=>m.id===op.marker))
           this.abandon(op.agent,'撤回维护请求已丢弃');
         return next();
       }
-      op.consumed=true;op.turn=turn;clearTimeout(op.claimTimer);
+      op.consumed=true;op.turn=turn;clearTimeout(op.claimTimer);restoreInput();
     }
     let st;try{st=await this.store.load(agent.id);}catch(error){
       if(op){op.error=error;op.consumed=true;op.turn=turn;return {kind:'reject'};}
@@ -276,7 +280,7 @@ export class RewindEngine {
     if(!op||op.consumed&&op.turn!==turn||op.executing){try{await this.checkpoint(agent,messages,payload.signal);}catch(error){if(payload.signal?.aborted||st.journal)throw error;this.backupGap(agent,error);}return next();}
     op.consumed=true;op.executing=true;op.turn=turn;
     // Claiming maintenance must never consume an already queued user prompt.
-    for(const m of [...messages].reverse())if(m.id!==op.marker)agent.inbox.prepend(op.queue.get(m.id)||'next-turn',m);
+    if(!op.marker)restoreInput();
     try{
       if(op.recovery){await this.store.lock(agent.id,async()=>{const state=await this.store.load(agent.id);await this.recover(agent.session,state,true);});op.value={draft:null};}
       else op.value=await this.commit(agent.id,op.planId,op.draft,op);
@@ -287,7 +291,7 @@ export class RewindEngine {
     const op=this.operations.get(session.id);if(!op||event.type!=='turn/end'||event.data.turn!==op.turn)return;
     void (async()=>{
       try{
-        await this.ctx.sessions.flush(session);
+        await this.flush(session);
         const state=await this.store.lock(session.id,async()=>{const st=await this.store.load(session.id),range={start:op.start,end:event.seq};st.internalRanges=mergeRanges([...(st.internalRanges||[]),range]);st.hiddenRanges=mergeRanges([...st.hiddenRanges,range]);if(!op.recovery&&!op.undo&&op.value&&st.undo.length)st.undo.at(-1).endSeq=event.seq;await this.store.save(st);return this.state(st);});
         if(op.error)op.reject(op.error);else op.resolve({...op.value,state});
       }catch(error){op.reject(error);}finally{this.operations.delete(session.id);void this.maintenance?.idle();}
@@ -302,6 +306,7 @@ export class RewindEngine {
       if(st.revision!==plan.revision||eventsOf(s).slice(plan.seq).some(e=>!['agent/inbox/spliced','turn/start'].includes(e.type)))throw Error('确认后会话已发生变化，请重新检查');
       const release=await lease(join(this.store.root,'workspace-locks',hash(plan.root)+'.json'));this.busy.add(plan.root);
       try{
+        await this.flush(s);
         await this.files.validate(plan.root,plan.changes);
         // Original native history is immutable. Persist its cutoff instead of
         // duplicating the whole conversation in every undo entry and journal.
@@ -322,7 +327,7 @@ export class RewindEngine {
         s.append('plan/mode',{active:plan.metadata.plan});
         // Durable native marker identifies a completed transaction even if the sidecar rename is interrupted.
         appendPluginRecord(s,'plugin:dsh-rewind-plus/commit',{id:plan.id});
-        await this.ctx.sessions.flush(s);
+        await this.flush(s);
         after.journal=null;await this.store.save(after);this.plans.delete(planId);await this.maintenance?.unpin(planId);
         const restored=after.pendingDraft.draft;
         return {state:this.state(after),draft:restored};
@@ -334,7 +339,7 @@ export class RewindEngine {
     const j=st.journal;if(!j)return;
     if(!locked){if(this.waves.has(j.root)||this.busy.has(j.root))throw Error('工作区正在执行操作，请先停止后再恢复');const release=await lease(join(this.store.root,'workspace-locks',hash(j.root)+'.json'));this.busy.add(j.root);try{return await this.recover(s,st,activeTurn,true);}finally{this.busy.delete(j.root);await release();}}
     const committed=eventsOf(s).some(e=>e.type==='plugin:dsh-rewind-plus/commit'&&e.data.id===j.id);
-    if(committed){await this.ctx.sessions.flush(s);j.after.journal=null;await this.store.save(j.after);return;}
+    if(committed){await this.flush(s);j.after.journal=null;await this.store.save(j.after);return;}
     const recovered=eventsOf(s).findLast(e=>e.type==='plugin:dsh-rewind-plus/recovered'&&e.data.id===j.id);
     if(!recovered){
       await this.files.recover(j.root,j.changes,'after');
@@ -342,7 +347,7 @@ export class RewindEngine {
     if(j.metadata.cwd)s.append('working-directory/change',{cwd:j.metadata.cwd});s.append('plan/mode',{active:j.metadata.plan});
       appendPluginRecord(s,'plugin:dsh-rewind-plus/recovered',{id:j.id});
     }
-    const internal={start:j.nativeStart,end:recovered?.seq??s.seq-1};st.hiddenRanges=mergeRanges([...st.hiddenRanges,internal]);st.internalRanges=mergeRanges([...(st.internalRanges||[]),internal]);await this.ctx.sessions.flush(s);st.journal=null;await this.store.save(st);
+    const internal={start:j.nativeStart,end:recovered?.seq??s.seq-1};st.hiddenRanges=mergeRanges([...st.hiddenRanges,internal]);st.internalRanges=mergeRanges([...(st.internalRanges||[]),internal]);await this.flush(s);st.journal=null;await this.store.save(st);
   }
 }
 function previousDraft(op){return op?.draft || {text:'',attachments:[]};}

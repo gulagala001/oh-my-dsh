@@ -17,8 +17,8 @@
       "source": "vendor/opencu/package.json",
       "license": "See component notices",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
-      "version": "2.2.12-dsh.0.2.2-rc.2",
-      "sourceSha256": "6016bbcd23820aa2448915dd1d4c77798fc243c934fa53a07892e1b1f0b5bb27",
+      "version": "2.2.13-dsh.0.2.2-rc.2",
+      "sourceSha256": "6c3ed4c174f388033e5a937a7c29a6dc6b64225cb027ca6f9771d4d503b07e28",
       "group": "products"
     },
     {
@@ -37,8 +37,8 @@
       "source": "vendor/workflow/package.json",
       "license": "MIT",
       "notice": "vendor/workflow/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.9-dsh.0.2.2-rc.2",
-      "sourceSha256": "0753582bdce022db33d95c377e0804d2a5ccb34cfd102922444a0d37362f6a06",
+      "version": "0.1.10-dsh.0.2.2-rc.2",
+      "sourceSha256": "ed1a4f57fa616de75e96f37f71fea5f49d093fb5f4ec912a41d1ddcad81beb9d",
       "group": "products"
     },
     {
@@ -57,8 +57,8 @@
       "source": "vendor/rewind/package.json",
       "license": "MIT",
       "notice": "vendor/rewind/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.12-dsh.0.2.2-rc.2",
-      "sourceSha256": "da36b53e4fdff2ecdfd0d9b4f6874b3244163063350b91c9b83ef66583799118",
+      "version": "0.1.13-dsh.0.2.2-rc.2",
+      "sourceSha256": "9738ff4595af109107cad96c41f73ed3aae7ddd64cb74c576587b809fc69e133",
       "group": "products"
     },
     {
@@ -198,7 +198,7 @@
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#dsh",
       "version": "0.2.2-rc.2",
-      "sourceSha256": "b9fe4424589388573fae68c2b933e1d8dfa6a7bf1832e1e832cf5234feca4460",
+      "sourceSha256": "4a91a15df1f56fb763151d0916cd53fba3f79a553dac1b341d079becce0de376",
       "group": "sources"
     },
     {

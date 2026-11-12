@@ -9,17 +9,17 @@
 打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.2.13-dsh.0.2.2-rc.2/opencu-2.2.13-dsh.0.2.2-rc.2.tgz
 ```
 
-等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/SHA256SUMS)。
+等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.13-dsh.0.2.2-rc.2/SHA256SUMS)。
 
 ## 用命令行安装
 
 用同一个 DSH 自带的命令行，把 `web` 换成你的 profile（桌面版是 `desktop`）：
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/opencu/releases/download/v2.2.13-dsh.0.2.2-rc.2/opencu-2.2.13-dsh.0.2.2-rc.2.tgz"
 ```
 
 已经装了 OMD 的话不用再装，OMD 里已经带了 OpenCU。其他 DSH 版本请到 [Releases](https://github.com/gulagala001/opencu/releases) 找对应的包，版本不一致的包不要混装。
@@ -38,7 +38,7 @@ dsh plugin --profile web add "https://github.com/gulagala001/opencu/releases/dow
 
 ```text
 请把 OpenCU 安装到我现在用的 DSH profile：
-https://github.com/gulagala001/opencu/releases/download/v2.2.12-dsh.0.2.2-rc.2/opencu-2.2.12-dsh.0.2.2-rc.2.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.2.13-dsh.0.2.2-rc.2/opencu-2.2.13-dsh.0.2.2-rc.2.tgz
 先确认 DSH 是 0.2.2-rc.2、Node.js 是 24.9.0 以上；如果已经装了 OMD，就不要再装 OpenCU。
 保留原来的配置、会话、浏览器配对和其他插件，不要升级 DSH；需要重启时先确认没有任务在跑。
 装好后确认 设置 → 电脑与浏览器 能打开，并告诉我还需要授予哪些系统权限。

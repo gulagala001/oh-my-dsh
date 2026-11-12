@@ -11,7 +11,7 @@ async function request(action, data, signal) {
   });
   if (action === 'send' && response.ok) return response;
   const value = await response.json();
-  if (!response.ok) throw Error(value.error || '临时聊天操作失败');
+  if (!response.ok) throw Object.assign(Error(value.error || '临时聊天操作失败'), {status:response.status});
   return value;
 }
 export function installTemporaryChat(ctx) {
@@ -38,6 +38,11 @@ export function installTemporaryChat(ctx) {
   };
   const create = (tab, parentId) => {
     const entry = { messages: [], draft: '', closed: false, busy: false, turn: null, created: request('open', { parentId }), error: '' };
+    entry.reopen = () => {
+      const previous = entry.created;
+      entry.created = request('open', { parentId }).catch(error => { entry.created = previous; throw error; });
+      return entry.created.then(value => { entry.value = value; heartbeat(entry); return value; });
+    };
     entry.created.then(value => {
       entry.value = value;
       if (entry.closed) return request('close', { id: value.id });

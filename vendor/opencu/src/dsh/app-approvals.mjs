@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, unlink } from 'node:fs/promises';
+import { renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
@@ -29,14 +30,17 @@ export function createAppApprovals(getDirectory, onChange = () => {}) {
     if (!Array.isArray(value?.approvedApps) || value.approvedApps.some(app => !app.bundleIdentifier || !app.executable || !app.displayName)) throw new Error('Invalid persisted application approvals');
     return value;
   }
-  function change(update) {
+  function change(update, publish) {
     const work = tail.then(async () => {
       if (closed) throw new Error('Application approvals are closed');
       const next = update(await read()), directory = getDirectory();
       await mkdir(directory, { recursive: true, mode: 0o700 });
       const file = join(directory, 'app-approvals.json'), temporary = file + '.pending';
       await writeFile(temporary, JSON.stringify(next, null, 2) + '\n', { mode: 0o600 });
-      await rename(temporary, file);
+      try {
+        if (publish) publish(() => renameSync(temporary, file));
+        else renameSync(temporary, file);
+      } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
       return next;
     });
     tail = work.catch(() => {});
@@ -132,15 +136,20 @@ export function createAppApprovals(getDirectory, onChange = () => {}) {
       if (!['accept', 'decline'].includes(action) || action === 'accept' && !['session', 'always'].includes(persist)) throw new Error('Invalid application approval response');
       request.responding = true;
       try {
-        if (action === 'accept' && persist === 'always') await change(value => ({ approvedApps: [...value.approvedApps.filter(app => app.bundleIdentifier !== request.app.bundleIdentifier), request.app] }));
-        if (!pending.has(requestId)) throw failure('APP_REQUEST_EXPIRED', 'The task ended while saving this approval');
-        if (action === 'accept') grants(conversationId).set(request.app.bundleIdentifier, request.app);
-        pending.delete(requestId); changed();
-        for (const waiter of request.waiters) {
-          waiter.cleanup();
-          if (action === 'accept') waiter.resolve();
-          else waiter.reject(failure('APP_ACCESS_DENIED', `Access to ${request.app.displayName} was declined`));
-        }
+        const settle = commit => {
+          if (!pending.has(requestId)) throw failure('APP_REQUEST_EXPIRED', 'The task ended while saving this approval');
+          commit?.();
+          if (action === 'accept') grants(conversationId).set(request.app.bundleIdentifier, request.app);
+          pending.delete(requestId);
+          for (const waiter of request.waiters) {
+            waiter.cleanup();
+            if (action === 'accept') waiter.resolve();
+            else waiter.reject(failure('APP_ACCESS_DENIED', `Access to ${request.app.displayName} was declined`));
+          }
+          changed();
+        };
+        if (action === 'accept' && persist === 'always') await change(value => ({ approvedApps: [...value.approvedApps.filter(app => app.bundleIdentifier !== request.app.bundleIdentifier), request.app] }), settle);
+        else settle();
         return { settled: true };
       } finally { request.responding = false; }
     },

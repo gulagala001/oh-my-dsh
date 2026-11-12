@@ -1,3 +1,31 @@
+# Oh My DSH 1.3.18 · DSH 0.2.2-rc.2
+
+[中文](#zh-1318) · [English](#en-1318)
+
+<a id="zh-1318"></a>
+
+## 中文
+
+### 问题修复
+
+- 切换上下文后端时可以等待维护完成。临时聊天过期后可用原草稿重新开始，Dream 成功重试后清除旧错误。内置撤回、应用授权与工作流续跑也已更新。
+
+<a id="en-1318"></a>
+
+## English
+
+### Bug fixes
+
+- Context switches wait for maintenance. Expired temporary chats retain your draft, and successful Dream retries clear earlier errors. Includes fixes for rewind, app approvals and workflow resume.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.2** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.18/oh-my-dsh-0.2.2-rc.2.omd.1.3.18.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.18/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.17 · DSH 0.2.2-rc.2
 
 [中文](#zh-1317) · [English](#en-1317)

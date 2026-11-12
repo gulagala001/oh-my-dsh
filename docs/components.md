@@ -12,7 +12,7 @@
 
 电脑与浏览器观察、操作、批注和预览。内置插件；支持独立安装与共装。
 
-- 固定来源／版本: [2.2.12-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- 固定来源／版本: [2.2.13-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - 许可／归属: See component notices · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -21,7 +21,7 @@
 
 任务规划、执行、预算与恢复。内置工作流插件。
 
-- 固定来源／版本: [0.1.9-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
+- 固定来源／版本: [0.1.10-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
 
 ### DSH Rewind
@@ -30,7 +30,7 @@
 
 完整回合撤回与会话回退。内置撤回插件。
 
-- 固定来源／版本: [0.1.12-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
+- 固定来源／版本: [0.1.13-dsh.0.2.2-rc.2](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/THIRD_PARTY_NOTICES.md)
 
 ### DSH Persona

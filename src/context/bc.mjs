@@ -1,3 +1,4 @@
+import { reserveMaintenance } from '../host/maintenance.mjs';
 import { forkParentOf } from '../host/session-fork.mjs';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { isAgentLoopRequest, markAgentLoopRequest, freezeMessage } from '@deepseek-ai/dsh-llm';
@@ -185,7 +186,8 @@ export class BillionContext {
     this.hub.context.store.update(s, { pendingBackend: backend, backendError: undefined });
     if (this.hub.context.manualSessions.has(session.id) || agent && agent.status !== 'idle') return { queued: true, backend: this.backend(session), pendingBackend: backend };
     const run = signal => this.applyChoice(session, signal);
-    if (agent?.runMaintenance) await agent.runMaintenance(run); else await run();
+    const reservation = reserveMaintenance(agent, run);
+    if (reservation) await reservation.work;
     return { queued: Boolean(s.pendingBackend), backend: this.backend(session), pendingBackend: s.pendingBackend };
   }
   async applyChoice(session, signal) {

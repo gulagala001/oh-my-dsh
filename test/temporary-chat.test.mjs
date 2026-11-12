@@ -192,3 +192,16 @@ test('simultaneous stop and close return the original request boundary', async t
   const stopped = service.stop(id,1); await service.close(id);
   assert.deepEqual(await stopped,{requestId:1,committed:false}); await ended;
 });
+
+test('expired temporary chat opens a fresh conversation and keeps unsent input', async t => {
+  const {service,calls}=fixture(); t.after(()=>service.dispose());
+  const old=service.open(); await service.close(old.id);
+  const turn={id:1,text:'retained',before:[]};
+  const entry={turn,created:Promise.resolve(old),messages:[],draft:''};
+  entry.reopen=()=>entry.created=Promise.resolve(service.open());
+  await recoverTemporaryChat(entry,async (_, {id,requestId})=>{
+    try { return await service.stop(id,requestId); } catch (e) {e.status=e.statusCode;throw e;}
+  });
+  assert.notEqual((await entry.created).id,old.id);
+  assert.equal(entry.turn,null);assert.equal(entry.draft,'retained');assert.equal(calls.length,0);
+});

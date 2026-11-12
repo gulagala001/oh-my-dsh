@@ -215,3 +215,19 @@ test('legacy path-only history cannot authorize a live same-name directory', asy
   assert.equal(await f.service.resolve(f.input), null);
   await assert.rejects(f.service.prepare(f.input), /no physical ownership record/);
 });
+
+test('interrupted staging retains the location of a directory without ownership proof', async t => {
+  const f = await fixture(t), mkdir = fs.mkdir;
+  let stage;
+  const injection = t.mock.method(fs, 'mkdir', async (dir, options) => {
+    await mkdir(dir, options);
+    if (path.basename(dir).startsWith('.omd-')) { stage = dir; throw Error('interrupted after mkdir'); }
+  });
+  await assert.rejects(f.service.prepare(f.input), /interrupted after mkdir/);
+  injection.mock.restore();
+  await fs.writeFile(path.join(stage,'keep'),'original');
+  await f.reopen().prepare(f.input);
+  const report = JSON.parse(await fs.readFile(path.join(f.storeDir,'unverified-stages',hash(stage)+'.json')));
+  assert.equal(report.path, stage);
+  assert.equal(await fs.readFile(path.join(stage,'keep'),'utf8'),'original');
+});

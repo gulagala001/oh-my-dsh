@@ -145,3 +145,12 @@ test('a pending choice settles after manual ownership retires and superseded cho
   assert.throws(() => p.setMode(session, 'adaptive'), /排队/);
   assert.equal(p.state(session).manualQueue.length, 1);
 });
+
+test('a concurrent maintenance reservation keeps a backend switch queued', async () => {
+  const {BillionContext}=await import('../src/context/bc.mjs');
+  const state={contextBackend:'bc'},session={id:'test',header:{}};
+  const ctx={state:()=>state,manualSessions:new Map(),store:{peek:()=>state,update:Object.assign}};
+  const bc=new BillionContext({context:ctx});
+  const result=await bc.choose(session,'omd',{status:'idle',runMaintenance(){throw Error('agent "test" already has active work');}});
+  assert.equal(result.queued,true);assert.equal(state.pendingBackend,'omd');assert.equal(state.contextBackend,'bc');
+});

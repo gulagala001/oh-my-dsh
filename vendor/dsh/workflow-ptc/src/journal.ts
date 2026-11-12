@@ -34,17 +34,23 @@ export function readJournal(text: string): Map<number, Call> {
   const lines = text.split('\n')
   if (lines.at(-1) !== '') lines.pop()
   const calls = new Map<number, Call>()
+  let started = false, ended = false
   for (const line of lines) {
     if (!line) continue
     const event = JSON.parse(line)
-    if (event.type === 'start') {
+    if (ended || (!started && event.type !== 'run')) throw new Error('Invalid workflow journal boundary')
+    if (event.type === 'run') {
+      if (started) throw new Error('Duplicate workflow run')
+      started = true
+    } else if (event.type === 'end') ended = true
+    else if (event.type === 'start') {
       if (!Number.isSafeInteger(event.seq) || event.seq < 1 || calls.has(event.seq) || typeof event.key !== 'string') throw new Error('Invalid workflow journal start')
       calls.set(event.seq, { key: event.key })
     } else if (event.type === 'result') {
       const call = calls.get(event.seq)
       if (!call || call.result || !event.result || typeof event.result.stopReason !== 'string' || !Array.isArray(event.result.output)) throw new Error('Invalid workflow journal result')
       call.result = event.result
-    } else if (event.type !== 'run' && event.type !== 'end') throw new Error('Unknown workflow journal event')
+    } else throw new Error('Unknown workflow journal event')
   }
   return calls
 }

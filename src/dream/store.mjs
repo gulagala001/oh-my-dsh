@@ -176,7 +176,9 @@ export class DreamStore {
   job(id) { return decode(this.db.prepare('SELECT data FROM jobs WHERE id=?').get(id)); }
   updateJob(id, patch) {
     const before = this.job(id); if (!before) throw Error('Dream 作业不存在');
-    const next = { ...before, ...patch, updatedAt: this.now() };
+    const reset = ['queued','running','complete'].includes(patch.state)
+      ? {error:null,code:null,httpStatus:null,failure:null,resumeAt:null} : {};
+    const next = { ...before, ...reset, ...patch, updatedAt: this.now() };
     this.db.prepare('UPDATE jobs SET state=?,automatic=?,data=? WHERE id=?').run(next.state,Number(next.automatic),encode(next),id);
     if(next.state==='complete')this.db.prepare('DELETE FROM job_targets WHERE job=?').run(id);
     return next;

@@ -1,3 +1,31 @@
+# DSH Workflow 0.1.10 · DSH 0.2.2-rc.2
+
+[中文](#zh-0110) · [English](#en-0110)
+
+<a id="zh-0110"></a>
+
+## 中文
+
+### 问题修复
+
+- 续跑时拒绝使用运行结束后出现的子任务结果。
+
+<a id="en-0110"></a>
+
+## English
+
+### Bug fixes
+
+- Resume rejects child results recorded after the workflow ended.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.2** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.10-dsh.0.2.2-rc.2/dsh-workflow-plus-0.1.10-dsh.0.2.2-rc.2.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-workflow/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.10-dsh.0.2.2-rc.2/SHA256SUMS)
+
+---
+
 # DSH Workflow 0.1.9 · DSH 0.2.2-rc.2
 
 [中文](#zh-019) · [English](#en-019)
@@ -18,15 +46,7 @@
 
 - Run details show a stop request as soon as it is accepted. Reloading the plugin keeps session events from being counted twice.
 
-## 安装 / Installation
-
-适用于 DSH **0.2.2-rc.2**、Node.js **24.9.0+**。在插件页添加下列安装包，等当前任务结束后按提示重启。
-
-Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**. Add the package from the Plugins page, finish active tasks and restart when prompted.
-
-| DSH | 固定安装包 / Fixed package | SHA256SUMS |
-| --- | --- | --- |
-| 0.2.2-rc.2 | [DSH Workflow 0.1.9](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.9-dsh.0.2.2-rc.2/dsh-workflow-plus-0.1.9-dsh.0.2.2-rc.2.tgz) | [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.9-dsh.0.2.2-rc.2/SHA256SUMS) |
+已撤回。 / Withdrawn.
 
 ---
 

@@ -266,7 +266,15 @@ export function createProjectlessWorkspaceService({ root, storeDir, now = () => 
             return previous;
           }
           const candidate = path.join(stageParent, record.stage);
-          if (record.identity && await directoryIdentity(candidate) === record.identity) {
+          const candidateIdentity = await directoryIdentity(candidate);
+          if (candidateIdentity !== null && (!record.identity || candidateIdentity !== record.identity)) {
+            // Keep a durable reference before replacing the request record. A crash or
+            // external replacement left no proof that we may publish or remove this path.
+            const retained = path.join(storeDir, 'unverified-stages');
+            await safeDirectory(retained, true);
+            await writeJson(path.join(retained, hash(candidate) + '.json'), { requestId: id, path: candidate });
+          }
+          if (record.identity && candidateIdentity === record.identity) {
             stage = candidate;
             identity = record.identity;
           }

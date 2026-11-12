@@ -38,7 +38,7 @@ export class TemporaryChats {
   }
   get(id) {
     const chat = this.chats.get(id);
-    if (!chat || chat.closed) throw Error('临时聊天已关闭，请重新打开。');
+    if (!chat || chat.closed) throw Object.assign(Error('临时聊天已关闭，请重新打开。'), {statusCode:410});
     chat.touched = Date.now();
     return chat;
   }

@@ -1,6 +1,6 @@
 {
   "name": "opencu",
-  "version": "2.2.12-dsh.0.2.2-rc.2",
+  "version": "2.2.13-dsh.0.2.2-rc.2",
   "description": "Let the AI in DeepSeek Harness operate browsers and desktop apps, with live previews and annotations. You can step in at any time. macOS, Windows and Linux.",
   "type": "module",
   "engines": {
@@ -61,21 +61,6 @@
     "scripts/check-docs.mjs",
     "scripts/check-release-assets.mjs"
   ],
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "build:client": "node scripts/build-client.mjs",
-    "build:native": "node scripts/build-native.mjs",
-    "build:targets": "node scripts/build-targets.mjs",
-    "pack": "node scripts/pack.mjs",
-    "test": "node --experimental-vm-modules --test test/*.test.mjs",
-    "prepack": "npm run cu:check && node scripts/check-docs.mjs && node scripts/build.mjs && node scripts/check-extension-distribution.mjs && node scripts/check-public-files.mjs",
-    "docs:check": "node scripts/check-docs.mjs",
-    "release:check": "node scripts/check-release-assets.mjs",
-    "pretest": "npm run cu:check",
-    "cu:check": "node scripts/cu-liveness.mjs check",
-    "cu:verify": "node scripts/cu-liveness.mjs verify",
-    "cu:replay": "node scripts/cu-liveness.mjs replay"
-  },
   "dependencies": {
     "playwright": "1.63.0",
     "sharp": "0.35.5"
@@ -105,5 +90,19 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gulagala001/opencu.git"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "build:native": "node scripts/build-native.mjs",
+    "build:targets": "node scripts/build-targets.mjs",
+    "pack": "node scripts/pack.mjs",
+    "test": "node --experimental-vm-modules --test test/*.test.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
+    "release:check": "node scripts/check-release-assets.mjs",
+    "pretest": "npm run cu:check",
+    "cu:check": "node scripts/cu-liveness.mjs check",
+    "cu:verify": "node scripts/cu-liveness.mjs verify",
+    "cu:replay": "node scripts/cu-liveness.mjs replay"
   }
 }

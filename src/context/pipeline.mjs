@@ -1,3 +1,4 @@
+import { reserveMaintenance } from '../host/maintenance.mjs';
 import { forkParentOf } from '../host/session-fork.mjs';
 import { replacementEstimate } from '../metering/estimate.mjs';
 import { catalogPage } from './catalog.mjs';
@@ -601,7 +602,9 @@ export class ContextPipeline {
     if (this.manualSessions.has(session.id)) throw Error('本会话正在压缩，请勿重复提交');
     if (!agent || agent.status !== 'idle') return this.queueManual(session, { operation, sourceCommandId });
     const run = ownSignal => this.runManual(agent, { operation, sourceCommandId }, signal && ownSignal ? AbortSignal.any([signal, ownSignal]) : signal || ownSignal);
-    const result = agent.runMaintenance ? await agent.runMaintenance(run) : await run();
+    const reservation = reserveMaintenance(agent, run);
+    if (!reservation) return this.queueManual(session, { operation, sourceCommandId });
+    const result = await reservation.work;
     await this.autoCompact.check(agent, signal);
     return { changed: Boolean(result), queued: false, result };
   }
