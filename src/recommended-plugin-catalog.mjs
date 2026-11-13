@@ -5,8 +5,8 @@ export const recommendedPlugins = [
     id: 'billion-context', name: 'Billion Context', packageName: 'billion-context', author: 'ranxianglei',
     description: '管理长会话的上下文压缩、原文恢复和缓存诊断；在 OMD 上下文页按会话切换。',
     category: '上下文管理', url: 'https://github.com/ranxianglei/billion-context',
-    requireReviewedVersion: true, supportedHostVersions: ['0.2.2-rc.2', '0.2.2-rc.1', '0.2.1-rc.5', '0.2.1-rc.2', '0.2.1-rc.3'],
-    review: { version: '0.1.202', dsh: '0.2.2-rc.2',
+    requireReviewedVersion: true, supportedHostVersions: ['0.2.2-rc.3', '0.2.2-rc.2', '0.2.2-rc.1', '0.2.1-rc.5', '0.2.1-rc.2', '0.2.1-rc.3'],
+    review: { version: '0.1.202', dsh: '0.2.2-rc.3',
       sha256: 'b42958e6bed13ee0afd5460ed9b88cabb10072254abe0d2b7e9f1ea45cc4f397',
       note: '原作者固定 npm 包；已核验 rc.2 原生安装与启动。按会话切换压缩后端，保留归档、Dream、任务和回查。BC 自身自动更新独立于此目录；更改版本后需重新核验适配。' },
   },
@@ -17,6 +17,7 @@ export const recommendedPlugins = [
     category: '操作工具', url: 'https://github.com/T-Auto/dsh-ops', githubRelease: 'gulagala001/oh-my-dsh',
     supportedRuntimeTargets: ['darwin-arm64', 'linux-x64', 'win32-x64'], requireReviewedVersion: true,
     hostBuilds: {
+      '0.2.2-rc.3': {"version": "0.2.2-rc.3.ops.0.1.0", "upstreamVersion": "0.4.1", "releaseVersion": "0.2.2-rc.3.omd.1.3.19", "releaseTag": "v0.2.2-rc.3.omd.1.3.19", "asset": "dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz", "sha256": "9c81ec7e851fea7b6f64acb2b7d9e203d92963d69b7918a577f7c6f6e9e3a9c6", "dsh": "0.2.2-rc.3", "allowPrerelease": false},
       '0.2.2-rc.2': {"version": "0.2.2-rc.2.ops.0.1.0", "upstreamVersion": "0.4.1", "releaseVersion": "0.2.2-rc.2.omd.1.3.18", "releaseTag": "v0.2.2-rc.2.omd.1.3.18", "asset": "dsh-ops-0.2.2-rc.2.ops.0.1.0.tgz", "sha256": "70ad15bfa5b31501ef814f978c154739809417b8d4dbc76ff605f4d831daf47f", "dsh": "0.2.2-rc.2", "allowPrerelease": false},
       '0.2.2-rc.1': {"version": "0.2.2-rc.1.ops.0.1.0", "upstreamVersion": "0.4.1", "releaseVersion": "0.2.2-rc.1.omd.1.3.3", "releaseTag": "v0.2.2-rc.1.omd.1.3.3", "asset": "dsh-ops-0.2.2-rc.1.ops.0.1.0.tgz", "sha256": "54bae4fc31a19a6c985a335c1e52864562ba3f76989e80bddf760f3aea9904f7", "dsh": "0.2.2-rc.1", "allowPrerelease": false},
       '0.2.1-rc.5': {"version": "0.2.1-rc.5.ops.0.1.0", "upstreamVersion": "0.4.1", "releaseVersion": "0.2.1-rc.5.omd.1.2.2", "releaseTag": "v0.2.1-rc.5.omd.1.2.2", "asset": "dsh-ops-0.2.1-rc.5.ops.0.1.0.tgz", "sha256": "a0cd0142e7a12ecdb907ca7554019d369cfad16ab236ce63660bfeb9207feafe", "dsh": "0.2.1-rc.5", "allowPrerelease": false},
@@ -42,6 +43,7 @@ export const recommendedPlugins = [
     description: '在回答中使用交互图表、表单、计算器、模拟和小游戏。',
     category: '界面增强', url: 'https://github.com/gulagala001/dsh-intelligent-ui', githubRelease: 'gulagala001/dsh-intelligent-ui',
     hostBuilds: {
+      '0.2.2-rc.3': {"version": "0.2.2-rc.3.iui.1.0.18", "releaseTag": "v0.2.2-rc.3.iui.1.0.18", "asset": "dsh-intelligent-ui-0.2.2-rc.3.iui.1.0.18.tgz", "sha256": "1d1f25ee057f0745d73c48eea093d5d8bde1d7d594dbef79ecb2ebd4ff592c30", "dsh": "0.2.2-rc.3", "allowPrerelease": false},
       '0.2.2-rc.2': {"version": "0.2.2-rc.2.iui.1.0.17", "releaseTag": "v0.2.2-rc.2.iui.1.0.17", "asset": "dsh-intelligent-ui-0.2.2-rc.2.iui.1.0.17.tgz", "sha256": "f516d2d1b175fa59eb33c5000378619cb51d8362a629d894641171001f7d2e1f", "dsh": "0.2.2-rc.2", "allowPrerelease": false},
       '0.2.2-rc.1': {"version": "0.2.2-rc.1.iui.1.0.15", "releaseTag": "v0.2.2-rc.1.iui.1.0.15", "asset": "dsh-intelligent-ui-0.2.2-rc.1.iui.1.0.15.tgz", "sha256": "ca13feb38d22570e2c94fc021038bbadf1ee91416f94ca01c3bccfb7ec4e4661", "dsh": "0.2.2-rc.1", "allowPrerelease": false},
       '0.2.1-rc.5': {"version": "0.2.1-rc.5.iui.1.0.14", "releaseTag": "v0.2.1-rc.5.iui.1.0.14", "asset": "dsh-intelligent-ui-0.2.1-rc.5.iui.1.0.14.tgz", "sha256": "28442a1e13f29a3ea725cf9a88a73daa4ee30fa3dc29458f4417096f2da52c07", "dsh": "0.2.1-rc.5", "allowPrerelease": false},
@@ -66,6 +68,7 @@ export const recommendedPlugins = [
     description: '在「设置 → OMAA」选择 Codex、Grok Build、Cursor、Pi Coding Agent 或 ZCode 预设，沿用 DSH 会话和工具。',
     category: '智能体', url: 'https://github.com/gulagala001/oh-my-agents-above-all', githubRelease: 'gulagala001/oh-my-agents-above-all',
     hostBuilds: {
+      '0.2.2-rc.3': {"version": "0.2.2-rc.3.omaa.0.17.13", "releaseTag": "v0.2.2-rc.3.omaa.0.17.13", "asset": "oh-my-agents-above-all-0.2.2-rc.3.omaa.0.17.13.tgz", "sha256": "a9e1807ce93a32d19ea2c9052a5363bab8065d6e75d53331254df66b6a2944af", "dsh": "0.2.2-rc.3", "allowPrerelease": false},
       '0.2.2-rc.2': {"version": "0.2.2-rc.2.omaa.0.17.12", "releaseTag": "v0.2.2-rc.2.omaa.0.17.12", "asset": "oh-my-agents-above-all-0.2.2-rc.2.omaa.0.17.12.tgz", "sha256": "8504cf72aec4b899e00719ea0b522c7bb28714784cdd81f99a6a5a9ba733f5fc", "dsh": "0.2.2-rc.2", "allowPrerelease": false},
       '0.2.2-rc.1': {"version": "0.2.2-rc.1.omaa.0.17.10", "releaseTag": "v0.2.2-rc.1.omaa.0.17.10", "asset": "oh-my-agents-above-all-0.2.2-rc.1.omaa.0.17.10.tgz", "sha256": "d4a5b4a96c788f021ca21ac4c6285699821273e94df7222261b34dd71200136d", "dsh": "0.2.2-rc.1", "allowPrerelease": false},
       '0.2.1-rc.5': {"version": "0.2.1-rc.5.omaa.0.17.7", "releaseTag": "v0.2.1-rc.5.omaa.0.17.7", "asset": "oh-my-agents-above-all-0.2.1-rc.5.omaa.0.17.7.tgz", "sha256": "0605bf8c744b38de06b5c84bf375bbdc8643557287b34487606d65b1daa8fa7b", "dsh": "0.2.1-rc.5", "allowPrerelease": false},
@@ -98,6 +101,7 @@ export const recommendedPlugins = [
     category: '模型能力', url: 'https://github.com/gulagala001/omd-prompt-optimizer',
     githubRelease: 'gulagala001/oh-my-dsh', requireReviewedVersion: true,
     hostBuilds: {
+      '0.2.2-rc.3': {"version": "0.2.2-rc.3.intent.0.3.4", "upstreamVersion": "0.3.0", "releaseVersion": "0.2.2-rc.3.omd.1.3.19", "releaseTag": "v0.2.2-rc.3.omd.1.3.19", "asset": "omd-prompt-optimizer-0.2.2-rc.3.intent.0.3.4.tgz", "sha256": "a35108377feb7f30a6f1d677784f1feeba242f91d18bcbc5cececd0fed682940", "dsh": "0.2.2-rc.3", "allowPrerelease": false},
       '0.2.2-rc.2': {"version": "0.2.2-rc.2.intent.0.3.4", "upstreamVersion": "0.3.0", "releaseVersion": "0.2.2-rc.2.omd.1.3.18", "releaseTag": "v0.2.2-rc.2.omd.1.3.18", "asset": "omd-prompt-optimizer-0.2.2-rc.2.intent.0.3.4.tgz", "sha256": "0195f27e10bef8f496a325ed53a2a2967e101f6ec0b1b310442b0be88437c268", "dsh": "0.2.2-rc.2", "allowPrerelease": false},
       '0.2.2-rc.1': {"version": "0.2.2-rc.1.intent.0.3.4", "upstreamVersion": "0.3.0", "releaseVersion": "0.2.2-rc.1.omd.1.3.3", "releaseTag": "v0.2.2-rc.1.omd.1.3.3", "asset": "omd-prompt-optimizer-0.2.2-rc.1.intent.0.3.4.tgz", "sha256": "65cefcded21c2897b03ce07c01edeb71d6353be1795a12d0cbd3a24cc2d857f8", "dsh": "0.2.2-rc.1", "allowPrerelease": false},
       '0.2.1-rc.5': {"version": "0.2.1-rc.5.intent.0.3.4", "upstreamVersion": "0.3.0", "releaseVersion": "0.2.1-rc.5.omd.1.2.2", "releaseTag": "v0.2.1-rc.5.omd.1.2.2", "asset": "omd-prompt-optimizer-0.2.1-rc.5.intent.0.3.4.tgz", "sha256": "74b32347ee6a7041ffa8f4f9c950ce80e01acec1144287bb8fd216fd8dd62ff5", "dsh": "0.2.1-rc.5", "allowPrerelease": false},
@@ -108,8 +112,8 @@ export const recommendedPlugins = [
     id: 'dsh-market', name: '插件市场', packageName: 'dshmarket', author: 'dsh-market',
     description: '在 DSH 内浏览、搜索和安装社区插件与主题，支持分类筛选、更新管理及配置备份。安装后在设置中打开插件市场。',
     category: '插件管理', url: 'https://github.com/dsh-market/dsh-market',
-    supportedHostVersions: ['0.2.2-rc.2', '0.2.2-rc.1', '0.2.1-rc.5', '0.2.1-rc.3'],
-    review: { version: '1.70.3', dsh: '0.2.2-rc.2',
+    supportedHostVersions: ['0.2.2-rc.3', '0.2.2-rc.2', '0.2.2-rc.1', '0.2.1-rc.5', '0.2.1-rc.3'],
+    review: { version: '1.70.3', dsh: '0.2.2-rc.3',
       sha256: 'bf7b4ed2446e984bcf73276b328b6827a46727e88f7a0cba96d82ebab90dceb1',
       note: '原作者固定发行包；已核验 rc.2 原生安装、启动与基础界面。外部账号、服务及其他平台需各自配置和验证。' },
   },

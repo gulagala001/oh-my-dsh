@@ -2,11 +2,11 @@
 
 OpenCU 是 DSH 插件：新控制核心、浏览器／原生／扩展后端配合真实 REA 前端组件。AI 像使用其他工具一样调用电脑；页面、活动和监看自然呈现，没有单独的 CU 控制台。
 
-源码默认适配 DSH `0.2.2-rc.2`。`rc1`、`021rc2`、`021rc3` 分别使用精确匹配的 SDK、冻结依赖锁与宿主适配器；每份包只用于自己的完整宿主版本。
+源码默认适配 DSH `0.2.2-rc.3`。`rc1`、`021rc2`、`021rc3` 分别使用精确匹配的 SDK、冻结依赖锁与宿主适配器；每份包只用于自己的完整宿主版本。
 
 ## 加载
 
-各宿主分别精确匹配 SDK 与框架：DSH `0.2.1-rc.1`／`0.2.1-rc.2`／`0.2.2-rc.2` 均使用 Cordis `4.1.0`／Schemastery `3.19.0`。插件包根入口和 `opencu/dsh` 均为 Cordis Host 插件，依赖宿主真实 `tools` 和 `attachments` 服务。不需要另开 OpenCU 服务，也不接受外部 origin/token。由 DSH profile 加载：
+各宿主分别精确匹配 SDK 与框架：DSH `0.2.1-rc.1`／`0.2.1-rc.2`／`0.2.2-rc.3` 均使用 Cordis `4.1.0`／Schemastery `3.19.0`。插件包根入口和 `opencu/dsh` 均为 Cordis Host 插件，依赖宿主真实 `tools` 和 `attachments` 服务。不需要另开 OpenCU 服务，也不接受外部 origin/token。由 DSH profile 加载：
 
 ```yaml
 - insert:
@@ -115,7 +115,7 @@ npm run cu:check
 npm run cu:verify
 ```
 
-`cu:verify` 默认选择 `full`，自动启用真实隔离 DSH smoke。SDK 从显式 `OPENCU_DSH_INSTALL`、本地 `.local/cu-dsh-sdk`、当前包或相邻 OMD 安装锚点发现，版本必须与包声明精确一致；缺少 SDK 时报告未完成。独立环境可运行 `npm install --prefix .local/cu-dsh-sdk --no-audit --no-fund --save-exact @deepseek-ai/dsh@0.2.2-rc.2 @deepseek-ai/dsh-attachment-local@0.2.2-rc.2 @deepseek-ai/dsh-system-prompt@0.2.2-rc.2 @deepseek-ai/dsh-tools@0.2.2-rc.2` 准备。`node scripts/cu-liveness.mjs help` 可查看命令入口。Linux CI 使用 `npx playwright install --with-deps chromium`；现有构建／归档及产物一致性检查保持，随后执行一次 `npm run cu:verify -- --profile full`。`cu:check` 已接入 `pretest` 与 `prepack`，打包时仍执行原文档、扩展分发和公开文件门禁；不会在打包前自动运行完整验证机。宿主变体 staging 通过 `OPENCU_SOURCE_ROOT` 指向原源码，`check` 据此核对原源码登记，避免把有意生成的宿主变体误认为未经审查的源码修改。
+`cu:verify` 默认选择 `full`，自动启用真实隔离 DSH smoke。SDK 从显式 `OPENCU_DSH_INSTALL`、本地 `.local/cu-dsh-sdk`、当前包或相邻 OMD 安装锚点发现，版本必须与包声明精确一致；缺少 SDK 时报告未完成。独立环境可运行 `npm install --prefix .local/cu-dsh-sdk --no-audit --no-fund --save-exact @deepseek-ai/dsh@0.2.2-rc.3 @deepseek-ai/dsh-attachment-local@0.2.2-rc.3 @deepseek-ai/dsh-system-prompt@0.2.2-rc.3 @deepseek-ai/dsh-tools@0.2.2-rc.3` 准备。`node scripts/cu-liveness.mjs help` 可查看命令入口。Linux CI 使用 `npx playwright install --with-deps chromium`；现有构建／归档及产物一致性检查保持，随后执行一次 `npm run cu:verify -- --profile full`。`cu:check` 已接入 `pretest` 与 `prepack`，打包时仍执行原文档、扩展分发和公开文件门禁；不会在打包前自动运行完整验证机。宿主变体 staging 通过 `OPENCU_SOURCE_ROOT` 指向原源码，`check` 据此核对原源码登记，避免把有意生成的宿主变体误认为未经审查的源码修改。
 
 | 命令或范围 | 实际执行内容 |
 | --- | --- |
@@ -169,6 +169,6 @@ node scripts/cu-direct.mjs --data-dir /absolute/isolated/cu/data --output-dir /a
 
 `host/build-inputs/022rc1/` 锁定 rc.1 SDK 与 Electron。`source.json` 分别记录原始公开源码提交、官方 rc.1 桌面包及构建提交；七个原始桌面入口重建后必须与该官方包逐字节一致。随后在该独立源码目录执行 `node host/apply.mjs <source> --target 0.2.2-rc.1`，该入口核对 Git 来源、未改动源码和全部原始桌面入口摘要后才应用适配。不能更改旧源码的版本冒充新版来源。
 
-### DSH 0.2.2-rc.2 构建输入
+### DSH 0.2.2-rc.3 构建输入
 
-`host/build-inputs/022rc2/` 固定插件依赖。构建命令为 `OPENCU_PNPM="$PNPM" node scripts/build-targets.mjs 022rc2`。SDK 取自官方标签 `dsh-v0.2.2-rc.2` 的提交 `ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c`，使用上游冻结锁构建。桌面适配保留宿主原有的登录回执，并在打包时检查原生终端和文档转换模块。
+`host/build-inputs/022rc2/` 固定插件依赖。构建命令为 `OPENCU_PNPM="$PNPM" node scripts/build-targets.mjs 022rc2`。SDK 取自官方标签 `dsh-v0.2.2-rc.3` 的提交 `38a6a5c965aa99ab525161efb7cc5cf1fe62fced`，使用上游冻结锁构建。桌面适配保留宿主原有的登录回执，并在打包时检查原生终端和文档转换模块。

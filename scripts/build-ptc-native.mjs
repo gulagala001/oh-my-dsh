@@ -8,7 +8,7 @@ const root = new URL('../', import.meta.url), require = createRequire(import.met
 const host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
 const file = host.resolve('@deepseek-ai/dsh-tool-executor-ptc');
 let source = await readFile(file, 'utf8');
-if (host('@deepseek-ai/dsh-tool-executor-ptc/package.json').version !== '0.2.2-rc.2'
+if (host('@deepseek-ai/dsh-tool-executor-ptc/package.json').version !== '0.2.2-rc.3'
   || createHash('sha256').update(source).digest('hex') !== 'ce5425f21f6da7eaf5d660979d4e69159f47446f612ccf9553d4e2636a30d86a') throw Error('Unreviewed PTC executor source');
 const controls = '["job_output", "job_list", "job_kill", "runtime_status"]';
 source = replaceExactly(source, '!nested && name !== RUN_CODE_NAME ?', `!nested && name !== RUN_CODE_NAME && !${controls}.includes(name) ?`, 'PTC control dispatch');

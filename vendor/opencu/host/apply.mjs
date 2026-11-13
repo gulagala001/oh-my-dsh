@@ -502,7 +502,7 @@ await patch(sidebar + 'stores.ts', [
             : planned.ops))`],
 ], 'Background opens cannot replace');
 await applyRuntimeLifecycle(patch, target);
-if (['0.2.1-rc.5', '0.2.2-rc.1', '0.2.2-rc.2'].includes(target.version)) {
+if (['0.2.1-rc.5', '0.2.2-rc.1', '0.2.2-rc.2', '0.2.2-rc.3'].includes(target.version)) {
   const preparation = 'apps/desktop/scripts/prepare-dsh.ts';
   await patch(preparation, [
     ["import { packagingStep } from './packaging-step.mjs'", "import { packagingStep } from './packaging-step.mjs'\nimport { prepareNativeRuntime } from './opencu-native-runtime.mjs'"],

@@ -24,7 +24,7 @@
 - 插件自己的日志事件通过宿主 `appendPluginRecord` 写入，普通 `Session.append` 不接收 `ignorable`。涉及事件持久化时，用真实 Session 和原生冷恢复检查。
 - 自有工具用 `checkedTool` 注册，范围和互斥要求由工具执行层校验。`npm run tools:check` 核对 Native 对象参数和 TypeScript／Python SDK，构建、CI 和 prepack 都会运行。
 - 宿主浏览器组件用 `scripts/host-build-contracts.mjs` 核对 SDK 和组件身份、ModuleLoader 注册、样式归属和唯一替换锚点。依赖通过宿主解析，不扫描 `.pnpm` 目录挑副本；离线平铺布局要能生成相同产物。源码编辑按原始 AST 从后往前应用。
-- DSH 0.2.2-rc.2 构建保留原始源码提交和 tag，并在 `vendor/host-artifacts.json` 记录目标官方 npm 工件。构建会逐文件核对复用模块、类型声明和源文件与目标 SDK 的摘要；SDK、框架和锁精确匹配。桌面适配前，七个未修改源码的桌面入口要先重建成和官方包相同的字节。
+- DSH 0.2.2-rc.3 构建保留原始源码提交和 tag，并在 `vendor/host-artifacts.json` 记录目标官方 npm 工件。构建会逐文件核对复用模块、类型声明和源文件与目标 SDK 的摘要；SDK、框架和锁精确匹配。桌面适配前，七个未修改源码的桌面入口要先重建成和官方包相同的字节。
 - 测试用隔离的数据目录和受控模型。个人配置、会话、密钥和用户原始报告不进提交和安装包。
 - 尽量少写测试：按需做最小构建和启动检查，只为具体问题做定点验证。兼容问题查[插件兼容](docs/plugin-compatibility.md)。
 - PR 写清问题、改后的行为、做过的检查和没覆盖的范围。跳过或模拟通过的检查要如实写。

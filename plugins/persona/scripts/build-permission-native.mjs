@@ -14,7 +14,7 @@ const version = JSON.parse(await readFile(new URL('package.json', root), 'utf8')
 let source = await readFile(new URL('lib/client.js', pathToFileURL(manifest)), 'utf8');
 const hash = createHash('sha256').update(source).digest('hex');
 if (pkg.name !== '@deepseek-ai/dsh-client-ui-permission-presets' || pkg.version !== version
-    || version !== '0.2.2-rc.2' || hash !== '99d6f706c65b8a832fd95cf2ff44b920d58f47384bc7fe5b0d0ed9d334a870ba') {
+    || version !== '0.2.2-rc.3' || hash !== '99d6f706c65b8a832fd95cf2ff44b920d58f47384bc7fe5b0d0ed9d334a870ba') {
   throw Error(`Unreviewed native permission picker: ${pkg.version}`);
 }
 const replaceOnce = (before, after) => {

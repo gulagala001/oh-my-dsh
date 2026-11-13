@@ -8,7 +8,7 @@ import { clientComponents } from './client-identity.mjs';
 
 // Deliberately narrower than the legacy non-CU fixture's parent-of-repo root.
 export const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
-export const hostVersion = '0.2.2-rc.2';
+export const hostVersion = '0.2.2-rc.3';
 export const inside = (root, path) => path === root || path.startsWith(root + sep);
 export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sdkNames = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host', '@deepseek-ai/dsh-app-boot',

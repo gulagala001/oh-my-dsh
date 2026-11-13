@@ -6,8 +6,8 @@ settings:
 
 overrides:
   fflate@<0.8.3: 0.8.3
-  '@deepseek-ai/cordis': link:../.local/dsh-sdk-ddac9676/vendor/cordis
-  '@deepseek-ai/schemastery': link:../.local/dsh-sdk-ddac9676/vendor/schemastery
+  '@deepseek-ai/cordis': link:../.local/dsh-sdk-38a6a5c9/vendor/cordis
+  '@deepseek-ai/schemastery': link:../.local/dsh-sdk-38a6a5c9/vendor/schemastery
   '@deepseek-ai/cosmokit': 1.9.0
   '@deepseek-ai/cordis-plugin-group': 1.1.0
   '@deepseek-ai/cordis-plugin-hmr': 1.1.0
@@ -15,26 +15,26 @@ overrides:
   '@deepseek-ai/cordis-plugin-loader': 1.1.0
   '@deepseek-ai/cordis-plugin-logger-console': 1.1.0
   '@deepseek-ai/cordis-plugin-timer': 1.2.0
-  '@deepseek-ai/dsh-attachment': link:../.local/dsh-sdk-ddac9676/packages/attachment/attachment
-  '@deepseek-ai/dsh-compaction': link:../.local/dsh-sdk-ddac9676/packages/compaction/compaction
-  '@deepseek-ai/dsh-llm': link:../.local/dsh-sdk-ddac9676/packages/llm/llm
-  '@deepseek-ai/dsh-scope': link:../.local/dsh-sdk-ddac9676/packages/core/scope
-  '@deepseek-ai/dsh-tools': link:../.local/dsh-sdk-ddac9676/packages/core/tools
-  '@deepseek-ai/dsh-util-values': link:../.local/dsh-sdk-ddac9676/packages/util/values
-  '@deepseek-ai/dsh-session': link:../.local/dsh-sdk-ddac9676/packages/core/session
-  '@deepseek-ai/dsh-tool-executor-native': link:../.local/dsh-sdk-ddac9676/packages/core/tool-executor-native
-  '@deepseek-ai/dsh-tool-executor-ptc': link:../.local/dsh-sdk-ddac9676/packages/core/tool-executor-ptc
-  '@deepseek-ai/dsh-mcp-client': link:../.local/dsh-sdk-ddac9676/packages/mcp/mcp-client
-  '@deepseek-ai/dsh': link:../.local/dsh-sdk-ddac9676/apps/cli
-  '@deepseek-ai/dsh-brand': link:../.local/dsh-sdk-ddac9676/packages/util/brand
-  '@deepseek-ai/dsh-jobs': link:../.local/dsh-sdk-ddac9676/packages/jobs/jobs
-  '@deepseek-ai/dsh-output-retention': link:../.local/dsh-sdk-ddac9676/packages/util/output-retention
-  '@deepseek-ai/dsh-sandbox': link:../.local/dsh-sdk-ddac9676/packages/sandbox/sandbox
-  '@deepseek-ai/dsh-session-persistence-jsonl': link:../.local/dsh-sdk-ddac9676/packages/session/session-persistence-jsonl
-  '@deepseek-ai/dsh-shell': link:../.local/dsh-sdk-ddac9676/packages/shell/shell
-  '@deepseek-ai/dsh-subagent': link:../.local/dsh-sdk-ddac9676/packages/subagent/subagent
-  '@deepseek-ai/dsh-timeout': link:../.local/dsh-sdk-ddac9676/packages/util/timeout
-  '@deepseek-ai/dsh-workflow': link:../.local/dsh-sdk-ddac9676/packages/workflow/workflow
+  '@deepseek-ai/dsh-attachment': link:../.local/dsh-sdk-38a6a5c9/packages/attachment/attachment
+  '@deepseek-ai/dsh-compaction': link:../.local/dsh-sdk-38a6a5c9/packages/compaction/compaction
+  '@deepseek-ai/dsh-llm': link:../.local/dsh-sdk-38a6a5c9/packages/llm/llm
+  '@deepseek-ai/dsh-scope': link:../.local/dsh-sdk-38a6a5c9/packages/core/scope
+  '@deepseek-ai/dsh-tools': link:../.local/dsh-sdk-38a6a5c9/packages/core/tools
+  '@deepseek-ai/dsh-util-values': link:../.local/dsh-sdk-38a6a5c9/packages/util/values
+  '@deepseek-ai/dsh-session': link:../.local/dsh-sdk-38a6a5c9/packages/core/session
+  '@deepseek-ai/dsh-tool-executor-native': link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-native
+  '@deepseek-ai/dsh-tool-executor-ptc': link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-ptc
+  '@deepseek-ai/dsh-mcp-client': link:../.local/dsh-sdk-38a6a5c9/packages/mcp/mcp-client
+  '@deepseek-ai/dsh': link:../.local/dsh-sdk-38a6a5c9/apps/cli
+  '@deepseek-ai/dsh-brand': link:../.local/dsh-sdk-38a6a5c9/packages/util/brand
+  '@deepseek-ai/dsh-jobs': link:../.local/dsh-sdk-38a6a5c9/packages/jobs/jobs
+  '@deepseek-ai/dsh-output-retention': link:../.local/dsh-sdk-38a6a5c9/packages/util/output-retention
+  '@deepseek-ai/dsh-sandbox': link:../.local/dsh-sdk-38a6a5c9/packages/sandbox/sandbox
+  '@deepseek-ai/dsh-session-persistence-jsonl': link:../.local/dsh-sdk-38a6a5c9/packages/session/session-persistence-jsonl
+  '@deepseek-ai/dsh-shell': link:../.local/dsh-sdk-38a6a5c9/packages/shell/shell
+  '@deepseek-ai/dsh-subagent': link:../.local/dsh-sdk-38a6a5c9/packages/subagent/subagent
+  '@deepseek-ai/dsh-timeout': link:../.local/dsh-sdk-38a6a5c9/packages/util/timeout
+  '@deepseek-ai/dsh-workflow': link:../.local/dsh-sdk-38a6a5c9/packages/workflow/workflow
 
 importers:
 
@@ -47,41 +47,41 @@ importers:
         specifier: 1.6.0
         version: 1.6.0
       '@deepseek-ai/cordis':
-        specifier: link:../.local/dsh-sdk-ddac9676/vendor/cordis
-        version: link:../.local/dsh-sdk-ddac9676/vendor/cordis
+        specifier: link:../.local/dsh-sdk-38a6a5c9/vendor/cordis
+        version: link:../.local/dsh-sdk-38a6a5c9/vendor/cordis
       '@deepseek-ai/dsh-attachment':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/attachment/attachment
-        version: link:../.local/dsh-sdk-ddac9676/packages/attachment/attachment
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/attachment/attachment
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/attachment/attachment
       '@deepseek-ai/dsh-compaction':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/compaction/compaction
-        version: link:../.local/dsh-sdk-ddac9676/packages/compaction/compaction
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/compaction/compaction
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/compaction/compaction
       '@deepseek-ai/dsh-llm':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/llm/llm
-        version: link:../.local/dsh-sdk-ddac9676/packages/llm/llm
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/llm/llm
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/llm/llm
       '@deepseek-ai/dsh-mcp-client':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/mcp/mcp-client
-        version: link:../.local/dsh-sdk-ddac9676/packages/mcp/mcp-client
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/mcp/mcp-client
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/mcp/mcp-client
       '@deepseek-ai/dsh-scope':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/core/scope
-        version: link:../.local/dsh-sdk-ddac9676/packages/core/scope
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/scope
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/core/scope
       '@deepseek-ai/dsh-session':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/core/session
-        version: link:../.local/dsh-sdk-ddac9676/packages/core/session
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/session
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/core/session
       '@deepseek-ai/dsh-tool-executor-native':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/core/tool-executor-native
-        version: link:../.local/dsh-sdk-ddac9676/packages/core/tool-executor-native
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-native
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-native
       '@deepseek-ai/dsh-tool-executor-ptc':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/core/tool-executor-ptc
-        version: link:../.local/dsh-sdk-ddac9676/packages/core/tool-executor-ptc
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-ptc
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-ptc
       '@deepseek-ai/dsh-tools':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/core/tools
-        version: link:../.local/dsh-sdk-ddac9676/packages/core/tools
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/tools
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/core/tools
       '@deepseek-ai/dsh-util-values':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/util/values
-        version: link:../.local/dsh-sdk-ddac9676/packages/util/values
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/util/values
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/util/values
       '@deepseek-ai/schemastery':
-        specifier: link:../.local/dsh-sdk-ddac9676/vendor/schemastery
-        version: link:../.local/dsh-sdk-ddac9676/vendor/schemastery
+        specifier: link:../.local/dsh-sdk-38a6a5c9/vendor/schemastery
+        version: link:../.local/dsh-sdk-38a6a5c9/vendor/schemastery
       '@modelcontextprotocol/client':
         specifier: 2.2.0
         version: 2.2.0
@@ -144,35 +144,35 @@ importers:
         version: 4.5.4
     devDependencies:
       '@deepseek-ai/dsh':
-        specifier: link:../.local/dsh-sdk-ddac9676/apps/cli
-        version: link:../.local/dsh-sdk-ddac9676/apps/cli
+        specifier: link:../.local/dsh-sdk-38a6a5c9/apps/cli
+        version: link:../.local/dsh-sdk-38a6a5c9/apps/cli
       '@deepseek-ai/dsh-brand':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/util/brand
-        version: link:../.local/dsh-sdk-ddac9676/packages/util/brand
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/util/brand
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/util/brand
       '@deepseek-ai/dsh-jobs':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/jobs/jobs
-        version: link:../.local/dsh-sdk-ddac9676/packages/jobs/jobs
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/jobs/jobs
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/jobs/jobs
       '@deepseek-ai/dsh-output-retention':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/util/output-retention
-        version: link:../.local/dsh-sdk-ddac9676/packages/util/output-retention
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/util/output-retention
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/util/output-retention
       '@deepseek-ai/dsh-sandbox':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/sandbox/sandbox
-        version: link:../.local/dsh-sdk-ddac9676/packages/sandbox/sandbox
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/sandbox/sandbox
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/sandbox/sandbox
       '@deepseek-ai/dsh-session-persistence-jsonl':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/session/session-persistence-jsonl
-        version: link:../.local/dsh-sdk-ddac9676/packages/session/session-persistence-jsonl
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/session/session-persistence-jsonl
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/session/session-persistence-jsonl
       '@deepseek-ai/dsh-shell':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/shell/shell
-        version: link:../.local/dsh-sdk-ddac9676/packages/shell/shell
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/shell/shell
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/shell/shell
       '@deepseek-ai/dsh-subagent':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/subagent/subagent
-        version: link:../.local/dsh-sdk-ddac9676/packages/subagent/subagent
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/subagent/subagent
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/subagent/subagent
       '@deepseek-ai/dsh-timeout':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/util/timeout
-        version: link:../.local/dsh-sdk-ddac9676/packages/util/timeout
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/util/timeout
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/util/timeout
       '@deepseek-ai/dsh-workflow':
-        specifier: link:../.local/dsh-sdk-ddac9676/packages/workflow/workflow
-        version: link:../.local/dsh-sdk-ddac9676/packages/workflow/workflow
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/workflow/workflow
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/workflow/workflow
       '@mermaid-js/tiny':
         specifier: 12.0.0
         version: 12.0.0

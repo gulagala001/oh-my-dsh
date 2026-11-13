@@ -2,24 +2,24 @@
 
 [简体中文](install.md) · [Back to README](../README_EN.md)
 
-Requires DSH **0.2.2-rc.2** and Node.js **24.9.0+**.
+Requires DSH **0.2.2-rc.3** and Node.js **24.9.0+**.
 
 ## Install in DSH
 
 Open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.2.13-dsh.0.2.2-rc.2/opencu-2.2.13-dsh.0.2.2-rc.2.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.2.14-dsh.0.2.2-rc.3/opencu-2.2.14-dsh.0.2.2-rc.3.tgz
 ```
 
-When your current task finishes, enable the plugin or restart DSH when prompted. Checksums: [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.13-dsh.0.2.2-rc.2/SHA256SUMS).
+When your current task finishes, enable the plugin or restart DSH when prompted. Checksums: [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.14-dsh.0.2.2-rc.3/SHA256SUMS).
 
 ## Install from the command line
 
 Use the CLI that belongs to the same DSH, replacing `web` with your profile (`desktop` for the desktop app):
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/opencu/releases/download/v2.2.13-dsh.0.2.2-rc.2/opencu-2.2.13-dsh.0.2.2-rc.2.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/opencu/releases/download/v2.2.14-dsh.0.2.2-rc.3/opencu-2.2.14-dsh.0.2.2-rc.3.tgz"
 ```
 
 If you already use OMD, skip this: OMD includes OpenCU. For other DSH versions, find the matching package on [Releases](https://github.com/gulagala001/opencu/releases); do not mix packages built for different versions.
@@ -38,8 +38,8 @@ You can also send this to the AI in DSH and let it do the install:
 
 ```text
 Install OpenCU into the DSH profile I am using now:
-https://github.com/gulagala001/opencu/releases/download/v2.2.13-dsh.0.2.2-rc.2/opencu-2.2.13-dsh.0.2.2-rc.2.tgz
-First check that DSH is 0.2.2-rc.2 and Node.js is 24.9.0 or later. If OMD is already installed, do not install OpenCU.
+https://github.com/gulagala001/opencu/releases/download/v2.2.14-dsh.0.2.2-rc.3/opencu-2.2.14-dsh.0.2.2-rc.3.tgz
+First check that DSH is 0.2.2-rc.3 and Node.js is 24.9.0 or later. If OMD is already installed, do not install OpenCU.
 Keep my settings, conversations, browser pairing and other plugins, and do not upgrade DSH. Before restarting, make sure no task is running.
 Afterwards, confirm that Settings → Computer & Browser opens, and tell me which system permissions I still need to grant.
 ```

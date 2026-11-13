@@ -6,7 +6,7 @@ This page assumes you installed OMD following the [installation guide](install_E
 
 ## 1. Check the version and model
 
-Open **Settings → Oh My DSH → About** and check that the current version is 1.3.16 and DSH is 0.2.2-rc.2. The desktop and web versions use different profiles, so make sure OMD is in the one you are using.
+Open **Settings → Oh My DSH → About** and check that the current version is 1.3.16 and DSH is 0.2.2-rc.3. The desktop and web versions use different profiles, so make sure OMD is in the one you are using.
 
 OMD uses the models configured in DSH and comes with no account. Working with files needs a model that supports tool calls; reading screenshots needs image input.
 

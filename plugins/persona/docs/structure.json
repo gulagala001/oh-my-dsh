@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "published": "0.2.3-dsh.0.2.2-rc.2",
+  "published": "0.2.4-dsh.0.2.2-rc.3",
   "repository": {
     "slug": "gulagala001/dsh-persona-plugin",
     "description": "给 DSH 里的 AI 设人格，全局或按会话选，可以新建、导入和分享。 AI personalities for DeepSeek Harness. Choose one globally or per conversation, and create, import or share your own.",

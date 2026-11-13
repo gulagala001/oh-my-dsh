@@ -18,7 +18,7 @@ OMD 是一套装好就能用的组合。里面的 Workflow、撤回、人格、�
 | [DSH BTW](https://github.com/gulagala001/dsh-btw/releases) · `@gulagala001/dsh-btw` | 旁聊、历史、追问和单独停止 | 内置，用 `/btw` | 0.1.9 |
 | [DSH Response ID Reuse](https://github.com/gulagala001/dsh-response-id-reuse/releases) · `@gulagala001/dsh-response-id-reuse` | Responses 渠道的响应 ID 续传 | 内置，无需设置 | 0.1.8 |
 
-独立版各自更新，表里是当前版本，都对应 DSH 0.2.2-rc.2。IUI、OMAA 一直是独立产品；dsh-ops 是第三方工具，在 OMD 的第三方功能页安装。
+独立版各自更新，表里是当前版本，都对应 DSH 0.2.2-rc.3。IUI、OMAA 一直是独立产品；dsh-ops 是第三方工具，在 OMD 的第三方功能页安装。
 
 ## 一起装时
 

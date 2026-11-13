@@ -44,11 +44,11 @@ for (const entry of projects) {
   if (!existsSync(resolve(root, entry.notice.split('#')[0]))) throw Error('Missing source notice: ' + entry.notice);
 }
 
-const lockFiles = ['pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/022rc2/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml'];
-const upstreamLock = 'https://github.com/deepseek-ai/deepseek-harness/blob/ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c/pnpm-lock.yaml';
-const sdkRoot = resolve(root, '../.local/dsh-sdk-ddac9676');
+const lockFiles = ['pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/022rc3/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml'];
+const upstreamLock = 'https://github.com/deepseek-ai/deepseek-harness/blob/38a6a5c965aa99ab525161efb7cc5cf1fe62fced/pnpm-lock.yaml';
+const sdkRoot = resolve(root, '../.local/dsh-sdk-38a6a5c9');
 const sdkLock = readFileSync(resolve(sdkRoot, 'pnpm-lock.yaml'), 'utf8');
-if (digest(sdkLock) !== 'be2834e3ef72341b8874a4b8c5359957449973585f0a49bc4fb4526298bca6a7') throw Error('Host source lock checksum mismatch');
+if (digest(sdkLock) !== 'c24a38565023f08480f3832a554a676ad7479d36c0868063c85ad66ba6d3e68a') throw Error('Host source lock checksum mismatch');
 const dependencies = new Map();
 for (const file of [...lockFiles, upstreamLock]) {
   const lock = parse(file === upstreamLock ? sdkLock : read(file));

@@ -7,9 +7,9 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.2.3-dsh.0.2.2-rc.2"><img alt="DSH Persona 0.2.3" src="https://img.shields.io/badge/release-0.2.3-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-persona-plugin/releases/tag/v0.2.4-dsh.0.2.2-rc.3"><img alt="DSH Persona 0.2.4" src="https://img.shields.io/badge/release-0.2.4-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-persona-plugin/releases"><img alt="GitHub downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-persona-plugin/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
-  <a href="#readme-install"><img alt="DSH 0.2.2-rc.2" src="https://img.shields.io/badge/DSH-0.2.2--rc.2-0969da?style=flat-square"></a>
+  <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-persona-plugin/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-persona-plugin?style=flat-square&amp;color=0969da"></a>
 </p>
 
@@ -21,17 +21,17 @@
 
 ## Quick start
 
-**Requires:** DSH **0.2.2-rc.2** and Node.js **24.9.0+**.
+**Requires:** DSH **0.2.2-rc.3** and Node.js **24.9.0+**.
 
 ### 1. Install
 
 In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/gulagala001-dsh-persona-plugin-0.2.3-dsh.0.2.2-rc.2.tgz
+https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.4-dsh.0.2.2-rc.3/gulagala001-dsh-persona-plugin-0.2.4-dsh.0.2.2-rc.3.tgz
 ```
 
-When your current task finishes, enable the plugin or restart DSH when prompted. Your settings and conversations stay as they were. Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/SHA256SUMS).
+When your current task finishes, enable the plugin or restart DSH when prompted. Your settings and conversations stay as they were. Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.4-dsh.0.2.2-rc.3/SHA256SUMS).
 
 <details>
 <summary>Install or remove from the command line</summary>
@@ -39,7 +39,7 @@ When your current task finishes, enable the plugin or restart DSH when prompted.
 Use the CLI that belongs to the same DSH, replacing `desktop` with your profile:
 
 ```sh
-dsh plugin --profile desktop add "https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.3-dsh.0.2.2-rc.2/gulagala001-dsh-persona-plugin-0.2.3-dsh.0.2.2-rc.2.tgz"
+dsh plugin --profile desktop add "https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.4-dsh.0.2.2-rc.3/gulagala001-dsh-persona-plugin-0.2.4-dsh.0.2.2-rc.3.tgz"
 dsh plugin --profile desktop remove @gulagala001/dsh-persona-plugin
 ```
 

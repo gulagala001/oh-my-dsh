@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "published": "0.1.10-dsh.0.2.2-rc.2",
+  "published": "0.1.11-dsh.0.2.2-rc.3",
   "repository": {
     "slug": "gulagala001/dsh-workflow",
     "description": "DSH 的 JavaScript 工作流：调度原生子智能体和后台任务，支持续跑、Token 目标和隔离工作区。 JavaScript workflows for DeepSeek Harness with native subagents and jobs, resumable runs, token targets and worktree isolation.",

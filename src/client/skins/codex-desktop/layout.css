@@ -53,22 +53,13 @@ html.omd[data-omd-layout="codex-desktop"] {
   & .hHd-Xa_root:not(.hHd-Xa_collapsed) {
     --codex-titlebar-height: 0px;
     display: grid; grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: var(--codex-titlebar-height) 44px 32px 32px auto 18px 30px minmax(0, 1fr) auto;
+    grid-template-rows: var(--codex-titlebar-height) 44px 32px minmax(0, 1fr) auto;
     &:has(.hHd-Xa_topStrip) { --codex-titlebar-height: 40px; }
     & .hHd-Xa_topStrip { grid-area: 1 / 1 / 2 / -1; margin: 0; height: 40px; }
     & .hHd-Xa_logoRow { grid-area: 2 / 1 / 3 / -1; margin: 0; }
-    & .hHd-Xa_newSession { grid-area: 3 / 1 / 4 / -1; }
-    & .hHd-Xa_panelList { grid-area: 5 / 1 / 6 / -1; margin: 0; }
-    & :is(.hHd-Xa_regionArea, .bhn1Oq_root, .bhn1Oq_sectionHeader) { display: contents; }
-    & .bhn1Oq_searchSlot { grid-area: 4 / 1 / 5 / -1; max-width: none; margin: 0; padding: 0; }
-    & .bhn1Oq_search { height: 32px; border-radius: 7px; }
-    & .bhn1Oq_search:not(.bhn1Oq_searchExpanded) .bhn1Oq_searchButton { width: 100%; justify-content: flex-start; padding: 0 8px; gap: 10px; height: 32px; border-radius: 7px; font-size: 14px; }
-    & .bhn1Oq_search:not(.bhn1Oq_searchExpanded) .bhn1Oq_searchButton::after { content: attr(aria-label); }
-    & .bhn1Oq_searchExpanded { width: 100%; margin: 0; border: 1px solid var(--omd-border); background: var(--omd-bg); }
-    & .bhn1Oq_sectionLabel { grid-area: 7 / 1 / 8 / 2; align-self: center; padding-left: 8px; max-width: 100%; color: var(--omd-muted); font-size: 12px; }
-    & .bhn1Oq_headerActions { grid-area: 7 / 2 / 8 / 3; }
-    & .bhn1Oq_listArea { grid-area: 8 / 1 / 9 / -1; margin: 0 -4px; }
-    & .hHd-Xa_footArea { grid-area: 9 / 1 / 10 / -1; }
+    & .hHd-Xa_newSessionRow { grid-area: 3 / 1 / 4 / -1; margin-inline: 0; }
+    & .hHd-Xa_scrollRegion { grid-area: 4 / 1 / 5 / -1; min-height: 0; }
+    & .hHd-Xa_footArea { grid-area: 5 / 1 / 6 / -1; }
   }
 
   /* One title bar spans the conversation and the right pane. Only the header

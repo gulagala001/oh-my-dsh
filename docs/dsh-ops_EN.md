@@ -10,7 +10,7 @@ This is a compatibility build of upstream **0.4.1**, with DSH adaptation maintai
 
 | Item | Requirement |
 | --- | --- |
-| DSH | 0.2.2-rc.2; each DSH version has its own package |
+| DSH | 0.2.2-rc.3; each DSH version has its own package |
 | Platform | Windows x64, Linux x64, macOS Apple Silicon |
 | Shell | Local Bash on Linux / macOS; optional bundled Bash on Windows, with PowerShell managed by DSH |
 
@@ -26,7 +26,7 @@ To install by hand, give the matching package to the target profile's plugin man
 
 | DSH | Package | Checksums |
 | --- | --- | --- |
-| 0.2.2-rc.2 | [dsh-ops-0.2.2-rc.2.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.18/dsh-ops-0.2.2-rc.2.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.18/SHA256SUMS) |
+| 0.2.2-rc.3 | [dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.19/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.19/SHA256SUMS) |
 
 <!-- history -->
 Older DSH versions: [0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.2.2) · [0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.100.1) · [0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.99.0) · [0.2.1-rc.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.99.0)

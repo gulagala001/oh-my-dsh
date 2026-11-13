@@ -1,3 +1,39 @@
+# Oh My DSH 1.3.19 · DSH 0.2.2-rc.3
+
+[中文](#zh-1319) · [English](#en-1319)
+
+<a id="zh-1319"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复 Codex 桌面布局中新会话和导入按钮的位置。
+
+### 其他变更
+
+- 适配 DSH 0.2.2-rc.3。
+
+<a id="en-1319"></a>
+
+## English
+
+### Bug fixes
+
+- Keeps the new chat and import buttons together in the Codex desktop layout.
+
+### Other changes
+
+- Adds support for DSH 0.2.2-rc.3.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.19/oh-my-dsh-0.2.2-rc.3.omd.1.3.19.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.19/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.18 · DSH 0.2.2-rc.2
 
 [中文](#zh-1318) · [English](#en-1318)

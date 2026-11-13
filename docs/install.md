@@ -2,7 +2,7 @@
 
 [English](install_EN.md) · [首页](../README.md) · [升级](upgrade.md) · [首次使用](getting-started.md)
 
-**需要：** DSH **0.2.2-rc.2**，Node.js **24.9.0+**。OMD 已经内置 OpenCU，不用再单独装。还没有 DSH 的话，先装 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)。
+**需要：** DSH **0.2.2-rc.3**，Node.js **24.9.0+**。OMD 已经内置 OpenCU，不用再单独装。还没有 DSH 的话，先装 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)。
 
 下面两种方式选一种。已经装过 OMD 的，先看[升级](upgrade.md)备份数据。
 
@@ -10,19 +10,19 @@
 
 ## 在"添加插件"里安装
 
-1. 在 DSH 的"关于"里看 DSH 的完整版本，比如 0.2.2-rc.2。这是 DSH 的版本，不是 OMD 的。
+1. 在 DSH 的"关于"里看 DSH 的完整版本，比如 0.2.2-rc.3。这是 DSH 的版本，不是 OMD 的。
 2. 等手头的任务跑完。
 3. 点左侧 **插件**，再点右上角 **＋ 添加插件**，粘贴：
 
    ```text
-   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.18/oh-my-dsh-0.2.2-rc.2.omd.1.3.18.tgz
+   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.19/oh-my-dsh-0.2.2-rc.3.omd.1.3.19.tgz
    ```
 
 4. 点 **安装**，装完确认 Oh My DSH 已启用。
 5. 完整退出再打开桌面版；网页版要重启原来的 Web 服务，只刷新网页不算。
 6. 新建会话，预设选 **Oh My DSH**。
 
-安装包名里前半段是 DSH 版本，`omd.` 后面的才是 OMD 版本。请用上面的固定安装包，不要直接装仓库的 main 分支，也不用下载 Source code 或 host-adapters.zip。校验文件：[SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.18/SHA256SUMS)。
+安装包名里前半段是 DSH 版本，`omd.` 后面的才是 OMD 版本。请用上面的固定安装包，不要直接装仓库的 main 分支，也不用下载 Source code 或 host-adapters.zip。校验文件：[SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.19/SHA256SUMS)。
 
 安装报错时先核对 DSH 版本。提示"构建脚本未批准"时，看[安装脚本处理](upgrade.md#build-approval)。
 
@@ -64,7 +64,7 @@ OMD 默认让 AI 直接读写文件、运行命令，不逐条询问；你在 pr
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.18/oh-my-dsh-0.2.2-rc.2.omd.1.3.18.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.19/oh-my-dsh-0.2.2-rc.3.omd.1.3.19.tgz
 ```
 
 然后按原来的方式启动，数据目录和端口都不变。
@@ -72,8 +72,8 @@ dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/d
 第一次用网页版（Windows 请用 PowerShell 7）：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.2-rc.2 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.18/oh-my-dsh-0.2.2-rc.2.omd.1.3.18.tgz
-npx --yes @deepseek-ai/dsh@0.2.2-rc.2 --profile web
+npx --yes @deepseek-ai/dsh@0.2.2-rc.3 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.19/oh-my-dsh-0.2.2-rc.3.omd.1.3.19.tgz
+npx --yes @deepseek-ai/dsh@0.2.2-rc.3 --profile web
 ```
 
 打开终端打印出来的完整登录链接。数据默认在用户目录的 `.dsh`，默认端口 3080。已经装过 DSH 的不要用这段命令另起一套。
@@ -82,7 +82,7 @@ macOS 桌面版默认位置的命令行：
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.2.omd.1.3.18/oh-my-dsh-0.2.2-rc.2.omd.1.3.18.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.19/oh-my-dsh-0.2.2-rc.3.omd.1.3.19.tgz
 ```
 
 Windows 桌面版建议直接用插件页安装。

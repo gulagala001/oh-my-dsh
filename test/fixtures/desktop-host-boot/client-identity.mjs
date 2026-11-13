@@ -30,7 +30,7 @@ export function assertHostUiIdentity(host, expected) {
 }
 
 // Fixed rc.2 shell table: packages/client/web/src/{platform,seed}.ts at
-// deepseek-harness@ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c. These exports are
+// deepseek-harness@38a6a5c965aa99ab525161efb7cc5cf1fe62fced. These exports are
 // compiled into the official shell, not necessarily standalone Host packages.
 export const shellSeeds = ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/client', '@deepseek-ai/cordis',
   'zod', '@tanstack/react-virtual', '@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-client-ui-slots',

@@ -2,7 +2,7 @@
 
 [首页](../README.md#computer-use) · [文档目录](README.md) · [安装](install.md#computer-use)
 
-OMD 内置 OpenCU 2.2.12。单独装的 OpenCU 和 OMD 内置的用同一套核心，不用另外启动控制服务。
+OMD 内置 OpenCU 2.2.14。单独装的 OpenCU 和 OMD 内置的用同一套核心，不用另外启动控制服务。
 
 ## 第一次使用
 

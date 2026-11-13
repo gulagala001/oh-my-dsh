@@ -9,6 +9,7 @@ const reviewedSource = {
 const reviewedFactories = new Map(reviewedSource.commits.map(commit => [commit, reviewedSource.sha256]));
 reviewedFactories.set('f3803c96974ad4a94195fb97e5c637e9c2a3afe3', '7671998cd4560381656c42aafa427d761a4a7105c823bd6a857730c6b59298e6');
 reviewedFactories.set('05b1cae8db6e674c5685101494d4eec24652424a', '31fee6f283a3187b10a4aac465890cc0bc52553c0ebc3c92d5558fbd1db88526');
+reviewedFactories.set('38a6a5c965aa99ab525161efb7cc5cf1fe62fced', '41ba7801797f1dfbeedcfc0a64dfc4553ea45f513a947815176f8f0bb341fdee');
 reviewedFactories.set('ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c', '41ba7801797f1dfbeedcfc0a64dfc4553ea45f513a947815176f8f0bb341fdee');
 const before = '.EvIC1a_column:has(>.EvIC1a_older)>[data-slot="conversation.chat.flow"]>';
 const after = '.EvIC1a_column>.EvIC1a_older~[data-slot="conversation.chat.flow"]>';

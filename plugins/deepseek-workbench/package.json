@@ -1,6 +1,6 @@
 {
   "name": "dsh-deepseek-workbench",
-  "version": "0.1.9-dsh.0.2.2-rc.2",
+  "version": "0.1.10-dsh.0.2.2-rc.3",
   "description": "在 DSH 里用 DeepSeek 网页聊天、临时侧栏和 API 开放平台，网页上的对话可以转成 DSH 会话接着聊。",
   "type": "module",
   "license": "MIT",
@@ -33,16 +33,16 @@
   },
   "engines": {
     "node": ">=24.9.0",
-    "dsh": "0.2.2-rc.2"
+    "dsh": "0.2.2-rc.3"
   },
   "dependencies": {
     "marked": "18.0.12"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-agent": "0.2.2-rc.2",
-    "@deepseek-ai/dsh-session": "0.2.2-rc.2",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.2"
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.3"
   },
   "dsh": {
     "bundle": {
@@ -82,9 +82,9 @@
   "packageManager": "pnpm@11.28.5",
   "devDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-agent": "0.2.2-rc.2",
-    "@deepseek-ai/dsh-session": "0.2.2-rc.2",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.2",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.3",
     "esbuild": "0.25.12",
     "react": "18.3.1",
     "react-dom": "18.3.1"

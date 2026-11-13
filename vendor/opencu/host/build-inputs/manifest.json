@@ -66,6 +66,14 @@
         "pnpm-lock.yaml": "d8a7c7761d0a5c76b0b72b3f7bf02b7e86615e52b91e93cc198e9d3479d2b858",
         "pnpm-workspace.yaml": "48634086de4342b2298d8ec52b7439d615b99aa33fbe7c4ba0a2bd5637c6deea"
       }
+    },
+    "022rc3": {
+      "sha256": {
+        "package-lock.json": "abb4d61481bfbeebd010fa1e620d36325b2207ade05cf466949bf686a380aa43",
+        "package.json": "acece75a8d1e4be682308144a97509223606c218f28e339285c8a59482857f5e",
+        "pnpm-lock.yaml": "fd962882cfe38073ea6d8aaa1181940b1cb36c8635910c6f81a9b0c94e5caa15",
+        "pnpm-workspace.yaml": "ef02eaaa458b049e201e6f5d2433b9073a4406b53f3b6cddc9cfa97ae98f0ff1"
+      }
     }
   },
   "frontend": {

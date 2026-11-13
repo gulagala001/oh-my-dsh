@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-response-id-reuse",
-  "version": "0.1.8-dsh.0.2.2-rc.2",
+  "version": "0.1.9-dsh.0.2.2-rc.3",
   "description": "Continue Responses API conversations in DeepSeek Harness by sending only new content and the previous response ID. No UI, no probe requests.",
   "type": "module",
   "license": "MIT",
@@ -12,7 +12,7 @@
   },
   "engines": {
     "node": ">=24.9.0",
-    "dsh": "0.2.2-rc.2"
+    "dsh": "0.2.2-rc.3"
   },
   "dsh": {
     "bundle": {
@@ -39,11 +39,11 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.2"
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.3"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.2"
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.3"
   },
   "keywords": [
     "dsh-plugin",

@@ -1,11 +1,11 @@
 {
   "name": "opencu",
-  "version": "2.2.13-dsh.0.2.2-rc.2",
+  "version": "2.2.14-dsh.0.2.2-rc.3",
   "description": "Let the AI in DeepSeek Harness operate browsers and desktop apps, with live previews and annotations. You can step in at any time. macOS, Windows and Linux.",
   "type": "module",
   "engines": {
     "node": ">=24.9.0",
-    "dsh": "0.2.2-rc.2"
+    "dsh": "0.2.2-rc.3"
   },
   "exports": {
     ".": "./src/index.mjs",
@@ -77,14 +77,14 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-tools": "0.2.2-rc.2",
-    "@deepseek-ai/dsh-attachment": "0.2.2-rc.2",
-    "@deepseek-ai/dsh-scope": "0.2.2-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-attachment": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-scope": "0.2.2-rc.3",
     "@deepseek-ai/schemastery": "3.19.0"
   },
   "opencu": {
-    "host": "0.2.2-rc.2",
-    "sourceCommit": "ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c",
+    "host": "0.2.2-rc.3",
+    "sourceCommit": "38a6a5c965aa99ab525161efb7cc5cf1fe62fced",
     "adapterRevision": 2
   },
   "repository": {

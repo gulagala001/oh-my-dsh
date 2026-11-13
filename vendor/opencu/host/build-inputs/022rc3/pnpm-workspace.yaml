@@ -1,0 +1,30 @@
+minimumReleaseAgeExclude:
+  - "@deepseek-ai/cordis@4.1.0"
+  - "@deepseek-ai/cosmokit@1.8.7-alpha.2"
+  - "@deepseek-ai/schemastery@3.19.0"
+  - "@deepseek-ai/cordis@4.1.0"
+  - "@deepseek-ai/schemastery@3.19.0"
+  - "@deepseek-ai/cosmokit@1.9.0"
+  - "@deepseek-ai/cordis-plugin-group@1.1.0"
+  - "@deepseek-ai/cordis-plugin-hmr@1.1.0"
+  - "@deepseek-ai/cordis-plugin-include@1.1.0"
+  - "@deepseek-ai/cordis-plugin-loader@1.1.0"
+  - "@deepseek-ai/cordis-plugin-logger-console@1.1.0"
+  - "@deepseek-ai/cordis-plugin-timer@1.2.0"
+overrides:
+  "@deepseek-ai/cordis": link:../.local/dsh-sdk-38a6a5c9/vendor/cordis
+  "@deepseek-ai/schemastery": link:../.local/dsh-sdk-38a6a5c9/vendor/schemastery
+  "@deepseek-ai/cosmokit": 1.9.0
+  "@deepseek-ai/cordis-plugin-group": 1.1.0
+  "@deepseek-ai/cordis-plugin-hmr": 1.1.0
+  "@deepseek-ai/cordis-plugin-include": 1.1.0
+  "@deepseek-ai/cordis-plugin-loader": 1.1.0
+  "@deepseek-ai/cordis-plugin-logger-console": 1.1.0
+  "@deepseek-ai/cordis-plugin-timer": 1.2.0
+  "@deepseek-ai/dsh-tools": link:../.local/dsh-sdk-38a6a5c9/packages/core/tools
+  "@deepseek-ai/dsh-attachment": link:../.local/dsh-sdk-38a6a5c9/packages/attachment/attachment
+  "@deepseek-ai/dsh-scope": link:../.local/dsh-sdk-38a6a5c9/packages/core/scope
+  "@deepseek-ai/dsh-system-prompt": link:../.local/dsh-sdk-38a6a5c9/packages/core/system-prompt
+  "@deepseek-ai/dsh-attachment-local": link:../.local/dsh-sdk-38a6a5c9/packages/attachment/attachment-local
+  "@deepseek-ai/dsh-tool-executor-native": link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-native
+  "@deepseek-ai/dsh-util-file-drag": link:../.local/dsh-sdk-38a6a5c9/packages/util/file-drag

@@ -21,7 +21,7 @@ for (const [name, exportName] of [['dsh-client-ui-agent-team', 'createTeamOvervi
   let { source, version } = await hostClientSource(root, '@deepseek-ai/' + name);
   const hash = createHash('sha256').update(source).digest('hex');
   // Bind the extracted seats to this exact host build.
-  if (version !== '0.2.2-rc.2' || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
+  if (version !== '0.2.2-rc.3' || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
   const ast = parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
   const functions = new Map(), duplicates = new Set();
   walk(ast, node => { if (node.type === 'FunctionDeclaration' && node.id) {

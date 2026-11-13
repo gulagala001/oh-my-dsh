@@ -80,7 +80,7 @@ test('serialized main identity reads installed resources without an import callb
   const appRoot = join(root, 'identity-app.asar'), anchor = join(appRoot, 'dsh', 'package.json');
   await mkdir(join(appRoot, 'dsh'), { recursive: true });
   await writeFile(anchor, JSON.stringify({ name: 'isolated-runtime-anchor', private: true }));
-  const expected = { appRoot, hostVersion: '0.2.2-rc.2', cordisVersion: '4.1.0',
+  const expected = { appRoot, hostVersion: '0.2.2-rc.3', cordisVersion: '4.1.0',
     sdkNames: ['@deepseek-ai/dsh'],
     clientComponents: clientComponents(['@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-ui-renderer']) };
   const packages = [...expected.sdkNames, ...expected.clientComponents.dynamic, '@deepseek-ai/cordis'];
@@ -142,7 +142,7 @@ test('actual client probe verifies shell seeds, boot release, dynamic module sou
   const slotsName = '@deepseek-ai/dsh-client-ui-slots', primitivesName = '@deepseek-ai/dsh-client-ui-primitives';
   const rendererName = '@deepseek-ai/dsh-client-ui-renderer', connectionName = '@deepseek-ai/dsh-client-connection';
   const conversationName = '@deepseek-ai/dsh-client-ui-conversation', chatName = '@deepseek-ai/dsh-client-ui-chat';
-  const expected = { stage: 'stock', appVersion: '0.2.2-rc.2', hostVersion: '0.2.2-rc.2',
+  const expected = { stage: 'stock', appVersion: '0.2.2-rc.3', hostVersion: '0.2.2-rc.3',
     publicComponents: [slotsName, primitivesName, rendererName, connectionName] };
   assert.deepEqual(clientComponents(expected.publicComponents), { static: [slotsName, primitivesName], dynamic: [rendererName, connectionName] });
   class Context {}
@@ -270,7 +270,7 @@ test('installed UI identity requires the exact disabled originals and active rep
 
 test('rc.2 input accepts only the frozen current bundle and its exact isolated paths', async t => {
   const env = await fixture(t), value = await desktopInputs(env, 'win32', 'x64');
-  assert.equal(value.hostVersion, '0.2.2-rc.2'); assert.equal(value.manifest.version, source.version);
+  assert.equal(value.hostVersion, '0.2.2-rc.3'); assert.equal(value.manifest.version, source.version);
   assert.equal(value.archive, env.OMD_PLUGIN_ARCHIVE);
   assert.equal(await realpath(repoRoot), await realpath(new URL('../', import.meta.url)));
 });
