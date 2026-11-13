@@ -1,3 +1,31 @@
+# Oh My DSH 1.3.20 · DSH 0.2.2-rc.3
+
+[中文](#zh-1320) · [English](#en-1320)
+
+<a id="zh-1320"></a>
+
+## 中文
+
+### 问题修复
+
+- 从桌面插件管理器启用随 DSH 提供的插件时，可以完成启动预检，包括 DeepSeek 会话导入。
+
+<a id="en-1320"></a>
+
+## English
+
+### Bug fixes
+
+- Desktop startup checks now work when enabling plugins shipped with DSH, including DeepSeek chat import.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.20/oh-my-dsh-0.2.2-rc.3.omd.1.3.20.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.20/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.19 · DSH 0.2.2-rc.3
 
 [中文](#zh-1319) · [English](#en-1319)

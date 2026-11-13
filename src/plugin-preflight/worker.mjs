@@ -131,7 +131,11 @@ async function prepare() {
   // never from a directory the user edits. Existing dependency bytes are reused.
   const source = candidate.path;
   const modules = join(dir, 'node_modules'); await mkdir(modules, { recursive: true });
-  if (!source.startsWith(root + '/') && !source.startsWith(root + '\\')) {
+  // Shipped bundles run from the immutable Electron archive via installAnchor.
+  // Electron can read these directories, but OS copies and symlinks cannot materialize them.
+  const shipped = action !== 'install' && /[\\/]app\.asar[\\/]/.test(source) &&
+    resolveBundleDir('omd-preflight', candidate.name, profile.installAnchor, dir) === source;
+  if (!shipped && !source.startsWith(root + '/') && !source.startsWith(root + '\\')) {
     const snapshot = await copyCandidate(source, root, modules);
     const link = join(modules, candidate.name); await mkdir(dirname(link), { recursive: true });
     await rm(link, { recursive: true, force: true });
@@ -157,6 +161,11 @@ async function prepare() {
   // Preserve explicit entry enablement, without copying user data paths,
   // credentials or expressions into a second live application.
   const patches = [...(input.entryStates || [])];
+  // Superagent requires an exclusive state directory even for an empty trial.
+  // Supply an isolated database path without importing account or ticket data.
+  if (bundles.includes('dsh-superagent')) patches.push({
+    id: 'dsh-superagent', config: { stateDir: join(home, 'superagent-state') },
+  });
   if (action === 'entry') patches.push({ id: input.entryId, disabled: false });
   await writeFile(join(dir, 'cordis.patch.yml'), JSON.stringify(patches));
   const loaded = loadProfileDirectory('omd-preflight', dir, profile.installAnchor);
