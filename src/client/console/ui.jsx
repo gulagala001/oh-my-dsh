@@ -2,7 +2,8 @@
 // composer dock items. Colours come from DSH theme aliases only.
 import React, { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Tag as NativeTag, StateDot, useAnchoredPosition, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Tag as NativeTag, StateDot, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives';
+import { useAnchoredPosition } from '../../../vendor/workflow/src/client/anchored-position.mjs';
 import { createPoller } from '../polling.mjs';
 import { Icon } from '../native-icons.jsx';
 export { Icon } from '../native-icons.jsx';

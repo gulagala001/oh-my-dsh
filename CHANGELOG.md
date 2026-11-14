@@ -1,3 +1,33 @@
+# Oh My DSH 1.3.21 · DSH 0.2.2-rc.3
+
+[中文](#zh-1321) · [English](#en-1321)
+
+<a id="zh-1321"></a>
+
+## 中文
+
+### 问题修复
+
+- 恢复底部用量弹层的控制台入口、上下文整理和 Dream 状态，以及工作流阶段入口。
+- 修复用量趋势提示无法显示的问题；弹层可随窗口变化调整位置。
+
+<a id="en-1321"></a>
+
+## English
+
+### Bug fixes
+
+- Restores console links in usage popovers, context and Dream status controls, and the workflow stage entry.
+- Fixes missing usage-chart tooltips and keeps popovers within the window when resized.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.21/oh-my-dsh-0.2.2-rc.3.omd.1.3.21.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.21/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.20 · DSH 0.2.2-rc.3
 
 [中文](#zh-1320) · [English](#en-1320)

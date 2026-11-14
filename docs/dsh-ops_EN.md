@@ -26,7 +26,7 @@ To install by hand, give the matching package to the target profile's plugin man
 
 | DSH | Package | Checksums |
 | --- | --- | --- |
-| 0.2.2-rc.3 | [dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.20/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.20/SHA256SUMS) |
+| 0.2.2-rc.3 | [dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.21/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.21/SHA256SUMS) |
 
 <!-- history -->
 Older DSH versions: [0.2.1-rc.5](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.5.omd.1.2.2) · [0.2.1-rc.3](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.100.1) · [0.2.1-rc.2](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.2.omd.0.99.0) · [0.2.1-rc.1](https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.99.0)

@@ -21,7 +21,7 @@
 
 任务规划、执行、预算与恢复。内置工作流插件。
 
-- 固定来源／版本: [0.1.11-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
+- 固定来源／版本: [0.1.12-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
 
 ### DSH Rewind

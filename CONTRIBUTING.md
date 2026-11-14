@@ -17,7 +17,7 @@
 - 系统提示词原文和许可放在 `src/prompt-styles/upstream/<来源>/`，`source.json` 记录固定提交、核对日期和原始字节哈希，公开样本要注明非官方。适配只处理宿主差异，不改写风格。改了来源后运行 `node scripts/check-prompt-styles.mjs --write` 和 `npm run prompts:check`。
 - Claude Desktop 外观的固定来源和适配范围在 `src/client/skins/claude-desktop/source.json`，原许可在 `vendor/licenses/Open-Claude-UI-MIT.txt`，升级时人工核对上游。增减主题或配色时，同步中英入口、主题基座和网站预览。
 - 工作过程标题的布局统一在 `scripts/chat-style-adapter.mjs`，通过原生 Chat 样式生效，不放进皮肤开关。`test/process-header-layout.test.mjs` 只在相关 UI、样式、宿主源码或依赖锁变化时运行，手动 CI 可勾选 `layout`。
-- composer 槽位由 `scripts/chat-style-adapter.mjs` 在指纹核对后用 AST 提取导出，槽位缺失、重复、未知或顺序是动态的都会阻止构建。改动后运行 `node --test test/chat-style-adapter.test.mjs` 并重建受影响的客户端。
+- composer 槽位由 `scripts/chat-style-adapter.mjs` 在指纹核对后用 AST 提取导出，槽位缺失、重复、未知或顺序是动态的都会阻止构建。客户端构建同时核对宿主 primitives 的命名导出；改动后运行 `node --test test/chat-style-adapter.test.mjs test/console-dock.test.mjs` 并重建受影响的客户端。
 - Shell 和任务控制的适配在 `scripts/build-host.mjs` 核对固定宿主源码后应用。升级宿主时复核两种 Shell 的终止等待和任务控制的注册位置，并运行 `node --test test/job-wait-cancel.test.mjs`。
 - 独立聊天从创建到发送用同一个会话和目录，改标题不挪文件。`scripts/build-open-in-app.mjs` 在构建时核对原生客户端字节和两个选择器替换点；构建指纹只说明替换点没变，真实目录行为另外检查。
 - 回退存储策略变更要同步独立插件、内置快照、使用指南和 CHANGELOG，并检查容量上限、低磁盘、并发写入和清理后的恢复。

@@ -1,3 +1,31 @@
+# DSH Workflow 0.1.12 · DSH 0.2.2-rc.3
+
+[中文](#zh-0112) · [English](#en-0112)
+
+<a id="zh-0112"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复工作流阶段入口消失、无法展开阶段与子任务详情的问题。
+
+<a id="en-0112"></a>
+
+## English
+
+### Bug fixes
+
+- Restores the workflow stage entry and its phase and child-task details.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.12-dsh.0.2.2-rc.3/dsh-workflow-plus-0.1.12-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-workflow/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.12-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DSH Workflow 0.1.11 · DSH 0.2.2-rc.3
 
 [中文](#zh-0111) · [English](#en-0111)

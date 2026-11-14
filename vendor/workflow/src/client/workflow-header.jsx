@@ -1,7 +1,8 @@
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { StateDot, IconChevronDownOutlineRegular, useAnchoredPosition, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives';
+import { StateDot, IconChevronDownOutlineRegular, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives';
+import { useAnchoredPosition } from './anchored-position.mjs';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import { headerWorkflows, workflowPhaseLabel, workflowChildLabels, subagentTabTitle, withWorkflowLabels } from './workflow-header.mjs';
 import { liveWorkflowData, workflowJobs } from './workflow-status.mjs';

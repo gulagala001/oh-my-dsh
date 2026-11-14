@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { whaleSvg } from '../src/client/brand.mjs';
 import { packSkin } from './pack-skin.mjs';
 import { pageScriptDefines } from '../plugins/deepseek-workbench/scripts/page-script-defines.mjs';
+import { checkClientPrimitives } from '../vendor/workflow/scripts/check-client-primitives.mjs';
 
 for (const skin of ['google-material-expressive', 'ios-liquid-glass', 'codex-desktop', 'claude-desktop', 'claude-cli-terminal']) {
   await packSkin(fileURLToPath(new URL(`../src/client/skins/${skin}/`, import.meta.url)),
@@ -60,11 +61,11 @@ await writeFile(new URL('../vendor/opencu/lib/client.factory.mjs', import.meta.u
 const logo = new URL('../docs/images/logo.svg', import.meta.url);
 await mkdir(new URL('./', logo), { recursive: true });
 await writeFile(logo, whaleSvg('omd-logo').replace('aria-hidden="true"', 'role="img" aria-label="Oh My DSH"'));
-await build({
+const clientBuild = await build({
   define: pageScriptDefines,
   entryPoints: [fileURLToPath(new URL('../src/client/index.jsx', import.meta.url))],
   outfile: fileURLToPath(new URL('../lib/client.js', import.meta.url)),
-  bundle: true, platform: 'browser', format: 'cjs', target: 'es2022',
+  bundle: true, platform: 'browser', format: 'cjs', target: 'es2022', metafile: true,
   minifySyntax: true, minifyWhitespace: true, minifyIdentifiers: true, keepNames: true, charset: 'utf8',
   external: ['react-dom', 'react', 'react/jsx-runtime', '@deepseek-ai/cordis', '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-api-session-controller/client'],
   banner: { js: 'window.__ModuleLoader__.load({id:"oh-my-dsh",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },
@@ -78,3 +79,4 @@ await build({
     b.onLoad({ filter: /\.css$/ }, async args => ({ contents: `export default ${JSON.stringify(await readFile(args.path, 'utf8'))}`, loader: 'js' }));
   } }],
 });
+await checkClientPrimitives(clientBuild.metafile, fileURLToPath(new URL('../', import.meta.url)));

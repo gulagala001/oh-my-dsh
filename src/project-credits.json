@@ -37,8 +37,8 @@
       "source": "vendor/workflow/package.json",
       "license": "MIT",
       "notice": "vendor/workflow/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.11-dsh.0.2.2-rc.3",
-      "sourceSha256": "b044d9d0fc3ad1b39c93d54e667468a2392df16424234fe7f12b7f45c20f34d8",
+      "version": "0.1.12-dsh.0.2.2-rc.3",
+      "sourceSha256": "768c51444f718fda128c0468706378c4cf05ce6424325017507936059bfec6ec",
       "group": "products"
     },
     {

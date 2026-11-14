@@ -21,7 +21,7 @@ Computer and browser observation, interaction, annotations and previews. Bundled
 
 Task planning, execution, budgets and recovery. Bundled workflow plugin.
 
-- Pinned source / version: [0.1.11-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
+- Pinned source / version: [0.1.12-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
 
 ### DSH Rewind
