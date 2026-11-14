@@ -1,3 +1,35 @@
+# Oh My DSH 1.3.22 · DSH 0.2.2-rc.3
+
+[中文](#zh-1322) · [English](#en-1322)
+
+<a id="zh-1322"></a>
+
+## 中文
+
+### 问题修复
+
+- 确认撤回时自动停止当前会话。临时浏览器文件不再阻止撤回，已有撤回记录也适用。
+- 文件冲突、备份缺失或文件被占用时保留相关文件，对话仍可撤回；撤销和中断恢复同样可继续。
+- 附件暂时不可用时先回填文字，保留附件重试入口。
+
+<a id="en-1322"></a>
+
+## English
+
+### Bug fixes
+
+- Confirming a rewind automatically stops the current conversation. Temporary browser files no longer block rewind, including existing records.
+- File conflicts, missing backups and busy files leave affected files in place while the conversation rewinds. Undo and interrupted recovery can continue too.
+- When attachments are unavailable, restores the text and keeps an option to retry the attachments.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.22/oh-my-dsh-0.2.2-rc.3.omd.1.3.22.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.22/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.21 · DSH 0.2.2-rc.3
 
 [中文](#zh-1321) · [English](#en-1321)

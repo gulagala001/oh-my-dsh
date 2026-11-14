@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.3.omd.1.3.22",
+      "severity": "normal",
+      "title": "Oh My DSH 1.3.22 · DSH 0.2.2-rc.3",
+      "notes": [
+        "确认撤回时自动停止当前会话。临时浏览器文件不再阻止撤回，已有撤回记录也适用。",
+        "文件冲突、备份缺失或文件被占用时保留相关文件，对话仍可撤回；撤销和中断恢复同样可继续。",
+        "附件暂时不可用时先回填文字，保留附件重试入口。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.3.22"
+    },
+    {
       "version": "0.2.2-rc.3.omd.1.3.21",
       "severity": "normal",
       "title": "Oh My DSH 1.3.21 · DSH 0.2.2-rc.3",

@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.14-dsh.0.2.2-rc.3"><img alt="DSH Rewind 0.1.14" src="https://img.shields.io/badge/release-0.1.14-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-undo-plugin/releases/tag/v0.1.15-dsh.0.2.2-rc.3"><img alt="DSH Rewind 0.1.15" src="https://img.shields.io/badge/release-0.1.15-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-undo-plugin/releases"><img alt="GitHub 下载量" src="https://img.shields.io/github/downloads/gulagala001/dsh-undo-plugin/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-undo-plugin/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-undo-plugin?style=flat-square&amp;color=0969da"></a>
@@ -28,10 +28,10 @@
 在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.14-dsh.0.2.2-rc.3/gulagala001-dsh-undo-plugin-0.1.14-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.15-dsh.0.2.2-rc.3/gulagala001-dsh-undo-plugin-0.1.15-dsh.0.2.2-rc.3.tgz
 ```
 
-等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。命令行安装、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.14-dsh.0.2.2-rc.3/SHA256SUMS)。
+等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。命令行安装、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.15-dsh.0.2.2-rc.3/SHA256SUMS)。
 
 ### 2. 先试一件事
 
@@ -46,7 +46,7 @@ https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.14-dsh.0.2
 退多了，点 **撤销撤回** 或输入 `/undo`，对话和文件都会回到撤回之前。
 
 - 不用手动存档：插件在 AI 每次调用工具前后自动记录文件变化。
-- 恢复前会检查文件在这期间有没有被别人改过，有冲突就停下来提醒你。
+- 恢复前会检查文件在这期间有没有被别人改过，有冲突就保留文件，对话仍能撤回。
 - 正在生成回复时双击 Esc 还是 DSH 原来的"停止"，停下后再双击才打开回退列表。
 
 ## 能退回什么
@@ -55,7 +55,7 @@ https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.14-dsh.0.2
 | --- | --- |
 | 安装插件之后的消息 | 对话和记录到的文件一起退回 |
 | 安装之前的消息，或备份已过期 | 只退回对话，确认框会标"仅对话" |
-| 文件在 DSH 之外被改过 | 先提示冲突，不会直接覆盖 |
+| 文件在 DSH 之外被改过 | 保留文件，继续撤回对话 |
 | 数据库、远程服务器、后台进程的改动 | 不在恢复范围内 |
 
 备份保留多久、占多少空间，见[使用指南](docs/usage.zh.md#存储)。

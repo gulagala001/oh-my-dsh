@@ -9,6 +9,10 @@ const compress=promisify(brotliCompress),decompress=promisify(brotliDecompress);
 import { Store, hash, atomic, read, lease, syncDirectory, ensureFreeSpace } from './store.mjs';
 const exec = promisify(execFile);
 const EXCLUDED = new Set(['.git','node_modules']);
+// OpenCU owns and removes these disposable browser profiles. Their lifetime
+// is independent of a tool call; never back up or restore their cache/locks.
+export const transientPath = path => /(?:^|\/)\.local\/browser-checks\/opencu-check-[^/]+(?:\/|$)/.test(path);
+export const projectChanges = changes => changes.filter(change=>!transientPath(change.path));
 const inside=(parent,child)=>{const path=relative(parent,child);return !path||(!isAbsolute(path)&&path!=='..'&&!path.startsWith('..'+sep));};
 const signature=info=>info?[info.size,info.mtimeMs,info.ctimeMs,info.ino].join(':'):'';
 // Share only overlapping directory checks. Settled observations are discarded
@@ -59,6 +63,7 @@ export class Files {
         for (const entry of await readdir(dir,{withFileTypes:true})) {
           if(EXCLUDED.has(entry.name)) continue;
           const p = prefix+entry.name;
+          if(transientPath(p))continue;
           if(entry.isDirectory()) await walk(join(dir,entry.name),p+'/'); else names.push(p);
         }
       }; await walk(root);
@@ -68,7 +73,7 @@ export class Files {
     const workers=new AbortController();
     const captureSignal=signal?AbortSignal.any([signal,workers.signal]):workers.signal;
     let index=0;
-    const candidates=names.sort().filter(path=>!path.split('/').some(p=>EXCLUDED.has(p))&&!path.endsWith('/'));
+    const candidates=names.sort().filter(path=>!path.split('/').some(p=>EXCLUDED.has(p))&&!transientPath(path)&&!path.endsWith('/'));
     const captureOne=async path=>{
       captureSignal.throwIfAborted();
       const abs=await this.path(root,path,pathReads);let info;
@@ -220,11 +225,33 @@ export class Files {
     if(!equal(await this.inspect(root,path),expected))throw Error(`文件有新的改动，已停止恢复：${path}`);
   }
   async validate(root, changes, field='after') {
-    for(const item of changes)await this.check(root,item.path,item[field]);
+    for(const item of projectChanges(changes))await this.check(root,item.path,item[field]);
   }
-  async put(root,path,value,expected) {
+  async available(root,changes){
+    const ready=[],skipped=[];
+    for(const item of projectChanges(changes)){
+      try{await this.check(root,item.path,item.after);ready.push(item);}
+      catch(error){skipped.push({path:item.path,reason:error.message});}
+    }
+    return {changes:ready,skipped};
+  }
+  async restoreAvailable(root,changes){
+    const applied=[],skipped=[];
+    for(const item of projectChanges(changes)){
+      let written=false;
+      try{await this.put(root,item.path,item.before,item.after,()=>{written=true;});applied.push(item);}
+      catch(error){
+        // Record our rename/unlink even if the subsequent directory sync fails.
+        // Matching bytes alone do not prove that we, rather than a user, wrote it.
+        if(written)applied.push(item);
+        skipped.push({path:item.path,reason:error.message});
+      }
+    }
+    return {changes:applied,skipped};
+  }
+  async put(root,path,value,expected,onApplied=()=>{}) {
     const abs=await this.path(root,path);
-    if(value===null) { await this.check(root,path,expected);await unlink(abs).catch(e=>{if(e.code!=='ENOENT')throw e;}); await syncDirectory(dirname(abs)); return; }
+    if(value===null) { await this.check(root,path,expected);await unlink(abs).catch(e=>{if(e.code!=='ENOENT')throw e;});onApplied(); await syncDirectory(dirname(abs)); return; }
     await mkdir(dirname(abs),{recursive:true});
     const temp=join(dirname(abs),`.dsh-rewind-${randomUUID()}`);
     try {
@@ -236,16 +263,28 @@ export class Files {
       }
       // Backup reads/decompression may take time. Fence the destination after
       // preparing bytes, immediately before replacing it, on every write path.
-      await this.check(root,path,expected);await rename(temp,abs);
+      await this.check(root,path,expected);await rename(temp,abs);onApplied();
       await syncDirectory(dirname(abs));
     } finally {await unlink(temp).catch(()=>{});}
   }
   async apply(root,changes,direction='before') {
+    changes=projectChanges(changes);
     const expected=direction==='before'?'after':'before'; await this.validate(root,changes,expected);
     for(const item of changes)await this.put(root,item.path,item[direction],item[expected]);
     await this.validate(root,changes,direction);
   }
-  async recover(root,changes,direction) {
+  async recover(root,changes,direction,{bestEffort=false}={}) {
+    changes=projectChanges(changes);
+    if(bestEffort){
+      const skipped=[];
+      for(const c of changes)try{
+        const now=await this.inspect(root,c.path);
+        if(equal(now,c[direction]))continue;
+        if(!equal(now,c.before)&&!equal(now,c.after))throw Error('文件已有新改动，保留当前内容');
+        await this.put(root,c.path,c[direction],now);
+      }catch(error){skipped.push({path:c.path,reason:error.message});}
+      return {skipped};
+    }
     const observed=[];
     for(const c of changes) {
       const now=await this.inspect(root,c.path);

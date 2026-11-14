@@ -5,7 +5,7 @@ import { appendPluginRecord } from '@deepseek-ai/dsh-session';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { Store, hash, lease, TOOL_LOCK_WAIT_MS, isLockFailure } from './store.mjs';
-import { Files, difference, equal } from './files.mjs';
+import { Files, difference, equal, projectChanges } from './files.mjs';
 import { eventsOf, snapshot, beforeMessage, userTarget, prepareReplay, appendPrepared, hidden, mergeRanges } from './conversation.mjs';
 
 const CAPTURE_MS = 4000;
@@ -168,51 +168,64 @@ export class RewindEngine {
   async preview(id,seq,undo=false){
     await this.agent(id);
     return this.store.lock(id,async()=>{
-      const s=this.session(id);let st=await this.store.load(id);if(st.journal)throw Error('存在未完成的撤回，请先恢复中断操作');
+      const s=this.session(id);let st=await this.store.load(id);
       const base=undo?st.undo.at(-1):null;if(undo&&!base)throw Error('没有可撤销的撤回');
       const target=undo?null:userTarget(s,seq,st.hiddenRanges),checkpoint=undo?null:st.checkpoints[s.eventAt(seq)?.data.id];
       const boundary=undo?undefined:inputBoundaries(eventsOf(s)).get(seq)??seq;
       const warnings=['已发送消息、网站操作、数据库和其他外部副作用不会被撤销。'];
-      let reason='',changes=[],root;
+      warnings.push('临时浏览器配置、缓存和锁文件不参与撤回或撤销；项目文件仍按备份检查。');
+      let reason='',fileReason='',changes=[],root,skipped=[];
       if(undo){
         root=base.root;
         // Do not erase a newer conversation when undo is invoked after continuing work.
         const newer=eventsOf(s).some(e=>e.seq>base.endSeq&&e.type==='user/message'&&e.data.source?.kind==='user'&&!hidden(st.hiddenRanges,e.seq));
         if(newer)reason='撤回后已有新消息；请先撤回这些新消息，再撤销上一次撤回。';
-        changes=base.changes.map(c=>({path:c.path,before:c.after,after:c.before}));
+        changes=projectChanges(base.changes).map(c=>({path:c.path,before:c.after,after:c.before}));
       }else{
-        root=checkpoint?.root || await this.root(s);
+        root=checkpoint?.root;
+        if(!root)try{root=await this.root(s);}catch(error){fileReason=error.message;}
         if(!checkpoint || checkpoint.error)warnings.push(checkpoint?.error || '这条消息没有文件检查点；只能撤回对话。');
         else{
           warnings.push(checkpoint.coverage);
           const map=new Map();
           for(const record of st.changes.slice(checkpoint.changeIndex)){
-            if(record.error){reason='存在未完整备份的文件操作：'+record.error;break;}
-            if(record.root!==root){reason='此后跨工作目录执行过操作，不能将不同目录的修改混合回退';break;}
-            if(record.owners.some(owner=>owner!==id)&&record.changes.length){reason='该时段有其他会话同时修改工作区，无法安全区分改动';break;}
-            for(const c of record.changes){const old=map.get(c.path);if(old&&!equal(old.after,c.before)){reason=`两次工具执行之间存在外部改动：${c.path}`;break;}map.set(c.path,{path:c.path,before:old?old.before:c.before,after:c.after});}
+            if(record.error){fileReason='存在未完整备份的文件操作：'+record.error;break;}
+            const tracked=projectChanges(record.changes);
+            if(!tracked.length)continue;
+            if(record.root!==root){fileReason='此后跨工作目录执行过操作，文件保持现状';break;}
+            if(record.owners.some(owner=>owner!==id)){fileReason='该时段有其他会话同时修改工作区，文件保持现状';break;}
+            for(const c of tracked){const old=map.get(c.path);if(old&&!equal(old.after,c.before)){fileReason=`两次工具执行之间存在外部改动：${c.path}`;break;}map.set(c.path,{path:c.path,before:old?old.before:c.before,after:c.after});}
+            if(fileReason)break;
           }
           changes=[...map.values()].filter(c=>!equal(c.before,c.after));
         }
       }
-      if(!undo&&eventsOf(s).some(e=>e.seq>=boundary&&e.type==='plugin:dsh-rewind-plus/backup-gap'&&!hidden(st.hiddenRanges,e.seq)))reason='这一段有文件变化未能完整备份，已保留现场，不能自动覆盖文件。';
-      const busy=this.waves.has(root)||this.ctx.agents.list().some(a=>a.status==='running'&&this.owner(a).id===id);
-      if(busy)reason='会话仍在执行，请先停止并重新检查。';
+      if(!undo&&eventsOf(s).some(e=>e.seq>=boundary&&e.type==='plugin:dsh-rewind-plus/backup-gap'&&!hidden(st.hiddenRanges,e.seq)))fileReason='这一段有文件变化未能完整备份';
+      // Stopping an idle conversation cannot repair a file conflict or a gap.
+      // Keep that action tied to the actual owner, not to any failed preview.
+      const canStop=this.ctx.agents.list().some(a=>a.status==='running'&&this.owner(a).id===id);
+      const busy=this.waves.has(root)||this.busy.has(root);
+      let foreignBusy=false;
       const foreign=this.ctx.agents.list().filter(a=>a.status==='running'&&this.owner(a).id!==id);
-      for(const a of foreign){try{if(await this.root(a.session)===root)reason='同一工作区还有其他会话正在执行。';}catch{}}
-      try{await this.files.validate(root,changes);}catch(e){reason=e.message;}
+      for(const a of foreign){try{if(await this.root(a.session)===root)foreignBusy=true;}catch{}}
+      if(canStop)warnings.push('确认后会自动停止当前会话，再撤回。');
+      if(foreignBusy||busy&&!canStop)fileReason='工作区还有其他操作，文件保持现状';
+      if(st.journal)fileReason='上次撤回曾中断，确认后会自动完成恢复';
+      if(fileReason){warnings.push(fileReason+'；本次仍可撤回对话。');changes=[];}
+      else if(!canStop){const available=await this.files.available(root,changes);changes=available.changes;skipped=available.skipped;}
+      if(skipped.length)warnings.push(`${skipped.length} 个文件有新改动或暂时不可用，将保留现状；对话正常撤回。`);
       const context=undo?base.context:{atSeq:boundary};
       if(Array.isArray(context))warnings.push('这份旧撤销备份没有任务历史截点；对话和文件恢复后，任务清单保持现状。');
       // Preflight every native append before offering the confirmation.
       prepareReplay(s,context,this.projections());
-      const plan={id:randomUUID(),sessionId:id,revision:st.revision,seq:s.seq,expires:Date.now()+5*60000,undo,target,root,changes,context,
+      const plan={id:randomUUID(),sessionId:id,revision:st.revision,seq:s.seq,expires:Date.now()+5*60000,undo,target,root,changes,skipped,fileReason,context,
         metadata:undo?base.metadata:this.metadata(s,boundary),ranges:undo?base.ranges:[...st.hiddenRanges,{start:boundary,end:s.seq-1}],reason};
       await this.maintenance?.pin(plan);
       this.plans.set(plan.id,plan);
       this.schedulePlanExpiry();
       for(const [key,p]of this.plans)if(p.expires<Date.now()){this.plans.delete(key);await this.maintenance?.unpin(key);}
       while(this.plans.size>16){const key=this.plans.keys().next().value;this.plans.delete(key);await this.maintenance?.unpin(key);}
-      return {workspace:root,planId:plan.id,revision:st.revision,target,files:changes.map(c=>({path:c.path,kind:!c.before?'delete':!c.after?'restore':'modify'})),warnings,canApply:!reason,reason,conversationOnly:!undo&&(!checkpoint||!!checkpoint.error)};
+      return {workspace:root,planId:plan.id,revision:st.revision,target,files:changes.map(c=>({path:c.path,kind:!c.before?'delete':!c.after?'restore':'modify'})),skipped,warnings,canApply:!reason,canStop,reason,conversationOnly:!changes.length};
     });
   }
   schedulePlanExpiry(){
@@ -231,7 +244,34 @@ export class RewindEngine {
     this.operations.delete(agent.id);clearTimeout(op.claimTimer);
     try{agent.inbox.remove?.(op.marker);}finally{op.reject(Error(reason));void this.maintenance?.idle();}
   }
-  async execute(id,planId,draft){return this.launch(id,{planId,draft});}
+  async execute(id,planId,draft,selection){
+    let plan=this.plans.get(planId);
+    if(plan&&plan.sessionId!==id)throw Error('无效会话');
+    if(!plan){
+      if(!selection||!selection.undo&&!Number.isSafeInteger(selection.seq))throw Error('确认已过期，请选择要撤回的消息');
+      const fresh=await this.preview(id,selection.seq,selection.undo);
+      planId=fresh.planId;plan=this.plans.get(planId);
+    }
+    if(this.operations.has(id))throw Error('撤回正在执行');
+    if(this.ctx.agents.list().some(a=>a.status==='running'&&this.owner(a).id===id))await this.stop(id);
+    if((await this.store.load(id)).journal)await this.launch(id,{recovery:true});
+    // Refresh automatically after cancellation, file changes or recovery. The
+    // selected message remains the boundary; files can only be restored safely.
+    const fresh=await this.preview(id,plan.target?.seq,plan.undo);
+    this.plans.delete(planId);await this.maintenance?.unpin(planId);
+    return this.launch(id,{planId:fresh.planId,draft});
+  }
+  async stop(id){
+    const related=this.ctx.agents.list().filter(a=>this.owner(a).id===id);
+    for(const a of related)if(a.status==='running')a.cancel({kind:'user'},{keepInbox:true});
+    let timer;
+    try{
+      await Promise.race([Promise.all(related.map(a=>a.whenIdle())),new Promise((_,reject)=>{
+        timer=setTimeout(()=>reject(Error('停止尚未完成，请稍后重新检查')),30000);timer.unref?.();
+      })]);
+      return await this.getState(id);
+    }finally{clearTimeout(timer);}
+  }
   async launch(id,request){
     const a=await this.agent(id);if(!a?.runMaintenance)throw Error('当前会话不支持撤回维护');
     if(this.operations.has(id))throw Error('撤回正在执行');
@@ -300,17 +340,20 @@ export class RewindEngine {
   async commit(id,planId,draft,operation){
     const plan=this.plans.get(planId);if(!plan||plan.sessionId!==id||plan.expires<Date.now())throw Error('确认已过期，请重新检查');
     if(plan.reason)throw Error(plan.reason);
-    return this.store.lock('workspace:'+plan.root,()=>this.store.lock(id,async()=>{
-      if(this.waves.has(plan.root)||this.busy.has(plan.root))throw Error('工作区仍在执行操作，请重新检查');
+    return this.store.lock(id,async()=>{
       const s=this.session(id),st=await this.store.load(id);
       if(st.revision!==plan.revision||eventsOf(s).slice(plan.seq).some(e=>!['agent/inbox/spliced','turn/start'].includes(e.type)))throw Error('确认后会话已发生变化，请重新检查');
-      const release=await lease(join(this.store.root,'workspace-locks',hash(plan.root)+'.json'));this.busy.add(plan.root);
+      let release,changes=plan.changes,skipped=[...plan.skipped],fileReason=plan.fileReason;
+      if(changes.length)try{
+        if(this.waves.has(plan.root)||this.busy.has(plan.root))throw Error('工作区仍在执行操作');
+        release=await lease(join(this.store.root,'workspace-locks',hash(plan.root)+'.json'));
+        this.busy.add(plan.root);
+      }catch(error){fileReason=error.message;changes=[];}
       try{
         await this.flush(s);
-        await this.files.validate(plan.root,plan.changes);
         // Original native history is immutable. Persist its cutoff instead of
         // duplicating the whole conversation in every undo entry and journal.
-        const previous={context:{atSeq:s.seq},metadata:this.metadata(s),ranges:st.hiddenRanges,changes:plan.changes,root:plan.root,draft,changeIndex:st.changes.length,createdAt:Date.now()};
+        const previous={context:{atSeq:s.seq},metadata:this.metadata(s),ranges:st.hiddenRanges,changes,root:plan.root,draft,changeIndex:st.changes.length,createdAt:Date.now()};
         const prepared=prepareReplay(s,plan.context,this.projections(),true);
         const endSeq=s.seq+prepared.length+(plan.metadata.cwd?1:0)+1;
         const internal={start:operation.start,end:endSeq+1};
@@ -320,8 +363,14 @@ export class RewindEngine {
         if(plan.undo){after.changes=st.undo.at(-1).previousChanges;after.checkpoints=st.undo.at(-1).previousCheckpoints;}
         else {after.undo.at(-1).previousChanges=structuredClone(st.changes);after.undo.at(-1).previousCheckpoints=structuredClone(st.checkpoints);after.changes=st.changes.slice(0,st.checkpoints[s.eventAt(plan.target.seq)?.data.id]?.changeIndex??st.changes.length);}
         after.pendingDraft={id:plan.id,draft:plan.undo?previousDraft(st.undo.at(-1)):plan.target};
-        st.journal={id:plan.id,nativeStart:operation.start,root:plan.root,changes:plan.changes,context:previous.context,metadata:previous.metadata,after};await this.store.save(st);
-        await this.files.apply(plan.root,plan.changes);
+        st.journal={id:plan.id,nativeStart:operation.start,root:plan.root,changes,context:previous.context,metadata:previous.metadata,after};await this.store.save(st);
+        const restoredFiles=await this.files.restoreAvailable(plan.root,changes);
+        skipped.push(...restoredFiles.skipped);
+        st.journal.changes=restoredFiles.changes;
+        if(!plan.undo)after.undo.at(-1).changes=restoredFiles.changes;
+        const outcome=plan.undo?'对话已恢复':'对话已撤回';
+        after.warning=fileReason?`${outcome}，文件保持现状：${fileReason}`:skipped.length?`${outcome}，${skipped.length} 个文件保留现状。`:null;
+        await this.store.save(st);
         appendPrepared(s,prepared);
         if(plan.metadata.cwd)s.append('working-directory/change',{cwd:plan.metadata.cwd});
         s.append('plan/mode',{active:plan.metadata.plan});
@@ -330,19 +379,27 @@ export class RewindEngine {
         await this.flush(s);
         after.journal=null;await this.store.save(after);this.plans.delete(planId);await this.maintenance?.unpin(planId);
         const restored=after.pendingDraft.draft;
-        return {state:this.state(after),draft:restored};
+        return {state:this.state(after),draft:restored,skipped};
       }catch(e){const current=await this.store.load(id);if(current.journal)try{await this.recover(s,current,true,true);}catch(recovery){throw new AggregateError([e,recovery],'恢复尚未完成，已保留备份并阻止新操作：'+recovery.message);}throw e;
-      }finally{this.busy.delete(plan.root);await release();}
-    }));
+      }finally{if(release){this.busy.delete(plan.root);await release();}}
+    });
   }
   async recover(s,st,activeTurn=false,locked=false){
     const j=st.journal;if(!j)return;
-    if(!locked){if(this.waves.has(j.root)||this.busy.has(j.root))throw Error('工作区正在执行操作，请先停止后再恢复');const release=await lease(join(this.store.root,'workspace-locks',hash(j.root)+'.json'));this.busy.add(j.root);try{return await this.recover(s,st,activeTurn,true);}finally{this.busy.delete(j.root);await release();}}
     const committed=eventsOf(s).some(e=>e.type==='plugin:dsh-rewind-plus/commit'&&e.data.id===j.id);
     if(committed){await this.flush(s);j.after.journal=null;await this.store.save(j.after);return;}
+    if(!locked){
+      let release;
+      if(j.changes.length)try{
+        if(this.waves.has(j.root)||this.busy.has(j.root))throw Error('工作区正在执行操作');
+        release=await lease(join(this.store.root,'workspace-locks',hash(j.root)+'.json'));this.busy.add(j.root);
+      }catch(error){st.warning='文件保持现状：'+error.message;st.journal={...j,changes:[]};}
+      try{return await this.recover(s,st,activeTurn,true);}finally{if(release){this.busy.delete(j.root);await release();}}
+    }
     const recovered=eventsOf(s).findLast(e=>e.type==='plugin:dsh-rewind-plus/recovered'&&e.data.id===j.id);
     if(!recovered){
-      await this.files.recover(j.root,j.changes,'after');
+      const recoveredFiles=await this.files.recover(j.root,j.changes,'after',{bestEffort:true});
+      if(recoveredFiles.skipped.length)st.warning=`中断操作已恢复，${recoveredFiles.skipped.length} 个文件保留现状。`;
       const replay=prepareReplay(s,j.context,this.projections(),activeTurn);appendPrepared(s,replay);
     if(j.metadata.cwd)s.append('working-directory/change',{cwd:j.metadata.cwd});s.append('plan/mode',{active:j.metadata.plan});
       appendPluginRecord(s,'plugin:dsh-rewind-plus/recovered',{id:j.id});

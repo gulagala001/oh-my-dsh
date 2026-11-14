@@ -62,13 +62,8 @@ export async function install(ctx,config={}) {
       if(operation==='candidates')value=await engine.candidates(id,data.before);
       if(operation==='preview')value=await engine.preview(id,data.messageSeq);
       if(operation==='undo-preview')value=await engine.preview(id,undefined,true);
-      if(operation==='apply'||operation==='undo')value=await engine.execute(id,data.planId,data.draft);
-      if(operation==='stop'){
-        const related=ctx.agents.list().filter(a=>engine.owner(a).id===id);
-        for(const a of related)a.cancel({kind:'user'},{keepInbox:true});
-        await Promise.race([Promise.all(related.map(a=>a.whenIdle())),new Promise((_,reject)=>{const t=setTimeout(()=>reject(Error('停止尚未完成，请稍后重新检查')),30000);t.unref?.();})]);
-        value=await engine.getState(id);
-      }
+      if(operation==='apply'||operation==='undo')value=await engine.execute(id,data.planId,data.draft,{seq:data.messageSeq,undo:operation==='undo'});
+      if(operation==='stop')value=await engine.stop(id);
       if(operation==='attachment'){
         const session=engine.session(id),event=session.eventAt(data.messageSeq),block=event?.type==='user/message'?event.data.content[data.index]:null;
         if(!block?.attachment||!['file','image'].includes(block.type))throw Error('会话中不存在这个附件');

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "published": "0.2.2-rc.3.omd.1.3.21",
+  "published": "0.2.2-rc.3.omd.1.3.22",
   "repository": {
     "slug": "gulagala001/oh-my-dsh",
     "description": "DeepSeek Harness 增强插件：上下文压缩与 Dream 记忆、Ultra 多智能体、OpenCU 电脑操作、代码理解、扩展管理、人格和主题。 All-in-one plugin for DeepSeek Harness: context compaction and memory, multi-agent Ultra, computer use, code understanding, extensions, personalities and themes.",
@@ -349,13 +349,13 @@
     {
       "path": "docs/dsh-ops.md",
       "rule": "version",
-      "text": "v0.2.2-rc.3.omd.1.3.21/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz",
+      "text": "v0.2.2-rc.3.omd.1.3.22/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz",
       "reason": "dsh-ops 的独立兼容附件随 OMD 1.3.18 发布。"
     },
     {
       "path": "docs/dsh-ops_EN.md",
       "rule": "version",
-      "text": "v0.2.2-rc.3.omd.1.3.21/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz",
+      "text": "v0.2.2-rc.3.omd.1.3.22/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz",
       "reason": "dsh-ops 的独立兼容附件随 OMD 1.3.18 发布。"
     },
     {

@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 // A few known regressions only; no host installation, browser or build matrix.
 const core = [
   'native-session-read', 'native-session-fork', 'market-release-check', 'alpha-tool-pipeline', 'chat-style-adapter', 'host-build-contracts', 'file-context',
-  'permission-presets', 'startup-isolation', 'metering-contract', 'console-dock',
+  'permission-presets', 'startup-isolation', 'metering-contract', 'console-dock', 'rewind-client',
   'start', 'monitor-partial', 'monitor-read-cache', 'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget', 'task-budget-persistence',
   'file-upload-compat', 'search-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update', 'recommended-plugin-package', 'dsh-ops-compat',
   'context-store-cache', 'context-coordinate-release', 'context-runtime-retirement',

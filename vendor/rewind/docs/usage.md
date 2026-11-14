@@ -4,7 +4,7 @@
 
 ## Rewind and undo
 
-Click the rewind arrow next to the copy button on one of your messages. The dialog shows the working directory and the files that will change. If the conversation is running, stop it first and check again; other conversations are not affected.
+Click the rewind arrow next to the copy button on one of your messages. The dialog shows the working directory and the files that will change. Confirming automatically stops the current conversation before rewinding; other conversations are not affected.
 
 After you confirm, that message and everything after it are removed, and its text, images and files go back into the composer. **Undo rewind** brings back the conversation, the files and the draft you had at the time. A draft you write in the meantime is not overwritten.
 
@@ -29,10 +29,12 @@ While a reply is generating, double Esc still stops DSH as usual; press it twice
 Before and after every AI tool call, the plugin records file changes in the working directory, including synchronous commands and subagents working in the same directory.
 
 - Git repositories: tracked files and new files not ignored by `.gitignore`.
-- Other directories: everything except `.git` and `node_modules`.
+- Other directories: everything except `.git`, `node_modules` and temporary browser profiles.
 - Binary files, creations, deletions, symlinks themselves and the executable bit are recorded.
 
-Before restoring, the plugin checks whether files changed in the meantime, and checks again before replacing each file. Changes it cannot attribute, or changes in another working directory, are never overwritten automatically. Background processes that run outside a tool call, databases and remote operations are not covered.
+Temporary browser profiles, caches and lock files are excluded. Screenshots, pages and other project files are still recorded.
+
+Before restoring, the plugin checks whether files changed in the meantime, and checks again before replacing each file. Conflicting files, missing backups and unavailable files are left in place while the conversation rewinds. Undo also preserves new file edits. Background processes that run outside a tool call, databases and remote operations are not covered.
 
 Restoring does not call the model, and the result survives restarts. The original DSH conversation log is only appended to, never deleted. If a restore is interrupted, its backup is kept so it can finish later.
 
@@ -49,7 +51,7 @@ Restoring does not call the model, and the result survives restarts. The origina
 
 Chat-only turns create tiny checkpoints and do not scan the project. Unchanged files reuse existing backups, and large files are split into 4 MiB chunks, deduplicated and compressed when useful.
 
-Each automatic backup gets at most 4 seconds; after a timeout the same directory is retried 30 seconds later. When a backup times out, runs out of space or hits the write limit, changes from that period are not backed up, and the dialog shows which messages can only roll back the conversation. The AI keeps working normally.
+Each automatic backup gets at most 4 seconds; after a timeout the same directory is retried 30 seconds later. When a backup times out, runs out of space or hits the write limit, changes from that period are not backed up, and rewinding keeps those files in place and restores the conversation. The AI keeps working normally.
 
 2 GiB is a cleanup target, not a hard cap. Backing up a large project can push usage above it for a while until idle cleanup brings it down. Do not delete the backup directory by hand while a restore is in progress.
 

@@ -11,7 +11,7 @@ const EMPTY={revision:0,hiddenRanges:[],undoAvailable:false};
 const contains=(ranges,seq)=>Number.isFinite(seq)&&ranges.some(r=>seq>=r.start&&seq<=r.end);
 async function api(operation,data,raw=false,signal){const r=await fetch(`/api/dsh-rewind/${operation}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),signal});if(raw&&r.ok)return r;const value=await r.json();if(!r.ok)throw Error(value.error||'撤回操作失败');return value;}
 export function install(ctx){
-  const states=new Map(),listeners=new Set(),attachmentBytes=new Map(),handlers=new Map();
+  const states=new Map(),listeners=new Set(),handlers=new Map();
   const update=(id,value)=>{if((states.get(id)?.revision??-1)>(value.revision??-1))return;if(JSON.stringify(states.get(id))===JSON.stringify(value))return;states.set(id,value);for(const fn of listeners)fn();};
   const subscribe=fn=>{listeners.add(fn);return()=>listeners.delete(fn);};
   installEntryPoints(ctx,{api,handlers,subscribe,states});
@@ -79,31 +79,32 @@ export function install(ctx){
     const restore=async(draft,expectedRev)=>{
       const shell=input(id),current=shell.state.getSnapshot();
       if(current.draftRev!==expectedRev){setPendingDraft(draft);throw Error('输入框在操作期间有新编辑，已保留草稿。可点击“回填撤回内容”重试。');}
-      let attachments=[];
+      let attachments=[],missing=0;
       if(draft.attachmentIds){
         attachments=ctx.conversation.resolveDraftAttachments(draft.attachmentIds);
-        if(attachments.length!==draft.attachmentIds.length)throw Error('原草稿附件已不在浏览器中，请重新添加；文字仍保留。');
+        missing=draft.attachmentIds.length-attachments.length;
       }else if(draft.attachments?.length){
         const files=[];
-        for(const item of draft.attachments){const key=`${id}:${draft.seq}:${item.contentIndex}`;const blob=attachmentBytes.get(key)||await api('attachment',{sessionId:id,messageSeq:draft.seq,index:item.contentIndex},true).then(r=>r.blob());attachmentBytes.delete(key);files.push(new File([blob],item.attachment?.name||`attachment-${item.contentIndex}`,{type:blob.type}));}
+        for(const item of draft.attachments)try{const blob=await api('attachment',{sessionId:id,messageSeq:draft.seq,index:item.contentIndex},true).then(r=>r.blob());files.push(new File([blob],item.attachment?.name||`attachment-${item.contentIndex}`,{type:blob.type}));}catch{missing++;}
         attachments=ctx.conversation.createDrafts(id,files);
       }
       if(shell.state.getSnapshot().draftRev!==expectedRev){setPendingDraft(draft);throw Error('输入框已改变，撤回内容已保留待回填。');}
       if(['adjudicating','submitting'].includes(shell.state.getSnapshot().phase))throw Error('输入框正在发送，请稍后回填');
       shell.pruneAttachments([]);shell.setDraft(draft.text||'');
       if(!shell.addAttachments(attachments.map(a=>a.id)))throw Error('附件暂时不能回填，请重试');
-      shell.persistDraft?.();setPendingDraft(null);const receipt=states.get(id)?.pendingDraft;if(receipt)update(id,await api('ack',{sessionId:id,draftToken:receipt.id}));
+      shell.persistDraft?.();
+      if(missing){setPendingDraft(draft);throw Error(`对话已撤回，文字已回填；${missing} 个附件暂时不可用，可重新添加或稍后回填。`);}
+      setPendingDraft(null);const receipt=states.get(id)?.pendingDraft;if(receipt)update(id,await api('ack',{sessionId:id,draftToken:receipt.id}));
     };
     const confirm=async()=>{setBusy(true);setError('');const shell=input(id),before=shell.state.getSnapshot();
       try{
-        // Fetch every original attachment before changing either conversation or files.
-        if(plan.target?.attachments?.length)for(const item of plan.target.attachments)attachmentBytes.set(`${id}:${plan.target.seq}:${item.contentIndex}`,await api('attachment',{sessionId:id,messageSeq:plan.target.seq,index:item.contentIndex},true).then(r=>r.blob()));
-        const result=await api(dialog?.undo?'undo':'apply',{sessionId:id,planId:plan.planId,draft:{text:before.draft,attachmentIds:before.attachmentIds}});
-        update(id,result.state);setPendingDraft(result.draft);if(result.draft)await restore(result.draft,before.draftRev);setDialog(null);
-      }catch(e){setError(e.message);void load(id);}finally{attachmentBytes.clear();setBusy(false);}
+        const result=await api(dialog?.undo?'undo':'apply',{sessionId:id,planId:plan.planId,messageSeq:dialog.seq,draft:{text:before.draft,attachmentIds:before.attachmentIds}});
+        update(id,result.state);setPendingDraft(result.draft);setDialog(null);if(result.draft)await restore(result.draft,before.draftRev);
+      }catch(e){setError(e.message);void load(id);}finally{setBusy(false);}
     };
     const action=<><span data-rewind-plus-status>{state.undoAvailable&&<Button size="sm" variant="ghost" onClick={()=>inspect({undo:true})}>撤销撤回</Button>}
       {pendingDraft&&<Button size="sm" variant="ghost" onClick={()=>{void restore(pendingDraft,input(id).state.getSnapshot().draftRev).catch(e=>setError(e.message));}}>回填撤回内容</Button>}
+      {state.warning&&<span role="status" style={{fontSize:12}}>{state.warning}</span>}
       {state.error&&<Button size="sm" variant="ghost" onClick={()=>{void api('recover',{sessionId:id}).then(result=>update(id,result.state)).catch(()=>load(id));}} title={state.error}>恢复中断操作 · 重试</Button>}
       {!dialog&&error&&<span role="alert">{error}</span>}</span>
       {targets.map(({container,seq})=>createPortal(<Tooltip label="撤回到发送此消息之前" side="bottom"><button type="button" className={container.querySelector('button')?.className} aria-label="撤回" data-rewind-plus-action onClick={()=>inspect({seq})}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M9 5 4 10l5 5M4 10h10a6 6 0 0 1 0 12" transform="translate(0 -2)"/></svg></button></Tooltip>,container,`${id}:${seq}`))}
@@ -111,11 +112,11 @@ export function install(ctx){
         {busy&&!plan&&<p>正在检查对话和文件…</p>}
         {plan&&dialog&&<><p>{dialog?.undo?'恢复撤回前的对话和文件，继续留在当前会话。':'这条消息及其之后的内容将撤回，原内容回填输入框。当前草稿暂存，可通过撤销恢复。'}</p>
           {!dialog.undo&&plan.target&&<p>选中消息：{plan.target.text.slice(0,240)||'（附件消息）'}{plan.target.text.length>240?'…':''}</p>}
-          <p><code>{plan.workspace}</code></p><p>{plan.conversationOnly?'仅撤回对话：此消息没有可用的文件备份。':`恢复 ${plan.files.length} 个文件。`}</p>
+          <p><code>{plan.workspace}</code></p><p>{plan.conversationOnly?`${dialog.undo?'恢复':'撤回'}对话，文件保持现状。`:`${dialog.undo?'恢复':'撤回'}对话并恢复 ${plan.files.length} 个文件；无法恢复的文件保留现状。`}</p>
           <div style={{maxHeight:240,overflow:'auto'}}>{plan.files.map(f=><div key={f.path}><code>{f.path}</code> · {({delete:'移除新增文件',restore:'找回文件',modify:'恢复原内容'})[f.kind]}</div>)}</div>
           {plan.warnings.map((w,i)=><p key={i} style={{fontSize:12,opacity:.75}}>{w}</p>)}
           {plan.reason&&<p role="alert">{plan.reason}</p>}
-          {!plan.canApply&&<Button disabled={busy} onClick={async()=>{setBusy(true);try{await api('stop',{sessionId:id});await inspect();}catch(e){setError(e.message);setBusy(false);}}}>停止当前会话并重新检查</Button>}</>}
+          {!plan.canApply&&<Button disabled={busy} onClick={()=>inspect()}>重新检查</Button>}</>}
         {error&&<p role="alert">{error}</p>}
       </Modal></>;
     return action;
