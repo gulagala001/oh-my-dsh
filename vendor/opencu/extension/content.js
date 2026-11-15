@@ -140,7 +140,7 @@ export function installDocumentRuntime({trackActivity = true, browserDocumentId,
     });
     mutation.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
     for (const event of ['scroll', 'resize']) addEventListener(event, () => revision++, true);
-    globalThis.visualViewport?.addEventListener('resize', () => revision++);
+    for (const event of ['scroll', 'resize']) globalThis.visualViewport?.addEventListener(event, () => revision++);
     if (trackActivity) for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'keydown', 'beforeinput', 'input', 'change', 'wheel', 'click']) addEventListener(type, event => {
       if (!event.isTrusted || automated(event)) return;
       userActivity = { documentId, sequence: ++activitySequence, kind: type, at: new Date().toISOString() };

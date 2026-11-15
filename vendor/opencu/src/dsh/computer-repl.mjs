@@ -119,6 +119,9 @@ export function createComputerRepl(request, report = () => {}) {
       const result = modelResult(observations.project(raw, { ...options, targetId: target.id, format }), { ...options, format });
       if (options.emit !== false) {
         if (raw.observation.partial && raw.observation.errors?.length) emit({targetId: target.id, partialObservation: true, errors: raw.observation.errors});
+        const {axScreenshotConsistency} = raw.observation;
+        if (axScreenshotConsistency || screenshot?.coordinateInput) emit({targetId:target.id,
+          ...(axScreenshotConsistency && {axScreenshotConsistency}), ...(screenshot?.coordinateInput && {coordinateInput:screenshot.coordinateInput})});
         if (result.userActivity) emit({ userActivity: result.userActivity, observedUserActivitySequence: result.observedUserActivitySequence,
           notice: 'The user interacted with this target. This is information, not a takeover or a stop; use the fresh observation before continuing.' });
         if (raw.observation.userActivityMonitoring?.available === false) emit({ userActivityMonitoring: raw.observation.userActivityMonitoring,
@@ -283,7 +286,11 @@ export function createComputerRepl(request, report = () => {}) {
       capabilities: optional.capabilities,
       getAXState: async options => { const result = await observe('ax', options); return displayed(typeof result.observation.ax === 'string' ? result.observation.ax : JSON.stringify(result.observation.ax)); },
       getScreenshot: async options => displayed((await observe('screenshot', options)).image),
-      getAXStateAndScreenshot: async options => { const result = await observe('both', options); return displayed({ state: typeof result.observation.ax === 'string' ? result.observation.ax : JSON.stringify(result.observation.ax), screenshot: result.image }); },
+      getAXStateAndScreenshot: async options => {
+        const {observation, image} = await observe('both', options), {ax, axScreenshotConsistency, screenshot} = observation;
+        return displayed({state: typeof ax === 'string' ? ax : JSON.stringify(ax), screenshot:image,
+          ...(axScreenshotConsistency && {axScreenshotConsistency}), ...(screenshot?.coordinateInput && {coordinateInput:screenshot.coordinateInput})});
+      },
       click: async (value, options) => { const opts = clickOptions(options); return act(opts.clickCount === 2 ? 'doubleClick' : 'click', {...point(value), ...opts}); },
       doubleClick: async (value, options) => act('doubleClick', { ...point(value), ...clickOptions(options, 2) }),
       move: async value => act('move', point(value)),

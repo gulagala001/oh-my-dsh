@@ -3,7 +3,7 @@
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3o2CrG2VyQVnZeM3gR8N64mo5NaM4Z0zPYZ35OBQTnMQE5chroj/Qydvegau5+iKWRt/PakyxV+MFlF7QV+S/cfTNWuwdn/xoojLFkewoxRlVOJNQ1t8YE9W7Fe4vy9MJtkg825fusNHvKKlCG49ZC3zDlSpeU+JxLPnIy7q60H6wd/qWyLJpGEV8ERPUplaUHJ1FnJxkM5V2nJvA5t58id4qoEUg+7bZ42HwKdQREaCECV3+e2e/wK/Nqm30PjvfkF1/FZ0xcdfcV6/pspm+y2T+do6kU0R1k3a99f7T1VSexnhuiO35A4bucJ8XgyFsVbYuYE/iiN7Ry0dS2vluwIDAQAB",
   "name": "OpenCU Local Browser Connector",
   "description": "One-click local DSH pairing, on-demand approval and persistent reconnection for Chrome / Edge.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "minimum_chrome_version": "125",
   "permissions": ["storage", "tabs", "scripting", "debugger", "webNavigation", "downloads", "alarms"],
   "host_permissions": ["http://127.0.0.1/*", "http://*/*", "https://*/*"],

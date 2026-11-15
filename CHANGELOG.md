@@ -1,3 +1,33 @@
+# Oh My DSH 1.3.24 · DSH 0.2.2-rc.3
+
+[中文](#zh-1324) · [English](#en-1324)
+
+<a id="zh-1324"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复 Chrome／Edge 连接器在页面持续更新但视口不变时反复截图失败。
+- 更新插件后，在浏览器的扩展管理页重新加载 OpenCU Connector，无需卸载或重新配对。
+
+<a id="en-1324"></a>
+
+## English
+
+### Bug fixes
+
+- Fixes repeated Chrome and Edge Connector screenshot failures when the page keeps updating without changing the viewport.
+- After upgrading, reload OpenCU Connector on the browser’s extensions page without removing it or pairing again.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.24/oh-my-dsh-0.2.2-rc.3.omd.1.3.24.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.24/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.23 · DSH 0.2.2-rc.3
 
 [中文](#zh-1323) · [English](#en-1323)

@@ -354,7 +354,7 @@ async function mouse(tabId, type, point, button = 'none', count = 0, extra = {},
       }
     }
     checkControl(epoch);
-    if ((type === 'mousePressed' || type === 'mouseWheel') && beforeDispatch) { await beforeDispatch(); checkControl(epoch); }
+    if (beforeDispatch) { await beforeDispatch(); checkControl(epoch); }
     submitted = true;
     await cdp(tabId, 'Input.dispatchMouseEvent', { type, x: point.x, y: point.y, button, buttons: buttonMask(state), clickCount: count, modifiers: modifiers(state), ...extra });
     if(type==='mousePressed'&&marker)(state.pointerMarkers??=new Map()).set(button,marker);
@@ -462,27 +462,43 @@ function pngSize(base64) {
   if (view.getUint32(0) !== 0x89504e47) fail('SCREENSHOT_FAILURE', 'Expected a PNG screenshot.');
   return { width: view.getUint32(16), height: view.getUint32(20) };
 }
+function viewportChanges(before, after) {
+  return ['width','height','scrollX','scrollY','devicePixelRatio'].filter(key => before[key] !== after[key]).concat(
+    ['x','y','width','height','scale'].filter(key => before.visual[key] !== after.visual[key]).map(key => `visual.${key}`));
+}
 async function observe(identity, options = {}, token = controlToken(identity.tabId)) {
   return readOperation(token, async read => {
+    const {tabId, documentId} = identity;
     await attach(identity, read);
-    const current = await verify(identity, true, read);
-    const dom = await content(identity.tabId, 'identity', {}, current.browserDocumentId, read);
-    const {commit, ...accessibility} = await read(() => observeAccessibility(identity.tabId, (method, params) => read(() => cdp(identity.tabId, method, params)), identity.documentId, read.check, {...options,deferCommit:true}, attached.get(identity.tabId)?.frameRouter));
-    let screenshot;
-    if (options.screenshot !== false) {
-      if (Math.abs(dom.geometry.visual.scale - 1) > 0.001) fail('UNSUPPORTED_PINCH_ZOOM', 'Reset pinch zoom before screenshot-coordinate actions. Browser page zoom is supported.');
-      const image = await read(() => cdp(identity.tabId, 'Page.captureScreenshot', { format: 'png', captureBeyondViewport: false, fromSurface: true }));
-      const after = await content(identity.tabId, 'identity', {}, current.browserDocumentId, read);
-      if (JSON.stringify(after.geometry) !== JSON.stringify(dom.geometry)) fail('OBSERVATION_CHANGED', 'Page geometry changed during screenshot; observe again.');
+    const committedDocument = documents.get(tabId);
+    const check = () => {
+      read.check();
+      if (documents.get(tabId) !== committedDocument) fail('STALE_DOCUMENT', 'Document changed; list tabs and select again.');
+    };
+    const {verified, ...dom} = await verify(identity, true, read);
+    check();
+    const {commit, ...accessibility} = await read(() => observeAccessibility(tabId, (method, params) => read(() => cdp(tabId, method, params)), documentId, check, {...options,deferCommit:true}, attached.get(tabId)?.frameRouter));
+    const image = options.screenshot === false ? null : await read(() => cdp(tabId, 'Page.captureScreenshot', { format: 'png', captureBeyondViewport: false, fromSurface: true }));
+    const userActivity = await frameActivity(tabId, documentId, read);
+    const after = await verify(identity, true, read);
+    let screenshot, axScreenshotConsistency;
+    if (image) {
+      const changed = viewportChanges(dom.geometry, after.geometry);
+      if (dom.url !== after.url) changed.push('url');
+      if (changed.length) fail('OBSERVATION_CHANGED', 'Viewport mapping or URL changed during screenshot capture; observe again.', {reason:'viewport-or-url-changed',changed});
+      const revisionChanged = dom.geometry.revision !== after.geometry.revision;
+      if (revisionChanged && accessibility.ax) axScreenshotConsistency = {verified:false, reason:'page-revision-changed',
+        message:'The page changed between AX sampling and image capture. They are separate observations, not a synchronized view.'};
+      const coordinateInput = Math.abs(dom.geometry.visual.scale - 1) > 0.001 ? {allowed:false, reason:'pinch-zoom', message:'Reset pinch zoom before screenshot-coordinate actions.'}
+        : revisionChanged ? {allowed:false, reason:'page-revision-changed', message:'The page changed during capture. Use a fresh AX observation and element IDs for input, or capture again when the page is stable.'} : undefined;
       screenshot = { id: crypto.randomUUID(), mimeType: 'image/png', encoding: 'base64', data: image.data, ...pngSize(image.data),
-        bounds: { x: dom.geometry.visual.x, y: dom.geometry.visual.y, width: dom.geometry.visual.width, height: dom.geometry.visual.height }, geometry: dom.geometry };
+        bounds: { x: dom.geometry.visual.x, y: dom.geometry.visual.y, width: dom.geometry.visual.width, height: dom.geometry.visual.height }, geometry: dom.geometry,
+        ...(coordinateInput && {coordinateInput}) };
     }
-    await verify(identity, true, read);
-    read.check();
     await read(commit);
-    if (screenshot) observations.set(identity.tabId, screenshot);
-    const userActivity=await frameActivity(identity.tabId,identity.documentId,read);
-    return { identity, ...dom, documentId:identity.documentId, ...accessibility, userActivity, ...(screenshot ? { screenshot } : {}) };
+    if (screenshot) observations.set(tabId, {id:screenshot.id, width:screenshot.width, height:screenshot.height,
+      bounds:screenshot.bounds, geometry:screenshot.geometry, url:dom.url, coordinateInput:screenshot.coordinateInput});
+    return { ...dom, ...accessibility, userActivity, ...(screenshot && {screenshot}), ...(axScreenshotConsistency && {axScreenshotConsistency}) };
   });
 }
 async function preview(identity, token = controlToken(identity.tabId)) {
@@ -494,6 +510,15 @@ async function preview(identity, token = controlToken(identity.tabId)) {
     return { dataUrl: `data:image/png;base64,${image.data}`, ...pngSize(image.data), active: tab.active && window.focused };
   });
 }
+function checkScreenshotMapping(screenshot, current, screenshotId, {duringDrag = false} = {}) {
+  const stale = reason => fail('STALE_SCREENSHOT', 'Screenshot coordinates are stale. Observe again or use a fresh AX element ID.', {reason});
+  if (!screenshot || screenshotId !== screenshot.id) stale('screenshot-replaced');
+  if (screenshot.coordinateInput) fail(screenshot.coordinateInput.reason === 'pinch-zoom' ? 'UNSUPPORTED_PINCH_ZOOM' : 'STALE_SCREENSHOT',
+    screenshot.coordinateInput.message, {reason:screenshot.coordinateInput.reason});
+  if (current.url !== screenshot.url) stale('url-changed');
+  if (viewportChanges(screenshot.geometry, current.geometry).length) stale('viewport-changed');
+  if (!duringDrag && current.geometry.revision !== screenshot.geometry.revision) stale('page-revision-changed');
+}
 async function actionPoint(identity, action, current, from = false, elementOptions = {}) {
   if (action.elementId != null) return elementOperation(identity.tabId, (method, params) => cdp(identity.tabId, method, params), 'point', action, attached.get(identity.tabId)?.frameRouter, elementOptions);
   const x = from ? action.fromX : action.x, y = from ? action.fromY : action.y;
@@ -503,8 +528,7 @@ async function actionPoint(identity, action, current, from = false, elementOptio
     return { x, y };
   }
   const screenshot = observations.get(identity.tabId);
-  if (!screenshot || action.screenshotId !== screenshot.id) fail('STALE_SCREENSHOT', 'Use the latest screenshotId for image coordinates.');
-  if (JSON.stringify(current.geometry) !== JSON.stringify(screenshot.geometry)) fail('STALE_SCREENSHOT', 'Viewport, scroll, zoom or page changed; observe again.');
+  checkScreenshotMapping(screenshot, current, action.screenshotId);
   const width = action.previewWidth ?? screenshot.width, height = action.previewHeight ?? screenshot.height;
   if (!(width > 0 && height > 0) || x < 0 || y < 0 || x >= width || y >= height) fail('INVALID_COORDINATES', 'Point is outside the displayed screenshot.');
   return { x: screenshot.bounds.x + x * screenshot.bounds.width / width, y: screenshot.bounds.y + y * screenshot.bounds.height / height };
@@ -513,12 +537,13 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   let inputState, inputStart = 0, markerStart = 0;
   try {
   checkControl(epoch);
-  const current = await readOperation(epoch, async read => {
+  const {tabId} = identity;
+  let current = await readOperation(epoch, async read => {
     await attach(identity, read);
-    inputState = attached.get(identity.tabId); inputStart = inputState.inputSequence ?? 0;
+    inputState = attached.get(tabId); inputStart = inputState.inputSequence ?? 0;
     markerStart = inputState.retiredMarkers ?? 0;
     return verify(identity, true, read);
-  }), tabId = identity.tabId;
+  });
   checkControl(epoch);
   const click = ['click','double_click','right_click'].includes(action.type)
     ? clickParameters({...action,...(action.type === 'right_click' ? {button:'right'} : {})}, {mac:/Mac/u.test(navigator.platform),count:action.type === 'double_click' ? 2 : 1}) : undefined;
@@ -551,7 +576,7 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   if (['click', 'double_click', 'right_click', 'move', 'mouse_down', 'mouse_up', 'scroll', 'drag', 'type_text', 'press_key', 'key_down', 'key_up', 'fill', 'set_value'].includes(action.type)) {
     await cdp(tabId, 'Emulation.setFocusEmulationEnabled', { enabled: true });
     checkControl(epoch);
-    await readOperation(epoch, read => verify(identity, true, read));
+    current = await readOperation(epoch, read => verify(identity, true, read));
     checkControl(epoch);
   }
   const verifyInputElement = async () => {
@@ -601,8 +626,12 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
   };
   const inputKey = (spec, down) => keyEvent(tabId, spec, down, epoch, action.elementId != null ? verifyInputElement : undefined,action.keyboardEditable);
   let scrollGeometry;
+  let screenshotMapping, dragging = false;
   const pointer = (type, point, button = 'none', count = 0, extra = {}) => mouse(tabId, type, point, button, count, extra, epoch,
-    action.elementId != null ? async () => {
+    (screenshotMapping || dragging) && (type !== 'mouseReleased' || action.type === 'mouse_up') ? async () => {
+      const live = await readOperation(epoch, read => verify(identity, true, read));
+      if (screenshotMapping) checkScreenshotMapping(screenshotMapping, live, action.screenshotId, {duringDrag:dragging});
+    } : action.elementId != null && (type === 'mousePressed' || type === 'mouseWheel') ? async () => {
       await element('checkPoint', {...action,...point});
       if (type === 'mouseWheel' && scrollGeometry) checkScrollGeometry(scrollGeometry,await element('scrollGeometry'));
     } : undefined);
@@ -767,6 +796,7 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
         for (const sample of samples.waypoints) path.push(await step(() => actionPoint(identity, { ...action, ...sample, elementId: undefined }, current)));
         ({points:path,intervalMs}=dragPath(path,action.durationMs));
       }
+      if (action.elementId == null && action.coordinateSpace !== 'css' && (path || action.x !== undefined)) screenshotMapping = observations.get(tabId);
       invalidate();
       const showCursor = (point, animateMovement = true) => {
         held.cursor = { ...point, visible: true, animateMovement };
@@ -780,11 +810,11 @@ async function act(identity, action, epoch = controlToken(identity.tabId)) {
       else if (action.type === 'mouse_up') await pointer('mouseReleased', point, button, 1);
       else if (path) {
         await pointer('mouseMoved', path[0]); await pointer('mousePressed', path[0], button, 1);
+        // Drag input itself can change the DOM. Continue to fence the mapping and document.
+        dragging = true;
         for (const sample of path.slice(1)) {
           await step(() => holdClick(intervalMs,() => checkControl(epoch)));
           await showCursor(sample,false);
-          const latest=await readOperation(epoch,read=>verify(identity,true,read));
-          if (action.coordinateSpace !== 'css' && (['width','height','scrollX','scrollY','devicePixelRatio'].some(key=>latest.geometry[key]!==current.geometry[key]) || JSON.stringify(latest.geometry.visual)!==JSON.stringify(current.geometry.visual))) fail('STALE_SCREENSHOT','Viewport, scroll or zoom changed during drag; observe again.');
           await pointer('mouseMoved',sample,button);
         }
         await pointer('mouseReleased',path.at(-1),button,1);

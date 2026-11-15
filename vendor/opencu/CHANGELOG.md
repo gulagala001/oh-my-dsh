@@ -1,3 +1,33 @@
+# OpenCU 2.2.16 · DSH 0.2.2-rc.3
+
+[中文](#zh-2216) · [English](#en-2216)
+
+<a id="zh-2216"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复 Chrome／Edge 连接器在页面持续更新但视口不变时反复截图失败。
+- 同时读取 AX 和截图时，如果两者无法确认同步，会明确提示。只读截图可查看，但不能用于坐标操作。 更新插件后，在浏览器的扩展管理页重新加载 OpenCU Connector，无需卸载或重新配对。
+
+<a id="en-2216"></a>
+
+## English
+
+### Bug fixes
+
+- Fixes repeated Chrome and Edge Connector screenshot failures when the page keeps updating without changing the viewport.
+- When the accessibility tree and screenshot cannot be confirmed in sync, OpenCU flags them as separate readings. View-only images cannot be used for coordinate input. After upgrading, reload OpenCU Connector on the browser’s extensions page without removing it or pairing again.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.2.16-dsh.0.2.2-rc.3/opencu-2.2.16-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.16-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # OpenCU 2.2.15 · DSH 0.2.2-rc.3
 
 [中文](#zh-2215) · [English](#en-2215)
