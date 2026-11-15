@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { sessionPersonality } from '../personality-session.mjs';
 import { createHash } from 'node:crypto';
 import { browserTestingGuide } from '#opencu/src/dsh/browser-testing.mjs';
-import { agentPromptStyle } from '../prompt-styles/session.mjs';
+import { agentPromptStyle, recordPromptStyle } from '../prompt-styles/session.mjs';
 import { DSH_IDENTITY, renderPromptStyle } from '../prompt-styles/render.mjs';
 import { isUnseededSubagent, renderPersonality } from '../../plugins/persona/src/shared/prompt.mjs';
 import { withoutTaskVerification } from '../task-verification.mjs';
@@ -186,7 +186,7 @@ export function installPromptAdapter(ctx) {
     const assembly = { ...presentation, tools: presentationTools(ctx, context) };
     if (!context?.agent) return assembly;
     const schemas = ctx.tools.schemas(context.scope ?? context.agent, context.toolSet);
-    const style = agentPromptStyle(ctx.omd, context.agent);
+    const style = recordPromptStyle(ctx.omd, context.agent);
     let renderSdk;
     if (activeSdk && (style === 'omd' || ctx.omd.optimization?.enabled(context.agent.session))) {
       const { renderToolsSdk, renderToolsSdkPy } = await import('@deepseek-ai/dsh-tool-executor-ptc');
@@ -228,7 +228,7 @@ export function installPromptAdapter(ctx) {
 
 export function projectToolDeclarations(ctx, model, definitions, context, toolMode = 'native') {
   const agent = context.agent ?? context.scope;
-  if (!agent?.session || isUnseededSubagent(agent.session) ||
+  if (!agent?.session ||
       agent.session.header?.origin === 'subagent' && !isOmdPreset(agent.session.header.agentPreset)) return model;
   const schemas = definitions.map(({ name, description, parameters }) => ({ name, description, parameters }));
   const personality = sessionPersonality(ctx.omd, agent.session), config = ctx.omd.config();

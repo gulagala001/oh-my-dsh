@@ -237,4 +237,9 @@ test('explore updates only the upstream reading advisory, never quoted source or
   const text = exploreResult(raw).content[0].text;
   assert.match(text,/Before edit, read the target range/); assert.ok(text.endsWith(source));
   const error = {...raw,isError:true}; assert.equal(exploreResult(error),error);
+  for (const [open, nested, close] of [['```md', '```ts', '```'], ['   ~~~~md', '~~~~info', '   ~~~~~  '], ['````md', '```', '````']]) {
+    const source = [open, nested, advisory, close].join('\n');
+    const result = exploreResult({ content: [{ type: 'text', text: source + '\n' + advisory }] }).content[0].text;
+    assert.ok(result.startsWith(source + '\n')); assert.ok(result.slice(source.length).includes('Before edit'));
+  }
 });

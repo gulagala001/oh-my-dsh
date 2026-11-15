@@ -2,7 +2,8 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { PersonaStore, validateSessionId } from './store.mjs';
 import { sessionPersonality, handlePersonalityApi } from './session.mjs';
-import { applyPersonality, renderPersonality } from './shared/prompt.mjs';
+import { applyPersonality, renderPersonality, isUnseededSubagent } from './shared/prompt.mjs';
+import { PERSONA_SNAPSHOT, readPromptSnapshot, writePromptSnapshot } from './shared/prompt-snapshot.mjs';
 
 export const name = 'dsh-persona-plugin';
 export const inject = ['sessions', 'sessionProjections'];
@@ -47,12 +48,13 @@ export function acquirePersona(ctx, { legacy } = {}) {
       forSession(session) {
         const value = sessionPersonality(service, session);
         const modules = session?.header?.origin === 'subagent' && session.header.isSeeded === true
-          ? store.forkModules(session.id) : undefined;
+          ? readPromptSnapshot(session, PERSONA_SNAPSHOT) ?? store.forkModules(session.id) : undefined;
         if (modules) value.modules = structuredClone(modules);
         return value;
       },
       forPrompt(session) {
         const value = service.forSession(session);
+        if (!isUnseededSubagent(session)) writePromptSnapshot(session, PERSONA_SNAPSHOT, value.modules);
         if (session?.id) presented.set(session.id, value.modules);
         return value;
       },
@@ -74,10 +76,19 @@ export function acquirePersona(ctx, { legacy } = {}) {
     }, { global: true });
     const offCreated = root.on('agent/created', ({ agent, source }) => {
       const session = agent.session, header = session.header;
-      if (header.origin !== 'subagent' || header.isSeeded !== true || !header.parentSession || !['startup', 'resume'].includes(source) || store.forkModules(session.id)) return;
+      if (header.origin !== 'subagent' || header.isSeeded !== true || !header.parentSession || !['startup', 'resume'].includes(source)) return;
       // The host seeds through the last completed turn, not the in-flight tool call.
-      const modules = source === 'startup' && completed.get(header.parentSession)?.get(session.inheritedEventCount - 1);
-      store.saveForkModules(session.id, modules || service.forSession(session).modules);
+      const inherited = readPromptSnapshot(session, PERSONA_SNAPSHOT);
+      if (inherited) return;
+      const parent = root.get('agents')?.get(header.parentSession)?.session ?? root.get('sessions')?.get(header.parentSession);
+      // Older logs have no record. Preserve an existing locked choice first;
+      // otherwise migrate the best parent snapshot once into the child's log.
+      const modules = store.forkModules(session.id)
+        ?? completed.get(header.parentSession)?.get(session.inheritedEventCount - 1)
+        ?? (parent?.header?.origin === 'subagent' ? service.forSession(parent).modules : undefined)
+        ?? presented.get(header.parentSession)
+        ?? service.forSession(parent ?? { id: header.parentSession }).modules;
+      if (!writePromptSnapshot(session, PERSONA_SNAPSHOT, modules)) store.saveForkModules(session.id, modules);
     }, { global: true });
     entry = { service, leases: new Set(), offCreated, offSession, offDisposed }; roots.set(root, entry);
     entry.unprovide = root.provide('dshPersona', service);

@@ -14,9 +14,12 @@ export function exploreResult(result) {
     if (block.type !== 'text') return block;
     let fence = '';
     const text = block.text.split('\n').map(line => {
-      const delimiter = line.match(/^(`{3,}|~{3,})/);
-      if (delimiter && (!fence || delimiter[1].startsWith(fence))) { fence = fence ? '' : delimiter[1]; return line; }
-      if (fence) return line;
+      const delimiter = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+      if (fence) {
+        if (delimiter && delimiter[1].startsWith(fence) && /^[ \t]*$/.test(delimiter[2])) fence = '';
+        return line;
+      }
+      if (delimiter && (delimiter[1][0] === '~' || !delimiter[2].includes('`'))) { fence = delimiter[1]; return line; }
       if (line.startsWith('> The code below is the **verbatim, current on-disk source**') && line.includes('do not Read a file shown here')) return '> ' + exploreRead;
       if (/^> \*\*Complete source for \d+ files? is included above/.test(line) && line.includes('do NOT re-read')) return '> Use the displayed symbols for exploration. For file changes follow the read requirements in the tool declaration.';
       return line;

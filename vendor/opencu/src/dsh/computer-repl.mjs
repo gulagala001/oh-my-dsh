@@ -360,14 +360,15 @@ export function createComputerRepl(request, report = () => {}) {
     if (Object.keys(options).some(key => key !== 'visible')) throw new TypeError('Only the visible browser tab option is supported; sessionName grouping is not available');
     if (options.visible !== undefined && typeof options.visible !== 'boolean') throw new TypeError('visible must be a boolean');
     const opened = await call('openTarget', { browserId, url });
-    let stage = 'select';
+    let stage = 'select', selected = false;
     try {
       const target = await select({ id: opened.target.id, identity: opened.target.identity });
+      selected = true;
       if (options.visible === true) { stage = 'show'; await target.focus(); }
       return target;
     }
     catch (cause) {
-      const details = { created: true, target: opened.target, stage, cause: { code: cause.code, message: cause.message, details: cause.details } };
+      const details = { created: true, selected, target: opened.target, stage, cause: { code: cause.code, message: cause.message, details: cause.details } };
       emit(details);
       throw Object.assign(new Error(`Tab ${opened.target.id} was created, but ${stage === 'show' ? 'it could not be shown' : 'control could not be recovered'}: ${cause.message}. Do not create another tab; select this target after recovery.`),
         { code: cause.code ?? 'TARGET_SELECTION_FAILED', details });
@@ -514,11 +515,18 @@ export function createComputerRepl(request, report = () => {}) {
         if (candidates.length === 1) {
           const candidate = candidates[0];
           const tab = await select({ id: candidate.id, browserId: candidate.browserId, identity: candidate.identity, expected: { url: destination.href } });
-          if (options.visible === true) await tab.focus();
+          if (options.visible === true) {
+            try { await tab.focus(); }
+            catch (cause) {
+              const details = { selected: true, target: candidate, stage: 'show', cause: { code: cause.code, message: cause.message, details: cause.details } };
+              emit(details);
+              throw Object.assign(new Error(`Tab ${candidate.id} remains selected, but could not be shown: ${cause.message}. Do not create another tab; retry showing this target after recovery.`), { code: cause.code ?? 'TARGET_SHOW_FAILED', details });
+            }
+          }
           return tab;
         }
         if (local.size !== 1) throw invalidArgument(local.size ? 'Multiple built-in windows own this conversation. Choose one by ID.' :
-          'No built-in browser is connected for this conversation. Choose an authorized browser explicitly.');
+          'No built-in browser is connected for this conversation. Subagents and unmounted conversations need an explicit authorized browser ID.');
         return createTab(local.values().next().value, destination.href, options.visible === undefined ? {} : { visible: options.visible });
       },
       downloads: { list: async (options = {}) => {

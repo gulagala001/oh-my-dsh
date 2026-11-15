@@ -2,10 +2,14 @@ import { PROMPT_STYLES, isPromptStyle, promptStyle } from './options.mjs';
 import { isOmdPreset } from '../legacy-identity.mjs';
 import { validateSessionId } from '../hub-store.mjs';
 import { symbols } from '@deepseek-ai/cordis';
+import { STYLE_SNAPSHOT, readPromptSnapshot, writePromptSnapshot } from '../../plugins/persona/src/shared/prompt-snapshot.mjs';
 
 export function sessionPromptStyle(hub, session) {
-  if (session?.header?.origin === 'subagent') return session.header.isSeeded === true
-    ? hub.store?.peek(session.id)?.forkPromptStyle ?? 'omd' : 'omd';
+  if (session?.header?.origin === 'subagent') {
+    if (session.header.isSeeded !== true) return 'omd';
+    const saved = readPromptSnapshot(session, STYLE_SNAPSHOT) ?? hub.store?.peek(session.id)?.forkPromptStyle;
+    return isPromptStyle(saved) ? saved : 'omd';
+  }
   const config = hub.config();
   const saved = config.sessionPromptStyleEnabled === true && session?.id
     ? hub.store?.peek(session.id)?.promptStyle : undefined;
@@ -22,6 +26,14 @@ export function capturePromptStyle(hub, agent, turn) {
 }
 export const agentPromptStyle = (hub, agent) => turns.get(agent?.[symbols.original] ?? agent)?.style ?? sessionPromptStyle(hub, agent?.session);
 
+export function recordPromptStyle(hub, agent) {
+  const style = agentPromptStyle(hub, agent);
+  if (agent?.session && !(agent.session.header?.origin === 'subagent' && agent.session.header.isSeeded !== true)) {
+    writePromptSnapshot(agent.session, STYLE_SNAPSHOT, style);
+  }
+  return style;
+}
+
 export function completePromptStyle(agent, event) {
   agent = agent[symbols.original] ?? agent;
   const active = turns.get(agent);
@@ -34,12 +46,14 @@ export function completePromptStyle(agent, event) {
 
 export function inheritForkPromptStyle(hub, agents, agent, source) {
   const { session } = agent, { header } = session;
-  if (header.origin !== 'subagent' || header.isSeeded !== true || !header.parentSession || source !== 'startup') return;
+  if (header.origin !== 'subagent' || header.isSeeded !== true || !header.parentSession || !['startup', 'resume'].includes(source)) return;
+  if (isPromptStyle(readPromptSnapshot(session, STYLE_SNAPSHOT))) return;
   const state = hub.store.state(session.id);
-  if (state.forkPromptStyle !== undefined) return;
   const parent = agents.get(header.parentSession);
-  const style = parent ? completed.get(parent[symbols.original] ?? parent)?.get(session.inheritedEventCount - 1) : undefined;
-  if (style !== undefined) hub.store.update(state, { forkPromptStyle: style });
+  const style = state.forkPromptStyle
+    ?? (parent && completed.get(parent[symbols.original] ?? parent)?.get(session.inheritedEventCount - 1))
+    ?? (parent ? agentPromptStyle(hub, parent) : sessionPromptStyle(hub, { id: header.parentSession }));
+  if (!writePromptSnapshot(session, STYLE_SNAPSHOT, style)) hub.store.update(state, { forkPromptStyle: style });
 }
 
 function eligible(ctx, target, id) {

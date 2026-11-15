@@ -51,6 +51,20 @@ function fixture(runtime, team = false) {
 }
 const section = (assembly, name) => assembly.sections.find(s => s.name === name)?.text;
 
+test('unseeded Native children share the prompt discovery catalog with provider declarations', async () => {
+  const definitions = ['tool_find', 'mcp__fixture__large'].map(name => tool(name, 'Detailed optional contract. '.repeat(150)));
+  let hook;
+  const ctx = { systemPrompt: {}, on: (_name, listener) => { hook = listener; },
+    tools: { schemas: () => definitions, get: name => definitions.find(item => item.name === name) },
+    omd: { config: () => ({}), optimization: { enabled: () => true } } };
+  const context = { agent: { session: { id: 'child', header: { origin: 'subagent', isSeeded: false, agentPreset: 'oh-my-dsh' } } } };
+  installPromptAdapter(ctx);
+  const prompt = await hook(null, context, async () => ({ sections: definitions.map(item => ({ name: 'tool:' + item.name, text: item.description })) }));
+  const model = projectToolDeclarations(ctx, { schemas: definitions }, definitions, context);
+  assert.match(section(prompt, 'omd:tool-discovery'), /mcp__fixture__large/);
+  assert.deepEqual(model.schemas.map(item => item.name), ['tool_find']);
+});
+
 test('native and PTC preserve live child/Team controls, identities, schemas and subagent scope', async () => {
   for (const runtime of [undefined, { language: 'typescript', programFormat: 'repl' }]) for (const team of [false, true]) {
     const f = fixture(runtime, team), result = await f.assemble();

@@ -92,31 +92,38 @@ export class TemporaryWebChat {
   constructor({ storage = localStorage, notify = () => {} } = {}) {
     this.storage = storage; this.notify = notify; this.token = crypto.randomUUID();
     this.owned = new Map(); this.adapter = null; this.pending = null; this.closing = false; this.closed = false;
-    this.armed = false; this.error = ''; this.listeners = new Set();
+    this.armed = false; this.syncWarning = ''; this.closeError = ''; this.listeners = new Set();
     liveTemporaryOwners.add(this.token);
   }
   subscribe = callback => { this.listeners.add(callback); return () => this.listeners.delete(callback); };
+  get error() { return this.closeError || this.syncWarning; }
+  warnSync(error) {
+    if (this.closed || !this.armed || this.persisted) return;
+    this.syncWarning = '临时聊天的归属尚未同步；关闭前会重新核对：' + error.message; this.publish();
+  }
   publish() { for (const listener of this.listeners) listener(); }
   observe(url) {
     this.lastUrl = url;
     // A navigation is never ownership evidence. Only the official create receipt is.
-    if (!this.closed && this.armed && !this.persisted && this.adapter) void this.capture().catch(error => { this.error = error.message; this.publish(); });
+    if (!this.closed && this.armed && !this.persisted && this.adapter) void this.capture().catch(() => {});
   }
   async capture(wait = false) {
     if (this.closed || !this.armed || this.persisted || !this.adapter) return;
-    let identity = this.owned.values().next().value;
-    if (!identity) {
-      const receipt = await this.adapter.extract(temporaryScript({ type: 'owned', token: this.token, wait }));
-      if (this.closed) return;
-      if (!/^[a-zA-Z0-9_-]+$/.test(receipt?.id || '')) return;
-      identity = { id: receipt.id, url: chatIdentity(this.lastUrl)?.id === receipt.id
-        ? this.lastUrl : `https://chat.deepseek.com/a/chat/s/${receipt.id}` };
-      this.owned.set(identity.id, identity);
-    }
-    const rows = pending(this.storage);
-    save(this.storage, [...rows.filter(row => row.id !== identity.id), { ...identity, owner: this.token }]);
-    this.persisted = true;
-    this.error = '';
+    try {
+      let identity = this.owned.values().next().value;
+      if (!identity) {
+        const receipt = await this.adapter.extract(temporaryScript({ type: 'owned', token: this.token, wait }));
+        if (this.closed || this.persisted) return;
+        if (!/^[a-zA-Z0-9_-]+$/.test(receipt?.id || '')) return;
+        identity = { id: receipt.id, url: chatIdentity(this.lastUrl)?.id === receipt.id
+          ? this.lastUrl : `https://chat.deepseek.com/a/chat/s/${receipt.id}` };
+        this.owned.set(identity.id, identity);
+      }
+      const rows = pending(this.storage);
+      save(this.storage, [...rows.filter(row => row.id !== identity.id), { ...identity, owner: this.token }]);
+      this.persisted = true;
+      if (this.syncWarning) { this.syncWarning = ''; this.publish(); }
+    } catch (error) { this.warnSync(error); throw error; }
   }
   async run(type, extra = {}) {
     if (this.closing || this.closed || this.pending) throw Error('临时会话正在处理，请稍候。');
@@ -145,8 +152,7 @@ export class TemporaryWebChat {
           this.observe(latest.url);
           await this.capture();
         } catch (error) {
-          this.error = '临时聊天的归属尚未同步；关闭前会重新核对：' + error.message;
-          this.publish();
+          this.warnSync(error);
         }
       }
     };
@@ -156,7 +162,7 @@ export class TemporaryWebChat {
   async close() {
     if (this.closed) return;
     if (this.cleanup) return this.cleanup;
-    this.closing = true; this.error = ''; this.publish();
+    this.closing = true; this.closeError = ''; this.publish();
     this.cleanup = (async () => {
       try {
         await this.pending?.catch(() => {});
@@ -179,7 +185,7 @@ export class TemporaryWebChat {
         }
         this.closed = true;
         liveTemporaryOwners.delete(this.token);
-      } catch (error) { this.error = error.message; throw error; }
+      } catch (error) { this.closeError = error.message; throw error; }
       finally { this.closing = false; this.cleanup = null; this.publish(); }
     })();
     return this.cleanup;

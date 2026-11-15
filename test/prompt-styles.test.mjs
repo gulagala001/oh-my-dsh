@@ -7,13 +7,29 @@ import { Config, contextConfig } from '../src/config.mjs';
 import { HubStore } from '../src/hub-store.mjs';
 import { PROMPT_STYLES } from '../src/prompt-styles/options.mjs';
 import { renderPromptStyle } from '../src/prompt-styles/render.mjs';
-import { capturePromptStyle, agentPromptStyle, sessionPromptStyle, handlePromptStyleApi } from '../src/prompt-styles/session.mjs';
+import { capturePromptStyle, agentPromptStyle, sessionPromptStyle, handlePromptStyleApi, inheritForkPromptStyle, recordPromptStyle } from '../src/prompt-styles/session.mjs';
+import { Session } from '@deepseek-ai/dsh-session';
 import { transformAssembly } from '../src/cc-adaptation/adapter.mjs';
 
 const schema = name => ({ name, description: 'Native contract for ' + name, parameters: { type: 'object', properties: {} } });
 const schemas = ['bash', 'pwsh', 'read', 'grep', 'write', 'edit', 'todo_write', 'note', 'recall', 'job_output', 'computer_use', 'subagent', 'ask_user_question'].map(schema);
 schemas.find(t => t.name === 'recall').parameters.properties = { memory: {}, sessionId: {}, reference: {} };
 const session = { id: 'chat', header: { origin: 'user', agentPreset: 'oh-my-dsh' } };
+
+test('cold and nested forks select the copied prompt record instead of newer parent settings', () => {
+  let config = { promptStyle: 'codex' };
+  const hub = { config: () => config }, parent = { session: Session.create('parent') };
+  capturePromptStyle(hub, parent, 1); recordPromptStyle(hub, parent);
+  parent.session.append('turn/end', { turn: 1, reason: { kind: 'completed' } });
+  const seed = JSON.parse(JSON.stringify(parent.session.snapshotEvents()));
+  config = { promptStyle: 'pi' }; capturePromptStyle(hub, parent, 2); recordPromptStyle(hub, parent);
+  const child = Session.create('child', seed, { ...parent.session.header, id: 'child', origin: 'subagent', isSeeded: true, parentSession: 'parent' }, seed.length);
+  inheritForkPromptStyle(hub, new Map(), { session: child }, 'startup');
+  assert.equal(sessionPromptStyle(hub, child), 'codex');
+  const nested = Session.create('nested', child.snapshotEvents(), { ...child.header, id: 'nested', parentSession: child.id }, child.seq);
+  inheritForkPromptStyle(hub, new Map(), { session: nested }, 'resume');
+  assert.equal(sessionPromptStyle(hub, nested), 'codex');
+});
 
 test('seven choices default to OMD with no session entry; invalid settings cannot silently select a style', () => {
   assert.deepEqual(PROMPT_STYLES.map(x => x.value), ['omd', 'dsh', 'codex', 'cursor', 'pi', 'grok', 'zcode']);

@@ -2,6 +2,10 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Lexer } from 'marked';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import { commandScript, previewScript, statusScript } from './native-chat-bridge.mjs';
+import { chatIdentity } from './temporary-web.mjs';
+
+const conversationKey = value => { try { const url = new URL(value); return url.origin + url.pathname.replace(/\/+$/, ''); } catch { return value; } };
+const blankChat = value => conversationKey(value) === 'https://chat.deepseek.com';
 
 const safeLink = value => { try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : null; } catch { return null; } };
 function Inline({ tokens = [] }) {
@@ -43,17 +47,22 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
   const [inspect, setInspect] = useState(false), [history, setHistory] = useState(false);
   const [readError, setReadError] = useState('');
   const [files, setFiles] = useState([]);
+  const [recoveryDraft, setRecoveryDraft] = useState('');
   const input = useRef(null), scroll = useRef(null), picker = useRef(null), current = useRef(''), previewBusy = useRef(false), follow = useRef(true), signingIn = useRef(false), commandBusy = useRef(false);
   const showWebsite = inspect && (!temporary || snapshot.signIn && /^https:\/\/chat\.deepseek\.com\/(sign_in|sign_up|authorized)(?:[/?#]|$)/.test(frame.url));
   const surface = useRef(null), lifetime = useRef(null), drafts = useRef(new Map()), navigation = useRef(null);
-  const draftFor = (url, value) => { if (value) drafts.current.set(url, value); else drafts.current.delete(url); };
+  const unconfirmed = useRef(null), uploading = useRef(false), controls = useRef(null);
+  controls.current = { ready: snapshot.ready, generating: snapshot.generating, loading: frame.loading };
+  const draftFor = (url, value) => { const key = conversationKey(url); if (value) drafts.current.set(key, value); else drafts.current.delete(key); };
   const changeText = value => { draftFor(current.current, value); setText(value); };
+  const endNavigation = () => { if (navigation.current) { navigation.current = null; setBusy(''); setHistory(false); } };
   const visit = async url => {
     const page = adapter.current;
-    if (!page || navigation.current || commandBusy.current || importing) return;
-    if (url === current.current) { setHistory(false); return; }
-    const request = { page, url }; navigation.current = request; setBusy('navigate'); setError('');
-    try { await page.navigate(url); }
+    if (!page || navigation.current || commandBusy.current || uploading.current || importing) return;
+    if (conversationKey(url) === conversationKey(current.current)) { setHistory(false); return; }
+    unconfirmed.current = null;
+    const request = { page, url, completed: false }; navigation.current = request; setBusy('navigate'); setError('');
+    try { await page.navigate(url); request.completed = true; }
     catch (failure) { if (navigation.current === request) { navigation.current = null; setBusy(''); setError(failure.message); } }
   };
   useLayoutEffect(() => {
@@ -63,6 +72,7 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
     lifetime.current = ticket; commandBusy.current = false; if (!frame.ready) navigation.current = null; setBusy(navigation.current ? 'navigate' : '');
     return () => { ticket.active = false; for (const reader of ticket.readers) reader.abort(); };
   }, [frame.ready, adapter]);
+  useEffect(() => { if (frame.error) endNavigation(); }, [frame.error]);
   useLayoutEffect(() => {
     // File selection still belongs to the document where it started.
     const ticket = lifetime.current;
@@ -93,7 +103,12 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
         const page = adapter.current, value = await page?.extract(statusScript);
         if (!value || stopped || page !== adapter.current || commandBusy.current) return;
         if (value.ready && signingIn.current) setInspect(false);
-        if (value.signIn && !signingIn.current) { drafts.current.clear(); current.current = ''; setText(''); setFiles([]); setMessages([]); }
+        if (value.signIn) endNavigation();
+        if (value.signIn && !signingIn.current) {
+          const saved = drafts.current.get(conversationKey(current.current)) || unconfirmed.current?.text;
+          if (saved) setRecoveryDraft(saved);
+          drafts.current.clear(); unconfirmed.current = null; current.current = ''; setText(''); setFiles([]); setMessages([]);
+        }
         signingIn.current = value.signIn;
         setSnapshot(value);
         statusReporter.current?.(value);
@@ -102,15 +117,29 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
           const conversation = await page.extract(previewScript);
           if (stopped || page !== adapter.current || commandBusy.current) return;
           if (navigation.current) {
-            if (navigation.current.page !== page || conversation.url !== navigation.current.url) return;
-            navigation.current = null; setBusy(''); setHistory(false);
+            const request = navigation.current;
+            if (request.page !== page) { endNavigation(); return; }
+            if (conversationKey(conversation.url) !== conversationKey(request.url)) {
+              if (!request.completed) return;
+              setError('官网打开了其他对话，请核对当前页面；原草稿已保留。');
+            }
+            endNavigation();
           }
-          if (current.current !== conversation.url) { current.current = conversation.url; setText(drafts.current.get(conversation.url) || ''); setMessages(conversation.messages); follow.current = true; setFiles([]); }
+          if (conversationKey(current.current) !== conversationKey(conversation.url)) {
+            const pending = unconfirmed.current;
+            if (pending?.page === page && blankChat(pending.owner) && chatIdentity(conversation.url)) {
+              if (!drafts.current.has(conversationKey(conversation.url))) { draftFor(conversation.url, pending.text); draftFor(pending.owner, ''); }
+              else setRecoveryDraft(pending.text);
+              unconfirmed.current = null;
+            }
+            current.current = conversation.url; setText(drafts.current.get(conversationKey(conversation.url)) || ''); setMessages(conversation.messages); follow.current = true; setFiles([]);
+          }
           else setMessages(old => {
             const updates = new Map(conversation.messages.map((message, i) => [message.sourceMessageId ?? `${message.role}:${i}`, message]));
             const result = old.map((message, i) => { const key = message.sourceMessageId ?? `${message.role}:${i}`; const update = updates.get(key); updates.delete(key); return update ?? message; });
             return [...result, ...updates.values()];
           });
+          current.current = conversation.url;
         }
         if (!stopped && page === adapter.current) setReadError('');
       } catch (failure) { if (!stopped && !/未找到可识别/.test(failure.message)) setReadError(failure.message); }
@@ -124,14 +153,16 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
     const ticket = lifetime.current, page = adapter.current;
     const owner = current.current;
     const active = () => ticket?.active && lifetime.current === ticket && adapter.current === page;
-    if (!active() || !page || navigation.current || frame.loading || commandBusy.current || importing || temporary?.closing || temporary?.closed) return false;
+    if (!active() || !page || !owner || navigation.current || frame.loading || commandBusy.current || uploading.current && type !== 'upload' || importing || temporary?.closing || temporary?.closed) return false;
     commandBusy.current = ticket; setBusy(type); setError('');
+    if (type === 'send') unconfirmed.current = { page, owner, text: extra.text };
     try {
       const result = temporary ? await temporary.run(type, extra) : await page.extract(commandScript({ type, ...extra, expectedUrl: owner }));
       if (!active()) return false;
       if (type === 'new' && result?.navigateTo) await page.navigate(result.navigateTo);
       if (!active()) return false;
       if (type === 'send' && result?.accepted !== true) { setError(result?.error || '尚未确认官网发送结果，输入内容已保留。请先检查官网页面，避免重复发送。'); return false; }
+      if (type === 'send') unconfirmed.current = null;
       if (result?.status) setSnapshot(result.status);
       return true;
     } catch (failure) { if (active()) setError(failure.message); return false; }
@@ -139,11 +170,13 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
   };
   const submit = async () => { const ticket = lifetime.current; if (!text.trim() || !snapshot.ready || snapshot.generating) return; const owner = current.current; if (await command('send', { text }) && ticket?.active && current.current === owner) { changeText(''); setFiles([]); follow.current = true; input.current?.focus(); } };
   const upload = async selected => {
+    if (!snapshot.ready || !current.current || snapshot.generating || frame.loading || commandBusy.current || navigation.current || uploading.current || importing || temporary?.closing || temporary?.closed) return;
     const ticket = lifetime.current, page = adapter.current;
     const readerEpoch = ticket?.readerEpoch;
-    const current = () => ticket?.active && lifetime.current === ticket && adapter.current === page && ticket.readerEpoch === readerEpoch;
-    const list = Array.from(selected ?? []); if (!list.length || !current()) return;
+    const active = () => ticket?.active && lifetime.current === ticket && adapter.current === page && ticket.readerEpoch === readerEpoch;
+    const list = Array.from(selected ?? []); if (!list.length || !active()) return;
     if (list.length > 20 || list.reduce((size, file) => size + file.size, 0) > 32 * 1024 * 1024) { setError('附件最多 20 个，总大小不超过 32 MiB。'); return; }
+    uploading.current = ticket; setBusy('upload');
     try {
       const payload = await Promise.all(list.map(file => new Promise((resolve, reject) => {
         const reader = new FileReader(); ticket.readers.add(reader);
@@ -153,10 +186,12 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
         reader.onload = () => finish(() => resolve({ name: file.name, type: file.type, data: String(reader.result).split(',')[1] }));
         reader.readAsDataURL(file);
       })));
-      if (current() && await command('upload', { files: payload }) && current()) setFiles(old => [...old, ...list.map(file => file.name)]);
-    } catch (failure) { if (current()) setError(failure.message); }
+      if (active() && controls.current.ready && !controls.current.generating && !controls.current.loading && await command('upload', { files: payload }) && active()) setFiles(old => [...old, ...list.map(file => file.name)]);
+    } catch (failure) { if (active()) setError(failure.message); }
+    finally { if (uploading.current === ticket) { uploading.current = false; if (ticket?.active && lifetime.current === ticket && !commandBusy.current && !navigation.current) setBusy(''); } }
   };
-  return <div ref={surface} className="dswb-native" data-deepseek-workbench="chat" data-empty={messages.length === 0} inert={temporary?.closing || temporary?.closed ? '' : undefined} onDragOver={event => { if (snapshot.ready) event.preventDefault(); }} onDrop={event => { if (snapshot.ready) { event.preventDefault(); void upload(event.dataTransfer.files).catch(failure => setError(failure.message)); } }}>
+  const canUpload = snapshot.ready && current.current && !frame.loading && busy === '' && !snapshot.generating;
+  return <div ref={surface} className="dswb-native" data-deepseek-workbench="chat" data-empty={messages.length === 0} inert={temporary?.closing || temporary?.closed ? '' : undefined} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); if (canUpload) void upload(event.dataTransfer.files).catch(failure => setError(failure.message)); }}>
     <header className="dswb-chat-header" data-window-drag><div className="dswb-chat-identity"><div><strong>{temporary ? '临时网页聊天' : 'DeepSeek 网页聊天'}</strong></div></div><div className="dswb-chat-actions">
       {!temporary && <><Button size="sm" type="button" onClick={() => setHistory(value => !value)} aria-expanded={history}>历史对话</Button>
       <Button size="sm" type="button" disabled={!snapshot.ready || busy !== '' || snapshot.generating} onClick={() => void visit('https://chat.deepseek.com/')}>新对话</Button>
@@ -164,9 +199,10 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
       <Button size="sm" type="button" aria-label="在外部浏览器打开" title="在外部浏览器打开" onClick={onExternal}>↗</Button></>}
       {(!temporary || snapshot.signIn) && <Button size="sm" type="button" className="dswb-more" aria-label={showWebsite ? '返回原生聊天' : '登录或检查官网页面'} title={showWebsite ? '返回聊天' : '登录或检查官网页面'} disabled={!!temporary && (temporary.closing || busy !== '')} onClick={() => setInspect(value => !value)}>⋯</Button>}
     </div></header>
-    {busy === 'navigate' && <div className="dswb-notice" role="status">正在等待目标对话就绪，原草稿已保留。<Button size="sm" onClick={() => { navigation.current = null; setBusy(''); }}>停止等待</Button></div>}
+    {busy === 'navigate' && <div className="dswb-notice" role="status">正在等待目标对话就绪，原草稿已保留。<Button size="sm" onClick={endNavigation}>停止等待</Button></div>}
     {history && <div className="dswb-history" role="dialog" aria-label="DeepSeek 历史对话"><div><strong>历史对话</strong><Button size="sm" onClick={() => setHistory(false)} aria-label="关闭历史对话">×</Button></div>{snapshot.history.length ? snapshot.history.map(item => <Button size="sm" key={item.url} disabled={busy !== '' || Boolean(importing) || frame.loading} onClick={() => void visit(item.url)}>{item.title}</Button>) : <p>暂无已加载的历史对话</p>}</div>}
-    {(error || frame.error || readError) && <div className="dswb-error" role="alert">{error || frame.error || readError} {!temporary && <Button size="sm" onClick={() => setInspect(true)}>检查官网页面</Button>}{!temporary?.armed && <Button size="sm" onClick={retry}>重新加载</Button>}</div>}
+    {(error || frame.error || readError) && <div className="dswb-error" role="alert">{error || frame.error || readError} {!temporary && <Button size="sm" onClick={() => setInspect(true)}>检查官网页面</Button>}{!temporary?.armed && <Button size="sm" disabled={!!commandBusy.current || !!uploading.current} onClick={() => { endNavigation(); retry(); }}>重新加载</Button>}</div>}
+    {recoveryDraft && <div className="dswb-notice" role="status">尚未发送的草稿已保留。<Button size="sm" disabled={!snapshot.ready || !current.current || busy !== '' || !!text} onClick={() => { changeText(recoveryDraft); setRecoveryDraft(''); }}>恢复到输入框</Button></div>}
     {warnings}
     {snapshot.alerts.length > 0 && <div className="dswb-notice" role="status">{snapshot.alerts.join(' · ')}</div>}
     <div className={`dswb-official-page${showWebsite ? ' is-visible' : ''}`} aria-hidden={!showWebsite}>{guest}</div>
@@ -176,7 +212,7 @@ export function NativeChat({ frame, adapter, guest, error, setError, onImport, i
     </div></div><div className="dswb-composer-wrap"><div className="dswb-composer" data-composer-card="">
       {files.length > 0 && <div className="dswb-files">{files.map((name, i) => <span key={i}>▧ {name}</span>)}{!temporary && <Button size="sm" onClick={() => setInspect(true)}>查看上传状态</Button>}</div>}
       <textarea ref={input} data-composer-input="" value={text} rows={2} placeholder="发送消息给 DeepSeek" aria-label="发送消息给 DeepSeek" disabled={!snapshot.ready || !current.current || frame.loading || busy === 'navigate' || busy === 'send'} onChange={event => changeText(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(); } }}/>
-      <div className="dswb-composer-actions"><div>{snapshot.think && <Button size="sm" aria-pressed={snapshot.think.enabled} disabled={snapshot.think.disabled || busy !== ''} onClick={() => command('think', { enabled: !snapshot.think.enabled })}>深度思考</Button>}{snapshot.search && <Button size="sm" aria-pressed={snapshot.search.enabled} disabled={snapshot.search.disabled || busy !== ''} onClick={() => command('search', { enabled: !snapshot.search.enabled })}>联网搜索</Button>}</div><div><input ref={picker} type="file" multiple hidden onChange={event => { void upload(event.target.files).catch(failure => setError(failure.message)); event.target.value = ''; }}/><Button size="sm" aria-label="上传附件" disabled={!snapshot.ready || busy !== '' || snapshot.generating} onClick={() => picker.current?.click()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></Button><Button size="sm" className="dswb-send" aria-label="发送" disabled={!snapshot.ready || !text.trim() || busy !== '' || snapshot.generating} onClick={submit}>{busy === 'send' ? '…' : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>}</Button></div></div>
+      <div className="dswb-composer-actions"><div>{snapshot.think && <Button size="sm" aria-pressed={snapshot.think.enabled} disabled={snapshot.think.disabled || busy !== ''} onClick={() => command('think', { enabled: !snapshot.think.enabled })}>深度思考</Button>}{snapshot.search && <Button size="sm" aria-pressed={snapshot.search.enabled} disabled={snapshot.search.disabled || busy !== ''} onClick={() => command('search', { enabled: !snapshot.search.enabled })}>联网搜索</Button>}</div><div><input ref={picker} type="file" multiple hidden onChange={event => { void upload(event.target.files).catch(failure => setError(failure.message)); event.target.value = ''; }}/><Button size="sm" aria-label="上传附件" disabled={!canUpload} onClick={() => picker.current?.click()}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></Button><Button size="sm" className="dswb-send" aria-label="发送" disabled={!snapshot.ready || !text.trim() || busy !== '' || snapshot.generating} onClick={submit}>{busy === 'send' ? '…' : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>}</Button></div></div>
     </div></div></>}
   </div>;
 }

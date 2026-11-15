@@ -23,7 +23,8 @@ export function installTemporarySidebar(ctx, BrowserPage) {
     const close = () => { void temporary.close().then(() => tab.actions.close()).catch(() => {}); };
     return <div className="dswb-temporary" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <div className="dswb-toolbar"><span role="status">{temporary.closing ? '正在清理临时聊天…' : '临时聊天 · 关闭后删除历史'}</span><Button size="sm" disabled={temporary.closing} onClick={close}>关闭</Button></div>
-      {temporary.error && <div className="dswb-error" role="alert">{temporary.error}<Button size="sm" onClick={close}>重试关闭</Button></div>}
+      {temporary.closeError && <div className="dswb-error" role="alert">{temporary.closeError}<Button size="sm" disabled={temporary.closing} onClick={close}>重试关闭</Button></div>}
+      {!temporary.closeError && temporary.syncWarning && <div className="dswb-error" role="alert">{temporary.syncWarning}<Button size="sm" disabled={temporary.closing} onClick={() => void temporary.capture().catch(() => {})}>重试同步</Button></div>}
       <BrowserPage ctx={ctx} native temporary={temporary} workspace={`deepseek-temporary-${temporary.token}`}/>
     </div>;
   }

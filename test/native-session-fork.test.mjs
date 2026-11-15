@@ -9,7 +9,7 @@ import { forkParentOf, installForkProvenance } from '../src/host/session-fork.mj
 import { forkArchiveSnapshot } from '../src/context/fork.mjs';
 import { acquirePersona } from '../plugins/persona/src/index.mjs';
 import { personalityPatch } from '../plugins/persona/src/shared/personality.mjs';
-import { capturePromptStyle, completePromptStyle, inheritForkPromptStyle } from '../src/prompt-styles/session.mjs';
+import { capturePromptStyle, completePromptStyle, inheritForkPromptStyle, sessionPromptStyle } from '../src/prompt-styles/session.mjs';
 import { installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
 import { PERSONALITY_SCOPE } from '../plugins/persona/src/shared/prompt.mjs';
 
@@ -122,7 +122,6 @@ test('native seeded activation and a later turn keep the completed parent settin
   assert.equal((await activation.result).stopReason, 'completed');
   assert.equal((await first).stopReason, 'completed');
   assert.equal(ctx.agents.get(childId), undefined);
-  assert.equal(hub.store.peek(childId).forkPromptStyle, 'codex');
   const second = ended();
   const messageId = await ctx.subagents.sendMessage(parent, childId, [{ type: 'text', text: 'second child turn' }], { signal });
   assert.equal((await second).stopReason, 'completed');
@@ -130,7 +129,9 @@ test('native seeded activation and a later turn keep the completed parent settin
   try {
     assert.equal(saved.header.isSeeded, true);
     assert.equal(saved.inheritedEventCount, lastEnd.seq + 1);
-    const events = (await saved.read()).events.slice(saved.inheritedEventCount);
+    const snapshot = (await saved.read()).events;
+    const events = snapshot.slice(saved.inheritedEventCount);
+    assert.equal(sessionPromptStyle(hub, { id: childId, header: saved.header, snapshotEvents: () => snapshot }), 'codex');
     const claimed = events.filter(event => event.type === 'user/message');
     assert.deepEqual(claimed.filter(event => ['user', 'agent-message'].includes(event.data.source.kind)).map(event => event.data.id), [activation.messageId, messageId]);
     assert.equal(events.filter(event => event.type === 'turn/end').length, 2);

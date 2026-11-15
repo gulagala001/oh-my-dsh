@@ -23,7 +23,7 @@
     "docs/structure.json": "6f88758d0c128822b29d8157041b8076139cc8122490fa513463056fca0726d5",
     "docs/usage_EN.md": "399006309b532f2489b8f2877e86adb90e027e655b57abbaf3e38d04acbc76e4",
     "docs/usage.md": "ae75a7aa3d0b3d580d77423cb201d2ec0986a7fa4960f20417dd660279cbe4bb",
-    "lib/client.js": "11d645e70c48733e50902fa8d3676c02ec57bd52e921405620b0969d827b0aab",
+    "lib/client.js": "771796cfbf683c835dc7476c5adca6cf3718dd1f18b977f289a373d26a00bf61",
     "package.json": "25710232d1668bb40ba6797a87f02ce00ad4ed62d127991ce66125edc8e07862",
     "scripts/build.mjs": "70869d27e396cda01e08625aff9bd24fd856326c8f15cb987276422062fd54cb",
     "scripts/check-docs.mjs": "6c062fc1534c6a55951bccc2bd2818e0bc72752b5daf98c8665338f79ef68133",
@@ -40,11 +40,11 @@
     "src/client/index.jsx": "ce066a0bb66ec457073b768da12bfe3de183247e033583fb44b8bc9dfffd7f47",
     "src/client/native-chat-bridge.mjs": "53ed137560adad54b692d85666e9aa43d29614f670295b2df35776083dd96a22",
     "src/client/native-chat.css": "6ebd71e47ce5042d051205b13d6bd0a925298f78310361c2368f1ae3289e72b4",
-    "src/client/native-chat.jsx": "b0efc424f55ce2bc0e0c2cb5a3a8fd85e87ea84406a6dd93fe07220d63fae265",
+    "src/client/native-chat.jsx": "51692367b96e83f09504efd4db10d920392ef5a3fda2674aadf0b27d14eab619",
     "src/client/platform-page.jsx": "33e8af6eaa6d48835ee204795387b5c5798e49ebdb39e87498246d1b8bdc1483",
     "src/client/style.css": "14fa444b98107878fbcc99b79fee058d43efd60822b251c2470880f2c06ab23e",
-    "src/client/temporary-sidebar.jsx": "0990581ecd9e4f85e9ea46ace739bc684b7be8393db04833898ca65667b5f201",
-    "src/client/temporary-web.mjs": "4aec0f9dbcddda4327e78f3e697a7c2f10388d7b7fefe11f6090ecefcf1b6695",
+    "src/client/temporary-sidebar.jsx": "2011fe0ab9e62fafa62bbe82e79648b5bc31fe9c4c403cf23d8d08bb329a5382",
+    "src/client/temporary-web.mjs": "b5ca0ef51f1e77b4235b1a43f0093b374adee902f46f23b31316ff26d8b6fb66",
     "src/import.mjs": "20520bde14ac07877b85b5a16c5b133a33d9c587999ae5b1c1346014e46edc3b",
     "src/index.mjs": "9ba46f0254bdfd5d58d7791c506536cc2be99360cdd09ed0eece1f726527e138"
   }
