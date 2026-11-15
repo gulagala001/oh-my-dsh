@@ -1,3 +1,31 @@
+# Response ID Reuse 0.1.10 · DSH 0.2.2-rc.3
+
+[中文](#zh-0110) · [English](#en-0110)
+
+<a id="zh-0110"></a>
+
+## 中文
+
+### 其他变更
+
+- 维护更新；保持连接中断且尚未收到输出时不重复发送请求。
+
+<a id="en-0110"></a>
+
+## English
+
+### Other changes
+
+- Maintenance release retaining single-dispatch behavior when a connection ends before any output arrives.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.10-dsh.0.2.2-rc.3/gulagala001-dsh-response-id-reuse-0.1.10-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-response-id-reuse/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.10-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # Response ID Reuse 0.1.9 · DSH 0.2.2-rc.3
 
 [中文](#zh-019) · [English](#en-019)

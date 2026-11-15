@@ -1,3 +1,35 @@
+# DeepSeek Workbench 0.1.11 · DSH 0.2.2-rc.3
+
+[中文](#zh-0111) · [English](#en-0111)
+
+<a id="zh-0111"></a>
+
+## 中文
+
+### 问题修复
+
+- 发送结果未确认、登录失效或网页跳转时保留草稿，避免输入内容突然消失。
+- 临时聊天分别提供同步重试和关闭重试；导航失败后可继续操作。
+- 上传附件与拖拽文件遵循相同的会话和运行状态限制。
+
+<a id="en-0111"></a>
+
+## English
+
+### Bug fixes
+
+- Retains drafts when sending is unconfirmed, login expires, or the page changes.
+- Temporary chats offer separate sync and close retries, and navigation failures no longer leave the chat waiting.
+- File uploads and drops respect the same conversation and running-state restrictions.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.11-dsh.0.2.2-rc.3/dsh-deepseek-workbench-0.1.11-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-deepseek-workbench/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.11-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DeepSeek Workbench 0.1.10 · DSH 0.2.2-rc.3
 
 [中文](#zh-0110) · [English](#en-0110)

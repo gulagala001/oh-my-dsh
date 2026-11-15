@@ -1,3 +1,33 @@
+# DSH Persona 0.2.5 · DSH 0.2.2-rc.3
+
+[中文](#zh-025) · [English](#en-025)
+
+<a id="zh-025"></a>
+
+## 中文
+
+### 问题修复
+
+- 分支子会话在重启和再次派生后继续保留继承的人设。
+- 减少重复的人设提示，保留普通子任务的原生提示。
+
+<a id="en-025"></a>
+
+## English
+
+### Bug fixes
+
+- Forked subagents retain their inherited personality across restarts and nested forks.
+- Reduces duplicate personality guidance while preserving native prompts for ordinary delegated tasks.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.5-dsh.0.2.2-rc.3/gulagala001-dsh-persona-plugin-0.2.5-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-persona-plugin/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.5-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DSH Persona 0.2.4 · DSH 0.2.2-rc.3
 
 [中文](#zh-024) · [English](#en-024)

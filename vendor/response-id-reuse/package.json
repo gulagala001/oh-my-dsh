@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-response-id-reuse",
-  "version": "0.1.9-dsh.0.2.2-rc.3",
+  "version": "0.1.10-dsh.0.2.2-rc.3",
   "description": "Continue Responses API conversations in DeepSeek Harness by sending only new content and the previous response ID. No UI, no probe requests.",
   "type": "module",
   "license": "MIT",

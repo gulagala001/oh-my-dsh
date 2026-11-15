@@ -1,3 +1,43 @@
+# Oh My DSH 1.4.0 · DSH 0.2.2-rc.3
+
+[中文](#zh-140) · [English](#en-140)
+
+<a id="zh-140"></a>
+
+## 中文
+
+### 新增功能
+
+- 新增浏览器优先级设置，可优先使用内置浏览器，或复用你已允许使用的匹配标签。
+
+### 问题修复
+
+- 运行中始终保留可用的停止入口，设置回执丢失时先核对已保存内容。
+- 分支子会话保留继承的提示词风格与人设，普通子任务的工具目录保持一致。
+- 修复临时聊天草稿、标签关闭反馈及工作流状态显示，并显示 Dream 的完成或失败结果。
+
+<a id="en-140"></a>
+
+## English
+
+### New features
+
+- Adds browser priority settings for built-in pages or matching tabs you have authorized for reuse.
+
+### Bug fixes
+
+- Keeps a stop action available during execution and checks saved settings when a response is lost.
+- Forked subagents retain inherited prompt styles and personalities, and delegated tool catalogs stay consistent.
+- Fixes temporary-chat drafts, tab-close feedback and workflow status, and shows Dream completion or failure results.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.4.0/oh-my-dsh-0.2.2-rc.3.omd.1.4.0.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.4.0/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.24 · DSH 0.2.2-rc.3
 
 [中文](#zh-1324) · [English](#en-1324)

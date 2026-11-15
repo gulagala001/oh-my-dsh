@@ -1,3 +1,35 @@
+# OpenCU 2.3.0 · DSH 0.2.2-rc.3
+
+[中文](#zh-230) · [English](#en-230)
+
+<a id="zh-230"></a>
+
+## 中文
+
+### 体验优化
+
+- 选中文字后可在同一入口复制、引用或添加批注，取消编辑时清理对应选区。
+- 关闭文档或图片标签失败时保留内容并说明原因。
+- 打开或显示浏览器遇到问题时，明确保留已选中的页面，避免重复创建。
+
+<a id="en-230"></a>
+
+## English
+
+### Improvements
+
+- Offers copying, quoting and annotations from one text-selection entry and clears the matching selection when editing is cancelled.
+- Keeps document and image tabs open with an explanation when closing fails.
+- Retains the selected browser page when opening or showing it fails, avoiding duplicate tabs.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.3.0-dsh.0.2.2-rc.3/opencu-2.3.0-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.3.0-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # OpenCU 2.2.16 · DSH 0.2.2-rc.3
 
 [中文](#zh-2216) · [English](#en-2216)

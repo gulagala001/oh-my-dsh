@@ -43,7 +43,7 @@ export const recommendedPlugins = [
     description: '在回答中使用交互图表、表单、计算器、模拟和小游戏。',
     category: '界面增强', url: 'https://github.com/gulagala001/dsh-intelligent-ui', githubRelease: 'gulagala001/dsh-intelligent-ui',
     hostBuilds: {
-      '0.2.2-rc.3': {"version": "0.2.2-rc.3.iui.1.0.18", "releaseTag": "v0.2.2-rc.3.iui.1.0.18", "asset": "dsh-intelligent-ui-0.2.2-rc.3.iui.1.0.18.tgz", "sha256": "1d1f25ee057f0745d73c48eea093d5d8bde1d7d594dbef79ecb2ebd4ff592c30", "dsh": "0.2.2-rc.3", "allowPrerelease": false},
+      '0.2.2-rc.3': {"version": "0.2.2-rc.3.iui.1.0.19", "releaseTag": "v0.2.2-rc.3.iui.1.0.19", "asset": "dsh-intelligent-ui-0.2.2-rc.3.iui.1.0.19.tgz", "sha256": "3c30ba36166fbd3f3de38c2ba9d5f70aeeb563a64975d5991deaeb8e1a379632", "dsh": "0.2.2-rc.3", "allowPrerelease": false},
       '0.2.2-rc.2': {"version": "0.2.2-rc.2.iui.1.0.17", "releaseTag": "v0.2.2-rc.2.iui.1.0.17", "asset": "dsh-intelligent-ui-0.2.2-rc.2.iui.1.0.17.tgz", "sha256": "f516d2d1b175fa59eb33c5000378619cb51d8362a629d894641171001f7d2e1f", "dsh": "0.2.2-rc.2", "allowPrerelease": false},
       '0.2.2-rc.1': {"version": "0.2.2-rc.1.iui.1.0.15", "releaseTag": "v0.2.2-rc.1.iui.1.0.15", "asset": "dsh-intelligent-ui-0.2.2-rc.1.iui.1.0.15.tgz", "sha256": "ca13feb38d22570e2c94fc021038bbadf1ee91416f94ca01c3bccfb7ec4e4661", "dsh": "0.2.2-rc.1", "allowPrerelease": false},
       '0.2.1-rc.5': {"version": "0.2.1-rc.5.iui.1.0.14", "releaseTag": "v0.2.1-rc.5.iui.1.0.14", "asset": "dsh-intelligent-ui-0.2.1-rc.5.iui.1.0.14.tgz", "sha256": "28442a1e13f29a3ea725cf9a88a73daa4ee30fa3dc29458f4417096f2da52c07", "dsh": "0.2.1-rc.5", "allowPrerelease": false},
@@ -68,7 +68,7 @@ export const recommendedPlugins = [
     description: '在「设置 → OMAA」选择 Codex、Grok Build、Cursor、Pi Coding Agent 或 ZCode 预设，沿用 DSH 会话和工具。',
     category: '智能体', url: 'https://github.com/gulagala001/oh-my-agents-above-all', githubRelease: 'gulagala001/oh-my-agents-above-all',
     hostBuilds: {
-      '0.2.2-rc.3': {"version": "0.2.2-rc.3.omaa.0.17.13", "releaseTag": "v0.2.2-rc.3.omaa.0.17.13", "asset": "oh-my-agents-above-all-0.2.2-rc.3.omaa.0.17.13.tgz", "sha256": "a9e1807ce93a32d19ea2c9052a5363bab8065d6e75d53331254df66b6a2944af", "dsh": "0.2.2-rc.3", "allowPrerelease": false},
+      '0.2.2-rc.3': {"version": "0.2.2-rc.3.omaa.0.17.14", "releaseTag": "v0.2.2-rc.3.omaa.0.17.14", "asset": "oh-my-agents-above-all-0.2.2-rc.3.omaa.0.17.14.tgz", "sha256": "de542991eaa84ffbb537e4f6a1d177090ae16b9ccfeba5b3a0962452a47415b4", "dsh": "0.2.2-rc.3", "allowPrerelease": false},
       '0.2.2-rc.2': {"version": "0.2.2-rc.2.omaa.0.17.12", "releaseTag": "v0.2.2-rc.2.omaa.0.17.12", "asset": "oh-my-agents-above-all-0.2.2-rc.2.omaa.0.17.12.tgz", "sha256": "8504cf72aec4b899e00719ea0b522c7bb28714784cdd81f99a6a5a9ba733f5fc", "dsh": "0.2.2-rc.2", "allowPrerelease": false},
       '0.2.2-rc.1': {"version": "0.2.2-rc.1.omaa.0.17.10", "releaseTag": "v0.2.2-rc.1.omaa.0.17.10", "asset": "oh-my-agents-above-all-0.2.2-rc.1.omaa.0.17.10.tgz", "sha256": "d4a5b4a96c788f021ca21ac4c6285699821273e94df7222261b34dd71200136d", "dsh": "0.2.2-rc.1", "allowPrerelease": false},
       '0.2.1-rc.5': {"version": "0.2.1-rc.5.omaa.0.17.7", "releaseTag": "v0.2.1-rc.5.omaa.0.17.7", "asset": "oh-my-agents-above-all-0.2.1-rc.5.omaa.0.17.7.tgz", "sha256": "0605bf8c744b38de06b5c84bf375bbdc8643557287b34487606d65b1daa8fa7b", "dsh": "0.2.1-rc.5", "allowPrerelease": false},

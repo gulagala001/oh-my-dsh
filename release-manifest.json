@@ -2,6 +2,17 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.3.omd.1.4.0",
+      "severity": "normal",
+      "title": "Oh My DSH 1.4.0 · DSH 0.2.2-rc.3",
+      "notes": [
+        "浏览器操作可选择内置优先或优先复用，外部标签沿用明确授权。",
+        "运行中保留停止入口，关闭、导航、同步及恢复失败时提供准确状态和重试。",
+        "分叉会话保留人格与提示词风格；更新内置工作台、电脑操作、扩展和工作流。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.4.0"
+    },
+    {
       "version": "0.2.2-rc.3.omd.1.3.22",
       "severity": "normal",
       "title": "Oh My DSH 1.3.22 · DSH 0.2.2-rc.3",

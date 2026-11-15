@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-response-id-reuse/releases/tag/v0.1.9-dsh.0.2.2-rc.3"><img alt="DSH Response ID Reuse 0.1.9" src="https://img.shields.io/badge/release-0.1.9-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-response-id-reuse/releases/tag/v0.1.10-dsh.0.2.2-rc.3"><img alt="DSH Response ID Reuse 0.1.10" src="https://img.shields.io/badge/release-0.1.10-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-response-id-reuse/releases"><img alt="GitHub 下载量" src="https://img.shields.io/github/downloads/gulagala001/dsh-response-id-reuse/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
 </p>
@@ -21,10 +21,10 @@
 在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.9-dsh.0.2.2-rc.3/gulagala001-dsh-response-id-reuse-0.1.9-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.10-dsh.0.2.2-rc.3/gulagala001-dsh-response-id-reuse-0.1.10-dsh.0.2.2-rc.3.tgz
 ```
 
-校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.9-dsh.0.2.2-rc.3/SHA256SUMS)。装好后自动生效，没有设置项。想恢复原来的行为，在插件页停用或卸载即可。
+校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.10-dsh.0.2.2-rc.3/SHA256SUMS)。装好后自动生效，没有设置项。想恢复原来的行为，在插件页停用或卸载即可。
 
 ## 它做什么
 

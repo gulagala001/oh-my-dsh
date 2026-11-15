@@ -1,3 +1,31 @@
+# DSH Workflow 0.1.13 · DSH 0.2.2-rc.3
+
+[中文](#zh-0113) · [English](#en-0113)
+
+<a id="zh-0113"></a>
+
+## 中文
+
+### 问题修复
+
+- 后台工作流及时显示运行和停止状态，不再等待工具回执才更新。
+
+<a id="en-0113"></a>
+
+## English
+
+### Bug fixes
+
+- Background workflows show running and stopping states without waiting for a tool receipt.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.13-dsh.0.2.2-rc.3/dsh-workflow-plus-0.1.13-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-workflow/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.13-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DSH Workflow 0.1.12 · DSH 0.2.2-rc.3
 
 [中文](#zh-0112) · [English](#en-0112)

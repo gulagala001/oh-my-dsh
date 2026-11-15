@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.7-dsh.0.2.2-rc.3"><img alt="0.1.7" src="https://img.shields.io/badge/release-0.1.7-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-extensions/releases/tag/v0.1.8-dsh.0.2.2-rc.3"><img alt="DSH Extensions 0.1.8" src="https://img.shields.io/badge/release-0.1.8-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-extensions/releases"><img alt="GitHub release downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-extensions/total?style=flat-square&amp;label=GitHub%20release%20downloads"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-0969da?style=flat-square"></a>
@@ -28,10 +28,10 @@ DSH already reads skills, MCP servers, AGENTS.md and similar extensions, but mos
 In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.7-dsh.0.2.2-rc.3/dsh-extensions-0.1.7-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.8-dsh.0.2.2-rc.3/dsh-extensions-0.1.8-dsh.0.2.2-rc.3.tgz
 ```
 
-When your current task finishes, enable the plugin or restart DSH when prompted. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.7-dsh.0.2.2-rc.3/SHA256SUMS).
+When your current task finishes, enable the plugin or restart DSH when prompted. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.8-dsh.0.2.2-rc.3/SHA256SUMS).
 
 ### 2. Try it
 
