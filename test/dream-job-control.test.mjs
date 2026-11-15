@@ -215,3 +215,14 @@ test('automatic retry removes diagnostics belonging to a previous attempt', asyn
   const row=store.job(job.id);assert.equal(row.state,'complete');assert.equal(row.httpStatus,null);assert.equal(row.failure,null);
   store.release(epoch);
 });
+
+test('dock shows a recent terminal receipt, but never counts it as active or masks a live job', async t => {
+  let now=100000; const {store}=await fixture(t,{now:()=>now});
+  const first=store.enqueue('session','alpha'); store.updateJob(first.id,{state:'complete'});
+  assert.equal(store.jobActivity({includeJob:true}).job.state,'complete');
+  assert.deepEqual(store.jobActivity(),{activeJobs:0,queuedJobs:0});
+  const next=store.enqueue('session','beta'); store.updateJob(next.id,{state:'budget'});
+  assert.equal(store.jobActivity({includeJob:true}).job.id,next.id); store.updateJob(next.id,{state:'paused'});
+  assert.equal(store.jobActivity({includeJob:true}).job.state,'paused'); now+=60000;
+  assert.equal(store.jobActivity({includeJob:true}).job,null);
+});

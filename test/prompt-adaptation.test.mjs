@@ -139,7 +139,7 @@ test('Native, PTC and Both expose one complete browser guide and distinguish job
     assert.equal(directText.includes('rendered `[status: ...]` line'), toolMode !== 'ptc' || directJob);
     assert.equal(sdk.includes('inspect `job.status`'), toolMode !== 'native');
     const sender = toolMode === 'ptc' ? sdk : assembly.tools.find(t => t.name === 'send_message').description;
-    assert.notEqual(sender, 'Live child messaging');
+    assert.ok(sender.includes('Live child messaging'));
   }
 });
 
@@ -158,4 +158,16 @@ test('execution guidance is English while budget UI and user identities retain t
   assert.match(state, /Tokens: 5,000 \/ 10,000 \(50%\)/);
   assert.match(state, /Execution time: 1 minutes \/ 2 minutes \(50%\)/);
   assert.equal(renderBudget({ ...budget, limits: { tokens: null, rounds: null, timeMs: null } }, { language: 'en' }), 'Budget: unlimited');
+});
+
+test('desktop links replace only the desktop citation rule; no dangling constraint pointer', () => {
+  const sections = [{ name: 'oh-my-dsh:persona', text: '' }], ui = { name: 'ui:deliverable-file-references', text: 'host policy' };
+  const bindings = { todo_write: { file:'tools/todo-write.md',fields:[] } }, todo = tool('todo_write', 'native'), ctx = { agent: { session: { header:{} } } };
+  for (const desktop of [false, true]) for (const enabled of [false, true]) {
+    const { assembly } = transformAssembly({sections:desktop?[...sections,ui]:sections,tools:[todo]},ctx,{bindings,todoConstraintFirst:enabled});
+    assert.equal(section(assembly,'oh-my-dsh:persona').includes('Reference code as'),!desktop);
+    if(desktop) assert.match(section(assembly,ui.name), /path#L24-L30/);
+    assert.equal(assembly.tools[0].description.includes('## Constraint-first reasoning'),enabled);
+    assert.equal(section(assembly,'oh-my-dsh:persona').includes('## Constraint-first reasoning'),enabled);
+  }
 });

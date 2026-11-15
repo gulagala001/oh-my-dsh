@@ -6,7 +6,7 @@ import { apiSessionTarget } from './api-session.mjs';
 import { isOmdPreset } from './legacy-identity.mjs';
 import { validateSessionId } from './hub-store.mjs';
 
-export const ULTRA_WORKFLOW_ON = "Ultra Workflow mode is on. Use the Workflow tool on substantive tasks to delegate concrete requirements under the shared Ultra quality and initiative requirements. See the workflow authoring reference for the actual tool API.";
+export const ULTRA_WORKFLOW_ON = "Ultra Workflow mode is on. Use the Workflow tool on substantive tasks to delegate concrete requirements under the shared Ultra quality and initiative requirements. The workflow tool declaration defines its API.";
 export const ULTRA_OFF = "Ultra is off. Its standing multi-agent authorization and selected collaboration strategy no longer apply; follow the user's current task and the tools' ordinary guidance.";
 export const ULTRA_SUBMODES = new Set(['workflow', 'team', 'free']);
 const modes = new Set(['off', 'ultra']);

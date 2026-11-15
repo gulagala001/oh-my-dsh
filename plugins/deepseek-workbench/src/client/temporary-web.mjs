@@ -121,7 +121,7 @@ export class TemporaryWebChat {
   async run(type, extra = {}) {
     if (this.closing || this.closed || this.pending) throw Error('临时会话正在处理，请稍候。');
     if (!this.adapter) throw Error('网页尚未就绪。');
-    if (!['send', 'think', 'search', 'upload'].includes(type)) throw Error('临时会话不支持此操作。');
+    if (!['send', 'think', 'search', 'upload', 'stop'].includes(type)) throw Error('临时会话不支持此操作。');
     const work = async () => {
       const status = await this.adapter.extract(statusScript);
       const current = chatIdentity(status.url);
@@ -135,7 +135,7 @@ export class TemporaryWebChat {
         this.armed = true;
       }
       try {
-        const result = await this.adapter.extract(commandScript({ type, ...extra }));
+        const result = await this.adapter.extract(commandScript({ type, ...extra, expectedUrl: status.url }));
         // An unacknowledged dispatch stays fenced until its creation receipt is known.
         return result;
       }

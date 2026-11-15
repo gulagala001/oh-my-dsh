@@ -52,31 +52,30 @@ export function runtimeStateKey(status) {
 export function renderRuntimeState(status) {
   const c = status.context, last = c.lastRequest;
   const lines = [`[runtime state · as of ${status.sampledAt} · turn ${status.turn ?? 'not started'} · step ${status.step ?? 'not started'}]`,
-    'Latest snapshot supersedes earlier runtime snapshots.',
     ...(status.budget ? [renderBudget(status.budget, { language: 'en' })].filter(Boolean) : []),
-    'Turn and step are host execution positions at sampling time, not live counters.',
-    ...(status.turnWallElapsedMs == null ? [] : [`Turn wall time: ${Math.floor(status.turnWallElapsedMs / 1000)}s (includes tools and waiting).`]),
-    `Retained context estimate: ${c.retainedTokensEstimate == null ? 'not yet measured' : `${c.retainedTokensEstimate} tokens`}; excludes pending input and new prompt assembly.`,
-    ...(last ? [`Last confirmed request: ${last.provider}/${last.model}; window ${last.window ?? 'unknown'} (not remaining capacity).`] : []),
+    ...(status.turnWallElapsedMs == null ? [] : [`Turn wall time: ${Math.floor(status.turnWallElapsedMs / 1000)}s`]),
+    `Retained context estimate: ${c.retainedTokensEstimate == null ? 'not yet measured' : `${c.retainedTokensEstimate} tokens`}`,
+    ...(last ? [`Last confirmed request: ${last.provider}/${last.model}; window ${last.window ?? 'unknown'}`] : []),
     `Context records: raw ${c.records.raw}, detail ${c.records.detail}, brief ${c.records.brief}; automatic replacement ${c.automaticReplace ? 'on' : 'off'}.`,
-    `Jobs: ${status.jobsAvailable ? status.jobs.length : 'service unavailable'}. Delivery describes supplied content, not verification or success.`];
+    `Jobs: ${status.jobsAvailable ? status.jobs.length : 'service unavailable'}`];
   // Bound the complete state block in UTF-8; the task list is never truncated.
-  const footer = 'Query runtime_status for fresh facts and the full job list.';
   for (const job of status.jobs.slice(0, 8)) {
     const row = JSON.stringify({ id: job.id, status: job.status, delivery: job.resultDelivery });
-    if (Buffer.byteLength([...lines, row, footer].join('\n')) > 2048) break;
+    if (Buffer.byteLength([...lines, row].join('\n') + '\n\n') > 2048) break;
     lines.push(row);
   }
-  while (Buffer.byteLength([...lines, footer].join('\n')) > 2048) lines.pop();
-  return [...lines, footer].join('\n');
+  while (Buffer.byteLength(lines.join('\n') + '\n\n') > 2048) lines.pop();
+  return lines.join('\n') + '\n\n';
 }
 
 export function runtimeContext(agent, hub, options) {
   const config = hub.config();
   if (!config.stateHintsEnabled && !config.budgetHintsEnabled) return null;
   const status = collectRuntimeStatus(agent, hub, options);
-  const text = config.stateHintsEnabled ? renderRuntimeState(status) : renderBudget(status.budget, { language: 'en' });
-  const budgetText = renderBudget(status.budget, { language: 'en' }), interval = config.budgetInjectionEvery ?? 1;
+  const budget = renderBudget(status.budget, { language: 'en' });
+  const budgetText = budget ? budget + '\n\n' : '';
+  const text = config.stateHintsEnabled ? renderRuntimeState(status) : budgetText;
+  const interval = config.budgetInjectionEvery ?? 1;
   const limited = status.budget?.visible && Object.values(status.budget.limits).some(value => value != null);
   return text ? { key: `${Boolean(config.stateHintsEnabled)}:${runtimeStateKey(status)}`, sampledAt: status.sampledAt, text,
     ...(budgetText ? { budget: { text: budgetText, rounds: status.budget.rounds,

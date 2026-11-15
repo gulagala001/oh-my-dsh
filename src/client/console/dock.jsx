@@ -147,12 +147,13 @@ export function ContextDockItem(props) {
   </Pill>;
 }
 
-/** Dream job in progress (appears only while a job runs or waits). */
+/** Keep a recent terminal receipt in the same place as the running job. */
 export function DreamDockItem(props) {
   const isOmd = useIsOmd(props), seat = usePopover();
   const { data: live, refresh } = usePoll(signal => api(`/monitor/live?${qs({ session: props.sessionId })}`, undefined, signal), props.sessionId, { enabled: isOmd, interval: seat.open ? 3000 : 8000 });
   const data = live?.dream, job = data?.job;
-  if (!isOmd || !(data?.activeJobs || data?.queuedJobs)) return null;
+  if (!isOmd || !job) return null;
+  const status = { running: '整理中', queued: '排队', budget: '等额度', complete: '已完成', failed: '失败', paused: '已暂停' }[job.state] ?? job.state;
   const stop = async () => {
     if (!job) return;
     try { await api(`/dream/job?${qs({ session: props.sessionId })}`, { id: job.id, action: 'stop' }); }
@@ -160,9 +161,9 @@ export function DreamDockItem(props) {
     refresh();
   };
   const scope = { session: '会话', project: '项目', global: '全局' }[job?.scope] || '';
-  return <Pill seat={seat} stat="omd-dream" icon={<Dot tone="pink" pulse={Boolean(data.activeJobs)}/>} aria="Dream 整理中"
-    label={job ? `Dream ${job.done || 0}/${job.total ?? '—'}` : 'Dream 排队'} title={`Dream ${scope}整理`} footer={<Jump section="memory"/>}>
-    {job ? <dl className="omc-kv"><dt>目标</dt><dd>{job.targetTitle || job.target}</dd><dt>进度</dt><dd>{job.done || 0}/{job.total ?? '—'} 个范围</dd>
+  return <Pill seat={seat} stat="omd-dream" icon={<Dot tone="pink" pulse={Boolean(data.activeJobs)}/>} aria={`Dream ${status}`}
+    label={job.state === 'running' ? `Dream ${job.done || 0}/${job.total ?? '—'}` : `Dream ${status}`} title={`Dream ${scope}整理`} footer={<Jump section="memory"/>}>
+    {job ? <dl className="omc-kv"><dt>状态</dt><dd>{status}</dd><dt>目标</dt><dd>{job.targetTitle || job.target}</dd><dt>进度</dt><dd>{job.done || 0}/{job.total ?? '—'} 个范围</dd>
       <dt>调用</dt><dd>{job.calls || 0} 次</dd><dt>今日额度</dt><dd>{k(data.usage?.used)} / {k(data.dailyTokens)}</dd></dl> : <p className="omc-hint">等待执行</p>}
     {job && ['running', 'queued', 'budget'].includes(job.state) && <Button icon="stop" onClick={stop}>停止</Button>}
   </Pill>;

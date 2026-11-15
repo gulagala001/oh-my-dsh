@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { CodegraphRuntime } from '../src/codegraph.mjs';
-import { apply as installAgent } from '../src/codegraph-agent.mjs';
+import { apply as installAgent, exploreResult } from '../src/codegraph-agent.mjs';
 
 const cwd = new URL('../', import.meta.url).pathname;
 const deferred = () => Promise.withResolvers();
@@ -229,4 +229,12 @@ test('a cancelled manual index leaves the next independent tool preparation runn
   await runtime.ensureProject(cwd);
   assert.equal(attempts, 2);
   await runtime.dispose();
+});
+
+test('explore updates only the upstream reading advisory, never quoted source or errors', () => {
+  const advisory = '> The code below is the **verbatim, current on-disk source**; do not Read a file shown here.';
+  const source = '```js\n'+advisory+'\n```', raw = { content:[{type:'text',text:advisory+'\n'+source}] };
+  const text = exploreResult(raw).content[0].text;
+  assert.match(text,/Before edit, read the target range/); assert.ok(text.endsWith(source));
+  const error = {...raw,isError:true}; assert.equal(exploreResult(error),error);
 });

@@ -12,7 +12,7 @@ import { accessSync, constants, realpathSync } from 'node:fs'
 import { resolve as resolvePath, extname } from 'node:path'
 
 /** 新用户输入时投递的任务提醒。 */
-export const TODO_NUDGE = promptText('runtime/task-nudge.md')
+export const TODO_NUDGE = promptText('runtime/task-nudge.md') + '\n\n'
 /** run 失败输出尾巴长度（回执 output tail 的截取；「tail」语义是拍板文案自带的，非预算限制） */
 const RUN_TAIL_CHARS = 2000
 /** 单个测试文件的执行上限（对齐本仓 run_verify 前例 tsc 300s；防挂死拖住取证轮） */

@@ -17,15 +17,17 @@ export const MAIN_FILES = Object.freeze(["main/01-identity.md", "main/02-harness
 const mainParts = MAIN_FILES.map(promptText);
 export function buildMainPrompt(identity = DEFAULT_IDENTITY, { toolMode = 'native', personalityModules } = {}) {
   const inserts = { 0: 'style', 5: 'presentation', 6: 'communication' };
+  let hasPersonality = Boolean(identity.trim());
   const mainBody = mainParts.flatMap((part, index) => {
     const key = inserts[index];
-    return [part, key && personalityModules ? personalityGuidance(key, personalityModules[key] ?? PERSONALITY_FIELDS.find(field => field.key === key).defaultText) : ''];
+    const guidance = key && personalityModules ? personalityGuidance(key, personalityModules[key] ?? PERSONALITY_FIELDS.find(field => field.key === key).defaultText) : '';
+    if (guidance) hasPersonality = true;
+    return [part, guidance];
   }).filter(Boolean).join('\n\n');
   const body = toolMode === 'ptc' ? mainBody.replace(
     'Independent tool calls can run in parallel in one response.',
     'Independent read-only tool calls may run concurrently inside a `run_code` program; await dependent work in order.',
   ) : mainBody;
-  const hasPersonality = identity.trim() || mainBody !== mainParts.join('\n\n');
   return [identity.trim(), hasPersonality ? PERSONALITY_SCOPE : '', body, toolMode !== 'native' ? promptText('runtime/ptc-guidance.md') : ''].filter(Boolean).join('\n\n');
 }
 export const mainPrompt = buildMainPrompt();

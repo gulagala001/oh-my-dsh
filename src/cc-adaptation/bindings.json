@@ -190,14 +190,7 @@
     "mode": "retain-native"
   },
   "send_message": {
-    "file": "tools/send-message.md",
-    "fields": [
-      "agent",
-      "message"
-    ],
-    "sections": [
-      "tool:send_message"
-    ]
+    "mode": "retain-native"
   },
   "list_agents": {
     "mode": "retain-native"

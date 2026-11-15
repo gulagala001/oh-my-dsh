@@ -59,7 +59,7 @@ export function projectCatalogAssembly(assembly, { enabled, schemas, renderSdk, 
   return { ...assembly, tools, sections };
 }
 export function installCatalog(ctx, hub) {
-  ctx.tools.register(checkedTool({ name: 'tool_find', description: 'Find optional tools by name or purpose. Returns their exact input and output contracts and includes them in the next Native request or PTC SDK. Use an empty query to browse; permissions are unchanged.',
+  ctx.tools.register(checkedTool({ name: 'tool_find', description: 'Find optional tools by name or purpose. Returns their exact input and output contracts and includes them in the next Native request or PTC SDK. Returns a JSON string with available, matched, tools and optional nextOffset. Use an empty query to browse; permissions are unchanged.',
     parameters: { type: 'object', additionalProperties: false, properties: {
       query: { type: 'string', description: 'Name or purpose, at most 256 characters; empty lists all optional tools.' },
       offset: { type: 'integer', description: 'Non-negative result offset, default 0.' },

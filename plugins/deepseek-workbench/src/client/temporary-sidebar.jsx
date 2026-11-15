@@ -6,7 +6,7 @@ export const TEMPORARY_WEB_KIND = 'deepseek-temporary-chat';
 export const TEMPORARY_WEB_ID = 'dsh-deepseek-workbench/temporary';
 
 export function installTemporarySidebar(ctx, BrowserPage) {
-  const entries = new Map();
+  const entries = new Map(), closing = new WeakSet();
   const get = tab => {
     let value = entries.get(tab.id);
     if (!value) { value = new TemporaryWebChat(); entries.set(tab.id, value); }
@@ -17,6 +17,9 @@ export function installTemporarySidebar(ctx, BrowserPage) {
     const temporary = get(tab);
     const [, refresh] = useState(0);
     useEffect(() => temporary.subscribe(() => refresh(n => n + 1)), [temporary]);
+    useEffect(() => tab.actions.bindCloseGuard?.(async () => {
+      try { await temporary.close(); return true; } catch { return false; }
+    }), [tab.actions, temporary]);
     const close = () => { void temporary.close().then(() => tab.actions.close()).catch(() => {}); };
     return <div className="dswb-temporary" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <div className="dswb-toolbar"><span role="status">{temporary.closing ? '正在清理临时聊天…' : '临时聊天 · 关闭后删除历史'}</span><Button size="sm" disabled={temporary.closing} onClick={close}>关闭</Button></div>
@@ -31,7 +34,12 @@ export function installTemporarySidebar(ctx, BrowserPage) {
   ctx.effect(() => ctx.sidebarRight.registerCloseHandler(TEMPORARY_WEB_KIND, (sessionId, tab) => {
     const temporary = entries.get(tab.id);
     if (!temporary || temporary.closed) { entries.delete(tab.id); return; }
-    void temporary.close().then(() => ctx.sidebarRight.closeIn(sessionId, tab.id)).catch(() => {});
+    // Stock hosts have only a synchronous veto. Never interpret a promise as approval.
+    if (!closing.has(temporary)) {
+      closing.add(temporary);
+      void temporary.close().then(() => { if (entries.get(tab.id) === temporary) ctx.sidebarRight.closeIn(sessionId, tab.id); })
+        .catch(() => {}).finally(() => closing.delete(temporary));
+    }
     throw Error('正在清理临时网页聊天；清理成功后自动关闭。');
   }));
   const command = {

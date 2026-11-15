@@ -6,6 +6,25 @@ export const inject = ['omd', 'tools', 'systemPrompt'];
 export const CODEGRAPH_GUIDE = `CodeGraph is bundled with Oh My DSH and enabled by default. The current project is indexed automatically in the background; a first query waits for preparation when needed. Use codegraph_index to refresh or rebuild a project's index. It creates the project's .codegraph directory; no global CLI installation or agent setup is needed. Query paths default to this session's working directory; relative projectPath values resolve against it. Indexed projects have live synchronization while connected; idle connections close and catch up on the next query. If indexing or a query fails, report the error and continue with the ordinary file/search tools where appropriate. Component status and switches are in the basic components settings.`;
 export const CODEGRAPH_DISABLED_GUIDE = 'CodeGraph is disabled in component settings. Use the ordinary file and search tools. Do not start or query CodeGraph unless the user enables it.';
 
+const exploreRead = 'For read-only questions, use the displayed symbols without reopening them. Before edit, read the target range. Before overwriting an existing file with write, read the entire current file without truncation or use context_view(file, view="raw") with partial=false. In run_code, await and inspect the read before the edit.';
+// Replace only the known upstream advisory lines, never text inside a source block.
+export function exploreResult(result) {
+  if (result?.isError || !Array.isArray(result?.content)) return result;
+  return { ...result, content: result.content.map(block => {
+    if (block.type !== 'text') return block;
+    let fence = '';
+    const text = block.text.split('\n').map(line => {
+      const delimiter = line.match(/^(`{3,}|~{3,})/);
+      if (delimiter && (!fence || delimiter[1].startsWith(fence))) { fence = fence ? '' : delimiter[1]; return line; }
+      if (fence) return line;
+      if (line.startsWith('> The code below is the **verbatim, current on-disk source**') && line.includes('do not Read a file shown here')) return '> ' + exploreRead;
+      if (/^> \*\*Complete source for \d+ files? is included above/.test(line) && line.includes('do NOT re-read')) return '> Use the displayed symbols for exploration. For file changes follow the read requirements in the tool declaration.';
+      return line;
+    }).join('\n');
+    return text === block.text ? block : { ...block, text };
+  }) };
+}
+
 export async function apply(ctx) {
   const runtime = ctx.omd.codegraph, owner = codegraphCatalogOwner(ctx);
   if (!owner.active()) return;
@@ -40,9 +59,12 @@ export async function apply(ctx) {
         const parameters = { ...tool.inputSchema, required: (tool.inputSchema.required || []).filter(key => key !== 'projectPath') };
         const definition = createMcpToolDefinition(ctx, {
           name: `mcp__codegraph__${tool.name}`, rawName: tool.name,
-          description: tool.description, inputSchema: parameters, outputSchema: tool.outputSchema,
-          call: (args, { agent, signal }) => runtime.call(tool.name, args, { cwd: currentDirectory(ctx, agent.session), signal,
-            sessionKey: ctx.omd.optimization?.graphScope(agent) ?? agent.session.id }),
+          description: tool.name === 'codegraph_explore' ? 'Explore relevant source symbols and their call paths by question, symbol or filename. ' + exploreRead : tool.description, inputSchema: parameters, outputSchema: tool.outputSchema,
+          async call(args, { agent, signal }) {
+            const result = await runtime.call(tool.name, args, { cwd: currentDirectory(ctx, agent.session), signal,
+              sessionKey: ctx.omd.optimization?.graphScope(agent) ?? agent.session.id });
+            return tool.name === 'codegraph_explore' ? exploreResult(result) : result;
+          },
         });
         if (!owner.active()) return;
         ctx.tools.register(definition);

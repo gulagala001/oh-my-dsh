@@ -8,7 +8,6 @@ import { agentPromptStyle } from '../prompt-styles/session.mjs';
 import { DSH_IDENTITY, renderPromptStyle } from '../prompt-styles/render.mjs';
 import { isUnseededSubagent, renderPersonality } from '../../plugins/persona/src/shared/prompt.mjs';
 import { withoutTaskVerification } from '../task-verification.mjs';
-import { hasNativeTeamTools } from '../ultracode.mjs';
 import { isOmdPreset } from '../legacy-identity.mjs';
 
 import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
@@ -46,13 +45,8 @@ export function transformAssembly(assembly, context, options = {}) {
   const known = new Map(schemas.map(tool => [tool.name, tool]));
   const directTools = new Map((assembly.tools ?? []).map(tool => [tool.name, tool]));
   const shells = ['bash', 'pwsh'];
-  const teamControl = hasNativeTeamTools(schemas);
   const applied = new Set(), retained = [], missing = [], changedSchemas = new Map();
   for (const tool of known.values()) {
-    // Native Team controls use member targets, not ordinary child ids.
-    if (teamControl && ['send_message', 'list_agents', 'interrupt_agent'].includes(tool.name)) {
-      retained.push({ name: tool.name, reason: 'native-team-control' }); continue;
-    }
     if (tool.name === 'run_code') { retained.push({ name: tool.name, reason: 'runtime-owned-transport' }); continue; }
     const binding = map[tool.name];
     if (!binding) { retained.push({ name: tool.name, reason: 'unmapped-native-tool' }); continue; }
@@ -70,6 +64,7 @@ export function transformAssembly(assembly, context, options = {}) {
     if (tool.name === 'todo_write' && (!fields.op?.enum?.includes('pause_turn') || !Object.hasOwn(fields, 'reason'))) {
       description = description.split('\n').filter(line => !line.includes('`pause_turn`')).join('\n');
     }
+    if (tool.name === 'todo_write' && constraintGuidance) description += '\n\nApply ## Constraint-first reasoning to task titles and completion checks.';
     // Do not tell the model to use optional companion tools it cannot see.
     if (['bash', 'pwsh'].includes(tool.name) && !Object.hasOwn(fields, 'run_in_background')) {
       description = description.split('\n').filter(line => !line.includes('`run_in_background`')).join('\n');
@@ -106,6 +101,8 @@ export function transformAssembly(assembly, context, options = {}) {
     renderPersonality(options.personalityModules ?? { identity: options.identityPrompt }),
     toolMode !== 'native' ? load('runtime/ptc-guidance.md') : '',
   ].filter(Boolean).join('\n\n') : options.main ?? buildMainPrompt(options.identityPrompt, { toolMode, personalityModules: options.personalityModules });
+  const fileReferences = assembly.sections.some(section => section.name === 'ui:deliverable-file-references' && section.text);
+  if (fileReferences && style === 'omd') persona = persona.replace('\n - Reference code as `file_path:line_number`.', '');
   if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '');
   if (options.stateHintsEnabled && known.has('runtime_status')) persona += '\n\n' + load('runtime/state-guidance.md');
   if (!directComputerHasGuide && !sdkComputerHasGuide && shells.some(name => known.has(name))) persona += '\n\n## Browser testing\n' + shellGuide;
@@ -124,6 +121,7 @@ export function transformAssembly(assembly, context, options = {}) {
   let sdkRegenerated = false, sdkSchemas;
   const sections = assembly.sections.flatMap(section => {
     if (section.name === 'oh-my-dsh:persona') return [{ ...section, text: persona, interpolate: false }];
+    if (section.name === 'ui:deliverable-file-references' && fileReferences && style === 'omd') return [{ ...section, text: load('runtime/file-references.md'), interpolate: false }];
     if (section.name === 'harness:identity' && style !== 'dsh') return [];
     if (section.name === 'tool:jobs' && applied.has('job_output') && applied.has('job_kill')) {
       return [{ ...section, text: load(options.backgroundTasksEnabled ? 'runtime/job-collection-background.md' : 'runtime/job-collection.md'), interpolate: false }];

@@ -149,7 +149,7 @@ export class ResultReduction {
     }
   }
   track(promise) { this.writes.add(promise); promise.catch(error => this.ctx.logger?.warn?.('上下文优化保留原结果：' + error.message)).finally(() => this.writes.delete(promise)); return promise; }
-  async settled() { await Promise.allSettled([...this.writes]); }
+  async settled() { await Promise.allSettled([this.evidence.ready, ...this.writes]); }
   async ancestors(session, signal) {
     const ids = [], seen = new Set([session.id]); let current = session;
     while (forkParentOf(current.header, this.hub.store) && current.header.origin !== 'subagent' && ids.length < 64) {

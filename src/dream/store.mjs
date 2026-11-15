@@ -180,6 +180,7 @@ export class DreamStore {
       ? {error:null,code:null,httpStatus:null,failure:null,resumeAt:null} : {};
     const next = { ...before, ...reset, ...patch, updatedAt: this.now() };
     this.db.prepare('UPDATE jobs SET state=?,automatic=?,data=? WHERE id=?').run(next.state,Number(next.automatic),encode(next),id);
+    if (patch.state && ['complete','paused','failed'].includes(next.state)) this.setMeta('lastTerminalJob', id);
     if(next.state==='complete')this.db.prepare('DELETE FROM job_targets WHERE job=?').run(id);
     return next;
   }
@@ -227,7 +228,12 @@ export class DreamStore {
       ${includeJob ? `, coalesce(
         (SELECT data FROM jobs WHERE state='running' ORDER BY created DESC,rowid ASC LIMIT 1),
         (SELECT data FROM jobs WHERE state IN ('queued','budget') ORDER BY created DESC,rowid ASC LIMIT 1)) data` : ''}`).get();
-    return { activeJobs: row.activeJobs, queuedJobs: row.queuedJobs, ...(includeJob ? { job: decode(row) } : {}) };
+    let job = includeJob ? decode(row) : null;
+    if (includeJob && !job) {
+      const id = this.meta('lastTerminalJob'), last = id && this.job(id);
+      if (last && ['complete','paused','failed'].includes(last.state) && this.now() - last.updatedAt < 60000) job = last;
+    }
+    return { activeJobs: row.activeJobs, queuedJobs: row.queuedJobs, ...(includeJob ? { job } : {}) };
   }
   hasRunnableJobs() { return Boolean(this.db.prepare("SELECT 1 FROM jobs WHERE state IN ('queued','running') LIMIT 1").get()); }
   recover(epoch) {

@@ -3,6 +3,7 @@ import { extractPageSource, pageFunctionScript } from './extraction.mjs';
 /** Operate only the visible official composer. No account store or credential reads. */
 export async function pageCommand(command, readStatus, readPreview) {
   if (location.origin !== 'https://chat.deepseek.com') throw Error('请先打开 DeepSeek 聊天。');
+  if (command.expectedUrl !== undefined && command.expectedUrl !== location.href) throw Error('网页对话已经切换，未执行操作；请等待当前对话就绪。');
   const input = document.querySelector('textarea[name="search"]');
   const label = node => (node.getAttribute('aria-label') || node.getAttribute('title') || node.textContent || '').trim();
   if (command.type === 'new') {
@@ -26,6 +27,21 @@ export async function pageCommand(command, readStatus, readPreview) {
       if (status[command.type]?.enabled === enabled) return { dispatched: true, status };
     } while (Date.now() < deadline);
     throw Error('尚未确认官网开关状态，请检查官网页面后重试。');
+  }
+  if (command.type === 'stop') {
+    if (!readStatus().generating) return { status: readStatus() };
+    for (let scope = input?.parentElement, depth = 0; scope && depth < 5; scope = scope.parentElement, depth++) {
+      for (const node of scope.querySelectorAll('button,[role="button"]')) {
+        if (node.disabled || node.getAttribute('aria-disabled') === 'true' || !node.getClientRects().length) continue;
+        const key = Object.keys(node).find(key => key.startsWith('__reactFiber$'));
+        let stop = /^(停止(?:生成|回复)?|Stop(?: generating| response)?)$/i.test(label(node));
+        for (let fiber = node[key], i = 0; !stop && fiber && i < 7; fiber = fiber.return, i++) stop = fiber.memoizedProps?.mode === 'stop';
+        if (!stop) continue;
+        node.click();
+        return { dispatched: true, status: readStatus() };
+      }
+    }
+    throw Error('官网未提供可确认的停止按钮；没有发送停止操作。');
   }
   if (!input || input.disabled || input.readOnly) throw Error('网页输入框尚不可用，请先完成登录或等待回复结束。');
   if (command.type === 'send') {

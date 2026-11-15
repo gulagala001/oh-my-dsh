@@ -330,6 +330,20 @@ await patch(sidebar + 'service.ts', [[
       commit()
     })`,
 ]], 'occurrence.closeGuards.close(');
+// Keep synchronous close hooks synchronous; expose the guarded completion to the owning tab.
+await patch(sidebar + 'contract/slots.ts', [['  close(): void', '  close(): boolean | Promise<boolean>']], 'close(): boolean | Promise<boolean>');
+await patch(sidebar + 'tab-domain.ts', [
+  ['closeIn(sessionId: SessionId, tabId: TabId): void', 'closeIn(sessionId: SessionId, tabId: TabId): boolean | Promise<boolean>'],
+  ['close: () => { navigator.closeIn(sessionId, tabId) }', 'close: () => navigator.closeIn(sessionId, tabId)'],
+], 'close: () => navigator.closeIn');
+await patch(sidebar + 'service.ts', [
+  ['closeIn(sessionId: SessionId, tabId: TabId): void', 'closeIn(sessionId: SessionId, tabId: TabId): boolean | Promise<boolean>'],
+  ['if (actions === undefined || surface === undefined) return\n    const tab = surface.layout.tabs[tabId]', 'if (actions === undefined || surface === undefined) return false\n    const tab = surface.layout.tabs[tabId]'],
+  ['if (tab === undefined || !canCloseTab(surface, tabId)) return\n    this.removeAfterCleanup', 'if (tab === undefined || !canCloseTab(surface, tabId)) return false\n    return this.removeAfterCleanup'],
+  ['private removeAfterCleanup(sessionId: SessionId, tab: TabRecord, commit: () => void): void', 'private removeAfterCleanup(sessionId: SessionId, tab: TabRecord, commit: () => void): boolean | Promise<boolean>'],
+  ['    occurrence.closeGuards.close(() => {', '    return occurrence.closeGuards.close(() => {'],
+  ['current?.kind !== tab.kind) return\n      this.closeHandlers.get(tab.kind)?.(sessionId, tab)\n      commit()', 'current?.kind !== tab.kind) return false\n      this.closeHandlers.get(tab.kind)?.(sessionId, tab)\n      commit()\n      return true'],
+], 'return occurrence.closeGuards.close(');
 await patch(sidebar + 'contract/slots.ts', [["    /** Session content selected by the root-scoped right Sidebar controller. */", "    /** Session-owned accessories; no contributor changes the docking surface. */\n    'sidebar.right.accessory': { kind: 'list'; scope: 'session'; owner: { readonly visible: boolean } }\n    /** Session content selected by the root-scoped right Sidebar controller. */"]], 'sidebar.right.accessory');
 // Structured context menus moved the menu-item child out of rightbar.session.
 // Attach accessories to the session's title child, which remains in that seat.
