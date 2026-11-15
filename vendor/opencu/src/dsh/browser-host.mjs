@@ -315,6 +315,9 @@ export function createBrowserHost() {
   return {
     backend,
     listBrowsers() { return liveClients().map(client => ({ id: `dsh:${client.id}`, provider: 'dsh', name: 'DSH Browser' })); },
+    browsersForSession(sessionId) {
+      return liveClients().filter(client => client.sessionIds.includes(sessionId)).map(client => `dsh:${client.id}`);
+    },
     presentationOwner,
     revealTab({ id, identity }, sessionId, signal) {
       const target = { id, identity };

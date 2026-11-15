@@ -46,7 +46,7 @@ function fixture(t, { blocked = false } = {}) {
     }
     return { mode: rows[id].mode ?? 'off', submode: rows[id].submode ?? 'free', eligible: true, teamAvailable: false, selected: rows[id].selected, revision: selections.length };
   }, storage: { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) } });
-  drafts.managed.set('saved', true);
+  drafts.managed.set('saved', { cwd: rows.saved.cwd, managed: true });
   t.after(() => drafts.dispose());
   return { drafts, opened, created, initialized, notices, selections, modeSelections, models, rows, draftsById, workspaces, allocations, get minted() { return mint; }, gate: value => { catalogGate = value; } };
 }
@@ -144,7 +144,7 @@ test('a submitting draft keeps its content when initialization is blocked', asyn
 
 test('old unmanaged drafts remain intact instead of being repurposed or copied', async t => {
   const f = fixture(t), original = structuredClone(f.draftsById.saved);
-  f.drafts.managed.set('saved', false);
+  f.drafts.managed.set('saved', { cwd: f.rows.saved.cwd, managed: false });
   await f.drafts.startDraft('saved');
   assert.notEqual(f.opened.at(-1), 'saved');
   assert.deepEqual(f.draftsById.saved, original);

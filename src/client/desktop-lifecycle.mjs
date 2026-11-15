@@ -12,7 +12,7 @@ export function installDesktopLifecycle(ctx) {
     const sync = () => {
       if (modules.entries.state.getSnapshot().syncing) return;
       const revision = modules.manifest.modules.find(row => row.id === 'oh-my-dsh')?.rev;
-      if (revision === bootRevision) return;
+      if (revision === bootRevision) { notice?.remove(); notice = undefined; return; }
       if (notice) return;
       notice = document.createElement('div');
       notice.dataset.omdDesktopRestart = '';

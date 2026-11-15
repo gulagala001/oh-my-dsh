@@ -122,8 +122,8 @@ function createWorkflowRecorder(ctx) {
     if (!append(session, "tool-workflow/agent-end", data)) active.delete(info.id);
   });
   return {
-    start(session, run) {
-      if (append(session, "tool-workflow/run-start", { runId: run.id, name: run.meta.name })) {
+    start(session, run, jobId) {
+      if (append(session, "tool-workflow/run-start", { runId: run.id, name: run.meta.name, ...jobId === void 0 ? {} : { jobId } })) {
         active.set(run.id, session);
       }
     },
@@ -259,7 +259,7 @@ async function startBackgroundRun(ctx, args, parent, toolCall, recordsRun, deps)
         parent
       });
       deps.mirror.start(run.id, job);
-      if (recordsRun) deps.recorder.start(parent.session, run);
+      if (recordsRun) deps.recorder.start(parent.session, run, job.id);
       const done = run.result.then(async (result) => {
         let settled = result;
         try {

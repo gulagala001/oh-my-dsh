@@ -20,16 +20,17 @@ function WorkflowProgress({ ctx, ...props }) {
   const jobState = useStore(ctx.jobs.state);
   const runs = useMemo(() => workflowJobs(window?.entries ?? []), [window]);
   const workflows = headerWorkflows(chat).map(node => ({ ...node, data: liveWorkflowData(node, runs, jobState?.rows?.[sessionId], sessionId) }));
-  const current = workflows.find(node => node.data.status === 'running') ?? workflows[0];
+  const current = workflows.find(node => ['running', 'stopping'].includes(node.data.status)) ?? workflows[0];
   const [open, setOpen] = useState(false);
   const trigger = useRef(null), panel = useRef(null), id = useId();
   const position = useAnchoredPosition({ open, anchorRef: trigger, panelRef: panel, side: 'bottom', gap: 8, margin: 12 });
   useDismissOnOutsidePointer(trigger, open, setOpen, panel);
   useEffect(() => ctx.jobs.watchRows(sessionId), [ctx, sessionId]);
   useEffect(() => { setOpen(false); }, [sessionId]);
+  const visible = open && position !== null;
+  useEffect(() => { if (visible) panel.current?.focus({ preventScroll: true }); }, [visible]);
   useEffect(() => {
     if (!open) return;
-    panel.current?.focus({ preventScroll: true });
     const escape = event => {
       if (event.key !== 'Escape') return;
       event.preventDefault(); setOpen(false); trigger.current?.focus();

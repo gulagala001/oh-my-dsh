@@ -5,7 +5,9 @@ export function workflowJobs(entries) {
   for (const entry of entries) {
     const event = entry.event ?? entry, data = event.data;
     if (event.type === 'tool/call' && data.name === 'workflow') calls.set(event.seq, data);
-    else if (event.type === 'tool-workflow/run-start') runs.set(data.runId, { seq: event.seq });
+    else if (event.type === 'tool-workflow/run-start') runs.set(data.runId, {
+      seq: event.seq, ...(typeof data.jobId === 'string' && data.jobId && { jobId: data.jobId }),
+    });
     else if (event.type === 'tool-workflow/run-end') {
       const run = runs.get(data.runId);
       if (run) { run.ended = true; run.failures = data.failures ?? []; }
@@ -23,7 +25,7 @@ export function workflowJobs(entries) {
       const jobId = /^workflow "[\s\S]*?" started in the background as job ([^.\s]+)\./.exec(text)?.[1];
       const runId = /\nRun ID: ([^\r\n]+)(?:\r?\n|$)/.exec(text)?.[1];
       const run = runs.get(runId);
-      if (!jobId || !run || run.seq >= event.seq) continue;
+      if (!jobId || !run || run.jobId || run.seq >= event.seq) continue;
       const owned = ownedCalls.some(seq => seq < run.seq);
       if (owned) run.jobId = jobId;
     }

@@ -32,7 +32,7 @@ export function McpPage() {
   const connecting = servers.some(server => server.enabled || ['starting', 'stopping', 'cleanup-failed'].includes(server.status));
   useEffect(() => {
     if (!connecting) return;
-    const timer = setInterval(() => void list.reload({ quiet: true }), 2000);
+    const timer = setInterval(() => void list.reload({ quiet: true, idleOnly: true }), 2000);
     return () => clearInterval(timer);
   }, [connecting, list.reload]);
   const write = async (input, success) => {

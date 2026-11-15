@@ -9,7 +9,12 @@ const groupOf = source => GROUPS.find(([, sources]) => sources.includes(source))
 const ORDER = ['project', 'user', 'custom', 'bundled', 'runtime'];
 
 export function SkillsPage() {
-  const t = useT(), { scope, scopes } = useScopes(), opener = useOpeners(), action = useAction();
+  const { scope, scopes } = useScopes();
+  return <ScopedSkillsPage key={scope} scope={scope} scopes={scopes}/>;
+}
+
+function ScopedSkillsPage({ scope, scopes }) {
+  const t = useT(), opener = useOpeners(), action = useAction();
   const [search, setSearch] = useState(''), [open, setOpen] = useState(null), [editor, setEditor] = useState(null), [removing, setRemoving] = useState(null);
   const list = useResource(() => api(query('/skills', { scope })), [scope]);
   const skills = list.data?.skills ?? [];
@@ -63,11 +68,11 @@ export function SkillsPage() {
       : !groups.length ? <p className="dshx-empty">{t('noMatch')}</p>
       : groups.map(([key, items]) => <Group key={key} title={t(`skills.group.${key}`)} count={items.length}>
         {items.map(skill => {
-          const enabled = skill.model || skill.user;
+          const enabled = skill.model || skill.user, both = skill.model && skill.user;
           return <Row key={skill.key} icon={<IconSkillOutlineRegular size={20}/>} title={skill.name} muted={!enabled}
-            tags={<>{!enabled && <Tag tone="quiet">{t('skills.stopped')}</Tag>}{key !== 'bundled' && key !== 'runtime' && <Tag tone="quiet">{t(`source.${skill.source}`)}</Tag>}</>}
+            tags={<>{!enabled && <Tag tone="quiet">{t('skills.stopped')}</Tag>}{enabled && !both && <Tag tone="warning">{t(skill.model ? 'skills.modelOnly' : 'skills.userOnly')}</Tag>}{key !== 'bundled' && key !== 'runtime' && <Tag tone="quiet">{t(`source.${skill.source}`)}</Tag>}</>}
             description={skill.description} onOpen={() => setOpen(skill.key)}
-            end={<><Switch label={t('toggle', { name: skill.name })} checked={enabled} disabled={!skill.editable || action.busy} title={skill.editable ? undefined : t('skills.readOnly')}
+            end={<><Switch label={t('skills.toggleBoth', { name: skill.name })} checked={both} disabled={!skill.editable || action.busy} title={skill.editable ? t('skills.toggleBoth', { name: skill.name }) : t('skills.readOnly')}
               onChange={value => toggle(skill, { model: value, user: value })}/><ActionsMenu actions={menu(skill)}/></>}/>;
         })}
       </Group>)}

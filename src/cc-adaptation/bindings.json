@@ -192,7 +192,7 @@
   "send_message": {
     "file": "tools/send-message.md",
     "fields": [
-      "agent_id",
+      "agent",
       "message"
     ],
     "sections": [

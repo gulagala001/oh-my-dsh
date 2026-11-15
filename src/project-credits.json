@@ -198,7 +198,7 @@
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#dsh",
       "version": "0.2.2-rc.3",
-      "sourceSha256": "3e8b9f1c46f0da4b9306b8bceb9b80f1a279d9e540b12b38aa4b96d7356b8e39",
+      "sourceSha256": "bea4913ee60b81b4818bf2f52cf74aae61b75d22482b6828b10d18f344929593",
       "group": "sources"
     },
     {
@@ -218,8 +218,8 @@
       "license": "Original upstream rights apply",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
       "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json",
-      "version": "SHA256:dd741c57658f86ac451f35020044aba31e35c00ee76bb3a29be47285678e9d26",
-      "sourceSha256": "dd741c57658f86ac451f35020044aba31e35c00ee76bb3a29be47285678e9d26",
+      "version": "SHA256:65038c9a2758155b703a502bcf44b3deca68e598e41e7cd2711e44242699eea6",
+      "sourceSha256": "65038c9a2758155b703a502bcf44b3deca68e598e41e7cd2711e44242699eea6",
       "group": "sources"
     },
     {

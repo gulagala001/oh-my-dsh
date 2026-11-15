@@ -140,9 +140,14 @@ export class TemporaryWebChat {
         return result;
       }
       finally {
-        const latest = await this.adapter.extract(statusScript);
-        this.observe(latest.url);
-        await this.capture();
+        try {
+          const latest = await this.adapter.extract(statusScript);
+          this.observe(latest.url);
+          await this.capture();
+        } catch (error) {
+          this.error = '临时聊天的归属尚未同步；关闭前会重新核对：' + error.message;
+          this.publish();
+        }
       }
     };
     this.pending = work();

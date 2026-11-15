@@ -1,3 +1,7 @@
+const sameSetting = (a, b) => Object.is(a, b) || a != null && b != null && typeof a === 'object' && typeof b === 'object'
+  && Array.isArray(a) === Array.isArray(b) && Object.keys(a).length === Object.keys(b).length
+  && Object.keys(a).every(key => Object.hasOwn(b, key) && sameSetting(a[key], b[key]));
+
 // The server owns confirmed settings. Pending edits are an ordered overlay,
 // so an older read or a failed write cannot erase a newer user's edit.
 export function createSettingsState({ read, write, onChange, onSaved, onError }) {
@@ -29,7 +33,11 @@ export function createSettingsState({ read, write, onChange, onSaved, onError })
           // A lost response can follow a completed server write. Read its
           // actual state before rolling back only this failed edit.
           const restored = !closed && await reload();
-          if (!closed) onError?.('保存失败：' + error.message + (restored ? '' : '；无法重新读取设置，请重试。'));
+          if (restored && Object.entries(item.patch).every(([key, value]) => sameSetting(confirmed.config?.[key], value))) {
+            onSaved?.(confirmed.config);
+            return true;
+          }
+          if (!closed) onError?.(restored ? '设置未应用：' + error.message : '无法确认设置是否已保存；请先重新读取设置。');
           return false;
         } finally { pending.splice(pending.indexOf(item), 1); publish(); }
       });

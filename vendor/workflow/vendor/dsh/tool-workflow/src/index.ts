@@ -67,7 +67,7 @@ export const Config: z<Config> = z.object({
 type ResolvedConfig = Required<Config>
 
 interface WorkflowRecorder {
-  start(session: Session, run: WorkflowRun): void
+  start(session: Session, run: WorkflowRun, jobId?: JobId): void
   finish(runId: WorkflowRunId, stopReason: WorkflowStopReason, failures?: ReturnType<typeof childFailures>): void
   abandon(runId: WorkflowRunId): void
 }
@@ -138,8 +138,8 @@ function createWorkflowRecorder(ctx: Context): WorkflowRecorder {
   })
 
   return {
-    start(session, run) {
-      if (append(session, 'tool-workflow/run-start', { runId: run.id, name: run.meta.name })) {
+    start(session, run, jobId) {
+      if (append(session, 'tool-workflow/run-start', { runId: run.id, name: run.meta.name, ...(jobId === undefined ? {} : { jobId }) })) {
         active.set(run.id, session)
       }
     },
@@ -339,7 +339,7 @@ async function startBackgroundRun(
         parent,
       })
       deps.mirror.start(run.id, job)
-      if (recordsRun) deps.recorder.start(parent.session, run)
+      if (recordsRun) deps.recorder.start(parent.session, run, job.id)
       const done = run.result.then(async (result): Promise<JobOutcome> => {
         let settled = result
         try {

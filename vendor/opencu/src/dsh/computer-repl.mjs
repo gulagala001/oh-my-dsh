@@ -457,6 +457,7 @@ export function createComputerRepl(request, report = () => {}) {
     }
   }
   function initialize() {
+    const invalidArgument = message => Object.assign(new TypeError(message), {code:'INVALID_ARGUMENT',details:{inputDispatched:false,retryable:false}});
     const input = new PassThrough(), output = new PassThrough();
     output.on('data', () => {});
     repl = start({ input, output, terminal: false, prompt: '', useGlobal: false, ignoreUndefined: true });
@@ -495,6 +496,31 @@ export function createComputerRepl(request, report = () => {}) {
         return displayed(browserAPI(ids[0]));
       },
       createBrowserTab: createTab,
+      openBrowser: async (url, options = {}) => {
+        if (!options || typeof options !== 'object' || Array.isArray(options) ||
+            Object.keys(options).some(key => key !== 'reuseAuthorized' && key !== 'visible') ||
+            Object.values(options).some(value => typeof value !== 'boolean')) throw invalidArgument('openBrowser accepts {reuseAuthorized?:boolean, visible?:boolean}');
+        const destination = new URL(url);
+        if (!['http:', 'https:'].includes(destination.protocol)) throw invalidArgument('openBrowser needs an HTTP(S) URL');
+        const { enabled, preference, builtIn, sessionId } = await call('browserRoute');
+        if (!enabled) throw invalidArgument('Automatic browser routing requires OMD. Bind an explicit browser ID.');
+        const inventory = await call('targets');
+        const local = new Set(builtIn.filter(id => inventory.browsers?.some(browser => browser.id === id && !browser.pairingRequired)));
+        const connected = new Set(inventory.browsers?.filter(browser => browser.connected === true && !browser.pairingRequired).map(browser => browser.id));
+        const matching = inventory.targets.filter(target => target.backend === 'browser' && target.supported !== false && !target.error && target.url === destination.href);
+        const candidates = matching.filter(target => local.has(target.browserId) && target.sessionId === sessionId ||
+          preference === 'reuse' && options.reuseAuthorized === true && target.provider === 'extension' && connected.has(target.browserId));
+        if (candidates.length > 1) throw invalidArgument('Multiple tabs match this URL. List tabs and bind an explicit ID.');
+        if (candidates.length === 1) {
+          const candidate = candidates[0];
+          const tab = await select({ id: candidate.id, browserId: candidate.browserId, identity: candidate.identity, expected: { url: destination.href } });
+          if (options.visible === true) await tab.focus();
+          return tab;
+        }
+        if (local.size !== 1) throw invalidArgument(local.size ? 'Multiple built-in windows own this conversation. Choose one by ID.' :
+          'No built-in browser is connected for this conversation. Choose an authorized browser explicitly.');
+        return createTab(local.values().next().value, destination.href, options.visible === undefined ? {} : { visible: options.visible });
+      },
       downloads: { list: async (options = {}) => {
         const result = await call('deliveries', { emit: options.emit !== false });
         if (options.emit !== false) { emit(result.deliveries); deliveries.push(...result.deliveries.filter(item => item.file?.attachmentId)); progress(); }

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { parse } from 'acorn';
-import { installPromptAdapter, projectToolDeclarations } from '../src/cc-adaptation/adapter.mjs';
+import { installPromptAdapter, projectToolDeclarations, transformAssembly } from '../src/cc-adaptation/adapter.mjs';
+import { browserTestingGuide } from '#opencu/src/dsh/browser-testing.mjs';
 import { buildMainPrompt } from '../src/cc-adaptation/texts.mjs';
 import { renderBudget } from '../src/task-budget.mjs';
 import { renderRuntimeState } from '../src/runtime-state.mjs';
@@ -105,11 +106,40 @@ test('Shell path and variable guards survive native and SDK adaptation', async (
     for (const name of ['bash', 'pwsh']) {
       const text = runtime ? section(result, 'tools:sdk') : result.tools.find(t => t.name === name).description;
       assert.ok(text.includes('resolved absolute target path'));
-      assert.ok(text.includes('withIsolatedBrowser') && text.includes('--use-mock-keychain') && text.includes('--password-store=basic'));
-      assert.ok(text.includes('file:') && text.includes('/src/browser/automation.mjs'), 'the installed helper is directly importable from project scripts');
+      assert.match(text, /see the browser testing guide in the system prompt/);
+      assert.doesNotMatch(text, /--use-mock-keychain/);
       assert.ok(text.includes(name === 'bash' ? '${VAR:?}' : '$HOME'));
       if (name === 'pwsh') assert.ok(text.includes('case-insensitive') && text.includes('$home'));
     }
+    const guide = section(result, 'oh-my-dsh:persona');
+    assert.match(guide, /withIsolatedBrowser.*file:.*\/src\/browser\/automation\.mjs/);
+    assert.equal(guide.match(/--use-mock-keychain/g)?.length, 1);
+    assert.match(guide, /--password-store=basic/);
+  }
+});
+
+test('Native, PTC and Both expose one complete browser guide and distinguish job receipts', () => {
+  const toolset = [tool('computer_use', browserTestingGuide), tool('bash', 'Live bash',
+    Object.fromEntries(['command', 'workdir', 'timeoutMs', 'run_in_background', 'yieldMs'].map(name => [name, { type: 'string' }]))),
+    tool('job_output', 'Live job output', { job_id: { type: 'string' }, wait: { type: 'boolean' } }),
+    tool('send_message', 'Live child messaging', { agent: { type: 'string' }, message: { type: 'string' } }), tool('run_code', 'Live SDK entry')];
+  for (const toolMode of ['native', 'ptc', 'both']) for (const directJob of [false, true]) {
+    const direct = toolMode !== 'ptc' ? toolset : toolset.filter(t => t.name === 'run_code' || directJob && t.name === 'job_output');
+    const sections = [{ name: 'oh-my-dsh:persona', text: '' }];
+    if (toolMode !== 'native') sections.push({ name: 'tools:sdk', text: 'SDK' });
+    const { assembly } = transformAssembly({ sections, tools: direct }, { agent: { session: { header: { origin: 'subagent', isSeeded: true } } } }, {
+      schemas: toolset, toolMode, backgroundTasksEnabled: true, todoConstraintFirst: true,
+      renderSdk: tools => tools.map(t => t.description).join('\n'), definition: name => toolset.find(t => t.name === name),
+    });
+    const sdk = section(assembly, 'tools:sdk') ?? '', persona = section(assembly, 'oh-my-dsh:persona');
+    const directText = assembly.tools.map(t => t.description).join('\n'), total = `${persona}\n${directText}\n${sdk}`;
+    assert.equal(total.match(/--use-mock-keychain/g)?.length, 1);
+    assert.equal(total.match(/First extract the task's applicable constraints/g)?.length, 1);
+    assert.equal(persona.includes('`yieldMs`'), toolMode !== 'ptc');
+    assert.equal(directText.includes('rendered `[status: ...]` line'), toolMode !== 'ptc' || directJob);
+    assert.equal(sdk.includes('inspect `job.status`'), toolMode !== 'native');
+    const sender = toolMode === 'ptc' ? sdk : assembly.tools.find(t => t.name === 'send_message').description;
+    assert.notEqual(sender, 'Live child messaging');
   }
 });
 

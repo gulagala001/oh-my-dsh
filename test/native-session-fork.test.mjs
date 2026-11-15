@@ -7,6 +7,11 @@ import { createRequire } from 'node:module';
 import { HubStore } from '../src/hub-store.mjs';
 import { forkParentOf, installForkProvenance } from '../src/host/session-fork.mjs';
 import { forkArchiveSnapshot } from '../src/context/fork.mjs';
+import { acquirePersona } from '../plugins/persona/src/index.mjs';
+import { personalityPatch } from '../plugins/persona/src/shared/personality.mjs';
+import { capturePromptStyle, completePromptStyle, inheritForkPromptStyle } from '../src/prompt-styles/session.mjs';
+import { installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
+import { PERSONALITY_SCOPE } from '../plugins/persona/src/shared/prompt.mjs';
 
 const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
 const { Context } = await import(host.resolve('@deepseek-ai/cordis'));
@@ -54,4 +59,91 @@ test('native independent forks retain only verified OMD archive lineage across c
   assert.equal(forkParentOf({ id: results[0].sessionId, isSeeded: true, origin: 'subagent' }, store), undefined);
   await scope.dispose();
   assert.equal(controller.fork, nativeFork);
+});
+
+test('native seeded activation and a later turn keep the completed parent settings without adding tools or messages', { timeout: 8000 }, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'omd-seeded-'));
+  const ctx = new Context(), hub = { config: () => config, store: new HubStore(directory) };
+  let config = { promptStyle: 'codex' };
+  t.after(async () => { await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }); });
+  ctx.provide('profileContext', { home: directory, dir: directory });
+  const native = name => import(host.resolve('@deepseek-ai/dsh-' + name));
+  for (const name of ['session', 'session-projection', 'agent', 'llm', 'system-prompt', 'tools', 'tool-executor-native',
+    'fs-local', 'working-directory', 'agent-loop', 'subagent', 'subagent-fork-in-process']) {
+    const module = await native(name); await ctx.plugin(module.default ?? module, name === 'subagent-fork-in-process' ? { providerName: 'fork' } : undefined);
+  }
+  await ctx.plugin(await native('session-persistence-jsonl'), { root: join(directory, 'sessions-native') });
+  await ctx.plugin((await native('session-query-sqlite')).default, { path: join(directory, 'sessions.sqlite') });
+  const persona = await acquirePersona(ctx);
+  persona.update(personalityPatch(persona.config(), 'economical'));
+  const original = persona.config().identityPrompt;
+  const { LlmAdapter, createUserMessage } = await native('llm');
+  const requests = [];
+  class Adapter extends LlmAdapter {
+    async *stream(request) { requests.push(request); yield { type: 'finish', reason: { kind: 'stop' } }; }
+  }
+  ctx.llm.registerAdapter(['fixture'], new Adapter());
+  ctx.on('agent/created', ({ agent, source }) => inheritForkPromptStyle(hub, ctx.agents, agent, source), { global: true });
+  ctx.on('session/event', (session, event) => {
+    const agent = ctx.agents.get(session.id);
+    if (agent && event.type === 'turn/start') capturePromptStyle(hub, agent, event.data.turn);
+    if (agent && event.type === 'turn/end') completePromptStyle(agent, event);
+  }, { global: true });
+  const observed = [];
+  ctx.systemPrompt.section({ name: 'oh-my-dsh:persona', order: 0, text: 'Unadapted fixture prompt' });
+  ctx.provide('omd', { ...hub, persona });
+  installPromptAdapter(ctx);
+  const parentOnly = ['held_back', 'list_agents', 'team_task_create', 'team_task_get', 'team_task_list', 'team_task_update', 'wait_agent'];
+  for (const name of ['send_message', ...parentOnly]) {
+    const properties = name === 'send_message' ? { agent: { type: 'string' }, message: { type: 'string' } } : {};
+    ctx.tools.register({ name, description: name, parameters: { type: 'object', properties },
+      output: { schema: { type: 'string' }, render: () => [] }, execute: () => '',
+    }, { when: ({ agent }) => name === 'send_message' || agent.session.header.origin !== 'subagent' });
+  }
+  ctx.on('system-prompt/assemble', async (_initial, context, next) => {
+    const assembly = await next();
+    if (context.agent) observed.push({ id: context.agent.id, sections: assembly.sections });
+    return assembly;
+  }, { global: true, prepend: true });
+  const parent = await ctx.agentLoop.create('parent', { provider: 'fixture', model: 'fixture' }, { cwd: directory });
+  const send = (agent, text) => agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }));
+  send(parent, 'parent turn'); await parent.whenIdle();
+  const lastEnd = parent.session.snapshotEvents().findLast(event => event.type === 'turn/end');
+  assert.ok(lastEnd);
+  config = { promptStyle: 'pi' };
+  persona.update(personalityPatch(persona.config(), 'off'));
+  const signal = new AbortController().signal, childId = 'seeded-child';
+  const ended = () => new Promise(resolve => {
+    const off = ctx.on('subagent/end', info => { if (info.id === childId) { off(); resolve(info); } }, { global: true });
+  });
+  const first = ended();
+  const activation = await ctx.subagents.startActivation({ provider: 'fork', label: 'fixture', parent, childId,
+    delivery: 'caller', prompt: [{ type: 'text', text: 'first child turn' }], signal });
+  assert.equal((await activation.result).stopReason, 'completed');
+  assert.equal((await first).stopReason, 'completed');
+  assert.equal(ctx.agents.get(childId), undefined);
+  assert.equal(hub.store.peek(childId).forkPromptStyle, 'codex');
+  const second = ended();
+  const messageId = await ctx.subagents.sendMessage(parent, childId, [{ type: 'text', text: 'second child turn' }], { signal });
+  assert.equal((await second).stopReason, 'completed');
+  const saved = await ctx.sessionPersistence.open(childId, 'read');
+  try {
+    assert.equal(saved.header.isSeeded, true);
+    assert.equal(saved.inheritedEventCount, lastEnd.seq + 1);
+    const events = (await saved.read()).events.slice(saved.inheritedEventCount);
+    const claimed = events.filter(event => event.type === 'user/message');
+    assert.deepEqual(claimed.filter(event => ['user', 'agent-message'].includes(event.data.source.kind)).map(event => event.data.id), [activation.messageId, messageId]);
+    assert.equal(events.filter(event => event.type === 'turn/end').length, 2);
+  } finally { await saved.close(); }
+  assert.equal(observed.filter(entry => entry.id === childId).length, 2);
+  for (const { sections } of observed.filter(entry => entry.id === childId)) {
+    const prompt = sections.map(section => section.text).join('\n');
+    assert.match(prompt, /using the Codex system prompt style/);
+    assert.ok(prompt.includes(original));
+    assert.equal(prompt.split(PERSONALITY_SCOPE).length, 2);
+    assert.ok(!prompt.includes('Unadapted fixture prompt'));
+    assert.ok(sections.some(section => section.name === 'omd:execution-contract'));
+  }
+  assert.deepEqual(requests[0].tools.map(tool => tool.name), [...parentOnly, 'send_message'].sort());
+  assert.deepEqual(requests.filter(request => request.sessionId === childId).map(request => request.tools.map(tool => tool.name)), [['send_message'], ['send_message']]);
 });

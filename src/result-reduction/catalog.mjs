@@ -10,12 +10,13 @@ export const CONTEXT_TOOL_GUIDE = 'Use context_view for a bounded file/page outl
 // Presentation is shared across modes. The host retains registry, permission,
 // dispatch and cancellation ownership; discovery never grants execution access.
 export function selectCatalog(ctx, hub, agent, schemas) {
-  if (!agent || !hub.optimization?.enabled(agent.session)) return { tools: schemas, hidden: [], notice: '' };
+  if (!agent || !hub.optimization?.enabled(agent.session) || !schemas.some(tool => tool.name === 'tool_find'))
+    return { tools: schemas, hidden: [], notice: '' };
   const names = chosen(agent);
   for (const [name, definition] of names) if (ctx.tools.get(name, agent) !== definition) names.delete(name);
   const tools = schemas.filter(t => !optional(t.name) || names.has(t.name));
   const hidden = schemas.filter(t => !tools.includes(t));
-  const notice = hidden.length ? `${hidden.length} optional tools are discoverable with tool_find(query). Available names: ${hidden.map(t => t.name).join(', ')}. Search by name or purpose; discovery returns exact current input/output contracts and includes them in the next request's Native catalog or PTC SDK. Permissions are unchanged.` : '';
+  const notice = hidden.length ? `${hidden.length} optional tools are discoverable with tool_find(query). Hidden names: ${hidden.map(t => t.name).join(', ')}. For any hidden MCP tool named in server instructions, search tool_find by its exact name or server before calling it. Tools already declared need no discovery. Search by name or purpose; discovery returns exact current input/output contracts and includes them in the next request's Native catalog or PTC SDK. Permissions are unchanged.` : '';
   return { tools, hidden, notice };
 }
 export function rememberCatalog(hub, plan) {
@@ -48,7 +49,6 @@ export function projectCatalogAssembly(assembly, { enabled, schemas, renderSdk, 
   if (selection.notice) {
     sections.push({ name: 'omd:tool-discovery', order: 81, text: selection.notice, interpolate: false });
     if (sdkSection) {
-
       sections[sections.indexOf(sdkSection)] = { ...sdkSection, text: sdk, interpolate: false };
       remember?.({ sdk, fullSdk: sdkSection.text, notice: selection.notice });
     } else {

@@ -6,8 +6,10 @@ import { createHash } from 'node:crypto';
 import { browserTestingGuide } from '#opencu/src/dsh/browser-testing.mjs';
 import { agentPromptStyle } from '../prompt-styles/session.mjs';
 import { DSH_IDENTITY, renderPromptStyle } from '../prompt-styles/render.mjs';
-import { renderPersonality } from '../../plugins/persona/src/shared/prompt.mjs';
+import { isUnseededSubagent, renderPersonality } from '../../plugins/persona/src/shared/prompt.mjs';
 import { withoutTaskVerification } from '../task-verification.mjs';
+import { hasNativeTeamTools } from '../ultracode.mjs';
+import { isOmdPreset } from '../legacy-identity.mjs';
 
 import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
 const bindings = JSON.parse(readFileSync(new URL('./bindings.json', import.meta.url), 'utf8'));
@@ -20,8 +22,8 @@ function sdkDescription(name, description) {
     'For foreground results, inspect `exitCode`, `signal`, `timedOut`, and `aborted`; read `stdout.text` and `stderr.text`, including their truncation and spill-path fields. A non-zero process exit is a command outcome, not necessarily a ToolCallError.');
   if (name === 'pwsh') return description.replace('A nonzero exit is reported as `[exit code: N]`.',
     'Inspect the returned process status and output fields in the current SDK return type.');
-  if (name === 'job_output') return description.replace('Inspect the `[status: ...]` line.',
-    'Inspect `job.status` and read `text` from the returned object.');
+  if (name === 'job_output') return description.replace('In a direct tool call, inspect the rendered `[status: ...]` line.',
+    'In `run_code`, inspect `job.status` and read `text` from the returned object.');
   if (name === 'read') return description.replace('Read a UTF-8 text file and return line-numbered content.',
     'Read a UTF-8 text file and return structured line records with their numbers and text, plus range metadata.');
   return description;
@@ -30,21 +32,25 @@ function sdkDescription(name, description) {
 /** Pure prompt transformation: never changes execution functions or input/output schemas. */
 export function transformAssembly(assembly, context, options = {}) {
   const { agent } = context ?? {};
-  if (!agent || agent.session?.header?.origin === 'subagent'
+  if (!agent || isUnseededSubagent(agent.session)
       || !assembly.sections?.some(section => section.name === 'oh-my-dsh:persona')) {
     return { assembly, audit: { applied: false, reason: 'outside-main-agent-scope' } };
   }
   const load = options.read ?? read;
   const activeSdk = assembly.sections.some(section => section.name === 'tools:sdk' && section.text);
-  const toolMode = !activeSdk ? 'native' : assembly.sections.some(section => section.name === 'tools:ptc-only' && section.text) ? 'ptc' : 'both';
+  const toolMode = options.toolMode ?? (!activeSdk ? 'native' : assembly.sections.some(section => section.name === 'tools:ptc-only' && section.text) ? 'ptc' : 'both');
   const constraintGuidance = options.todoConstraintFirst === true ? load('tools/todo-constraints.md') : '';
   const style = options.promptStyle ?? 'omd';
   const map = style === 'omd' ? options.bindings ?? bindings : {};
-  const known = new Map((options.schemas ?? assembly.tools ?? []).map(tool => [tool.name, tool]));
+  const schemas = options.schemas ?? assembly.tools ?? [];
+  const known = new Map(schemas.map(tool => [tool.name, tool]));
+  const directTools = new Map((assembly.tools ?? []).map(tool => [tool.name, tool]));
+  const shells = ['bash', 'pwsh'];
+  const teamControl = hasNativeTeamTools(schemas);
   const applied = new Set(), retained = [], missing = [], changedSchemas = new Map();
   for (const tool of known.values()) {
     // Native Team controls use member targets, not ordinary child ids.
-    if (['send_message', 'list_agents', 'interrupt_agent'].includes(tool.name) && Object.hasOwn(known.get('send_message')?.parameters?.properties ?? {}, 'agent')) {
+    if (teamControl && ['send_message', 'list_agents', 'interrupt_agent'].includes(tool.name)) {
       retained.push({ name: tool.name, reason: 'native-team-control' }); continue;
     }
     if (tool.name === 'run_code') { retained.push({ name: tool.name, reason: 'runtime-owned-transport' }); continue; }
@@ -64,9 +70,6 @@ export function transformAssembly(assembly, context, options = {}) {
     if (tool.name === 'todo_write' && (!fields.op?.enum?.includes('pause_turn') || !Object.hasOwn(fields, 'reason'))) {
       description = description.split('\n').filter(line => !line.includes('`pause_turn`')).join('\n');
     }
-    if (tool.name === 'todo_write' && constraintGuidance) {
-      description += '\n\n' + constraintGuidance;
-    }
     // Do not tell the model to use optional companion tools it cannot see.
     if (['bash', 'pwsh'].includes(tool.name) && !Object.hasOwn(fields, 'run_in_background')) {
       description = description.split('\n').filter(line => !line.includes('`run_in_background`')).join('\n');
@@ -77,10 +80,6 @@ export function transformAssembly(assembly, context, options = {}) {
     if (['bash', 'pwsh'].includes(tool.name) && !Object.hasOwn(fields, 'sandbox_permissions')) {
       description = description.split('\n').filter(line => !line.includes('`sandbox_permissions`')).join('\n');
     }
-    if (['bash', 'pwsh'].includes(tool.name)) {
-      description += '\n\n' + (known.has('computer_use') ? browserTestingGuide
-        : browserTestingGuide.replace('through computer_use when available', 'through an available browser tool'));
-    }
     if (tool.name === 'web_search' && !known.has('web_fetch')) {
       description = description.replace(/Open relevant result URLs with `web_fetch`[^.]*\./g, 'Use returned source snippets when full-page retrieval is unavailable.');
     }
@@ -90,17 +89,34 @@ export function transformAssembly(assembly, context, options = {}) {
     changedSchemas.set(tool.name, { ...tool, description });
     applied.add(tool.name);
   }
-  const source = style === 'omd' ? undefined : renderPromptStyle(style, { schemas: [...known.values()], toolMode });
+  const source = style === 'omd' ? undefined : renderPromptStyle(style, { schemas, toolMode });
+  const hasGuide = tool => ['withIsolatedBrowser', '--use-mock-keychain', '--password-store=basic']
+    .every(marker => tool?.description?.includes(marker));
+  const directComputerHasGuide = hasGuide(directTools.get('computer_use'));
+  const sdkComputerHasGuide = toolMode !== 'native' && hasGuide(known.get('computer_use'));
+  const shellGuide = browserTestingGuide.replace('through computer_use when available', 'through an available browser tool');
+  const testingLink = 'For isolation and safe browser launch, see the browser testing guide';
+  const shellDescription = (name, description) => {
+    if (!shells.includes(name)) return description;
+    const location = directComputerHasGuide ? 'in the direct `computer_use` declaration'
+      : sdkComputerHasGuide ? 'in `tools.computer_use` in the SDK' : 'in the system prompt';
+    return `${description}\n\n${testingLink} ${location}.`;
+  };
   let persona = source ? [source.text,
     renderPersonality(options.personalityModules ?? { identity: options.identityPrompt }),
     toolMode !== 'native' ? load('runtime/ptc-guidance.md') : '',
   ].filter(Boolean).join('\n\n') : options.main ?? buildMainPrompt(options.identityPrompt, { toolMode, personalityModules: options.personalityModules });
   if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '');
   if (options.stateHintsEnabled && known.has('runtime_status')) persona += '\n\n' + load('runtime/state-guidance.md');
-  if (options.backgroundTasksEnabled && known.has('job_output')) {
-    persona += '\n\n' + load('runtime/background-guidance.md');
-    const direct = (assembly.tools ?? []).filter(t => ['job_output', 'job_list', 'job_kill', 'runtime_status'].includes(t.name)).map(t => t.name);
-    if (activeSdk && direct.length) persona += '\n\nThe following control tools are available directly in this request: ' + direct.map(n => '`' + n + '`').join(', ') + '. Start background work in a short program, emit its id using the current runtime output syntax, and call these controls in later steps as needed.';
+  if (!directComputerHasGuide && !sdkComputerHasGuide && shells.some(name => known.has(name))) persona += '\n\n## Browser testing\n' + shellGuide;
+  if (options.backgroundTasksEnabled) {
+    const background = [];
+    if (directTools.has('job_output') && shells.some(name => {
+      const fields = directTools.get(name)?.parameters?.properties ?? {};
+      return Object.hasOwn(fields, 'yieldMs') && Object.hasOwn(fields, 'run_in_background');
+    })) background.push(load('runtime/background-guidance.md'));
+    if (directTools.get('job_output')?.parameters?.properties?.wait) background.push(load('runtime/direct-job-wait.md'));
+    if (background.length) persona += '\n\n## Background execution\n' + background.join('\n\n');
   }
   if (constraintGuidance) persona += '\n\n## Constraint-first reasoning\n' + constraintGuidance;
   const suppressed = new Set();
@@ -127,7 +143,11 @@ export function transformAssembly(assembly, context, options = {}) {
         const definition = options.definition(tool.name);
         if (!definition?.output?.schema) throw new Error(`Missing live output contract: ${tool.name}`);
         const adapted = changedSchemas.get(tool.name);
-        return { ...(adapted ?? tool), ...(adapted ? { description: sdkDescription(tool.name, adapted.description) } : {}), output: definition.output.schema };
+        let description = adapted ? sdkDescription(tool.name, shellDescription(tool.name, adapted.description, true)) : tool.description;
+        if (tool.name === 'computer_use' && directComputerHasGuide) {
+          description = description.replace(browserTestingGuide, `${testingLink} in the direct \`computer_use\` declaration.`);
+        }
+        return { ...tool, description, output: definition.output.schema };
       });
       sdkRegenerated = true; sdkSchemas = sdk;
       return [{ ...section, text: options.renderSdk(sdk), interpolate: false }];
@@ -147,7 +167,10 @@ export function transformAssembly(assembly, context, options = {}) {
     sections.push({name:'oh-my-dsh:cc-dream-memory',text:load('context/dream-memory.md'),interpolate:false});
   }
   // DSH strips order metadata after assembling sections. Preserve the host's order.
-  const result = { ...assembly, sections, tools: (assembly.tools ?? []).map(tool => changedSchemas.get(tool.name) ?? tool) };
+  const result = { ...assembly, sections, tools: (assembly.tools ?? []).map(tool => {
+    const adapted = changedSchemas.get(tool.name);
+    return adapted ? { ...tool, description: shellDescription(tool.name, adapted.description, false) } : tool;
+  }) };
   // The actual fields and their parameter descriptions remain the live owner contract.
   if (sha((assembly.tools ?? []).map(x => [x.name, x.parameters])) !== sha(result.tools.map(x => [x.name, x.parameters]))) {
     throw new Error('Prompt adapter attempted to change a callable schema.');
@@ -156,17 +179,16 @@ export function transformAssembly(assembly, context, options = {}) {
     sdkRegenerated, style, toolsHash: sha(result.tools), mainHash: sha(persona) } };
 }
 
-/** Install once in the preset scope; the main-agent check excludes all internal/child requests. */
+/** Install in the preset scope; a seeded child may inherit the presentation, not the executor's authority. */
 export function installPromptAdapter(ctx) {
   const seen = new Set();
   ctx.on('system-prompt/assemble', async (_initial, context, next) => {
     const presentation = await next();
-    const assembly = { ...presentation, tools: presentation.sections.some(section => section.name === 'tools:sdk' && section.text)
-      ? presentationTools(ctx, context) : ctx.tools.schemas(context.scope ?? context.agent, context.toolSet) };
+    const activeSdk = presentation.sections.some(section => section.name === 'tools:sdk' && section.text);
+    const assembly = { ...presentation, tools: presentationTools(ctx, context) };
     if (!context?.agent) return assembly;
     const schemas = ctx.tools.schemas(context.scope ?? context.agent, context.toolSet);
     const style = agentPromptStyle(ctx.omd, context.agent);
-    const activeSdk = assembly.sections.some(section => section.name === 'tools:sdk' && section.text);
     let renderSdk;
     if (activeSdk && (style === 'omd' || ctx.omd.optimization?.enabled(context.agent.session))) {
       const { renderToolsSdk, renderToolsSdkPy } = await import('@deepseek-ai/dsh-tool-executor-ptc');
@@ -177,7 +199,7 @@ export function installPromptAdapter(ctx) {
       if (!renderSdk) throw new Error(`Unsupported PTC SDK language: ${language}`);
     }
     const config = ctx.omd.config();
-    const personality = sessionPersonality(ctx.omd, context.agent.session);
+    const personality = ctx.omd.persona?.forPrompt?.(context.agent.session) ?? sessionPersonality(ctx.omd, context.agent.session);
     const result = transformAssembly(assembly, context, {
       promptStyle: style,
       identityPrompt: personality.modules.identity, personalityModules: personality.modules,
@@ -206,13 +228,14 @@ export function installPromptAdapter(ctx) {
   });
 }
 
-export function projectToolDeclarations(ctx, model, definitions, context) {
+export function projectToolDeclarations(ctx, model, definitions, context, toolMode = 'native') {
   const agent = context.agent ?? context.scope;
-  if (!agent?.session) return model;
+  if (!agent?.session || isUnseededSubagent(agent.session) ||
+      agent.session.header?.origin === 'subagent' && !isOmdPreset(agent.session.header.agentPreset)) return model;
   const schemas = definitions.map(({ name, description, parameters }) => ({ name, description, parameters }));
   const personality = sessionPersonality(ctx.omd, agent.session), config = ctx.omd.config();
   const result = transformAssembly({ tools: model.schemas, sections: [{ name: 'oh-my-dsh:persona', text: '' }] }, { ...context, agent }, {
-    schemas, promptStyle: agentPromptStyle(ctx.omd, agent), personalityModules: personality.modules,
+    schemas, toolMode, promptStyle: agentPromptStyle(ctx.omd, agent), personalityModules: personality.modules,
     identityPrompt: personality.modules.identity, todoConstraintFirst: config.todoConstraintFirst,
   });
   const projected = projectCatalogAssembly(result.assembly, {

@@ -1,6 +1,6 @@
 import { scopeOf } from '@deepseek-ai/dsh-scope';
 import { sessionPersonality } from './personality-session.mjs';
-import { PERSONALITY_SCOPE, personalityGuidance } from './cc-adaptation/texts.mjs';
+import { renderPersonality } from '../plugins/persona/src/shared/prompt.mjs';
 import { apply as applyCodegraph } from './codegraph-agent.mjs';
 
 // Mount these sibling rows inside OMAA's workflowEngine-isolated Group. The
@@ -28,8 +28,4 @@ export async function installOmaaEnhancement(scope, computer) {
   return [...new Set([...names, ...computerNames, ...(visible.has('codegraph_index') ? ['codegraph_index'] : [])])];
 }
 
-export const omaaIdentityPrompt = (hub, session) => {
-  const { modules } = sessionPersonality(hub, session);
-  return [modules.identity, modules.identity ? PERSONALITY_SCOPE : '',
-    ...['style', 'communication', 'presentation'].map(key => personalityGuidance(key, modules[key]))].filter(Boolean).join('\n\n');
-};
+export const omaaIdentityPrompt = (hub, session) => hub.persona?.promptFor?.(session) ?? renderPersonality(sessionPersonality(hub, session).modules);

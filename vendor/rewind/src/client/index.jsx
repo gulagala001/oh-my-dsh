@@ -78,7 +78,9 @@ export function install(ctx){
     useEffect(()=>{const handler={inspect:next=>actionsRef.current.inspect(next),blocked:()=>actionsRef.current.blocked()};handlers.set(id,handler);return()=>{if(handlers.get(id)===handler)handlers.delete(id);ctx.get('commandUi')?.dismiss('dsh-undo-picker');};},[id]);
     const restore=async(draft,expectedRev)=>{
       const shell=input(id),current=shell.state.getSnapshot();
+      const assertEditable=snapshot=>{if(['adjudicating','submitting','sending'].includes(snapshot.phase))throw Error('输入框正在发送，请稍后回填');};
       if(current.draftRev!==expectedRev){setPendingDraft(draft);throw Error('输入框在操作期间有新编辑，已保留草稿。可点击“回填撤回内容”重试。');}
+      assertEditable(current);
       let attachments=[],missing=0;
       if(draft.attachmentIds){
         attachments=ctx.conversation.resolveDraftAttachments(draft.attachmentIds);
@@ -89,7 +91,7 @@ export function install(ctx){
         attachments=ctx.conversation.createDrafts(id,files);
       }
       if(shell.state.getSnapshot().draftRev!==expectedRev){setPendingDraft(draft);throw Error('输入框已改变，撤回内容已保留待回填。');}
-      if(['adjudicating','submitting'].includes(shell.state.getSnapshot().phase))throw Error('输入框正在发送，请稍后回填');
+      assertEditable(shell.state.getSnapshot());
       shell.pruneAttachments([]);shell.setDraft(draft.text||'');
       if(!shell.addAttachments(attachments.map(a=>a.id)))throw Error('附件暂时不能回填，请重试');
       shell.persistDraft?.();

@@ -20,7 +20,7 @@ export class TemporaryChats {
   constructor(ctx, { idleMs = 180000 } = {}) {
     this.ctx = ctx; this.chats = new Map(); this.idleMs = idleMs; this.closed = false;
     this.timer = setInterval(() => {
-      for (const chat of this.chats.values()) if (Date.now() - chat.touched > idleMs) void this.close(chat.id).catch(error => this.ctx.logger?.warn?.(error.message));
+      for (const chat of this.chats.values()) if (!chat.active && Date.now() - chat.touched > idleMs) void this.close(chat.id).catch(error => this.ctx.logger?.warn?.(error.message));
     }, Math.min(idleMs, 30000));
     this.timer.unref?.();
   }
@@ -72,7 +72,7 @@ export class TemporaryChats {
         chat.turns.push({ id: requestId, user, assistant });
         emit({ type: 'done', ...receipt(chat, requestId) });
       } finally {
-        if (chat.active === operation) chat.active = null;
+        if (chat.active === operation) { chat.active = null; chat.touched = Date.now(); }
       }
     })();
     return operation.done;

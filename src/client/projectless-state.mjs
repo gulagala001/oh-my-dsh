@@ -17,7 +17,7 @@ export async function modelModeApi(sessionId, body, signal) {
 export function initializeDraft(conversation, binding, options) {
   if (conversation.input.requestDraftInitialization) return conversation.input.requestDraftInitialization(binding, options);
   const input = conversation.input.for(binding.ctx), state = input.state.getSnapshot();
-  if (state.phase === 'adjudicating' || state.phase === 'submitting') return 'blocked';
+  if (['adjudicating', 'submitting', 'sending'].includes(state.phase)) return 'blocked';
   if (options.prompt === undefined && options.clearPreviousDraft !== true) return 'preserved';
   if (options.clearPreviousDraft !== true && (state.draft !== '' || state.attachmentIds.length > 0)) return 'preserved';
   input.setDraft(options.prompt ?? '');
@@ -133,18 +133,23 @@ export class ProjectlessDrafts {
     if (this.lifetime.signal.aborted) return undefined;
     return this.ctx.sessions.list.getSnapshot().ids.find(id => this.ctx.sessions.retainInfo(id).getSnapshot().retainedBy.mainView > 0);
   }
-  isManaged(id) { return !this.lifetime.signal.aborted && this.managed.get(id) === true && this.scopeFor(id) === 'global'; }
+  cwdOf(id) { return this.ctx.sessions.list.getSnapshot().byId[id]?.cwd; }
+  isManaged(id) {
+    const receipt = this.managed.get(id);
+    return !this.lifetime.signal.aborted && receipt?.managed === true && receipt.cwd === this.cwdOf(id) && this.scopeFor(id) === 'global';
+  }
   async inspect(id) {
-    if (this.lifetime.signal.aborted) return false;
-    if (!id || this.managed.has(id)) return this.isManaged(id);
-    if (this.inspections.has(id)) return this.inspections.get(id);
-    const cwd = this.ctx.sessions.list.getSnapshot().byId[id]?.cwd;
+    if (this.lifetime.signal.aborted || !id || this.scopeFor(id) !== 'global') return false;
+    const cwd = this.cwdOf(id);
     if (!cwd) return false;
+    if (this.managed.get(id)?.cwd === cwd) return this.isManaged(id);
+    const pending = this.inspections.get(id);
+    if (pending?.cwd === cwd) return pending.attempt;
     const attempt = this.request('?cwd=' + encodeURIComponent(cwd) + '&session=' + encodeURIComponent(id), undefined, this.lifetime.signal).then(value => {
-      if (this.lifetime.signal.aborted) return false;
-      this.managed.set(id, value.managed); this.emit(); return this.isManaged(id);
-    }).finally(() => this.inspections.delete(id));
-    this.inspections.set(id, attempt); return attempt;
+      if (this.lifetime.signal.aborted || this.inspections.get(id)?.attempt !== attempt || cwd !== this.cwdOf(id)) return false;
+      this.managed.set(id, { cwd, managed: value.managed }); this.emit(); return this.isManaged(id);
+    }).finally(() => { if (this.inspections.get(id)?.attempt === attempt) this.inspections.delete(id); });
+    this.inspections.set(id, { cwd, attempt }); return attempt;
   }
   shell(id) { return this.ctx.get('conversation').input.for(this.ctx.sessions.binding(id).ctx); }
   async startDraft(from, options, workspaceId, beforeOpen) {
@@ -175,7 +180,7 @@ export class ProjectlessDrafts {
           signal.throwIfAborted();
         }
         const agentPreset = options?.agentPreset ?? sessions.byId[reusable]?.projectionValues?.agentPreset;
-        let id;
+        let id, allocatedCwd;
         if (workspaceId === undefined) {
           if (reusable) {
             id = reusable;
@@ -188,7 +193,8 @@ export class ProjectlessDrafts {
             this.remember(scope, { pendingDraft: reserved });
             const workspace = await this.request('', { requestId: reserved }, signal);
             signal.throwIfAborted();
-            id = await this.ctx.sessions.create({ cwd: workspace.cwd, sessionId: reserved, ...(agentPreset ? { agentPreset } : {}) });
+            allocatedCwd = workspace.cwd;
+            id = await this.ctx.sessions.create({ cwd: allocatedCwd, sessionId: reserved, ...(agentPreset ? { agentPreset } : {}) });
             if (id !== reserved) {
               this.remember(scope, { pendingDraft: undefined });
               throw Error('预留会话已开始，请重新新建聊天；原会话与草稿已保留');
@@ -203,7 +209,9 @@ export class ProjectlessDrafts {
         await targetRef.ready;
         signal.throwIfAborted();
         this.remember(scope, { draft: id, pendingDraft: undefined });
-        if (workspaceId === undefined) { this.managed.set(id, true); this.emit(); }
+        if (allocatedCwd && this.cwdOf(id) === allocatedCwd) {
+          this.managed.set(id, { cwd: allocatedCwd, managed: true }); this.emit();
+        }
         await this.applyModelPreference(id, scope, signal);
         signal.throwIfAborted();
         if (options && initializeDraft(this.ctx.get('conversation'), targetRef.binding, options) === 'blocked') {

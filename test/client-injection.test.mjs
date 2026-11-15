@@ -49,7 +49,11 @@ async function fixture(t, { presetMounted = true } = {}) {
   const services = {
     sessions: { list: { getSnapshot: () => ({ ids: [...bindings.keys()], byId: rows }) }, binding: id => bindings.get(id),
       retainInfo: id => store({ retainedBy: { mainView: id === current ? 1 : 0 } }),
-      async create({ sessionId = `new-${++serial}` }) { calls.push(['create', sessionId]); if (!bindings.has(sessionId)) bindings.set(sessionId, session(sessionId)); return sessionId; },
+      async create({ cwd, sessionId = `new-${++serial}` }) {
+        calls.push(['create', sessionId]);
+        if (!bindings.has(sessionId)) { bindings.set(sessionId, session(sessionId)); if (cwd) rows[sessionId].cwd = cwd; }
+        return sessionId;
+      },
       retain(id) { references++; return { binding: bindings.get(id), ready: Promise.resolve(), release() { references--; } }; },
     },
     layout: { beginNavigation: () => new AbortController().signal },
@@ -136,7 +140,7 @@ test('preset availability gates the owning plugin and withdrawal recreates its d
 
 test('a refused preset preserves the existing native draft without submitting it', async t => {
   const f = await fixture(t), { drafts } = f.capture, source = f.shells.get('source');
-  drafts.managed.set('source', true); source.restoreDraft({ ...empty(), draft: '保留原稿' });
+  drafts.managed.set('source', { cwd: drafts.cwdOf('source'), managed: true }); source.restoreDraft({ ...empty(), draft: '保留原稿' });
   f.refuse(true); await drafts.startDraft('source', { agentPreset: 'cordis' });
   assert.equal(source.captureDraft().draft, '保留原稿');
   assert.deepEqual(f.notices, [['error', '选择预设失败']]);

@@ -5,6 +5,7 @@
  * @module @deepseek-ai/dsh-tool-workflow/types
  */
 
+import type { JobId } from '@deepseek-ai/dsh-jobs'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
   WorkflowAgentOutcome, WorkflowRunId, WorkflowStopReason,
@@ -14,6 +15,8 @@ import type {
 export interface ToolWorkflowRunStartData {
   readonly runId: WorkflowRunId
   readonly name: string
+  /** Owning job for a background run; absent for foreground and older records. */
+  readonly jobId?: JobId
 }
 
 /** Records one workflow member after its child Session is published. */

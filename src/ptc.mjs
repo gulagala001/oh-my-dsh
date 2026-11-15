@@ -30,7 +30,7 @@ export function installPtcPresentation(ctx, Executor, directTools, scopes) {
   const delegate = new Executor(ctx);
   setPresentedExecutor(ctx, delegate, (model, definitions, context) => {
     const agent = context.agent ?? context.scope, names = sample(agent, context.toolSet);
-    const projected = projectToolDeclarations(ctx, { ...model, schemas: model.schemas.filter(tool => names.has(tool.name)) }, definitions, context);
+    const projected = projectToolDeclarations(ctx, { ...model, schemas: model.schemas.filter(tool => names.has(tool.name)) }, definitions, context, 'ptc');
     const timeout = ctx.get('ptcRuntime')?.timeout;
     if (timeout && ctx.omd.config().ptcAdaptiveBudgets !== false) projected.schemas = projected.schemas.map(tool => tool.name === 'run_code' && tool.parameters?.properties?.timeoutMs
       ? { ...tool, parameters: { ...tool.parameters, properties: { ...tool.parameters.properties, timeoutMs: { ...tool.parameters.properties.timeoutMs,

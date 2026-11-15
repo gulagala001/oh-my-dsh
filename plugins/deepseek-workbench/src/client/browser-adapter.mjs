@@ -68,7 +68,10 @@ export async function createBrowserAdapter({ bridge, container, workspace = 'dee
       if (event.isMainFrame === false || event.errorCode === -3) return;
       publish({ loading: false, error: event.errorDescription || `网页加载失败 (${event.errorCode ?? '未知'})` });
     });
-    listen('render-process-gone', () => publish({ ready: false, loading: false, error: '网页进程已退出，请重新打开页面。' }));
+    listen('render-process-gone', () => {
+      ready = false;
+      publish({ ready: false, loading: false, canGoBack: false, canGoForward: false, error: '网页进程已退出，请重新打开页面。' });
+    });
     stopOpen = bridge.onOpenRequested?.(reservation.lease, value => { const next = httpUrl(value); if (next) void navigate(next).catch(() => {}); });
     container.append(element);
     signal?.addEventListener('abort', abort, { once: true });

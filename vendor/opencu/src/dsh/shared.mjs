@@ -102,6 +102,15 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       signal?.throwIfAborted();
       if (endpoint.startsWith('recovery/')) throw new Error('Recovery confirmation is available only in browser connection settings');
       if (entry.retiring && !['stop', 'interrupt', 'browser/poll', 'browser/result', 'browser/disconnect'].includes(endpoint)) throw new Error('OpenCU is releasing the last lease; retry after cleanup');
+      if (endpoint === 'browserRoute' || endpoint === 'browserRoute/enabled') {
+        const enabled = Boolean(root.get('omd') || [...entry.leases].some(owner => owner.namespace === 'omd-opencu'));
+        if (endpoint === 'browserRoute/enabled' || !enabled) return { ok: true, enabled };
+        const sessionId = typeof sessionKey === 'string' ? sessionKey : undefined;
+        const settings = await entry.preferences.read();
+        return { ok: true, enabled, sessionId,
+          preference: settings.values['browser-cu-target-preference'] === 'reuse' ? 'reuse' : 'built-in',
+          builtIn: sessionId ? entry.browserHost.browsersForSession(sessionId) : [] };
+      }
       if (endpoint === 'settings/read') return { ok: true, settings: await entry.preferences.read() };
       if (endpoint === 'settings/write') return { ok: true, settings: await entry.preferences.write(args.key, args.value) };
       if (endpoint.startsWith('history/')) return { ok: true, value: await entry.history.handle(endpoint.slice(8), args) };

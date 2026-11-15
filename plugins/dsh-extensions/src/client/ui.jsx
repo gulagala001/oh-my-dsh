@@ -43,30 +43,44 @@ export function useScopes() {
 /** Load-on-mount with explicit reload; a stale response never replaces a newer one. */
 export function useResource(load, deps) {
   const [state, setState] = useState({ data: null, error: null, loading: true });
-  const ticket = useRef(0);
-  const reload = useCallback(async ({ quiet = false } = {}) => {
+  const ticket = useRef(0), pending = useRef(0);
+  const reload = useCallback(async ({ quiet = false, idleOnly = false } = {}) => {
+    if (idleOnly && pending.current) return;
     const mine = ++ticket.current;
+    pending.current = mine;
     if (!quiet) setState(current => ({ ...current, loading: true }));
-    try { const data = await load(); if (ticket.current === mine) setState({ data, error: null, loading: false }); return data; }
-    catch (error) { if (ticket.current === mine) setState(current => ({ data: quiet ? current.data : null, error, loading: false })); }
+    try {
+      const data = await load();
+      if (ticket.current !== mine) return;
+      setState({ data, error: null, loading: false });
+      return data;
+    } catch (error) {
+      if (ticket.current === mine) setState(current => ({ data: quiet ? current.data : null, error, loading: false }));
+    } finally { if (pending.current === mine) pending.current = 0; }
   }, deps);
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => { void reload(); return () => { ++ticket.current; pending.current = 0; }; }, [reload]);
   return { ...state, reload };
 }
 
 /** Run one write at a time and keep its failure visible next to the controls. */
 export function useAction() {
   const [busy, setBusy] = useState(false), [error, setError] = useState(null), [notice, setNotice] = useState('');
-  const timer = useRef();
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const timer = useRef(), owner = useRef(null);
+  useEffect(() => {
+    owner.current = { pending: false };
+    return () => { owner.current = null; clearTimeout(timer.current); };
+  }, []);
   const run = useCallback(async (task, success) => {
-    setBusy(true); setError(null);
+    const current = owner.current;
+    if (!current || current.pending) return false;
+    current.pending = true; setBusy(true); setError(null);
     try {
       const value = await task();
+      if (owner.current !== current) return false;
       if (success) { setNotice(success); clearTimeout(timer.current); timer.current = setTimeout(() => setNotice(''), 2400); }
       return value ?? true;
-    } catch (failure) { setError(failure); return false; }
-    finally { setBusy(false); }
+    } catch (failure) { if (owner.current === current) setError(failure); return false; }
+    finally { current.pending = false; if (owner.current === current) setBusy(false); }
   }, []);
   return { busy, error, notice, run, clear: () => setError(null) };
 }

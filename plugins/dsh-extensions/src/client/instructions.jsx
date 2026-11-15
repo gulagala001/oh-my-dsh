@@ -8,7 +8,12 @@ const basename = path => path.split(/[\\/]/).pop();
 const when = ms => ms ? new Date(ms).toLocaleString() : '';
 
 export function InstructionsPage() {
-  const t = useT(), { scope, scopes } = useScopes(), opener = useOpeners(), action = useAction();
+  const { scope, scopes } = useScopes();
+  return <ScopedInstructionsPage key={scope} scope={scope} scopes={scopes}/>;
+}
+
+function ScopedInstructionsPage({ scope, scopes }) {
+  const t = useT(), opener = useOpeners(), action = useAction();
   const [open, setOpen] = useState(null), [editor, setEditor] = useState(null), [removing, setRemoving] = useState(null);
   const list = useResource(() => api(query('/instructions', { scope })), [scope]);
   const files = list.data?.files ?? [];

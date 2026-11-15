@@ -42,9 +42,44 @@ export function acquirePersona(ctx, { legacy } = {}) {
     const profileKey = createHash('sha256').update(profile?.dir || 'default').digest('hex').slice(0, 16);
     const store = new PersonaStore(join(home, 'dsh-persona-plugin', profileKey));
     if (legacy) store.migrateLegacy(legacy.config(), legacy.store.dir);
+    const presented = new Map(), completed = new Map();
     const service = { store, config: () => store.config(), update: (patch, revision) => store.update(patch, revision),
-      forSession: session => sessionPersonality(service, session), promptFor: session => renderPersonality(service.forSession(session).modules) };
-    entry = { service, leases: new Set() }; roots.set(root, entry);
+      forSession(session) {
+        const value = sessionPersonality(service, session);
+        const modules = session?.header?.origin === 'subagent' && session.header.isSeeded === true
+          ? store.forkModules(session.id) : undefined;
+        if (modules) value.modules = structuredClone(modules);
+        return value;
+      },
+      forPrompt(session) {
+        const value = service.forSession(session);
+        if (session?.id) presented.set(session.id, value.modules);
+        return value;
+      },
+      promptFor: session => renderPersonality(service.forPrompt(session).modules),
+    };
+    const offSession = root.on('session/event', (session, event) => {
+      if (event.type === 'turn/start') presented.delete(session.id);
+      if (event.type !== 'turn/end') return;
+      const modules = presented.get(session.id);
+      if (!modules) return;
+      let snapshots = completed.get(session.id);
+      if (!snapshots) completed.set(session.id, snapshots = new Map());
+      snapshots.set(event.seq, modules);
+      if (snapshots.size > 8) snapshots.delete(snapshots.keys().next().value);
+      presented.delete(session.id);
+    }, { global: true });
+    const offDisposed = root.on('agent/disposed', ({ agent }) => {
+      presented.delete(agent.session.id); completed.delete(agent.session.id);
+    }, { global: true });
+    const offCreated = root.on('agent/created', ({ agent, source }) => {
+      const session = agent.session, header = session.header;
+      if (header.origin !== 'subagent' || header.isSeeded !== true || !header.parentSession || !['startup', 'resume'].includes(source) || store.forkModules(session.id)) return;
+      // The host seeds through the last completed turn, not the in-flight tool call.
+      const modules = source === 'startup' && completed.get(header.parentSession)?.get(session.inheritedEventCount - 1);
+      store.saveForkModules(session.id, modules || service.forSession(session).modules);
+    }, { global: true });
+    entry = { service, leases: new Set(), offCreated, offSession, offDisposed }; roots.set(root, entry);
     entry.unprovide = root.provide('dshPersona', service);
     entry.offPrompt = root.on('system-prompt/assemble', async (_initial, context, next) => applyPersonality(await next(), context, service), { global: true, prepend: true });
     entry.api = root.inject(['webServer', 'connection'], scope => scope.effect(() => scope.webServer.register({ kind: 'prefix', path: API, async handler(req, res) {
@@ -88,7 +123,7 @@ export function acquirePersona(ctx, { legacy } = {}) {
     entry.retiring = Promise.resolve().then(async () => {
       entry.service.store.close();
       await entry.api.dispose();
-      entry.offPrompt(); entry.unprovide(); roots.delete(root);
+      entry.offCreated(); entry.offSession(); entry.offDisposed(); entry.offPrompt(); entry.unprovide(); roots.delete(root);
     });
     await entry.retiring;
   });

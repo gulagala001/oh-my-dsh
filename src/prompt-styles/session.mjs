@@ -4,7 +4,8 @@ import { validateSessionId } from '../hub-store.mjs';
 import { symbols } from '@deepseek-ai/cordis';
 
 export function sessionPromptStyle(hub, session) {
-  if (session?.header?.origin === 'subagent') return 'omd';
+  if (session?.header?.origin === 'subagent') return session.header.isSeeded === true
+    ? hub.store?.peek(session.id)?.forkPromptStyle ?? 'omd' : 'omd';
   const config = hub.config();
   const saved = config.sessionPromptStyleEnabled === true && session?.id
     ? hub.store?.peek(session.id)?.promptStyle : undefined;
@@ -13,13 +14,33 @@ export function sessionPromptStyle(hub, session) {
 
 // Keep a running turn stable; settings and session choices take effect together
 // at the next native turn, including a resumed session.
-const turns = new WeakMap();
+const turns = new WeakMap(), completed = new WeakMap();
 export function capturePromptStyle(hub, agent, turn) {
   agent = agent[symbols.original] ?? agent;
   // A native clear/rewind can reuse a turn number on the same live Agent.
   turns.set(agent, { turn, style: sessionPromptStyle(hub, agent.session) });
 }
 export const agentPromptStyle = (hub, agent) => turns.get(agent?.[symbols.original] ?? agent)?.style ?? sessionPromptStyle(hub, agent?.session);
+
+export function completePromptStyle(agent, event) {
+  agent = agent[symbols.original] ?? agent;
+  const active = turns.get(agent);
+  if (active?.turn !== event.data.turn) return;
+  let snapshots = completed.get(agent);
+  if (!snapshots) completed.set(agent, snapshots = new Map());
+  snapshots.set(event.seq, active.style);
+  if (snapshots.size > 8) snapshots.delete(snapshots.keys().next().value);
+}
+
+export function inheritForkPromptStyle(hub, agents, agent, source) {
+  const { session } = agent, { header } = session;
+  if (header.origin !== 'subagent' || header.isSeeded !== true || !header.parentSession || source !== 'startup') return;
+  const state = hub.store.state(session.id);
+  if (state.forkPromptStyle !== undefined) return;
+  const parent = agents.get(header.parentSession);
+  const style = parent ? completed.get(parent[symbols.original] ?? parent)?.get(session.inheritedEventCount - 1) : undefined;
+  if (style !== undefined) hub.store.update(state, { forkPromptStyle: style });
+}
 
 function eligible(ctx, target, id) {
   const header = target.session?.header ?? target.inspection?.meta;

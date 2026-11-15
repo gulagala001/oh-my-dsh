@@ -32,7 +32,7 @@ import { handleSkinAsset } from './skin-assets.mjs';
 import { installImageBudget } from './image-budget.mjs';
 import { Config } from './config.mjs';
 import { neutralizeHostEnvironment } from './cc-adaptation/environment.mjs';
-import { agentPromptStyle, capturePromptStyle } from './prompt-styles/session.mjs';
+import { agentPromptStyle, capturePromptStyle, completePromptStyle, inheritForkPromptStyle } from './prompt-styles/session.mjs';
 import { Hub } from "./hub.mjs";
 import { installContextErrorRecovery } from './context/host.mjs';
 import { currentTasks, restoreTaskProjection } from './tasks.mjs';
@@ -318,6 +318,7 @@ async function applyRuntime(ctx, config) {
     if (!hub.agents.has(session.id)) return hub.context.dispose(session.id);
   }, { global: true });
   ctx.on('agent/created', async ({ agent, source, signal }) => {
+    if (isX(agent.session)) inheritForkPromptStyle(hub, ctx.agents, agent, source);
     if(isBtwSession(agent.session))return;
     hub.ultracode.lifecycle(agent, source);
     hub.workflowBudget.attach(agent.session);
@@ -350,9 +351,11 @@ async function applyRuntime(ctx, config) {
     if (!hub.dream.closed) hub.dream.sources.observe(session, event);
     if(isBtwSession(session))return;
     // Native prompt assembly precedes pre-step; pin at the earlier turn event.
-    if (event.type === 'turn/start' && isX(session) && session.header.origin !== 'subagent') {
+    if ((event.type === 'turn/start' || event.type === 'turn/end') && isX(session) &&
+        (session.header.origin !== 'subagent' || session.header.isSeeded === true)) {
       const agent = ctx.agents.get(session.id);
-      if (agent) capturePromptStyle(hub, agent, event.data.turn);
+      if (agent && event.type === 'turn/start') capturePromptStyle(hub, agent, event.data.turn);
+      if (agent && event.type === 'turn/end') completePromptStyle(agent, event);
     }
     hub.ultracode.committed(session, event);
     hub.workflowBudget.observe(session, event);

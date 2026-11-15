@@ -32,6 +32,13 @@ export class PersonaStore {
       validateSessionId(id);
       if (preset !== null && typeof preset !== 'string') throw Error('会话人格记录无效');
     }
+    if (this.data.forkModules !== undefined) {
+      if (!object(this.data.forkModules)) throw Error('继承人格记录无效');
+      for (const [id, modules] of Object.entries(this.data.forkModules)) {
+        validateSessionId(id);
+        if (!object(modules) || Object.keys(modules).some(key => !['identity', 'style', 'communication', 'presentation'].includes(key) || typeof modules[key] !== 'string')) throw Error('继承人格记录无效');
+      }
+    }
     for (const migration of this.data.migrations) if (!object(migration) || typeof migration.dir !== 'string' || !object(migration.ids)) throw Error('人格迁移记录无效');
     this.persisted = saved !== null;
   }
@@ -93,6 +100,13 @@ export class PersonaStore {
       }
     }
     return undefined;
+  }
+  forkModules(id) {
+    validateSessionId(id);
+    return Object.hasOwn(this.data.forkModules ?? {}, id) ? this.data.forkModules[id] : undefined;
+  }
+  saveForkModules(id, modules) {
+    if (this.forkModules(id) === undefined) this.commit({ ...this.data, forkModules: { ...this.data.forkModules, [id]: structuredClone(modules) } });
   }
   peek(id) { const personalityPreset = this.choice(id); return { id, ...(personalityPreset ? { personalityPreset } : {}) }; }
   state(id) { return this.peek(id); }

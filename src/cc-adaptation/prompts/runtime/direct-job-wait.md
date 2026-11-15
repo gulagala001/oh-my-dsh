@@ -1,0 +1,1 @@
+A direct `job_output` call with `wait: true` can return before the target settles, for example when the user steers the conversation. Read the returned target status and any reason before deciding whether to wait again. Do not assume that a wakeup finished or cancelled the job.

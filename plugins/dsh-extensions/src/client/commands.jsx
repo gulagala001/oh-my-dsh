@@ -5,7 +5,12 @@ import { ActionsMenu, Confirm, Editor, Field, Group, Page, RefreshButton, Row, S
   dirname, filter, folderActions, useAction, useOpeners, useResource, useScopes, useT } from './ui.jsx';
 
 export function CommandsPage() {
-  const t = useT(), { scope, scopes } = useScopes(), opener = useOpeners(), action = useAction();
+  const { scope, scopes } = useScopes();
+  return <ScopedCommandsPage key={scope} scope={scope} scopes={scopes}/>;
+}
+
+function ScopedCommandsPage({ scope, scopes }) {
+  const t = useT(), opener = useOpeners(), action = useAction();
   const [search, setSearch] = useState(''), [editor, setEditor] = useState(null), [removing, setRemoving] = useState(null);
   const list = useResource(() => api(query('/commands', { scope })), [scope]);
   const data = list.data;

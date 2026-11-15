@@ -282,21 +282,6 @@ export function createPluginRuntime(options = {}) {
       const requested = await runtime.connectBrowser({...args, signal, onApprovalWait});
       return {ok: true, ...requested, browsers: [...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(requested.browsers ?? [])]};
     }
-    let browserConnection = null, targetInventory;
-    if (endpoint === 'targets') {
-      targetInventory = await runtime.listTargets({signal});
-      signal?.throwIfAborted();
-      // Inventory is not a browser choice. Preserve an explicit ID, existing
-      // targets/connections and backend errors without unrelated pairing.
-      if (targetInventory.ok !== false && !args.browserId && !targetInventory.targets.length
-        && !targetInventory.browsers?.some(browser => browser.connected && !browser.pairingRequired)
-        && !targetInventory.errors?.length && sessionKey && runtime.runtimeInfo.backends.extension) {
-        browserConnection = await runtime.connectBrowser({signal, onApprovalWait});
-        signal?.throwIfAborted();
-        targetInventory = await runtime.listTargets({signal});
-        signal?.throwIfAborted();
-      }
-    }
     if (endpoint === 'browserSettings/forget') return {ok: true, ...await runtime.forgetBrowser(args)};
     if (endpoint === 'browserSettings/open') return { ok: true, ...await runtime.openBrowserSettings(args) };
     if (endpoint === 'browserSettings/disconnect') return { ok: true, ...await runtime.disconnectBrowser(args) };
@@ -385,7 +370,7 @@ export function createPluginRuntime(options = {}) {
       else {
         const method = methods[endpoint];
         if (!method || typeof runtime[method] !== 'function') throw error('UNSUPPORTED_METHOD', 'Unknown or unsupported OpenCU operation');
-        result = targetInventory ?? await runtime[method](endpoint === 'stop' ? {source:requestSource, ...(typeof sessionKey === 'string' ? {sessionId:sessionKey} : {})} : endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, signal, includeBase64: false,
+        result = await runtime[method](endpoint === 'stop' ? {source:requestSource, ...(typeof sessionKey === 'string' ? {sessionId:sessionKey} : {})} : endpoint === 'select' ? args.reference : endpoint === 'observe' ? { ...args, signal, includeBase64: false,
           captureImage(bytes) {
             signal?.throwIfAborted();
             if (!acceptingCaptures) throw error('INVALID_SCREENSHOT', 'Screenshot delivery is no longer active');
@@ -394,7 +379,7 @@ export function createPluginRuntime(options = {}) {
           } } : endpoint === 'permissions' ? {...args,signal} : args);
       }
       if (result.ok === false) return stripPaths(result);
-      if (endpoint === 'targets' || endpoint === 'state') result.browsers = [...new Map([...(result.browsers ?? []), ...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true})), ...(browserConnection?.browsers ?? [])].map(item => [item.id, item])).values()];
+      if (endpoint === 'targets' || endpoint === 'state') result.browsers = [...new Map([...(result.browsers ?? []), ...runtime.extensionConnections().map(item => ({id: 'extension:' + item.instanceId, name: item.label, provider: 'extension', connected: true}))].map(item => [item.id, item])).values()];
       if (endpoint === 'targets' || endpoint === 'state') result.browserProviders = runtime.runtimeInfo.browserProviders;
       if (result.observation) { result = await attachScreenshot(result, attachments, captures); lastObservation = { targetId: result.targetId, observation: stripPaths(result.observation), image: result.image ?? null }; }
       if (result.state) result = { ...result, state: { ...result.state, status: result.state.mode, selectedTarget: result.state.targets.find(target => target.id === result.state.activeTargetId) ?? null, annotations, lastObservation, revision, activity }, service: { name: 'OpenCU', ...runtime.runtimeInfo }, config: publicConfig(getConfig()) };

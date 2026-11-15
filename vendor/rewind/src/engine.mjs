@@ -135,7 +135,7 @@ export class RewindEngine {
     return {revision:st.revision,hiddenRanges:ranges,hiddenTurns:[...new Set(hiddenTurns)],hiddenSteps:hiddenStepSeqs.size,maintenanceTurns:maintenanceTurns.length,maintenanceSteps,undoAvailable:st.undo.length>0,busy:!!st.journal,warning:st.warning||null,pendingDraft:st.pendingDraft||null};
   }
 
-  async acknowledge(id,token){return this.store.lock(id,async()=>{const st=await this.store.load(id);if(st.pendingDraft?.id===token){st.pendingDraft=null;await this.store.save(st);}return this.state(st);});}
+  async acknowledge(id,token){return this.store.lock(id,async()=>{const st=await this.store.load(id);if(st.pendingDraft?.id===token){st.pendingDraft=null;st.revision++;await this.store.save(st);}return this.state(st);});}
   async getState(id){return this.store.lock(id,async()=>{
     // Viewing persisted history does not activate an Agent.
     const events=this.ctx.sessions.get(id)?.snapshotEvents()??(await readNativeSession(this.ctx, id)).events;

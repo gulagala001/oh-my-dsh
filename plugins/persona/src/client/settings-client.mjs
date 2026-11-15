@@ -42,13 +42,12 @@ export function createSettingsClient() {
       const write = async () => {
         if (lifetime.signal.aborted) return false;
         try {
-          const config = await request(body, revision); ++generation;
+          const config = await request(body, revision);
           if (lifetime.signal.aborted) return false;
           publish({ config, error: '' });
           window.dispatchEvent(new CustomEvent(SETTINGS_EVENT, { detail: config }));
           return true;
         } catch (error) {
-          ++generation;
           publish({ ...(error.config ? { config: error.config } : {}), error: '保存失败：' + error.message });
           return false;
         }

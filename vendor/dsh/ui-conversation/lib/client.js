@@ -23580,7 +23580,7 @@ const InputBar = (0, react.memo)(function InputBar({ useSession, useInput, input
 	const primaryStops = running && subagent === null && !sending && (empty || blocked !== void 0);
 	const primaryRetries = !running && subagent === null && empty && retryableFailure !== void 0 && !pendingHumanInput && historyOpen && !submissionPending && !disabled && input.queue.length === 0 && input.phase === "plain" && retry !== void 0;
 	const primaryDisabled = primaryStops ? stopAction === void 0 : !primaryRetries && empty || disabled || machineBusy || uploadsPending;
-	const interruptible = running && (continuable || sending && subagent === null);
+	const interruptible = running && !primaryStops && (continuable || subagent === null);
 	const primarySubmitMode = resolveSubmitMode(busyEnter, running, "enter", steeringAvailable);
 	const plainMessageDraft = !empty && input?.phase === "plain" && !draft.trimStart().startsWith("/");
 	const primaryLabel = primaryStops ? t("input.stop") : sending ? t("input.sending") : primaryRetries ? t("input.continue") : running && steeringAvailable && !disabled && !uploadsPending && plainMessageDraft ? t(eventWaiting ? "input.send.now" : primarySubmitMode === "steer" ? "input.send.steer" : "input.send.queue") : t("input.send");

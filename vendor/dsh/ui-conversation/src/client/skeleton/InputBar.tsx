@@ -373,9 +373,8 @@ export const InputBar = memo(function InputBar({
   // button (no pending upload) over a non-empty draft that is neither a
   // claimed command nor a `/` line headed for adjudication — so it never
   // describes a delivery the click cannot or does not perform; every other
-  // state keeps plain Send. A continuable child keeps Send primary and
-  // exposes Stop independently, and so does a running session while a
-  // message waits for the Host.
+  // state keeps plain Send. When Send is primary, keep Stop independently
+  // available for the running conversation.
   const primaryStops = running && subagent === null && !sending && (empty || blocked !== undefined)
   const primaryRetries = !running && subagent === null && empty && retryableFailure !== undefined
     && !pendingHumanInput && historyOpen && !submissionPending && !disabled && input.queue.length === 0
@@ -383,7 +382,7 @@ export const InputBar = memo(function InputBar({
   // Disabled native buttons may omit mouseleave; their tooltip must close from state.
   const primaryDisabled = primaryStops ? stopAction === undefined
     : (!primaryRetries && empty) || disabled || machineBusy || uploadsPending
-  const interruptible = running && (continuable || (sending && subagent === null))
+  const interruptible = running && !primaryStops && (continuable || subagent === null)
   const primarySubmitMode = resolveSubmitMode(busyEnter, running, 'enter', steeringAvailable)
   const plainMessageDraft = !empty && input?.phase === 'plain' && !draft.trimStart().startsWith('/')
   const primaryLabel = primaryStops

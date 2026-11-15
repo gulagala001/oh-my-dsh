@@ -1,5 +1,3 @@
-Send `message` to a direct continuable child by `agent_id`. A resident continuable child may also address its direct parent.
+Send `message` to another continuable member of your subagent tree. Pass its host-assigned name or path from `list_agents` as `agent`.
 
-A running child receives the message at its next step boundary; an idle or ready child starts a turn. The result confirms delivery, not the child's answer. If delivery fails, do not report that the child received it.
-
-Use the durable id returned by the host, not teammate display names or a `to` field.
+A running agent receives it at its next step; an idle agent starts a turn. The result confirms delivery, not the agent's answer.

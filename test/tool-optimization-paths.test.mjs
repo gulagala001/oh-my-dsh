@@ -135,8 +135,9 @@ test('Native and PTC share discovery, exact contracts and revocation; all four f
   const f = await fixture(t, 'native'); installCatalog(f.ctx, f.hub); registerContextViews(f.ctx, f.hub); registerContextRecall(f.ctx, f.hub);
   const original = definition('mcp__demo__lookup', { value: 42 }); original.description = 'Lookup documents. '.repeat(200);
   const dispose = f.ctx.tools.register(original);
+  const instructions = { name: 'mcp:demo', text: '### MCP server: demo\nUse mcp__demo__lookup to look up documents.' };
   const make = ptc => {
-    const schemas = f.ctx.tools.schemas(f.agent), assembly = { sections: [{ name: 'oh-my-dsh:persona', text: 'owner' }, ...(ptc ? [{ name: 'tools:sdk', text: renderToolsSdk(schemas.map(s=>({ ...s, output:f.ctx.tools.get(s.name,f.agent).output.schema }))) }] : [])], tools: ptc ? [] : schemas };
+    const schemas = f.ctx.tools.schemas(f.agent), assembly = { sections: [{ name: 'oh-my-dsh:persona', text: 'owner' }, instructions, ...(ptc ? [{ name: 'tools:sdk', text: renderToolsSdk(schemas.map(s=>({ ...s, output:f.ctx.tools.get(s.name,f.agent).output.schema }))) }] : [])], tools: ptc ? [] : schemas };
     const transformed = transformAssembly(assembly, { agent: f.agent }, { promptStyle: 'dsh', schemas }).assembly;
     return projectCatalogAssembly(transformed, { enabled: true, renderSdk: renderToolsSdk,
       schemas: schemas.map(s=>({ ...s, output:f.ctx.tools.get(s.name,f.agent).output.schema })),
@@ -146,6 +147,11 @@ test('Native and PTC share discovery, exact contracts and revocation; all four f
   assert.ok(!native.tools.some(t=>t.name===original.name));
   assert.ok(!ptc.sections.find(s=>s.name==='tools:sdk').text.includes(original.name + ':'));
   for (const assembly of [native, ptc]) {
+    assert.equal(assembly.sections.find(s => s.name === instructions.name), instructions);
+    const discovery = assembly.sections.find(s => s.name === 'omd:tool-discovery').text;
+    assert.match(discovery, /Hidden names: mcp__demo__lookup/);
+    assert.match(discovery, /search tool_find by its exact name or server/);
+    assert.match(discovery, /Tools already declared need no discovery/);
     const system = { id: 'catalog-system', role: 'system', source: { kind: 'system-prompt' }, content: text(assembly.sections.map(s=>s.text).join('\n\n')) };
     for await (const _ of f.ctx.llm.stream(f.request([system], { tools: assembly.tools }))) {}
     const stats = f.service.snapshot(f.session);
@@ -159,8 +165,13 @@ test('Native and PTC share discovery, exact contracts and revocation; all four f
   }
   const found = await f.call('tool_find', { query: 'demo lookup' }); assert.equal(found.isError,false);
   assert.deepEqual(JSON.parse(found.value).tools[0].parameters, original.parameters);
-  assert.ok(make(false).tools.some(t=>t.name===original.name));
-  assert.ok(make(true).sections.find(s=>s.name==='tools:sdk').text.includes(original.name+':'));
+  const laterNative = make(false), laterPtc = make(true);
+  assert.ok(laterNative.tools.some(t=>t.name===original.name));
+  assert.ok(laterPtc.sections.find(s=>s.name==='tools:sdk').text.includes(original.name+':'));
+  for (const later of [laterNative, laterPtc]) {
+    assert.equal(later.sections.find(s => s.name === instructions.name), instructions);
+    assert.ok(!later.sections.find(s => s.name === 'omd:tool-discovery')?.text.includes(original.name));
+  }
   dispose(); assert.ok(!make(false).tools.some(t=>t.name===original.name));
   for (const [name,args] of [['tool_find',{query:'',limit:0}],['code_search',{paths:[],language:'javascript',pattern:'x'}],['context_view',{file:'a',url:'x',view:'raw'}],['recall',{from:1}],['recall',{id:'x',asset:0}]]) assert.equal((await f.call(name,args)).isError,true,name);
 });

@@ -50,6 +50,7 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
       return function WorkspaceBrowser(props) { return <><Original {...props}/><UngroupedCreate {...props}/></>; };
     }));
   const useDrafts = () => useSyncExternalStore(drafts.subscribe, drafts.getSnapshot);
+  const useCwd = id => useSyncExternalStore(fn => ctx.sessions.list.subscribe(fn), () => drafts.cwdOf(id));
   ctx.effect(() => {
     const style = document.createElement('style'); style.dataset.plugin = 'omd-projectless'; style.textContent = css; document.head.append(style);
     const workspace = ctx.uiWorkspace, original = workspace.startSession, originalOpen = workspace.openWorkspace, originalRestore = workspace.restoreSelection;
@@ -89,8 +90,8 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
   const decorate = (name, render) => components.set(name, render);
   decorate('conversation.composer.bar', Original => function Composer(props) {
     useDrafts();
-    const id = props.sessionId, active = drafts.isManaged(id);
-    useEffect(() => { void drafts.inspect(id).catch(() => {}); }, [id]);
+    const id = props.sessionId, cwd = useCwd(id), active = drafts.isManaged(id);
+    useEffect(() => { void drafts.inspect(id).catch(() => {}); }, [id, cwd]);
     if (drafts.lifetime.signal.aborted) return <Original {...props}/>;
     const next = { ...props };
     if (active && next.onRequestWorkspace) {
@@ -100,9 +101,9 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
   });
   decorate('conversation.hero.workspace', Original => function Picker(props) {
     useDrafts();
-    const id = drafts.current(), managed = drafts.isManaged(id);
+    const id = drafts.current(), cwd = useCwd(id), managed = drafts.isManaged(id);
     const [open, setOpen] = useState(false), anchor = useRef(null);
-    useEffect(() => { setOpen(false); void drafts.inspect(id).catch(() => {}); }, [id]);
+    useEffect(() => { setOpen(false); void drafts.inspect(id).catch(() => {}); }, [id, cwd]);
     if (drafts.lifetime.signal.aborted) return <Original {...props}/>;
     const pick = workspaceId => {
       // The native unbound seat applies its staged preset only after a Session

@@ -25,6 +25,7 @@ export function buildMainPrompt(identity = DEFAULT_IDENTITY, { toolMode = 'nativ
     'Independent tool calls can run in parallel in one response.',
     'Independent read-only tool calls may run concurrently inside a `run_code` program; await dependent work in order.',
   ) : mainBody;
-  return [identity.trim(), identity.trim() ? PERSONALITY_SCOPE : '', body, toolMode !== 'native' ? promptText('runtime/ptc-guidance.md') : ''].filter(Boolean).join('\n\n');
+  const hasPersonality = identity.trim() || mainBody !== mainParts.join('\n\n');
+  return [identity.trim(), hasPersonality ? PERSONALITY_SCOPE : '', body, toolMode !== 'native' ? promptText('runtime/ptc-guidance.md') : ''].filter(Boolean).join('\n\n');
 }
 export const mainPrompt = buildMainPrompt();

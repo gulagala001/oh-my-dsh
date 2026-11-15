@@ -149,10 +149,13 @@ export class SideChatStore {
     } finally {
       controller.signal.removeEventListener('abort', cancel);
       controller.abort();
-      await reader?.cancel().catch(() => {});
-      reader?.releaseLock();
       if (this.running.get(id) === controller) this.running.delete(id);
       this.update(id, {});
+      if (reader) {
+        const cleanup = reader.cancel();
+        reader.releaseLock();
+        void cleanup.catch(() => {});
+      }
     }
   }
   dispose() {

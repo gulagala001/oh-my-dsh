@@ -23,7 +23,7 @@
     "docs/structure.json": "6f88758d0c128822b29d8157041b8076139cc8122490fa513463056fca0726d5",
     "docs/usage_EN.md": "399006309b532f2489b8f2877e86adb90e027e655b57abbaf3e38d04acbc76e4",
     "docs/usage.md": "ae75a7aa3d0b3d580d77423cb201d2ec0986a7fa4960f20417dd660279cbe4bb",
-    "lib/client.js": "9f99a520ebd567bb2b3dd2fa3d5197bcbf1bf9c31a2a599e3d2d59214a60d073",
+    "lib/client.js": "aedc60b33c13dc124c70cdbaba9b10d415ebe2d7419a95a70a4fb3e15c3fe6f2",
     "package.json": "25710232d1668bb40ba6797a87f02ce00ad4ed62d127991ce66125edc8e07862",
     "scripts/build.mjs": "70869d27e396cda01e08625aff9bd24fd856326c8f15cb987276422062fd54cb",
     "scripts/check-docs.mjs": "6c062fc1534c6a55951bccc2bd2818e0bc72752b5daf98c8665338f79ef68133",
@@ -33,7 +33,7 @@
     "scripts/prepack.mjs": "c45e3fc4bee8ab65e00452e0e5c197619da3aef9315d3ef7f9fd1470f46cf98b",
     "scripts/prepare-host-sdk.mjs": "e5ffa4c03231aef9178f98232d69b6c909cab1dbf6ae4f9c1cdf4e6ca0fc6b1d",
     "src/account-probe.mjs": "f1b27cf5286ea500e73c1f93759078f2218b7a487623e72c088ad4c5bfa6c4b7",
-    "src/client/browser-adapter.mjs": "d66d3466c6d539b4eda27666f494686e130253b3da4ccfc8049eaf88515b561f",
+    "src/client/browser-adapter.mjs": "1b7478c6c48ec60856ab678c56ef997a0cadf09d52d9ee0b3ece8d4266397cff",
     "src/client/conversation-import.mjs": "d351cc3fd1e188423f6a7324fa8fd2c9156687141abe5fb98ccb66abbe456b0f",
     "src/client/extraction.mjs": "cd3fe83fdcceb8efcd7e5ed39c8cd930ce1e11f76c0e0a854e893c5ed48be141",
     "src/client/host-capabilities.mjs": "45f7a97ebf23a4bb2fe87b72f49acc107d4747c6e3b41bb90f73970479e67f5e",
@@ -44,7 +44,7 @@
     "src/client/platform-page.jsx": "33e8af6eaa6d48835ee204795387b5c5798e49ebdb39e87498246d1b8bdc1483",
     "src/client/style.css": "14fa444b98107878fbcc99b79fee058d43efd60822b251c2470880f2c06ab23e",
     "src/client/temporary-sidebar.jsx": "34142a71cfa0f88399d34517f591c3d132a4e4a84b1995ac5bbda539c6a02275",
-    "src/client/temporary-web.mjs": "06783d00cb9c56c92894e3f04abeff9338bdb7931986eba059429f157c8c20e1",
+    "src/client/temporary-web.mjs": "d6a954cb22f88c2bdb00e6c2284d4c1c3dae5e048f892d63346b31dd734d17a8",
     "src/import.mjs": "20520bde14ac07877b85b5a16c5b133a33d9c587999ae5b1c1346014e46edc3b",
     "src/index.mjs": "9ba46f0254bdfd5d58d7791c506536cc2be99360cdd09ed0eece1f726527e138"
   }
