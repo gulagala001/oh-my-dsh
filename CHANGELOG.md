@@ -1,3 +1,33 @@
+# Oh My DSH 1.3.23 · DSH 0.2.2-rc.3
+
+[中文](#zh-1323) · [English](#en-1323)
+
+<a id="zh-1323"></a>
+
+## 中文
+
+### 问题修复
+
+- 历史离线浏览器页面不再阻塞新会话操作电脑和浏览器，无需先到设置中逐个清理。
+- 修复同一个离线页面重复显示输入释放错误，以及重启后仍选中旧页面的问题。
+
+<a id="en-1323"></a>
+
+## English
+
+### Bug fixes
+
+- Offline pages from earlier sessions no longer block computer and browser control in a new chat or require manual cleanup in settings.
+- Fixes duplicate input-release errors for the same offline page and stale page selection after restart.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.23/oh-my-dsh-0.2.2-rc.3.omd.1.3.23.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.3.23/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.3.22 · DSH 0.2.2-rc.3
 
 [中文](#zh-1322) · [English](#en-1322)

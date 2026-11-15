@@ -1,3 +1,33 @@
+# OpenCU 2.2.15 · DSH 0.2.2-rc.3
+
+[中文](#zh-2215) · [English](#en-2215)
+
+<a id="zh-2215"></a>
+
+## 中文
+
+### 问题修复
+
+- 历史离线浏览器页面不再阻塞新会话操作电脑和浏览器，无需先到设置中逐个清理。
+- 修复同一个离线页面重复显示输入释放错误，以及重启后仍选中旧页面的问题。
+
+<a id="en-2215"></a>
+
+## English
+
+### Bug fixes
+
+- Offline pages from earlier sessions no longer block computer and browser control in a new chat or require manual cleanup in settings.
+- Fixes duplicate input-release errors for the same offline page and stale page selection after restart.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.2.15-dsh.0.2.2-rc.3/opencu-2.2.15-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.2.15-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # OpenCU 2.2.14 · DSH 0.2.2-rc.3
 
 [中文](#zh-2214) · [English](#en-2214)

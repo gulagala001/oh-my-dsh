@@ -15,7 +15,10 @@ test('bundled sidebar keeps unresolved input and fences replacement connections'
   await host.handle('browser/result',{...first,id:command.id,result:{accepted:true}});
   await action;
   await host.handle('browser/disconnect',first);
-  assert.equal((await host.backend.release()).released,false,'offline is not a release acknowledgement');
+  const offline = await host.backend.release();
+  assert.equal(offline.released,false,'offline is not a release acknowledgement');
+  assert.equal(offline.failures.length,1,'one unresolved occurrence has one release error');
+  assert.equal(offline.failures[0].code,'BROWSER_HOST_DISCONNECTED');
 
   const current = await host.handle('browser/connect',{rendererId});
   await host.handle('browser/publish',{...current,targets:[target]});

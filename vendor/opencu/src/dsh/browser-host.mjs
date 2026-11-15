@@ -264,6 +264,11 @@ export function createBrowserHost() {
     },
     async release({ targets = [], dismissDialogs = true } = {}) {
       const failures = [], releasedTargetIds = [];
+      const failedTargets = new Set();
+      const failure = value => {
+        if (failedTargets.has(value.targetId)) return;
+        failedTargets.add(value.targetId); failures.push(value);
+      };
       const retiredTargetIds = targets.filter(target => sameIdentity(retired.get(target.id)?.identity, target.identity)
         || target.cold && target.releaseAcknowledged === true && !bindings.has(target.id)
           && !liveClients().some(client => client.targets.some(current => sameIdentity(current.identity, target.identity)))).map(target => target.id);
@@ -280,12 +285,14 @@ export function createBrowserHost() {
         }
         try {
           const result = await backend.releaseTarget(binding.target,{dismissDialogs});
-          if (!inputReleased(result)) { failures.push({targetId:binding.target.id,code:'RELEASE_FAILED',result}); return; }
+          if (!inputReleased(result)) { failure({targetId:binding.target.id,code:'RELEASE_FAILED',result}); return; }
           binding.needsRelease = false; releasedTargetIds.push(binding.target.id);
           if (result.retired === true) retiredTargetIds.push(binding.target.id);
-        } catch (error) { failures.push({targetId:binding.target.id,code:error.code,message:error.message}); }
+        } catch (error) { failure({targetId:binding.target.id,code:error.code,message:error.message,identity:binding.target.identity}); }
       }));
-      for (const binding of bindings.values()) if (binding.needsRelease) failures.push({targetId: binding.target.id,
+      // Include obligations created while release was in flight, without replacing
+      // an attempted target's precise failure with a second generic stale error.
+      for (const binding of bindings.values()) if (binding.needsRelease || binding.uncertain) failure({targetId: binding.target.id,
         code: 'STALE_TARGET', message: 'The original sidebar guest has not acknowledged input release', identity: binding.target.identity});
       for (const target of targets) if (!bindings.has(target.id) && !target.cold && !retiredTargetIds.includes(target.id)) releasedTargetIds.push(target.id);
       return { released: failures.length === 0, failures, retiredTargetIds, releasedTargetIds:[...new Set(releasedTargetIds)] };
