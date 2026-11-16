@@ -443,6 +443,23 @@
       "source": "src/client/skins/claude-desktop/source.json",
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#open-claude-ui"
+    },
+    {
+      "id": "unharnessed",
+      "name": "Unharnessed",
+      "url": "https://github.com/unharnessed-agent/Unharnessed",
+      "authors": "Unharnessed contributors and DSH Unharnessed contributors",
+      "purpose": {
+        "zh": "实验性持久 Python 预设、后台命令与检查点",
+        "en": "Experimental persistent Python preset, background commands and checkpoints"
+      },
+      "relationship": {
+        "zh": "内置实验预设，默认关闭",
+        "en": "Bundled experimental preset, disabled by default"
+      },
+      "source": "vendor/unharnessed/package.json",
+      "license": "MIT; dill: BSD-3-Clause",
+      "notice": "vendor/unharnessed/THIRD_PARTY_NOTICES.md"
     }
   ]
 }

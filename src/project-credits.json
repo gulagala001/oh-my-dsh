@@ -523,6 +523,26 @@
       "group": "sources"
     },
     {
+      "id": "unharnessed",
+      "name": "Unharnessed",
+      "url": "https://github.com/unharnessed-agent/Unharnessed",
+      "authors": "Unharnessed contributors and DSH Unharnessed contributors",
+      "purpose": {
+        "zh": "实验性持久 Python 预设、后台命令与检查点",
+        "en": "Experimental persistent Python preset, background commands and checkpoints"
+      },
+      "relationship": {
+        "zh": "内置实验预设，默认关闭",
+        "en": "Bundled experimental preset, disabled by default"
+      },
+      "source": "vendor/unharnessed/package.json",
+      "license": "MIT; dill: BSD-3-Clause",
+      "notice": "vendor/unharnessed/THIRD_PARTY_NOTICES.md",
+      "version": "0.2.1",
+      "sourceSha256": "ce29fe0b266986bb01347b652724bbfad630ba9015c3f0709080b72558a96a64",
+      "group": "sources"
+    },
+    {
       "id": "billion-context",
       "name": "Billion Context",
       "url": "https://github.com/ranxianglei/billion-context",

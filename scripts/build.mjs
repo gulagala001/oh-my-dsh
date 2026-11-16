@@ -2,6 +2,7 @@ import './build-ptc-native.mjs';
 import './build-host.mjs';
 await import('./check-tool-contracts.mjs');
 import './check-prompt-styles.mjs';
+import './check-unharnessed.mjs';
 import './build-deepseek-workbench.mjs';
 import './build-overview-native.mjs';
 import './build-permission-native.mjs';

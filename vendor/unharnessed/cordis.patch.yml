@@ -1,0 +1,41 @@
+- insert:
+    - id: preset-unharnessed
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: unharnessed
+        name: Unharnessed
+        description: '单一 Python REPL，跨重启快照、DSH MCP、富媒体、异步 bash 与原生目标验收。'
+        order: 20
+        plugins:
+          - id: native-executor
+            name: '@deepseek-ai/dsh-tool-executor-native'
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: unharnessed
+            name: dsh-unharnessed
+            config:
+              pythonCommand: auto
+              bashCommand: bash
+              maxOutputChars: 16000
+              cellTimeoutMs: 600000
+              startupTimeoutMs: 15000
+              interruptGraceMs: 3000
+              gateTimeoutMs: 60000
+              snapshots: true
+              stateDirectory: ''
+              snapshotMaxBytes: 268435456
+              snapshotVariableBytes: 16777216
+              snapshotTimeoutMs: 15000
+              maxAttachmentBytes: 10485760
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'

@@ -57,6 +57,7 @@ export const Config = z.object({
   sessionPersonalityEnabled: z.boolean().default(true),
   promptStyle: z.union(PROMPT_STYLES.map(option => option.value)).default('omd'),
   sessionPromptStyleEnabled: z.boolean().default(false),
+  experimentalUnharnessedEnabled: z.boolean().default(false),
   stateHintsEnabled: z.boolean().default(false),
   budgetHintsEnabled: z.boolean().default(false),
   budgetEveryStep: z.boolean().default(false),

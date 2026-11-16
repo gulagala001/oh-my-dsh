@@ -1,0 +1,26 @@
+{
+  "name": "dsh-unharnessed",
+  "version": "0.2.1",
+  "private": true,
+  "description": "Native DSH single-tool Python harness with session checkpoints, MCP, durable media, background shell and gated goals.",
+  "type": "module",
+  "scripts": { "test": "node tests/run.mjs" },
+  "license": "MIT",
+  "engines": { "dsh": ">=0.2.2-rc.3 <0.2.3-0", "node": ">=22" },
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": "~3.19.0",
+    "@deepseek-ai/dsh-tools": ">=0.2.2-rc.3 <0.2.3-0",
+    "@deepseek-ai/dsh-llm": ">=0.2.2-rc.3 <0.2.3-0",
+    "@deepseek-ai/dsh-system-prompt": ">=0.2.2-rc.3 <0.2.3-0",
+    "@deepseek-ai/dsh-attachment": ">=0.2.2-rc.3 <0.2.3-0",
+    "zod": "^4.6.6"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "lib", "python", "vendor", "tests", "cordis.patch.yml", "locale", "icon.svg", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Unharnessed",
+    "description": "One Python tool with restart checkpoints, DSH MCP, durable media, async shell and native goal gates."
+  }
+}

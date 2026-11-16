@@ -10,7 +10,7 @@ const core = [
   'context-store-cache', 'context-coordinate-release', 'context-runtime-retirement',
   'model-reply', 'temporary-chat', 'prompt-optimizer-drafts',
   'dream-source-lifecycle', 'dream-job-control',
-  'context-controls', 'settings-state',
+  'context-controls', 'settings-state', 'experimental-presets',
   'task-ledger-authority', 'task-history-replay', 'task-verification', 'task-verification-mode', 'plugin-operation-state', 'plugin-preflight', 'plugin-update-admission',
   'session-migration-cache', 'host-component-reload', 'loader-lifecycle-retention', 'codegraph-lifecycle', 'projectless-allocation', 'projectless-directory-native',
 ].map(name => `test/${name}.test.mjs`);

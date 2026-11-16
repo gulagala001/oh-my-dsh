@@ -4,7 +4,7 @@ import { subscribeSettingsAnchor, takeSettingsAnchor } from './settings-nav.mjs'
 
 export const SETTINGS_SECTIONS = [
   ['features', '功能'], ['personality', '人格'], ['context', '上下文与记忆'], ['models', '后台模型'],
-  ['background', '全局背景'], ['agents', '智能体'], ['about', '关于'], ['advanced', '高级'],
+  ['background', '全局背景'], ['agents', '智能体'], ['experiments', '实验预设'], ['about', '关于'], ['advanced', '高级'],
 ].map(([id, label]) => ({ id, label }));
 
 export function SettingsOutline({ active, navigate }) {

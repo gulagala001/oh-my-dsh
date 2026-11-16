@@ -204,7 +204,10 @@ export async function handleContextApi({ hub, ctx, req, res, url, session, agent
       throw new Error('请通过人格设置保存；旧设置入口不再写入人格数据');
     contextConfig({ ...hub.config(), ...patch });
     if (patch.memoryScope !== undefined && !['session', 'project', 'global'].includes(patch.memoryScope)) throw new Error('旧 full 档不再参与跨项目记忆；全局模式使用 global');
-    if (Object.keys(patch).length) await ctx.settings.update('oh-my-dsh', patch);
+    if (Object.hasOwn(patch, 'experimentalUnharnessedEnabled')) {
+      if (!hub.experimentalPresets) throw Error('实验预设服务尚未就绪，请稍后重试');
+      await hub.experimentalPresets.update(patch);
+    } else if (Object.keys(patch).length) await ctx.settings.update('oh-my-dsh', patch);
     if (Object.hasOwn(patch, 'taskVerificationMode')) hub.refreshTaskVerification();
     hub.context.cachedPreparation.configure();
     send(res, 200, hub.config()); return true;

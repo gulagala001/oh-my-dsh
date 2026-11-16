@@ -20,6 +20,7 @@ overrides:
   '@deepseek-ai/dsh-llm': link:../.local/dsh-sdk-38a6a5c9/packages/llm/llm
   '@deepseek-ai/dsh-scope': link:../.local/dsh-sdk-38a6a5c9/packages/core/scope
   '@deepseek-ai/dsh-tools': link:../.local/dsh-sdk-38a6a5c9/packages/core/tools
+  '@deepseek-ai/dsh-system-prompt': link:../.local/dsh-sdk-38a6a5c9/packages/core/system-prompt
   '@deepseek-ai/dsh-util-values': link:../.local/dsh-sdk-38a6a5c9/packages/util/values
   '@deepseek-ai/dsh-session': link:../.local/dsh-sdk-38a6a5c9/packages/core/session
   '@deepseek-ai/dsh-tool-executor-native': link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-native
@@ -67,6 +68,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/session
         version: link:../.local/dsh-sdk-38a6a5c9/packages/core/session
+      '@deepseek-ai/dsh-system-prompt':
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/system-prompt
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/core/system-prompt
       '@deepseek-ai/dsh-tool-executor-native':
         specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-native
         version: link:../.local/dsh-sdk-38a6a5c9/packages/core/tool-executor-native

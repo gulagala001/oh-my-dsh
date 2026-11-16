@@ -68,6 +68,7 @@ import { TemporaryChats, handleTemporaryChatApi } from './temporary-chat.mjs';
 import { createProjectlessWorkspaceService } from './projectless-workspaces.mjs';
 import { closeToolComputations } from './compute.mjs';
 import { clearOriginalSearchCache } from './context/original-search.mjs';
+import { installExperimentalPresets } from './experimental-presets.mjs';
 
 export async function apply(ctx, config) {
   return mountRuntimeLifecycle(ctx, scope => applyRuntime(scope, config));
@@ -97,6 +98,7 @@ async function applyRuntime(ctx, config) {
   hub.getConfig = () => ({ ...liveConfig(), ...(importing ? legacy.current() : {}) });
   hub.persona = await acquirePersona(ctx, { legacy: hub });
   legacy.persist(() => { importing = false; });
+  installExperimentalPresets(ctx, hub);
   ctx.effect(() => { void hub.dream.start().catch(error => hub.dream.notice(error)); });
   hub.budgets = new TaskBudgets(hub);
   hub.workflowBudget = new WorkflowBudget(hub.store);
@@ -446,7 +448,7 @@ async function applyRuntime(ctx, config) {
           const directory = id ? [] : await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));
           res.setHeader('Cache-Control', 'no-store');
           send(res, 200, {
-            config: hub.config(), directory,
+            config: hub.config(), directory, experimentalPresets: hub.experimentalPresets?.inspect(),
             taskVerificationMode: hub.taskReminders(scopeSession).verificationMode,
             notes: stored?.notes || [],
             legacyContext: stored && (stored.status || stored.pins?.length || stored.memoryContext?.doc || stored.checkpoint || stored.digests?.length || stored.probe || stored.probeNotes?.length) ? {

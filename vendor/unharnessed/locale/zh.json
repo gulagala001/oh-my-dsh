@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Unharnessed",
+    "description": "单一 Python REPL，跨重启快照、DSH MCP、富媒体、异步 bash 和目标验收。"
+  }
+}

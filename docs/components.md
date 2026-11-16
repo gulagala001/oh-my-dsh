@@ -352,6 +352,15 @@ Claude Desktop 主题的设计令牌与组件视觉规范。固定版本的 CDS 
 - 固定来源／版本: [1.0.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/claude-desktop/source.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#open-claude-ui)
 
+### Unharnessed
+
+[项目](https://github.com/unharnessed-agent/Unharnessed) · Unharnessed contributors and DSH Unharnessed contributors
+
+实验性持久 Python 预设、后台命令与检查点。内置实验预设，默认关闭。
+
+- 固定来源／版本: [0.2.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/package.json)
+- 许可／归属: MIT; dill: BSD-3-Clause · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/THIRD_PARTY_NOTICES.md)
+
 ## 完整锁定依赖清单
 
 下表列出 OMD、DSH SDK 与内置 OpenCU 宿主／前端锁文件中的全部 2356 个不同包版本，覆盖直接、间接、构建和可选平台依赖。它们是依赖输入，不代表全部在运行时加载。包页面提供原作者／维护者与许可信息，实际随包许可为准。[机器可读清单](dependencies.json)。

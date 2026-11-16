@@ -5,19 +5,19 @@
 <a id="install-in-existing-dsh"></a>
 <a id="update-uninstall"></a>
 
-For installing, upgrading and removing OMD, see the [installation guide](install_EN.md). After installing, fully restart DSH and pick the **Oh My DSH** preset when you create a session. Existing sessions keep their preset. Models and permissions come from your DSH settings.
+See [installation](install_EN.md) to install, upgrade or remove OMD. Fully restart DSH after installing, then choose **Oh My DSH** for new sessions. Existing sessions keep their preset; DSH settings supply models and permissions.
 
 ## New chats
 
-You do not need a project first. Click the global **New Session** and OMD creates a folder for the chat under **Documents/DSH/date/新聊天** (numbered if the name exists), which the chat keeps using. Renaming the chat does not move the folder. These chats appear under "Ungrouped".
+Click the global **New Session** without a project to create an "Ungrouped" chat with a folder under **Documents/DSH/date/新聊天** (numbered if taken). The chat keeps this folder even when renamed.
 
 - **Drafts**: each workspace and the global new chat keep their own unsent draft, with text and attachments, when you switch.
-- **Model preferences**: each workspace and the global new chat remember the last channel, model, reasoning level and Ultra mode you picked by hand, and new chats use them.
-- **Folders are not memory**: an automatic folder is not a Dream project and never shares memory with other chats. Only after you add a real workspace is memory shared by workspace. See [Dream](dream-memory.md).
+- **Model preferences**: new chats inherit the last channel, model, reasoning level and Ultra mode you manually chose for that workspace or global new chat.
+- **Folders are not memory**: automatic folders are not Dream projects and share no memory. Project memory is shared only after adding a real workspace. See [Dream](dream-memory.md).
 
 ## OMD Console
 
-The **OMD Console** in the right sidebar has five pages. The info bar under the input box and the BT menu also jump to the matching page.
+The right-sidebar **OMD Console** has five pages, also linked from the input info bar and BT:
 
 | Page | What you see |
 | --- | --- |
@@ -31,9 +31,9 @@ The **OMD Console** in the right sidebar has five pages. The info bar under the 
 
 ## Tasks and progress
 
-**Conversation overview**, to the right of the title, collects output files, subagents, background processes, sources and computer use. Open a subagent to talk to it directly, view or stop a background process, or add a source as an attachment.
+**Conversation overview**, beside the title, lists outputs, subagents, background processes, sources and computer use. Open subagent chats, inspect or stop processes, or attach sources.
 
-When you hand over a task, state the goal, material, scope and what counts as done. For multi-step work the AI records your words and the tasks it derived with `todo_write`, and attaches check commands and their results to each task with `verify_link`.
+State your goal, material, scope and completion criteria. For multi-step work, `todo_write` records your words and derived tasks; `verify_link` attaches each task's check commands and results.
 
 **BT**, next to the input box, sets reminders per session:
 
@@ -45,13 +45,13 @@ When you hand over a task, state the goal, material, scope and what counts as do
 
 Click the reasoning level to expand **Enable Agent Teams**. In Ultra, open **More model options**.
 
-The model panel keeps DSH's own levels and adds **Ultra**. Slide to Ultra and click the **Ultra** button at the top of the panel to pick one of three ways of working together:
+The model panel adds **Ultra** alongside DSH's levels. Slide to Ultra, then click the panel's **Ultra** button to choose:
 
 - **Workflow**: runs a plan in stages. See [Ultra and Workflow](workflow.md).
 - **Agent Team**: several members split the work. Turn on Agent Team in DSH first.
 - **Free**: the AI decides how to collaborate. This is the default the first time.
 
-**Reasoning effort** in the menu sets the reasoning level for Ultra separately. It defaults to `xhigh`, or the highest level the model supports. These choices are remembered across reloads, new chats and restarts; picking a normal level leaves Ultra.
+**Reasoning effort** sets Ultra's level separately: `xhigh` by default, or the model's highest supported level. Choices survive reloads, new chats and restarts. Picking a normal level leaves Ultra.
 
 With [Subscription Login](https://github.com/V1ki/dsh-plugin-subscriptions) installed and a supported model, a lightning icon next to the model turns **Fast** on and off.
 
@@ -59,7 +59,11 @@ With [Subscription Login](https://github.com/V1ki/dsh-plugin-subscriptions) inst
 
 OMD keeps DSH's tools, permissions and cancellation. In OMD-PTC mode the AI calls several tools from one program through `run_code`, while background-job tools (`job_output`, `job_list`, `job_kill`, `runtime_status`) stay directly callable.
 
-`run_code` runs for up to 120 seconds by default and 600 seconds at most per call. Timeouts and cancellation return a clear error. If the previous call has not finished cleaning up, the session waits for it before accepting new calls.
+`run_code` defaults to 120 seconds, with a 600-second maximum per call. Timeouts and cancellation return errors. New calls wait for the previous call's cleanup.
+
+**Unharnessed** is off by default. Enable it in **Settings → Oh My DSH → Experimental presets**, then select **Unharnessed (experimental)** for a new chat. Its single `ipython` tool supports persistent Python, background shells, existing MCP connections, skills and attachments, under DSH's model and permissions. It requires Python 3.11+ and a POSIX shell, preferring the desktop's bundled Python.
+
+Per-session checkpoints restore variables and serializable functions after restart with matching directory, permissions and Python version; background processes need restarting. `/unharnessed-reset` resets Python; `/goal` manages goals. Before disabling, finish running work and background commands, pause active goals and change the default preset if needed. Re-enabling preserves history and checkpoints.
 
 ## Context and memory
 
@@ -91,7 +95,7 @@ Results are never sent automatically. Each session keeps up to 20 versions. Relo
 
 ## Settings
 
-OMD's settings live on one page, **Settings → Oh My DSH**, with third-party features on a separate subpage. Switches save immediately; personality text is saved with the button in the editor. If saving fails you see a notice and the saved state comes back.
+Use **Settings → Oh My DSH**, with third-party features on a subpage. Switches save immediately; personality text uses the editor's save button. Failed saves show a notice and restore the saved state.
 
 | Group | Contents |
 | --- | --- |
@@ -100,13 +104,14 @@ OMD's settings live on one page, **Settings → Oh My DSH**, with third-party fe
 | Context and memory | Multi-image repair, context optimization, background preprocessing, cache mode, auto compaction, default memory scope and Dream |
 | Background model / global background | Which model background calls use, and the fixed background you write yourself |
 | Agent | System prompt style, run state, budget hints, background waits and the default task verification level |
+| Experimental presets | The optional Unharnessed persistent Python preset, off by default |
 | About / advanced | Version and updates, plugin install pre-check, advanced parameters |
 
-**System prompt style** offers OMD default, DSH native, Codex, Cursor, Pi, Grok and ZCode, with OMD default selected. Turn on **Enable per-chat prompt style** to change the style of a single main session from its permissions menu, starting with the next turn. See [prompt sources](prompt-adaptation.md).
+**System prompt style** defaults to OMD; alternatives are DSH native, Codex, Cursor, Pi, Grok and ZCode. **Enable per-chat prompt style** allows changes in a main session's permissions menu from the next turn. See [prompt sources](prompt-adaptation.md).
 
-**Global background** is written by you; Dream never changes it. If two places edit it at once, click **Read latest version**, compare and save again.
+**Global background** is user-written; Dream never edits it. For conflicting edits, **Read latest version**, compare and save again.
 
-Run state, budget hints, background optimization and similar options are described in [run state and background options](runtime-state-background.md).
+See [run state and background options](runtime-state-background.md) for run state, budget hints and background optimization.
 
 <a id="personalities"></a>
 
@@ -114,7 +119,7 @@ Run state, budget hints, background optimization and similar options are describ
 
 **Personality preset** picks the global default. Built in are Default, Overclock (超频), Economical (精算) and Economical English. Overclock explains its reasoning and details fully; Economical cuts repetition and saves tokens without lowering the quality of the work. Economical English uses an English personality text, and replies still follow your language.
 
-Each personality has four modules: identity and personality, language style, communication, and answer presentation. The last three can inherit the default. A personality only changes how the AI talks, not its permissions, tools or task rules.
+Personalities have four modules: identity and personality, language style, communication, and answer presentation. The last three can inherit defaults. Personalities affect speech, not permissions, tools or task rules.
 
 - **Create one**: click **Copy creation prompt**, send it to the AI and describe the personality you want. When the AI produces a JSON file, add it with **Import personality file**. Duplicate names are renamed, never overwritten.
 - **Manage**: expand **Advanced** to create, copy, rename, delete and export. Copy a built-in personality before editing it.
@@ -126,7 +131,7 @@ New installs use the DSH theme, logo and title. Upgrades keep your choices. In *
 
 ## Monitoring
 
-The Overview and logs in the **OMD Console** can show this session or all sessions over a time range, filtered by date, model or component.
+**OMD Console** Overview and logs cover this session or all sessions over a time range, with date, model and component filters.
 
 **`≥`** before a number means a known minimum; the real figure may be higher. Input, cache or output a provider did not report is shown as unknown, never as 0, and the cache hit rate is only computed from complete data. Context usage is an estimate, not a bill. See [monitoring](monitoring.md).
 
@@ -150,7 +155,7 @@ Turn DeepSeek Workbench, interactive answers and agent presets on or off in the 
 - **Extensions** (on by default): adds Skills, MCP, Instructions, Commands and Hooks tabs to the **Plugins** page so you do not edit config files by hand. See [extension management](extensions.md).
 - **Separate plugins**: IUI, OMAA, Subscription Login and others are separate projects; install them by their own instructions. Notes on running them alongside OMD are in [plugin compatibility](plugin-compatibility_EN.md).
 
-**Plugin install pre-check** (on by default, under About): when you install, update or enable a plugin from the DSH plugin page, a tool call or the desktop dsh-market, OMD first tries to load it in a temporary DSH and continues automatically if it passes. If it fails, you can cancel, copy the repair details for the AI, or choose to install anyway. The pre-check copies none of your sessions or accounts and deletes its temporary folder afterwards. Plugins installed from the command line or by editing folders are not pre-checked.
+**Plugin install pre-check** (on by default, under About): installs, updates and enabling through the DSH plugin page, tools or desktop dsh-market first load the plugin in a temporary DSH. Passing continues automatically; on failure, cancel, copy repair details for the AI or install anyway. No sessions or accounts are copied, and the temporary folder is deleted afterwards. Command-line and folder installs skip this check.
 
 <a id="side-questions-and-turn-rewind"></a>
 
@@ -168,4 +173,4 @@ Rewind backups are trimmed to 2 GiB when idle, capped at 4 GiB, and paused when 
 
 ## Updates
 
-**Settings → Oh My DSH → About** shows the current and latest version: a green dot is a normal update, a red dot an important fix. Checking for updates calls no model and uploads no sessions. Updating only replaces OMD; it never upgrades DSH or restarts it.
+**Settings → Oh My DSH → About** shows current/latest versions: green for updates, red for important fixes. Checks call no model and upload no sessions. Updates replace OMD without upgrading or restarting DSH.

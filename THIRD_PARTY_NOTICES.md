@@ -4,6 +4,8 @@ OMD 自有代码采用根目录的 [MIT 许可证](LICENSE)；该声明不替换
 
 OMD-owned code uses the root [MIT license](LICENSE). Third-party code, components, prompts and materials retain the licenses documented below.
 
+The optional Unharnessed preset bundles the DSH Unharnessed 0.2.1 distribution, with the MIT runtime from [Unharnessed](https://github.com/unharnessed-agent/Unharnessed) commit `fe2cf2815f78463464b91c598fc0c31c0af98f4c` and dill 0.4.0 under BSD-3-Clause. OMD adds opt-in preset registration, isolated checkpoint and cancellation identities, and a read-only activity view for safe disabling. Original and adapted file hashes are recorded in `vendor/unharnessed.json`; full notices and licenses are preserved in [the bundled notices](vendor/unharnessed/THIRD_PARTY_NOTICES.md).
+
 本页集中列出原作者、原项目与第三方许可；各节保留固定版本、修改范围和许可证说明。完整的自有产品、可选集成、组件和锁定依赖见[项目、组件与致谢](docs/components.md)（[English](docs/components_EN.md)）。
 
 上下文优化使用直接依赖：[@ast-grep/wasm](https://github.com/ast-grep/ast-grep) 0.51.0（MIT）、[web-tree-sitter](https://github.com/tree-sitter/tree-sitter) 0.26.0（MIT）、[@vscode/tree-sitter-wasm](https://github.com/microsoft/vscode-tree-sitter-wasm) 0.3.1（MIT，语法各自许可随包保留）、[@toon-format/toon](https://github.com/toon-format/toon) 4.4.0（MIT）、[@mozilla/readability](https://github.com/mozilla/readability) 0.6.0（Apache-2.0）和 [jsdom](https://github.com/jsdom/jsdom) 26.1.0（MIT）。依赖原件未修改；OMD 自有代码提供宿主适配、原文权限和结果视图。

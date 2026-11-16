@@ -382,7 +382,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
     const [notice, setNotice] = useState('');
     useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 6000); return () => clearTimeout(timer); }, [notice]);
     const report = useCallback(message => setNotice(message), []);
-    const { config: c, directory, error, commit, reload } = useConfig(report);
+    const { config: c, directory, error, experimentalPresets, commit, reload } = useConfig(report);
     const features = usePollingAction(pluginApi, 2000);
     const components = usePollingAction(componentApi, 2500);
     const dream = usePollingAction(dreamApi, 30000);
@@ -443,6 +443,12 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
       <Group title="后台模型" anchor="models"><BackgroundModels config={c} directory={directory} commit={commit} dream={dream} commitDream={commitDream}/></Group>
       <Group title="全局背景" anchor="background"><GlobalBackground/></Group>
       <Group title="智能体" anchor="agents"><AgentHints config={c} commit={commit}/></Group>
+      <Group title="实验预设" anchor="experiments">
+        <Toggle title="Unharnessed" hint="默认关闭。开启后可在新会话的 Agent 预设中选择 Unharnessed（实验），使用持久 Python、MCP、附件和目标验收。需要已有 Python 3.11+ 与 POSIX shell。"
+          checked={c.experimentalUnharnessedEnabled === true}
+          onChange={async enabled => { if (await commit({ experimentalUnharnessedEnabled: enabled })) await reload(); }}/>
+        <Status error action={<Button type="button" size="sm" variant="ghost" onClick={async () => { if (await commit({ experimentalUnharnessedEnabled: c.experimentalUnharnessedEnabled === true })) await reload(); }}>重试</Button>}>{experimentalPresets?.error}</Status>
+      </Group>
       <Group title="关于" anchor="about">
         <Toggle title="插件安装预检" hint="安装前在临时环境检查启动和基础界面；通过后自动继续，失败时可选择仍然安装或复制 AI 修复信息。" checked={c.pluginPreflightEnabled !== false}
           onChange={value => commit({ pluginPreflightEnabled: value })}/>

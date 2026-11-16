@@ -352,6 +352,15 @@ Design tokens and component styling for the Claude Desktop theme. Pinned CDS vis
 - Pinned source / version: [1.0.0](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/claude-desktop/source.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#open-claude-ui)
 
+### Unharnessed
+
+[Project](https://github.com/unharnessed-agent/Unharnessed) · Unharnessed contributors and DSH Unharnessed contributors
+
+Experimental persistent Python preset, background commands and checkpoints. Bundled experimental preset, disabled by default.
+
+- Pinned source / version: [0.2.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/package.json)
+- License / attribution: MIT; dill: BSD-3-Clause · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/THIRD_PARTY_NOTICES.md)
+
 ## Locked dependency inventory
 
 All 2356 distinct package versions in the OMD, DSH SDK and embedded OpenCU host/frontend lockfiles are listed below, including direct, transitive, build and optional platform dependencies. These are dependency inputs, not a claim that every package is loaded at runtime. Package pages provide original maintainers and license metadata; distributed licenses remain authoritative. [Machine-readable inventory](dependencies.json).
