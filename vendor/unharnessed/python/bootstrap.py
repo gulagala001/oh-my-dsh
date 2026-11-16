@@ -1,9 +1,19 @@
 import asyncio
-from rlm import bash, host_request as _dsh_request
+from rlm import bash as _dsh_bash, host_request as _dsh_request
+import os as _dsh_os
 import state as _dsh_state
 import base64 as _dsh_base64
 import mimetypes as _dsh_mimetypes
 from pathlib import Path as _DshPath
+
+
+def bash(command, timeout=600):
+    # Missing shell affects shell calls only. Check before creating a background
+    # handle, and never fall back to a cell-controlled PATH or inherited shell.
+    if not _dsh_os.environ.get("UNHARNESSED_BASH_SHELL"):
+        raise RuntimeError(_dsh_os.environ.get("DSH_UNHARNESSED_SHELL_ERROR") or
+                           "No POSIX shell is configured. Set bashCommand to an absolute shell path and reset the Python kernel.")
+    return _dsh_bash(command, timeout=timeout)
 
 
 class _Goal:

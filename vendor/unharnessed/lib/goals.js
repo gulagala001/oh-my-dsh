@@ -1,4 +1,5 @@
 import { bounded } from './kernel.js'
+import { resolveShell } from './shell.js'
 
 export const GATE_MARKER = '\n\n[unharnessed autonomous gates v1]\n'
 export const refOf = goal => ({ id: goal.id, revision: goal.revision })
@@ -29,7 +30,7 @@ export function gatesOf(goal) {
 /** Gate subprocesses are owned by DSH and use its current confinement policy. */
 export async function runGates(ctx, agent, gates, config, signal) {
   const cwd = await ctx.workingDirectory.ensure(agent, signal)
-  const shell = await ctx.subprocess.resolveExecutable(config.bashCommand, undefined, signal)
+  const shell = await resolveShell(ctx, config.bashCommand, signal)
   const results = []
   for (const command of gates) {
     signal.throwIfAborted()

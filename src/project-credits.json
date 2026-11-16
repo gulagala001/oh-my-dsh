@@ -538,8 +538,8 @@
       "source": "vendor/unharnessed/package.json",
       "license": "MIT; dill: BSD-3-Clause",
       "notice": "vendor/unharnessed/THIRD_PARTY_NOTICES.md",
-      "version": "0.2.2-dsh.0.2.2-rc.3",
-      "sourceSha256": "8cee79b179a841c2070070bac0d5dcc33be35714545e9a1f83c204e1394dae74",
+      "version": "0.2.3-dsh.0.2.2-rc.3",
+      "sourceSha256": "3a44c8835c93588f6df7a1ffd4b8210e1e24eaae50c412e64155a8af8c07c2a6",
       "group": "sources"
     },
     {

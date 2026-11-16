@@ -62,7 +62,7 @@ OMD 保留 DSH 原有的工具、权限和取消方式。OMD-PTC 模式下，AI 
 
 `run_code` 默认最长运行 120 秒，单次最多 600 秒。超时或取消会返回明确的错误；如果上一次调用还没收尾，同一会话会先等它结束再接受新的调用。
 
-**Unharnessed 实验预设**默认关闭。在 **设置 → Oh My DSH → 实验预设** 开启后，新建会话并选择 **Unharnessed（实验）**。模型通过单一 `ipython` 工具使用持久 Python、后台 shell、现有 MCP、技能和附件；需要已有 Python 3.11+ 与 POSIX shell，优先使用桌面宿主自带解释器。模型与权限沿用 DSH 设置。
+**Unharnessed 实验预设**默认关闭。在 **设置 → Oh My DSH → 实验预设** 开启后，新建会话并选择 **Unharnessed（实验）**。模型通过单一 `ipython` 工具使用持久 Python、后台 shell、现有 MCP、技能和附件；需要已有 Python 3.11+，优先使用桌面宿主自带解释器。后台命令和自主任务的 shell 检查另需 Bash；Windows 会自动查找 Git for Windows，也可使用 Git Bash 插件配置的路径。不支持 WSL 启动器。缺少 shell 时仍能运行 Python。模型与权限沿用 DSH 设置。
 
 Python 变量和可保存函数会生成会话检查点；重启后在相同目录、权限与 Python 版本下恢复，后台进程需要重新启动。使用 `/unharnessed-reset` 重置 Python，使用 `/goal` 管理目标。关闭预设前先结束任务、后台命令并暂停活动目标；若已设为默认预设，先选择其他默认项。关闭保留会话记录与检查点，重新开启后可继续使用。
 

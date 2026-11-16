@@ -61,7 +61,7 @@ OMD keeps DSH's tools, permissions and cancellation. In OMD-PTC mode the AI call
 
 `run_code` defaults to 120 seconds, with a 600-second maximum per call. Timeouts and cancellation return errors. New calls wait for the previous call's cleanup.
 
-**Unharnessed** is off by default. Enable it in **Settings → Oh My DSH → Experimental presets**, then select **Unharnessed (experimental)** for a new chat. Its single `ipython` tool supports persistent Python, background shells, existing MCP connections, skills and attachments, under DSH's model and permissions. It requires Python 3.11+ and a POSIX shell, preferring the desktop's bundled Python.
+**Unharnessed** is off by default. Enable it in **Settings → Oh My DSH → Experimental presets** and select it in a new chat. `ipython` provides persistent Python, shell, MCP, skills and attachments. Requires Python 3.11+. Shell commands and autonomous checks need Bash; Windows finds Git Bash, including its plugin's configured path. WSL is unsupported. Python works without Bash.
 
 Per-session checkpoints restore variables and serializable functions after restart with matching directory, permissions and Python version; background processes need restarting. `/unharnessed-reset` resets Python; `/goal` manages goals. Before disabling, finish running work and background commands, pause active goals and change the default preset if needed. Re-enabling preserves history and checkpoints.
 

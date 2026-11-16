@@ -80,7 +80,7 @@ test('real host loads the optional preset and retains Python state across availa
   const agent = handle.agent ?? handle;
   agent.followup = message => agent.inbox.append('next-turn', message);
   assert.deepEqual(ctx.tools.schemas(agent).map(tool => tool.name), ['ipython']);
-  const cell = async code => (await ctx.tools.execute({ agent, signal: new AbortController().signal,
+  const cell = async (code, target = agent) => (await ctx.tools.execute({ agent: target, signal: new AbortController().signal,
     calls: [{ type: 'tool-call', id: randomUUID(), name: 'ipython', arguments: JSON.stringify({ code }) }] })).results[0].result;
   assert.match((await cell('x = 41\nx + 1')).value, /42/);
   assert.match((await cell('await asyncio.sleep(0)\nx + 1')).value, /42/);
@@ -95,4 +95,13 @@ test('real host loads the optional preset and retains Python state across availa
   assert.match((await cell('x + 1')).value, /42/);
   assert.ok(ctx.agentPresets.serviceFor(agent, 'omdUnharnessedRuntime'));
   assert.equal(ctx.get('omdUnharnessedRuntime'), undefined, 'activity service remains in its preset realm');
+  const missing = structuredClone(manager.definition);
+  missing.id = 'fixture-missing-shell';
+  missing.plugins.find(row => row.id === 'unharnessed').config.bashCommand = join(dir, 'no-such-shell');
+  await ctx.agentPresets.register(missing);
+  const noShell = await ctx.agents.create({ sessionId: SessionId('no-shell-' + randomUUID()), meta: { cwd: dir, agentPreset: missing.id },
+    setup: async scope => { await ctx.agentPresets.mount(scope, missing.id); } });
+  assert.match((await cell('preserved = 42\npreserved', noShell.agent)).value, /42/);
+  assert.match((await cell("bash('printf must-not-run')", noShell.agent)).value, /Configured bashCommand.*unavailable/);
+  assert.match((await cell('preserved', noShell.agent)).value, /42/);
 });

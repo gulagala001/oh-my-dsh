@@ -17,12 +17,14 @@ Select **Unharnessed** in a new chat. Existing chats can retain their original p
 | Supported environment | Requirement |
 | --- | --- |
 | Host | DSH Desktop 0.2.2-rc.3 |
-| Runtime | Node.js 24.9.0+, existing Python 3.11+ and a POSIX shell |
+| Runtime | Node.js 24.9.0+, existing Python 3.11+ |
 | Python | Uses the Desktop interpreter when available; kernel and dill are included |
 
 Try asking it to calculate the sum of squares from 1 to 100 and save the result in a variable.
 
 ## Python and background commands
+
+Python works without a shell. Background commands and autonomous shell checks need Bash. On Windows, install Git for Windows; default, per-user, Scoop and PATH installations are detected, and an active Git Bash plugin can supply its configured path. WSL launchers are not supported. For a custom installation, set `bashCommand` below to an absolute path such as `C:/Tools/Git/bin/bash.exe`, then use `/unharnessed-reset` or start a new chat.
 
 ```python
 from pathlib import Path
@@ -110,7 +112,7 @@ Configure the `unharnessed` plugin in `cordis.patch.yml`. Time settings use mill
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | pythonCommand | auto | Existing Python executable |
-| bashCommand | bash | POSIX shell |
+| bashCommand | bash | Discover Bash or use an explicit absolute path |
 | maxOutputChars | 16000 | Cell text limit |
 | cellTimeoutMs | 600000 | Cell deadline |
 | startupTimeoutMs | 15000 | Kernel startup deadline |

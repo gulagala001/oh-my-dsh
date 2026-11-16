@@ -49,6 +49,22 @@ async function cell(agent,code,control=signal()) {
  return tool.execute({code},{agent,signal:control,callId:randomUUID(),name:'ipython',arguments:{code},deferContext(){},concludeTurn(){}})
 }
 try {
+ const noShellDefinition=structuredClone(definition)
+ noShellDefinition.id='unharnessed-no-shell'
+ noShellDefinition.plugins.find(x=>x.id==='unharnessed').config.bashCommand=resolve('fixture-missing-shell')
+ await ctx.agentPresets.register(noShellDefinition)
+ const noShellHandle=await ctx.agents.create({sessionId:SessionId('integration-no-shell'),meta:{cwd:process.cwd(),agentPreset:noShellDefinition.id},setup:scope=>ctx.agentPresets.mount(scope,noShellDefinition.id).then(()=>undefined)})
+ try {
+  const noShell=noShellHandle.agent
+  assert.match(await cell(noShell,'import sys\nshell_independent = 42\nshell_independent'),/42/)
+  assert.match(await cell(noShell,"bash('printf must-not-run')"),/Configured bashCommand.*unavailable/)
+  assert.match(await cell(noShell,'shell_independent'),/42/)
+  assert.match(await cell(noShell,"import os\nos.environ.get('UNHARNESSED_BASH_SHELL') == ''"),/True/)
+  const reset=await ctx.commands.execute(noShell,'/unharnessed-reset',[],signal())
+  assert.equal(reset.result.kind,'success')
+  assert.match(await cell(noShell,'sum(range(10))'),/45/)
+  pass('missing shell preserves real Python execution, variables and reset; shell calls report actionable errors')
+ } finally { await noShellHandle.dispose() }
  assert.match(await cell(a,'x = 41\ndef answer(): return x + 1\nanswer()'),/42/)
  assert.match(await cell(a,'await asyncio.sleep(0)\nanswer()'),/42/)
  assert.match(await cell(b,"'x' in globals()"),/False/)

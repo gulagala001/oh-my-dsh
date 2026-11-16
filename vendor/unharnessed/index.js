@@ -10,6 +10,7 @@ import { Kernel } from './lib/kernel.js'
 import { Snapshots } from './lib/snapshots.js'
 import { createBridges } from './lib/bridges.js'
 import { GATE_MARKER, gatesOf, parseAutonomous, refOf, runGates } from './lib/goals.js'
+import { resolveShell, ShellUnavailableError } from './lib/shell.js'
 
 export const name = 'unharnessed'
 export const inject = ['tools', 'systemPrompt', 'agents', 'subprocess', 'workingDirectory', 'sandboxPolicy', 'sandbox', 'goals', 'commands', 'sessionProjections']
@@ -213,11 +214,17 @@ export async function apply(ctx, input = {}, integration = {}) {
         catch { signal.throwIfAborted() }
       }
       if (!python) throw new Error('Python 3.11+ was not found. Set pythonCommand to an existing interpreter; this preset does not install Python.')
-      const shell = await ctx.subprocess.resolveExecutable(config.bashCommand, undefined, signal)
+      let shell, shellError = ''
+      try { shell = await resolveShell(ctx, config.bashCommand, signal) }
+      catch (error) {
+        signal.throwIfAborted()
+        if (!(error instanceof ShellUnavailableError)) throw error
+        shellError = error.message
+      }
       let argv = [python, '-u', '-B', '-s', entry]
       if (policy.mode !== 'danger-full-access') argv = (await ctx.sandbox.confine(argv, policy, signal)).argv
       signal.throwIfAborted()
-      const handle = ctx.subprocess.spawn({ argv, cwd, env: { UNHARNESSED_BASH_SHELL: shell }, signal: state.lifetime.signal, graceMs: config.interruptGraceMs,
+      const handle = ctx.subprocess.spawn({ argv, cwd, env: { UNHARNESSED_BASH_SHELL: shell ?? '', DSH_UNHARNESSED_SHELL_ERROR: shellError }, signal: state.lifetime.signal, graceMs: config.interruptGraceMs,
         stdio: { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' } })
       const kernel = new Kernel(handle, config, data => bridge(state, data), item => activity(state, item), (error, hadPending) => {
         const established = !state.reset
@@ -273,7 +280,7 @@ export async function apply(ctx, input = {}, integration = {}) {
         state.execution = { ...exec, signal: cellSignal }
         let cellTimer
         try {
-          const kernel = await getKernel(state, exec.signal)
+          const kernel = await getKernel(state, cellSignal)
           const reset = state.reset; state.reset = false
           const restored = state.stateNotice; state.stateNotice = ''
           cellTimer = setTimeout(() => cellControl.abort(new Error(`Python cell exceeded ${config.cellTimeoutMs} ms`)), config.cellTimeoutMs)

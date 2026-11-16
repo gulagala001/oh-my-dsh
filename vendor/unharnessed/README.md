@@ -17,12 +17,14 @@ https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.2-dsh.0.2.
 | 使用范围 | 要求 |
 | --- | --- |
 | 宿主 | DSH Desktop 0.2.2-rc.3 |
-| 运行环境 | Node.js 24.9.0+，已有 Python 3.11+ 和 POSIX shell |
+| 运行环境 | Node.js 24.9.0+，已有 Python 3.11+ |
 | Python | 默认优先使用 DSH Desktop 自带解释器；内核和 dill 随插件提供 |
 
 先试：让它“用 Python 算出 1 到 100 的平方和，并把结果保存在变量里”。
 
 ## Python 与后台命令
+
+没有 shell 也能运行 Python。后台命令和自主任务的 shell 检查需要 Bash。Windows 上安装 Git for Windows 后，会自动查找默认目录、用户目录、Scoop 和 PATH 中的安装，也可使用已启用的 Git Bash 插件提供的路径。不支持 WSL 启动器。自定义安装可将下方的 `bashCommand` 设为 `C:/Tools/Git/bin/bash.exe` 这样的绝对路径，然后执行 `/unharnessed-reset` 或新建聊天。
 
 ```python
 from pathlib import Path
@@ -124,7 +126,7 @@ await skills.get('实际技能名')
 | 配置 | 默认值 | 作用 |
 |---|---:|---|
 | `pythonCommand` | `auto` | 已有 Python；可指定绝对路径 |
-| `bashCommand` | `bash` | 已有 POSIX shell |
+| `bashCommand` | `bash` | 自动查找 Bash，也可指定绝对路径 |
 | `maxOutputChars` | 16000 | 单元格文本返回上限 |
 | `cellTimeoutMs` | 600000 | 单元格执行上限 |
 | `startupTimeoutMs` | 15000 | 内核启动期限 |
