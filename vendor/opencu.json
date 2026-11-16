@@ -766,7 +766,7 @@
     "src/dsh/browser-host.mjs": "13a8168f7efaf32f56de1d09f9349a692513801dbf2d6d7f2140db9fb1e35823",
     "src/dsh/browser-testing.mjs": "d2fdda1a0a00fce296706c7438e261e531bea37d5a9448590a2267fe86fd7a1b",
     "src/dsh/browser-waits.mjs": "dbb4eff08247c1a9c252b8b43b89695d5e2f7fe80ddc80d43bfd9330c5e8151d",
-    "src/dsh/computer-docs.mjs": "103fa68742608a3ba184a2cc2fb25e56f5617c94784d6735f157ac0e7c3a35ea",
+    "src/dsh/computer-docs.mjs": "aa06dd2e7eb7e1d7b3cf9c4c6544131e3dffd80f6d0abfd89d14732d8a4c7262",
     "src/dsh/computer-repl.mjs": "c041d3d4ce6a6fbb688712fe07a47e640d3b251195bf1b2d5e320031a66808c8",
     "src/dsh/computer-worker.mjs": "655492c43299130256b5b8cf3415eb9cf87fbe5232bc0a6624c0b984863f7a64",
     "src/dsh/computer.mjs": "1a4f5821408c415d2b500c6e2bcddbed25edfc5d426c7b708a49d213e4ae59a6",
@@ -806,5 +806,5 @@
     "src/runtime.mjs": "e2300107196b9a24d167c214cec506036a3e557f73cb92e78e40a79963f76854",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
   },
-  "sourceCommit": "56412061c7b55c02d130d0329caa0c8e9e0d7ae3"
+  "sourceCommit": "bb7ce55b59e282c6708f853d7637ae14a045329f"
 }
