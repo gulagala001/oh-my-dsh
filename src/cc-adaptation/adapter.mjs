@@ -20,7 +20,9 @@ const sha = value => createHash('sha256').update(JSON.stringify(value)).digest('
 // illustrative; an available directory binding avoids teaching redundant pwd.
 function renderSdkPresentation(render, tools) {
   let sdk = render(tools);
-  sdk = sdk.replace(/## Writing code for run_code\n\n[^\n]+(?=\n)/, '## Tool SDK');
+  // The runtime introduction also defines bindings: Python's TypedDict classes
+  // are static stubs, while only tools and ToolCallError exist at runtime.
+  sdk = sdk.replace(/^## Writing code for run_code\n/, '## Tool SDK\n');
   const directory = tools.find(tool => tool.name === 'working_directory');
   if (directory && !(directory.parameters?.required?.length)) sdk = sdk
     .replace(/await tools\.bash\(\{ (?:description: 'Show current directory', )?command: 'pwd' \}\)/g, 'await tools.working_directory({})')

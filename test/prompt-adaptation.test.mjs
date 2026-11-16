@@ -104,7 +104,19 @@ test('TypeScript SDK follows the live execution format and REPL guidance never r
 test('Python SDK keeps its native language and runtime-neutral OMD guidance', async () => {
   const result = await fixture({ language: 'python', programFormat: 'repl' }).assemble();
   assert.ok(section(result, 'tools:sdk').includes('async def bash('));
+  assert.match(section(result, 'tools:sdk'), /exactly two of the names declared below are bound: `tools` and `ToolCallError`/);
+  assert.match(section(result, 'tools:sdk'), /`TypedDict` classes do NOT exist at run time/);
+  assert.match(section(result, 'tools:sdk'), /plain `dict`\/`list` JSON values/);
   assert.ok(!/\breturn (?:its result|or print)\b/.test(section(result, 'oh-my-dsh:persona') + section(result, 'plan:policy')));
+});
+
+test('recall keeps summary-directory discovery before a record ID is known', () => {
+  const recall = tool('recall', 'Host recall', Object.fromEntries(['id', 'query', 'from', 'to', 'sessionId', 'memory', 'reference', 'search'].map(name => [name, { type: 'string' }])));
+  const { assembly } = transformAssembly({ tools: [recall], sections: [{ name: 'oh-my-dsh:persona', text: '' }] },
+    { agent: { session: { header: {} } } });
+  const description = assembly.tools[0].description;
+  assert.match(description, /sessionId alone.*summary directory/);
+  assert.match(description, /project sessions.*shared records/);
 });
 
 test('both generated presets use the authored policy and require explicit plan approval', async () => {
