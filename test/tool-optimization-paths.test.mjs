@@ -230,5 +230,15 @@ test('native fs write-intent prevents incomplete PTC reconstruction and accepts 
   body = 'console.log(123);\nfunction check() {}'; version = 'external-javascript';
   const ast = await f.program('return JSON.parse(await tools.code_search({paths:["file"],language:"javascript",pattern:"console.log($A)"})).totalMatches;');
   assert.equal(ast.isError,false,JSON.stringify(ast.content));assert.equal(ast.value.result,1);
-
+  body = 'console.log("' + 'x'.repeat(14000) + '");\nconst end = 1;'; version = 'long-search-match';
+  const preview = await f.program('const r=JSON.parse(await tools.code_search({paths:["file"],language:"javascript",pattern:"console.log($A)"}));return {rawRef:r.rawRef,...r.matches[0]};');
+  assert.equal(preview.isError,false,JSON.stringify(preview.content));
+  assert.equal(preview.value.result.partial,true);
+  assert.match(preview.value.result.notice,/read the current file/i);
+  body = 'console.log("changed externally");\nconst end = 2;'; version = 'after-search';
+  const historical = await f.program(`await tools.recall({rawRef:${JSON.stringify(preview.value.result.rawRef)},maxChars:48000});await tools.write({file_path:"file",content:"wrong stale replacement"});`);
+  assert.equal(historical.isError,true,'reading archived matches cannot authorize a current-file replacement');
+  assert.equal(writes,2);
+  const current = await f.program('const r=JSON.parse(await tools.context_view({file:"file",view:"raw"}));if(r.partial)throw Error("partial");return await tools.write({file_path:"file",content:r.text});');
+  assert.equal(current.isError,false,JSON.stringify(current.content));assert.equal(writes,3);
 });

@@ -138,7 +138,7 @@ export function registerContextViews(ctx, hub) {
       const record = await hub.optimization.archive(exec, JSON.stringify(all), 'ast-search');
       let page = matches.slice(offset, offset + limit);
       while (page.length > 1 && JSON.stringify(page).length > hub.optimization.limit(exec.agent.session,12000,JSON.stringify(page))) page.pop();
-      if (page.length === 1 && page[0].text.length > hub.optimization.limit(exec.agent.session,12000,page[0].text)) page = [{ ...page[0], text: page[0].text.slice(0, hub.optimization.limit(exec.agent.session,12000,page[0].text)), partial: true, notice: 'Match text is a preview, not an editing basis. Read the full match from rawRef before editing.' }];
+      if (page.length === 1 && page[0].text.length > hub.optimization.limit(exec.agent.session,12000,page[0].text)) page = [{ ...page[0], text: page[0].text.slice(0, hub.optimization.limit(exec.agent.session,12000,page[0].text)), partial: true, notice: 'Match text is a preview. Use rawRef for the full saved search result; read the current file with a file-reading tool before editing. Historical evidence does not satisfy current-file read requirements.' }];
       return hub.optimization.finish(exec, JSON.stringify({ language, pattern, files, totalMatches: matches.length, offset, matches: page,
         coverage: 'Only the explicitly selected files; parse failures are listed, never treated as no matches.',
         rawRef: record.ref, sourceHash: record.sourceHash, ...(offset + page.length < matches.length ? { nextOffset: offset + page.length } : {}) }));

@@ -16,6 +16,17 @@ const schemas = ['bash', 'pwsh', 'read', 'grep', 'write', 'edit', 'todo_write', 
 schemas.find(t => t.name === 'recall').parameters.properties = { memory: {}, sessionId: {}, reference: {} };
 const session = { id: 'chat', header: { origin: 'user', agentPreset: 'oh-my-dsh' } };
 
+test('ZCode style preserves the host distinction between execution denial and user authorization', () => {
+  for (const toolMode of ['native', 'ptc']) {
+    const { text } = renderPromptStyle('zcode', { schemas, toolMode });
+    assert.doesNotMatch(text, /a denied call means the user declined/);
+    assert.doesNotMatch(text, /treat hook output as user feedback/);
+    assert.match(text, /sandbox denial is not necessarily a user rejection/);
+    assert.match(text, /not new user instructions or authorization/);
+    assert.match(text, /never bypass a denial/);
+  }
+});
+
 test('cold and nested forks select the copied prompt record instead of newer parent settings', () => {
   let config = { promptStyle: 'codex' };
   const hub = { config: () => config }, parent = { session: Session.create('parent') };
