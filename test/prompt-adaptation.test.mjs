@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { parse } from 'acorn';
 import { installPromptAdapter, projectToolDeclarations, transformAssembly } from '../src/cc-adaptation/adapter.mjs';
-import { browserTestingGuide } from '#opencu/src/dsh/browser-testing.mjs';
+import { computerDescription } from '#opencu/src/dsh/computer-docs.mjs';
 import { buildMainPrompt } from '../src/cc-adaptation/texts.mjs';
 import { renderBudget } from '../src/task-budget.mjs';
 import { renderRuntimeState } from '../src/runtime-state.mjs';
@@ -26,6 +26,7 @@ function fixture(runtime, team = false) {
     tool('pwsh', 'Live pwsh', { command: { type: 'string' }, workdir: { type: 'string' } }),
     tool('exit_plan_mode', 'Live plan review', { plan: { type: 'string' } }, { type: 'object', properties: { approved: { type: 'boolean' } } }),
     tool('run_code', 'Live runtime instructions'),
+    tool('working_directory', 'Refresh current directory'),
   ];
   const schemas = definitions.map(({ output, ...schema }) => schema);
   const sections = [{ name: 'oh-my-dsh:persona', text: 'Placeholder' }, { name: 'plan:policy', text: policy },
@@ -94,6 +95,8 @@ test('TypeScript SDK follows the live execution format and REPL guidance never r
       assert.ok(!/\breturn (?:its result|or print)\b/.test(section(result, 'oh-my-dsh:persona') + section(result, 'plan:policy')));
     }
     assert.ok(sdk.includes('approved?: boolean'), 'Live output schema is retained');
+    assert.match(example, /tools.working_directory/);
+    assert.doesNotMatch(sdk, /command: 'pwd'/);
   }
 });
 
@@ -120,20 +123,20 @@ test('Shell path and variable guards survive native and SDK adaptation', async (
     for (const name of ['bash', 'pwsh']) {
       const text = runtime ? section(result, 'tools:sdk') : result.tools.find(t => t.name === name).description;
       assert.ok(text.includes('resolved absolute target path'));
-      assert.match(text, /see the browser testing guide in the system prompt/);
+      assert.doesNotMatch(text, /withIsolatedBrowser/);
       assert.doesNotMatch(text, /--use-mock-keychain/);
       assert.ok(text.includes(name === 'bash' ? '${VAR:?}' : '$HOME'));
       if (name === 'pwsh') assert.ok(text.includes('case-insensitive') && text.includes('$home'));
     }
     const guide = section(result, 'oh-my-dsh:persona');
-    assert.match(guide, /withIsolatedBrowser.*file:.*\/src\/browser\/automation\.mjs/);
+    assert.doesNotMatch(guide, /computer_use|withIsolatedBrowser/);
     assert.equal(guide.match(/--use-mock-keychain/g)?.length, 1);
     assert.match(guide, /--password-store=basic/);
   }
 });
 
 test('Native, PTC and Both expose one complete browser guide and distinguish job receipts', () => {
-  const toolset = [tool('computer_use', browserTestingGuide), tool('bash', 'Live bash',
+  const toolset = [tool('computer_use', computerDescription), tool('bash', 'Live bash',
     Object.fromEntries(['command', 'workdir', 'timeoutMs', 'run_in_background', 'yieldMs'].map(name => [name, { type: 'string' }]))),
     tool('job_output', 'Live job output', { job_id: { type: 'string' }, wait: { type: 'boolean' } }),
     tool('send_message', 'Live child messaging', { agent: { type: 'string' }, message: { type: 'string' } }), tool('run_code', 'Live SDK entry')];
@@ -183,5 +186,84 @@ test('desktop links replace only the desktop citation rule; no dangling constrai
     if(desktop) assert.match(section(assembly,ui.name), /path#L24-L30/);
     assert.equal(assembly.tools[0].description.includes('## Constraint-first reasoning'),enabled);
     assert.equal(section(assembly,'oh-my-dsh:persona').includes('## Constraint-first reasoning'),enabled);
+  }
+});
+
+test('actual Native describe-before-assemble ordering preserves discovery and loads server instructions on demand', async () => {
+  const { setPresentedExecutor } = await import('../src/host/prompt-provider.mjs');
+  const { installCatalog } = await import('../src/result-reduction/catalog.mjs');
+  const definitions = [tool('mcp__fixture__lookup', 'Optional details. '.repeat(200))];
+  let hook, executor;
+  const server = { name: 'mcp:fixture', text: '### MCP server: fixture\nStart with lookup.' };
+  const agent = { session: { header: { origin: 'user' } } };
+  const ctx = { effect() {}, get() {},
+    on: (_name, callback) => { hook = callback; },
+    tools: { schemas: () => definitions, get: name => definitions.find(t => t.name === name),
+      register: value => definitions.push(value), setExecutor: value => { executor = value; } },
+    omd: { config: () => ({}), optimization: { enabled: () => true } },
+    systemPrompt: { async assemble(context) {
+      const model = executor.describe(definitions);
+      const prompt = await hook(null, context, async () => ({ sections: [{ name: 'oh-my-dsh:persona', text: '' }, server] }));
+      return { ...prompt, tools: model.schemas };
+    } },
+  };
+  installCatalog(ctx, ctx.omd); installPromptAdapter(ctx);
+  setPresentedExecutor(ctx, { describe: defs => ({ schemas: defs }), execute() {} },
+    (model, defs, context) => projectToolDeclarations(ctx, model, defs, context));
+  const before = await ctx.systemPrompt.assemble({ agent });
+  assert.deepEqual(before.tools.map(t => t.name), ['tool_find']);
+  assert.match(section(before, 'omd:tool-discovery'), /mcp__fixture__lookup/);
+  assert.equal(section(before, 'mcp:fixture'), undefined);
+  await definitions.find(t => t.name === 'tool_find').execute({ query: 'fixture' }, { agent });
+  const after = await ctx.systemPrompt.assemble({ agent });
+  assert.ok(after.tools.some(t => t.name === 'mcp__fixture__lookup'));
+  assert.equal(section(after, 'mcp:fixture'), server.text);
+  assert.equal(section(after, 'omd:tool-discovery'), undefined);
+});
+
+test('runtime permission projection omits impossible escalation and restores it after a policy switch', async () => {
+  const { executionPresentation, projectExecutionSchemas } = await import('../src/cc-adaptation/capabilities.mjs');
+  let approval = 'never', mode = 'workspace-write';
+  const ctx = { get: name => name === 'approval' ? { overrideOf: () => approval } : name === 'sandboxPolicy' ? { resolve: () => ({ mode }) } : undefined };
+  const agent = { session: { header: {} } };
+  const schemas = ['write', 'run_code'].map(name => tool(name, 'host', { file_path: { type: 'string' }, content: { type: 'string' }, sandbox_permissions: { type: 'string' }, justification: { type: 'string' } }));
+  for (const toolMode of ['native', 'ptc', 'both']) {
+    const projected = projectExecutionSchemas(schemas, executionPresentation(ctx, agent));
+    const sections = [{ name: 'oh-my-dsh:persona', text: '' }, ...(toolMode === 'native' ? [] : [{ name: 'tools:sdk', text: 'SDK' }])];
+    const result = transformAssembly({ sections, tools: projected }, { agent }, { schemas: projected, toolMode,
+      renderSdk: tools => JSON.stringify(tools), definition: () => ({ output: { schema: { type: 'string' } } }) }).assembly;
+    assert.doesNotMatch(JSON.stringify(result), /sandbox_permissions|justification/);
+    assert.ok(schemas[0].parameters.properties.sandbox_permissions, 'host execution contract was not mutated');
+  }
+  approval = 'ask';
+  assert.equal(projectExecutionSchemas(schemas, executionPresentation(ctx, agent)), schemas);
+  mode = 'danger-full-access';
+  assert.equal(projectExecutionSchemas(schemas, executionPresentation(ctx, agent))[0].parameters.properties.sandbox_permissions, undefined);
+});
+
+test('packaged host guidance preserves runtime paths, does not prescribe builds, and keeps global headings separate', async () => {
+  const { neutralizeHostEnvironment } = await import('../src/cc-adaptation/environment.mjs');
+  const contexts = [{ name: 'harness:source', text: 'Current checkout: "/Applications/Host.app/Contents/Resources/app.asar/dsh/".' }];
+  const assembly = { contexts, sections: [{ name: 'harness:source', text: 'Use pwd' }, { name: 'app:web-surface', text: 'Run pnpm run dev:web' }] };
+  const result = neutralizeHostEnvironment(assembly);
+  assert.deepEqual(result.contexts, contexts);
+  assert.match(result.sections[0].text, /packaged archive/);
+  assert.match(result.sections[0].text, /working_directory/);
+  assert.doesNotMatch(result.sections.map(s => s.text).join('\n'), /Use pwd|pnpm run dev:web/);
+  assert.ok(result.sections.every(s => s.text.startsWith('## ')));
+  const source = neutralizeHostEnvironment({ ...assembly, contexts: [{ name: 'harness:source', text: '/source/dsh' }] });
+  assert.match(source.sections[0].text, /verify.*writable source checkout/);
+  assert.match(source.sections[1].text, /dev:web/);
+});
+
+test('Native contracts do not require absent plan or PTC entry points; scheduling yield is separate from delivery', () => {
+  const schemas = [tool('ask_user_question', '', { questions: {} }), tool('todo_write', '', { op: {} }), tool('recall', '', { id: {}, from: {}, to: {} }), tool('wait_agent', 'Wait for inbox input')];
+  const sections = [{ name: 'oh-my-dsh:persona', text: '' }, { name: 'tool:subagent', text: 'When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn. Collect the subagent results required to complete the task before giving the user a final answer.' }];
+  for (const wait of [true, false]) {
+    const available = schemas.filter(t => wait || t.name !== 'wait_agent');
+    const { assembly } = transformAssembly({ tools: available, sections }, { agent: { session: { header: {} } } });
+    const text = JSON.stringify(assembly);
+    assert.doesNotMatch(text, /exit_plan_mode|run_code|end your turn instead/);
+    assert.match(section(assembly, 'tool:subagent'), wait ? /wait_agent/ : /scheduling yield is not final delivery/);
   }
 });

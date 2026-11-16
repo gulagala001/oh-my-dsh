@@ -1,4 +1,4 @@
-Run a workflow only when multi-agent orchestration is authorized by the user or the active Ultra strategy. With Ultra off, ordinary opt-in applies.
+Run a workflow only when the user or an explicitly supplied active Ultra strategy authorizes multi-agent orchestration. Without that authorization, do not delegate.
 
 Use plain JavaScript only: TypeScript annotations (such as `: string[]`), interfaces and type arguments are not supported. Pass an inline script beginning with `export const meta = {...}`. The metadata must be a pure literal with `name` and `description`, plus optional `whenToUse` and `phases`; no calls, variables, spreads, or interpolation. A separate `meta` object with a script body is also accepted. Top-level `await` is supported; finish with a JSON-serializable `return` value. Pass `args` as actual JSON values, including arrays, rather than JSON-encoded strings.
 
@@ -13,7 +13,7 @@ Each invocation saves its script and returns `runId`, `scriptPath`, and `transcr
 
 Only the documented JSON Schema subset is supported: type, properties, required, additionalProperties, items, enum, const, and oneOf. Use an object root with properties; required keys must be declared, and enum/const needs type or oneOf. Invalid hooks, schemas, or caps fail the script rather than becoming per-item null results. Concurrency and agent-count limits still apply.
 
-This engine runs the orchestration program in a fresh Node PTC process under the calling session's file policy. Its documented API is the helper set above; it is not a security boundary. The program-visible environment is empty, and the file policy does not restrict network access. The engine has no overall elapsed deadline, but its initial synchronous slice, process limits, caller cancellation, and enclosing tool deadlines still apply.
+This engine runs the orchestration program in a fresh isolated JavaScript execution process under the calling session's file policy. Its documented API is the helper set above; it is not a security boundary. The program-visible environment is empty, and the file policy does not restrict network access. The engine has no overall elapsed deadline, but its initial synchronous slice, process limits, caller cancellation, and enclosing tool deadlines still apply.
 
 Use the helpers to coordinate work performed by agents. Do not infer arbitrary Node API support from the underlying process. Scripts must be deterministic: `Date.now()`, `Math.random()`, and argumentless `new Date()` are unavailable; pass time or randomness through `args`.
 

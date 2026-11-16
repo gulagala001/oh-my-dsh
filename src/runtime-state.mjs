@@ -61,11 +61,11 @@ export function renderRuntimeState(status) {
   // Bound the complete state block in UTF-8; the task list is never truncated.
   for (const job of status.jobs.slice(0, 8)) {
     const row = JSON.stringify({ id: job.id, status: job.status, delivery: job.resultDelivery });
-    if (Buffer.byteLength([...lines, row].join('\n') + '\n\n') > 2048) break;
+    if (Buffer.byteLength([...lines, row].join('\n') + '\n\n') > 2000) break;
     lines.push(row);
   }
-  while (Buffer.byteLength(lines.join('\n') + '\n\n') > 2048) lines.pop();
-  return lines.join('\n') + '\n\n';
+  while (Buffer.byteLength(lines.join('\n') + '\n\n') > 2000) lines.pop();
+  return '<runtime-state>\n' + lines.join('\n') + '\n</runtime-state>\n\n';
 }
 
 export function runtimeContext(agent, hub, options) {

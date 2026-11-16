@@ -1,9 +1,10 @@
-import { presentationTools } from '../host/prompt-provider.mjs';
+import { presentationTools, FULL_PRESENTED_TOOLS } from '../host/prompt-provider.mjs';
+import { executionPresentation, projectExecutionSchemas, projectExecutionSections, transportDescription } from './capabilities.mjs';
 import { selectCatalog, rememberCatalog, projectCatalogAssembly } from '../result-reduction/catalog.mjs';
 import { readFileSync } from 'node:fs';
 import { sessionPersonality } from '../personality-session.mjs';
 import { createHash } from 'node:crypto';
-import { browserTestingGuide } from '#opencu/src/dsh/browser-testing.mjs';
+import { browserIsolationGuide } from '#opencu/src/dsh/browser-testing.mjs';
 import { agentPromptStyle, recordPromptStyle } from '../prompt-styles/session.mjs';
 import { DSH_IDENTITY, renderPromptStyle } from '../prompt-styles/render.mjs';
 import { isUnseededSubagent, renderPersonality } from '../../plugins/persona/src/shared/prompt.mjs';
@@ -14,6 +15,17 @@ import { promptText as read, mainPrompt, buildMainPrompt } from './texts.mjs';
 const bindings = JSON.parse(readFileSync(new URL('./bindings.json', import.meta.url), 'utf8'));
 export { mainPrompt };
 const sha = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+
+// Keep the runtime's language and output contract. Its bash example is merely
+// illustrative; an available directory binding avoids teaching redundant pwd.
+function renderSdkPresentation(render, tools) {
+  let sdk = render(tools);
+  const directory = tools.find(tool => tool.name === 'working_directory');
+  if (directory && !(directory.parameters?.required?.length)) sdk = sdk
+    .replace(/await tools\.bash\(\{ (?:description: 'Show current directory', )?command: 'pwd' \}\)/g, 'await tools.working_directory({})')
+    .replace('When no separate `bash` schema is supplied, invoke a declared `bash` binding inside `run_code`:', 'Example, only when the current directory needs refreshing:');
+  return sdk;
+}
 
 // These rendered-text conventions apply to native results, not SDK return values.
 function sdkDescription(name, description) {
@@ -31,6 +43,7 @@ function sdkDescription(name, description) {
 /** Pure prompt transformation: never changes execution functions or input/output schemas. */
 export function transformAssembly(assembly, context, options = {}) {
   const { agent } = context ?? {};
+  if (agent) assembly = { ...assembly, sections: projectExecutionSections(assembly.sections ?? [], new Map((options.schemas ?? assembly.tools ?? []).map(tool => [tool.name, tool]))) };
   if (!agent || isUnseededSubagent(agent.session)
       || !assembly.sections?.some(section => section.name === 'oh-my-dsh:persona')) {
     return { assembly, audit: { applied: false, reason: 'outside-main-agent-scope' } };
@@ -49,7 +62,11 @@ export function transformAssembly(assembly, context, options = {}) {
   for (const tool of known.values()) {
     if (tool.name === 'run_code') { retained.push({ name: tool.name, reason: 'runtime-owned-transport' }); continue; }
     const binding = map[tool.name];
-    if (!binding) { retained.push({ name: tool.name, reason: 'unmapped-native-tool' }); continue; }
+    if (!binding) {
+      const description = transportDescription(tool.name, tool.description, known, toolMode);
+      if (description !== tool.description) changedSchemas.set(tool.name, { ...tool, description });
+      retained.push({ name: tool.name, reason: 'unmapped-native-tool' }); continue;
+    }
     if (binding.mode === 'retain-native') {
       retained.push({ name: tool.name, reason: 'owner-specific-runtime-conditions' }); continue;
     }
@@ -81,38 +98,32 @@ export function transformAssembly(assembly, context, options = {}) {
     if (tool.name === 'workflow' && (!Object.hasOwn(fields, 'run_in_background') || !known.has('job_output') || !known.has('job_kill'))) {
       description = description.replace(/ With `run_in_background: true`,[^\n]*?`job_kill`\./, '');
     }
-    changedSchemas.set(tool.name, { ...tool, description });
+    changedSchemas.set(tool.name, { ...tool, description: transportDescription(tool.name, description, known, toolMode) });
     applied.add(tool.name);
   }
+  if (known.has('create_goal')) {
+    const tool = known.get('create_goal');
+    changedSchemas.set(tool.name, { ...tool, description: tool.description + ' A large number of steps or tool calls alone does not require a goal. A goal is for an objective that needs independent automatic continuation rounds, not a bounded review or conversation.' + (known.has('todo_write') ? ' Track requirements within the current task with todo_write.' : '') });
+  }
   const source = style === 'omd' ? undefined : renderPromptStyle(style, { schemas, toolMode });
-  const hasGuide = tool => ['withIsolatedBrowser', '--use-mock-keychain', '--password-store=basic']
-    .every(marker => tool?.description?.includes(marker));
-  const directComputerHasGuide = hasGuide(directTools.get('computer_use'));
-  const sdkComputerHasGuide = toolMode !== 'native' && hasGuide(known.get('computer_use'));
-  const shellGuide = browserTestingGuide.replace('through computer_use when available', 'through an available browser tool');
-  const testingLink = 'For isolation and safe browser launch, see the browser testing guide';
-  const shellDescription = (name, description) => {
-    if (!shells.includes(name)) return description;
-    const location = directComputerHasGuide ? 'in the direct `computer_use` declaration'
-      : sdkComputerHasGuide ? 'in `tools.computer_use` in the SDK' : 'in the system prompt';
-    return `${description}\n\n${testingLink} ${location}.`;
-  };
   let persona = source ? [source.text,
     renderPersonality(options.personalityModules ?? { identity: options.identityPrompt }),
     toolMode !== 'native' ? load('runtime/ptc-guidance.md') : '',
   ].filter(Boolean).join('\n\n') : options.main ?? buildMainPrompt(options.identityPrompt, { toolMode, personalityModules: options.personalityModules });
   const fileReferences = assembly.sections.some(section => section.name === 'ui:deliverable-file-references' && section.text);
   if (fileReferences && style === 'omd') persona = persona.replace('\n - Reference code as `file_path:line_number`.', '');
-  if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '');
+  if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '')
+    .replace(' Computer Use JavaScript and persistent bindings belong inside computer_use, separate from the outer program.', '');
   if (options.stateHintsEnabled && known.has('runtime_status')) persona += '\n\n' + load('runtime/state-guidance.md');
-  if (!directComputerHasGuide && !sdkComputerHasGuide && shells.some(name => known.has(name))) persona += '\n\n## Browser testing\n' + shellGuide;
+  if (shells.some(name => known.has(name))) persona += '\n\n## Browser testing\n' + (known.has('computer_use') ? browserIsolationGuide
+    : browserIsolationGuide.replace(' or load computer_use documentation("testing") for the installed helper', ''));
   if (options.backgroundTasksEnabled) {
     const background = [];
     if (directTools.has('job_output') && shells.some(name => {
       const fields = directTools.get(name)?.parameters?.properties ?? {};
       return Object.hasOwn(fields, 'yieldMs') && Object.hasOwn(fields, 'run_in_background');
     })) background.push(load('runtime/background-guidance.md'));
-    if (directTools.get('job_output')?.parameters?.properties?.wait) background.push(load('runtime/direct-job-wait.md'));
+    if (toolMode === 'native' && directTools.get('job_output')?.parameters?.properties?.wait) background.push(load('runtime/direct-job-wait.md'));
     if (background.length) persona += '\n\n## Background execution\n' + background.join('\n\n');
   }
   if (constraintGuidance) persona += '\n\n## Constraint-first reasoning\n' + constraintGuidance;
@@ -141,14 +152,11 @@ export function transformAssembly(assembly, context, options = {}) {
         const definition = options.definition(tool.name);
         if (!definition?.output?.schema) throw new Error(`Missing live output contract: ${tool.name}`);
         const adapted = changedSchemas.get(tool.name);
-        let description = adapted ? sdkDescription(tool.name, shellDescription(tool.name, adapted.description, true)) : tool.description;
-        if (tool.name === 'computer_use' && directComputerHasGuide) {
-          description = description.replace(browserTestingGuide, `${testingLink} in the direct \`computer_use\` declaration.`);
-        }
+        const description = adapted ? sdkDescription(tool.name, adapted.description) : tool.description;
         return { ...tool, description, output: definition.output.schema };
       });
       sdkRegenerated = true; sdkSchemas = sdk;
-      return [{ ...section, text: options.renderSdk(sdk), interpolate: false }];
+      return [{ ...section, text: renderSdkPresentation(options.renderSdk, sdk), interpolate: false }];
     }
     if (suppressed.has(section.name)) return [];
     return [section];
@@ -167,7 +175,7 @@ export function transformAssembly(assembly, context, options = {}) {
   // DSH strips order metadata after assembling sections. Preserve the host's order.
   const result = { ...assembly, sections, tools: (assembly.tools ?? []).map(tool => {
     const adapted = changedSchemas.get(tool.name);
-    return adapted ? { ...tool, description: shellDescription(tool.name, adapted.description, false) } : tool;
+    return adapted ? { ...tool, description: adapted.description } : tool;
   }) };
   // The actual fields and their parameter descriptions remain the live owner contract.
   if (sha((assembly.tools ?? []).map(x => [x.name, x.parameters])) !== sha(result.tools.map(x => [x.name, x.parameters]))) {
@@ -183,9 +191,10 @@ export function installPromptAdapter(ctx) {
   ctx.on('system-prompt/assemble', async (_initial, context, next) => {
     const presentation = await next();
     const activeSdk = presentation.sections.some(section => section.name === 'tools:sdk' && section.text);
-    const assembly = { ...presentation, tools: presentationTools(ctx, context) };
+    const policy = executionPresentation(ctx, context?.agent);
+    const assembly = { ...presentation, tools: projectExecutionSchemas(presentationTools(ctx, context), policy) };
     if (!context?.agent) return assembly;
-    const schemas = ctx.tools.schemas(context.scope ?? context.agent, context.toolSet);
+    const schemas = projectExecutionSchemas(ctx.tools.schemas(context.scope ?? context.agent, context.toolSet), policy);
     const style = recordPromptStyle(ctx.omd, context.agent);
     let renderSdk;
     if (activeSdk && (style === 'omd' || ctx.omd.optimization?.enabled(context.agent.session))) {
@@ -208,7 +217,7 @@ export function installPromptAdapter(ctx) {
     // Catalog projection is independent of persona/style adaptation and also
     // covers delegated agents which deliberately retain their native prompts.
     result.assembly = projectCatalogAssembly(result.assembly, {
-      enabled: ctx.omd.optimization?.enabled(context.agent.session), renderSdk,
+      enabled: ctx.omd.optimization?.enabled(context.agent.session), renderSdk: renderSdk && (tools => renderSdkPresentation(renderSdk, tools)),
       schemas: result.sdkSchemas ?? schemas.map(tool => ({ ...tool, output: ctx.tools.get(tool.name, context.scope ?? context.agent, context.toolSet)?.output?.schema })),
       select: schemas => selectCatalog(ctx, ctx.omd, context.agent, schemas),
       remember: plan => rememberCatalog(ctx.omd, plan),
@@ -230,9 +239,10 @@ export function projectToolDeclarations(ctx, model, definitions, context, toolMo
   const agent = context.agent ?? context.scope;
   if (!agent?.session ||
       agent.session.header?.origin === 'subagent' && !isOmdPreset(agent.session.header.agentPreset)) return model;
-  const schemas = definitions.map(({ name, description, parameters }) => ({ name, description, parameters }));
+  const policy = executionPresentation(ctx, agent);
+  const schemas = projectExecutionSchemas(definitions.map(({ name, description, parameters }) => ({ name, description, parameters })), policy);
   const personality = sessionPersonality(ctx.omd, agent.session), config = ctx.omd.config();
-  const result = transformAssembly({ tools: model.schemas, sections: [{ name: 'oh-my-dsh:persona', text: '' }] }, { ...context, agent }, {
+  const result = transformAssembly({ tools: projectExecutionSchemas(model.schemas, policy), sections: [{ name: 'oh-my-dsh:persona', text: '' }] }, { ...context, agent }, {
     schemas, toolMode, promptStyle: agentPromptStyle(ctx.omd, agent), personalityModules: personality.modules,
     identityPrompt: personality.modules.identity, todoConstraintFirst: config.todoConstraintFirst,
   });
@@ -240,5 +250,5 @@ export function projectToolDeclarations(ctx, model, definitions, context, toolMo
     enabled: ctx.omd.optimization?.enabled(agent.session), schemas,
     select: values => selectCatalog(ctx, ctx.omd, agent, values), remember: plan => rememberCatalog(ctx.omd, plan),
   });
-  return { ...model, schemas: projected.tools };
+  return { ...model, schemas: projected.tools, [FULL_PRESENTED_TOOLS]: result.assembly.tools };
 }

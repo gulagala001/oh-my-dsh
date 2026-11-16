@@ -147,7 +147,7 @@ test('Native and PTC share discovery, exact contracts and revocation; all four f
   assert.ok(!native.tools.some(t=>t.name===original.name));
   assert.ok(!ptc.sections.find(s=>s.name==='tools:sdk').text.includes(original.name + ':'));
   for (const assembly of [native, ptc]) {
-    assert.equal(assembly.sections.find(s => s.name === instructions.name), instructions);
+    assert.equal(assembly.sections.find(s => s.name === instructions.name), undefined, 'server instructions load with its tools');
     const discovery = assembly.sections.find(s => s.name === 'omd:tool-discovery').text;
     assert.match(discovery, /Hidden names: mcp__demo__lookup/);
     assert.match(discovery, /search tool_find by its exact name or server/);

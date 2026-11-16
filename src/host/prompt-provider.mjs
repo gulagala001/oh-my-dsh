@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { symbols } from '@deepseek-ai/cordis';
 
 const key = Symbol.for('dsh.plugins.prompt-provider-context.alpha2');
+export const FULL_PRESENTED_TOOLS = Symbol('omd.full-presented-tools');
 // Alpha keeps declarations provider-owned. Carry the assembly context into
 // our executor's describe() without changing native admission or dispatch.
 export function usePromptContext(ctx) {
@@ -31,7 +32,9 @@ export function setPresentedExecutor(ctx, delegate, project = value => value) {
       const state = storage.getStore();
       if (!state) throw Error('Tool declarations require a native prompt assembly context');
       const result = project(delegate.describe(definitions), definitions, state.context);
-      state.schemas = result.schemas;
+      // Assembly must see the same full presentation used for discovery, not
+      // its already reduced Native catalog (which loses the hidden names).
+      state.schemas = result[FULL_PRESENTED_TOOLS] ?? result.schemas;
       return result;
     },
     execute: input => delegate.execute(input),

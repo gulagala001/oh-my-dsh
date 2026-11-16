@@ -35,21 +35,27 @@ test('locked-host providers retain scoped declarations and one admitted tool set
 
 test('reviewed Loader-resolved PTC executor exposes only admitted controls and guards stale direct calls',async t=>{
  const { apply }=await import('../src/ptc.mjs');
- let enabled=true;
+ let enabled=true, sandboxMode='danger-full-access';
  const root=new Context();t.after(()=>root.fiber.dispose());await root.plugin(SystemPrompt);await root.plugin(ToolRuntime);
- root.provide('ptcRuntime',{language:'typescript',programFormat:'repl',resolve:spec=>spec,run(){throw Error('Unexpected program dispatch')}});
+ root.provide('sandboxPolicy',{resolve:()=>({mode:sandboxMode})});
+ root.provide('ptcRuntime',{language:'typescript',programFormat:'repl',sandboxMode:'workspace-write',timeout:{defaultMs:1000,maxMs:5000},resolve:spec=>spec,run(){throw Error('Unexpected program dispatch')}});
  root.provide('omd',{prepareBackground(){},backgroundOptions:()=>({interruptibleWait:enabled}),config:()=>({})});
  root.provide('loader',{entries:()=>[{options:{name:'@deepseek-ai/dsh-tools'},parent:{tree:{import:spec=>import(host.resolve(spec))}}}]});
  let injected;await root.inject(['tools','systemPrompt','ptcRuntime','omd','loader'],ctx=>{injected=ctx});
- const preset={},owner=createScope(injected,preset).ctx,agent={};agent.ctx=createScope(owner,agent,{parent:preset}).ctx;
- owner.tools.register(tool('job_output',()=> 'control'));
+ const preset={},owner=createScope(injected,preset).ctx,agent={session:{id:'ptc-presentation',header:{}}};agent.ctx=createScope(owner,agent,{parent:preset}).ctx;
+ owner.tools.register({...tool('job_output',()=> 'control'),parameters:{type:'object',properties:{wait:{type:'boolean'}}}});
  owner.tools.register(tool('business',()=> 'business'));
  await apply(owner);
  const context={scope:agent,agent};const first=await owner.systemPrompt.assemble(context);
  assert.deepEqual(first.tools.map(t=>t.name).sort(),['job_output','run_code']);
+ assert.equal(first.tools.find(t=>t.name==='run_code').parameters.properties.sandbox_permissions,undefined);
+ assert.match(first.sections.find(s=>s.name==='tools:ptc-only').text,/Top-level event waits are enabled/);
+ assert.match(first.tools.find(t=>t.name==='run_code').parameters.properties.timeoutMs.description,/can extend/);
  assert.equal((await call(owner,agent,'job_output')).value,'control');
  assert.equal((await call(owner,agent,'business')).isError,true);
- enabled=false;const second=await owner.systemPrompt.assemble({scope:agent});assert.deepEqual(second.tools.map(t=>t.name),['run_code']);
+ enabled=false;sandboxMode='workspace-write';const second=await owner.systemPrompt.assemble({scope:agent});assert.deepEqual(second.tools.map(t=>t.name),['run_code']);
  assert.equal((await call(owner,agent,'job_output')).isError,true);
+ assert.ok(second.tools[0].parameters.properties.sandbox_permissions);
+ assert.doesNotMatch(second.sections.find(s=>s.name==='tools:ptc-only').text,/event waits are enabled/);
  assert.equal(Object.hasOwn(context,'toolSet'),false);
 });

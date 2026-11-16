@@ -1,4 +1,4 @@
-import { setPresentedExecutor } from './host/prompt-provider.mjs';
+import { setPresentedExecutor, FULL_PRESENTED_TOOLS } from './host/prompt-provider.mjs';
 import { projectToolDeclarations } from './cc-adaptation/adapter.mjs';
 import { readFile } from 'node:fs/promises';
 import { loadHostModule } from './host-component.mjs';
@@ -32,17 +32,20 @@ export function installPtcPresentation(ctx, Executor, directTools, scopes) {
     const agent = context.agent ?? context.scope, names = sample(agent, context.toolSet);
     const projected = projectToolDeclarations(ctx, { ...model, schemas: model.schemas.filter(tool => names.has(tool.name)) }, definitions, context, 'ptc');
     const timeout = ctx.get('ptcRuntime')?.timeout;
-    if (timeout && ctx.omd.config().ptcAdaptiveBudgets !== false) projected.schemas = projected.schemas.map(tool => tool.name === 'run_code' && tool.parameters?.properties?.timeoutMs
+    const adaptTimeout = tool => timeout && ctx.omd.config().ptcAdaptiveBudgets !== false && tool.name === 'run_code' && tool.parameters?.properties?.timeoutMs
       ? { ...tool, parameters: { ...tool.parameters, properties: { ...tool.parameters.properties, timeoutMs: { ...tool.parameters.properties.timeoutMs,
-        description: `When omitted, the ${timeout.defaultMs}ms default can extend for nested tool budgets up to ${timeout.maxMs}ms; an explicit timeoutMs remains a hard limit. Cancellation and cleanup stay active.` } } } } : tool);
+        description: `When omitted, the ${timeout.defaultMs}ms default can extend for nested tool budgets up to ${timeout.maxMs}ms; an explicit timeoutMs remains a hard limit. Cancellation and cleanup stay active.` } } } } : tool;
+    projected.schemas = projected.schemas.map(adaptTimeout);
+    if (projected[FULL_PRESENTED_TOOLS]) projected[FULL_PRESENTED_TOOLS] = projected[FULL_PRESENTED_TOOLS].map(adaptTimeout);
     return projected;
   });
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
     const assembly = await next(), agent = context?.agent ?? context?.scope;
     if (!owns(agent)) return assembly;
     const controls = [...(sampled.get(agent)?.keys() ?? [])];
+    const wait = sampled.get(agent)?.get('job_output')?.parameters?.properties?.wait;
     const text = controls.length
-      ? `Use run_code and the tools SDK for business operations. These control tools are also callable directly: ${controls.join(', ')}. All other tools require run_code.`
+      ? `Use run_code and the tools SDK for business operations. These controls are also callable directly: ${controls.join(', ')}. ${wait ? 'Top-level event waits are enabled: prefer direct job_output(wait:true) when only waiting remains, so user input can wake the wait without a program deadline. Read its rendered status before continuing. ' : ''}Use SDK controls when their structured values are needed by a program; nested waits remain subject to its timeoutMs. All other tools require run_code.`
       : '`run_code` is the only tool you can call directly. Reach other tools through the program SDK.';
     return { ...assembly, sections: assembly.sections.map(section => section.name === 'tools:ptc-only' ? { ...section, text } : section) };
   });

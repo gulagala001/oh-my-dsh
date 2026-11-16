@@ -5,7 +5,7 @@ import { hash } from './evidence.mjs';
 const loaded = new WeakMap();
 const optional = name => /^mcp__/.test(name) && !/codegraph_explore$/.test(name) || /^opencu_/.test(name);
 const chosen = agent => { if (!loaded.has(agent)) loaded.set(agent, new Map()); return loaded.get(agent); };
-export const CONTEXT_TOOL_GUIDE = 'Use context_view for a bounded file/page outline, literal query, article or compact JSON view; use code_search for AST patterns in explicit files after locating them with glob or CodeGraph. Read exact source before editing. Partial views identify their scope and provide recall(rawRef, mode, cursor) for the original. In PTC call these tools through the SDK and emit only the result needed for the task; program values remain complete.';
+export const CONTEXT_TOOL_GUIDE = '## Context tools\nUse context_view for bounded file/page views and code_search for AST patterns in located files. Partial views identify their scope and provide recall(rawRef, mode, cursor) for the original; follow the file tools’ read requirements before modifying source.';
 
 // Presentation is shared across modes. The host retains registry, permission,
 // dispatch and cancellation ownership; discovery never grants execution access.
@@ -43,7 +43,9 @@ export function projectCatalogAssembly(assembly, { enabled, schemas, renderSdk, 
   }
   const hidden = new Set(selection.hidden.map(t => t.name));
   const sections = assembly.sections.filter(s => !['omd:context-tools', 'omd:tool-discovery'].includes(s.name)
-    && (!s.name.startsWith('tool:') || !hidden.has(s.name.slice(5))));
+    && (!s.name.startsWith('tool:') || !hidden.has(s.name.slice(5)))
+    && (!s.name.startsWith('mcp:') || !full.some(t => t.name.startsWith(`mcp__${s.name.slice(4)}__`))
+      || selection.tools.some(t => t.name.startsWith(`mcp__${s.name.slice(4)}__`))));
   sections.push({ name: 'omd:context-tools', order: 81, text: CONTEXT_TOOL_GUIDE, interpolate: false });
   let tools = assembly.tools;
   if (selection.notice) {

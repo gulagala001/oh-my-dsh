@@ -242,3 +242,11 @@ test('periodic human claims survive an uncommitted assembly and retire on the na
   f.control.committed(f.session, {type:'request/header'});
   await assemble(); assert.equal(f.control.frames.get(f.agent).emit, false);
 });
+
+
+test('a fresh ordinary session explicitly states Ultra is off without enabling continuation', async () => {
+  const f = fixture();
+  const assembly = await f.control.assemble(f.agent, async () => ({ sections: [] }));
+  assert.match(assembly.sections.find(s => s.name === 'omd:ultra').text, /Ultra is off/);
+  assert.equal(f.control.view(f.session).enabled, false);
+});

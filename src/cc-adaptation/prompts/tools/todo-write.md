@@ -2,7 +2,7 @@ Create and maintain the task list for work with several distinct steps or requir
 
 The task list tracks the user's requirements; it must not redefine or narrow them. Do not recast unmet original requirements as optional improvements to mark work complete.
 
-- `excerpt`: create an excerpt and its tasks in one call. Supply top-level `from` and `to` quoting the opening and closing words of the user's block. Each task requires `title` and `anchor: {from, to}` quoting a sub-range inside that excerpt. Both pairs are required; for a short quote, `from` and `to` may contain the same text.
+- `excerpt`: create an excerpt and its tasks in one call. Supply top-level `from` and `to` quoting the opening and closing words of the user's block. Each task requires `title` and `anchor: {from, to}` quoting a sub-range inside that excerpt. Both pairs are required. For a short request, reuse the same quote across tasks; overlapping anchors are allowed. Matching ignores whitespace, punctuation and symbols; use longer quotes only to resolve ambiguity.
 - `add` and `edit`: add anchored tasks or update an existing task by its `id`. Changing the title or anchored excerpt/range clears its checkmark and verification links. Reapplying the same values preserves them.
 - `remove`: remove an irrelevant, superseded, or genuinely impossible task and explain why. Do not remove work merely because it is difficult.
 - `check`: set `done` through `updates` only when the task is fully accomplished. Check off completed tasks as you go, not all at the end. Do not check off a partial implementation, failing tests, or an unresolved error. Reopen affected tasks when the user identifies a defect or new evidence shows they are not done.

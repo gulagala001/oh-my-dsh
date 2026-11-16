@@ -298,7 +298,7 @@ export class UltracodeControl {
     if (on && submode === 'team' && assembly.sections.some(section => section.name === 'team:policy')) {
       return { ...assembly, sections: assembly.sections.map(section => section.name === 'team:policy' ? { ...section, text: guide.text, interpolate: false } : section) };
     }
-    const text = on ? [submode === 'workflow' ? ULTRA_WORKFLOW_ON : '', guide.text].filter(Boolean).join('\n\n') : last ? ULTRA_OFF : '';
+    const text = on ? [submode === 'workflow' ? ULTRA_WORKFLOW_ON : '', guide.text].filter(Boolean).join('\n\n') : ULTRA_OFF;
     return text ? { ...assembly, sections: [...assembly.sections, { name: 'omd:ultra', text, interpolate: false }] } : assembly;
   }
   committed(session, event) {

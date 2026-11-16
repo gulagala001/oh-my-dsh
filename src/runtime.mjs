@@ -200,7 +200,8 @@ async function applyRuntime(ctx, config) {
     const assembly = await next();
     // Children inherit the preset; stock sessions and non-agent calls stay exact.
     if (!context?.agent || !isX(context.agent.session)) return assembly;
-    const result = agentPromptStyle(hub, context.agent) === 'omd' ? neutralizeHostEnvironment(assembly) : assembly;
+    const result = neutralizeHostEnvironment(assembly, { neutralBrand: agentPromptStyle(hub, context.agent) === 'omd',
+      directoryTool: Boolean(ctx.tools.get('working_directory', context.scope ?? context.agent, context.toolSet)) });
     return { ...result, sections: result.sections.map(s => {
       if (!['tool:write', 'tool:edit'].includes(s.name)) return s;
       const text = s.text.replace(' (the default fs-observation-policy requires it)', '');
