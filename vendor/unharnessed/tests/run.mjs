@@ -20,7 +20,7 @@ try {
     if (entry === 'dsh-unharnessed' || entry === '.bin' || entry.startsWith('.')) continue
     await symlink(join(modules, entry), join(staged, entry), 'junction')
   }
-  await cp(join(source, 'tests/integration.mjs'), join(root, 'integration.mjs'))
+  for (const suite of ['notifications', 'integration']) await cp(join(source, `tests/${suite}.mjs`), join(root, `${suite}.mjs`))
   await cp(source, linked, { recursive: true, filter: path => !path.includes('/node_modules/') && !path.endsWith('/node_modules') })
   const profile = join(root, 'profiles', 'linked-fixture')
   await mkdir(join(profile, 'node_modules'), { recursive: true })
@@ -35,10 +35,15 @@ try {
     })
     if (code !== 0) throw new Error(`Linked installation regression failed: ${mode}`)
   }
+  const suites = process.env.DSH_TEST_SUITE ? [process.env.DSH_TEST_SUITE] : ['notifications', 'integration']
+  for (const suite of suites) {
+  if (!['notifications', 'integration'].includes(suite)) throw new Error('Unknown test suite')
   const code = await new Promise((resolveCode, reject) => {
-    const child = spawn(process.execPath, [join(root, 'integration.mjs')], { cwd: root, env: { ...process.env, DSH_UNHARNESSED_STATE_DIR: join(root, 'state'), DSH_HOME: join(root, 'home') }, stdio: 'inherit' })
+    const child = spawn(process.execPath, [join(root, `${suite}.mjs`)], { cwd: root, env: { ...process.env, DSH_UNHARNESSED_STATE_DIR: join(root, 'state'), DSH_HOME: join(root, 'home') }, stdio: 'inherit' })
     child.once('error', reject)
     child.once('exit', code => resolveCode(code ?? 1))
   })
   process.exitCode = code
+  if (code !== 0) break
+  }
 } finally { await rm(root, { recursive: true, force: true }); await rm(linked, { recursive: true, force: true }) }

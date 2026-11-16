@@ -9,7 +9,7 @@
 在 **插件 → 添加插件** 中粘贴安装包地址：
 
 ```text
-https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.2-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.2-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.3-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.3-dsh.0.2.2-rc.3.tgz
 ```
 
 然后在新聊天的 Agent 预设中选择 **Unharnessed**。已有聊天可能沿用启动时的插件修订，更新后新建聊天或正常重启 DSH。
@@ -34,7 +34,7 @@ len(source), source[:300]
 
 ```python
 build = bash('npm run build', timeout=600)
-# 立即返回；结束当前轮次后，完成通知会唤醒会话。
+# 立即返回；完成通知会在下一步送达，空闲时自动唤醒会话。
 ```
 
 ```python
@@ -42,7 +42,7 @@ result = await build
 result.exit_code, result.output[-2000:]
 ```
 
-支持顶层 await、尾表达式、跨单元格变量和函数、异步任务、中断恢复、后台输出和通知撤回。`bash()` 的超时以秒计；`timeout=None` 表示该命令不限时。
+支持顶层 await、尾表达式、跨单元格变量和函数、异步任务、中断恢复、后台输出和通知撤回。`bash()` 的超时以秒计；`timeout=None` 表示该命令不限时，适合需要持续运行的预览服务；用完后调用对应句柄的 `kill()`。读取已完成句柄的结果会撤回待处理提醒；停止、重置或切换预设不会留下旧进程提醒。
 
 ## 跨重启快照
 

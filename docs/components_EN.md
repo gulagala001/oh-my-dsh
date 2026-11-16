@@ -358,7 +358,7 @@ Design tokens and component styling for the Claude Desktop theme. Pinned CDS vis
 
 Experimental persistent Python preset, background commands and checkpoints. Bundled experimental preset, disabled by default.
 
-- Pinned source / version: [0.2.3-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/package.json)
+- Pinned source / version: [0.2.4-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/package.json)
 - License / attribution: MIT; dill: BSD-3-Clause · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/THIRD_PARTY_NOTICES.md)
 
 ## Locked dependency inventory

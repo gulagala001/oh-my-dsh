@@ -1,6 +1,6 @@
 {
   "name": "dsh-unharnessed",
-  "version": "0.2.3-dsh.0.2.2-rc.3",
+  "version": "0.2.4-dsh.0.2.2-rc.3",
   "private": true,
   "description": "在 DeepSeek Harness 中使用持久 Python、后台命令、MCP、图片与文件附件和可恢复的任务状态。",
   "type": "module",

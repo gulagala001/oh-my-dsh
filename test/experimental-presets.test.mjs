@@ -79,11 +79,19 @@ test('real host loads the optional preset and retains Python state across availa
     setup: async scope => { await ctx.agentPresets.mount(scope, PRESET); } });
   const agent = handle.agent ?? handle;
   agent.followup = message => agent.inbox.append('next-turn', message);
+  agent.steer = message => agent.inbox.append('next-step', message);
   assert.deepEqual(ctx.tools.schemas(agent).map(tool => tool.name), ['ipython']);
   const cell = async (code, target = agent) => (await ctx.tools.execute({ agent: target, signal: new AbortController().signal,
     calls: [{ type: 'tool-call', id: randomUUID(), name: 'ipython', arguments: JSON.stringify({ code }) }] })).results[0].result;
   assert.match((await cell('x = 41\nx + 1')).value, /42/);
   assert.match((await cell('await asyncio.sleep(0)\nx + 1')).value, /42/);
+  await cell("notice_job = bash('sleep 0.05; printf bundled-notice')");
+  await cell('await asyncio.sleep(0.2)');
+  const isNotice = message => message.content.some(item => item.text?.startsWith('[bash-done'));
+  assert.equal(agent.inbox.nextStep.filter(isNotice).length, 1);
+  assert.equal(agent.inbox.nextTurn.filter(isNotice).length, 0);
+  assert.match((await cell('notice_job.output()')).value, /bundled-notice/);
+  assert.equal(agent.inbox.nextStep.filter(isNotice).length, 0);
   assert.equal((await cell("job = bash('sleep 1; printf ready')")).isError, false);
   await assert.rejects(manager.update({ [SETTING]: false }), /后台命令/);
   assert.match((await cell('(await job).output')).value, /ready/);

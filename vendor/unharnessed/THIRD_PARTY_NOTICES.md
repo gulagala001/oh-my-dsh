@@ -11,12 +11,15 @@ The following files are copied without code changes from
 
 - `vendor/rlm/__init__.py`
 - `vendor/rlm/repl.py`
-- `vendor/rlm/bash.py`
 - `vendor/rlm/_winjob.py`
 - `vendor/rlm/variables.py`
 - `vendor/rlm/repl.md`
 
 License: MIT, reproduced in full in `vendor/LICENSE.Unharnessed`.
+
+`vendor/rlm/bash.py` comes from the same commit, with one integration change:
+completion and consumption requests also carry the existing per-process
+activity UUID, so delayed consumption cannot withdraw a reused PID's notice.
 
 Upstream copyright notices include Unharnessed, Prime Intellect Ltd. and
 Mario Zechner. See the preserved license for the exact notices.

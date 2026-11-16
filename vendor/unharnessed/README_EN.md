@@ -9,7 +9,7 @@ Use one persistent Python tool in DeepSeek Harness for coding, background comman
 Paste this package URL into **Plugins → Add plugin**:
 
 ```text
-https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.2-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.2-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.3-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.3-dsh.0.2.2-rc.3.tgz
 ```
 
 Select **Unharnessed** in a new chat. Existing chats can retain their original plugin revision; start a new chat or restart DSH normally after an update.
@@ -35,7 +35,7 @@ result = await build
 result.exit_code, result.output[-2000:]
 ```
 
-Top-level await, trailing expressions, variables, functions and async tasks persist between cells. Shell handles expose pid, running, command, tail(), output(), poll(), kill() and await. An unconsumed background completion wakes the chat after the current turn. Reading its output withdraws a stale completion notice. Shell timeouts use seconds; timeout=None removes that command's deadline.
+Top-level await, trailing expressions, variables, functions and async tasks persist between cells. Shell handles expose pid, running, command, tail(), output(), poll(), kill() and await. An unconsumed background completion reaches the next step of active work or wakes an idle chat. Reading its output withdraws a stale completion notice. Shell timeouts use seconds; timeout=None removes that command's deadline for servers or long work; call the handle's kill() when finished. Stop, reset and preset changes clear obsolete process notices.
 
 ## Checkpoints across restarts
 

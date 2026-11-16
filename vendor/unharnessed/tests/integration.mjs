@@ -39,6 +39,10 @@ const composition={setup:agentCtx=>ctx.agentPresets.mount(agentCtx,'unharnessed'
 const aHandle=await ctx.agents.create({sessionId:SessionId('integration-a'),meta:{cwd:process.cwd(),agentPreset:'unharnessed'},setup:composition.setup})
 const bHandle=await ctx.agents.create({sessionId:SessionId('integration-b'),meta:{cwd:process.cwd(),agentPreset:'unharnessed'},setup:composition.setup})
 const a=aHandle.agent??aHandle, b=bHandle.agent??bHandle
+// Direct-cell fixtures inspect pending input; real driver delivery is covered
+// by notifications.mjs with a controlled model, without paid model requests.
+a.steer = message => a.inbox.append('next-step', message)
+b.steer = message => b.inbox.append('next-step', message)
 console.log('agent',a.id,!!a.ctx,ctx.tools.schemas(a).map(x=>x.name))
 assert.deepEqual(ctx.tools.schemas(a).map(x=>x.name),['ipython'])
 pass('preset loads in the real DSH registry and exposes exactly ipython')
@@ -85,15 +89,15 @@ try {
  assert.match(await cell(a,'answer()'),/42/)
  pass('cell deadline and DSH cancellation interrupt without losing state')
  const completions=[]
- const originalFollowup=a.followup.bind(a)
- a.followup=message=>{completions.push(message); a.inbox.append('next-turn',message)}
+ const originalSteer=a.steer.bind(a)
+ a.steer=message=>{completions.push(message); a.inbox.append('next-step',message)}
  await cell(a,"bg = bash('sleep 0.1; printf background-ok')")
  await new Promise(r=>setTimeout(r,350))
  assert.equal(completions.filter(m=>m.content[0].text.startsWith('[bash-done')).length,1)
  assert.match(await cell(a,'bg.output()'),/background-ok/)
  await new Promise(r=>setTimeout(r,20))
- assert(!a.inbox.nextTurn.some(m=>m.content[0].text.startsWith('[bash-done')))
- a.followup=originalFollowup
+ assert(!a.inbox.nextStep.some(m=>m.content[0].text.startsWith('[bash-done')))
+ a.steer=originalSteer
  pass('background completion wakes once and consumed output withdraws stale notices')
  assert.match(await cell(a,'await goal.get()'),/None/)
  const goal=ctx.goals.create(a,{objective:'Synthetic native goal',maxGoalRounds:5})

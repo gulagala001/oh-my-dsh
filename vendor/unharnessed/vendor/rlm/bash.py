@@ -774,6 +774,7 @@ class BashHandle:
             reply = await repl.host_request(
                 {
                     "type": "bash.completed",
+                    "activityId": self._activity_id,
                     "pid": self._pid,
                     "command": command,
                     "exitCode": result.exit_code,
@@ -826,7 +827,7 @@ class BashHandle:
             {
                 "event": "host_request",
                 "id": uuid.uuid4().hex,
-                "data": {"type": "bash.consumed", "pid": self._pid, "command": command},
+                "data": {"type": "bash.consumed", "activityId": self._activity_id, "pid": self._pid, "command": command},
             }
         )
 

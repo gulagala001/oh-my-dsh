@@ -1,3 +1,35 @@
+# Oh My DSH 1.5.3 · DSH 0.2.2-rc.3
+
+[中文](#zh-153) · [English](#en-153)
+
+<a id="zh-153"></a>
+
+## 中文
+
+### 问题修复
+
+- 后台命令完成后，正在进行的对话会在下一步收到结果提醒；空闲会话会自动继续。
+- 读取结果、重置 Python 或切换预设后清理过时提醒，停止后不再被迟到通知自动唤醒。
+- 后台图片、文件、MCP 附加信息和 Python 意外退出及时通知会话，自主任务达到检查上限后仍会报告结果。
+
+<a id="en-153"></a>
+
+## English
+
+### Bug fixes
+
+- Delivers background command completion at the next step of active work, and resumes idle chats when a result arrives.
+- Withdraws obsolete notices after reading results, resetting Python or switching presets, and prevents late notifications from restarting stopped work.
+- Delivers background images, files, additional MCP context and unexpected Python exits promptly, and reports final check results when autonomous work reaches its round limit.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[安装包 / Package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.3/oh-my-dsh-0.2.2-rc.3.omd.1.5.3.tgz) · [使用说明 / Guide](https://github.com/gulagala001/oh-my-dsh/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.3/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.5.2 · DSH 0.2.2-rc.3
 
 [中文](#zh-152) · [English](#en-152)

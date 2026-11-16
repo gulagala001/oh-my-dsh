@@ -11,6 +11,7 @@ import { Snapshots } from './lib/snapshots.js'
 import { createBridges } from './lib/bridges.js'
 import { GATE_MARKER, gatesOf, parseAutonomous, refOf, runGates } from './lib/goals.js'
 import { resolveShell, ShellUnavailableError } from './lib/shell.js'
+import { Notifications, clearObsoleteNotifications } from './lib/notifications.js'
 
 export const name = 'unharnessed'
 export const inject = ['tools', 'systemPrompt', 'agents', 'subprocess', 'workingDirectory', 'sandboxPolicy', 'sandbox', 'goals', 'commands', 'sessionProjections']
@@ -36,7 +37,7 @@ const bootstrap = readFileSync(new URL('./python/bootstrap.py', import.meta.url)
 const entry = fileURLToPath(new URL('./python/entry.py', import.meta.url))
 const PROMPT = `You are Unharnessed, a coding agent running natively inside DeepSeek Harness.
 You have one tool, ipython: a persistent CPython REPL with top-level await. Write Python to read, search, edit, fetch, parse and automate. Save large data and reusable helpers in named variables; print only the relevant excerpts. Batch independent work into one cell.
-The kernel preloads asyncio and bash(command, timeout=600). bash starts a new background shell process immediately and returns a handle: pid, running, command, tail(n=50), output(), poll(), kill(), and await handle. The awaited result has exit_code, output and duration. Python cwd/environment changes apply to later bash calls. Use bash to launch programs; keep orchestration in Python. Run project dependencies through the project's own environment. Do not automatically install dependencies into this kernel.
+The kernel preloads asyncio and bash(command, timeout=600). bash starts a new background shell process immediately and returns a handle: pid, running, command, tail(n=50), output(), poll(), kill(), and await handle. The awaited result has exit_code, output and duration. Use timeout=None for servers or intentionally long-running commands; keep their handles and stop them when no longer needed. Python cwd/environment changes apply to later bash calls. Use bash to launch programs; keep orchestration in Python. Run project dependencies through the project's own environment. Do not automatically install dependencies into this kernel.
 Variables, functions and tasks survive DSH context compaction while this Agent remains alive. Completed cells checkpoint serializable variables and functions. Restart or resume of the same session restores its verified checkpoint only under the same permissions, workspace and Python version. A fork, permission/workspace change or explicit reset starts fresh. Read the restoration notice: processes, live tasks, streams and failed values do not come back. Compaction prunes single variables above the checkpoint size cap. Start long work with bash, end the turn when waiting, and respond when its completion notice arrives; do not poll or sleep to hold the turn.
 DSH's file policy and normal tool approval pipeline apply. Do not weaken them. Follow the user's instructions and the project's AGENTS.md. This preset does not add subagents.
 Use /goal through the native UI when the user requests a persistent goal. In Python, await goal.get(), await goal.complete(), or await goal.block(reason) operate on that native goal. Complete only after auditing every requirement. Block only after the same blocker persists for three goal rounds. Pausing/resuming belongs to the human's /goal controls. In autonomous mode the host runs the human's persisted gate commands at idle boundaries and alone decides success; goal.complete() cannot bypass those gates. Round limits are DSH round limits, not token budgets.
@@ -68,9 +69,11 @@ export async function apply(ctx, input = {}, integration = {}) {
   function stateFor(agent) {
     let state = states.get(agent)
     if (!state) {
-      state = { agent, kernel: undefined, queue: Promise.resolve(), active: new Set(), notices: new Map(), waitingGoal: undefined, reset: true, resetting: false, gateRun: undefined, lifetime: new AbortController(), dead: false,
+      state = { agent, kernel: undefined, queue: Promise.resolve(), active: new Set(), waitingGoal: undefined, reset: true, resetting: false, gateRun: undefined, lifetime: new AbortController(), dead: false,
         snapshots: config.snapshots ? new Snapshots(agent.session.id, config) : undefined, stateNotice: '', execution: undefined }
       states.set(agent, state)
+      state.notices = new Notifications(agent, () => live(state) && !state.resetting && !state.turnSignal?.aborted && !cancellation.stateOf(agent.session), () => Boolean(state.execution))
+      clearObsoleteNotifications(agent)
     }
     return state
   }
@@ -82,7 +85,7 @@ export async function apply(ctx, input = {}, integration = {}) {
     state.restriction?.(); state.restriction = undefined
     try { return ctx.tools.view(state.agent) }
     finally { if (masked && !state.dead) state.restriction = state.agent.ctx.tools.restrict({ allow: ['ipython'] }) }
-  })
+  }, (state, message) => state.notices.put(message.id, message, { wake: !state.execution, retain: false }))
 
   async function checkpoint(state, signal, prune = false) {
     if (!state.snapshots || !state.kernel || state.kernel.closed) return
@@ -101,10 +104,25 @@ export async function apply(ctx, input = {}, integration = {}) {
     state.restriction = agent.ctx.tools.restrict({ allow: ['ipython'] })
   })
 
+  ctx.on('agent/pre-step', ({ agent, signal }, next) => {
+    const state = stateFor(agent)
+    if (state.turnSignal !== signal) {
+      state.removeTurnAbort?.()
+      state.turnSignal = signal
+      const abort = () => { try { state.notices.clear() } catch (error) { ctx.logger.warn(String(error)) } }
+      signal.addEventListener('abort', abort, { once: true })
+      state.removeTurnAbort = () => signal.removeEventListener('abort', abort)
+    }
+    return next()
+  }, { prepend: true })
+
   function releaseAgent(agent) {
     const state = states.get(agent)
     if (!state) return
     state.dead = true; state.restriction?.(); states.delete(agent)
+    state.removeTurnAbort?.()
+    state.kernelEpoch?.abort()
+    try { state.notices.clear() } catch (error) { ctx.logger.warn(String(error)) }
     state.cellControl?.abort(new Error('Owning DSH Agent was disposed'))
     const cleanup = (async () => {
       try {
@@ -119,36 +137,22 @@ export async function apply(ctx, input = {}, integration = {}) {
     void cleanup.catch(error => ctx.logger.warn(String(error))).finally(() => cleanups.delete(cleanup))
   }
 
-  function removeNotice(state, pid) {
-    const message = state.notices.get(pid)
-    if (!message) return
-    state.notices.delete(pid)
-    for (const target of ['next-step', 'next-turn']) {
-      const list = target === 'next-step' ? state.agent.inbox.nextStep : state.agent.inbox.nextTurn
-      const index = list.findIndex(x => x.id === message.id)
-      if (index >= 0) state.agent.inbox.splice(target, index, 1, [])
-    }
-  }
-
-  async function bridge(state, data) {
+  async function bridge(state, data, epoch) {
     if (!live(state)) throw new Error('Owning DSH Agent was disposed')
+    epoch.signal.throwIfAborted()
     const agent = state.agent
-    const signal = state.execution ? AbortSignal.any([state.execution.signal, state.lifetime.signal]) : state.lifetime.signal
+    const signal = AbortSignal.any([epoch.signal, state.lifetime.signal, ...(state.execution ? [state.execution.signal] : []), ...(state.turnSignal ? [state.turnSignal] : [])])
     if (data.type === 'dsh.mcp') return bridges.mcp(state, data, signal)
     if (data.type === 'dsh.media') return bridges.media(state, data, signal)
     if (data.type === 'bash.completed') {
-      if (state.resetting || cancellation.stateOf(agent.session)) return {}
+      if (state.resetting || state.turnSignal?.aborted || cancellation.stateOf(agent.session)) return {}
+      if (typeof data.activityId !== 'string' || !data.activityId) throw new Error('Missing background process identity')
       const text = `[bash-done pid:${data.pid} exit:${data.exitCode}${data.timeoutSeconds ? ` timeout:${data.timeoutSeconds}s` : ''}] ${String(data.command).slice(0, 1000)}\nInspect the saved Python handle for output.`
       const message = notice(text)
-      removeNotice(state, data.pid)
-      state.notices.set(data.pid, message)
-      // Queue after the current cell has settled, leaving bash.consumed able to withdraw it.
-      setImmediate(() => {
-        if (live(state) && !state.resetting && !cancellation.stateOf(agent.session) && state.notices.get(data.pid) === message) agent.followup(message)
-      })
+      state.notices.put('bash:' + data.activityId, message)
       return {}
     }
-    if (data.type === 'bash.consumed') { removeNotice(state, data.pid); return {} }
+    if (data.type === 'bash.consumed') { state.notices.remove('bash:' + data.activityId); return {} }
     if (data.type === 'dsh.goal') {
       const current = ctx.goals.get(agent)
       if (data.action === 'get') return current ?? { goal: null }
@@ -197,13 +201,18 @@ export async function apply(ctx, input = {}, integration = {}) {
     const cwd = await ctx.workingDirectory.ensure(state.agent, signal)
     if (state.kernel && (state.kernel.closed || state.policy !== key || state.hostCwd !== cwd)) {
       state.resetting = true
-      try { await state.kernel.dispose().catch(error => ctx.logger.warn(String(error))) }
+      try {
+        state.kernelEpoch?.abort()
+        try { state.notices.clear() } finally { await state.kernel.dispose().catch(error => ctx.logger.warn(String(error))) }
+      }
       finally { state.resetting = false }
-      for (const pid of state.notices.keys()) removeNotice(state, pid)
       state.waitingGoal = undefined
       state.kernel = undefined; state.active.clear(); state.reset = true
     }
     if (!state.kernel) {
+      state.notices.remove('kernel-stopped')
+      const epoch = new AbortController()
+      state.kernelEpoch = epoch
       await state.snapshots?.acquire()
       const candidates = config.pythonCommand === 'auto'
         ? [process.env.DSH_PRIMARY_RUNTIME && join(process.env.DSH_PRIMARY_RUNTIME, 'dependencies', 'python', process.platform === 'win32' ? 'python.exe' : 'bin/python3'), 'python3.14', 'python3.13', 'python3.12', 'python3.11', 'python3', 'python'].filter(Boolean)
@@ -226,29 +235,34 @@ export async function apply(ctx, input = {}, integration = {}) {
       signal.throwIfAborted()
       const handle = ctx.subprocess.spawn({ argv, cwd, env: { UNHARNESSED_BASH_SHELL: shell ?? '', DSH_UNHARNESSED_SHELL_ERROR: shellError }, signal: state.lifetime.signal, graceMs: config.interruptGraceMs,
         stdio: { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' } })
-      const kernel = new Kernel(handle, config, data => bridge(state, data), item => activity(state, item), (error, hadPending) => {
+      const owned = () => state.kernelEpoch === epoch && live(state)
+      const current = () => owned() && !epoch.signal.aborted
+      const kernel = new Kernel(handle, config, data => bridge(state, data, epoch), item => { if (current()) activity(state, item) }, (error, hadPending) => {
+        if (!current()) return
         const established = !state.reset
+        epoch.abort()
         state.active.clear(); state.reset = true
+        try { state.notices.clear() } catch (cause) { ctx.logger.warn(String(cause)) }
         if (!established || hadPending || !live(state) || state.resetting || cancellation.stateOf(state.agent.session)) return
         // An idle kernel failure must not strand a goal waiting on dead handles.
         void handle.done.catch(() => {}).then(() => {
-          if (!live(state) || state.resetting || cancellation.stateOf(state.agent.session)) return
+          if (!owned() || state.resetting || state.turnSignal?.aborted || cancellation.stateOf(state.agent.session)) return
           const goal = ctx.goals.get(state.agent)
           const waiting = state.waitingGoal; state.waitingGoal = undefined
           if (waiting && sameRef(goal, waiting) && goal.phase === 'active' && goal.activation === 'disarmed') {
             try { ctx.goals.resume(state.agent, refOf(goal)) } catch (cause) { ctx.logger.warn(String(cause)) }
           }
-          state.agent.followup(notice(`[Python kernel stopped] ${String(error.message ?? error)}\nIts variables and tasks were lost. The next ipython call starts a fresh kernel.`))
+          state.notices.put('kernel-stopped', notice(`[Python kernel stopped] ${String(error.message ?? error)}\nIts variables and tasks were lost. The next ipython call starts a fresh kernel.`))
         }).catch(cause => ctx.logger.warn(String(cause)))
       }, async data => {
-        if (!live(state) || cancellation.stateOf(state.agent.session)) return
+        if (!current() || state.turnSignal?.aborted || cancellation.stateOf(state.agent.session)) return
         for (const [mediaType, payload] of Object.entries(data || {})) {
           if (mediaType === 'text/plain' || mediaType.startsWith('application/vnd.')) continue
           if (typeof payload !== 'string') throw new Error('Display payload must be text or canonical base64')
           const isImage = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(mediaType)
           const extension = { 'text/html': 'html', 'application/json': 'json', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'video/mp4': 'mp4', 'application/pdf': 'pdf' }[mediaType] || 'bin'
           await bridges.media(state, { action: isImage ? 'images' : 'files', items: [{ name: `output.${extension}`, mediaType,
-            data: mediaType.startsWith('text/') || mediaType === 'application/json' ? Buffer.from(payload).toString('base64') : payload }] }, state.execution?.signal || state.lifetime.signal)
+            data: mediaType.startsWith('text/') || mediaType === 'application/json' ? Buffer.from(payload).toString('base64') : payload }] }, AbortSignal.any([epoch.signal, state.execution?.signal || state.lifetime.signal]))
         }
       })
       state.kernel = kernel; state.policy = key; state.hostCwd = cwd
@@ -258,7 +272,7 @@ export async function apply(ctx, input = {}, integration = {}) {
         const boot = await kernel.request('execute', { code: `_dsh_attachment_limit = ${config.maxAttachmentBytes}\n${bootstrap}` }, signal)
         if (boot.status !== 'ok') throw new Error(`Python bootstrap failed: ${boot.text}`)
         state.stateNotice = await state.snapshots?.restore(kernel, state.binding, signal) || ''
-      } catch (error) { await kernel.dispose().catch(() => {}); state.kernel = undefined; throw error }
+      } catch (error) { epoch.abort(); state.notices.clear(); await kernel.dispose().catch(() => {}); state.kernel = undefined; throw error }
     }
     return state.kernel
   }
@@ -290,7 +304,11 @@ export async function apply(ctx, input = {}, integration = {}) {
           const status = [restored || (reset ? '[Fresh Python kernel: previous variables and tasks are unavailable.]' : ''), state.stateNotice].filter(Boolean).join('\n')
           state.stateNotice = ''
           return `${status ? status + '\n' : ''}${result.text || (result.status === 'ok' ? '[ok]' : '[Python execution failed]')}`
-        } finally { clearTimeout(cellTimer); cellControl.abort(); state.execution = undefined; state.cellControl = undefined }
+        } finally {
+          clearTimeout(cellTimer); cellControl.abort(); state.execution = undefined; state.cellControl = undefined
+          if (exec.signal.aborted) state.notices.clear()
+          else state.notices.flush()
+        }
       })
       state.queue = run.then(() => {}, () => {})
       return run
@@ -331,11 +349,12 @@ export async function apply(ctx, input = {}, integration = {}) {
         const feedback = notice(`[autonomous gates]\n${JSON.stringify(result)}`, 'unharnessed-gates')
         if (result.pass) {
           ctx.goals.complete(agent, refOf(current))
-          agent.followup(notice(`[autonomous gates passed]\n${JSON.stringify(result)}\nReport the verified outcome to the user. The native goal is complete.`, 'unharnessed-gates'))
+          agent.steer(notice(`[autonomous gates passed]\n${JSON.stringify(result)}\nReport the verified outcome to the user. The native goal is complete.`, 'unharnessed-gates'))
         } else {
-          agent.inject(feedback)
-          if (current.roundsStarted >= current.maxGoalRounds) ctx.goals.block(agent, refOf(current), { code: 'round-limit', message: 'Autonomous gate checks failed at the configured round limit.' })
-          else ctx.goals.resume(agent, refOf(current))
+          if (current.roundsStarted >= current.maxGoalRounds) {
+            ctx.goals.block(agent, refOf(current), { code: 'round-limit', message: 'Autonomous gate checks failed at the configured round limit.' })
+            agent.steer(feedback)
+          } else { agent.inject(feedback); ctx.goals.resume(agent, refOf(current)) }
         }
       } catch (error) {
         if (!control.aborted && live(state)) {
@@ -352,8 +371,9 @@ export async function apply(ctx, input = {}, integration = {}) {
   ctx.on('agent/inbox/claimed', ({ agent, message }) => {
     const state = states.get(agent)
     if (!state) return
-    for (const [pid, queued] of state.notices) if (queued.id === message.id) state.notices.delete(pid)
+    state.notices.forget(message)
   })
+  ctx.on('agent/inbox/discarded', ({ agent, message }) => states.get(agent)?.notices.forget(message))
   ctx.on('agent/disposed', ({ agent }) => {
     releaseAgent(agent)
   })
@@ -372,10 +392,11 @@ export async function apply(ctx, input = {}, integration = {}) {
     await agent.runMaintenance(async () => {
       state.resetting = true
       try {
+        state.kernelEpoch?.abort()
+        state.notices.clear()
         await state.queue
         await state.kernel?.dispose()
         await state.snapshots?.clear()
-        for (const pid of state.notices.keys()) removeNotice(state, pid)
         state.kernel = undefined; state.active.clear(); state.waitingGoal = undefined; state.reset = true
       } finally { state.resetting = false }
     })
