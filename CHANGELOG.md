@@ -26,7 +26,7 @@
 
 DSH **0.2.2-rc.3** · Node.js **24.9.0+**
 
-[安装包 / Package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.2/oh-my-dsh-0.2.2-rc.3.omd.1.5.2.tgz) · [使用说明 / Guide](README.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.2/SHA256SUMS)
+[安装包 / Package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.2/oh-my-dsh-0.2.2-rc.3.omd.1.5.2.tgz) · [使用说明 / Guide](https://github.com/gulagala001/oh-my-dsh/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.2/SHA256SUMS)
 
 ---
 

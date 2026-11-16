@@ -26,7 +26,7 @@
 
 DSH **0.2.2-rc.3** · Node.js **24.9.0+**
 
-[安装包 / Package](https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.3-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.3-dsh.0.2.2-rc.3.tgz) · [使用说明 / Guide](README.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.3-dsh.0.2.2-rc.3/SHA256SUMS)
+[安装包 / Package](https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.3-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.3-dsh.0.2.2-rc.3.tgz) · [使用说明 / Guide](https://github.com/gulagala001/dsh-unharnessed/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.3-dsh.0.2.2-rc.3/SHA256SUMS)
 
 ---
 

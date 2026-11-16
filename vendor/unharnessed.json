@@ -4,7 +4,7 @@
   "version": "0.2.3-dsh.0.2.2-rc.3",
   "host": "0.2.2-rc.3",
   "source": "https://github.com/gulagala001/dsh-unharnessed",
-  "sourceArchiveSha256": "7cac52935ecb94dea69a2c7c7990f7b1fc2399da53c10334b13aea6544a44a0f",
+  "sourceArchiveSha256": "0e78d07c2d598d40098680de83f306320685ebd0fa100d13f99560a864ce7dc6",
   "upstream": {
     "url": "https://github.com/unharnessed-agent/Unharnessed",
     "commit": "fe2cf2815f78463464b91c598fc0c31c0af98f4c"
@@ -22,7 +22,7 @@
     "package.json": "3a44c8835c93588f6df7a1ffd4b8210e1e24eaae50c412e64155a8af8c07c2a6",
     "docs/structure.json": "1656a0b75005e4a2580bfc07c7ead0ba20c7e1af304e74750db009276e5cc7f1",
     "locale/zh.json": "97846d83bdbc639c18886220b87a3539a42bf353b90544e7512657aab86cf582",
-    "CHANGELOG.md": "3f55106c0df7fc3a1f23f04708abca7e6f176d917e8d2c06e41bfa9cf4db5bcd",
+    "CHANGELOG.md": "6a63309a4c665961b4f0e19d218d7c8f60f70accfeb3a375789cbfc17779411b",
     "CONTRIBUTING.md": "98c15f17aaa56f9cf589b584f9b0340fc93ede16f3f695406a8984f988aa16e3",
     "README_EN.md": "bf55655e71c609510d2992bcc485a269dfc8eaef7995c4289a8fd86203d792fd",
     "README.md": "71cc82e7a30c07ae5cffefa2b04b65360bb83b6a4c06e2defa8104fd212f179e",
@@ -63,7 +63,7 @@
     "cordis.patch.yml": "faaf11111273f680110042b8bbbe5b718609ec911dbb8cd37ad18505b2ebc6ac"
   },
   "files": {
-    "CHANGELOG.md": "3f55106c0df7fc3a1f23f04708abca7e6f176d917e8d2c06e41bfa9cf4db5bcd",
+    "CHANGELOG.md": "6a63309a4c665961b4f0e19d218d7c8f60f70accfeb3a375789cbfc17779411b",
     "CONTRIBUTING.md": "98c15f17aaa56f9cf589b584f9b0340fc93ede16f3f695406a8984f988aa16e3",
     "LICENSE": "33e40e7e3b2b80f3b344a837af44a6926384efb697f0ab0d1b98d66037010414",
     "README.md": "71cc82e7a30c07ae5cffefa2b04b65360bb83b6a4c06e2defa8104fd212f179e",
@@ -125,5 +125,5 @@
       "reason": "Document OMD integration adaptations."
     }
   ],
-  "sourceCommit": "5d88a9adb1b86a49d77a67196688030c4ef25a6a"
+  "sourceCommit": "381daad0417bca636566a3f15c8697b13f3b5bd5"
 }
