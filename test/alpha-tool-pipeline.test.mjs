@@ -59,3 +59,22 @@ test('reviewed Loader-resolved PTC executor exposes only admitted controls and g
  assert.doesNotMatch(second.sections.find(s=>s.name==='tools:ptc-only').text,/event waits are enabled/);
  assert.equal(Object.hasOwn(context,'toolSet'),false);
 });
+
+test('shell troubleshooting is attached only to matching failures and preserves canonical values', async t => {
+ const {installShellDiagnostics}=await import('../src/cc-adaptation/shell-diagnostics.mjs');
+ const root=new Context();t.after(()=>root.fiber.dispose());await root.plugin(SystemPrompt);await root.plugin(ToolRuntime);
+ let owner;await root.inject(['tools','systemPrompt'],ctx=>{owner=ctx});
+ setPresentedExecutor(owner,new NativeToolExecutor(owner));installShellDiagnostics(owner);
+ let value={exitCode:0,stdout:{text:'different Team IDs'},stderr:{text:''}};
+ owner.tools.register({name:'bash',description:'shell fixture',parameters:{type:'object',properties:{}},
+  output:{schema:{type:'object',additionalProperties:true},render:(_,v)=>[{type:'text',text:JSON.stringify(v)}]},execute:()=>value});
+ const good=await call(owner,{},'bash');assert.deepEqual(good.value,value);assert.equal(good.additionalContexts?.length??0,0);
+ value={...value,exitCode:1};const bad=await call(owner,{},'bash');assert.deepEqual(bad.value,value);
+ assert.equal(bad.isError,false,'a failed command remains a successful tool delivery with exitCode 1');
+ assert.match(bad.additionalContexts[0].content[0].text,/Do not disable signing/);
+ assert.equal(bad.content[0].text,JSON.stringify(value));
+ value={exitCode:1,stdout:{text:'invalid package name'},stderr:{text:''}};
+ assert.match((await call(owner,{},'bash')).additionalContexts[0].content[0].text,/keeping the user/);
+ value={exitCode:1,stdout:{text:'ordinary compile failure'},stderr:{text:''}};
+ assert.equal((await call(owner,{},'bash')).additionalContexts?.length??0,0);
+});

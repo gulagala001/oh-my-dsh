@@ -1,6 +1,7 @@
 import { checkedTool } from './tool-contract.mjs';
 import { registerContextCommands } from './context/commands.mjs';
 import { installPromptAdapter } from './cc-adaptation/adapter.mjs';
+import { installShellDiagnostics } from './cc-adaptation/shell-diagnostics.mjs';
 import { mainPrompt as MAIN_PERSONA } from './cc-adaptation/texts.mjs';
 import { ReplacementCanvas } from './context/host.mjs';
 import { registerContextRecall } from './context/recall.mjs';
@@ -17,6 +18,7 @@ export function apply(ctx) {
   const hub = ctx.omd;
   ctx.systemPrompt.section({ name: 'oh-my-dsh:persona', order: 0, text: MAIN_PERSONA, interpolate: false });
   installPromptAdapter(ctx);
+  installShellDiagnostics(ctx);
   new ReplacementCanvas(ctx, hub);
   hub.todoStore = registerTasks(ctx, hub.todoStore);
   ctx.tools.register(checkedTool({ name: 'note', description: NOTE_DESCRIPTION,

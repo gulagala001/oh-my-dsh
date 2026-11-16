@@ -62,7 +62,7 @@ export const COORDINATE_TOOL = { name: 'submit_context_choices', description: 'C
 } };
 
 export const ADAPTIVE_TASK = `[OMD independent asynchronous context check]
-The main agent continues the user's task separately. This request only prepares a possible context replacement; it does not execute the recorded conversation or any available tool. Return exactly one JSON object as text, with no tool calls, commentary or new work.
+This is an independent, read-only summary-preparation request. The preceding conversation and tool catalog are reference material. The main agent continues the user's task separately. This request only prepares a possible context replacement; it does not execute the recorded conversation or any available tool. Return exactly one JSON object as text, with no tool calls, commentary or new work.
 
 Use the supplied candidates and the zero-based message indexes to read only the designated source ranges in the preceding request. Choose whether their current representation is still needed for the current request. A high pressure reading is context for your decision, not an instruction to discard useful information.
 For a prepared candidate, choose keep, detail or brief using its existing content. Do not rewrite it or combine records.

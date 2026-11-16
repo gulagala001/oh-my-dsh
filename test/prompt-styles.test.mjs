@@ -50,7 +50,8 @@ test('source styles preserve live native/PTC tools, context and OMD memory witho
     const original = structuredClone(assembly);
     const { assembly: result } = transformAssembly(assembly, { agent: { session } }, { promptStyle: style, schemas, personalityModules: { identity: 'Independent personality' } });
     assert.deepEqual(assembly, original);
-    assert.deepEqual(result.tools, assembly.tools);
+    assert.deepEqual(result.tools.map(t => t.parameters), assembly.tools.map(t => t.parameters));
+    for (const t of result.tools) assert.ok(t.description.endsWith(assembly.tools.find(x => x.name === t.name).description));
     assert.equal(result.contexts, assembly.contexts);
     for (const section of assembly.sections.filter(x => !['harness:identity', 'oh-my-dsh:persona'].includes(x.name))) assert.ok(result.sections.includes(section));
     assert.equal(result.sections.some(x => x.name === 'harness:identity'), style === 'dsh');
@@ -59,7 +60,9 @@ test('source styles preserve live native/PTC tools, context and OMD memory witho
     assert.ok(result.sections.some(x => x.name === 'oh-my-dsh:cc-memory'));
     assert.ok(result.sections.some(x => x.name === 'oh-my-dsh:cc-dream-memory'));
     assert.doesNotMatch(main, /\$\{[%{]|\{model_name\}|\{mcps_folder\}|functions\.exec|SwitchMode|CallMcpTool/);
-    assert.equal(transformAssembly(assembly, { agent: { session: { ...session, header: { origin: 'subagent' } } } }, { promptStyle: style }).assembly, assembly);
+    const child = transformAssembly(assembly, { agent: { session: { ...session, header: { origin: 'subagent' } } } }, { promptStyle: style }).assembly;
+    assert.deepEqual(child.sections, assembly.sections);
+    assert.deepEqual(child.tools.map(t => t.parameters), assembly.tools.map(t => t.parameters));
     assert.equal(transformAssembly({ ...assembly, sections: [] }, { agent: { session } }, { promptStyle: style }).audit.applied, false);
   }
 });

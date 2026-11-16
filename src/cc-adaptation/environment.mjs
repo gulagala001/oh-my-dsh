@@ -37,7 +37,12 @@ export function neutralizeHostEnvironment(assembly, { neutralBrand = true, direc
     return text === section.text ? section : { ...section, text };
   };
   const sections = assembly.sections.map(rewrite);
-  const contexts = (assembly.contexts ?? []).map(s => s.name === 'sandbox:policy' ? rewrite(s) : s);
+  const contexts = (assembly.contexts ?? []).map(s => {
+    if (s.name === 'sandbox:policy') return rewrite(s);
+    if (s.name === 'harness:source') return { ...s, text: s.text.replace('implementation checkout:', packed ? 'packaged installation path (inside ASAR):' : 'installation path:') };
+    if (s.name === 'approval:policy') return { ...s, text: s.text.replace(' — do not request sandbox escalation (do not set `sandbox_permissions`).', '. Asking the user a question clarifies intent; it does not override tool permission checks.') };
+    return s;
+  });
   if (sections.every((s, i) => s === assembly.sections[i])
       && contexts.every((s, i) => s === assembly.contexts?.[i])) return assembly;
   return { ...assembly, sections, contexts };

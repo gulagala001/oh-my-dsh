@@ -1,4 +1,4 @@
-Run a workflow only when the user or an explicitly supplied active Ultra strategy authorizes multi-agent orchestration. Without that authorization, do not delegate.
+Delegate only when authorized by the user or an explicit active collaboration strategy.
 
 Use plain JavaScript only: TypeScript annotations (such as `: string[]`), interfaces and type arguments are not supported. Pass an inline script beginning with `export const meta = {...}`. The metadata must be a pure literal with `name` and `description`, plus optional `whenToUse` and `phases`; no calls, variables, spreads, or interpolation. A separate `meta` object with a script body is also accepted. Top-level `await` is supported; finish with a JSON-serializable `return` value. Pass `args` as actual JSON values, including arrays, rather than JSON-encoded strings.
 

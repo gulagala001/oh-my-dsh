@@ -14,7 +14,7 @@ OMD 的核心功能，默认开启，在 **设置 → Oh My DSH → 上下文与
 
 ### 新工具
 
-- **`tool_find`**：按需发现可选的 MCP 工具，返回完整的参数和返回说明。普通模式和 PTC 共用一份目录。
+- **`tool_find`**：按需发现工作流、媒体生成及可选 MCP 工具，返回完整的参数和返回说明。常用代码检索入口直接可用；Ultra Workflow 启用时直接提供工作流工具。普通模式和 PTC 共用目录，发现工具不会改变调用方式或授权。
 - **`context_view`**：给文件、网页或原文引用提供 `raw`、`data`、`article`、`outline`、`query` 几种视图，部分内容会明确标注。完整快照单文件最大 8 MiB，更大的走原生分段读取。
 - **读文档**：同一个 `context_view` 能读 DOCX 段落和表格、PDF 文字层、CSV／TSV 单元格和 XLSX 工作表。输入最大 32 MiB、提取结果最大 8 MiB，解析失败或超时会报错。PDF 不做 OCR，DOCX 不保留版式和图片，XLSX 用公式已缓存的值、不重算，不支持旧版 DOC／XLS。提取结果另存可回查，但不能当作写回原文件的依据。
 - **`code_search`**：对选定文件做 AST 模式搜索，支持 16 种语言，返回覆盖情况、解析失败、精确位置和分页。先用 glob 或 CodeGraph 选文件。
@@ -45,7 +45,7 @@ Built into OMD and on by default. Turn it off under **Settings → Oh My DSH →
 
 ### New tools
 
-- **`tool_find`**: discovers optional MCP tools on demand with full parameter and return descriptions. Normal mode and PTC share one catalog.
+- **`tool_find`**: discovers workflows, media generation and optional MCP tools on demand with full parameter and return descriptions. Common code-navigation tools stay available; Ultra Workflow exposes workflow directly. Native mode and PTC share the catalog; discovery changes neither calling mode nor authorization.
 - **`context_view`**: `raw`, `data`, `article`, `outline` and `query` views of files, web pages or original-content references, with partial views clearly marked. Complete snapshots are limited to 8 MiB per file; larger files use native ranged reads.
 - **Documents**: the same `context_view` reads DOCX paragraphs and tables, PDF text, CSV / TSV cells and XLSX sheets. Inputs up to 32 MiB, extracted results up to 8 MiB; failed or timed-out parsing reports an error. No OCR for PDF, no layout or images for DOCX, cached formula values for XLSX without recalculation, and no legacy DOC / XLS. Extracted text is saved for lookup but cannot be the basis for writing back the original file.
 - **`code_search`**: AST pattern search over selected files in 16 languages, with coverage, parse failures, exact positions and paging. Pick files with glob or CodeGraph first.

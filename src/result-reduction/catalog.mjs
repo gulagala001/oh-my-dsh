@@ -3,9 +3,11 @@ import { checkedTool } from '../tool-contract.mjs';
 import { hash } from './evidence.mjs';
 
 const loaded = new WeakMap();
-const optional = name => /^mcp__/.test(name) && !/codegraph_explore$/.test(name) || /^opencu_/.test(name);
+const codeEntries = new Set(['mcp__codegraph__codegraph_explore', 'mcp__codegraph__codegraph_search', 'mcp__codegraph__codegraph_files']);
+const occasional = new Set(['workflow', 'ralph', 'image_generate', 'video_generate', 'x_search']);
+const optional = name => /^mcp__/.test(name) && !codeEntries.has(name) || /^opencu_/.test(name) || occasional.has(name);
 const chosen = agent => { if (!loaded.has(agent)) loaded.set(agent, new Map()); return loaded.get(agent); };
-export const CONTEXT_TOOL_GUIDE = '## Context tools\nUse context_view for bounded file/page views and code_search for AST patterns in located files. Partial views identify their scope and provide recall(rawRef, mode, cursor) for the original; follow the file tools’ read requirements before modifying source.';
+export const CONTEXT_TOOL_GUIDE = '## Context tools\nUse read for current file text, context_view for bounded views, code_search for AST patterns, and recall for saved history. A rawRef is an immutable historical copy, not a current-file observation. Follow the file tools’ read requirements before editing; partial views retain continuation references.';
 
 // Presentation is shared across modes. The host retains registry, permission,
 // dispatch and cancellation ownership; discovery never grants execution access.
@@ -14,9 +16,11 @@ export function selectCatalog(ctx, hub, agent, schemas) {
     return { tools: schemas, hidden: [], notice: '' };
   const names = chosen(agent);
   for (const [name, definition] of names) if (ctx.tools.get(name, agent) !== definition) names.delete(name);
-  const tools = schemas.filter(t => !optional(t.name) || names.has(t.name));
+  const ultra = hub.ultracode?.view?.(agent.session, agent);
+  const workflowActive = (ultra?.currentMode ?? ultra?.mode) === 'ultra' && (ultra?.currentSubmode ?? ultra?.submode) === 'workflow';
+  const tools = schemas.filter(t => !optional(t.name) || names.has(t.name) || workflowActive && t.name === 'workflow');
   const hidden = schemas.filter(t => !tools.includes(t));
-  const notice = hidden.length ? `${hidden.length} optional tools are discoverable with tool_find(query). Hidden names: ${hidden.map(t => t.name).join(', ')}. For any hidden MCP tool named in server instructions, search tool_find by its exact name or server before calling it. Tools already declared need no discovery. Search by name or purpose; discovery returns exact current input/output contracts and includes them in the next request's Native catalog or PTC SDK. Permissions are unchanged.` : '';
+  const notice = hidden.length ? `${hidden.length} currently registered optional tools are discoverable with tool_find(query). Hidden names: ${hidden.map(t => t.name).join(', ')}. For any hidden MCP tool named in server instructions, search tool_find by its exact name or server before calling it. Tools already declared need no discovery. Discovery preserves the current calling mode and permissions; SDK tools do not become top-level tools. Skills may register additional tools. Low-level opencu_* tools share computer_use's backend and are for compatibility/diagnostics.` : '';
   return { tools, hidden, notice };
 }
 export function rememberCatalog(hub, plan) {
@@ -61,7 +65,7 @@ export function projectCatalogAssembly(assembly, { enabled, schemas, renderSdk, 
   return { ...assembly, tools, sections };
 }
 export function installCatalog(ctx, hub) {
-  ctx.tools.register(checkedTool({ name: 'tool_find', description: 'Find optional tools by name or purpose. Returns their exact input and output contracts and includes them in the next Native request or PTC SDK. Returns a JSON string with available, matched, tools and optional nextOffset. Use an empty query to browse; permissions are unchanged.',
+  ctx.tools.register(checkedTool({ name: 'tool_find', description: 'Find currently registered optional tools by name or purpose. Returns a JSON string with available, matched, tools (exact input/output contracts) and optional nextOffset. Discovered tools become available next step through the current calling mode; permissions do not change. Use an empty query to browse. Skills may register more tools.',
     parameters: { type: 'object', additionalProperties: false, properties: {
       query: { type: 'string', description: 'Name or purpose, at most 256 characters; empty lists all optional tools.' },
       offset: { type: 'integer', description: 'Non-negative result offset, default 0.' },

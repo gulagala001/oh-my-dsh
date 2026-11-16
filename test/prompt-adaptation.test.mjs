@@ -72,13 +72,14 @@ test('native and PTC preserve live child/Team controls, identities, schemas and 
     for (const control of f.controls) {
       assert.equal(section(result, `tool:${control.name}`), control.description);
       if (runtime) assert.ok(section(result, 'tools:sdk').includes(control.description));
-      else assert.equal(result.tools.find(t => t.name === control.name), f.schemas.find(t => t.name === control.name));
+      else { const value = result.tools.find(t => t.name === control.name); assert.ok(value.description.endsWith(control.description)); assert.deepEqual(value.parameters, control.parameters); }
     }
     assert.deepEqual(result.tools.map(t => t.parameters), f.assembly.tools.map(t => t.parameters));
     assert.ok(section(result, 'oh-my-dsh:persona').startsWith('OMD fixture identity'));
     const child = await f.assemble('subagent');
     assert.equal(section(child, 'oh-my-dsh:persona'), 'Placeholder');
-    assert.deepEqual(child.tools, f.assembly.tools);
+    assert.deepEqual(child.tools.map(t => t.parameters), f.assembly.tools.map(t => t.parameters));
+    for (const t of child.tools) assert.ok(t.description.endsWith(f.assembly.tools.find(x => x.name === t.name).description));
     for (const control of f.controls) assert.equal(section(child, `tool:${control.name}`), control.description);
   }
 });
@@ -266,4 +267,79 @@ test('Native contracts do not require absent plan or PTC entry points; schedulin
     assert.doesNotMatch(text, /exit_plan_mode|run_code|end your turn instead/);
     assert.match(section(assembly, 'tool:subagent'), wait ? /wait_agent/ : /scheduling yield is not final delivery/);
   }
+});
+
+test('SDK shell contracts reflect nested execution while Native and legacy promotion remain intact', async () => {
+  const { projectSdkTool } = await import('../src/cc-adaptation/capabilities.mjs');
+  const { renderToolsSdk, renderToolsSdkPy } = await import('@deepseek-ai/dsh-tool-executor-ptc');
+  for (const name of ['bash', 'pwsh']) {
+    const input = { name, description: 'Shell', parameters: { type: 'object', properties: { command: { type: 'string' }, yieldMs: { type: 'number', description: 'Initial wait for top-level calls; nested calls wait for the final result.' }, run_in_background: { type: 'boolean' } }, required: ['command'] },
+      output: { oneOf: ['foreground', 'background', 'promoted'].map(kind => ({ type: 'object', properties: { kind: { type: 'string', const: kind } }, required: ['kind'] })) } };
+    const original = structuredClone(input);
+    for (const softYieldEnabled of [true, false]) {
+      const projected = projectSdkTool(input, { softYieldEnabled });
+      assert.equal(projected.parameters.properties.yieldMs, undefined);
+      assert.ok(projected.parameters.properties.run_in_background);
+      assert.equal(projected.output.oneOf.some(t => t.properties.kind.const === 'promoted'), !softYieldEnabled);
+      for (const render of [renderToolsSdk, renderToolsSdkPy]) {
+        const text = render([projected]);
+        assert.doesNotMatch(text, /yieldMs/);
+        assert.equal(text.includes('promoted'), !softYieldEnabled);
+      }
+    }
+    assert.deepEqual(input, original, 'the Native/registry contract is untouched');
+  }
+});
+
+test('runtime context labels preserve paths and separate user intent from disabled tool approvals', async () => {
+  const { neutralizeHostEnvironment } = await import('../src/cc-adaptation/environment.mjs');
+  const source = 'Current DeepSeek Harness implementation checkout: "/Applications/Host.app/Contents/Resources/app.asar/dsh/".';
+  const result = neutralizeHostEnvironment({ sections: [], contexts: [{ name: 'harness:source', text: source },
+    { name: 'approval:policy', text: 'Approval prompts are disabled in this session: actions that require approval are rejected automatically — do not request sandbox escalation (do not set `sandbox_permissions`).' }] });
+  assert.match(result.contexts[0].text, /packaged installation path \(inside ASAR\)/);
+  assert.ok(result.contexts[0].text.endsWith(source.slice(source.indexOf(':'))));
+  assert.doesNotMatch(result.contexts[1].text, /sandbox_permissions/);
+  assert.match(result.contexts[1].text, /rejected automatically/);
+  assert.match(result.contexts[1].text, /does not override tool permission checks/);
+});
+
+test('global sections have explicit boundaries and main prompts do not activate summary-only behavior', async () => {
+  const { scopeSectionHeadings, transportEntryDescription } = await import('../src/cc-adaptation/capabilities.mjs');
+  const { ADAPTIVE_TASK } = await import('../src/context/prompts.mjs');
+  const names = ['oh-my-dsh:codegraph', 'tools:ptc-only', 'context:file-reference', 'tool:jobs', 'tool:goal', 'tool:ralph', 'tool:subagent', 'omd:ultra', 'omd:tool-discovery'];
+  const sections = names.map(name => ({ name, text: 'Owned guidance' }));
+  const once = scopeSectionHeadings(sections);
+  assert.ok(once.every(s => s.text.startsWith('## ')));
+  assert.deepEqual(scopeSectionHeadings(once), once);
+  const main = readFileSync(new URL('../src/cc-adaptation/prompts/runtime/execution-contract.md', import.meta.url), 'utf8');
+  assert.doesNotMatch(main, /summary-preparation|Return its specified JSON/);
+  assert.match(ADAPTIVE_TASK, /independent, read-only summary-preparation/);
+  assert.match(ADAPTIVE_TASK, /no tool calls/);
+  const tail = ' The program is the body of an async TypeScript function; exact runtime semantics. Nested tools retain their own policies and approvals.';
+  const projected = transportEntryDescription('Execute a TypeScript program against the available tools. Duplicated function-body instructions.' + tail);
+  assert.ok(projected.endsWith(tail));
+  assert.doesNotMatch(projected, /Duplicated/);
+  assert.equal(transportEntryDescription('Custom runtime contract'), 'Custom runtime contract');
+});
+
+test('catalog keeps code navigation ready and discovers occasional tools without enabling delegation', async () => {
+  const { selectCatalog, installCatalog, projectCatalogAssembly } = await import('../src/result-reduction/catalog.mjs');
+  const definitions = ['workflow','ralph','video_generate','x_search','mcp__codegraph__codegraph_search','mcp__codegraph__codegraph_files','computer_use'].map(name => tool(name, 'Detailed contract. '.repeat(300)));
+  let strategy='off'; const agent={session:{}};
+  const ctx={tools:{schemas:()=>definitions,get:name=>definitions.find(t=>t.name===name),register:t=>definitions.push(t)}};
+  const hub={optimization:{enabled:()=>true},ultracode:{view:()=>({currentMode:strategy==='off'?'off':'ultra',currentSubmode:strategy})}};
+  installCatalog(ctx,hub);
+  const project=()=>projectCatalogAssembly({tools:definitions,sections:[]},{enabled:true,schemas:definitions,select:tools=>selectCatalog(ctx,hub,agent,tools)});
+  const initial=project();
+  assert.ok(initial.tools.some(t=>t.name==='mcp__codegraph__codegraph_search'));
+  assert.ok(initial.tools.some(t=>t.name==='mcp__codegraph__codegraph_files'));
+  assert.ok(!initial.tools.some(t=>t.name==='workflow'));
+  assert.match(section(initial,'omd:tool-discovery'),/Skills may register additional tools/);
+  const found=JSON.parse(await definitions.find(t=>t.name==='tool_find').execute({query:'workflow'},{agent}));
+  assert.deepEqual(found.tools[0].parameters,definitions[0].parameters);
+  assert.ok(project().tools.some(t=>t.name==='workflow'));
+  const fresh={session:{}};strategy='workflow';
+  assert.ok(selectCatalog(ctx,hub,fresh,definitions).tools.some(t=>t.name==='workflow'));
+  strategy='off';assert.ok(!selectCatalog(ctx,hub,fresh,definitions).tools.some(t=>t.name==='workflow'));
+  assert.equal(definitions.filter(t=>t.name==='workflow').length,1,'discovery never creates a second executor');
 });

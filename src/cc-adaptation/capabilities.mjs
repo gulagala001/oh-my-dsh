@@ -6,7 +6,39 @@ export function executionPresentation(ctx, agent) {
   const approval = scope.get?.('approval');
   const policy = approval?.overrideOf?.(session) ?? approval?.config?.policy;
   const mode = scope.get?.('sandboxPolicy')?.resolve({ session })?.mode;
-  return { hideEscalation: policy === 'never' || mode === 'danger-full-access' };
+  return { hideEscalation: policy === 'never' || mode === 'danger-full-access',
+    softYieldEnabled: scope.get?.('jobs')?.ownerOptions?.(agent)?.softYieldMs !== undefined };
+}
+
+export const DELEGATION_RULE = 'Delegate only when authorized by the user or an explicit active collaboration strategy.';
+export const isDelegationTool = name => /^subagent(?:_|$)/.test(name) || name === 'spawn_teammate' || name === 'workflow';
+
+// Reduce duplicate transport boilerplate only for the recognized host/runtime
+// combination. Keep the actual evaluator, isolation, output and retry rules.
+export function transportEntryDescription(description) {
+  const marker = ' The program is the body of an async TypeScript function;';
+  const offset = description.indexOf(marker);
+  return description.startsWith('Execute a TypeScript program against the available tools.') && offset > 0
+    ? 'Execute TypeScript using the tool SDK below.' + description.slice(offset) : description;
+}
+
+export function projectSdkTool(tool, { softYieldEnabled = false, direct = false } = {}) {
+  let { parameters, output, description } = tool;
+  const yieldDescription = parameters?.properties?.yieldMs?.description ?? '';
+  if (['bash', 'pwsh'].includes(tool.name) && yieldDescription.includes('top-level calls') && yieldDescription.includes('nested calls wait')) {
+    const { yieldMs, ...properties } = parameters.properties;
+    parameters = { ...parameters, properties, ...(parameters.required ? { required: parameters.required.filter(k => k !== 'yieldMs') } : {}) };
+    // The historical timeout-promotion path remains valid when soft yielding
+    // is disabled. Never narrow its output just because the call is nested.
+    if (softYieldEnabled && output?.oneOf) output = { ...output, oneOf: output.oneOf.filter(branch => branch.properties?.kind?.const !== 'promoted') };
+  }
+  description = description.replace('The SDK returns a JSON string containing {content:[...]}; direct calls render those blocks.', 'Returns a JSON string containing {content:[...]}; parse it once.');
+  if (direct && ['job_output', 'job_list', 'job_kill', 'runtime_status'].includes(tool.name)) {
+    description = tool.name === 'job_output'
+      ? 'SDK form of the direct job_output tool: inspect `job.status` and `text`. Nested waits share the program deadline; prefer the direct call when only waiting remains.'
+      : `SDK form of the direct ${tool.name} tool; returns the structured value declared below.`;
+  }
+  return { ...tool, parameters, output, description };
 }
 
 export function projectExecutionSchemas(schemas, { hideEscalation } = {}) {
@@ -25,8 +57,23 @@ export function transportDescription(name, description, known, mode) {
   if (name === 'ask_user_question' && !known.has('exit_plan_mode')) description = description.replace(/\n\nIn plan mode,[^\n]*/, '');
   if (name === 'todo_write' && !known.has('exit_plan_mode')) description = description.replace(' During plan mode, follow the plan-mode instructions instead.', '');
   if (mode === 'native' && name === 'recall') description = description.replace('The SDK returns a JSON string containing {content:[...]}; direct calls render those blocks.', 'Results are rendered content blocks.');
-  if (mode === 'native' && name === 'tool_find') description = description.replace('Native request or PTC SDK', 'tool catalog');
+  if (name === 'tool_find') description = description.replace('Native request or PTC SDK', 'tool catalog for the current calling mode');
+  if (isDelegationTool(name) && !description.includes(DELEGATION_RULE)) description = DELEGATION_RULE + ' ' + description;
   return description;
+}
+
+const headings = {
+  'oh-my-dsh:codegraph': 'Code navigation', 'tools:ptc-only': 'Tool entry points',
+  'context:file-reference': 'Referenced paths', 'tool:jobs': 'Background jobs',
+  'tool:goal': 'Persistent goals', 'tool:ralph': 'Fresh-agent iteration',
+  'omd:ultra': 'Collaboration mode', 'omd:tool-discovery': 'Tool discovery',
+};
+export function scopeSectionHeadings(sections) {
+  return sections.map(section => {
+    const heading = headings[section.name] ?? (section.name.startsWith('tool:subagent') ? 'Delegated tasks' : undefined);
+    return heading && section.text && !/^#{1,2} /.test(section.text)
+      ? { ...section, text: `## ${heading}\n${section.text}` } : section;
+  });
 }
 
 export function projectExecutionSections(sections, known) {

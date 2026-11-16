@@ -1,5 +1,5 @@
 import { presentationTools, FULL_PRESENTED_TOOLS } from '../host/prompt-provider.mjs';
-import { executionPresentation, projectExecutionSchemas, projectExecutionSections, transportDescription } from './capabilities.mjs';
+import { executionPresentation, projectExecutionSchemas, projectExecutionSections, scopeSectionHeadings, transportDescription, transportEntryDescription, projectSdkTool, DELEGATION_RULE, isDelegationTool } from './capabilities.mjs';
 import { selectCatalog, rememberCatalog, projectCatalogAssembly } from '../result-reduction/catalog.mjs';
 import { readFileSync } from 'node:fs';
 import { sessionPersonality } from '../personality-session.mjs';
@@ -20,6 +20,7 @@ const sha = value => createHash('sha256').update(JSON.stringify(value)).digest('
 // illustrative; an available directory binding avoids teaching redundant pwd.
 function renderSdkPresentation(render, tools) {
   let sdk = render(tools);
+  sdk = sdk.replace(/## Writing code for run_code\n\n[^\n]+(?=\n)/, '## Tool SDK');
   const directory = tools.find(tool => tool.name === 'working_directory');
   if (directory && !(directory.parameters?.required?.length)) sdk = sdk
     .replace(/await tools\.bash\(\{ (?:description: 'Show current directory', )?command: 'pwd' \}\)/g, 'await tools.working_directory({})')
@@ -40,10 +41,17 @@ function sdkDescription(name, description) {
   return description;
 }
 
-/** Pure prompt transformation: never changes execution functions or input/output schemas. */
+/** Preserve registry contracts and execution; project the visible descriptions and SDK variants. */
 export function transformAssembly(assembly, context, options = {}) {
   const { agent } = context ?? {};
-  if (agent) assembly = { ...assembly, sections: projectExecutionSections(assembly.sections ?? [], new Map((options.schemas ?? assembly.tools ?? []).map(tool => [tool.name, tool]))) };
+  if (agent) {
+    const available = new Map((options.schemas ?? assembly.tools ?? []).map(tool => [tool.name, tool]));
+    assembly = { ...assembly, sections: projectExecutionSections(assembly.sections ?? [], available), tools: (assembly.tools ?? []).map(tool => {
+      const description = tool.name === 'run_code' ? transportEntryDescription(tool.description)
+        : isDelegationTool(tool.name) ? transportDescription(tool.name, tool.description, available, 'native') : tool.description;
+      return description === tool.description ? tool : { ...tool, description };
+    }) };
+  }
   if (!agent || isUnseededSubagent(agent.session)
       || !assembly.sections?.some(section => section.name === 'oh-my-dsh:persona')) {
     return { assembly, audit: { applied: false, reason: 'outside-main-agent-scope' } };
@@ -60,7 +68,10 @@ export function transformAssembly(assembly, context, options = {}) {
   const shells = ['bash', 'pwsh'];
   const applied = new Set(), retained = [], missing = [], changedSchemas = new Map();
   for (const tool of known.values()) {
-    if (tool.name === 'run_code') { retained.push({ name: tool.name, reason: 'runtime-owned-transport' }); continue; }
+    if (tool.name === 'run_code') {
+      changedSchemas.set(tool.name, { ...tool, description: transportEntryDescription(tool.description) });
+      retained.push({ name: tool.name, reason: 'runtime-owned-transport' }); continue;
+    }
     const binding = map[tool.name];
     if (!binding) {
       const description = transportDescription(tool.name, tool.description, known, toolMode);
@@ -68,6 +79,8 @@ export function transformAssembly(assembly, context, options = {}) {
       retained.push({ name: tool.name, reason: 'unmapped-native-tool' }); continue;
     }
     if (binding.mode === 'retain-native') {
+      const description = transportDescription(tool.name, tool.description, known, toolMode);
+      if (description !== tool.description) changedSchemas.set(tool.name, { ...tool, description });
       retained.push({ name: tool.name, reason: 'owner-specific-runtime-conditions' }); continue;
     }
     const fields = tool.parameters?.properties ?? {};
@@ -76,7 +89,7 @@ export function transformAssembly(assembly, context, options = {}) {
     let description = load(binding.file);
     if (tool.name === 'todo_write' && !known.has('verify_link')) description = withoutTaskVerification(description);
     if (tool.name === 'recall' && !Object.hasOwn(fields, 'search')) {
-      description = description.replace(/ Use search=original[\s\S]*?Original search does not automatically search other sessions or change saved summaries and decisions\./, '');
+      description = description.replace(/search=original searches[^\n]*?It does not automatically search other sessions\. /i, '');
     }
     if (tool.name === 'todo_write' && (!fields.op?.enum?.includes('pause_turn') || !Object.hasOwn(fields, 'reason'))) {
       description = description.split('\n').filter(line => !line.includes('`pause_turn`')).join('\n');
@@ -114,6 +127,9 @@ export function transformAssembly(assembly, context, options = {}) {
   if (fileReferences && style === 'omd') persona = persona.replace('\n - Reference code as `file_path:line_number`.', '');
   if (!known.has('computer_use')) persona = persona.replace('Use the available computer-use tools for tasks involving browsers and desktop applications. ', '')
     .replace(' Computer Use JavaScript and persistent bindings belong inside computer_use, separate from the outer program.', '');
+  const reviews = ['ask_user_question', 'exit_plan_mode'].filter(name => known.has(name));
+  if (toolMode !== 'native' && reviews.length) persona += '\n\nRun ' + reviews.map(name => '`' + name + '`').join(' or ') + ' alone. Awaiting gives the running program its result; emit that result and finish so the model can read it before deciding dependent actions.';
+  if ([...known.keys()].some(isDelegationTool)) persona += '\n\n## Delegation authorization\n' + DELEGATION_RULE + ' Tool availability and discovery do not grant authorization.';
   if (options.stateHintsEnabled && known.has('runtime_status')) persona += '\n\n' + load('runtime/state-guidance.md');
   if (shells.some(name => known.has(name))) persona += '\n\n## Browser testing\n' + (known.has('computer_use') ? browserIsolationGuide
     : browserIsolationGuide.replace(' or load computer_use documentation("testing") for the installed helper', ''));
@@ -153,7 +169,9 @@ export function transformAssembly(assembly, context, options = {}) {
         if (!definition?.output?.schema) throw new Error(`Missing live output contract: ${tool.name}`);
         const adapted = changedSchemas.get(tool.name);
         const description = adapted ? sdkDescription(tool.name, adapted.description) : tool.description;
-        return { ...tool, description, output: definition.output.schema };
+        return projectSdkTool({ ...tool, description, output: definition.output.schema }, {
+          softYieldEnabled: options.softYieldEnabled, direct: directTools.has(tool.name),
+        });
       });
       sdkRegenerated = true; sdkSchemas = sdk;
       return [{ ...section, text: renderSdkPresentation(options.renderSdk, sdk), interpolate: false }];
@@ -197,7 +215,7 @@ export function installPromptAdapter(ctx) {
     const schemas = projectExecutionSchemas(ctx.tools.schemas(context.scope ?? context.agent, context.toolSet), policy);
     const style = recordPromptStyle(ctx.omd, context.agent);
     let renderSdk;
-    if (activeSdk && (style === 'omd' || ctx.omd.optimization?.enabled(context.agent.session))) {
+    if (activeSdk) {
       const { renderToolsSdk, renderToolsSdkPy } = await import('@deepseek-ai/dsh-tool-executor-ptc');
       const runtime = ctx.get('ptcRuntime');
       const language = runtime?.language;
@@ -212,18 +230,29 @@ export function installPromptAdapter(ctx) {
       identityPrompt: personality.modules.identity, personalityModules: personality.modules,
       todoConstraintFirst: config.todoConstraintFirst, stateHintsEnabled: config.stateHintsEnabled,
       backgroundTasksEnabled: ctx.omd.backgroundOptions?.(context.agent)?.interruptibleWait === true,
+      softYieldEnabled: policy.softYieldEnabled,
       schemas, renderSdk, definition: name => ctx.tools.get(name, context.scope ?? context.agent, context.toolSet),
     });
+    const schemaMap = new Map(schemas.map(tool => [tool.name, tool]));
+    const sdkSchemas = (result.sdkSchemas ?? schemas.map(tool => ({ ...tool,
+      description: transportDescription(tool.name, tool.description, schemaMap, activeSdk ? 'ptc' : 'native'),
+      output: ctx.tools.get(tool.name, context.scope ?? context.agent, context.toolSet)?.output?.schema,
+    }))).filter(tool => tool.name !== 'run_code').map(tool => projectSdkTool(tool, {
+      softYieldEnabled: policy.softYieldEnabled, direct: assembly.tools.some(t => t.name === tool.name),
+    }));
+    if (activeSdk) result.assembly.sections = result.assembly.sections.map(section => section.name === 'tools:sdk'
+      ? { ...section, text: renderSdkPresentation(renderSdk, sdkSchemas), interpolate: false } : section);
     // Catalog projection is independent of persona/style adaptation and also
     // covers delegated agents which deliberately retain their native prompts.
     result.assembly = projectCatalogAssembly(result.assembly, {
       enabled: ctx.omd.optimization?.enabled(context.agent.session), renderSdk: renderSdk && (tools => renderSdkPresentation(renderSdk, tools)),
-      schemas: result.sdkSchemas ?? schemas.map(tool => ({ ...tool, output: ctx.tools.get(tool.name, context.scope ?? context.agent, context.toolSet)?.output?.schema })),
+      schemas: sdkSchemas,
       select: schemas => selectCatalog(ctx, ctx.omd, context.agent, schemas),
       remember: plan => rememberCatalog(ctx.omd, plan),
     });
     result.audit.toolsHash = sha(result.assembly.tools);
     result.assembly.sections.push({ name: 'omd:execution-contract', text: read('runtime/execution-contract.md'), interpolate: false });
+    result.assembly.sections = scopeSectionHeadings(result.assembly.sections);
     if (ctx.omd.persona) result.assembly.sections.push({ name: 'dsh-persona:applied', text: '', interpolate: false });
     const key = sha(result.audit);
     if (!seen.has(key)) {

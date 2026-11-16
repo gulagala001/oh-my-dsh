@@ -226,6 +226,8 @@ for (const scenario of ['growth', 'suffix', 'unconfirmed']) test('adaptive prepa
   const candidate = payload.candidates.find(c => c.id === 'new-window');
   assert.ok(candidate.segment.some(entry => entry.seq === later[1].seq && entry.new_since_snapshot));
   assert.equal(f.state.records.length, 1);
+  assert.match(f.calls.at(-1).messages.at(-1).content.map(b => b.text ?? '').join('\n'), /independent, read-only summary-preparation/);
+  assert.match(f.calls.at(-1).messages.at(-1).content.map(b => b.text ?? '').join('\n'), /no tool calls/);
   assert.equal(f.state.pending.source, 'adaptive');
   assert.equal(f.state.adaptive.error, null);
 });
