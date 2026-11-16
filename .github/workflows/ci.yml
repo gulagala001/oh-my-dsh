@@ -78,7 +78,7 @@ jobs:
           execFileSync(process.execPath, ['--test', 'test/opencu-static-zip-delivery.test.mjs'], { stdio: 'inherit', env: { ...process.env, OMD_DELIVERY_ARCHIVE: archive } });
           NODE
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && env.OMD_DELIVERY_ROOT != ''
         with:
           name: core-opencu-delivery
           path: ${{ env.OMD_DELIVERY_ROOT }}

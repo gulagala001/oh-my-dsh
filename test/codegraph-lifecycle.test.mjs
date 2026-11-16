@@ -235,11 +235,12 @@ test('explore updates only the upstream reading advisory, never quoted source or
   const advisory = '> The code below is the **verbatim, current on-disk source**; do not Read a file shown here.';
   const source = '```js\n'+advisory+'\n```', raw = { content:[{type:'text',text:advisory+'\n'+source}] };
   const text = exploreResult(raw).content[0].text;
-  assert.match(text,/Before edit, read the target range/); assert.ok(text.endsWith(source));
+  const readingRule = /Before modifying source, follow the read requirements of the file tool.*not an exact current file snapshot/;
+  assert.match(text,readingRule); assert.ok(text.endsWith(source));
   const error = {...raw,isError:true}; assert.equal(exploreResult(error),error);
   for (const [open, nested, close] of [['```md', '```ts', '```'], ['   ~~~~md', '~~~~info', '   ~~~~~  '], ['````md', '```', '````']]) {
     const source = [open, nested, advisory, close].join('\n');
     const result = exploreResult({ content: [{ type: 'text', text: source + '\n' + advisory }] }).content[0].text;
-    assert.ok(result.startsWith(source + '\n')); assert.ok(result.slice(source.length).includes('Before edit'));
+    assert.ok(result.startsWith(source + '\n')); assert.match(result.slice(source.length),readingRule);
   }
 });
