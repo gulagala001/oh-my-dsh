@@ -122,6 +122,75 @@ test('source paths exclude recall/task payloads, and generated tool calls never 
   assert.equal(f.state.failures.prepare.validation, true);
 });
 
+test('tool-call rejection recovers with a bounded summary-only request and the next window reuses cache', async t => {
+  const f=await fixture(t), main=f.take(), original=f.session.snapshotEvents();
+  f.reply(async request=>{
+    if(f.calls.length===1)return [{type:'tool-call',name:'read',arguments:'{"file_path":"/must-not-run"}'}];
+    if(request.tools?.[0]?.name==='prepare_segment') {
+      const inputs=JSON.parse(request.messages[0].content[0].text), source=inputs.decision_sources[0];
+      return [{type:'tool-call',name:'prepare_segment',arguments:{summary:'Observed result.',documents:[],decisions:[{text:'Preserve originals.',seq:source.seq,quoteIndex:0}]}}];
+    }
+    return [{type:'text',text:'{"summary":"New observed result.","documents":[]}'}];
+  });
+  await f.pipeline.prepare(f.agent,true);
+  assert.deepEqual(f.session.snapshotEvents(),original);
+  assert.equal(f.state.records.length,0);assert.equal(f.state.failures.prepare.details.reason,'tool-call');
+  await f.pipeline.prepare(f.agent,true);
+  assert.deepEqual(f.calls[1].tools.map(t=>t.name),['prepare_segment']);
+  assert.equal(f.calls[1].messages.length,1);
+  assert.equal(f.state.records[0].decisions[0].quote,'Preserve the original records.');
+  assert.equal(f.state.failures.prepare,undefined);
+  assert.deepEqual(main.messages,original.flatMap(e=>{const m=f.session.deriveEventMessage(e);return m?[m]:[]}));
+  exchange(f.session,'New factual work. '.repeat(220));const next=f.take();
+  await f.pipeline.prepare(f.agent,true);
+  assert.deepEqual(f.calls.at(-1).messages.slice(0,-1),next.messages);
+  assert.deepEqual(f.calls.at(-1).tools,next.tools);
+});
+
+test('bounded recovery survives an intervening provider failure without resetting retry limits',async t=>{
+  const f=await fixture(t,{backgroundMaxRetries:2});f.take();const original=f.session.snapshotEvents();
+  f.reply(async()=>{
+    if(f.calls.length===1)return [{type:'tool-call',name:'read',arguments:'{}'}];
+    throw Error('Provider unavailable');
+  });
+  await f.pipeline.prepare(f.agent,true);
+  f.state.prepareRetryAt=0;await f.pipeline.prepare(f.agent,true,{retry:true});
+  assert.equal(f.state.failures.prepare.count,2);assert.equal(f.state.failures.prepare.boundedPreparation,true);
+  f.state.prepareRetryAt=0;await f.pipeline.prepare(f.agent,true,{retry:true});
+  assert.equal(f.calls.length,3);assert.deepEqual(f.calls[2].tools.map(t=>t.name),['prepare_segment']);
+  f.state.prepareRetryAt=0;await f.pipeline.prepare(f.agent,false,{retry:true});
+  assert.equal(f.calls.length,3,'The fallback cannot grant a fresh retry burst');
+  assert.deepEqual(f.session.snapshotEvents(),original);assert.equal(f.state.records.length,0);
+});
+
+test('Auto Compact retains originals after a cached tool call and recovers through the bounded contract', async t=>{
+  const f=await fixture(t,{contextEnabled:false,autoCompactEnabled:true,autoCompactThreshold:100,autoCompactMode:'brief'});
+  f.hub.ctx.tokenMeter={measure:()=>({totalTokens:f.session.surface.nodes.includes(f.work[0].seq)?500:50,nodes:[]})};
+  f.take();const original=f.session.snapshotEvents();
+  f.reply(async request=>request.tools?.[0]?.name==='prepare_segment'
+    ? [{type:'tool-call',name:'prepare_segment',arguments:{summary:'Observed result.',documents:[]}}]
+    : [{type:'tool-call',name:'read',arguments:'{}'}]);
+  await f.pipeline.autoCompact.check(f.agent);
+  assert.deepEqual(f.session.snapshotEvents(),original);assert.equal(f.state.records.length,0);
+  assert.equal(f.state.failures.autoCompact.details.reason,'tool-call');
+  await f.pipeline.autoCompact.check(f.agent);
+  assert.equal(f.calls.length,2);assert.deepEqual(f.calls[1].tools.map(t=>t.name),['prepare_segment']);
+  assert.equal(f.state.records[0].mode,'brief');assert.equal(f.state.failures.autoCompact,undefined);
+});
+
+test('adaptive tool-call rejection uses the bounded read-only path once, preserving cache for later checks', async t=>{
+  const f=await fixture(t,{coordinatorMinGapMs:0});f.state.compressionMode='adaptive';f.state.eventsSincePrepare=0;
+  const main=f.take();
+  f.reply(async()=>f.calls.length===1?[{type:'tool-call',name:'read',arguments:'{}'}]:[{type:'text',text:'{"action":"skip","reason":"Keep originals."}'}]);
+  await f.pipeline.adaptive.check(f.agent,{force:true});
+  assert.equal(f.state.adaptive.rejectionDetails.reason,'tool-call');assert.equal(f.state.records.length,0);
+  await f.pipeline.adaptive.check(f.agent,{force:true});
+  assert.deepEqual(f.calls[1].tools,[]);assert.equal(f.calls[1].messages.length,1);
+  assert.equal(f.state.adaptive.rejectionDetails,undefined);
+  await f.pipeline.adaptive.check(f.agent,{force:true});
+  assert.deepEqual(f.calls[2].tools,main.tools);assert.deepEqual(f.calls[2].messages.slice(0,-1),main.messages);
+});
+
 test('disabled, released, changed-route and replaced-source requests cannot publish late replies', async t => {
   for (const change of ['disabled', 'released', 'route', 'source']) {
     const f = await fixture(t), late = Promise.withResolvers();

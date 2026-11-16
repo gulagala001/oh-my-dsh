@@ -130,7 +130,11 @@ export class AutoCompaction {
         if (!events) break;
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
-        const cached = cfg.memoryCacheEnabled ? p.cachedPreparation.build(agent, events, inputs) : null;
+        if (s.failures.autoCompact?.details) {
+          inputs.previous_rejection = s.failures.autoCompact.message;
+          inputs.previous_rejection_details = s.failures.autoCompact.details;
+        }
+        const cached = cfg.memoryCacheEnabled ? p.cachedPreparation.build(agent, events, inputs, { bounded: s.failures.autoCompact?.boundedPreparation }) : null;
         // Cache reuse may improve cost, but cannot block a safety compression.
         let reply;
         if (cached) reply = await p.cachedPreparation.call(agent, cached, controller, activeSignal);
@@ -176,7 +180,7 @@ export class AutoCompaction {
           } else {
             s.autoCompact = { ...s.autoCompact, error: error.message };
             if (s.failures.autoCompact?.key !== checkedKey) delete s.failures.autoCompact;
-            p.reportError(agent, 'autoCompact', error);
+            p.reportError(agent, 'autoCompact', error, false, error.code === 'PREPARE_VALIDATION');
             s.failures.autoCompact.key = checkedKey; p.store.save(s);
           }
         }

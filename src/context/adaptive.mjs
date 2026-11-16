@@ -4,7 +4,7 @@ import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { assertCachedRequestPrefix } from './request-prefix.mjs';
 import { taskContextMeta } from '../task-context.mjs';
 import { ADAPTIVE_TASK, SUMMARY_PROMPT_VERSION } from './prompts.mjs';
-import { activeRecords, candidateInput, hash, liveSpan, newRecord, normalizeChoices, preparationWorkload, prepareCandidate, recordBlocks, recordSnapshot, userRevision, validatePrepared } from './core.mjs';
+import { activeRecords, candidateInput, hash, liveSpan, newRecord, normalizeChoices, preparationWorkload, prepareCandidate, recordBlocks, recordSnapshot, userRevision, validatePrepared, assertPreparationTools } from './core.mjs';
 import { messageTokens } from './materials.mjs';
 import { RequestSnapshots, cachedRouteKey, cachedBudgetReason } from './request-snapshots.mjs';
 import { cachedPreparationInput } from './cached-preparation.mjs';
@@ -90,7 +90,7 @@ export class AdaptiveCompaction {
     }
     const events = preparationEvents(p, agent, s, cfg);
     let built, reason;
-    for (const snapshot of usable) {
+    for (const snapshot of status.rejectionDetails?.reason === 'tool-call' ? [] : usable) {
       const attempt = this.buildRequest(session, s, cfg, snapshot, events, pressure);
       if (attempt.request) { built = { ...attempt, snapshot }; break; }
       reason ??= attempt.reason;
@@ -163,7 +163,7 @@ export class AdaptiveCompaction {
       const result = await p.call(agent, 'adaptive', request, controller.signal, () => { if (!current()) throw Error('后台检查条件已改变'); });
       controller.signal.throwIfAborted();
       if (!current()) return;
-      if (result.blocks.some(b => b.type === 'tool-call')) throw Error('主动整理请求调用了工具；未执行，原文保留');
+      assertPreparationTools(result);
       const text = result.blocks.filter(b => b.type === 'text').map(b => b.text).join('').trim();
       const value = JSON.parse(text.replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/, '$1'));
       if (!value || !['skip', 'compress'].includes(value.action) || Object.keys(value).some(k => !['action', 'reason', 'choices', 'prepared'].includes(k))) throw Error('主动整理回复格式无效，原文保留');
@@ -171,7 +171,7 @@ export class AdaptiveCompaction {
       if (s.transaction || s.pending || userRevision(session) !== snapshot.userRevision) { status.lastDecision = 'stale'; status.reason = '用户要求或替换状态已变化，未提交旧结果'; p.store.save(s); return; }
       if (value.action === 'skip') {
         if (value.prepared !== undefined || value.choices?.length) throw Error('不压缩的回复不能提交替换内容');
-        status.lastKey = fingerprint; status.lastDecision = 'skip'; status.reason = value.reason || '本次保留当前上下文'; status.failures = 0;
+        status.lastKey = fingerprint; status.lastDecision = 'skip'; status.reason = value.reason || '本次保留当前上下文'; status.failures = 0; delete status.rejectionDetails;
         p.hub.event?.(session, { kind: 'adaptive', status: 'skip', title: '主动整理：保留', detail: status.reason, data: { cacheReadTokens: result.usage?.cacheReadTokens ?? null } });
         s.eventsSincePrepare = Math.max(0, (s.eventsSincePrepare || 0) - seenEvents);
         status.cacheReadTokens = result.usage?.cacheReadTokens ?? null; p.store.save(s); return;
@@ -206,13 +206,15 @@ export class AdaptiveCompaction {
       }
       s.pending = { id: randomUUID(), createdAt: Date.now(), source: 'adaptive', routeKey: routeKey(snapshot.request), userRevision: userRevision(session), choices: normalized, summaryPromptVersion: SUMMARY_PROMPT_VERSION };
       p.hub.action(session, 'contextDecisions', 1);
-      status.lastKey = fingerprint; status.lastDecision = 'compress'; status.reason = value.reason || '已准备替换，等待安全请求边界'; status.failures = 0;
+      status.lastKey = fingerprint; status.lastDecision = 'compress'; status.reason = value.reason || '已准备替换，等待安全请求边界'; status.failures = 0; delete status.rejectionDetails;
       p.hub.event?.(session, { kind: 'adaptive', status: 'success', title: '主动整理：准备替换', detail: status.reason,
         count: normalized.reduce((n, c) => n + (c.action === 'keep' ? 0 : c.ids.length), 0), data: { newRecord: Boolean(record) } });
       status.cacheReadTokens = result.usage?.cacheReadTokens ?? null; p.store.save(s);
     })().catch(error => {
       if (!current()) return;
-      status.error = error.message; status.failures = (status.failures || 0) + 1; status.failureRoute = routeKey(snapshot.request); p.store.save(s);
+      status.error = error.message; status.failures = (status.failures || 0) + 1; status.failureRoute = routeKey(snapshot.request);
+      if (error.code === 'PREPARE_VALIDATION') status.rejectionDetails = error.details;
+      p.store.save(s);
       p.hub.event?.(session, { kind: 'adaptive', status: 'error', title: '主动整理失败', detail: error.message, data: { count: status.failures } });
       p.hub.ctx.logger?.warn?.(`主动异步整理：${error.message}`);
     }).finally(() => {

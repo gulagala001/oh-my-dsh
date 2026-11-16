@@ -40,6 +40,27 @@ export const hasOpaqueContent = blocks => (blocks || []).some(b => !['text', 're
 function invalidPrepared(field, message, details = {}) {
   throw Object.assign(new Error(`预处理校验失败：${field} ${message}`), {code:'PREPARE_VALIDATION', details:{field,...details}});
 }
+// Lossless host-authored excerpts: the model selects an index instead of
+// retranscribing punctuation, escapes or multilingual user text.
+export function decisionQuotes(text) {
+  const quotes = [];
+  for (let start = 0; start < text.length;) {
+    let end = Math.min(start + 600, text.length);
+    if (end < text.length) {
+      const fragment = text.slice(start, end), boundary = Math.max(fragment.lastIndexOf('\n'), fragment.lastIndexOf('。'), fragment.lastIndexOf('. '));
+      if (boundary >= 300) end = start + boundary + 1;
+      if (/[\uD800-\uDBFF]/.test(text[end - 1])) end--;
+    }
+    quotes.push(text.slice(start, end)); start = end;
+  }
+  return quotes;
+}
+export function assertPreparationTools(result, allowed) {
+  const calls = result?.blocks?.filter(block => block.type === 'tool-call') || [];
+  if (!calls.length || (allowed && calls.length === 1 && calls[0].name === allowed)) return;
+  invalidPrepared('response.tools', allowed ? `只允许一次 ${allowed} 结果提交；其他调用未执行，原文保留`
+    : '只允许返回摘要 JSON；工具调用未执行，原文保留', {reason:'tool-call', tools:[...new Set(calls.map(call => call.name))].slice(0,8)});
+}
 export function validatePrepared(value, decisionSources = []) {
   if (!value || typeof value.summary !== 'string') invalidPrepared('summary','必须是字符串', {reason:'type'});
   if (!Array.isArray(value.documents)) invalidPrepared('documents','必须是数组', {reason:'type'});
@@ -49,24 +70,35 @@ export function validatePrepared(value, decisionSources = []) {
   const decisions = value.decisions;
   if (decisions !== undefined && !Array.isArray(decisions)) invalidPrepared('decisions','必须是数组', {reason:'type'});
   if (decisions?.length > 12) invalidPrepared('decisions',`有 ${decisions.length} 项，最多 12 项`, {reason:'too-many',actual:decisions.length,limit:12});
-  const sources = new Map(decisionSources.map(s => [s.seq, s.text]));
+  const sources = new Map(decisionSources.map(s => [s.seq, s]));
+  const normalized = [];
   for (const [i,d] of (decisions || []).entries()) {
     const prefix = `decisions[${i}]`;
     if (!d || typeof d.text !== 'string' || !d.text.trim()) invalidPrepared(`${prefix}.text`,'必须是非空字符串', {reason:'empty-or-type'});
     if (d.text.length > 1200) invalidPrepared(`${prefix}.text`,`长度 ${d.text.length} 超过上限 1200`, {reason:'too-long',actual:d.text.length,limit:1200});
     if (!Number.isSafeInteger(d.seq)) invalidPrepared(`${prefix}.seq`,'必须是本批原话的整数序号', {reason:'type'});
     if (!sources.has(d.seq)) invalidPrepared(`${prefix}.seq`,`${d.seq} 不在本批真实用户原话中`, {reason:'missing-source',seq:d.seq});
-    if (typeof d.quote !== 'string' || !d.quote.trim()) invalidPrepared(`${prefix}.quote`,'必须包含非空的用户原话', {reason:'empty-or-type',seq:d.seq});
-    if (d.quote.length > 600) invalidPrepared(`${prefix}.quote`,`长度 ${d.quote.length} 超过上限 600，请摘录更短的连续原话`, {reason:'too-long',seq:d.seq,actual:d.quote.length,limit:600});
-    if (!sources.get(d.seq)?.includes(d.quote)) invalidPrepared(`${prefix}.quote`,`与序号 ${d.seq} 的真实用户原话不匹配，必须逐字摘录连续片段`, {reason:'quote-mismatch',seq:d.seq});
+    const source = sources.get(d.seq);
+    let quote = d.quote;
+    if (Object.hasOwn(d, 'quoteIndex')) {
+      if (Object.hasOwn(d, 'quote')) invalidPrepared(`${prefix}.quoteIndex`,'不能同时指定原话和引用索引', {reason:'ambiguous-source',seq:d.seq});
+      if (!Number.isSafeInteger(d.quoteIndex) || d.quoteIndex < 0 || !Array.isArray(source.quotes) || d.quoteIndex >= source.quotes.length)
+        invalidPrepared(`${prefix}.quoteIndex`,'必须选择该用户原话 quotes 数组中的有效索引', {reason:'missing-quote',seq:d.seq});
+      quote = source.quotes[d.quoteIndex];
+    }
+    if (typeof quote !== 'string' || !quote.trim()) invalidPrepared(`${prefix}.quote`,'必须包含非空的用户原话', {reason:'empty-or-type',seq:d.seq});
+    if (quote.length > 600) invalidPrepared(`${prefix}.quote`,`长度 ${quote.length} 超过上限 600，请摘录更短的连续原话`, {reason:'too-long',seq:d.seq,actual:quote.length,limit:600});
+    if (!(source.text ?? source.quotes?.join(''))?.includes(quote)) invalidPrepared(`${prefix}.quote`,`与序号 ${d.seq} 的真实用户原话不匹配，必须逐字摘录连续片段`, {reason:'quote-mismatch',seq:d.seq});
+    normalized.push({text:d.text.trim(),seq:d.seq,quote});
   }
   const total = (decisions || []).reduce((n, d) => n + Array.from(d.text).length, 0);
   if (total > 1200) invalidPrepared('decisions[].text',`总长度 ${total} 超过上限 1200`, {reason:'too-long',actual:total,limit:1200});
   if (!value.summary.trim() && !decisions?.length) invalidPrepared('summary','摘要和用户决定不能同时为空', {reason:'empty'});
   return { summary: value.summary.trim(), documents: value.documents.map(d => ({ title: d.title.trim(), text: d.text.trim() })),
-    ...(decisions?.length ? { decisions: decisions.map(d => ({ text: d.text.trim(), seq: d.seq, quote: d.quote })) } : {}) };
+    ...(normalized.length ? { decisions: normalized } : {}) };
 }
 export function decodeResult(result, toolName) {
+  assertPreparationTools(result, toolName);
   const call = result?.blocks?.findLast(b => b.type === 'tool-call' && b.name === toolName);
   if (!call) throw new Error(`后台未调用 ${toolName}`);
   return typeof call.arguments === 'string' ? JSON.parse(call.arguments) : call.arguments;
@@ -352,7 +384,7 @@ export function candidateInput(session, events, lookback) {
   const segmentUsers = segment.filter(actualUser);
   const precedingUser = all.slice(0, start).findLast(actualUser);
   const decisionSources = [...new Map([...(precedingUser ? [precedingUser] : []), ...segmentUsers].map(e => [e.seq, e])).values()]
-    .map(e => ({ seq: e.seq, text: textBlocks(e.data.content) }));
+    .map(e => ({ seq: e.seq, quotes: decisionQuotes(textBlocks(e.data.content)) }));
   return { summary_scope: { source: 'segment', event_seqs: events.filter(e => !actualUser(e) && !(events.retainedSeqs || []).includes(e.seq) && read(e)).map(e => e.seq), reference_only_fields: ['reference', 'user_messages'] },
     decision_sources: decisionSources,
     reference: prior.filter(e => read(e)).map(e => ({ seq: e.seq, type: e.type, text: materialText(read(e).content, e.seq) })),

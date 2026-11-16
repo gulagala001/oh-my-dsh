@@ -1,7 +1,7 @@
 import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { assertCachedRequestPrefix } from './request-prefix.mjs';
 import { summaryMessageReader, taskContextMeta } from '../task-context.mjs';
-import { hash } from './core.mjs';
+import { hash, assertPreparationTools } from './core.mjs';
 import { materialText } from './materials.mjs';
 import { CACHED_PREPARE_TASK } from './prompts.mjs';
 import { RequestSnapshots, cachedBudgetReason } from './request-snapshots.mjs';
@@ -54,7 +54,7 @@ export function cachedPreparationInput(session, snapshot, inputs) {
 }
 
 export function decodeCachedPreparation(result) {
-  if (result.blocks.some(block => block.type === 'tool-call')) throw Error('记忆缓存预处理调用了工具；未执行，原文保留');
+  assertPreparationTools(result);
   const text = result.blocks.filter(block => block.type === 'text').map(block => block.text).join('').trim();
   const value = JSON.parse(text.replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/, '$1'));
   if (!value || Array.isArray(value) || typeof value !== 'object'
@@ -89,8 +89,11 @@ export class CachedPreparation {
     return this.snapshots.confirm(session, route);
   }
   version(session) { return this.snapshots.version(session); }
-  build(agent, events, inputs) {
+  build(agent, events, inputs, { bounded = false } = {}) {
     if (!this.configure()) return null;
+    // The host has no tool_choice control. After a tool-call rejection, use
+    // the existing bounded preparation request for this recovery only.
+    if (bounded || inputs.previous_rejection_details?.reason === 'tool-call') return null;
     const p = this.pipeline, session = agent.session;
     for (const snapshot of this.snapshots.candidates(session)) {
       const built = this.buildRequest(session, snapshot, inputs);

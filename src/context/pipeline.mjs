@@ -295,6 +295,8 @@ export class ContextPipeline {
     const s = this.state(agent.session);
     s.failures[kind] = { count: (s.failures[kind]?.count || 0) + 1, at: Date.now(), message: error.message,
       recoverable: providerFailure && transientFailure(error), providerFailure,
+      ...(['prepare','autoCompact'].includes(kind) && (error.details?.reason === 'tool-call' || s.failures[kind]?.boundedPreparation)
+        ? { boundedPreparation: true } : {}),
       ...(typeof error.code === 'string' ? { code: error.code } : {}),
       ...(validationFailure && error.code === 'PREPARE_VALIDATION' ? {details:error.details} : {}),
       ...(validationFailure ? { validation: true, newEvents: 0, lastEventSeq: agent.session.snapshotEvents().findLast(preparationEvent)?.seq ?? -1 } : {}) };
@@ -321,6 +323,7 @@ export class ContextPipeline {
     if (this.jobs.has(key)) return this.jobs.get(key);
     const s = this.state(session);
     const recovering = Boolean(s.failures.prepare);
+    let rejection = s.failures.prepare;
     if (force && !retry) { delete s.failures.prepare; delete s.prepareRetryAt; }
     if (Date.now() < (s.prepareRetryAt || 0)) {
       if (s.failures.prepare?.validation && s.failures.prepare.count > this.config().backgroundMaxRetries
@@ -357,11 +360,11 @@ export class ContextPipeline {
         if (!events) { this.store.touch(s); break; }
         const inputs = candidateInput(session, events, cfg.digestLookback);
         inputs.target_characters = cfg.summaryTargetChars;
-        if (s.failures.prepare) {
-          inputs.previous_rejection = s.failures.prepare.message;
-          if (s.failures.prepare.details) inputs.previous_rejection_details = s.failures.prepare.details;
+        if (rejection) {
+          inputs.previous_rejection = rejection.message;
+          if (rejection.details) inputs.previous_rejection_details = rejection.details;
         }
-        const cached = cfg.memoryCacheEnabled ? this.cachedPreparation.build(agent, events, inputs) : null;
+        const cached = cfg.memoryCacheEnabled ? this.cachedPreparation.build(agent, events, inputs, { bounded: rejection?.boundedPreparation }) : null;
         // A reusable prefix is optional; cold or over-budget sessions use the same bounded segment.
         const admit = () => this.admitMainSuccess(agent, 'prepare', mainSuccess, controller);
         const execute = () => {
@@ -380,6 +383,7 @@ export class ContextPipeline {
         } catch (error) { validationFailure = true; throw error; }
         const record = newRecord(session, events, prepared, s.binding, { state: s });
         record.summaryFormatVersion = 2; record.summaryPromptVersion = SUMMARY_PROMPT_VERSION;
+        rejection = undefined;
         // A write-ahead replacement owns the session records until its disk flush completes.
         if (s.transaction) { this.store.notice(s, '预处理完成时替换事务尚未提交，原文保留并等待下一批'); break; }
         // Other maintenance may have replaced this source while the model ran.
