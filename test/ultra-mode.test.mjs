@@ -247,6 +247,6 @@ test('periodic human claims survive an uncommitted assembly and retire on the na
 test('a fresh ordinary session explicitly states Ultra is off without enabling continuation', async () => {
   const f = fixture();
   const assembly = await f.control.assemble(f.agent, async () => ({ sections: [] }));
-  assert.match(assembly.sections.find(s => s.name === 'omd:ultra').text, /Ultra is off/);
+  assert.match(assembly.sections.find(s => s.name === 'omd:ultra').text, /^## Collaboration mode\nUltra is off/);
   assert.equal(f.control.view(f.session).enabled, false);
 });

@@ -3,8 +3,9 @@ import { currentDirectory } from './working-directory.mjs';
 import { codegraphCatalogOwner } from './codegraph-agent-lifecycle.mjs';
 
 export const inject = ['omd', 'tools', 'systemPrompt'];
-export const CODEGRAPH_GUIDE = `The current project is indexed automatically; a first query may wait for preparation. Use mcp__codegraph__codegraph_explore for symbol/call-path questions, mcp__codegraph__codegraph_search for search, and mcp__codegraph__codegraph_files to locate files when declared. codegraph_index refreshes or rebuilds the project's .codegraph index; no global CLI setup is needed. Relative projectPath defaults to the session directory. If indexing or a query fails, report the error and use ordinary file/search tools. Saved symbols do not replace current-file reads before editing.`;
-export const CODEGRAPH_DISABLED_GUIDE = 'CodeGraph is disabled in component settings. Use the ordinary file and search tools. Do not start or query CodeGraph unless the user enables it.';
+export const CODEGRAPH_GUIDE = `## Code navigation
+The current project is indexed automatically; a first query may wait for preparation. Use mcp__codegraph__codegraph_explore for symbol/call-path questions, mcp__codegraph__codegraph_search for search, and mcp__codegraph__codegraph_files to locate files when declared. codegraph_index refreshes or rebuilds the project's .codegraph index; no global CLI setup is needed. Relative projectPath defaults to the session directory. If indexing or a query fails, report the error and use ordinary file/search tools. Saved symbols do not replace current-file reads before editing.`;
+export const CODEGRAPH_DISABLED_GUIDE = '## Code navigation\nCodeGraph is disabled in component settings. Use the ordinary file and search tools. Do not start or query CodeGraph unless the user enables it.';
 
 const exploreRead = 'For read-only questions, use the displayed symbols without reopening them. Before modifying source, follow the read requirements of the file tool you will use; indexed symbols are not an exact current file snapshot.';
 // Replace only the known upstream advisory lines, never text inside a source block.

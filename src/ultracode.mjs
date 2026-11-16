@@ -299,7 +299,7 @@ export class UltracodeControl {
       return { ...assembly, sections: assembly.sections.map(section => section.name === 'team:policy' ? { ...section, text: guide.text, interpolate: false } : section) };
     }
     const text = on ? [submode === 'workflow' ? ULTRA_WORKFLOW_ON : '', guide.text].filter(Boolean).join('\n\n') : ULTRA_OFF;
-    return text ? { ...assembly, sections: [...assembly.sections, { name: 'omd:ultra', text, interpolate: false }] } : assembly;
+    return text ? { ...assembly, sections: [...assembly.sections, { name: 'omd:ultra', text: '## Collaboration mode\n' + text, interpolate: false }] } : assembly;
   }
   committed(session, event) {
     if (event.type === 'turn/start') {

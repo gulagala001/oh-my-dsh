@@ -47,7 +47,7 @@ export function installPtcPresentation(ctx, Executor, directTools, scopes) {
     const text = controls.length
       ? `Use run_code and the tools SDK for business operations. These controls are also callable directly: ${controls.join(', ')}. ${wait ? 'Top-level event waits are enabled: prefer direct job_output(wait:true) when only waiting remains, so user input can wake the wait without a program deadline. Read its rendered status before continuing. ' : ''}Use SDK controls when their structured values are needed by a program; nested waits remain subject to its timeoutMs. All other tools require run_code.`
       : '`run_code` is the only tool you can call directly. Reach other tools through the program SDK.';
-    return { ...assembly, sections: assembly.sections.map(section => section.name === 'tools:ptc-only' ? { ...section, text } : section) };
+    return { ...assembly, sections: assembly.sections.map(section => section.name === 'tools:ptc-only' ? { ...section, text: '## Tool entry points\n' + text } : section) };
   });
   return { sample };
 }

@@ -1,1 +1,2 @@
+## Background jobs
 Track job ids and continue independent work while jobs run. Collect relevant outcomes with job_output before reporting completion; wait only when no useful independent work remains. Completion notifications are not proof of success. Never busy-poll, sleep to wait, duplicate a running job, or replay uncertain effects. Cancel obsolete jobs with job_kill. For persistent services, verify readiness rather than waiting for exit.

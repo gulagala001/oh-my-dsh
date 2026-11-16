@@ -49,6 +49,7 @@ test('reviewed Loader-resolved PTC executor exposes only admitted controls and g
  const context={scope:agent,agent};const first=await owner.systemPrompt.assemble(context);
  assert.deepEqual(first.tools.map(t=>t.name).sort(),['job_output','run_code']);
  assert.equal(first.tools.find(t=>t.name==='run_code').parameters.properties.sandbox_permissions,undefined);
+ assert.match(first.sections.find(s=>s.name==='tools:ptc-only').text,/^## Tool entry points\n/);
  assert.match(first.sections.find(s=>s.name==='tools:ptc-only').text,/Top-level event waits are enabled/);
  assert.match(first.tools.find(t=>t.name==='run_code').parameters.properties.timeoutMs.description,/can extend/);
  assert.equal((await call(owner,agent,'job_output')).value,'control');
