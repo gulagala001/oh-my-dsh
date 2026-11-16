@@ -1,3 +1,49 @@
+# Oh My DSH 1.5.0 · DSH 0.2.2-rc.3
+
+[中文](#zh-150) · [English](#en-150)
+
+<a id="zh-150"></a>
+
+## 中文
+
+### 新增功能
+
+- 新增默认关闭的 Unharnessed 实验预设。在「设置 → Oh My DSH → 实验预设」开启后，新建会话即可使用持久 Python、MCP、附件和后台命令。
+
+### 体验优化
+
+- 工具说明随当前执行模式和权限调整，减少重复或不适用的提示；保留安全边界和委派授权要求。
+
+### 问题修复
+
+- 修复后台预处理误调用工具后的重复失败，并减少用户原文引用抄写错误造成的摘要失败；失败时仍保留原文。
+- 修正安装目录、历史回查和 Python 工具调用说明，避免指向不可用接口或错误修改位置。
+
+<a id="en-150"></a>
+
+## English
+
+### New features
+
+- Adds the optional Unharnessed preset, off by default. Enable it in Settings > Oh My DSH > Experimental presets, then start a new chat with persistent Python, MCP, attachments and background commands.
+
+### Improvements
+
+- Adapts tool guidance to the active execution mode and permissions, reducing repeated or inapplicable instructions while preserving safety and delegation requirements.
+
+### Bug fixes
+
+- Fixes repeated preparation failures after unintended tool calls and avoids transcription errors in user-source quotations; failed preparation still preserves originals.
+- Corrects guidance for installed paths, history lookup and Python tool calls to avoid unavailable interfaces and incorrect editing locations.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.0/oh-my-dsh-0.2.2-rc.3.omd.1.5.0.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.0/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.4.0 · DSH 0.2.2-rc.3
 
 [中文](#zh-140) · [English](#en-140)

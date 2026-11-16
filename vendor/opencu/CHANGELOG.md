@@ -1,3 +1,33 @@
+# OpenCU 2.3.1 · DSH 0.2.2-rc.3
+
+[中文](#zh-231) · [English](#en-231)
+
+<a id="zh-231"></a>
+
+## 中文
+
+### 体验优化
+
+- 电脑操作的详细说明按需显示，减少每轮对话中的重复提示。
+- 保留浏览器、标签页和应用的目标选择规则，以及外部操作的授权要求。
+
+<a id="en-231"></a>
+
+## English
+
+### Improvements
+
+- Loads detailed computer-use guidance when needed, reducing repeated instructions in each conversation.
+- Preserves browser, tab and app selection rules and authorization requirements for external actions.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.3.1-dsh.0.2.2-rc.3/opencu-2.3.1-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.3.1-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # OpenCU 2.3.0 · DSH 0.2.2-rc.3
 
 [中文](#zh-230) · [English](#en-230)

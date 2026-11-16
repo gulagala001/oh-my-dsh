@@ -17,8 +17,8 @@
       "source": "vendor/opencu/package.json",
       "license": "See component notices",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
-      "version": "2.3.0-dsh.0.2.2-rc.3",
-      "sourceSha256": "ff13943d6a4ca5784060a7b38d37d9379e039daa6606f63e6fa3fde8d6386da5",
+      "version": "2.3.1-dsh.0.2.2-rc.3",
+      "sourceSha256": "3e4d3092171b11c6e753a16f82decd6fb4467d71ea48a708e4eb1d65faf16a7e",
       "group": "products"
     },
     {

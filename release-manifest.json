@@ -2,6 +2,19 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.3.omd.1.5.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "Oh My DSH 1.5.0 · DSH 0.2.2-rc.3",
+      "notes": [
+        "新增默认关闭的 Unharnessed 实验预设。在「设置 → Oh My DSH → 实验预设」开启后，新建会话即可使用持久 Python、MCP、附件和后台命令。",
+        "工具说明随当前执行模式和权限调整，减少重复或不适用的提示；保留安全边界和委派授权要求。",
+        "修复后台预处理误调用工具后的重复失败，并减少用户原文引用抄写错误造成的摘要失败；失败时仍保留原文。",
+        "修正安装目录、历史回查和 Python 工具调用说明，避免指向不可用接口或错误修改位置。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.5.0"
+    },
+    {
       "version": "0.2.2-rc.3.omd.1.4.0",
       "severity": "normal",
       "title": "Oh My DSH 1.4.0 · DSH 0.2.2-rc.3",
