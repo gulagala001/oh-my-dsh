@@ -1,3 +1,33 @@
+# Oh My DSH 1.5.1 · DSH 0.2.2-rc.3
+
+[中文](#zh-151) · [English](#en-151)
+
+<a id="zh-151"></a>
+
+## 中文
+
+### 问题修复
+
+- Unharnessed 的图片、文件和 MCP 附件明确标注为工具输出，避免被误认为用户再次发送需求。
+- 后台异步输出和 MCP 附加附件沿用相同来源说明；实验预设默认关闭。
+
+<a id="en-151"></a>
+
+## English
+
+### Bug fixes
+
+- Labels Unharnessed images, files and MCP attachments as tool output so they can be distinguished from repeated human requests.
+- Applies the same provenance to background output and additional MCP attachments. The experimental preset remains off by default.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.1/oh-my-dsh-0.2.2-rc.3.omd.1.5.1.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.5.1/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.5.0 · DSH 0.2.2-rc.3
 
 [中文](#zh-150) · [English](#en-150)

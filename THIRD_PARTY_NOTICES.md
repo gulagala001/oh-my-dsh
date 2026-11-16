@@ -4,7 +4,7 @@ OMD 自有代码采用根目录的 [MIT 许可证](LICENSE)；该声明不替换
 
 OMD-owned code uses the root [MIT license](LICENSE). Third-party code, components, prompts and materials retain the licenses documented below.
 
-The optional Unharnessed preset bundles the DSH Unharnessed 0.2.1 distribution, with the MIT runtime from [Unharnessed](https://github.com/unharnessed-agent/Unharnessed) commit `fe2cf2815f78463464b91c598fc0c31c0af98f4c` and dill 0.4.0 under BSD-3-Clause. OMD adds opt-in preset registration, isolated checkpoint and cancellation identities, and a read-only activity view for safe disabling. Original and adapted file hashes are recorded in `vendor/unharnessed.json`; full notices and licenses are preserved in [the bundled notices](vendor/unharnessed/THIRD_PARTY_NOTICES.md).
+The optional Unharnessed preset bundles the [DSH Unharnessed](https://github.com/gulagala001/dsh-unharnessed) distribution, with the MIT runtime from [Unharnessed](https://github.com/unharnessed-agent/Unharnessed) commit `fe2cf2815f78463464b91c598fc0c31c0af98f4c` and dill 0.4.0 under BSD-3-Clause. OMD adds opt-in preset registration, isolated checkpoint and cancellation identities, and a read-only activity view for safe disabling. Original and adapted file hashes are recorded in `vendor/unharnessed.json`; full notices and licenses are preserved in [the bundled notices](vendor/unharnessed/THIRD_PARTY_NOTICES.md).
 
 本页集中列出原作者、原项目与第三方许可；各节保留固定版本、修改范围和许可证说明。完整的自有产品、可选集成、组件和锁定依赖见[项目、组件与致谢](docs/components.md)（[English](docs/components_EN.md)）。
 

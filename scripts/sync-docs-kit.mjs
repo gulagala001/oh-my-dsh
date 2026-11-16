@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const repositories = ['deepseek-workbench', 'dsh-btw-plugin', 'dsh-extensions', 'dsh-persona-plugin', 'dsh-response-id-reuse',
-  'dsh-theme-plugin', 'iui', 'omaa', 'opencu', 'rewind', 'workflow'];
+  'dsh-theme-plugin', 'dsh-unharnessed', 'iui', 'omaa', 'opencu', 'rewind', 'workflow'];
 const source = readFileSync(resolve(root, 'scripts/check-docs.mjs'), 'utf8');
 const check = process.argv.includes('--check');
 let stale = 0;

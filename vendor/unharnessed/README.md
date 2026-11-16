@@ -1,20 +1,26 @@
-# DSH Unharnessed 0.2.1
+# DSH Unharnessed
 
-在 DeepSeek Harness 中原生运行 Unharnessed 风格的 harness。模型只看到 `ipython`：持久 Python、异步 shell、DSH 目标续跑、宿主验收门禁、跨重启快照、现有 MCP 连接和富媒体都通过这个工具使用。
+[English](README_EN.md)
 
-本版补齐 0.1.0 的三项缺口：**跨重启快照恢复、DSH MCP 桥接、图片及文件附件桥接**。不调用 Unharnessed CLI、Rust Agent、ACP 或另一套模型服务。模型路由、会话、审批和文件沙箱继续由 DSH 负责。
+在 DeepSeek Harness 中，用一个持久 Python 工具完成编程、后台命令、MCP 调用和图片与文件交付。变量可以跨对话压缩保留，并在相同会话重启后恢复。
 
 ## 安装与选择
 
-兼容本机 **DSH Desktop 0.2.2-rc.3**，声明范围 `>=0.2.2-rc.3 <0.2.3-0`。需要已有 Python 3.11+ 和 POSIX shell；默认优先使用 DSH Desktop 自带解释器。插件附带固定版本的 Python 内核和 dill，无需 pip、venv 或额外下载。
+在 **插件 → 添加插件** 中粘贴安装包地址：
 
-在 DSH **插件 → 添加插件** 中选择本目录，或使用 DSH 自带命令行的插件管理命令：
-
-```sh
-dsh plugin --profile desktop add /absolute/path/dsh-unharnessed
+```text
+https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.2-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.2-dsh.0.2.2-rc.3.tgz
 ```
 
-然后在新会话的 Agent 预设中选择 **Unharnessed**。安装增加独立预设；现有会话和其他预设沿用各自的配置。已有会话可能保持启动时的插件修订，应在新会话中验证更新。
+然后在新聊天的 Agent 预设中选择 **Unharnessed**。已有聊天可能沿用启动时的插件修订，更新后新建聊天或正常重启 DSH。
+
+| 使用范围 | 要求 |
+| --- | --- |
+| 宿主 | DSH Desktop 0.2.2-rc.3 |
+| 运行环境 | Node.js 24.9.0+，已有 Python 3.11+ 和 POSIX shell |
+| Python | 默认优先使用 DSH Desktop 自带解释器；内核和 dill 随插件提供 |
+
+先试：让它“用 Python 算出 1 到 100 的平方和，并把结果保存在变量里”。
 
 ## Python 与后台命令
 
@@ -79,9 +85,9 @@ await display({'image/png': Path('plot.png').read_bytes()})
 
 附件从 Python 当前目录读取，受内核当前沙箱约束；宿主不代替 Python 读取任意路径。默认一次附件请求总量最多 10 MiB。附件在进入会话前持久存储，并通过会话日志记录引用。
 
-音频/视频是文件附件，不代表模型具备原生听音或视频理解能力；具体预览由 DSH 决定。HTML 作为文件交付，不在插件中执行任意 HTML。
+音频和视频作为文件交付，预览取决于 DSH。HTML 作为文件交付，不在插件中执行任意 HTML。
 
-## 目标与自主验收
+## 目标与自主检查
 
 ```text
 /goal 修复解析器，运行测试并检查边界输入
@@ -123,7 +129,7 @@ await skills.get('实际技能名')
 | `cellTimeoutMs` | 600000 | 单元格执行上限 |
 | `startupTimeoutMs` | 15000 | 内核启动期限 |
 | `interruptGraceMs` | 3000 | 中断后的强制停止等待 |
-| `gateTimeoutMs` | 60000 | 每条验收命令期限 |
+| `gateTimeoutMs` | 60000 | 每条检查命令期限 |
 | `snapshots` | true | 保存和恢复检查点 |
 | `stateDirectory` | 空 | 自动使用 profile 状态目录 |
 | `snapshotMaxBytes` | 268435456 | 检查点总上限 |
@@ -131,16 +137,6 @@ await skills.get('实际技能名')
 | `snapshotTimeoutMs` | 15000 | 保存检查点期限 |
 | `maxAttachmentBytes` | 10485760 | 一次附件请求总上限 |
 
-## 开发
+## 开发与许可
 
-```sh
-DSH_TEST_RUNTIME=/path/to/existing/unpacked-dsh-runtime node tests/run.mjs
-```
-
-测试在临时目录运行，不安装插件、不改实际 profile。`DSH_PRIMARY_RUNTIME` 可指向现有 Desktop 的 primary-runtime 目录。
-
-## 来源与许可
-
-上游：[Unharnessed](https://github.com/unharnessed-agent/Unharnessed)，固定提交 `fe2cf2815f78463464b91c598fc0c31c0af98f4c`。内核采用其 MIT 代码；本版在独立桥接模块中增加持久化与媒体能力。dill 固定为 0.4.0（BSD-3-Clause），随包提供代码与许可。详细来源及 wheel 校验值见 `THIRD_PARTY_NOTICES.md`。
-
-DSH API 依据本机 0.2.2-rc.3 源码及官方自带指南。这是第三方适配插件。
+开发和检查命令见 [CONTRIBUTING.md](CONTRIBUTING.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)。本插件采用 [MIT](LICENSE)，Python 内核与 dill 的来源和许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

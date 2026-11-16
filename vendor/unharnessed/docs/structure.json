@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 2,
+  "published": "0.2.2-dsh.0.2.2-rc.3",
+  "repository": {
+    "slug": "gulagala001/dsh-unharnessed",
+    "description": "在 DeepSeek Harness 中使用持久 Python、后台命令、MCP、图片与文件附件和可恢复的任务状态。 Persistent Python, MCP and durable media in DeepSeek Harness.",
+    "homepage": "",
+    "topics": [
+      "deepseek-harness",
+      "dsh-plugin",
+      "dsh-bundle",
+      "python",
+      "unharnessed"
+    ]
+  },
+  "names": [
+    "DSH Unharnessed"
+  ],
+  "maxPages": 5,
+  "documents": [
+    {
+      "path": "README.md",
+      "role": "home",
+      "language": "zh",
+      "translation": "README_EN.md"
+    },
+    {
+      "path": "README_EN.md",
+      "role": "home",
+      "language": "en",
+      "translation": "README.md"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "role": "release",
+      "language": "bilingual"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "role": "development",
+      "language": "en"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "role": "sources",
+      "language": "en"
+    }
+  ]
+}

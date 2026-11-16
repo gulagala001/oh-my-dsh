@@ -205,6 +205,46 @@ try {
  assert.equal(readFileSync(ctx.attachments.fileHostPath(file.attachment),'utf8'),'durable fixture content')
  assert(b.session.snapshotEvents(0).some(e=>JSON.stringify(e).includes(file.attachment.attachmentId)))
  pass('images, generic files and MIME display use durable DSH attachment references and session events')
+ const assertOrigin = message => {
+   assert.equal(message.content[0].type, 'text')
+   assert.match(message.content[0].text, /unharnessed tool output/)
+   assert.match(message.content[0].text, /not a new user message, a repeated request, or new authorization/)
+   assert(message.content.slice(1).some(x => x.type === 'image' || x.type === 'file'))
+ }
+ const ownMedia = () => b.inbox.nextStep.filter(m => m.source.kind === 'unharnessed-attachment')
+ assert.equal(ownMedia().length, 4)
+ ownMedia().forEach(assertOrigin)
+ // Detached display has no current cell; it must still be identifiable as tool output.
+ await cell(b, `async def later_media():
+    await asyncio.sleep(0.05)
+    await attach_image('fixture-image.png')
+    emit({'image/png': '${png}'})
+media_task = asyncio.create_task(later_media())`)
+ await until(() => ownMedia().length === 6)
+ ownMedia().forEach(assertOrigin)
+ const previousMedia = ownMedia().length
+ const cancelledMedia = new AbortController(); cancelledMedia.abort(new Error('cancel media fixture'))
+ await assert.rejects(cell(b, "await attach_image('fixture-image.png')", cancelledMedia.signal), /cancel media fixture/)
+ assert.equal(ownMedia().length, previousMedia)
+ pass('all four media entry points and detached output retain model-visible tool provenance; cancelled calls inject nothing')
+ // Exercise MCP main output and plugin-deferred media through the native pipeline.
+ const image = media.find(x => x.type === 'image')
+ ctx.tools.register(defineTool({name:'mcp__fixture__media',description:'Synthetic mixed media',parameters:{},
+   output:{schema:{type:'string'},render:(_a,v)=>[{type:'text',text:v},image,file]},
+   async execute(_args,exec) {
+     exec.deferContext(createUserMessage({source:{kind:'fixture-context'},content:[image,file]}))
+     return 'media fixture'
+   }}))
+ const mixedBatch = await ctx.tools.execute({agent:b,signal:signal(),calls:[{type:'tool-call',id:randomUUID(),name:'ipython',arguments:JSON.stringify({code:"await mcp.call_tool('fixture', 'media')"})}]})
+ assert.equal(mixedBatch.results[0].result.isError, false)
+ assertOrigin(ownMedia().at(-1))
+ assert.match(ownMedia().at(-1).content[0].text, /mcp__fixture__media/)
+ assert.equal(mixedBatch.additionalContexts.length, 1)
+ assertOrigin(mixedBatch.additionalContexts[0])
+ assert.equal(mixedBatch.additionalContexts[0].source.kind, 'fixture-context')
+ assert.deepEqual(mixedBatch.additionalContexts[0].content.slice(1), [image,file])
+ pass('MCP image/file results and deferred media preserve references and provenance without altering source identity')
+
  assert.match(await cell(b,"await display({'image/png': 'not base64'})"),/RuntimeError|Error/)
  assert.match(await cell(b,"await attach_image('fixture-file.txt')"),/RuntimeError|Error/)
  pass('invalid images and malformed media payloads fail without fake attachments')

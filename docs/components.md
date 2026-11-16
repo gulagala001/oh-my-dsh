@@ -358,7 +358,7 @@ Claude Desktop 主题的设计令牌与组件视觉规范。固定版本的 CDS 
 
 实验性持久 Python 预设、后台命令与检查点。内置实验预设，默认关闭。
 
-- 固定来源／版本: [0.2.1](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/package.json)
+- 固定来源／版本: [0.2.2-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/package.json)
 - 许可／归属: MIT; dill: BSD-3-Clause · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/THIRD_PARTY_NOTICES.md)
 
 ## 完整锁定依赖清单
