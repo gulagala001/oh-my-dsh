@@ -4,7 +4,6 @@
     {
       "version": "0.2.2-rc.3.omd.1.5.0",
       "severity": "normal",
-      "unpublished": true,
       "title": "Oh My DSH 1.5.0 · DSH 0.2.2-rc.3",
       "notes": [
         "新增默认关闭的 Unharnessed 实验预设。在「设置 → Oh My DSH → 实验预设」开启后，新建会话即可使用持久 Python、MCP、附件和后台命令。",
