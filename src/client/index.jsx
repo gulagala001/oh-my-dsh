@@ -3,6 +3,7 @@ import { Icon } from './native-icons.jsx';
 import { applyAppearanceBrand } from './appearance-brand.jsx';
 import { createPoller } from './polling.mjs';
 import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
+import { installSidebarSections } from './sidebar-sections.jsx';
 import { installTemporaryChat } from './temporary-chat.jsx';
 import { isOmdPreset } from '../legacy-identity.mjs';
 import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
@@ -140,6 +141,7 @@ export async function apply(ctx) {
 
 async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report }) {
   applyPluginPreflight(ctx);
+  ctx.inject(['slots', 'locale', 'uiWorkspace'], installSidebarSections);
   const persona = acquirePersonaClient(ctx, { embedded: true });
   await mountOptionalClient(ctx, '打开工作目录', async () => createOpenInApp(require), report);
   applySessionTimeZone(ctx);

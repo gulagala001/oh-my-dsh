@@ -8,7 +8,7 @@ const core = [
   'start', 'monitor-partial', 'monitor-read-cache', 'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget', 'task-budget-persistence',
   'file-upload-compat', 'search-compat', 'context-original-search-boundary', 'background-owner-reload', 'recommended-update', 'recommended-plugin-package', 'dsh-ops-compat',
   'context-store-cache', 'context-coordinate-release', 'context-runtime-retirement',
-  'model-reply', 'temporary-chat', 'temporary-chat-client', 'overview-panel', 'prompt-optimizer-drafts',
+  'model-reply', 'temporary-chat', 'temporary-chat-client', 'overview-panel', 'sidebar-sections', 'prompt-optimizer-drafts',
   'dream-source-lifecycle', 'dream-job-control',
   'context-controls', 'settings-state', 'experimental-presets',
   'task-ledger-authority', 'task-history-replay', 'task-verification', 'task-verification-mode', 'plugin-operation-state', 'plugin-preflight', 'plugin-update-admission',

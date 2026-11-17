@@ -1,0 +1,18 @@
+.omd-sidebar-sections-scroll { display:flex; flex-direction:column; gap:8px; padding-bottom:8px; }
+.omd-sidebar-section-header { justify-content:flex-start !important; margin-right:0 !important; padding-right:0 !important; }
+.omd-sidebar-section-toggle { display:flex; align-items:center; gap:7px; min-width:0; flex:1; text-align:start; border:0; padding:0; color:inherit; font:inherit; background:transparent; cursor:pointer; }
+.omd-sidebar-section-toggle > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.omd-sidebar-section-toggle > svg { flex:none; transition:transform 220ms cubic-bezier(.22,1,.36,1); }
+.omd-sidebar-section-toggle[aria-expanded="false"] > svg { transform:rotate(-90deg); }
+.omd-sidebar-section-toggle:focus-visible { outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary)); outline-offset:2px; border-radius:4px; }
+.omd-sidebar-section-actions { display:flex; align-items:center; flex:none; margin-left:auto; gap:4px; opacity:0; pointer-events:none; transition:opacity 120ms ease-out; }
+.omd-sidebar-section-header:is(:hover,:focus-within,[data-search-open]):not([hidden]) .omd-sidebar-section-actions,
+.omd-sidebar-section-header:has([aria-expanded="true"][aria-haspopup]) .omd-sidebar-section-actions { opacity:1; pointer-events:auto; }
+.omd-sidebar-section-header[data-search-open] .omd-sidebar-section-actions { flex:1; min-width:0; }
+.omd-sidebar-section-header[data-search-open] .omd-sidebar-section-actions > div { flex:1; max-width:100%; }
+.omd-sidebar-section-more { margin:4px 0 4px var(--dsh-sidebar-row-padding,12px); padding:4px 0; border:0; background:transparent; font:inherit; font-size:12px; color:var(--dsw-alias-label-tertiary); cursor:pointer; }
+.omd-sidebar-section-error { margin:4px 12px; color:var(--dsw-alias-state-error-primary); font-size:12px; }
+[data-omd-sidebar-section] .omd-motion-collapse-content { min-width:0; }
+@media (hover:none), (pointer:coarse) { .omd-sidebar-section-actions { opacity:1; pointer-events:auto; } }
+@media (prefers-reduced-motion:reduce) { .omd-sidebar-section-actions,.omd-sidebar-section-toggle > svg { transition:none; } }
+html[data-omd-reduce-effects] :is(.omd-sidebar-section-actions,.omd-sidebar-section-toggle > svg) { transition:none; }

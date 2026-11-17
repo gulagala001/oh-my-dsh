@@ -269,7 +269,7 @@ function mountSidebarPresentation(ctx) {
       // npm/desktop hash variants. Never replace its child-slot declarations.
       sidebar = document.querySelector('[data-omd-surface="sidebar"]');
       navMarkers.refresh(sidebar);
-      const root = sidebar?.querySelector('[class*="_sectionHeader"]')?.parentElement;
+      const root = sidebar?.querySelector('[data-omd-sidebar-sections]') ?? sidebar?.querySelector('[class*="_sectionHeader"]')?.parentElement;
       for (const [element, record] of owned) if (element !== root) { restore(element, record); owned.delete(element); }
       if (!root) return;
       if (!owned.has(root)) {

@@ -9,11 +9,13 @@ See [installation](install_EN.md) to install, upgrade or remove OMD. Fully resta
 
 ## New chats
 
-Click the global **New Session** without a project to create an "Ungrouped" chat with a folder under **Documents/DSH/date/新聊天** (numbered if taken). The chat keeps this folder even when renamed.
+**New Session** creates a chat in **Documents/DSH/date/新聊天**, numbered if taken. Renaming keeps its folder.
 
-- **Drafts**: each workspace and the global new chat keep their own unsent draft, with text and attachments, when you switch.
-- **Model preferences**: new chats inherit the last channel, model, reasoning level and Ultra mode you manually chose for that workspace or global new chat.
-- **Folders are not memory**: automatic folders are not Dream projects and share no memory. Project memory is shared only after adding a real workspace. See [Dream](dream-memory.md).
+The sidebar has collapsible **Pinned → Workspaces → Recent** sections. Pinned chats appear at the top; Recent includes workspace chats, ordered by activity. All three headers show actions on hover or keyboard focus, always on touchscreens.
+
+- **Drafts**: workspaces and global chats retain separate text and attachments.
+- **Models**: new chats inherit the channel, model, reasoning level and Ultra mode last chosen for that workspace or global chat.
+- **Memory**: automatic folders share no memory. Add a real workspace for shared project memory. See [Dream](dream-memory.md).
 
 ## OMD Console
 

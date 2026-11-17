@@ -5,6 +5,7 @@ import './check-prompt-styles.mjs';
 import './check-unharnessed.mjs';
 import './build-deepseek-workbench.mjs';
 import './build-overview-native.mjs';
+import './build-sidebar-native.mjs';
 import './build-permission-native.mjs';
 import './build-open-in-app.mjs';
 import './build-persona.mjs';
