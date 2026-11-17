@@ -31,7 +31,7 @@ The right-sidebar **OMD Console** has five pages, also linked from the input inf
 
 ## Tasks and progress
 
-**Conversation overview** slides in and pushes chat; click again to close. Drag its left edge to resize; double-click to reset. Opening the workspace closes it; reopening floats it. Outside clicks keep it open.
+**Conversation overview** starts with outputs and sources; other sections appear as needed, with staggered agent arrivals. Click to slide in/out; drag its edge to resize. Opening the workspace closes it; reopening floats it. Outside clicks keep it open.
 
 State your goal, material, scope and completion criteria. For multi-step work, `todo_write` records your words and derived tasks; `verify_link` attaches each task's check commands and results.
 
@@ -167,7 +167,7 @@ Turn DeepSeek Workbench, interactive answers and agent presets on or off in the 
 
 ## Data and backups
 
-Everything lives in your `DSH_HOME` (`.dsh` in your user folder for the web version), with OMD's own data in `oh-my-dsh/`. Dream memory is in `dream-v1/memory.sqlite`, monitoring in `monitor-v1/usage.sqlite` and rewind backups in `rewind-plus/v1`. Personalities, rewind backups, Workflow and web imports each keep their own data, so copying `oh-my-dsh/` alone is not enough; back them up together using [plugin data ownership](architecture_EN.md#data-retains-its-owner). Disabling or removing OMD never deletes this data.
+Data lives in `DSH_HOME` (`~/.dsh` for web), with OMD data in `oh-my-dsh/`. Dream memory is in `dream-v1/memory.sqlite`, monitoring in `monitor-v1/usage.sqlite` and rewind backups in `rewind-plus/v1`. Personalities, rewind backups, Workflow and web imports each keep their own data, so copying `oh-my-dsh/` alone is not enough; back them up together using [plugin data ownership](architecture_EN.md#data-retains-its-owner). Disabling or removing OMD never deletes this data.
 
 Rewind backups are trimmed to 2 GiB when idle, capped at 4 GiB, and paused when less than 512 MiB of disk is free; files changed during that time cannot be rewound. Do not delete `rewind-plus/v1` by hand while a restore is running.
 

@@ -5,8 +5,9 @@ import { bindOverviewResize, readOverviewWidth, OVERVIEW_WIDTH_KEY } from './ove
 /** One panel per conversation; the native content/composer keeps its mount. */
 export function installOverviewPanel(ctx) {
   const panels = new Map(), listeners = new Set();
+  let motionRevision = 0;
   const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
-  const empty = { open: false, sidebarExpanded: false, container: null };
+  const empty = { open: false, motion: 0, sidebarExpanded: false, container: null };
   const read = sessionId => {
     if (!sessionId) return empty;
     if (!panels.has(sessionId)) panels.set(sessionId, { ...empty,
@@ -18,7 +19,10 @@ export function installOverviewPanel(ctx) {
     if (!sessionId) return;
     const previous = read(sessionId);
     if (Object.entries(patch).every(([key, value]) => previous[key] === value)) return;
-    panels.set(sessionId, { ...previous, ...patch });
+    // Publish transition and target geometry in the SAME React commit, before
+    // the resize controller (or native children) can force layout measurement.
+    const motion = 'open' in patch && patch.open !== previous.open ? ++motionRevision : previous.motion;
+    panels.set(sessionId, { ...previous, motion, ...patch });
     for (const listener of listeners) listener();
   };
   const usePanel = sessionId => useSyncExternalStore(subscribe, useCallback(() => read(sessionId), [sessionId]));
@@ -39,7 +43,7 @@ export function installOverviewPanel(ctx) {
 
   function Layout({ sessionId, children }) {
     const panel = usePanel(sessionId);
-    const root = useRef(null), handle = useRef(null), resize = useRef(null), previousOpen = useRef(panel.open), id = useId();
+    const root = useRef(null), handle = useRef(null), resize = useRef(null), id = useId();
     const [width, setWidth] = useState(() => readOverviewWidth());
     const preferred = useRef(width); preferred.current = width;
     useLayoutEffect(() => {
@@ -51,14 +55,14 @@ export function installOverviewPanel(ctx) {
     }, []);
     useLayoutEffect(() => { resize.current?.cancel(); resize.current?.refresh(); }, [sessionId, panel.open, panel.sidebarExpanded]);
     useLayoutEffect(() => {
-      if (previousOpen.current === panel.open) return;
-      previousOpen.current = panel.open;
-      const element = root.current; element.setAttribute('data-overview-animating', '');
-      const timer = setTimeout(() => element.removeAttribute('data-overview-animating'), 300);
-      return () => { clearTimeout(timer); element.removeAttribute('data-overview-animating'); };
-    }, [panel.open]);
+      if (!panel.motion) return;
+      const timer = setTimeout(() => {
+        if (read(sessionId).motion === panel.motion) update(sessionId, { motion: 0 });
+      }, 350);
+      return () => clearTimeout(timer);
+    }, [sessionId, panel.motion]);
     const attach = useCallback(container => update(sessionId, { container }), [sessionId]);
-    return <div ref={root} className="omd-overview-layout" data-overview-open={panel.open || undefined}
+    return <div ref={root} className="omd-overview-layout" data-overview-open={panel.open || undefined} data-overview-animating={panel.motion || undefined}
       data-overview-floating={panel.sidebarExpanded || undefined} style={{ '--omd-overview-preferred-width': `${width}px` }}>
       <div className="omd-overview-chat">{children}</div>
       <aside id={id} className="omd-overview-rail" aria-label="会话总览" aria-hidden={!panel.open} inert={panel.open ? undefined : ''}>

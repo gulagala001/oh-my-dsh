@@ -115,7 +115,7 @@ export function applySessionOverview(ctx, openCU) {
         return { ...agents, rows, active: rows.filter(row => ['running', 'provisioning'].includes(row.status)),
           context: props, ready: Boolean(durable), refreshProjection,
           outputs: durable?.outputs ?? [], sources: durable?.sources ?? [],
-          allJobs, jobs: allJobs.filter(job => ['bash', 'pwsh'].includes(job.kind) && ['running', 'stopping'].includes(job.status)), whalePath,
+          allJobs, jobs: allJobs.filter(job => ['bash', 'pwsh'].includes(job.kind)), whalePath,
           openAgent, openPage: section => openPage(sessionId, section), openJob: id => openPage(sessionId, 'jobs', { jobId: id }),
           openMainAgent: row => scope.uiWorkspace.openSession({ parentSessionId: row.parentId, childSessionId: row.id, mode: row.mode }),
           addSources: () => addSources(sessionId),

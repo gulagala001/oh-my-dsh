@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import css from './temporary-chat.css';
 
@@ -53,7 +53,11 @@ export function installTemporaryChat(ctx) {
   const nativeComponent = () => ctx.slots.entriesOfSlot('sidebar.chat.conversation')[0]?.component;
   function NativeConversation(props) {
     const Component = useSyncExternalStore(subscribeNative, nativeComponent);
-    return Component ? <Component {...props}/> : <div role="status">正在加载会话…</div>;
+    const renderFactorySlot = useCallback((name, owner, options) => props.renderFactorySlot(name,
+      // A temporary sidebar is already an admitted session. The native hero
+      // demands main-workspace membership, which sidebar sessions do not own.
+      name === 'conversation.content' ? { ...owner, phase: 'active', hero: false } : owner, options), [props.renderFactorySlot]);
+    return Component ? <Component {...props} renderFactorySlot={renderFactorySlot}/> : <div role="status">正在加载会话…</div>;
   }
   function Panel({ useTabInfo, sessionId, SessionProvider, renderSlot }) {
     const { tab } = useTabInfo(), [entry, setEntry] = useState(null), [, setRevision] = useState(0);
@@ -67,9 +71,7 @@ export function installTemporaryChat(ctx) {
       void close(entry).then(() => tab.actions.close()).catch(error => { entry.error = error.message; refresh(entry); });
     };
     return <section className="omd-temporary-chat" aria-label="侧栏聊天" data-sidebar-chat="">
-      <header><span>侧栏聊天<small>独立会话 · 关闭后清空</small></span>
-        <Button size="sm" disabled={!entry || !!entry.closing} onClick={end}>{entry?.closing ? '正在关闭…' : '关闭'}</Button></header>
-      {entry?.error && <div role="alert">{entry.error}</div>}
+      {entry?.error && <div role="alert">{entry.error}<Button size="sm" disabled={!!entry.closing} onClick={end}>{entry.closing ? '正在关闭…' : '关闭'}</Button></div>}
       <div className="omd-temporary-conversation">
         {entry?.reference ? <SessionProvider session={entry.reference}>{renderSlot(SLOT, {})}</SessionProvider>
           : !entry?.error && <div className="omd-temporary-status" role="status">{entry?.closing ? '正在清理会话…' : '正在打开会话…'}</div>}

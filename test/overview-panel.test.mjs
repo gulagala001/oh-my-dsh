@@ -35,8 +35,11 @@ test('overview closes on workspace expansion, reopens resident and floating, and
   t.after(async () => { await act(() => root.unmount()); for (const off of cleanups.reverse()) off?.(); dom.window.close(); for (const [key, descriptor] of globals) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; } });
   await act(() => root.render(e(React.Fragment, null, e(Toggle), e(Corner, { sessionId: 'root', actions: { setExpanded() {} }, useStore: select => select(useSyncExternalStore(subscribe, () => sidebar)) }), e(Main, { sessionId: 'root', renderFactorySlot: () => e(Chat) }))));
   const layout = document.querySelector('.omd-overview-layout'), toggle = document.querySelector('button');
+  const measured = [];
+  Object.defineProperty(layout, 'clientWidth', { configurable: true, get() { measured.push(layout.getAttribute('data-overview-animating')); return 1000; } });
   const expand = async expanded => act(() => { sidebar = { bySession: { root: { layout: { expanded } } } }; listeners.forEach(fn => fn()); });
   await act(() => toggle.click()); assert.ok(layout.hasAttribute('data-overview-open'));
+  assert.ok(measured.length && measured.every(Boolean), 'motion must be present before resize measurements flush the new width');
   await expand(true); assert.ok(!layout.hasAttribute('data-overview-open'));
   await act(() => toggle.click()); assert.ok(layout.hasAttribute('data-overview-floating')); assert.ok(layout.hasAttribute('data-overview-open'));
   await act(() => document.body.click()); assert.ok(layout.hasAttribute('data-overview-open'));
