@@ -75,7 +75,7 @@ See [plugin architecture](architecture_EN.md) for product boundaries, independen
 | `src/tasks.mjs`, `src/todolist.mjs` | Anchors, tasks, evidence |
 | `src/hub.mjs`, `src/hub-store.mjs`, `src/monitor-ledger.mjs` | Background work/persistent monitoring ledger |
 | `src/dream/` | Isolation, sources, short memory, recovery |
-| `src/temporary-chat.mjs`, `src/client/temporary-chat-state.mjs` | Temporary chat turns and frontend streaming interaction state |
+| `src/temporary-chat.mjs`, `src/temporary-session-storage.mjs` | Native sidebar sessions and temporary storage ownership |
 | `src/codegraph.mjs` | Indexing/queries |
 | `src/client/` | Conversation, workbench, settings, themes |
 | `vendor/dsh/` | Public Chat, Conversation and host components matching the current build target |
@@ -96,7 +96,7 @@ Full-package synchronization preserves the native helper's executable mode and s
 
 `pnpm build` builds the frontend and generates the standard and OMD-PTC presets from `presets/oh-my-dsh/agent.cordis.yml`. Edit source configuration, not generated files.
 
-Temporary chat history comes from complete turns held in server memory. Native messages and model replay information are reused unchanged in the next request. Request numbers increase within each tab: a `done` receipt confirms commitment, while `stop` cancels only that request, fences its late arrival, and waits for real producer cleanup. After a disconnect, the client reconciles that turn and preserves the draft with sending paused until confirmation; recovery never repeats the model call. Tab entries own frontend state and components subscribe to their views. Closing erases history, and removing a tab stops its keepalive.
+Sidebar chat owns a native AgentHandle and SessionReference and renders the host's embedded Conversation, including messages, composer, attachments and stop controls. A separate native JSONL backend accepts only registered temporary sessions and descendants; ordinary storage calls pass through unchanged. Closing drains native work, removes OMD session sidecars, releases storage and deletes its temporary directory. Cleanup failures retain a retryable close action.
 
 Recommended updates and OMD self-updates reuse their own admission rules inside the `withPluginPreflight` continuation, covering queues, probes and manual continuation. Native inventory, current configuration/tasks and the version service remain authoritative. The callback rereads them before mutation instead of overwriting a new choice with old enablement. Ineligible automatic updates end without mutation; manual conflicts retain an actionable error. Each attempt still probes once. Native methods own their file locks, failure recovery and HMR; removal and installation remain two host operations, without a cross-process replacement transaction. Self-update uses the version service's current snapshot without another network check.
 

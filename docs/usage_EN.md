@@ -31,7 +31,7 @@ The right-sidebar **OMD Console** has five pages, also linked from the input inf
 
 ## Tasks and progress
 
-**Conversation overview** slides in from the right, making room in chat; click again to retract. Outside clicks keep it open. View outputs, chat with subagents, manage processes, attach sources or follow computer use.
+**Conversation overview** slides in and pushes chat; click again to close. Drag its left edge to resize; double-click to reset. Opening the workspace closes it; reopening floats it. Outside clicks keep it open.
 
 State your goal, material, scope and completion criteria. For multi-step work, `todo_write` records your words and derived tasks; `verify_link` attaches each task's check commands and results.
 
@@ -162,7 +162,7 @@ Turn DeepSeek Workbench, interactive answers and agent presets on or off in the 
 ## Side questions and rewind
 
 - **`/btw question`**: opens a side chat above the input box that answers with the main session's context and model while the main task keeps running. Closing it does not stop the answer. Side chats live only in the current window, clear on reload and never enter the main conversation or Dream.
-- **`/侧栏`**: opens a temporary text chat with the current model and none of the main chat's context; closing it clears it. `/侧栏（网页版）` opens one with your DeepSeek web account and deletes that web conversation when closed.
+- **`/侧栏`** or **Sidebar chat**: opens a separate native chat with the current model, attachments, tools and stop controls. Closing clears it. `/侧栏（网页版）` opens and deletes a temporary DeepSeek web chat.
 - **Rewind**: every message you sent has a rewind button. Confirm it and the conversation, plus the files the AI changed afterwards, go back to that point, and your text, images and files return to the input box. If you went too far, use undo rewind. When the session is idle, press Esc twice or type `/rewind` for the rewind list; `/undo` undoes the last rewind. Old messages without a backup only rewind the conversation, and the interface says so. Do not enable other plugins that rewrite conversation history at the same time.
 
 ## Data and backups

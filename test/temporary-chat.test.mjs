@@ -1,207 +1,129 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
-import { TemporaryChats, handleTemporaryChatApi } from '../src/temporary-chat.mjs';
-import { sendJson } from '../src/http.mjs';
-import { recoverTemporaryChat, sendTemporaryChat } from '../src/client/temporary-chat-state.mjs';
-function fixture() {
-  const calls = [];
-  const service = new TemporaryChats({
-    sessions: { get() { return null; } }, sessionProjections: {},
-    get() { return { currentSelection: () => ({ provider: 'synthetic', model: 'local' }) }; },
-    llm: { async prepareCall(route, signal) {
-      return { config: route, async *stream(request) {
-        calls.push(request);
-        if (request.messages.at(-1).content[0].text === 'wait') await new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
-        yield { type: 'block-start', index: 0, blockType: 'reasoning' };
-        yield { type: 'reasoning-delta', index: 0, text: 'synthetic reasoning' };
-        yield { type: 'block-end', index: 0, block: { type: 'reasoning', text: 'synthetic reasoning' } };
-        yield { type: 'block-start', index: 1, blockType: 'text' };
-        yield { type: 'text-delta', index: 1, text: 'synthetic reply' };
-        yield { type: 'block-end', index: 1, block: { type: 'text', text: 'synthetic reply' } };
-        yield { type: 'finish', reason: { kind: 'stop' }, replayState: { response: { signature: 'synthetic' }, blocks: ['reasoning-replay', 'text-replay'] } };
-      } };
-    } },
-  });
-  return { service, calls };
-}
-test('temporary messages are retained only in memory and never assigned a host session', async () => {
-  const { service, calls } = fixture();
-  try {
-    const { id } = service.open('main'); await service.send(id, 1, 'hello', () => {});
-    assert.equal(service.chats.get(id).turns.length, 1);
-    assert.equal(calls[0].sessionId, undefined); assert.deepEqual(calls[0].tools, []);
-    await service.close(id); assert.equal(service.chats.size, 0); assert.throws(() => service.get(id), /已关闭/);
-  } finally { await service.dispose(); }
-});
-test('closing while streaming aborts and erases only the temporary chat', async () => {
-  const { service } = fixture();
-  try {
-    const first = service.open('main'), second = service.open('other');
-    const running = service.send(first.id, 1, 'wait', () => {}); running.catch(() => {});
-    await new Promise(resolve => setImmediate(resolve)); await service.close(first.id);
-    await assert.rejects(running, /已关闭/);
-    assert.equal(service.chats.size, 1); assert.ok(service.get(second.id)); assert.deepEqual(service.get(second.id).turns, []);
-  } finally { await service.dispose(); }
-});
+import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { HubStore } from '../src/hub-store.mjs';
+import { ContextStore } from '../src/context/store.mjs';
+import { TemporaryChats } from '../src/temporary-chat.mjs';
 
-test('committed requests replay their receipt without another model call or history entry', async t => {
-  const { service, calls } = fixture(); t.after(() => service.dispose());
-  const { id } = service.open('main'), requestId = 1, receipts = [];
-  await service.send(id, requestId, 'hello', event => { if (event.type === 'done') receipts.push(event); });
-  await service.send(id, requestId, 'hello', event => receipts.push(event));
-  assert.equal(calls.length, 1); assert.equal(service.get(id).turns.length, 1);
-  assert.deepEqual(receipts[1], receipts[0]); assert.equal(receipts[0].committed, true);
-  assert.equal(receipts[0].messages[1].text, 'synthetic reply');
-  assert.equal(receipts[0].messages[1].reasoning, 'synthetic reasoning');
-  await assert.rejects(service.send(id, requestId, 'different', () => {}), /不同消息/);
-  await service.send(id, 2, 'next', () => {});
-  assert.equal(calls[1].messages.length, 3);
-  assert.equal(calls[1].messages[0], service.get(id).turns[0].user);
-  assert.equal(calls[1].messages[1], service.get(id).turns[0].assistant, 'native replay messages are preserved');
-  assert.deepEqual(calls[1].messages[1].source.replayState,
-    { response: { signature: 'synthetic' }, blocks: ['reasoning-replay', 'text-replay'] });
-});
-
-test('stopping an old request never cancels the next reply, and stop waits for cancellation', async t => {
-  const { service, calls } = fixture(); t.after(() => service.dispose());
-  const { id } = service.open('main'), old = 1, next = 2;
-  await service.send(id, old, 'hello', () => {});
-  const running = service.send(id, next, 'wait', () => {}), rejected = assert.rejects(running, /回复已停止/);
-  await new Promise(setImmediate);
-  assert.equal((await service.stop(id, old)).committed, true);
-  assert.equal(service.get(id).active.abort.signal.aborted, false);
-  await assert.rejects(service.stop(id), /请求编号/);
-  assert.equal(service.get(id).active.id, next);
-  assert.deepEqual(await service.stop(id, next), { requestId: next, committed: false });
-  await rejected;
-  assert.equal(service.get(id).active, null); assert.equal(service.get(id).turns.length, 1);
-  assert.equal(calls.length, 2);
-  assert.deepEqual(await service.stop(id, 3), { requestId: 3, committed: false });
-  await assert.rejects(service.send(id, 3, 'late HTTP send', () => {}), /已结束/);
-  assert.equal(calls.length, 2, 'stop-before-admission prevents late dispatch without a cancelled-request journal');
-});
-
-async function httpFixture(t) {
-  const f = fixture(), faults = { receipt: null, stop: false, deltas: false }, actions = [];
-  const server = createServer(async (req, res) => {
-    const url = new URL(req.url, 'http://localhost'), action = url.pathname.split('/').at(-1);
-    actions.push(action);
-    if (action === 'stop' && faults.stop) { sendJson(res, 503, { error: 'synthetic offline' }); return; }
-    const write = res.write.bind(res);
-    res.write = value => {
-      const event = JSON.parse(value);
-      if (faults.deltas && event.type === 'text-delta') return true;
-      if (faults.receipt && event.type === 'done') {
-        const fault = faults.receipt; faults.receipt = null;
-        if (fault === 'disconnect') res.destroy();
-        else if (fault === 'invalid') return write(JSON.stringify({ ...event, requestId: 'wrong' }) + '\n');
-        return true;
+const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
+const native = name => import(host.resolve('@deepseek-ai/dsh-' + name));
+const { Context } = await import(host.resolve('@deepseek-ai/cordis'));
+const { createUserMessage, LlmAdapter } = await native('llm');
+async function fixture(t) {
+  await mkdir(resolve('../.local/temporary-native-tests'), { recursive: true });
+  const directory = await mkdtemp(resolve('../.local/temporary-native-tests/test-')), ctx = new Context(), requests = [], started = Promise.withResolvers();
+  let service;
+  t.after(async () => { await service?.dispose(); await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }); });
+  ctx.provide('profileContext', { home: directory, dir: directory });
+  for (const name of ['session', 'session-projection', 'agent', 'llm', 'system-prompt', 'tools', 'tool-executor-native', 'fs-local', 'working-directory', 'agent-loop']) {
+    const module = await native(name); await ctx.plugin(module.default ?? module);
+  }
+  await ctx.plugin(await native('session-persistence-jsonl'), { root: join(directory, 'ordinary'), compression: 'none' });
+  class Adapter extends LlmAdapter {
+    async *stream(request, options) {
+      requests.push(request);
+      if (request.model === 'wait') {
+        started.resolve();
+        const signal = options?.signal ?? request.signal;
+        if (signal) await new Promise(resolve => { if (signal.aborted) resolve(); else signal.addEventListener('abort', resolve, { once: true }); });
       }
-      return write(value);
-    };
-    try { await handleTemporaryChatApi({ service: f.service, req, res, url }); }
-    catch (error) { sendJson(res, error.statusCode || 400, { error: error.message }); }
-  });
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  t.after(async () => {
-    await f.service.dispose(); server.closeAllConnections();
-    await new Promise(resolve => server.close(resolve));
-  });
-  const request = async (action, data, signal) => {
-    const response = await fetch(`http://127.0.0.1:${server.address().port}/oh-my-dsh/api/temporary-chat/${action}`, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data), signal,
-    });
-    if (action === 'send' && response.ok) return response;
-    const value = await response.json();
-    if (!response.ok) throw Error(value.error);
-    return value;
-  };
-  const entry = { messages: [], draft: 'hello', created: request('open', { parentId: 'main' }), busy: false, turn: null };
-  return { ...f, faults, actions, request, entry };
+      yield { type: 'block-start', index: 0, blockType: 'text' };
+      yield { type: 'text-delta', index: 0, text: 'native reply' };
+      yield { type: 'block-end', index: 0, block: { type: 'text', text: 'native reply' } };
+      yield { type: 'finish', reason: { kind: 'stop' } };
+    }
+  }
+  ctx.llm.registerAdapter(['fixture'], new Adapter());
+  ctx.tools.register({ name: 'native_fixture', description: 'Synthetic tool', parameters: { type: 'object', properties: {} },
+    output: { schema: { type: 'string' }, render: () => [] }, execute: () => 'ok' });
+  const parent = await ctx.agents.create({ sessionId: 'ordinary-parent', agentOptions: { provider: 'fixture', model: 'local' }, meta: { cwd: directory } });
+  service = new TemporaryChats(ctx, { directory: join(directory, 'temporary') });
+  return { ctx, parent, service, directory, requests, started };
 }
+const send = (agent, text) => agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }));
 
-test('HTTP lost or invalid receipts recover the committed reply without repeating the model call', async t => {
-  for (const fault of ['truncate', 'disconnect', 'invalid']) await t.test(fault, async t => {
-    const f = await httpFixture(t); f.faults.receipt = fault;
-    await sendTemporaryChat(f.entry, f.request);
-    assert.equal(f.entry.turn, null); assert.equal(f.entry.draft, ''); assert.equal(f.entry.error, '');
-    assert.equal(f.entry.messages[1].text, 'synthetic reply'); assert.equal(f.calls.length, 1);
-    assert.equal(f.actions.filter(action => action === 'stop').length, 1);
-    f.entry.draft = 'next'; await sendTemporaryChat(f.entry, f.request);
-    assert.equal(f.calls.length, 2); assert.equal(f.calls[1].messages.length, 3);
-    assert.deepEqual(f.calls[1].messages.map(message => message.role), ['user', 'assistant', 'user']);
-  });
+test('native sidebar sessions use native messages and tools, start blank, and erase only their own records', { timeout: 15000 }, async t => {
+  const f = await fixture(t), ordinaryCreate = f.ctx.sessionPersistence.create;
+  send(f.parent.agent, 'parent only'); await f.parent.agent.whenIdle();
+  const created = await f.service.open(f.parent.agent.id), child = f.ctx.agents.get(created.id);
+  assert.equal(f.requests.length, 1, 'opening does not dispatch a model call');
+  assert.equal(child.session.header.cwd, f.directory);
+  assert.equal(child.session.header.origin, undefined, 'user-operated session accepts normal native prompt routing');
+  send(child, 'sidebar only'); await child.whenIdle();
+  assert.ok(f.requests[1].tools.some(tool => tool.name === 'native_fixture'));
+  assert.ok(!JSON.stringify(f.requests[1].messages).includes('parent only'));
+  await f.ctx.sessionPersistence.flush();
+  const saved = await f.ctx.sessionPersistence.open(created.id, 'read');
+  assert.ok((await saved.read()).events.some(event => event.type === 'user/message'));
+  await saved.close();
+  const ownedPath = f.service.get(created.id).owner.path;
+  await f.service.close(created.id);
+  assert.equal(f.ctx.agents.get(created.id), undefined);
+  assert.equal(f.ctx.sessions.get(created.id), undefined);
+  assert.equal(await f.ctx.sessionPersistence.stat(created.id), undefined);
+  await assert.rejects(readdir(ownedPath), { code: 'ENOENT' });
+  assert.ok(await f.ctx.sessionPersistence.stat(f.parent.agent.id));
+  assert.equal((await f.ctx.sessionPersistence.list()).length, 1);
+  await f.service.dispose();
+  assert.notEqual(f.ctx.sessionPersistence.create, ordinaryCreate, 'storage adapter uninstalls');
 });
 
-test('unconfirmed HTTP delivery blocks another send until explicit recovery succeeds', async t => {
-  const f = await httpFixture(t); f.faults.receipt = 'truncate'; f.faults.stop = true;
-  await sendTemporaryChat(f.entry, f.request);
-  assert.ok(f.entry.turn); assert.equal(f.entry.busy, false); assert.equal(f.entry.draft, 'hello');
-  assert.match(f.entry.error, /尚未确认/);
-  await sendTemporaryChat(f.entry, f.request); assert.equal(f.calls.length, 1);
-  f.faults.stop = false; await recoverTemporaryChat(f.entry, f.request);
-  assert.equal(f.entry.turn, null); assert.equal(f.entry.messages.length, 2); assert.equal(f.entry.error, '');
-  assert.equal(f.calls.length, 1);
+test('closing drains native descendant agents and refuses late descendants without touching the parent', { timeout: 15000 }, async t => {
+  const f = await fixture(t), opened = await f.service.open(f.parent.agent.id);
+  const child = await f.ctx.agents.create({ sessionId: 'native-descendant', meta: { parentSession: opened.id }, agentOptions: { provider: 'fixture', model: 'local' } });
+  send(child.agent, 'child work'); await child.agent.whenIdle();
+  await child.dispose();
+  const resumed = await f.ctx.agents.resume({ resumeSessionId: child.agent.id, agentOptions: { provider: 'fixture', model: 'local' } });
+  assert.ok(f.ctx.agents.get(resumed.agent.id));
+  await f.service.close(opened.id);
+  assert.equal(f.ctx.agents.get(child.agent.id), undefined);
+  assert.equal(await f.ctx.sessionPersistence.stat(child.agent.id), undefined);
+  await assert.rejects(f.ctx.agents.create({ sessionId: 'late-descendant', meta: { parentSession: opened.id } }), /已关闭/);
+  assert.equal(f.ctx.agents.get(f.parent.agent.id), f.parent.agent);
 });
 
-test('HTTP cancellation restores the draft after the producer retires and allows a fresh send', async t => {
-  const f = await httpFixture(t); f.entry.draft = 'wait';
-  const started = Promise.withResolvers();
-  f.entry.refresh = () => { if (f.calls.length) started.resolve(); };
-  const sending = sendTemporaryChat(f.entry, f.request); await started.promise;
-  const requestId = f.entry.turn.id;
-  // Busy and request ownership live on the entry, so a replacement Panel sees them too.
-  assert.equal(f.entry.busy, true); await sendTemporaryChat(f.entry, f.request); assert.equal(f.calls.length, 1);
-  f.entry.turn.abort.abort(); await sending;
-  assert.equal(f.entry.turn, null); assert.equal(f.entry.draft, 'wait'); assert.equal(f.entry.messages.length, 0);
-  const { id } = await f.entry.created; assert.equal(f.service.get(id).active, null);
-  f.entry.draft = 'next'; await sendTemporaryChat(f.entry, f.request);
-  assert.equal(f.entry.messages.length, 2); assert.equal(f.calls[1].messages.length, 1);
-  assert.deepEqual(await f.request('stop', { id, requestId }), { requestId, committed: false });
-});
-
-test('the done receipt supplies canonical blocks even when no text deltas were delivered', async t => {
-  const f = await httpFixture(t); f.faults.deltas = true;
-  await sendTemporaryChat(f.entry, f.request);
-  assert.equal(f.entry.messages[1].text, 'synthetic reply'); assert.equal(f.entry.draft, '');
-  assert.equal(f.entry.messages[1].reasoning, 'synthetic reasoning');
-  assert.equal(f.actions.filter(action => action === 'stop').length, 0, 'healthy sends need no reconciliation request');
-});
-
-test('a late reconciliation failure cannot repopulate a chat closed in the meantime', async t => {
-  const f = await httpFixture(t), entered = Promise.withResolvers(), release = Promise.withResolvers();
-  f.faults.receipt = 'truncate';
-  const sending = sendTemporaryChat(f.entry, async (action, ...args) => {
-    if (action === 'stop') { entered.resolve(); await release.promise; }
-    return f.request(action, ...args);
-  });
+test('unload during native creation waits for rollback and clears the temporary backend', { timeout: 15000 }, async t => {
+  const f = await fixture(t), entered = Promise.withResolvers(), release = Promise.withResolvers();
+  f.ctx.on('agent/created', async ({ agent }) => { if (agent.id.startsWith('omd-sidebar-')) { entered.resolve(); await release.promise; } }, { global: true });
+  const opening = f.service.open(f.parent.agent.id), rejected = assert.rejects(opening, /已关闭/);
   await entered.promise;
-  f.entry.closing = f.entry.created.then(({ id }) => f.request('close', { id }));
-  await f.entry.closing;
-  Object.assign(f.entry, { closed: true, closing: null, turn: null, draft: '', messages: [], error: '' });
-  release.resolve(); await sending;
-  assert.equal(f.entry.error, ''); assert.equal(f.entry.draft, ''); assert.deepEqual(f.entry.messages, []);
+  let finished = false;
+  const disposing = f.service.dispose().then(() => { finished = true; });
+  await new Promise(setImmediate); assert.equal(finished, false);
+  release.resolve(); await rejected; await disposing;
+  assert.deepEqual(await readdir(join(f.directory, 'temporary')), []);
+  assert.deepEqual(f.ctx.agents.list().map(agent => agent.id), [f.parent.agent.id]);
 });
 
-test('simultaneous stop and close return the original request boundary', async t => {
-  const {service} = fixture(); t.after(()=>service.dispose());
-  const {id} = service.open('main');
-  const work = service.send(id, 1, 'wait', () => {}); const ended = assert.rejects(work);
-  await new Promise(setImmediate);
-  const stopped = service.stop(id,1); await service.close(id);
-  assert.deepEqual(await stopped,{requestId:1,committed:false}); await ended;
+
+test('closing an active native reply waits for its model cancellation and clears the session', { timeout: 15000 }, async t => {
+  const f = await fixture(t);
+  f.parent.agent.session.append('model/selection', { provider: 'fixture', model: 'wait' });
+  const opened = await f.service.open(f.parent.agent.id), child = f.ctx.agents.get(opened.id);
+  // Set the pending native route on the side session, just as the model menu does.
+  child.session.append('model/selection', { provider: 'fixture', model: 'wait' });
+  send(child, 'waiting reply'); await f.started.promise;
+  await f.service.close(opened.id);
+  assert.equal(f.ctx.agents.get(opened.id), undefined);
+  assert.equal(await f.ctx.sessionPersistence.stat(opened.id), undefined);
 });
 
-test('expired temporary chat opens a fresh conversation and keeps unsent input', async t => {
-  const {service,calls}=fixture(); t.after(()=>service.dispose());
-  const old=service.open(); await service.close(old.id);
-  const turn={id:1,text:'retained',before:[]};
-  const entry={turn,created:Promise.resolve(old),messages:[],draft:''};
-  entry.reopen=()=>entry.created=Promise.resolve(service.open());
-  await recoverTemporaryChat(entry,async (_, {id,requestId})=>{
-    try { return await service.stop(id,requestId); } catch (e) {e.status=e.statusCode;throw e;}
-  });
-  assert.notEqual((await entry.created).id,old.id);
-  assert.equal(entry.turn,null);assert.equal(entry.draft,'retained');assert.equal(calls.length,0);
+
+test('cleanup failure is retryable and OMD sidecar deletion preserves ordinary session data', { timeout: 15000 }, async t => {
+  const f = await fixture(t), opened = await f.service.open(f.parent.agent.id);
+  const hub = new HubStore(join(f.directory, 'sidecars')), context = new ContextStore(hub.dir);
+  for (const id of [opened.id, f.parent.agent.id]) { hub.save(hub.state(id)); context.save(context.state(id)); }
+  const ownedPath = f.service.get(opened.id).owner.path;
+  let fail = true;
+  f.service.storage.cleanup = async ids => {
+    if (fail) throw Error('synthetic cleanup failure');
+    for (const id of ids) { context.forget(id); hub.forget(id); }
+  };
+  await assert.rejects(f.service.close(opened.id), /synthetic cleanup failure/);
+  assert.ok(await readdir(ownedPath)); assert.ok(hub.peek(opened.id));
+  fail = false; await f.service.close(opened.id);
+  assert.equal(hub.peek(opened.id), undefined); assert.equal(context.peek(opened.id), null);
+  assert.ok(hub.peek(f.parent.agent.id)); assert.ok(context.peek(f.parent.agent.id));
 });

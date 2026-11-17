@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, existsSync, openSync, fsyncSync, closeSync, statSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, existsSync, openSync, fsyncSync, closeSync, statSync, rmSync } from 'node:fs';
 import { join, resolve, basename } from 'node:path';
 import { hash } from './core.mjs';
 
@@ -69,6 +69,11 @@ export class ContextStore {
     this.flush(id);
     this.cache.delete(id); this.writes.delete(this.path(id)); this.dirty.delete(id);
     this.dropDiskCache(basename(this.path(id)));
+  }
+  forget(id) {
+    this.release(id);
+    rmSync(this.path(id), { force: true });
+    rmSync(`${this.path(id)}.tmp`, { force: true });
   }
   all({ tolerateInvalid = false, requiredId } = {}) {
     const files = readdirSync(join(this.dir, 'sessions')).filter(f => f.endsWith('.json'));

@@ -103,7 +103,9 @@ async function applyRuntime(ctx, config) {
   hub.budgets = new TaskBudgets(hub);
   hub.workflowBudget = new WorkflowBudget(hub.store);
   ctx.effect(() => () => { for (const agent of hub.agents.values()) hub.budgets.dispose(agent.session); });
-  const temporaryChats = new TemporaryChats(ctx);
+  const temporaryChats = new TemporaryChats(ctx, { directory: join(hub.store.dir, 'temporary-sidebar'),
+    cleanup: async ids => { for (const id of ids) { await hub.context.dispose(id); hub.context.store.forget(id); hub.store.forget(id); } },
+  });
   ctx.effect(() => () => temporaryChats.dispose());
   const promptOptimizer = createPromptOptimizer(ctx, hub);
   ctx.effect(() => () => promptOptimizer.dispose());

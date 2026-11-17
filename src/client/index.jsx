@@ -144,7 +144,7 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
   await mountOptionalClient(ctx, '打开工作目录', async () => createOpenInApp(require), report);
   applySessionTimeZone(ctx);
   applyFeatureClients(ctx, { 'dsh-deepseek-workbench': applyDeepSeekWorkbench, 'dsh-extensions': { apply: applyExtensions, inject: extensionsInject } });
-  ctx.inject(['commandUi', 'sidebarRight', 'sidebarRightTabs'], installTemporaryChat);
+  ctx.inject(['commandUi', 'sidebarRight', 'sidebarRightTabs', 'sessions', 'slots'], installTemporaryChat);
   applyHistorySize(ctx);
   installDesktopLifecycle(ctx);
   await mountOptionalClient(ctx, '旁聊', async () => ({ inject: btwInject, apply: applyBtw }), report);

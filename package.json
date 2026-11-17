@@ -183,7 +183,8 @@
     "@deepseek-ai/dsh-tool-executor-native": "0.2.2-rc.3",
     "@deepseek-ai/dsh-tool-executor-ptc": "0.2.2-rc.3",
     "@deepseek-ai/dsh-mcp-client": "0.2.2-rc.3",
-    "koffi": "3.1.1"
+    "koffi": "3.1.1",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.3"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.3",
@@ -199,7 +200,10 @@
     "@deepseek-ai/dsh-tool-executor-native": "0.2.2-rc.3",
     "@deepseek-ai/dsh-tool-executor-ptc": "0.2.2-rc.3",
     "@deepseek-ai/dsh-mcp-client": "0.2.2-rc.3",
-    "koffi": "3.1.1"
+    "koffi": "3.1.1",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-subagent": "0.2.2-rc.3"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-util-values": {
@@ -221,6 +225,15 @@
       "optional": true
     },
     "@deepseek-ai/dsh-attachment": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-agent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session-persistence-jsonl": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-subagent": {
       "optional": true
     }
   },

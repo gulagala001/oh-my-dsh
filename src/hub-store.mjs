@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { projectKeyOf, sameProject } from './project.mjs';
 import { readonlyMonitorActivity } from './monitor-activity.mjs';
@@ -45,6 +45,12 @@ export class HubStore {
     return value;
   }
   release(id) { this.states.delete(id); }
+  forget(id) {
+    validateSessionId(id); this.release(id);
+    this.monitorCache.delete(`${id}.json`); this.monitorErrors.delete(`${id}.json`);
+    rmSync(join(this.dir, 'sessions', `${id}.json`), { force: true });
+    rmSync(join(this.dir, 'sessions', `${id}.json.tmp`), { force: true });
+  }
   state(id) {
     validateSessionId(id);
     const cached = this.states.has(id);

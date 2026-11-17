@@ -35,6 +35,7 @@ overrides:
   "@deepseek-ai/cordis-plugin-loader": 1.1.0
   "@deepseek-ai/cordis-plugin-logger-console": 1.1.0
   "@deepseek-ai/cordis-plugin-timer": 1.2.0
+  "@deepseek-ai/dsh-agent": link:../.local/dsh-sdk-38a6a5c9/packages/core/agent
   "@deepseek-ai/dsh-attachment": link:../.local/dsh-sdk-38a6a5c9/packages/attachment/attachment
   "@deepseek-ai/dsh-compaction": link:../.local/dsh-sdk-38a6a5c9/packages/compaction/compaction
   "@deepseek-ai/dsh-llm": link:../.local/dsh-sdk-38a6a5c9/packages/llm/llm

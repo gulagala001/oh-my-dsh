@@ -75,7 +75,7 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 | `src/tasks.mjs`、`src/todolist.mjs` | 锚点、任务、证据 |
 | `src/hub.mjs`、`src/hub-store.mjs`、`src/monitor-ledger.mjs` | 后台／持久监控账本 |
 | `src/dream/` | 隔离归属、来源、短记忆与续跑 |
-| `src/temporary-chat.mjs`、`src/client/temporary-chat-state.mjs` | 临时聊天回合与前端流式交互状态 |
+| `src/temporary-chat.mjs`、`src/temporary-session-storage.mjs` | 原生侧栏会话与临时存储生命周期 |
 | `src/codegraph.mjs` | 索引／查询；取消及初始化失败保留可读错误与原始 cause |
 | `src/client/` | 对话、工作台、设置、主题 |
 | `vendor/dsh/` | 匹配当前构建目标的公共 Chat、Conversation 与宿主组件 |
@@ -100,7 +100,7 @@ Skill 管理同样在独立 Extensions 维护。固定 rc.2 的 `SkillRegistry.l
 
 `pnpm build` 构建前端，并从 `presets/oh-my-dsh/agent.cordis.yml` 生成普通与 OMD-PTC 预设；修改源配置，不手改生成文件。
 
-临时聊天以服务端内存中的完整回合为历史来源，原生消息及模型重放信息原样用于下一次请求。每个标签页的请求编号递增；`done` 回执确认提交，`stop` 只取消对应请求、阻止该编号迟到执行，并等待真实调用清理。断线时核对该次回合，未确认前保留草稿并暂停发送，恢复操作不重新调用模型。前端状态由标签页记录持有，组件只订阅视图；关闭后清空历史，移除标签页后停止保活。
+侧栏聊天由原生 AgentHandle 和 SessionReference 承载，渲染宿主子会话的 Conversation 内容，复用消息、输入、附件和停止流程。独立原生 JSONL 后端只接收已登记的临时会话与子会话，其他存储调用原样透传。关闭时停止并等待原生任务、清理 OMD 会话附属记录，最后释放存储并删除对应临时目录；清理失败保留关闭入口供重试。
 
 推荐插件更新与 OMD 自更新都在 `withPluginPreflight` 的执行回调中复用各自的准入规则，覆盖排队、预检与人工继续之间的等待。原生安装清单、当前配置／任务和版本服务仍是权威来源；回调重读后才能开始变更，不根据预检前的启用状态覆盖新选择。自动更新不再满足条件时直接结束，手动冲突保留明确错误。预检仍只运行一次，原生方法负责自己的文件锁、失败恢复与 HMR；移除和安装仍是宿主的两个操作，不提供跨进程整包替换事务。自更新复用版本服务当前快照，不增加第二次网络查询。
 

@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TemporaryChats } from '../src/temporary-chat.mjs';
 import { createPromptOptimizer } from '../src/prompt-optimizer.mjs';
 
 const route = { provider: 'synthetic', model: 'local' };
@@ -14,16 +13,13 @@ function consumer(t, kind, prepareCall) {
   const session = { id: 'reply-test', requestHeader: () => ({ config: route }) }, emitted = [], records = [];
   const ctx = { sessions: { get: () => session }, sessionProjections: { stateOf() {} }, llm: { prepareCall } };
   const hub = { live: new Map(), context: { releaseState() {} }, record(_session, _kind, record) { records.push(record); } };
-  const service = kind === 'chat' ? new TemporaryChats(ctx) : createPromptOptimizer(ctx, hub);
-  const id = kind === 'chat' ? service.open(session.id).id : null;
-  let requestId = 0;
-  const run = signal => kind === 'chat' ? service.send(id, ++requestId, 'Original draft', event => emitted.push(event), signal)
-    : service.optimize(session, { text: 'Original draft' }, signal);
+  const service = createPromptOptimizer(ctx, hub);
+  const run = signal => service.optimize(session, { text: 'Original draft' }, signal);
   t.after(() => service.dispose());
-  return { service, run, emitted, records, hub, id };
+  return { service, run, emitted, records, hub };
 }
 
-for (const kind of ['chat', 'optimizer']) {
+for (const kind of ['optimizer']) {
   test(kind + ' keeps its slot until a cancelled producer and yielding finalizer actually retire', async t => {
     const entered = Promise.withResolvers(), output = Promise.withResolvers(), cleaning = Promise.withResolvers(), retire = Promise.withResolvers();
     let calls = 0, retired = false;
@@ -40,8 +36,7 @@ for (const kind of ['chat', 'optimizer']) {
     assert.ok(!f.emitted.some(event => event.type === 'text-delta' || event.type === 'done'));
     retire.resolve(); await rejected;
     assert.equal(retired, true);
-    if (kind === 'chat') assert.equal(f.service.get(f.id).turns.length, 0);
-    else { assert.equal(f.records[0].status, 'cancelled'); assert.equal(f.hub.live.size, 0); }
+    { assert.equal(f.records[0].status, 'cancelled'); assert.equal(f.hub.live.size, 0); }
     await f.run(); assert.equal(calls, 2, 'The cancelled operation must release its slot exactly once');
   });
 
@@ -56,10 +51,7 @@ for (const kind of ['chat', 'optimizer']) {
       } else yield* frames(variant === 0 ? null : 'max-tokens');
     } }));
     for (const expected of [/未报告完成/, /max-tokens/, /工具调用/]) await assert.rejects(f.run(), expected);
-    if (kind === 'chat') {
-      assert.equal(f.service.get(f.id).turns.length, 0);
-      assert.equal(f.emitted.some(event => event.type === 'done'), false);
-    } else assert.ok(f.records.length === 3 && f.records.every(record => record.status === 'error'));
+    assert.ok(f.records.length === 3 && f.records.every(record => record.status === 'error'));
   });
 
   for (const outcome of ['ready', 'failed']) test(kind + ' disposal waits for cancelled preparation: ' + outcome, async t => {
@@ -79,8 +71,7 @@ for (const kind of ['chat', 'optimizer']) {
     await new Promise(setImmediate); assert.equal(disposed, false);
     prepared.resolve(); await rejected; await closed;
     assert.equal(dispatched, false); assert.equal(f.records.length, 0);
-    if (kind === 'chat') assert.throws(() => f.service.open(), /已停止/);
-    else await assert.rejects(f.run(), /已停止/);
+    await assert.rejects(f.run(), /已停止/);
   });
 
   test(kind + ' reports the original pre-dispatch failure without inventing a model call', async t => {
@@ -98,7 +89,6 @@ for (const kind of ['chat', 'optimizer']) {
     const abort = new AbortController(), running = f.run(abort.signal);
     const rejected = assert.rejects(running, error => error.cleanup === true && error.errors.includes(failure));
     await entered.promise; abort.abort(Error('human stop')); release.resolve(); await rejected;
-    if (kind === 'chat') assert.equal(f.service.get(f.id).turns.length, 0);
-    else assert.equal(f.records[0].status, 'error');
+    assert.equal(f.records[0].status, 'error');
   });
 }

@@ -15,6 +15,22 @@ const entriesFor = (slots, name, accept) => ({ ctx: slots.ctx,
 export function applySessionOverview(ctx, openCU) {
   if (!openCU.OverviewSlot) return;
   const usePanel = installOverviewPanel(ctx);
+  // Filter the host guide only: standalone OpenCU and existing resource tabs
+  // keep their registrations and behavior.
+  const hiddenGuideKinds = new Set([AGENTS_KIND, JOBS_KIND, SOURCES_KIND, OUTPUTS_KIND, 'opencu-sources']);
+  const filteredGuides = new WeakMap();
+  const guideEntries = entries => {
+    if (!filteredGuides.has(entries)) filteredGuides.set(entries, entries.filter(entry => !hiddenGuideKinds.has(entry.kind)));
+    return filteredGuides.get(entries);
+  };
+  ctx.slots.inject('sidebar.right.pane.tab', () => decorateSlotComponent(ctx.slots, 'sidebar.right.pane.tab',
+    key => key === '@deepseek-ai/dsh-client-ui-sidebar-right/guide', original => {
+      const Original = original.component;
+      return function Guide(props) {
+        const useGuideEntries = selector => props.useGuideEntries(entries => selector(guideEntries(entries)));
+        return <Original {...props} useGuideEntries={useGuideEntries}/>;
+      };
+    }));
   function Overview(props) {
     const Component = openCU.getOverviewSlot?.(ctx) ?? openCU.OverviewSlot;
     return <Component {...props}/>;
@@ -196,8 +212,8 @@ export function applySessionOverview(ctx, openCU) {
     for (const [kind, title, variant] of [[AGENTS_KIND, '子智能体', 'agents'], [JOBS_KIND, '后台进程', 'jobs'], [SOURCES_KIND, '来源', 'sources'], [OUTPUTS_KIND, '输出内容', 'outputs']]) {
       const id = `oh-my-dsh/${kind}`;
       scope.effect(() => scope.sidebarRightTabs.register({ id, kind, multiple: false, title: () => title,
-        // Retain the old kind for saved tabs; OpenCU owns the single Sources entry.
-        guide: kind === SOURCES_KIND ? [] : [{ id: kind, order: 32, title: () => title }] }));
+        // Pages remain available from the overview and existing saved tabs.
+        guide: [] }));
       scope.slots.inject('sidebar.right.pane.tab', () => scope.slots.register({ name: 'sidebar.right.pane.tab', key: id }, variant === 'jobs' ? JobsPage : props => <OverviewPage {...props} variant={variant}/>));
     }
     scope.slots.inject('sidebar.right.pane.tab', () => decorateSlotComponent(scope.slots, 'sidebar.right.pane.tab', key => key === 'opencu.sources', original => {

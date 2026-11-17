@@ -15,6 +15,7 @@ overrides:
   '@deepseek-ai/cordis-plugin-loader': 1.1.0
   '@deepseek-ai/cordis-plugin-logger-console': 1.1.0
   '@deepseek-ai/cordis-plugin-timer': 1.2.0
+  '@deepseek-ai/dsh-agent': link:../.local/dsh-sdk-38a6a5c9/packages/core/agent
   '@deepseek-ai/dsh-attachment': link:../.local/dsh-sdk-38a6a5c9/packages/attachment/attachment
   '@deepseek-ai/dsh-compaction': link:../.local/dsh-sdk-38a6a5c9/packages/compaction/compaction
   '@deepseek-ai/dsh-llm': link:../.local/dsh-sdk-38a6a5c9/packages/llm/llm
@@ -50,6 +51,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: link:../.local/dsh-sdk-38a6a5c9/vendor/cordis
         version: link:../.local/dsh-sdk-38a6a5c9/vendor/cordis
+      '@deepseek-ai/dsh-agent':
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/agent
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/core/agent
       '@deepseek-ai/dsh-attachment':
         specifier: link:../.local/dsh-sdk-38a6a5c9/packages/attachment/attachment
         version: link:../.local/dsh-sdk-38a6a5c9/packages/attachment/attachment
@@ -68,6 +72,12 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/session
         version: link:../.local/dsh-sdk-38a6a5c9/packages/core/session
+      '@deepseek-ai/dsh-session-persistence-jsonl':
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/session/session-persistence-jsonl
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/session/session-persistence-jsonl
+      '@deepseek-ai/dsh-subagent':
+        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/subagent/subagent
+        version: link:../.local/dsh-sdk-38a6a5c9/packages/subagent/subagent
       '@deepseek-ai/dsh-system-prompt':
         specifier: link:../.local/dsh-sdk-38a6a5c9/packages/core/system-prompt
         version: link:../.local/dsh-sdk-38a6a5c9/packages/core/system-prompt
@@ -162,15 +172,9 @@ importers:
       '@deepseek-ai/dsh-sandbox':
         specifier: link:../.local/dsh-sdk-38a6a5c9/packages/sandbox/sandbox
         version: link:../.local/dsh-sdk-38a6a5c9/packages/sandbox/sandbox
-      '@deepseek-ai/dsh-session-persistence-jsonl':
-        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/session/session-persistence-jsonl
-        version: link:../.local/dsh-sdk-38a6a5c9/packages/session/session-persistence-jsonl
       '@deepseek-ai/dsh-shell':
         specifier: link:../.local/dsh-sdk-38a6a5c9/packages/shell/shell
         version: link:../.local/dsh-sdk-38a6a5c9/packages/shell/shell
-      '@deepseek-ai/dsh-subagent':
-        specifier: link:../.local/dsh-sdk-38a6a5c9/packages/subagent/subagent
-        version: link:../.local/dsh-sdk-38a6a5c9/packages/subagent/subagent
       '@deepseek-ai/dsh-timeout':
         specifier: link:../.local/dsh-sdk-38a6a5c9/packages/util/timeout
         version: link:../.local/dsh-sdk-38a6a5c9/packages/util/timeout
