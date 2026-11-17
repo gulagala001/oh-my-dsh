@@ -13,6 +13,10 @@
 .omd-sidebar-section-more { margin:4px 0 4px var(--dsh-sidebar-row-padding,12px); padding:4px 0; border:0; background:transparent; font:inherit; font-size:12px; color:var(--dsw-alias-label-tertiary); cursor:pointer; }
 .omd-sidebar-section-error { margin:4px 12px; color:var(--dsw-alias-state-error-primary); font-size:12px; }
 [data-omd-sidebar-section] .omd-motion-collapse-content { min-width:0; }
+/* Native empty states are designed for a full browser, with an 80px top gap.
+   Section-sized empties keep the native text and archived-filter action. */
+[data-omd-sidebar-section] [data-row-key="empty"] { margin-top:0; padding:6px 12px; align-items:flex-start; gap:4px; }
+[data-omd-sidebar-section] [data-row-key="empty"] > svg { display:none; }
 @media (hover:none), (pointer:coarse) { .omd-sidebar-section-actions { opacity:1; pointer-events:auto; } }
 @media (prefers-reduced-motion:reduce) { .omd-sidebar-section-actions,.omd-sidebar-section-toggle > svg { transition:none; } }
 html[data-omd-reduce-effects] :is(.omd-sidebar-section-actions,.omd-sidebar-section-toggle > svg) { transition:none; }

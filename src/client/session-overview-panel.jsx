@@ -48,7 +48,10 @@ export function installOverviewPanel(ctx) {
     const preferred = useRef(width); preferred.current = width;
     useLayoutEffect(() => {
       const controller = bindOverviewResize({ root: root.current, handle: handle.current, preference: () => preferred.current,
-        commit: value => { value = Math.max(200, Math.min(480, value)); preferred.current = value; setWidth(value); try { localStorage.setItem(OVERVIEW_WIDTH_KEY, String(value)); } catch {} },
+        commit: value => {
+          value = value === null ? null : Math.max(200, Math.min(480, value)); preferred.current = value; setWidth(value);
+          try { if (value === null) localStorage.removeItem(OVERVIEW_WIDTH_KEY); else localStorage.setItem(OVERVIEW_WIDTH_KEY, String(value)); } catch {}
+        },
       });
       resize.current = controller;
       return () => { controller.dispose(); resize.current = null; };
@@ -63,10 +66,10 @@ export function installOverviewPanel(ctx) {
     }, [sessionId, panel.motion]);
     const attach = useCallback(container => update(sessionId, { container }), [sessionId]);
     return <div ref={root} className="omd-overview-layout" data-overview-open={panel.open || undefined} data-overview-animating={panel.motion || undefined}
-      data-overview-floating={panel.sidebarExpanded || undefined} style={{ '--omd-overview-preferred-width': `${width}px` }}>
+      data-overview-floating={panel.sidebarExpanded || undefined} style={{ '--omd-overview-preferred-width': width === null ? undefined : `${width}px` }}>
       <div className="omd-overview-chat">{children}</div>
       <aside id={id} className="omd-overview-rail" aria-label="会话总览" aria-hidden={!panel.open} inert={panel.open ? undefined : ''}>
-        <div ref={handle} className="omd-overview-resize" role="separator" tabIndex={0} aria-label="调整会话总览宽度" aria-orientation="vertical" aria-controls={id} title="拖动调节宽度，双击恢复默认"/>
+        <div ref={handle} className="omd-overview-resize" role="separator" tabIndex={0} aria-label="调整会话总览宽度" aria-orientation="vertical" aria-controls={id} title="拖动调节宽度，双击恢复默认比例"/>
         <div ref={attach} className="omd-overview-surface"/>
       </aside>
     </div>;

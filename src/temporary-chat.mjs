@@ -23,6 +23,7 @@ export class TemporaryChats {
     const selection = selected?.pending ?? session?.requestHeader()?.config
       ?? (inherited.provider && inherited.model ? inherited : this.ctx.get('agentDefaultModel')?.currentSelection());
     if (!selection?.provider || !selection?.model) throw Error('请先选择聊天模型。');
+    const currentDirectory = session && this.ctx.get('workingDirectory').get(session);
     const id = `omd-sidebar-${randomUUID()}`, owner = this.storage.create(id);
     const chat = { id, owner, touched: Date.now(), closed: false };
     this.chats.set(id, chat);
@@ -45,6 +46,9 @@ export class TemporaryChats {
           else if (presets) await presets.mount(agentCtx, (await presets.resolve(preset)).id);
           if (sandbox !== undefined) agent.session.append('sandbox/mode', { mode: sandbox, source: 'user' });
           if (permission !== undefined) agent.session.append('permission/preset', { preset: permission });
+          // The header keeps the original permission root. The native directory
+          // projection carries the parent's current folder independently.
+          if (currentDirectory) await agentCtx.get('workingDirectory').set(agent, currentDirectory, owner.abort.signal);
         },
       });
       owner.abort.signal.throwIfAborted();

@@ -56,7 +56,8 @@ function Sections({ element, state, props, t, pin }) {
   const renderSection = key => {
     const isSearch = state.searchExpanded && searchOwner === key;
     const open = isSearch || expanded(key), bodyId = `${id}-${key}`;
-    const heading = <button type="button" className="omd-sidebar-section-toggle" aria-expanded={open} aria-controls={bodyId}
+    const bodyOpen = open && (!filtered || searchOwner === key) && (key !== 'pinned' || sections.pinned.length > 0 || filtered);
+    const heading = <button type="button" className="omd-sidebar-section-toggle" aria-expanded={bodyOpen} aria-controls={bodyId}
       onClick={() => setExpanded(key, !expanded(key))}>
       <span>{names[key]}</span><IconChevronDownOutlineRegular size={14}/>
     </button>;
@@ -81,7 +82,7 @@ function Sections({ element, state, props, t, pin }) {
     return <section key={key} data-omd-sidebar-section={key}>
       {toolbar}
       {key === 'pinned' && error && <p className="omd-sidebar-section-error" role="alert">{error}</p>}
-      <Collapse open={open && (!filtered || searchOwner===key)} id={bodyId}>
+      <Collapse open={bodyOpen} id={bodyId}>
         {content}
         {!filtered && key==='recent' && sections.recent.length>10 && <button type="button" className="omd-sidebar-section-more" onClick={()=>setLimit(limit>=sections.recent.length?10:limit+20)}>
           {limit>=sections.recent.length?props.t('sessions.collapse'):props.t('sessions.expand',{n:sections.recent.length-limit})}

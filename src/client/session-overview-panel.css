@@ -1,5 +1,6 @@
 .omd-overview-layout {
-  --omd-overview-width: min(var(--omd-overview-preferred-width, 280px), 45cqw);
+  --omd-overview-default-width: clamp(240px, 27.5cqw, 360px);
+  --omd-overview-width: min(var(--omd-overview-preferred-width, var(--omd-overview-default-width)), 45cqw);
   --omd-overview-motion: 300ms cubic-bezier(.22, 1, .36, 1);
   container-type: inline-size;
   position: relative;
@@ -42,7 +43,7 @@
 .omd-overview-layout[data-overview-open] > .omd-overview-rail {
   transition-delay: 0s;
 }
-.omd-overview-layout[data-overview-floating] { --omd-overview-width: min(var(--omd-overview-preferred-width, 280px), calc(100cqw - 16px)); }
+.omd-overview-layout[data-overview-floating] { --omd-overview-width: min(var(--omd-overview-preferred-width, var(--omd-overview-default-width)), calc(100cqw - 16px)); }
 .omd-overview-layout[data-overview-floating] > .omd-overview-rail {
   position: absolute; inset: 0 0 0 auto; z-index: 40; width: var(--omd-overview-width); transform: translateX(100%);
 }

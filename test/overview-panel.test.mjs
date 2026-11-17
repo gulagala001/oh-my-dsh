@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { build } from 'esbuild';
 import { JSDOM } from 'jsdom';
 import React, { act, useSyncExternalStore } from 'react';
-import { readOverviewWidth, overviewWidthLimits } from '../src/client/overview-panel-resize.mjs';
+import { readOverviewWidth, overviewWidthLimits, overviewDefaultWidth } from '../src/client/overview-panel-resize.mjs';
 const require = createRequire(import.meta.url);
 const compiled = await build({ entryPoints: [new URL('../src/client/session-overview-panel.jsx', import.meta.url).pathname], bundle: true, write: false, platform: 'node', format: 'cjs', packages: 'external' });
 const module = { exports: {} };
@@ -50,17 +50,24 @@ test('overview closes on workspace expansion, reopens resident and floating, and
   separator.setPointerCapture = id => { capture = id; }; separator.hasPointerCapture = id => capture === id; separator.releasePointerCapture = () => { capture = null; };
   const pointer = (type, x, id = 1) => { const event = new dom.window.MouseEvent(type, { clientX: x, bubbles: true, button: 0 }); Object.defineProperty(event, 'pointerId', { value: id }); separator.dispatchEvent(event); };
   await act(() => { pointer('pointerdown', 700); pointer('pointermove', 640); pointer('pointerup', 640); });
-  assert.equal(readOverviewWidth(), 340);
+  assert.equal(readOverviewWidth(), 335);
   await act(() => { pointer('pointerdown', 700); pointer('pointermove', 600); pointer('pointercancel', 600); });
-  assert.equal(readOverviewWidth(), 340, 'cancel preserves the committed width');
+  assert.equal(readOverviewWidth(), 335, 'cancel preserves the committed width');
   await act(() => separator.dispatchEvent(new dom.window.MouseEvent('dblclick', { bubbles: true })));
-  assert.equal(readOverviewWidth(), 280);
+  assert.equal(readOverviewWidth(), null);
+  assert.equal(layout.style.getPropertyValue('--omd-overview-preferred-width'), '', 'reset restores responsive CSS sizing');
+  await act(() => { pointer('pointerdown', 700); pointer('pointermove', 600); pointer('pointercancel', 600); });
+  assert.equal(layout.style.getPropertyValue('--omd-overview-preferred-width'), '', 'cancelled drag keeps automatic sizing');
   await act(() => toggle.click()); assert.ok(!layout.hasAttribute('data-overview-open'));
 });
 
 test('width preferences tolerate denied storage and clamp to the available layout', () => {
-  assert.equal(readOverviewWidth({ getItem() { throw Error('denied'); } }), 280);
-  assert.equal(readOverviewWidth({ getItem: () => '9999' }), 280);
+  assert.equal(readOverviewWidth({ getItem() { throw Error('denied'); } }), null);
+  assert.equal(readOverviewWidth({ getItem: () => '9999' }), null);
+  assert.equal(readOverviewWidth({ getItem: () => '280' }), 280, 'existing manual widths remain intact');
+  assert.equal(overviewDefaultWidth(1262), 347.05);
+  assert.equal(overviewDefaultWidth(800), 240);
+  assert.equal(overviewDefaultWidth(1800), 360);
   assert.deepEqual(overviewWidthLimits(400), { min: 180, max: 180 });
   assert.deepEqual(overviewWidthLimits(400, true), { min: 200, max: 384 });
 });

@@ -44,6 +44,18 @@ async function fixture(t) {
 }
 const send = (agent, text) => agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }));
 
+test('sidebar inherits the current working directory without changing the original permission root', { timeout: 15000 }, async t => {
+  const f = await fixture(t), selected = join(f.directory, 'selected');
+  await mkdir(selected);
+  await f.ctx.workingDirectory.set(f.parent.agent, selected);
+  const opened = await f.service.open(f.parent.agent.id), child = f.ctx.agents.get(opened.id);
+  assert.equal(child.session.header.cwd, f.directory);
+  assert.equal(f.ctx.workingDirectory.get(child.session), selected);
+  assert.equal(f.requests.length, 0, 'opening must not start a model request');
+  await f.ctx.workingDirectory.set(f.parent.agent, f.directory);
+  assert.equal(f.ctx.workingDirectory.get(child.session), selected, 'later parent changes do not move the sidebar');
+});
+
 test('native sidebar sessions use native messages and tools, start blank, and erase only their own records', { timeout: 15000 }, async t => {
   const f = await fixture(t), ordinaryCreate = f.ctx.sessionPersistence.create;
   send(f.parent.agent, 'parent only'); await f.parent.agent.whenIdle();

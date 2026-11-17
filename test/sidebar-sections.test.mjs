@@ -61,3 +61,51 @@ test('section expansion is independent and tolerates unavailable or malformed st
   Object.defineProperty(globalThis,'localStorage',{configurable:true,get(){throw Error('denied')}});
   assert.deepEqual(readSectionExpansion(),{pinned:true,workspaces:true,recent:true});
 });
+
+// Exercise the extracted native browser and SlotCore; primitives only supply
+// passive wrappers here because layout/animation are checked in Chromium.
+test('empty sections stay compact and native search can move between headers', async () => {
+const require=createRequire(new URL('../package.json',import.meta.url));
+const {build}=require('esbuild'),{JSDOM}=require('jsdom'),React=require('react'),{act}=React;
+const keys=['window','document','Node','HTMLElement','Element','MouseEvent','getComputedStyle','localStorage','MutationObserver','requestAnimationFrame','cancelAnimationFrame','IS_REACT_ACT_ENVIRONMENT'];
+const prior=new Map(keys.map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+const dom=new JSDOM('<main/>',{url:'http://localhost',pretendToBeVisual:true});
+for(const key of ['window','document','Node','HTMLElement','Element','MouseEvent','getComputedStyle','localStorage','MutationObserver'])globalThis[key]=key==='getComputedStyle'?dom.window.getComputedStyle.bind(dom.window):dom.window[key];
+globalThis.requestAnimationFrame=dom.window.requestAnimationFrame.bind(dom.window);globalThis.cancelAnimationFrame=dom.window.cancelAnimationFrame.bind(dom.window);globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const e=React.createElement;
+const primitives=new Proxy({Tooltip:({children})=>children,HoverCard:({anchor})=>anchor,relativeTime:()=>({unit:'now',n:0}),useRowDragPreview:()=>({start(){},clear(){return false;}}),Menu:({anchor})=>anchor,AnimatedRows:({children})=>e('div',{},children),HoverCardGroup:({children})=>e('div',{},children)}, {get:(target,key)=>target[key]??(()=>null)});
+const compiled=await build({entryPoints:[new URL('../src/client/sidebar-sections.jsx',import.meta.url).pathname],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',loader:{'.css':'text'}}),module={exports:{}};
+new Function('require','module','exports',compiled.outputFiles[0].text)(name=>name==='@deepseek-ai/dsh-client-ui-primitives'?primitives:name==='@deepseek-ai/dsh-client-store'?{}:require(name),module,module.exports);
+const host=createRequire(require.resolve('@deepseek-ai/dsh/package.json')), {SlotCore}=await import(host.resolve('@deepseek-ai/dsh-client-ui-slots'));
+const slots=new SlotCore(),off=[];const effect=fn=>{const result=fn();if(result)off.push(result);};slots.inject=(_name,fn)=>effect(fn);
+slots.register({name:'root',children:{'sidebar.workspaces':{kind:'single',scope:'root'}}},()=>null);
+slots.register({name:'sidebar.workspaces',locale:'workspace',children:{'sidebar.workspaces.session.row.action':{kind:'list',scope:'root'}}},()=>null);
+module.exports.installSidebarSections({slots,effect,locale:{register:()=>()=>{},bind:()=>key=>key},uiWorkspace:{}});
+let shortcut={searchRequest:0,addRequested:false};const listeners=new Set();const sub=fn=>{listeners.add(fn);return()=>listeners.delete(fn);};
+const view={groupBy:'workspace',orderBy:'updated',archivedFilter:'default',groupExpansion:{},sessionOrderByAccount:{}}; let list={phase:'ready',ids:[],byId:{},projectionsBySession:{}},workspaces={items:[],phase:'ready',state:'ready',archivedSessionIds:[],pinnedSessionIds:[]};
+const noop=()=>{};const props={wide:true,t:key=>key,usePanelInfo:s=>s({activePanelId:null}),useSectionScroller:()=>({bindScrollerRef:noop}),useSessions:s=>s(list),useWorkspaces:s=>s(workspaces),useStore:s=>s(view),useSessionStatus:s=>s(new Map()),useSessionAccess:()=>true,useWorkspaceAccess:()=>true,useRemoteAccess:()=>true,useHostInfo:s=>s({home:'/synthetic'}),useShortcuts:s=>s([]),useWorkspaceShortcuts:s=>s(React.useSyncExternalStore(sub,()=>shortcut)),useDirectoryFlow:s=>s(false),useWorkspaceActionRequest:s=>s(null),useContextMenuTarget:s=>s(null),useContextMenu:()=>({getTriggerProps:()=>({})}),renderSlot:()=>null,renderFactorySlot:()=>null,actions:new Proxy({}, {get:()=>noop}),requestSearch:()=>{shortcut={...shortcut,searchRequest:shortcut.searchRequest+1};listeners.forEach(fn=>fn());},closeAddWorkspace:noop,requestAddWorkspace:noop,startSession:noop,expandSidebar:noop,searchSessions:async()=>({items:[],hasMore:false})};
+const {createRoot}=require('react-dom/client'),root=createRoot(document.querySelector('main'));
+const selector=key=>document.querySelector(`[data-omd-sidebar-section="${key}"]`);
+try{
+ await act(()=>root.render(e(slots.entries('sidebar.workspaces')[0].component,props)));
+ assert.equal(selector('pinned').querySelector('[data-row-key=empty]'),null,'no large placeholder under an empty Pinned header');
+ assert.equal(selector('pinned').querySelector('.omd-motion-collapse').getAttribute('aria-hidden'),'true');
+ for(const key of ['workspaces','recent'])assert.equal(getComputedStyle(selector(key).querySelector('[data-row-key=empty]')).marginTop,'0px');
+ list={...list,ids:['p'],byId:{p:{id:'p',title:'Pinned fixture',blank:false,retainedBy:{},updatedAt:1}}};workspaces={...workspaces,pinnedSessionIds:['p']};
+ await act(()=>root.render(e(slots.entries('sidebar.workspaces')[0].component,{...props})));
+ assert.ok(selector('pinned').querySelector('[data-row-key="session:p"]'));
+ workspaces={...workspaces,pinnedSessionIds:[]};
+ await act(()=>root.render(e(slots.entries('sidebar.workspaces')[0].component,{...props})));
+ assert.equal(selector('pinned').querySelector('.omd-motion-collapse').getAttribute('aria-hidden'),'true','last unpin starts the section exit');
+ assert.equal(selector('pinned').querySelector('[data-row-key=empty]'),null,'the exit must retain the old row, never the large empty state');
+ await act(()=>new Promise(resolve=>setTimeout(resolve,240)));
+ assert.equal(selector('pinned').querySelector('[data-row-key]'),null);
+ assert.ok(selector('recent').querySelector('[data-row-key="session:p"]'));
+ await act(()=>selector('workspaces').querySelector('[aria-label="search.sessions.aria"]').click());
+ assert.ok(selector('workspaces').querySelector('[data-search-open]'));
+ await act(()=>selector('recent').querySelector('[aria-label="search.sessions.aria"]').click());
+ assert.ok(selector('recent').querySelector('[data-search-open]'));
+ assert.equal(document.activeElement,selector('recent').querySelector('input'));
+} finally{await act(()=>root.unmount());for(const fn of off.reverse())fn();dom.window.close();for(const [key,value]of prior){if(value)Object.defineProperty(globalThis,key,value);else delete globalThis[key];}
+}
+});

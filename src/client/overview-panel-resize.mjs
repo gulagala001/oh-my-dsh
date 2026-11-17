@@ -1,12 +1,17 @@
 export const OVERVIEW_WIDTH_KEY = 'omd.overview.width.v1';
-export const OVERVIEW_DEFAULT_WIDTH = 280;
 const MIN = 200, MAX = 480;
+
+// Match the overview's share of the available conversation region. Manual
+// widths remain pixels; null means the responsive default owns sizing.
+export function overviewDefaultWidth(available) {
+  return Math.max(240, Math.min(360, available * .275));
+}
 
 export function readOverviewWidth(storage) {
   try {
     const value = Number((storage ?? globalThis.localStorage)?.getItem(OVERVIEW_WIDTH_KEY));
-    return Number.isFinite(value) && value >= MIN && value <= MAX ? value : OVERVIEW_DEFAULT_WIDTH;
-  } catch { return OVERVIEW_DEFAULT_WIDTH; }
+    return Number.isFinite(value) && value >= MIN && value <= MAX ? value : null;
+  } catch { return null; }
 }
 
 export function overviewWidthLimits(available, floating = false) {
@@ -20,16 +25,23 @@ export function bindOverviewResize({ root, handle, preference, commit }) {
   let drag = null, frame = null;
   const limits = () => overviewWidthLimits(root.clientWidth, root.hasAttribute('data-overview-floating'));
   const clamp = width => { const { min, max } = limits(); return Math.min(max, Math.max(min, width)); };
+  const preferred = () => preference() ?? overviewDefaultWidth(root.clientWidth);
   const paint = width => {
     root.style.setProperty('--omd-overview-preferred-width', `${width}px`);
     refresh(width);
   };
-  function refresh(width = drag?.width ?? preference()) {
+  function refresh(width = drag?.width ?? preferred()) {
     const { min, max } = limits();
     handle.setAttribute('aria-valuemin', String(Math.round(min)));
     handle.setAttribute('aria-valuemax', String(Math.round(max)));
     handle.setAttribute('aria-valuenow', String(Math.round(clamp(width))));
   }
+  const restore = () => {
+    const width = preference();
+    if (width === null) root.style.removeProperty('--omd-overview-preferred-width');
+    else root.style.setProperty('--omd-overview-preferred-width', `${width}px`);
+    refresh();
+  };
   const flush = () => {
     if (frame !== null) { view.cancelAnimationFrame(frame); frame = null; }
     if (drag) { drag.width = clamp(drag.startWidth + drag.startX - drag.x); paint(drag.width); }
@@ -40,13 +52,13 @@ export function bindOverviewResize({ root, handle, preference, commit }) {
     if (handle.hasPointerCapture(ended.id)) handle.releasePointerCapture(ended.id);
     root.removeAttribute('data-overview-resizing');
     if (save && ended.x !== ended.startX) commit(ended.width);
-    paint(preference());
+    restore();
   };
   const down = event => {
     if (event.button !== 0 || event.isPrimary === false || drag || !root.hasAttribute('data-overview-open')) return;
     event.preventDefault(); handle.focus({ preventScroll: true });
     handle.setPointerCapture(event.pointerId);
-    drag = { id: event.pointerId, startX: event.clientX, x: event.clientX, startWidth: clamp(preference()), width: clamp(preference()) };
+    drag = { id: event.pointerId, startX: event.clientX, x: event.clientX, startWidth: clamp(preferred()), width: clamp(preferred()) };
     root.removeAttribute('data-overview-animating'); root.setAttribute('data-overview-resizing', '');
   };
   const move = event => {
@@ -56,15 +68,16 @@ export function bindOverviewResize({ root, handle, preference, commit }) {
   };
   const up = event => { if (drag?.id === event.pointerId) { drag.x = event.clientX; finish(true); } };
   const cancel = event => { if (event?.pointerId !== undefined && event.pointerId !== drag?.id) return; finish(false); };
-  const reset = () => { cancel(); commit(OVERVIEW_DEFAULT_WIDTH); paint(preference()); };
+  const reset = () => { cancel(); commit(null); restore(); };
   const key = event => {
     if (event.key === 'Escape' && drag) { event.preventDefault(); cancel(); return; }
     if (!root.hasAttribute('data-overview-open') || !['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(event.key)) return;
     event.preventDefault(); cancel(); root.removeAttribute('data-overview-animating');
+    if (event.key === 'Enter') { reset(); return; }
     const { min, max } = limits(), step = event.shiftKey ? 40 : 16;
-    const value = event.key === 'Home' ? min : event.key === 'End' ? max : event.key === 'Enter' ? OVERVIEW_DEFAULT_WIDTH
-      : clamp(preference()) + (event.key === 'ArrowLeft' ? step : -step);
-    commit(clamp(value)); paint(preference());
+    const value = event.key === 'Home' ? min : event.key === 'End' ? max
+      : clamp(preferred()) + (event.key === 'ArrowLeft' ? step : -step);
+    commit(clamp(value)); restore();
   };
   const handlers = { pointerdown: down, pointermove: move, pointerup: up, pointercancel: cancel, lostpointercapture: cancel, dblclick: reset, keydown: key };
   for (const [type, listener] of Object.entries(handlers)) handle.addEventListener(type, listener);
