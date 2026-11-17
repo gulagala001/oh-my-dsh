@@ -6,7 +6,9 @@
 .omd-sidebar-section-toggle[aria-expanded="false"] > svg { transform:rotate(-90deg); }
 .omd-sidebar-section-toggle:focus-visible { outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary)); outline-offset:2px; border-radius:4px; }
 .omd-sidebar-section-actions { display:flex; align-items:center; flex:none; margin-left:auto; gap:4px; opacity:0; pointer-events:none; transition:opacity 120ms ease-out; }
-.omd-sidebar-section-header:is(:hover,:focus-within,[data-search-open]):not([hidden]) .omd-sidebar-section-actions,
+/* Pointer clicks retain DOM focus, but only keyboard focus keeps actions shown. */
+.omd-sidebar-section-header:is(:hover,[data-search-open]):not([hidden]) .omd-sidebar-section-actions,
+.omd-sidebar-section-header:has(:focus-visible) .omd-sidebar-section-actions,
 .omd-sidebar-section-header:has([aria-expanded="true"][aria-haspopup]) .omd-sidebar-section-actions { opacity:1; pointer-events:auto; }
 .omd-sidebar-section-header[data-search-open] .omd-sidebar-section-actions { flex:1; min-width:0; }
 .omd-sidebar-section-header[data-search-open] .omd-sidebar-section-actions > div { flex:1; max-width:100%; }
