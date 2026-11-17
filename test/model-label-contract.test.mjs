@@ -14,10 +14,15 @@ const { transformSync } = require('esbuild');
 const source = await readFile(new URL('../src/client/model-panel.jsx', import.meta.url), 'utf8');
 const { code } = transformSync(source + '\nexport { ModelPanel };', { loader: 'jsx', format: 'cjs', target: 'es2022' });
 const projectlessCode = transformSync(await readFile(new URL('../src/client/projectless-state.mjs', import.meta.url), 'utf8'), { format: 'cjs', target: 'es2022' }).code;
+const motionCode = transformSync(await readFile(new URL('../src/client/motion.mjs', import.meta.url), 'utf8'), { format: 'cjs', target: 'es2022' }).code;
 function load(pane, runtime = {}) {
   const hooks = { ...React, useCallback: fn => fn, useEffect() {}, useLayoutEffect() {}, useMemo: fn => fn(),
     useSyncExternalStore: (_subscribe, get) => get(), useRef: value => ({ current: value }), useId: () => 'test',
-    useState: value => [value === false ? true : value === 'effort' ? pane : value, () => {}] };
+    useState: value => [typeof value === 'function' ? value() : value === false ? true : value === 'effort' ? pane : value, () => {}] };
+  const motion = { exports: {} };
+  runInNewContext(motionCode, { module: motion, exports: motion.exports, require: name => {
+    assert.equal(name, 'react'); return runtime.react ?? hooks;
+  }, setTimeout, clearTimeout, ...runtime.globals });
   const module = { exports: {} };
   runInNewContext(code, { module, exports: module.exports, require: name => {
     if (name === 'react') return runtime.react ?? hooks;
@@ -30,6 +35,7 @@ function load(pane, runtime = {}) {
     if (name.includes('main-conversation')) return { useMainConversation: () => true };
     if (name.includes('slot-decoration')) return { decorateSlotComponent };
     if (name === './ultra-submode-preference.mjs') return ultraSubmodePreference;
+    if (name === './motion.mjs') return motion.exports;
     if (name === './projectless-state.mjs') {
       const dependency = { exports: {} };
       runInNewContext(projectlessCode, { module: dependency, exports: dependency.exports, ...runtime.globals });

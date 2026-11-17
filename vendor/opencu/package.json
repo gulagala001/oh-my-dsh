@@ -1,6 +1,6 @@
 {
   "name": "opencu",
-  "version": "2.3.1-dsh.0.2.2-rc.3",
+  "version": "2.4.0-dsh.0.2.2-rc.3",
   "description": "Let the AI in DeepSeek Harness operate browsers and desktop apps, with live previews and annotations. You can step in at any time. macOS, Windows and Linux.",
   "type": "module",
   "engines": {

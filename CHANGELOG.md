@@ -1,3 +1,61 @@
+# Oh My DSH 1.6.0 · DSH 0.2.2-rc.3
+
+[中文](#zh-160) · [English](#en-160)
+
+<a id="zh-160"></a>
+
+## 中文
+
+### 新增功能
+
+- 左侧分为置顶、工作区和最近，三个分区都能独立收起；最近也包含工作区中的聊天。
+- 会话总览变为可调宽的常驻面板，按聊天区宽度自适应，点原按钮收起。
+- 侧栏入口可直接打开临时聊天，支持模型切换、附件和工具，关闭后清理会话记录。
+
+### 体验优化
+
+- 总览侧滑挤开聊天；右侧工作栏展开时自动收起，再次打开则悬浮常驻。
+- 总览默认显示输出与来源，其他分区按内容出现，新子智能体逐个浮现。
+- 分区按钮只在悬停、键盘聚焦或菜单和搜索展开时显示；空置顶区不再留下大块空白。
+- 改善菜单、抽屉、折叠区域的进出动效，并支持减少动态效果设置。
+
+### 问题修复
+
+- 动画尚未结束时拖动总览，从当前宽度接管，不再突然跳宽。
+- 临时聊天继承主会话当前工作目录；关闭时等待正在运行的任务和子智能体结束清理，失败后可以重试。
+- 修复侧栏分区未生效、总览瞬间闪现以及选中文字后出现重复工具栏的问题。
+
+<a id="en-160"></a>
+
+## English
+
+### New features
+
+- Organizes the sidebar into independently collapsible Pinned, Workspaces and Recent sections; Recent also includes workspace chats.
+- Adds a resident, resizable conversation overview with a responsive default width. Click its button again to close it.
+- Opens temporary sidebar chats directly from the sidebar entry, with model selection, attachments and tools, and clears their records on close.
+
+### Improvements
+
+- Slides the overview in beside the chat. Opening the right workspace closes it; reopening keeps it floating.
+- Shows outputs and sources by default, reveals other sections as content arrives, and introduces agents one by one.
+- Shows section actions on hover, keyboard focus or while menus and search are open, and removes the large empty Pinned placeholder.
+- Smooths menus, drawers and collapsible areas while respecting reduced-motion settings.
+
+### Bug fixes
+
+- Takes over resizing from the currently visible width during an overview animation, preventing a sudden jump.
+- Inherits the main chat's current working directory in temporary chats, drains running work and child agents on close, and allows failed cleanup to be retried.
+- Fixes missing sidebar sections, abrupt overview appearance and duplicate toolbars for selected text.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[安装包 / Package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.6.0/oh-my-dsh-0.2.2-rc.3.omd.1.6.0.tgz) · [使用说明 / Guide](https://github.com/gulagala001/oh-my-dsh/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.6.0/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.5.3 · DSH 0.2.2-rc.3
 
 [中文](#zh-153) · [English](#en-153)

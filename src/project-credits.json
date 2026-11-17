@@ -17,8 +17,8 @@
       "source": "vendor/opencu/package.json",
       "license": "See component notices",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
-      "version": "2.3.1-dsh.0.2.2-rc.3",
-      "sourceSha256": "3e4d3092171b11c6e753a16f82decd6fb4467d71ea48a708e4eb1d65faf16a7e",
+      "version": "2.4.0-dsh.0.2.2-rc.3",
+      "sourceSha256": "5dd25a3a1856ff8d8f1685f53b2e2354a2bc1bb13dce276724792444c6233f63",
       "group": "products"
     },
     {
@@ -218,8 +218,8 @@
       "license": "Original upstream rights apply",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
       "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json",
-      "version": "SHA256:22d586ec1d8348e95080f4d5ed846c6ad008322997a0c41518f3a78aadee18ec",
-      "sourceSha256": "22d586ec1d8348e95080f4d5ed846c6ad008322997a0c41518f3a78aadee18ec",
+      "version": "SHA256:88b8a1d18b690c4afcf7979ac3bd8818569ceed92cda175144079f6bdd281448",
+      "sourceSha256": "88b8a1d18b690c4afcf7979ac3bd8818569ceed92cda175144079f6bdd281448",
       "group": "sources"
     },
     {

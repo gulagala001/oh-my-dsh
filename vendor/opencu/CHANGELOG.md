@@ -1,3 +1,43 @@
+# OpenCU 2.4.0 · DSH 0.2.2-rc.3
+
+[中文](#zh-240) · [English](#en-240)
+
+<a id="zh-240"></a>
+
+## 中文
+
+### 体验优化
+
+- 会话总览默认显示输出与来源，子智能体和后台进程有内容时再平滑出现。
+- 新出现的子智能体逐个浮现，列表增加成员后及时显示。
+- 总览常驻展开时，来源预览和菜单沿用所在面板的主题与位置。
+
+### 问题修复
+
+- 选中文字后只保留统一的复制、引用和批注入口，避免重复工具栏。
+
+<a id="en-240"></a>
+
+## English
+
+### Improvements
+
+- Shows outputs and sources by default, smoothly revealing agents and background processes when they have content.
+- Introduces new agents one by one and keeps newly added members visible.
+- Keeps source previews and menus aligned with the theme and position of a resident overview panel.
+
+### Bug fixes
+
+- Uses one copy, quote and annotation entry for selected text, avoiding duplicate toolbars.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[安装包 / Package](https://github.com/gulagala001/opencu/releases/download/v2.4.0-dsh.0.2.2-rc.3/opencu-2.4.0-dsh.0.2.2-rc.3.tgz) · [使用说明 / Guide](https://github.com/gulagala001/opencu/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.0-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # OpenCU 2.3.1 · DSH 0.2.2-rc.3
 
 [中文](#zh-231) · [English](#en-231)

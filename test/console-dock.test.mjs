@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { build } from 'esbuild';
 import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
+import { MOTION_MS } from '../src/client/motion.mjs';
 
 const require = createRequire(import.meta.url), host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
 const primitives = createRequire(host.resolve('@deepseek-ai/dsh-client-ui-primitives'));
@@ -49,6 +50,13 @@ test('real host controls render dock, console jumps and chart portals; resize an
       : { calls: 1, knownTotalTokens: 100, knownInputTokens: 90, uncachedInputTokens: 20, cacheReadTokens: 70, cacheWriteTokens: 0, outputTokens: 10 } };
   const { createRoot } = await import('react-dom/client');
   const root = createRoot(document.getElementById('root'));
+  const finishDismissal = async () => {
+    const exiting = document.querySelector('[role="dialog"]');
+    assert.ok(exiting?.hasAttribute('inert'), 'the exit frame cannot receive input');
+    assert.equal(exiting.getAttribute('aria-hidden'), 'true');
+    await act(() => new Promise(resolve => setTimeout(resolve, MOTION_MS.popup + 20)));
+    assert.equal(Boolean(document.querySelector('[role="dialog"]')), false);
+  };
   t.after(async () => {
     await act(() => root.unmount()); off(); cleanups.reverse().forEach(dispose => dispose());
     assert.equal(observers.size, 0);
@@ -70,13 +78,13 @@ test('real host controls render dock, console jumps and chart portals; resize an
   await act(() => dom.window.dispatchEvent(new dom.window.Event('resize')));
   assert.equal(panel.style.left, '28px'); assert.equal(panel.style.top, '12px'); assert.equal(panel.style.maxHeight, '176px');
   await act(() => [...panel.querySelectorAll('button')].find(button => button.textContent.includes('用量概览')).click());
-  assert.equal(jumps.length, 1); assert.equal(document.querySelector('[role="dialog"]'), null);
+  assert.equal(jumps.length, 1); await finishDismissal();
   await act(() => trigger.click());
   await act(() => document.body.dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true })));
-  assert.equal(document.querySelector('[role="dialog"]'), null);
+  await finishDismissal();
   await act(() => trigger.click()); trigger.focus();
   await act(() => document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
-  assert.equal(document.querySelector('[role="dialog"]'), null); assert.equal(document.activeElement, trigger);
+  await finishDismissal(); assert.equal(document.activeElement, trigger);
   await act(() => document.querySelector('.omc-bar').focus());
   assert.ok(document.querySelector('[role="tooltip"]')); assert.match(document.querySelector('[role="tooltip"]').textContent, /10:00/);
 });
