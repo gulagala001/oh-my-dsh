@@ -98,7 +98,7 @@ export function installSidebarSections(ctx) {
   ctx.effect(() => ctx.locale.register('omdSidebarSections', labels));
   const t = ctx.locale.bind('omdSidebarSections');
   ctx.effect(() => {const style=document.createElement('style');style.textContent=css;document.head.append(style);return()=>style.remove();});
-  ctx.slots.inject('sidebar.workspaces', () => decorateSlotComponent(ctx.slots,'sidebar.workspaces',(_key,entry)=>entry.options.locale==='workspace', () => {
+  ctx.slots.inject('sidebar.workspaces', () => decorateSlotComponent(ctx.slots,'sidebar.workspaces',(_key,entry)=>entry.locale==='workspace' && entry.children?.['sidebar.workspaces.session.row.action']?.kind==='list', () => {
     return function WorkspaceBrowser(props) {
       const translate = useCallback((key, values) => key === 'group.ungrouped' ? t('recent') : key === 'delete.desc' ? t('deleteDesc', values) : props.t(key, values), [props.t]);
       const render = useCallback((element,state)=>state.wide?<Sections element={element} state={state} props={{...props,t:translate}} t={t} pin={id=>ctx.uiWorkspace.pinSession(id)}/>:element,[props,translate]);
