@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api, qs, usePoll, useReader, useAction, Card, Stat, Tag, Seg, Table, Steps, StackBar, Ring, Empty, Skeleton, Alert, Button, KV, Icon, Drawer } from './ui.jsx';
+import { MotionPresence } from '../motion.mjs';
 import { k, ago, clock, composition } from './model.mjs';
 import { Checkbox } from '../native-controls.jsx';
 import { OptimizationCard } from '../context-evidence.jsx';
@@ -190,7 +191,7 @@ export function ContextSection({ sessionId, visible, go, params }) {
         </Card>
       </div>
     </details>
-    {doc && <RecordDrawer record={doc} sessionId={sessionId} onClose={() => documents.close()}/>}
+    <MotionPresence owner={sessionId}>{doc && <RecordDrawer record={doc} sessionId={sessionId} onClose={() => documents.close()}/>}</MotionPresence>
   </div>;
 }
 

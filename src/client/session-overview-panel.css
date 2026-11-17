@@ -1,0 +1,39 @@
+.omd-overview-layout {
+  --omd-overview-width: min(360px, 45cqw);
+  --omd-overview-motion: 300ms cubic-bezier(.22, 1, .36, 1);
+  container-type: inline-size;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.omd-overview-chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.omd-overview-rail {
+  flex: none;
+  width: 0;
+  min-height: 0;
+  overflow: clip;
+  visibility: hidden;
+  transition: width var(--omd-overview-motion), visibility 0s 300ms;
+}
+.omd-overview-surface {
+  /* The rail grows toward the chat while this fixed-width card follows its
+     left edge: the complete panel slides in/out without scaling its text. */
+  width: var(--omd-overview-width);
+  height: 100%;
+}
+.omd-overview-layout[data-overview-open] > .omd-overview-rail {
+  width: var(--omd-overview-width);
+  visibility: visible;
+  transition-delay: 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .omd-overview-rail { transition: none; }
+}
+html[data-omd-reduce-effects] .omd-overview-rail { transition: none; }

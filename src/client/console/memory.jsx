@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api, qs, usePoll, useReader, useAction, Card, Tag, Seg, Search, Table, Empty, Skeleton, Alert, Button, KV, Drawer, StackBar, Dot, Icon } from './ui.jsx';
 import { k, clock, ago } from './model.mjs';
 import { RecordDrawer } from './context.jsx';
+import { MotionPresence } from '../motion.mjs';
 import { Button as NativeButton } from '../native-controls.jsx';
 import { openOmdSettings } from '../settings-nav.mjs';
 
@@ -110,11 +111,11 @@ export function MemorySection({ sessionId, visible, params }) {
       ]}/>
     </Card>}
 
-    {reader && <Drawer title="记忆与来源" onClose={() => sources.close(reader.back || null)}>
+    <MotionPresence owner={sid}>{reader && <Drawer title="记忆与来源" onClose={() => sources.close(reader.back || null)}>
       {reader.loading ? <Skeleton rows={6}/> : <SourceView value={reader.value} onRead={read} onDoc={openDoc}/>}
-    </Drawer>}
-    {doc && <RecordDrawer record={doc} sessionId={sid} onClose={() => documents.close()}
-      assetBase={(r, i) => `oh-my-dsh/api/dream/asset?${qs({ sessionId: r.requestSessionId || r.sessionId, id: r.id, asset: i + 1 })}`}/>}
+    </Drawer>}</MotionPresence>
+    <MotionPresence owner={sid}>{doc && <RecordDrawer record={doc} sessionId={sid} onClose={() => documents.close()}
+      assetBase={(r, i) => `oh-my-dsh/api/dream/asset?${qs({ sessionId: r.requestSessionId || r.sessionId, id: r.id, asset: i + 1 })}`}/>}</MotionPresence>
   </div>;
 }
 

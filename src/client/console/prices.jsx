@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Input } from '../native-controls.jsx';
+import { useMotionVisible } from '../motion.mjs';
 import { api, qs, usePoll, Drawer, Card, Button, Alert, Empty, Search, Select, Table, Pager } from './ui.jsx';
 
 const rates = [['inputTokens', '未缓存输入'], ['cacheReadTokens', '缓存读'], ['cacheWriteTokens', '缓存写'], ['outputTokens', '输出']];
@@ -7,20 +8,22 @@ const blank = () => ({ provider: '', model: '', currency: 'USD', id: crypto.rand
 const rateText = (row, key) => row[key] == null ? '未单列' : `${row.currency} ${row[key]}`;
 
 export function PricesDrawer({ onClose, onSaved }) {
+  const visible = useMotionVisible();
   const [prices, setPrices] = useState(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const [query, setQuery] = useState(''), [provider, setProvider] = useState(''), [page, setPage] = useState(1);
   const lifecycle = useRef(null);
   const { data, error: catalogError, refresh } = usePoll(signal => api(`/monitor/prices?${qs({ query, provider, offset: (page - 1) * 20, limit: 20 })}`, undefined, signal),
-    JSON.stringify([query, provider, page]), { interval: 60000 });
+    JSON.stringify([query, provider, page]), { enabled: visible, interval: 60000 });
   useEffect(() => {
+    if (!visible) { setBusy(false); return; }
     const controller = new AbortController(); lifecycle.current = controller;
-    api('/settings', undefined, controller.signal).then(c => { if (!controller.signal.aborted) setPrices((c.monitorPrices || []).map(p => ({ ...p, id: crypto.randomUUID() }))); })
+    if (prices === null) api('/settings', undefined, controller.signal).then(c => { if (!controller.signal.aborted) setPrices((c.monitorPrices || []).map(p => ({ ...p, id: crypto.randomUUID() }))); })
       .catch(e => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
-  }, []);
+  }, [visible]);
   const change = (id, key, value) => setPrices(list => list.map(p => p.id === id ? { ...p, [key]: value } : p));
   const save = async e => {
-    e.preventDefault(); if (busy || !prices) return;
+    e.preventDefault(); if (!visible || busy || !prices) return;
     const { signal } = lifecycle.current;
     setBusy(true); setError('');
     try {

@@ -31,7 +31,7 @@ The right-sidebar **OMD Console** has five pages, also linked from the input inf
 
 ## Tasks and progress
 
-**Conversation overview**, beside the title, lists outputs, subagents, background processes, sources and computer use. Open subagent chats, inspect or stop processes, or attach sources.
+**Conversation overview** slides in from the right, making room in chat; click again to retract. Outside clicks keep it open. View outputs, chat with subagents, manage processes, attach sources or follow computer use.
 
 State your goal, material, scope and completion criteria. For multi-step work, `todo_write` records your words and derived tasks; `verify_link` attaches each task's check commands and results.
 

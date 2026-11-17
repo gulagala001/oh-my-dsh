@@ -1,7 +1,37 @@
-import React, { Children, isValidElement, useId, useRef, useState } from 'react';
-import { Button, Input, Switch, Checkbox, SegmentedControl as NativeSegmentedControl, Menu, IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
+import React, { Children, isValidElement, useEffect, useId, useRef, useState } from 'react';
+import { Button, Input, Switch, Checkbox, SegmentedControl as NativeSegmentedControl, Menu as NativeMenu, Modal as NativeModal, IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
+import { useExitContent, usePresence } from './motion.mjs';
 
 export { Button, Input, Switch, Checkbox };
+
+export function Menu({ open, ...props }) {
+  const { present, closing } = usePresence(open);
+  const marker = `omd-motion-menu-${useId().replace(/[^a-z0-9_-]/gi, '')}`;
+  useEffect(() => {
+    if (!closing || props.contextual) return;
+    // Let the native child restore focus before making its retained portal
+    // inert. Touch only this menu, once per close; never observe DOM.
+    const panel = document.querySelector(`.${marker}`);
+    if (!panel) return;
+    const previous = panel.inert; panel.inert = true;
+    return () => { panel.inert = previous; };
+  }, [closing, props.contextual, marker]);
+  // Context menus already have a native dismissal owner and timing.
+  if (props.contextual) return <NativeMenu {...props} open={open}/>;
+  return <NativeMenu {...props} open={present} exiting={props.exiting ?? (closing ? 'dismiss' : undefined)}
+    listClassName={[props.listClassName, 'omd-motion-menu', marker, closing && 'omd-motion-exit'].filter(Boolean).join(' ')}/>;
+}
+
+export function Modal({ open, ...props }) {
+  const { present, closing } = usePresence(open);
+  const content = useExitContent(props, open, present);
+  if (!content) return null;
+  const guard = children => <div style={{ display: 'contents' }} inert={closing ? '' : undefined}>{children}</div>;
+  return <NativeModal {...content} open={present} onClose={closing ? () => {} : props.onClose}
+    className={[content.className, 'omd-motion-dialog', closing && 'omd-motion-exit'].filter(Boolean).join(' ')}
+    onKeyDownCapture={event => { if (closing) { event.preventDefault(); event.stopPropagation(); } else content.onKeyDownCapture?.(event); }}
+    footer={content.footer && guard(content.footer)}>{guard(content.children)}</NativeModal>;
+}
 
 export function SegmentedControl({ id, ...props }) {
   const generated = useId();

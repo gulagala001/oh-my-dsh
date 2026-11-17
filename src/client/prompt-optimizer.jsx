@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { createOptimizerPreferences, DraftOptimizer, OPTIMIZER_MODES, optimizerRequirements } from './prompt-optimizer-state.mjs';
 import css from './prompt-optimizer.css';
 import { isSubagentSession, useMainConversation } from './main-conversation.mjs';
+import { usePresence } from './motion.mjs';
 
 const descriptions = { basic: '只润色表达，保留原意和限制。', structured: '整理已有目标、约束与交付要求。', planning: '将现有任务组织为可执行的步骤。' };
 function Sparkle() { return <Icon name="spark" size={16}/>; }
@@ -49,6 +50,7 @@ export function applyPromptOptimizer(ctx) {
   function Entry({ controller, useInput }) {
     const prefs = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot), state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
     const input = useInput(s => s), [open, setOpen] = useState(false), [localError, setLocalError] = useState('');
+    const motion = usePresence(open);
     const [presetName, setPresetName] = useState('');
     const requirements = optimizerRequirements(prefs), selectedPreset = prefs.requirementPresets.find(p => p.id === prefs.requirementPreset);
     useLayoutEffect(() => { setPresetName(selectedPreset?.name ?? ''); }, [prefs.requirementPreset, selectedPreset?.name]);
@@ -89,7 +91,7 @@ export function applyPromptOptimizer(ctx) {
     const canOptimize = Boolean(input?.draft.trim()) && input.phase === 'plain' && !/^\s*\//.test(input.draft);
     return <div className="omd-opt-entry omd-opt-theme" ref={anchor} onPointerEnter={event => { if (event.pointerType !== 'touch') reveal(); }} onPointerLeave={leave} onBlur={blur}>
       <Button size="sm" variant="outline" type="button" className="omd-opt-star" aria-label={prefs.automatic ? '提示词优化：每次都优化已开启，点击关闭' : '提示词优化：点击开启每次都优化'} aria-pressed={prefs.automatic} aria-expanded={open} aria-controls={open ? id : undefined} aria-haspopup="dialog" title={prefs.automatic ? '每次都优化已开启 · 点击关闭 · 悬停展开' : '点击开启每次都优化 · 悬停展开'} onFocus={event => { if (!panel.current?.contains(event.relatedTarget)) reveal(); }} onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); reveal(); requestAnimationFrame(() => panel.current?.querySelector('button')?.focus()); } }} onClick={() => { reveal(); set({ automatic: !prefs.automatic }); }} data-busy={state.busy || undefined}><Sparkle/></Button>
-      {open && createPortal(<section id={id} ref={panel} className="omd-opt-drawer omd-opt-theme" style={position} role="dialog" aria-label="提示词优化" onPointerEnter={cancelClose} onPointerLeave={leave} onBlur={blur}>
+      {motion.present && createPortal(<section id={id} ref={panel} className="omd-opt-drawer omd-opt-theme omd-motion-popup" data-motion-exit={motion.closing || undefined} inert={motion.closing ? '' : undefined} aria-hidden={motion.closing || undefined} style={position} role="dialog" aria-label="提示词优化" onPointerEnter={cancelClose} onPointerLeave={leave} onBlur={blur}>
         <header><strong><Sparkle/>提示词优化</strong><span>跟随当前模型</span><Button size="sm" variant="outline" type="button" aria-label="关闭提示词优化浮层" onClick={close}>×</Button></header>
         <p className="omd-opt-hint" role="status">每次都优化：{prefs.automatic ? '已开启' : '已关闭'}。点击输入框的 ✨ 切换，发送前自动轻润色。</p>
         <SegmentedControl id={id+"-mode"} label="优化模式" value={prefs.mode} disabled={!!state.busy} options={OPTIMIZER_MODES.map(([value, label]) => ({ value, label }))} onChange={mode => set({ mode })}/>

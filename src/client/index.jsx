@@ -9,7 +9,8 @@ import { installDesktopLifecycle } from './desktop-lifecycle.mjs';
 import { applySessionTimeZone } from './session-time-zone.mjs';
 import { apply as applyRewind, inject as rewindInject } from '../../vendor/rewind/src/client/index.jsx';
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Button, Menu, MenuItemButton, SegmentedControl } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, MenuItemButton, SegmentedControl } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Menu } from './native-controls.jsx';
 import { TASK_VERIFICATION_OPTIONS, TASK_VERIFICATION_HINTS } from '../task-verification.mjs';
 import { applyConsole } from './console/shell.jsx';
 import { openConsole } from './console/nav.mjs';
@@ -40,6 +41,8 @@ import { acquirePersonaClient } from '../../plugins/persona/src/client/index.jsx
 import { useMainConversation } from './main-conversation.mjs';
 import { apply as applyWorkflowClient } from '../../vendor/workflow/src/client/index.jsx';
 import { applySessionOverview } from './session-overview.jsx';
+import overviewPanelCss from './session-overview-panel.css';
+import motionCss from './motion.css';
 import { applyProjectlessWorkspaces } from './projectless-workspaces.jsx';
 import { apply as applyDeepSeekWorkbench } from '../../plugins/deepseek-workbench/src/client/index.jsx';
 import { apply as applyExtensions, inject as extensionsInject } from '../../plugins/dsh-extensions/src/client/index.jsx';
@@ -166,7 +169,7 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
   }
   const getAppearanceRuntime = applySkins(ctx);
   ctx.effect(() => {
-    const tag = document.createElement('style'); tag.dataset.plugin = 'oh-my-dsh'; setHostStyle(tag, css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss); document.head.appendChild(tag);
+    const tag = document.createElement('style'); tag.dataset.plugin = 'oh-my-dsh'; setHostStyle(tag, css + '\n' + shellCss + '\n' + whaleCss + '\n' + versionCss + '\n' + workbenchCss + '\n' + overviewPanelCss + '\n' + motionCss); document.head.appendChild(tag);
     const runtime = getAppearanceRuntime();
     // Feature integration scope only; native DSH never installs the selectable skin base.
     const sync = () => document.documentElement.classList.toggle('omd-shell', runtime.getSnapshot().active !== false);

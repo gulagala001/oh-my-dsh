@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, Modal, IconInfoOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, IconInfoOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Modal } from './native-controls.jsx';
 import { version as CLIENT_VERSION } from '../../package.json';
 import { VersionUpdate } from './version-update.jsx';
 

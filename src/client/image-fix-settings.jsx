@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useState } from 'react';
 import { Button, Choice, Input, Switch } from './native-controls.jsx';
 import { Icon } from './native-icons.jsx';
+import { Collapse } from './motion.mjs';
 import { DEFAULT_IMAGE_RULE, DEFAULT_IMAGE_RULES, validateImageRules } from '../image-rules.mjs';
 
 const draftOf = rule => ({ maxImages: String(rule.maxImages), maxBytes: String(rule.maxBytes / 1000000), keepImages: String(rule.keepImages) });
@@ -56,7 +57,7 @@ export function ImageFixSettings({ config, directory, commit }) {
       </Button>
       <Switch label="多图请求修复" checked={enabled} disabled={pending} onChange={value => void save({ multiImageFixEnabled: value })}/>
     </div>
-    {expanded && <div id={`${id}-body`} className="omd-image-body">
+    <Collapse open={expanded} id={`${id}-body`}><div className="omd-image-body">
       <div className="omd-image-channels">
         {!rules.length && <div className="omd-image-empty">添加需要启用修复的渠道</div>}
         {rules.map((rule, index) => <div className="omd-image-channel" key={rule.provider}>
@@ -68,7 +69,7 @@ export function ImageFixSettings({ config, directory, commit }) {
             </Button>
             <Button type="button" variant="ghost" size="sm" aria-label={`移除 ${name(rule.provider)}`} disabled={!enabled || pending} onClick={() => void remove(rule.provider)}><Icon name="close" size={14}/></Button>
           </div>
-          {opened === rule.provider && <div id={`${id}-channel-${index}`}><RuleFields rule={rule} disabled={!enabled || pending} change={update}/></div>}
+          <Collapse open={opened === rule.provider} id={`${id}-channel-${index}`}><RuleFields rule={rule} disabled={!enabled || pending} change={update}/></Collapse>
         </div>)}
       </div>
       {adding ? <div className="omd-image-add">
@@ -78,6 +79,6 @@ export function ImageFixSettings({ config, directory, commit }) {
         <Button type="button" size="sm" variant="ghost" aria-label="取消添加" onClick={() => setAdding(false)}><Icon name="close" size={14}/></Button>
       </div> : <Button type="button" variant="ghost" size="sm" disabled={!enabled || pending || !available.length} onClick={() => setAdding(true)}>＋ 添加渠道</Button>}
       <p className="omd-image-note">仅对所选渠道生效。批量减少历史图片发送，原图仍可回查；最新未读图片受保护。整理可能影响当次缓存。</p>
-    </div>}
+    </div></Collapse>
   </div>;
 }

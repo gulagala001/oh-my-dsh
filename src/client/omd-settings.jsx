@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Button, Checkbox, Choice, Input, SegmentedControl, Switch } from './native-controls.jsx';
+import { Collapse, MotionPresence } from './motion.mjs';
 import { PROMPT_STYLES } from '../prompt-styles/options.mjs';
 import { TASK_VERIFICATION_OPTIONS, TASK_VERIFICATION_HINTS } from '../task-verification.mjs';
 import { Icon } from './native-icons.jsx';
@@ -36,7 +37,7 @@ function Group({ title, anchor, children }) {
 function Row({ title, hint, children, extra, disabled }) {
   return <div className="omd-set-row" data-disabled={disabled || undefined}>
     <div className="omd-set-line"><div className="omd-set-copy">{title && <strong>{title}</strong>}{hint && <small>{hint}</small>}</div>{children && <div className="omd-set-control">{children}</div>}</div>
-    {extra}
+    <Collapse open={Boolean(extra)}>{extra}</Collapse>
   </div>;
 }
 function Status({ children, error, action }) {
@@ -496,10 +497,10 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
       </details>
     </>;
     return <div className="cx-panel cx-settings omd-settings">
-      {notice && <div className="omd-set-notice" role="alert"><span>{notice}</span><Button type="button" size="sm" variant="ghost" aria-label="关闭提示" onClick={() => setNotice('')}><Icon name="close" size={14}/></Button></div>}
+      <MotionPresence kind="popup">{notice && <div className="omd-set-notice omd-motion-popup" role="alert"><span>{notice}</span><Button type="button" size="sm" variant="ghost" aria-label="关闭提示" onClick={() => setNotice('')}><Icon name="close" size={14}/></Button></div>}</MotionPresence>
       <div className="omd-set-layout" data-outline={outline.enabled || undefined}>
         {outline.enabled && <SettingsOutline {...outline}/>}
-        <div className="omd-set-body" ref={body}>{content}</div>
+        <div className="omd-set-body" ref={body}><div key={page} className="omd-motion-page">{content}</div></div>
       </div>
     </div>;
   }

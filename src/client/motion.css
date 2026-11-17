@@ -1,0 +1,69 @@
+/* These timings match motion.mjs. Animate only deliberate UI transitions;
+   streaming text, virtual lists and live resize keep their native cadence. */
+:root { --omd-motion-ease: cubic-bezier(.22, 1, .36, 1); }
+.omd-motion-presence { display: contents; }
+.omd-motion-presence[data-motion-exit] > * { pointer-events: none; }
+.omd-motion-presence[data-motion-kind="drawer"] > .omc-drawer {
+  animation: omd-drawer-in 220ms var(--omd-motion-ease);
+}
+.omd-motion-presence[data-motion-kind="drawer"][data-motion-exit] > .omc-drawer {
+  animation: omd-drawer-out 220ms var(--omd-motion-ease) both;
+}
+@keyframes omd-drawer-in { from { opacity: .4; translate: 24px 0; } }
+@keyframes omd-drawer-out { to { opacity: 0; translate: 24px 0; } }
+
+/* Menu owns placement, focus and inert dismissal through its exiting prop.
+   Fade its content, preserving the host's translucent material and anchors. */
+.omd-motion-menu { animation: none !important; }
+.omd-motion-menu.omd-motion-exit { pointer-events: none; }
+.omd-motion-menu > * { animation: omd-fade-in 160ms var(--omd-motion-ease); }
+.omd-motion-menu.omd-motion-exit > * { animation: omd-fade-out 160ms ease-out both; }
+.omd-motion-popup { animation: omd-popup-in 160ms var(--omd-motion-ease) !important; }
+.omd-motion-popup[data-motion-exit] { pointer-events: none; animation: omd-popup-out 160ms ease-out both !important; }
+:where(.omd-motion-presence[data-motion-kind="popup"][data-motion-exit]) > .omd-motion-popup { animation: omd-popup-out 160ms ease-out both !important; }
+.omd-motion-dialog { animation: omd-dialog-in 160ms var(--omd-motion-ease) !important; }
+.omd-motion-dialog.omd-motion-exit { pointer-events: none; animation: omd-dialog-out 160ms ease-out both !important; }
+[role="presentation"]:has(> .omd-motion-dialog.omd-motion-exit) > [aria-hidden="true"]::after { animation: omd-fade-out 160ms ease-out both; }
+@keyframes omd-fade-in { from { opacity: 0; } }
+@keyframes omd-fade-out { to { opacity: 0; } }
+@keyframes omd-popup-in { from { opacity: 0; translate: 0 6px; } }
+@keyframes omd-popup-out { to { opacity: 0; translate: 0 4px; } }
+@keyframes omd-dialog-in { from { opacity: 0; translate: 0 8px; } }
+@keyframes omd-dialog-out { to { opacity: 0; translate: 0 6px; } }
+
+.omd-motion-collapse { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 220ms var(--omd-motion-ease); }
+.omd-motion-collapse[data-open] { grid-template-rows: 1fr; }
+.omd-motion-collapse-content { min-height: 0; overflow: hidden; }
+@starting-style { .omd-motion-collapse[data-open][data-animate-mount] { grid-template-rows: 0fr; } }
+/* Older browsers keep the native details behavior. No JS observers per row. */
+@supports (interpolate-size: allow-keywords) and selector(details::details-content) {
+  :is(.omd-settings,.omc-root,.tx-app,.cx-panel,.dshx-page,.dsp-settings,.omd-advanced,.omd-startup-notice,.omd-context-record) details::details-content,
+  details:is(.omd-advanced,.omd-custom-group)::details-content {
+    interpolate-size: allow-keywords;
+    block-size: 0;
+    overflow: clip;
+    transition: block-size 220ms var(--omd-motion-ease), content-visibility 220ms allow-discrete;
+  }
+  :is(.omd-settings,.omc-root,.tx-app,.cx-panel,.dshx-page,.dsp-settings,.omd-advanced,.omd-startup-notice,.omd-context-record) details[open]::details-content,
+  details:is(.omd-advanced,.omd-custom-group)[open]::details-content { block-size: auto; }
+}
+
+/* Small controls respond quickly; there is no transform on text or list rows. */
+:where(.omd-settings,.omc-root,.omd-model-panel,.omd-opt-theme,.tx-app,.cx-panel,.dshx-page,.dsp-settings) :where(button,input,textarea,[role="switch"]) {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 140ms;
+  transition-timing-function: ease-out;
+}
+.omd-image-disclosure > svg { transition: transform 220ms var(--omd-motion-ease); }
+.omc-hbar-track i, .omc-stackbar-track i { transition: width 220ms var(--omd-motion-ease); }
+.omc-ring circle { transition: stroke-dasharray 220ms var(--omd-motion-ease), stroke 140ms ease-out; }
+.omd-motion-page { animation: omd-popup-in 160ms var(--omd-motion-ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  html:root :is(.omd-motion-popup,.omd-motion-dialog,.omd-motion-menu,.omd-motion-menu > *, .omd-motion-presence > *, .omd-motion-page) { animation: none !important; }
+  .omd-motion-collapse, :is(.omd-settings,.omc-root,.omd-model-panel,.omd-opt-theme,.tx-app,.cx-panel,.dshx-page,.dsp-settings) * { transition: none !important; }
+  details::details-content { transition: none !important; }
+}
+html[data-omd-reduce-effects] :is(.omd-motion-popup,.omd-motion-dialog,.omd-motion-menu,.omd-motion-menu > *, .omd-motion-presence > *, .omd-motion-page) { animation: none !important; }
+html[data-omd-reduce-effects] :is(.omd-motion-collapse,.omd-settings *,.omc-root *,.omd-model-panel *,.omd-opt-theme *,.tx-app *,.cx-panel *,.dshx-page *,.dsp-settings *) { transition: none !important; }
+html[data-omd-reduce-effects] details::details-content { transition: none !important; }

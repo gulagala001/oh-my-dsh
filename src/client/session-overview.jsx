@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import { decorateSlotComponent } from './slot-decoration.mjs';
+import { installOverviewPanel } from './session-overview-panel.jsx';
 import { whalePath } from './brand.mjs';
 import { collectAgents, childAddress, whaleColor, projection, AGENTS_KIND, JOBS_KIND, SOURCES_KIND, OUTPUTS_KIND } from './session-overview.mjs';
 import { createTeamOverview, createJobsOverview, createWorkflowOverview } from '../../lib/host/overview-native.factory.mjs';
@@ -13,6 +14,7 @@ const entriesFor = (slots, name, accept) => ({ ctx: slots.ctx,
 
 export function applySessionOverview(ctx, openCU) {
   if (!openCU.OverviewSlot) return;
+  const usePanel = installOverviewPanel(ctx);
   function Overview(props) {
     const Component = openCU.getOverviewSlot?.(ctx) ?? openCU.OverviewSlot;
     return <Component {...props}/>;
@@ -76,6 +78,7 @@ export function applySessionOverview(ctx, openCU) {
     scope.effect(() => scope.locale.register('omdOverviewJobs', jobsNative.locale));
     function Header({ Original, ...props }) {
       const { sessionId } = props;
+      const summaryPanel = usePanel(sessionId);
       const sessions = props.useSessions(value => value), statuses = props.useSessionStatus(value => value);
       const jobsState = useStore(scope.jobs.state);
       const durable = projection(sessions, sessionId).omdOverview;
@@ -110,7 +113,7 @@ export function applySessionOverview(ctx, openCU) {
       }, [agents, jobsState, sessionId, durable, refreshProjection]);
       useLayoutEffect(() => { states.set(sessionId, data); notify(); }, [sessionId, data]);
       useEffect(() => () => { states.delete(sessionId); notify(); }, [sessionId]);
-      return <Original {...props} overview={data}/>;
+      return <Original {...props} overview={data} summaryPanel={summaryPanel.container ? summaryPanel : undefined}/>;
     }
     scope.slots.inject('conversation.session.header.utilities', () => {
       const slots = entriesFor(scope.slots, 'conversation.session.header.utilities', entry => entry.options.id === 'opencu.monitoring');

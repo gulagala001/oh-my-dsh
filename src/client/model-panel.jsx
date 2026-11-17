@@ -1,5 +1,5 @@
-import { Button, Input } from './native-controls.jsx';
-import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Input, Menu } from './native-controls.jsx';
+import { usePresence } from './motion.mjs';
 import { Icon } from './native-icons.jsx';
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
@@ -38,6 +38,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, select
   const projected = useStore(faces.mode), preset = useStore(faces.preset), teamEnabled = useStore(faces.team)?.enabled;
   const [mode, setMode] = useState(null), [error, setError] = useState(''), [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false), [pane, setPane] = useState('effort'), [query, setQuery] = useState('');
+  const motion = usePresence(open, undefined, sessionId);
   const [draft, setDraft] = useState(null), [dragging, setDragging] = useState(false);
   const [submodeDraft, setSubmodeDraft] = useState(null);
   const [submodeOpen, setSubmodeOpen] = useState(false);
@@ -264,7 +265,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, select
       onClick={() => { if (open) close(); else { setPane(model && state.routable !== false ? 'effort' : 'model'); setQuery(''); setOpen(true); load(); void refresh(); } }}>
       <span>{additive && activeMode !== 'ultra' ? 'OMD' : renderModelLabel(group, model, 'trigger')}</span><span className="omd-model-caption">· {savedLabel}{activeMode === 'ultra' ? ` · ${submode.label}` : ''}</span><span aria-hidden="true">⌃</span>
     </Button>
-    {open && createPortal(<section ref={panel} id={id} className="omd-model-panel" data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
+    {motion.present && createPortal(<section ref={panel} id={id} className="omd-model-panel omd-motion-popup" data-motion-exit={motion.closing || undefined} inert={motion.closing ? '' : undefined} aria-hidden={motion.closing || undefined} data-pane={pane} style={position} role="dialog" aria-label="模型与思考强度" aria-busy={busy} tabIndex={-1} onKeyDown={keyDown}>
       {pane === 'effort' ? <>
         <header className="omd-effort-heading">
           <h2 key={label} className={level?.mode === 'ultra' ? 'omd-effort-ultra' : ''}>

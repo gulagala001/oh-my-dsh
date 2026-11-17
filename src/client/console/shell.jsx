@@ -63,7 +63,7 @@ function ConsolePage(props) {
     <div className="omc-frame">
       <nav className="omc-nav" aria-label="控制台分区">{nav2.map(([id, title, icon]) => <NativeButton size="sm" variant="ghost" key={id} type="button" aria-current={section === id ? 'page' : undefined}
         onClick={() => go(id)}><Icon name={icon} size={15}/><span>{title}</span></NativeButton>)}</nav>
-      <main className="omc-main">
+      <main key={section} className="omc-main omd-motion-page">
         <ConsoleRefresh.Provider value={tick}><Body sessionId={props.sessionId} visible={visible} range={range} period={period} params={route.params} go={go}/></ConsoleRefresh.Provider>
       </main>
     </div>

@@ -5,15 +5,15 @@ import React, { useState, useSyncExternalStore } from 'react';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import { compactionGroups, taskInjectionDefinition, supersededTaskInjections } from './conversation-records.mjs';
 import css from './conversation-records.css';
+import { Collapse } from './motion.mjs';
 
 function Record({ title, hint, kind, children }) {
   const [open, setOpen] = useState(false);
   return <div className="omd-context-record" data-omd-record={kind}>
     <DisclosureRow icon={<Icon name={kind === 'compaction' ? 'compress' : 'context'} size={15}/>}
       title={title} open={open} expandable expandOnRowClick keepContentWhenOpen
-      onToggle={() => setOpen(value => !value)} collapsedContent={<span className="omd-record-hint">{hint}</span>}>
-      <div className="omd-record-body">{children}</div>
-    </DisclosureRow>
+      onToggle={() => setOpen(value => !value)} collapsedContent={<span className="omd-record-hint">{hint}</span>}/>
+    <Collapse open={open}><div className="omd-record-body">{children}</div></Collapse>
   </div>;
 }
 

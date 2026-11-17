@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api, qs, usePoll, Card, Tag, Select, Search, Table, Pager, Empty, Alert, KV, Button } from './ui.jsx';
 import { kindLabel, toneOf, k, clock, tokens, cacheRatio, cacheTitle, duration, money, apiPrice, statusOf } from './model.mjs';
 import { PricesDrawer } from './prices.jsx';
+import { MotionPresence } from '../motion.mjs';
 import { Usage } from './usage.jsx';
 
 const SIZE = 20;
@@ -75,6 +76,6 @@ export function CallsSection({ sessionId, visible, range, period, params }) {
     </Card>
     <p className="omc-footnote">API 价格自动匹配并更新；费用使用对应单价与调用用量计算。未返回用量仍显示 API 单价。</p>
     {d?.coverage?.message && <p className="omc-footnote">{d.coverage.message}</p>}
-    {pricesOpen && <PricesDrawer onClose={() => setPricesOpen(false)} onSaved={refresh}/>}
+    <MotionPresence owner={sessionId}>{pricesOpen && <PricesDrawer onClose={() => setPricesOpen(false)} onSaved={refresh}/>}</MotionPresence>
   </div>;
 }

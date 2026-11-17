@@ -6,6 +6,8 @@ import { Tag as NativeTag, StateDot, useDismissOnOutsidePointer } from '@deepsee
 import { useAnchoredPosition } from '../../../vendor/workflow/src/client/anchored-position.mjs';
 import { createPoller } from '../polling.mjs';
 import { Icon } from '../native-icons.jsx';
+import { Collapse, useMotionVisible, usePresence } from '../motion.mjs';
+export { MotionPresence } from '../motion.mjs';
 export { Icon } from '../native-icons.jsx';
 import { Button as NativeButton, Input, Select as NativeSelect } from '../native-controls.jsx';
 
@@ -94,6 +96,9 @@ export function Alert({ tone = 'error', children, action }) {
 
 /** Columns: { key, title, render(row), align, width, className, nowrap }. */
 export function Table({ columns, rows, rowKey, onRow, expanded, renderExpand, empty, loading, dense }) {
+  const showing = Boolean(renderExpand && rows?.some((row, index) => rowKey(row, index) === expanded));
+  const lastExpanded = useRef(expanded), motion = usePresence(showing, 220);
+  if (showing) lastExpanded.current = expanded;
   if (loading && !rows?.length) return <Skeleton rows={5}/>;
   if (!rows?.length) return empty || <Empty title="暂无数据"/>;
   return <div className={cx('omc-table-wrap', dense && 'omc-dense')}>
@@ -106,7 +111,9 @@ export function Table({ columns, rows, rowKey, onRow, expanded, renderExpand, em
             tabIndex={onRow ? 0 : undefined} onKeyDown={onRow ? e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRow(row, key); } } : undefined} aria-expanded={renderExpand ? open : undefined}>
             {columns.map(c => <td key={c.key} className={cx(c.align === 'right' && 'omc-r', c.nowrap !== false && 'omc-nowrap', c.className)}>{c.render ? c.render(row) : row[c.key]}</td>)}
           </tr>
-          {open && renderExpand && <tr className="omc-expand"><td colSpan={columns.length}>{renderExpand(row)}</td></tr>}
+          {renderExpand && motion.present && key === lastExpanded.current && <tr className="omc-expand"><td colSpan={columns.length}>
+            <Collapse open={open} animateOnMount>{open ? renderExpand(row) : null}</Collapse>
+          </td></tr>}
         </React.Fragment>;
       })}</tbody>
     </table>
@@ -310,8 +317,9 @@ export function useAction(onDone, key) {
 /** Anchored popover used by the composer dock items (portal; Escape/outside close). */
 export function usePopover() {
   const [open, setOpen] = useState(false);
+  const motion = usePresence(open);
   const rootRef = useRef(null), panelRef = useRef(null);
-  const pos = useAnchoredPosition({ open, anchorRef: rootRef, panelRef, side: 'top', gap: 8, margin: 12 });
+  const pos = useAnchoredPosition({ open: motion.present, anchorRef: rootRef, panelRef, side: 'top', gap: 8, margin: 12 });
   useDismissOnOutsidePointer(rootRef, open, setOpen, panelRef);
   useEffect(() => {
     if (!open) return;
@@ -328,11 +336,12 @@ export function usePopover() {
     document.addEventListener('keydown', key);
     return () => document.removeEventListener('keydown', key);
   }, [open]);
-  return { open, setOpen, rootRef, panelRef, pos };
+  return { open, setOpen, rootRef, panelRef, pos, motion };
 }
 export function Popover({ seat, title, value, icon, children, footer }) {
-  if (!seat.open) return null;
-  return createPortal(<div ref={seat.panelRef} className="omc-pop omc-root" role="dialog" aria-label={title}
+  if (!seat.motion.present) return null;
+  return createPortal(<div ref={seat.panelRef} className="omc-pop omc-root omd-motion-popup" role="dialog" aria-label={title}
+    data-motion-exit={seat.motion.closing || undefined} inert={seat.motion.closing ? '' : undefined} aria-hidden={seat.motion.closing || undefined}
     style={seat.pos ?? { visibility: 'hidden', left: 0, top: 0 }}>
     <div className="omc-pop-title"><span>{icon}{title}</span>{value != null && <b>{value}</b>}</div>
     <div className="omc-pop-body">{children}</div>
@@ -343,10 +352,12 @@ export function Popover({ seat, title, value, icon, children, footer }) {
 /** In-console overlay reader; Escape or the back button closes it. */
 export function Drawer({ title, onClose, children, actions }) {
   const ref = useRef(null);
+  const visible = useMotionVisible();
   useEffect(() => {
+    if (!visible) return;
     const prev = document.activeElement; ref.current?.focus({ preventScroll: true });
     return () => { if (prev?.isConnected) prev.focus?.({ preventScroll: true }); };
-  }, []);
+  }, [visible]);
   return <div className="omc-drawer" ref={ref} tabIndex={-1} role="dialog" aria-label={title}
     onKeyDown={e => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); onClose(); } }}>
     <header className="omc-drawer-head"><NativeButton size="sm" variant="ghost" type="button" className="omc-btn" onClick={onClose}><Icon name="chevron" size={13} className="omc-flip"/>返回</NativeButton><strong>{title}</strong>{actions}</header>

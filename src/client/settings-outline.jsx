@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Button, Menu, IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, IconChevronDownOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Menu } from './native-controls.jsx';
 import { subscribeSettingsAnchor, takeSettingsAnchor } from './settings-nav.mjs';
 
 export const SETTINGS_SECTIONS = [
