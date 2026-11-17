@@ -58,8 +58,11 @@ export function bindOverviewResize({ root, handle, preference, commit }) {
     if (event.button !== 0 || event.isPrimary === false || drag || !root.hasAttribute('data-overview-open')) return;
     event.preventDefault(); handle.focus({ preventScroll: true });
     handle.setPointerCapture(event.pointerId);
-    drag = { id: event.pointerId, startX: event.clientX, x: event.clientX, startWidth: clamp(preferred()), width: clamp(preferred()) };
+    const visibleWidth = root.querySelector('.omd-overview-rail')?.getBoundingClientRect().width;
+    const width = clamp(visibleWidth > 0 ? visibleWidth : preferred());
+    drag = { id: event.pointerId, startX: event.clientX, x: event.clientX, startWidth: width, width };
     root.removeAttribute('data-overview-animating'); root.setAttribute('data-overview-resizing', '');
+    paint(width);
   };
   const move = event => {
     if (drag?.id !== event.pointerId) return;

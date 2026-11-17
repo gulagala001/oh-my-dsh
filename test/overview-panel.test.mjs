@@ -49,6 +49,13 @@ test('overview closes on workspace expansion, reopens resident and floating, and
   const separator = document.querySelector('[role=separator]'); let capture;
   separator.setPointerCapture = id => { capture = id; }; separator.hasPointerCapture = id => capture === id; separator.releasePointerCapture = () => { capture = null; };
   const pointer = (type, x, id = 1) => { const event = new dom.window.MouseEvent(type, { clientX: x, bubbles: true, button: 0 }); Object.defineProperty(event, 'pointerId', { value: id }); separator.dispatchEvent(event); };
+  const rail = document.querySelector('.omd-overview-rail');
+  const measuredWidth = rail.getBoundingClientRect;
+  rail.getBoundingClientRect = () => ({ width: 240 });
+  await act(() => pointer('pointerdown', 700));
+  assert.equal(layout.style.getPropertyValue('--omd-overview-preferred-width'), '240px', 'drag takes over the visible animation frame');
+  await act(() => pointer('pointercancel', 700));
+  rail.getBoundingClientRect = measuredWidth;
   await act(() => { pointer('pointerdown', 700); pointer('pointermove', 640); pointer('pointerup', 640); });
   assert.equal(readOverviewWidth(), 335);
   await act(() => { pointer('pointerdown', 700); pointer('pointermove', 600); pointer('pointercancel', 600); });
