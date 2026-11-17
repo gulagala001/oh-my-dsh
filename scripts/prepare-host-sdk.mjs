@@ -11,6 +11,14 @@ const upstream = 'https://github.com/deepseek-ai/deepseek-harness.git';
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const frozen = 'c24a38565023f08480f3832a554a676ad7479d36c0868063c85ad66ba6d3e68a';
 const clients = {
+  "ui-workspace": [
+    "229b22697f611468b1bc5bb10aff187b3b8bbce63c96fcb0f9cb7cde9e1e1cac",
+    {
+      "WorkspaceBrowser_module_css_default": "NgEgMa",
+      "Rows_module_css_default": "tvuezW",
+      "WorkspacePicker_module_css_default": "AAf7EW"
+    }
+  ],
   "ui-jobs": [
     "a8604ef9338c337fa9d9fc8e89bee740faa23f0d73b72f1f499e3b36bac71724",
     {
@@ -46,6 +54,23 @@ const clients = {
     }
   ]
 };
+
+export function normalizeHostClientSource(name, source) {
+  const [hash, prefixes] = clients[name];
+  if (digest(source) === hash) return source;
+  for (const [group, released] of Object.entries(prefixes)) {
+    const properties = source.match(new RegExp(group + '=\\{([^}]+)\\}'))?.[1];
+    const names = new Set();
+    for (const [, key, value] of (properties ?? '').matchAll(/"([^"]+)":`([^`]+)`/g)) {
+      if (value.endsWith('_' + key)) names.add(value.slice(0, -key.length - 1));
+    }
+    if (names.size !== 1) throw new Error('Unexpected CSS module in ' + name + '/' + group);
+    const [prefix] = names;
+    source = source.replaceAll(prefix + '_', released + '_');
+  }
+  if (digest(source) !== hash) throw new Error('Compiled client differs from the released host: ' + name);
+  return source;
+}
 
 function git(directory, ...args) {
   return execFileSync('git', ['-C', directory, ...args], { encoding: 'utf8' }).trim();
@@ -87,22 +112,10 @@ export function prepareSdk(project = root) {
   }
   // CSS Modules derives local names from the checkout path. Restore the
   // released names before comparing each complete bundle with the desktop.
-  for (const [name, [hash, prefixes]] of Object.entries(clients)) {
+  for (const name of Object.keys(clients)) {
     const file = join(home, 'packages/client', name, 'lib/client.js');
-    let source = readFileSync(file, 'utf8');
-    if (digest(source) === hash) continue;
-    for (const [group, released] of Object.entries(prefixes)) {
-      const properties = source.match(new RegExp(group + '=\\{([^}]+)\\}'))?.[1];
-      const names = new Set();
-      for (const [, key, value] of (properties ?? '').matchAll(/"([^"]+)":`([^`]+)`/g)) {
-        if (value.endsWith('_' + key)) names.add(value.slice(0, -key.length - 1));
-      }
-      if (names.size !== 1) throw new Error('Unexpected CSS module in ' + name + '/' + group);
-      const [prefix] = names;
-      source = source.replaceAll(prefix + '_', released + '_');
-    }
-    if (digest(source) !== hash) throw new Error('Compiled client differs from the released host: ' + name);
-    writeFileSync(file, source);
+    const source = readFileSync(file, 'utf8'), normalized = normalizeHostClientSource(name, source);
+    if (source !== normalized) writeFileSync(file, normalized);
   }
   const local = resolve(project, '../.local', cacheName);
   if (local !== home) {

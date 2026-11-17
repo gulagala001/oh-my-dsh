@@ -8,9 +8,19 @@ import { join, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { hostClientSource, replaceExactly, ownClientStyles, clientRegistration } from '../scripts/host-build-contracts.mjs';
+import { normalizeHostClientSource } from '../scripts/prepare-host-sdk.mjs';
 
 const root = new URL('../', import.meta.url), require = createRequire(import.meta.url);
 const host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
+
+test('workspace CSS path variation normalizes to the complete pinned bundle and still rejects code changes', async () => {
+  const { source } = await hostClientSource(root, '@deepseek-ai/dsh-client-ui-workspace');
+  const elsewhere = source.replaceAll('NgEgMa_', 'fixtureBrowser_').replaceAll('tvuezW_', 'fixtureRows_').replaceAll('AAf7EW_', 'fixturePicker_');
+  assert.notEqual(elsewhere, source);
+  assert.equal(normalizeHostClientSource('ui-workspace', elsewhere), source);
+  assert.equal(normalizeHostClientSource('ui-workspace', source), source);
+  assert.throws(() => normalizeHostClientSource('ui-workspace', elsewhere + '\n/* changed implementation */'), /differs from the released host/);
+});
 
 test('native overview builds with actual pinned inputs in a hoisted layout', async t => {
   const dir = await mkdtemp(join(tmpdir(), 'omd-hoisted-build-'));
