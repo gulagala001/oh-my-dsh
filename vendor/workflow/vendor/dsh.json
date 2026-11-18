@@ -1,11 +1,11 @@
 {
   "repository": "https://github.com/deepseek-ai/deepseek-harness",
-  "tag": "dsh-v0.2.2-rc.5",
-  "commit": "9c2670d3bce5275e0d1610272958121af87787bb",
-  "version": "0.2.2-rc.5",
+  "tag": "dsh-v0.2.2-rc.3",
+  "commit": "38a6a5c965aa99ab525161efb7cc5cf1fe62fced",
+  "version": "0.2.2-rc.3",
   "files": {
     "LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
-    "llm/src/error.ts": "4c089d52d9d5761014083960f4851c2b63b9ed4a4daa253b13e57afcbc6aad1b",
+    "llm/src/error.ts": "5148046ac148bc8bdd6bde732aa9f86c4b1e0f906ee3eb0e2f4e27e9d057e12b",
     "session-persistence-jsonl/README.md": "85392cc2c4655582e2d29b7e848d08bf8681bd0cc36c6a30eacfba963821581e",
     "session-persistence-jsonl/src/catalog-migration.ts": "414ffd8d3ed6b80bb239f54916ec64e6b5f3d06ebc5a0d950922391271d612fa",
     "session-persistence-jsonl/src/format.ts": "87d536ead041fb953f866e0191a79b4dbbbc510aee1461706f9cdc2e4c46a038",

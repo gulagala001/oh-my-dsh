@@ -615,7 +615,7 @@ diff --git a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx b/
 index f7957393..d973aefd 100644
 --- a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
 +++ b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
-@@ -40,6 +40,7 @@ import { isImageMediaType } from '../service.ts'
+@@ -40,6 +40,7 @@
  import { ContextMeter } from './ContextMeter.tsx'
  import { observeControlRow } from './control-row-layout.ts'
  import css from './InputBar.module.css'
@@ -623,7 +623,7 @@ index f7957393..d973aefd 100644
  
  export type InputBarProps = ComposerBarProps
  
-@@ -55,7 +56,7 @@ export const InputBar = memo(function InputBar({
+@@ -55,7 +56,7 @@
  }: InputBarProps) {
    const input = useInput(s => s)
    const notice = useNotices(s => s)
@@ -632,7 +632,7 @@ index f7957393..d973aefd 100644
    const stopKeys = useStopShortcut(keys => keys)
    // A page whose access snapshot excludes prompting, stopping, or uploading to this Session is offered
    // no Send, no Stop, or no file intake rather than a disabled control. `useAccess` is undefined only
-@@ -78,6 +79,8 @@ export const InputBar = memo(function InputBar({
+@@ -78,6 +79,8 @@
        && message.source.kind === 'user') ?? false)
    const historyOpen = useSession(s => s.openState === 'open') ?? false
    const submissionPending = useSession(s => s.pendingSubmissions.length > 0) ?? false
@@ -641,7 +641,7 @@ index f7957393..d973aefd 100644
    const subagent = useSession(s => s.subagent) ?? null
    const removed = useSession(s => s.removed) ?? false
    // Plan mode swaps the composer placeholder (the projection is the folded
-@@ -370,9 +373,8 @@ export const InputBar = memo(function InputBar({
+@@ -370,9 +373,8 @@
    // button (no pending upload) over a non-empty draft that is neither a
    // claimed command nor a `/` line headed for adjudication — so it never
    // describes a delivery the click cannot or does not perform; every other
@@ -653,7 +653,7 @@ index f7957393..d973aefd 100644
    const primaryStops = running && subagent === null && !sending && (empty || blocked !== undefined)
    const primaryRetries = !running && subagent === null && empty && retryableFailure !== undefined
      && !pendingHumanInput && historyOpen && !submissionPending && !disabled && input.queue.length === 0
-@@ -380,7 +382,7 @@ export const InputBar = memo(function InputBar({
+@@ -380,7 +382,7 @@
    // Disabled native buttons may omit mouseleave; their tooltip must close from state.
    const primaryDisabled = primaryStops ? stopAction === undefined
      : (!primaryRetries && empty) || disabled || machineBusy || uploadsPending
@@ -662,7 +662,7 @@ index f7957393..d973aefd 100644
    const primarySubmitMode = resolveSubmitMode(busyEnter, running, 'enter', steeringAvailable)
    const plainMessageDraft = !empty && input?.phase === 'plain' && !draft.trimStart().startsWith('/')
    const primaryLabel = primaryStops
-@@ -390,7 +392,7 @@ export const InputBar = memo(function InputBar({
+@@ -390,7 +392,7 @@
        : primaryRetries
          ? t('input.continue')
          : running && steeringAvailable && !disabled && !uploadsPending && plainMessageDraft

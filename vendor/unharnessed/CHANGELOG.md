@@ -1,3 +1,35 @@
+# DSH Unharnessed 0.3.0 · DSH 0.2.2-rc.3
+
+**未发布 / Unreleased.**
+
+[中文](#zh-030) · [English](#en-030)
+
+<a id="zh-030"></a>
+
+## 中文
+
+### 体验优化
+
+- 现在可以在设置中控制子代理委派。每个子会话保留独立的 Python 内核。
+- 等待结果、取消执行或重置内核时保留已完成的回执，过期通知可继续撤回。
+
+<a id="en-030"></a>
+
+## English
+
+### Improvements
+
+- Control delegation in settings. Each child session uses its own Python kernel.
+- Completed results survive waits, cancellation and kernel resets. Pending notice withdrawals can be retried.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.3.0-dsh.0.2.2-rc.3/dsh-unharnessed-0.3.0-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-unharnessed/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.3.0-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DSH Unharnessed 0.2.4 · DSH 0.2.2-rc.3
 
 [中文](#zh-024) · [English](#en-024)
