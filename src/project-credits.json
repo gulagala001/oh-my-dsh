@@ -57,8 +57,8 @@
       "source": "vendor/rewind/package.json",
       "license": "MIT",
       "notice": "vendor/rewind/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.16-dsh.0.2.2-rc.3",
-      "sourceSha256": "ae1b4d747e916b6082e9528e4c581d182e122ea924f749f60afcb390066af51b",
+      "version": "0.1.17-dsh.0.2.2-rc.3",
+      "sourceSha256": "b58bc10f6a9204d2cfcb3cd1883803c5da44db0c1945e432f7150d257ab30f88",
       "group": "products"
     },
     {

@@ -28,7 +28,9 @@ export function applyStartupNotice(ctx) {
       <strong>部分增强功能未启动，基础会话界面可用</strong>
       <Button type="button" variant="ghost" size="sm" onClick={() => setDismissed(true)}>关闭提示</Button>
       {rows.map(row => <details key={row.name}><summary>{row.name}：{row.message}</summary><pre>{row.details}</pre></details>)}
-      <p>{recovery} 需要继续聊天时，可选择其他可用的 Agent 预设。</p>
+      {rows.some(row => row.message.includes('/api/opencu/rea-assets/')) &&
+        <p>电脑操作界面资源加载失败。请重新打开 DSH；如果仍然出现，请更新 Oh My DSH，并在反馈时附上上方的资源文件名。</p>}
+      {rows.some(row => !row.message.includes('/api/opencu/rea-assets/')) && <p>{recovery} 需要继续聊天时，可选择其他可用的 Agent 预设。</p>}
       <a href="https://github.com/gulagala001/oh-my-dsh/blob/main/docs/troubleshooting.md#native-dependencies" target="_blank" rel="noreferrer">依赖修复指引</a>
     </aside>;
   }

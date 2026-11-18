@@ -10,9 +10,13 @@ import { nativePackageModes } from '../scripts/native-package-modes.mjs';
 import { deliveryBaseline, verifyDeliveryArchive } from '../scripts/check-opencu-delivery.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-const client = Buffer.from('window.__ModuleLoader__.load({ id: "synthetic" });\n');
+const entry = 'opencu-client-AAAAAAAA.js';
+const runtime = Buffer.from('export const ready = true;');
+const client = Buffer.from(`import("/api/opencu/rea-assets/${entry}")`);
 const helper = 'native/bin/darwin-arm64/OpenCU Helper.app/Contents/MacOS/opencu-native';
 const vendor = {
+  ['lib/rea-assets/' + entry]: runtime,
+  'lib/rea-assets/manifest.json': Buffer.from(JSON.stringify([{file:entry, sha256:hash(runtime), source:'opencu-client-build'}])),
   'lib/client.js': Buffer.from('synthetic classic client\n'),
   'src/dsh/shared.mjs': Buffer.from('export const synthetic = true;\n'),
   [helper]: Buffer.from('synthetic helper bytes; never executed\n'),
@@ -61,9 +65,16 @@ test('rebuilt root runtime must equal HEAD even for a whitespace-only change', a
 
 test('actual tgz matches every vendor hash with only the classic client excluded', async t => {
   const result = verifyDeliveryArchive(await archive(t), baseline);
-  assert.equal(result.vendorMembers, 2);
+  assert.equal(result.vendorMembers, 4);
   assert.equal(result.rootClientSha256, hash(client));
   assert.deepEqual(result.helpers, [{ file: helper, mode: '0755' }]);
+});
+
+test('matching root and vendor baselines must still reference the same runtime', async t => {
+  const stale = Buffer.from('import("/api/opencu/rea-assets/opencu-client-BBBBBBBB.js")');
+  const files = entries(); files.set('package/lib/client.js', stale);
+  const packed = await archive(t, files);
+  assert.throws(() => verifyDeliveryArchive(packed, {...baseline, client:stale}), /differs from the served OpenCU runtime/);
 });
 
 test('actual runtime archive rejects website media and maintainer-only tools', async t => {

@@ -1,6 +1,6 @@
 {
   "name": "oh-my-dsh",
-  "version": "0.2.2-rc.3.omd.1.6.0",
+  "version": "0.2.2-rc.3.omd.1.6.1",
   "private": true,
   "type": "module",
   "description": "DeepSeek Harness 增强插件：上下文压缩与 Dream 记忆、Ultra 多智能体、OpenCU 电脑操作、代码理解、扩展管理、人格和主题。",
@@ -33,7 +33,7 @@
     "test:context": "node --test test/context-*.test.mjs",
     "simulate": "node scripts/simulate.mjs",
     "plugins:submissions": "node scripts/plugin-submissions.mjs",
-    "prepack": "npm run metering:check && npm run tools:check && npm run prompts:check && node scripts/check-unharnessed.mjs && npm run docs:check && node scripts/check-public-files.mjs",
+    "prepack": "node scripts/check-opencu-client-graph.mjs && npm run metering:check && npm run tools:check && npm run prompts:check && node scripts/check-unharnessed.mjs && npm run docs:check && node scripts/check-public-files.mjs",
     "prompts:check": "node scripts/check-prompt-styles.mjs",
     "docs:check": "node scripts/check-docs.mjs && node scripts/build-credits.mjs",
     "release:check": "node scripts/check-release-assets.mjs",

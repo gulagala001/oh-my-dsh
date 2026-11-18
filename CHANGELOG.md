@@ -1,3 +1,33 @@
+# Oh My DSH 1.6.1 · DSH 0.2.2-rc.3
+
+[中文](#zh-161) · [English](#en-161)
+
+<a id="zh-161"></a>
+
+## 中文
+
+### 问题修复
+
+- 修复桌面启动时电脑操作界面提示前端模块加载失败的问题。
+- 读取文件和等待队友消息时，其他会话的工作区备份不再阻塞这些操作。
+
+<a id="en-161"></a>
+
+## English
+
+### Bug fixes
+
+- Fix Computer Use failing to load its frontend module when opening the desktop app.
+- Read files and wait for teammates while another session is backing up the workspace.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[安装包 / Package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.6.1/oh-my-dsh-0.2.2-rc.3.omd.1.6.1.tgz) · [使用说明 / Guide](https://github.com/gulagala001/oh-my-dsh/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.6.1/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.6.0 · DSH 0.2.2-rc.3
 
 [中文](#zh-160) · [English](#en-160)

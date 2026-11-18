@@ -14,6 +14,7 @@ import { build } from 'esbuild';
 import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { checkBuiltClient } from './check-opencu-client-graph.mjs';
 import { whaleSvg } from '../src/client/brand.mjs';
 import { packSkin } from './pack-skin.mjs';
 import { pageScriptDefines } from '../plugins/deepseek-workbench/scripts/page-script-defines.mjs';
@@ -81,4 +82,5 @@ const clientBuild = await build({
     b.onLoad({ filter: /\.css$/ }, async args => ({ contents: `export default ${JSON.stringify(await readFile(args.path, 'utf8'))}`, loader: 'js' }));
   } }],
 });
+checkBuiltClient();
 await checkClientPrimitives(clientBuild.metafile, fileURLToPath(new URL('../', import.meta.url)));

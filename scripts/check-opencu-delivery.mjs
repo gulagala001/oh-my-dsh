@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import { assertPackageScope, assertPackageEntrypoints, assertPackageDocumentation } from './package-policy.mjs';
+import { checkClientGraph } from './check-opencu-client-graph.mjs';
 import { nativePackageModes } from './native-package-modes.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -90,6 +91,7 @@ export function verifyDeliveryArchive(archive, baseline) {
     found.add(name);
   }
   for (const name of expected.keys()) assert(found.has(name), `Missing packed OpenCU member: ${name}`);
+  checkClientGraph(files.get('package/lib/client.js').bytes, name => files.get(prefix + 'lib/rea-assets/' + name)?.bytes);
   return { rootClientSha256: sha256(baseline.client), vendorMembers: found.size, helpers, archiveSha256: sha256(archive) };
 }
 

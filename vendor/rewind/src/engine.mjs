@@ -10,7 +10,7 @@ import { eventsOf, snapshot, beforeMessage, userTarget, prepareReplay, appendPre
 
 const CAPTURE_MS = 4000;
 const RETRY_MS = 30000;
-const workspaceIndependent = Symbol.for('dsh-rewind-plus.workspace-independent');
+import { tracksWorkspaceTool } from './tool-tracking.mjs';
 
 export class RewindEngine {
   constructor(ctx,root,config={}) {this.ctx=ctx;this.store=new Store(root);this.files=new Files(root,config);this.plans=new Map();this.waves=new Map();this.busy=new Set();this.operations=new Map();this.captureRetry=new Map();}
@@ -51,8 +51,7 @@ export class RewindEngine {
     },{signal});
   }
   tracksTool(exec) {
-    return !!exec.agent && exec.parent === undefined
-      && this.ctx.get?.('tools')?.get(exec.name,exec.agent,exec.toolSet)?.[workspaceIndependent] !== true;
+    return tracksWorkspaceTool(exec, this.ctx.get?.('tools'));
   }
   async capture(root,signal){
     signal?.throwIfAborted();
@@ -292,6 +291,7 @@ export class RewindEngine {
     return done;
   }
   async preStep(payload,next){
+    const protect = fn => this.maintenance ? this.maintenance.run(fn, undefined, {signal:payload.signal}) : fn();
     const {agent,turn}=payload;let op=this.operations.get(agent.id);
     const stale=m=>m.source?.kind==='dsh-rewind-plus'&&m.id!==op?.marker;
     const messages=payload.messages.filter(m=>!stale(m));
@@ -317,13 +317,19 @@ export class RewindEngine {
       this.backupGap(agent,error);return next();
     }
     if(!op&&st.journal){op={recovery:true,start:agent.session.seq,queue:new Map(),resolve:()=>{},reject:()=>{}};this.operations.set(agent.id,op);}
-    if(!op||op.consumed&&op.turn!==turn||op.executing){try{await this.checkpoint(agent,messages,payload.signal);}catch(error){if(payload.signal?.aborted||st.journal)throw error;this.backupGap(agent,error);}return next();}
+    if(!op||op.consumed&&op.turn!==turn||op.executing){
+      if (this.owner(agent)===agent && (st.journal || messages.some(m=>m.source?.kind==='user'&&!st.checkpoints[m.id]))) {
+        try{await protect(()=>this.checkpoint(agent,messages,payload.signal));}
+        catch(error){if(payload.signal?.aborted||st.journal)throw error;this.backupGap(agent,error);}
+      }
+      return next();
+    }
     op.consumed=true;op.executing=true;op.turn=turn;
     // Claiming maintenance must never consume an already queued user prompt.
     if(!op.marker)restoreInput();
     try{
-      if(op.recovery){await this.store.lock(agent.id,async()=>{const state=await this.store.load(agent.id);await this.recover(agent.session,state,true);});op.value={draft:null};}
-      else op.value=await this.commit(agent.id,op.planId,op.draft,op);
+      if(op.recovery){await protect(()=>this.store.lock(agent.id,async()=>{const state=await this.store.load(agent.id);await this.recover(agent.session,state,true);}));op.value={draft:null};}
+      else op.value=await protect(()=>this.commit(agent.id,op.planId,op.draft,op));
     }catch(error){op.error=error;}
     return {kind:'reject'};
   }

@@ -48,6 +48,10 @@ if (args[0] === '--dir' || currentRelease) {
     || metadata.hostVersion !== pkg.engines.dsh || metadata.file !== filename || metadata.filename !== filename
     || !/^[a-f0-9]{64}$/.test(metadata.sha256) || !/^[a-f0-9]{40}$/.test(metadata.sourceCommit))
     throw Error('Updater metadata does not match this exact package');
+  if (local) {
+    const { deliveryBaseline, verifyDeliveryArchive } = await import('./check-opencu-delivery.mjs');
+    verifyDeliveryArchive(readFileSync(resolve(args[1], filename)), await deliveryBaseline(root));
+  }
   const digest = local ? createHash('sha256').update(readFileSync(resolve(args[1], filename))).digest('hex')
     : source.get(filename)?.digest?.replace(/^sha256:/, '');
   if (digest !== metadata.sha256) throw Error('Updater package SHA256 mismatch');

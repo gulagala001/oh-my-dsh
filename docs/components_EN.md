@@ -30,7 +30,7 @@ Task planning, execution, budgets and recovery. Bundled workflow plugin.
 
 Turn undo and conversation rewind. Bundled undo plugin.
 
-- Pinned source / version: [0.1.16-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
+- Pinned source / version: [0.1.17-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/THIRD_PARTY_NOTICES.md)
 
 ### DSH Persona

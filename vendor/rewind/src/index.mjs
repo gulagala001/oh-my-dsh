@@ -37,7 +37,7 @@ export async function install(ctx,config={}) {
   maintenance.schedule();
   ctx.effect(()=>()=>maintenance.dispose());
   ctx.effect(()=>{const key=Symbol.for('dsh-rewind-plus.engine');ctx.root[key]=engine;return()=>{if(ctx.root[key]===engine)delete ctx.root[key];};});
-  ctx.on('agent/pre-step',(payload,next)=>maintenance.run(()=>engine.preStep(payload,next),error=>{if(payload.signal?.aborted||isLockFailure(error))throw error;engine.backupGap(payload.agent,error);return next();},{signal:payload.signal}),{prepend:true});
+  ctx.on('agent/pre-step',(payload,next)=>engine.preStep(payload,next),{prepend:true});
   ctx.on('session/event',(session,event)=>engine.finish(session,event));
   ctx.on('agent/inbox/discarded',({agent,message})=>{
     if(engine.operations.get(agent.id)?.marker===message.id)engine.abandon(agent,'撤回维护请求已取消');
