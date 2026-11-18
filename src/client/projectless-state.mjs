@@ -4,6 +4,7 @@ const validModel = value => value && typeof value.provider === 'string' && value
 const sameModel = (a, b) => a?.provider === b?.provider && a?.model === b?.model && a?.reasoningEffort === b?.reasoningEffort;
 const modelKey = value => JSON.stringify([value.provider, value.model]);
 const validSubmode = value => ['workflow', 'team', 'free'].includes(value);
+const hasDraft = state => state.draft !== '' || state.attachmentIds.length > 0;
 
 export async function modelModeApi(sessionId, body, signal) {
   const response = await fetch(`oh-my-dsh/api/model-mode?session=${encodeURIComponent(sessionId)}`, {
@@ -19,7 +20,7 @@ export function initializeDraft(conversation, binding, options) {
   const input = conversation.input.for(binding.ctx), state = input.state.getSnapshot();
   if (['adjudicating', 'submitting', 'sending'].includes(state.phase)) return 'blocked';
   if (options.prompt === undefined && options.clearPreviousDraft !== true) return 'preserved';
-  if (options.clearPreviousDraft !== true && (state.draft !== '' || state.attachmentIds.length > 0)) return 'preserved';
+  if (options.clearPreviousDraft !== true && hasDraft(state)) return 'preserved';
   input.setDraft(options.prompt ?? '');
   return 'applied';
 }
@@ -152,10 +153,24 @@ export class ProjectlessDrafts {
     this.inspections.set(id, { cwd, attempt }); return attempt;
   }
   shell(id) { return this.ctx.get('conversation').input.for(this.ctx.sessions.binding(id).ctx); }
-  async startDraft(from, options, workspaceId, beforeOpen) {
+  prepareWorkspaceDraft(from, to, transfer) {
+    const blank = id => this.ctx.sessions.binding(id)?.session.getSnapshot?.().blank
+      ?? this.ctx.sessions.list.getSnapshot().byId[id]?.blank;
+    if (!from || from === to || blank(from) !== true) return;
+    const source = this.shell(from).state.getSnapshot();
+    if (!['plain', 'claimed'].includes(source.phase) || !hasDraft(source)) return;
+    const target = this.shell(to);
+    const state = target.state.getSnapshot();
+    if (blank(to) !== true || hasDraft(state) || !['plain', 'claimed'].includes(state.phase)) {
+      target.notify('info', '目标已有草稿或正在提交，原草稿仍保留在原会话。');
+      return;
+    }
+    transfer(to);
+  }
+  async startDraft(from, options, workspaceId, beforeOpen, carryDraft = false) {
     if (this.lifetime.signal.aborted) return;
     const scope = workspaceId === undefined ? 'global' : `workspace:${workspaceId}`;
-    if (this.newDraft && this.newDraftScope === scope) return this.newDraft;
+    if (this.newDraft && this.newDraftScope === scope && this.carryDraft === carryDraft) return this.newDraft;
     const navigation = this.ctx.layout.beginNavigation();
     const signal = AbortSignal.any([navigation, this.lifetime.signal]);
     const attempt = (async () => {
@@ -179,7 +194,8 @@ export class ProjectlessDrafts {
           if (usable(candidate) && (workspaceId !== undefined || await this.inspect(candidate))) { reusable = candidate; break; }
           signal.throwIfAborted();
         }
-        const agentPreset = options?.agentPreset ?? sessions.byId[reusable]?.projectionValues?.agentPreset;
+        const agentPreset = options?.agentPreset ?? sessions.byId[reusable]?.projectionValues?.agentPreset
+          ?? (carryDraft && !reusable ? sessions.byId[from]?.projectionValues?.agentPreset : undefined);
         let id, allocatedCwd;
         if (workspaceId === undefined) {
           if (reusable) {
@@ -217,7 +233,8 @@ export class ProjectlessDrafts {
         if (options && initializeDraft(this.ctx.get('conversation'), targetRef.binding, options) === 'blocked') {
           throw Error('草稿正在提交，请稍后重试；现有草稿已保留');
         }
-        await beforeOpen?.(id);
+        if (carryDraft && beforeOpen) this.prepareWorkspaceDraft(from, id, beforeOpen);
+        else if (beforeOpen) await beforeOpen(id);
         signal.throwIfAborted();
         this.ctx.uiWorkspace.openSession(id);
       } catch (error) { if (!signal.aborted) {
@@ -225,7 +242,7 @@ export class ProjectlessDrafts {
       } }
       finally { targetRef?.release(); sourceRef?.release(); }
     })();
-    this.newDraft = attempt; this.newDraftScope = scope;
+    this.newDraft = attempt; this.newDraftScope = scope; this.carryDraft = carryDraft;
     try { await attempt; } finally { if (this.newDraft === attempt) this.newDraft = null; }
   }
   dispose() { this.lifetime.abort(); this.listeners.clear(); }

@@ -16,7 +16,9 @@ function fixture(t, { blocked = false } = {}) {
   const draftsById = { saved: { draft: 'keep unsent text', attachmentIds: ['attachment'], occurrences: [] } };
   const binding = id => ({ ctx: { id }, session: { projections: { faceOf: key => ({ getSnapshot: () =>
     key === 'agentPreset' ? rows[id]?.projectionValues.agentPreset : key === 'modelSelection' ? { next: rows[id]?.selected ?? null } : undefined }) } } });
-  const conversation = { input: { for: context => ({ captureDraft: () => draftsById[context.id], notify: (...args) => notices.push(args) }),
+  const conversation = { input: { for: context => ({ captureDraft: () => draftsById[context.id],
+    state: { getSnapshot: () => ({ draft: '', attachmentIds: [], phase: 'plain', ...draftsById[context.id] }) },
+    notify: (...args) => notices.push(args) }),
     requestDraftInitialization: (target, options) => { initialized.push([target.ctx.id, options]); return blocked ? 'blocked' : 'preserved'; } } };
   let mint = 0, catalogGate;
   const ctx = { get: name => name === 'workspaces' ? { list: { getSnapshot: () => workspaces } } : conversation,
@@ -164,6 +166,34 @@ test('workspace drafts keep their separate text and attachment owners when switc
   assert.equal(f.opened.at(-1), b);
   assert.deepEqual(f.draftsById['draft-a'], { draft: 'Directory A', attachmentIds: ['A-file'], occurrences: [] });
   assert.deepEqual(f.draftsById[b], { draft: 'Directory B', attachmentIds: ['B-file'], occurrences: [] });
+});
+
+test('the hero workspace picker carries a blank draft without replacing another draft', async t => {
+  const f = fixture(t), draft = structuredClone(f.draftsById.saved);
+  f.rows.saved.projectionValues.agentPreset = 'unharnessed';
+  function carry(from, scope) {
+    return f.drafts.startDraft(from, undefined, scope, to => {
+      f.draftsById[to] = f.draftsById[from];
+      delete f.draftsById[from];
+    }, true);
+  }
+  await carry('saved', 'B');
+  const target = f.opened.at(-1);
+  assert.deepEqual(f.draftsById[target], draft);
+  assert.equal(f.rows[target].projectionValues.agentPreset, 'unharnessed');
+  await carry(target);
+  assert.equal(f.opened.at(-1), 'saved');
+  assert.deepEqual(f.draftsById.saved, draft);
+  f.draftsById[target] = { draft: '', attachmentIds: ['existing-file'] };
+  await carry('saved', 'B');
+  assert.deepEqual(f.draftsById.saved, draft);
+  assert.deepEqual(f.draftsById[target].attachmentIds, ['existing-file']);
+  assert.match(f.notices.at(-1)[1], /原草稿仍保留/);
+  delete f.draftsById[target];
+  f.draftsById.saved.phase = 'sending';
+  await carry('saved', 'B');
+  assert.equal(f.draftsById[target], undefined);
+  assert.equal(f.draftsById.saved.draft, draft.draft);
 });
 
 test('adding a projectless directory to a workspace changes draft ownership without moving content', async t => {

@@ -31,6 +31,13 @@ function UngroupedCreate({ wide, useRemoteAccess, actions, startSession, t }) {
 export function applyProjectlessWorkspaces(ctx, { onError = error => console.error('新会话创建失败', error) } = {}) {
   const drafts = new ProjectlessDrafts(ctx);
   let initialPreset;
+  let movingDraft = false;
+  function pickWorkspace(pick, workspaceId) {
+    // The native hero's onPick calls openWorkspace synchronously and supplies
+    // the owner of structured references and attachment transfer.
+    movingDraft = true;
+    try { pick(workspaceId); } finally { movingDraft = false; }
+  }
   ctx.effect(() => decorateSlotComponent(ctx.slots, 'conversation.hero.agentPreset', () => true, entry => {
     const Original = entry.component;
     return function Preset(props) {
@@ -74,7 +81,7 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
       return drafts.startDraft(drafts.current(), options, workspaceId).catch(onError);
     }
     workspace.startSession = start;
-    const openWorkspace = (id, beforeOpen, options) => drafts.startDraft(drafts.current(), options, id, beforeOpen);
+    const openWorkspace = (id, beforeOpen, options) => drafts.startDraft(drafts.current(), options, id, beforeOpen, movingDraft);
     workspace.openWorkspace = openWorkspace;
     return () => {
       if (workspace.startSession === start) workspace.startSession = original;
@@ -116,8 +123,8 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
         });
         return;
       }
-      setOpen(false); props.onClose();
-      void drafts.startDraft(id, undefined, workspaceId).catch(onError);
+      setOpen(false);
+      pickWorkspace(props.onPick, workspaceId);
     };
     if (managed) return <>
       <span className="omd-projectless-picker"/>
@@ -130,7 +137,7 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
     </>;
     return <>
       <Button size="sm" variant="ghost" type="button" className="omd-workspace-clear" aria-label="取消工作区" title="不在工作区中工作"
-        disabled={!id || !props.selectedId} onClick={() => { props.onClose(); void drafts.startDraft(id).catch(onError); }}>
+        disabled={!id || !props.selectedId} onClick={() => pickWorkspace(props.onPick, undefined)}>
         <Icon name="close" size={14}/>
       </Button>
       <Original {...props} onPick={pick}/>
