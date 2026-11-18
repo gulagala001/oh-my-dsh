@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.6.1"><img alt="OMD 1.6.1" src="https://img.shields.io/badge/release-OMD%201.6.1-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.7.0"><img alt="OMD 1.7.0" src="https://img.shields.io/badge/release-OMD%201.7.0-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/oh-my-dsh/total?style=flat-square&amp;label=GitHub%20total%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/oh-my-dsh/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/oh-my-dsh?style=flat-square&amp;color=0969da"></a>
@@ -33,10 +33,10 @@
 In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.6.1/oh-my-dsh-0.2.2-rc.3.omd.1.6.1.tgz
+https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.7.0/oh-my-dsh-0.2.2-rc.3.omd.1.7.0.tgz
 ```
 
-Let running tasks finish, then enable OMD or restart DSH when prompted. Your settings and conversations stay. For older DSH versions, upgrading and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.6.1/SHA256SUMS).
+Let running tasks finish, then enable OMD or restart DSH when prompted. Your settings and conversations stay. For older DSH versions, upgrading and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.7.0/SHA256SUMS).
 
 > By default OMD lets the AI read and write files and run commands without asking each time. Permissions you set in your profile take precedence.
 
