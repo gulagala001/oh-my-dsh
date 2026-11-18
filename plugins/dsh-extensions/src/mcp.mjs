@@ -338,14 +338,16 @@ export class Mcp {
     });
   }
   remove(name, revision) { return this.edit(servers => { if (revision !== undefined) checkRevision(revision, configRevision(servers[name])); delete servers[name]; }); }
-  setEnabled(name, enabled) {
+  setEnabled(name, enabled, revision) {
     return this.edit(servers => {
+      if (revision !== undefined) checkRevision(revision, configRevision(servers[name]));
       if (!servers[name]) fail('server-missing', `No MCP server named ${name}`, { name }, 404);
       if (enabled) delete servers[name].disabled; else servers[name].disabled = true;
     });
   }
-  setTool(name, tool, enabled) {
+  setTool(name, tool, enabled, revision) {
     return this.edit(servers => {
+      if (revision !== undefined) checkRevision(revision, configRevision(servers[name]));
       const entry = servers[name];
       if (!entry) fail('server-missing', `No MCP server named ${name}`, { name }, 404);
       const set = new Set(Array.isArray(entry.disabledTools) ? entry.disabledTools : []);

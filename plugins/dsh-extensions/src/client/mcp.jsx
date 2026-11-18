@@ -59,7 +59,7 @@ export function McpPage() {
   if (current) return <>
     <Detail title={current.name} tags={<StatusTag status={current.status}/>} onBack={() => setOpen(null)}
       actions={<><Switch label={t('toggle', { name: current.name })} checked={current.enabled} disabled={action.busy || !current.configured || current.status === 'invalid'}
-        onChange={value => write({ action: 'enable', name: current.name, enabled: value })}/>
+        onChange={value => write({ action: 'enable', name: current.name, revision: current.revision, enabled: value })}/>
         {current.configured && <Button variant="outline" size="sm" onClick={() => edit(current.name)}>{t('edit')}</Button>}<ActionsMenu actions={menu(current).slice(1)}/></>}>
       <Status error={action.error} notice={action.notice}/>
       <Facts rows={[[t('mcp.transport'), current.transport ? t(`mcp.transport.${current.transport}`) : '—'], [t('mcp.target'), <code>{current.target ?? '—'}</code>],
@@ -71,7 +71,7 @@ export function McpPage() {
         {!current.tools.length ? <li className="dshx-muted">{t('mcp.noTools')}</li> : current.tools.map(tool => <Row key={tool.name} title={<code>{tool.name}</code>}
           description={tool.description} muted={!tool.enabled}
           end={<Switch label={t('mcp.toolSwitch', { name: tool.name })} checked={tool.enabled} disabled={action.busy}
-            onChange={value => write({ action: 'tool', name: current.name, tool: tool.name, enabled: value })}/>}/>)}
+            onChange={value => write({ action: 'tool', name: current.name, revision: current.revision, tool: tool.name, enabled: value })}/>}/>)}
       </Group>
     </Detail>{dialogs}</>;
   return <Page start={<Search value={search} onChange={setSearch}/>}
@@ -89,7 +89,7 @@ export function McpPage() {
             description={<code>{server.target ?? '—'}</code>}
             meta={server.error ? <span className="dshx-error-text">{reason(t, server)}</span> : server.status === 'connected' ? t('mcp.tools', { n: server.tools.filter(tool => tool.enabled).length }) : null}
             end={<><Switch label={t('toggle', { name: server.name })} checked={server.enabled} disabled={action.busy || !server.configured || server.status === 'invalid'}
-              onChange={value => write({ action: 'enable', name: server.name, enabled: value })}/><ActionsMenu actions={menu(server)}/></>}/>)}
+              onChange={value => write({ action: 'enable', name: server.name, revision: server.revision, enabled: value })}/><ActionsMenu actions={menu(server)}/></>}/>)}
         </Group>}
         {managed.length > 0 && <Group title={t('mcp.managed')} count={managed.length} hint={t('mcp.managed.hint')}>
           {managed.map(row => <Row key={row.entryId ?? row.id} icon={<IconApiOutlineRegular size={20}/>} title={row.name ?? row.id} muted={!row.enabled}

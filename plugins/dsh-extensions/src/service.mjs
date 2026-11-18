@@ -98,6 +98,7 @@ export class Extensions extends Service {
     const revisionRequired = route === '/skills' && ['save','delete','invocation'].includes(input.action)
       || route === '/instructions' && ['save','delete'].includes(input.action)
       || ['/mcp','/commands'].includes(route) && (input.action === 'delete' || input.action === 'save' && input.previous !== undefined)
+      || route === '/mcp' && ['enable', 'tool'].includes(input.action)
       || route === '/hooks' && input.id !== undefined && ['save','delete','enable'].includes(input.action);
     if (revisionRequired) requireRevision(input.revision);
     switch (`${route}#${input.action}`) {
@@ -108,8 +109,8 @@ export class Extensions extends Service {
       case '/skills#delete': await this.skills.remove(scope(), input.path, input.revision); return done();
       case '/mcp#save': await this.mcp.save(input); return done();
       case '/mcp#delete': await this.mcp.remove(input.name, input.revision); return done();
-      case '/mcp#enable': await this.mcp.setEnabled(input.name, input.enabled === true); return done();
-      case '/mcp#tool': await this.mcp.setTool(input.name, input.tool, input.enabled === true); return done();
+      case '/mcp#enable': await this.mcp.setEnabled(input.name, input.enabled === true, input.revision); return done();
+      case '/mcp#tool': await this.mcp.setTool(input.name, input.tool, input.enabled === true, input.revision); return done();
       case '/mcp#import': return done({ names: await this.mcp.importJson(input.json) });
       case '/mcp#reconnect': await this.mcp.reconnect(input.name); return done();
       case '/mcp#cleanup': await this.mcp.cleanup(input.name); return done();
