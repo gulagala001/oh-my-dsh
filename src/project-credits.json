@@ -17,8 +17,8 @@
       "source": "vendor/opencu/package.json",
       "license": "See component notices",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
-      "version": "2.4.0-dsh.0.2.2-rc.3",
-      "sourceSha256": "5dd25a3a1856ff8d8f1685f53b2e2354a2bc1bb13dce276724792444c6233f63",
+      "version": "2.4.0-dsh.0.2.2-rc.4",
+      "sourceSha256": "3364ced5d9d283fd8ec9d7bad35209e91bb7605f67452d47a8df4b6bcc3928b8",
       "group": "products"
     },
     {
@@ -78,7 +78,7 @@
       "license": "MIT",
       "notice": "plugins/persona/THIRD_PARTY_NOTICES.md",
       "version": "0.2.5-dsh.0.2.2-rc.3",
-      "sourceSha256": "16ab2bb0d4af3fe71608dd0825bc954251dc6134fd85b503f3d88d36d2afc019",
+      "sourceSha256": "e9d14f15e2e2b180ae8a04a04465cd47a415e027c4188d283234a31dc23b8e10",
       "group": "products"
     },
     {
@@ -98,7 +98,7 @@
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md",
       "version": "0.1.8-dsh.0.2.2-rc.3",
-      "sourceSha256": "b55152f7eae044bb20491f7c61775a76d58cff10f90d5d4c4bf3d230daac212c",
+      "sourceSha256": "4c3bc0c7ad7f6db995e46116298efed33249f7c34e1d7c642b27d109aed454ee",
       "group": "products"
     },
     {
@@ -118,7 +118,7 @@
       "license": "MIT",
       "notice": "plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md",
       "version": "0.1.11-dsh.0.2.2-rc.3",
-      "sourceSha256": "a3bd9802cff33fd66a11f4e8cb6523dc361960e92ecc8c6e96c2c955c32de279",
+      "sourceSha256": "bcaeb1e231ca65dfe137488429a0f19ca22e9c45ea8ab7b572fa8fbaccede8dc",
       "group": "products"
     },
     {
@@ -197,8 +197,8 @@
       "source": "vendor/dsh.json",
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#dsh",
-      "version": "0.2.2-rc.3",
-      "sourceSha256": "bea4913ee60b81b4818bf2f52cf74aae61b75d22482b6828b10d18f344929593",
+      "version": "0.2.2-rc.4",
+      "sourceSha256": "526a3e372f13a0438f847ac2633274f0806284035e506c7bd351be1d13bba7d3",
       "group": "sources"
     },
     {
@@ -218,8 +218,8 @@
       "license": "Original upstream rights apply",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
       "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json",
-      "version": "SHA256:88b8a1d18b690c4afcf7979ac3bd8818569ceed92cda175144079f6bdd281448",
-      "sourceSha256": "88b8a1d18b690c4afcf7979ac3bd8818569ceed92cda175144079f6bdd281448",
+      "version": "SHA256:79c365af84da80f9261d03c1161667f2612eff4e09f1e6cb290e6527ef1db974",
+      "sourceSha256": "79c365af84da80f9261d03c1161667f2612eff4e09f1e6cb290e6527ef1db974",
       "group": "sources"
     },
     {
@@ -575,7 +575,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.2.2-rc.3.ops.0.1.0 / 0.2.2-rc.2.ops.0.1.0 / 0.2.2-rc.1.ops.0.1.0 / 0.2.1-rc.5.ops.0.1.0 / 0.2.1-rc.3.ops.0.1.0 / 0.2.1-rc.2.ops.0.1.0 / 0.2.1-rc.1.ops.0.1.0",
+      "version": "0.2.2-rc.4.ops.0.1.0 / 0.2.2-rc.3.ops.0.1.0 / 0.2.2-rc.2.ops.0.1.0 / 0.2.2-rc.1.ops.0.1.0 / 0.2.1-rc.5.ops.0.1.0 / 0.2.1-rc.3.ops.0.1.0 / 0.2.1-rc.2.ops.0.1.0 / 0.2.1-rc.1.ops.0.1.0",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"
@@ -670,7 +670,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.2.2-rc.3.intent.0.3.4 / 0.2.2-rc.2.intent.0.3.4 / 0.2.2-rc.1.intent.0.3.4 / 0.2.1-rc.5.intent.0.3.4 / 0.2.1-rc.3.intent.0.3.3",
+      "version": "0.2.2-rc.4.intent.0.3.4 / 0.2.2-rc.3.intent.0.3.4 / 0.2.2-rc.2.intent.0.3.4 / 0.2.2-rc.1.intent.0.3.4 / 0.2.1-rc.5.intent.0.3.4 / 0.2.1-rc.3.intent.0.3.3",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"

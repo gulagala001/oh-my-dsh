@@ -24,7 +24,7 @@
     "docs/usage_EN.md": "399006309b532f2489b8f2877e86adb90e027e655b57abbaf3e38d04acbc76e4",
     "docs/usage.md": "ae75a7aa3d0b3d580d77423cb201d2ec0986a7fa4960f20417dd660279cbe4bb",
     "lib/client.js": "771796cfbf683c835dc7476c5adca6cf3718dd1f18b977f289a373d26a00bf61",
-    "package.json": "a3bd9802cff33fd66a11f4e8cb6523dc361960e92ecc8c6e96c2c955c32de279",
+    "package.json": "bcaeb1e231ca65dfe137488429a0f19ca22e9c45ea8ab7b572fa8fbaccede8dc",
     "scripts/build.mjs": "70869d27e396cda01e08625aff9bd24fd856326c8f15cb987276422062fd54cb",
     "scripts/check-docs.mjs": "2592ee148ef6fd0164a0aa2a5be139c490a869b87e2a5d21e34d4defb943588e",
     "scripts/check-public-files.mjs": "2b5a86a744852fd0add41ba4a022388d605ce8d918af5eab63dcc64768c0e922",
@@ -47,5 +47,6 @@
     "src/client/temporary-web.mjs": "b5ca0ef51f1e77b4235b1a43f0093b374adee902f46f23b31316ff26d8b6fb66",
     "src/import.mjs": "20520bde14ac07877b85b5a16c5b133a33d9c587999ae5b1c1346014e46edc3b",
     "src/index.mjs": "9ba46f0254bdfd5d58d7791c506536cc2be99360cdd09ed0eece1f726527e138"
-  }
+  },
+  "buildHost": "0.2.2-rc.4"
 }

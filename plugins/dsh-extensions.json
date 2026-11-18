@@ -18,7 +18,7 @@
     "lib/client.js": "779498e0ae8e175956c0cdf74976ae5763731e3a60fbcb7f538737b1cc8e9b3a",
     "locale/en.json": "30a3c56e4a463aa3b160a77aad29d51dbf40145f48fab431ecad6caadfcaa35c",
     "locale/zh.json": "62cf42bc5a85bba9a70129f2dc858cded1da4e7c5b1df535fa78d5b167162664",
-    "package.json": "b55152f7eae044bb20491f7c61775a76d58cff10f90d5d4c4bf3d230daac212c",
+    "package.json": "4c3bc0c7ad7f6db995e46116298efed33249f7c34e1d7c642b27d109aed454ee",
     "scripts/build.mjs": "f620e499b0f6c834ea1100e6e0ce6262680b513018e7a706e6850bc2ef365ede",
     "scripts/check-docs.mjs": "2592ee148ef6fd0164a0aa2a5be139c490a869b87e2a5d21e34d4defb943588e",
     "scripts/check-public-files.mjs": "c52ef5a701e72cf4a9fdb2243a134883a4a5d1bcceb6bcfc0d017758aba73e76",
@@ -45,5 +45,6 @@
     "src/mcp.mjs": "59826c50f1371b0c1d1abf056fdf29fc162784e0fb25a59ae58f2bfcc9c88b26",
     "src/service.mjs": "a9b32ed280a46e8e990f5a8025c77efcdb467e6fd040c04f41d6371458f119a2",
     "src/skills.mjs": "72aecd73cfdc01d92c165f0f4b61cb92324d355f501f91c68080965b49fa1e8b"
-  }
+  },
+  "buildHost": "0.2.2-rc.4"
 }

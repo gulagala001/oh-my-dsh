@@ -1,54 +1,53 @@
 {
-  "version": "0.2.2-rc.3",
-  "commit": "38a6a5c965aa99ab525161efb7cc5cf1fe62fced",
+  "version": "0.2.2-rc.4",
+  "commit": "3f321d32bfe382212a8ed8785c1d47a5a300aa23",
   "cordis": "4.1.0",
   "schema": "3.19.0",
   "electron": "44.7.0",
   "peers": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-tools": "0.2.2-rc.3",
-    "@deepseek-ai/dsh-attachment": "0.2.2-rc.3",
-    "@deepseek-ai/dsh-scope": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.4",
+    "@deepseek-ai/dsh-attachment": "0.2.2-rc.4",
+    "@deepseek-ai/dsh-scope": "0.2.2-rc.4",
     "@deepseek-ai/schemastery": "3.19.0"
   },
   "buildInputs": {
     "packageManager": "pnpm@11.28.5",
     "sha256": {
-      "package-lock.json": "332e3e34d20603d4e2d790658cf64d861ef99170d1266898b965b246e24d4560",
-      "package.json": "acece75a8d1e4be682308144a97509223606c218f28e339285c8a59482857f5e",
-      "pnpm-lock.yaml": "fd962882cfe38073ea6d8aaa1181940b1cb36c8635910c6f81a9b0c94e5caa15",
-      "pnpm-workspace.yaml": "ef02eaaa458b049e201e6f5d2433b9073a4406b53f3b6cddc9cfa97ae98f0ff1"
+      "package.json": "43052b5f47dca2a148e91609a81fe77c838c1613ee1a85ec60c12df02790ba12",
+      "pnpm-lock.yaml": "dd5c510f3f3c0f2b3b6440a0cd5e88b8295d2b188e0119971f529a159cfafccf",
+      "pnpm-workspace.yaml": "ffbd28581ab35da3922d598355f58588704f7210b43316a0c52638e2881fd6b9"
     },
     "frontendSha256": {
       "package.json": "699f17b60a2c27537f8df26dfe455c04515c3aa36ec7996046a0f7cceb9f9450",
       "pnpm-lock.yaml": "77293248eafc9e6fc61e45b94686bc1e991a285792a174c82aea2e8d1a621f4c"
     },
     "dshPackages": [
-      "@deepseek-ai/dsh-agent@0.2.2-rc.3",
-      "@deepseek-ai/dsh-attachment-local@0.2.2-rc.3",
-      "@deepseek-ai/dsh-attachment@0.2.2-rc.3",
-      "@deepseek-ai/dsh-brand@0.2.2-rc.3",
-      "@deepseek-ai/dsh-error@0.2.2-rc.3",
-      "@deepseek-ai/dsh-home-paths@0.2.2-rc.3",
-      "@deepseek-ai/dsh-lazy-require@0.2.2-rc.3",
-      "@deepseek-ai/dsh-llm@0.2.2-rc.3",
-      "@deepseek-ai/dsh-scope@0.2.2-rc.3",
-      "@deepseek-ai/dsh-session-persistence@0.2.2-rc.3",
-      "@deepseek-ai/dsh-session-projection@0.2.2-rc.3",
-      "@deepseek-ai/dsh-session@0.2.2-rc.3",
-      "@deepseek-ai/dsh-storage-domain@0.2.2-rc.3",
-      "@deepseek-ai/dsh-storage@0.2.2-rc.3",
-      "@deepseek-ai/dsh-system-prompt@0.2.2-rc.3",
-      "@deepseek-ai/dsh-timeout@0.2.2-rc.3",
-      "@deepseek-ai/dsh-tool-executor-native@0.2.2-rc.3",
-      "@deepseek-ai/dsh-tools@0.2.2-rc.3",
-      "@deepseek-ai/dsh-typert-protocol@0.2.2-rc.3",
-      "@deepseek-ai/dsh-user-approval@0.2.2-rc.3",
-      "@deepseek-ai/dsh-util-crypto@0.2.2-rc.3",
-      "@deepseek-ai/dsh-util-file-drag@0.2.2-rc.3",
-      "@deepseek-ai/dsh-util-values@0.2.2-rc.3",
-      "@deepseek-ai/dsh-workspace@0.2.2-rc.3"
+      "@deepseek-ai/dsh-agent@0.2.2-rc.4",
+      "@deepseek-ai/dsh-attachment-local@0.2.2-rc.4",
+      "@deepseek-ai/dsh-attachment@0.2.2-rc.4",
+      "@deepseek-ai/dsh-brand@0.2.2-rc.4",
+      "@deepseek-ai/dsh-error@0.2.2-rc.4",
+      "@deepseek-ai/dsh-home-paths@0.2.2-rc.4",
+      "@deepseek-ai/dsh-lazy-require@0.2.2-rc.4",
+      "@deepseek-ai/dsh-llm@0.2.2-rc.4",
+      "@deepseek-ai/dsh-scope@0.2.2-rc.4",
+      "@deepseek-ai/dsh-session-persistence@0.2.2-rc.4",
+      "@deepseek-ai/dsh-session-projection@0.2.2-rc.4",
+      "@deepseek-ai/dsh-session@0.2.2-rc.4",
+      "@deepseek-ai/dsh-storage-domain@0.2.2-rc.4",
+      "@deepseek-ai/dsh-storage@0.2.2-rc.4",
+      "@deepseek-ai/dsh-system-prompt@0.2.2-rc.4",
+      "@deepseek-ai/dsh-timeout@0.2.2-rc.4",
+      "@deepseek-ai/dsh-tool-executor-native@0.2.2-rc.4",
+      "@deepseek-ai/dsh-tools@0.2.2-rc.4",
+      "@deepseek-ai/dsh-typert-protocol@0.2.2-rc.4",
+      "@deepseek-ai/dsh-user-approval@0.2.2-rc.4",
+      "@deepseek-ai/dsh-util-crypto@0.2.2-rc.4",
+      "@deepseek-ai/dsh-util-file-drag@0.2.2-rc.4",
+      "@deepseek-ai/dsh-util-values@0.2.2-rc.4",
+      "@deepseek-ai/dsh-workspace@0.2.2-rc.4"
     ],
-    "installedLockSha256": "fd962882cfe38073ea6d8aaa1181940b1cb36c8635910c6f81a9b0c94e5caa15"
+    "installedLockSha256": "dd5c510f3f3c0f2b3b6440a0cd5e88b8295d2b188e0119971f529a159cfafccf"
   }
 }

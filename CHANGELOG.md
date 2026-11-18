@@ -1,3 +1,31 @@
+# Oh My DSH 1.7.2 · DSH 0.2.2-rc.4
+
+[中文](#zh-172-rc4) · [English](#en-172-rc4)
+
+<a id="zh-172-rc4"></a>
+
+## 中文
+
+### 其他变更
+
+- 适配 DSH 0.2.2-rc.4。从插件页安装对应宿主的固定包。
+
+<a id="en-172-rc4"></a>
+
+## English
+
+### Other changes
+
+- Support DSH 0.2.2-rc.4. Install the package for your exact DSH version from the Plugins page.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.4** · Node.js **24.9.0+**
+
+[安装包 / Package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.7.2/oh-my-dsh-0.2.2-rc.4.omd.1.7.2.tgz) · [使用说明 / Guide](https://github.com/gulagala001/oh-my-dsh/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.7.2/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.7.1 · DSH 0.2.2-rc.3
 
 [中文](#zh-171) · [English](#en-171)
