@@ -1,7 +1,5 @@
 # Oh My DSH 1.8.0 · DSH 0.2.2-rc.5
 
-**未发布 / Unreleased.**
-
 [中文](#zh-180) · [English](#en-180)
 
 <a id="zh-180"></a>
