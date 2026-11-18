@@ -10,7 +10,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const { engines: { dsh: version }, packageManager } = JSON.parse(readFileSync(join(root, 'package.json')));
 const { commit, sdkLockSha256: frozen } = hostTarget(version);
 export { commit, frozen };
-export const reviewedNativeClients = new Set(['0.2.2-rc.3', '0.2.2-rc.4', '0.2.2-rc.5']);
+export const reviewedNativeClients = new Set(['0.2.2-rc.3', '0.2.2-rc.4', '0.2.2-rc.4']);
 export const cacheName = 'dsh-sdk-' + commit.slice(0, 8);
 const upstream = 'https://github.com/deepseek-ai/deepseek-harness.git';
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');

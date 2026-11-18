@@ -1,3 +1,35 @@
+# DSH Extensions 0.1.9 · DSH 0.2.2-rc.3
+
+**未发布 / Unreleased.**
+
+[中文](#zh-019) · [English](#en-019)
+
+<a id="zh-019"></a>
+
+## 中文
+
+### 体验优化
+
+- 在不同窗口编辑同一个 Skill、指令、自定义命令、MCP 服务或 Hook 时，保存冲突会保留草稿。
+- 切换工作区后保留选择，并阻止旧表单删除或修改已更新的条目。
+
+<a id="en-019"></a>
+
+## English
+
+### Improvements
+
+- Conflicting edits to the same skill, instruction, command, MCP server or hook leave the draft open.
+- Workspace selection survives a failed refresh, and stale forms cannot remove or change updated entries.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.9-dsh.0.2.2-rc.3/dsh-extensions-0.1.9-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-extensions/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.9-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DSH Extensions 0.1.8 · DSH 0.2.2-rc.3
 
 [中文](#zh-018) · [English](#en-018)

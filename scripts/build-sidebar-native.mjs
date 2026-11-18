@@ -8,7 +8,7 @@ import { hostClientSource, replaceExactly, ownClientStyles, clientRegistration }
 const root = new URL('../', import.meta.url), name = '@deepseek-ai/dsh-client-ui-workspace';
 let { source, version } = await hostClientSource(root, name);
 const hash = createHash('sha256').update(source).digest('hex');
-if (!reviewedNativeClients.has(version) || hash !== '229b22697f611468b1bc5bb10aff187b3b8bbce63c96fcb0f9cb7cde9e1e1cac') throw Error('Unreviewed native workspace browser');
+if (!reviewedNativeClients.has(version) || !['229b22697f611468b1bc5bb10aff187b3b8bbce63c96fcb0f9cb7cde9e1e1cac', 'a5719367e4b1913dfc5d92f375eeed50403dc992cef329f3227d053bfe671aec'].includes(hash)) throw Error('Unreviewed native workspace browser');
 const walk = (node, visit) => { if (!node || typeof node !== 'object') return; visit(node); for (const value of Object.values(node)) if (Array.isArray(value)) value.forEach(item => walk(item, visit)); else if (value && typeof value === 'object') walk(value, visit); };
 const functions = new Map();
 walk(parse(source, {ecmaVersion:'latest',sourceType:'script'}), node => {if(node.type==='FunctionDeclaration'&&node.id) {if(functions.has(node.id.name)) throw Error('Duplicate native function');functions.set(node.id.name,node);}});

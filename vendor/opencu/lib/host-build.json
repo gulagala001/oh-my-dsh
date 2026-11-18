@@ -1,53 +1,53 @@
 {
-  "version": "0.2.2-rc.5",
-  "commit": "9c2670d3bce5275e0d1610272958121af87787bb",
+  "version": "0.2.2-rc.4",
+  "commit": "3f321d32bfe382212a8ed8785c1d47a5a300aa23",
   "cordis": "4.1.0",
   "schema": "3.19.0",
   "electron": "44.7.0",
   "peers": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-tools": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-attachment": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-scope": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.4",
+    "@deepseek-ai/dsh-attachment": "0.2.2-rc.4",
+    "@deepseek-ai/dsh-scope": "0.2.2-rc.4",
     "@deepseek-ai/schemastery": "3.19.0"
   },
   "buildInputs": {
     "packageManager": "pnpm@11.28.5",
     "sha256": {
-      "package.json": "0ab5a137af53ad823a6974d575bbf06150e1297da49cf26adc5f3dc87debc497",
-      "pnpm-lock.yaml": "65535e3a89caede5d94b8e44c1ecf8bb90b3cf5bc2b6241ccefea5815551b2e0",
-      "pnpm-workspace.yaml": "3b75812571f9ef566aff670e3c6139e10c575d00bb8cae7cf5b4745f660e8d09"
+      "package.json": "43052b5f47dca2a148e91609a81fe77c838c1613ee1a85ec60c12df02790ba12",
+      "pnpm-lock.yaml": "dd5c510f3f3c0f2b3b6440a0cd5e88b8295d2b188e0119971f529a159cfafccf",
+      "pnpm-workspace.yaml": "ffbd28581ab35da3922d598355f58588704f7210b43316a0c52638e2881fd6b9"
     },
     "frontendSha256": {
       "package.json": "699f17b60a2c27537f8df26dfe455c04515c3aa36ec7996046a0f7cceb9f9450",
       "pnpm-lock.yaml": "77293248eafc9e6fc61e45b94686bc1e991a285792a174c82aea2e8d1a621f4c"
     },
     "dshPackages": [
-      "@deepseek-ai/dsh-agent@0.2.2-rc.5",
-      "@deepseek-ai/dsh-attachment-local@0.2.2-rc.5",
-      "@deepseek-ai/dsh-attachment@0.2.2-rc.5",
-      "@deepseek-ai/dsh-brand@0.2.2-rc.5",
-      "@deepseek-ai/dsh-error@0.2.2-rc.5",
-      "@deepseek-ai/dsh-home-paths@0.2.2-rc.5",
-      "@deepseek-ai/dsh-lazy-require@0.2.2-rc.5",
-      "@deepseek-ai/dsh-llm@0.2.2-rc.5",
-      "@deepseek-ai/dsh-scope@0.2.2-rc.5",
-      "@deepseek-ai/dsh-session-persistence@0.2.2-rc.5",
-      "@deepseek-ai/dsh-session-projection@0.2.2-rc.5",
-      "@deepseek-ai/dsh-session@0.2.2-rc.5",
-      "@deepseek-ai/dsh-storage-domain@0.2.2-rc.5",
-      "@deepseek-ai/dsh-storage@0.2.2-rc.5",
-      "@deepseek-ai/dsh-system-prompt@0.2.2-rc.5",
-      "@deepseek-ai/dsh-timeout@0.2.2-rc.5",
-      "@deepseek-ai/dsh-tool-executor-native@0.2.2-rc.5",
-      "@deepseek-ai/dsh-tools@0.2.2-rc.5",
-      "@deepseek-ai/dsh-typert-protocol@0.2.2-rc.5",
-      "@deepseek-ai/dsh-user-approval@0.2.2-rc.5",
-      "@deepseek-ai/dsh-util-crypto@0.2.2-rc.5",
-      "@deepseek-ai/dsh-util-file-drag@0.2.2-rc.5",
-      "@deepseek-ai/dsh-util-values@0.2.2-rc.5",
-      "@deepseek-ai/dsh-workspace@0.2.2-rc.5"
+      "@deepseek-ai/dsh-agent@0.2.2-rc.4",
+      "@deepseek-ai/dsh-attachment-local@0.2.2-rc.4",
+      "@deepseek-ai/dsh-attachment@0.2.2-rc.4",
+      "@deepseek-ai/dsh-brand@0.2.2-rc.4",
+      "@deepseek-ai/dsh-error@0.2.2-rc.4",
+      "@deepseek-ai/dsh-home-paths@0.2.2-rc.4",
+      "@deepseek-ai/dsh-lazy-require@0.2.2-rc.4",
+      "@deepseek-ai/dsh-llm@0.2.2-rc.4",
+      "@deepseek-ai/dsh-scope@0.2.2-rc.4",
+      "@deepseek-ai/dsh-session-persistence@0.2.2-rc.4",
+      "@deepseek-ai/dsh-session-projection@0.2.2-rc.4",
+      "@deepseek-ai/dsh-session@0.2.2-rc.4",
+      "@deepseek-ai/dsh-storage-domain@0.2.2-rc.4",
+      "@deepseek-ai/dsh-storage@0.2.2-rc.4",
+      "@deepseek-ai/dsh-system-prompt@0.2.2-rc.4",
+      "@deepseek-ai/dsh-timeout@0.2.2-rc.4",
+      "@deepseek-ai/dsh-tool-executor-native@0.2.2-rc.4",
+      "@deepseek-ai/dsh-tools@0.2.2-rc.4",
+      "@deepseek-ai/dsh-typert-protocol@0.2.2-rc.4",
+      "@deepseek-ai/dsh-user-approval@0.2.2-rc.4",
+      "@deepseek-ai/dsh-util-crypto@0.2.2-rc.4",
+      "@deepseek-ai/dsh-util-file-drag@0.2.2-rc.4",
+      "@deepseek-ai/dsh-util-values@0.2.2-rc.4",
+      "@deepseek-ai/dsh-workspace@0.2.2-rc.4"
     ],
-    "installedLockSha256": "65535e3a89caede5d94b8e44c1ecf8bb90b3cf5bc2b6241ccefea5815551b2e0"
+    "installedLockSha256": "dd5c510f3f3c0f2b3b6440a0cd5e88b8295d2b188e0119971f529a159cfafccf"
   }
 }

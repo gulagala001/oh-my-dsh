@@ -1,6 +1,6 @@
 {
   "name": "@gulagala001/dsh-persona-plugin",
-  "version": "0.2.5-dsh.0.2.2-rc.3",
+  "version": "0.2.6-dsh.0.2.2-rc.3",
   "description": "AI personalities for DeepSeek Harness. Choose one globally or per conversation, and create, import or share your own.",
   "type": "module",
   "license": "MIT",
@@ -21,7 +21,7 @@
   },
   "engines": {
     "node": ">=24.9.0",
-    "dsh": "0.2.2-rc.5"
+    "dsh": "0.2.2-rc.4"
   },
   "keywords": [
     "dsh-plugin",
@@ -58,11 +58,11 @@
     "@deepseek-ai/cordis": "4.1.0"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh": "0.2.2-rc.5",
+    "@deepseek-ai/dsh": "0.2.2-rc.4",
     "esbuild": "0.25.12",
     "react": "18.3.1",
-    "@deepseek-ai/dsh-tool-pwsh-persistent": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-session": "0.2.2-rc.5"
+    "@deepseek-ai/dsh-tool-pwsh-persistent": "0.2.2-rc.4",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.4"
   },
   "dsh": {
     "bundle": {

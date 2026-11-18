@@ -1,10 +1,10 @@
 {
   "package": "dsh-extensions",
-  "version": "0.1.8-dsh.0.2.2-rc.3",
+  "version": "0.1.9-dsh.0.2.2-rc.3",
   "host": "0.2.2-rc.3",
   "source": "../dsh-extensions",
   "files": {
-    "CHANGELOG.md": "44023e355a80daf3e5609c41346391188ddc832b99543738781102454d6fe457",
+    "CHANGELOG.md": "a741670e00ce93787383f38cc6ce252b5cc9d7e25fe2c3a155ba408e2294f355",
     "LICENSE": "34afbe3ace726d5a23cd5c54a95cf1e0ae2777153afc33959f55ac3e4bf6c187",
     "README_EN.md": "7fc1809a770ed3bb6bc198152e86f43c5fb7f911386ef864349d0546fdb04b8f",
     "README.md": "3b7fe4517d3a9a6cd6dbecb9e26a3c4498a755b7fbe747b741f724b20453c36e",
@@ -18,7 +18,7 @@
     "lib/client.js": "db1b2dc28c281f9c2954399708a99888ff2f32c690d25b2f57ea0f92266a8ae2",
     "locale/en.json": "30a3c56e4a463aa3b160a77aad29d51dbf40145f48fab431ecad6caadfcaa35c",
     "locale/zh.json": "62cf42bc5a85bba9a70129f2dc858cded1da4e7c5b1df535fa78d5b167162664",
-    "package.json": "dbe57360ce8a5455002329a2a4ea6d7deaeba86000236f3384990f566cd7db1b",
+    "package.json": "59ded33e8194be9aab88379cc25a73a7f771be728ce707921a5962aed472b9d1",
     "scripts/build.mjs": "f620e499b0f6c834ea1100e6e0ce6262680b513018e7a706e6850bc2ef365ede",
     "scripts/check-docs.mjs": "2592ee148ef6fd0164a0aa2a5be139c490a869b87e2a5d21e34d4defb943588e",
     "scripts/check-public-files.mjs": "c52ef5a701e72cf4a9fdb2243a134883a4a5d1bcceb6bcfc0d017758aba73e76",
@@ -49,5 +49,5 @@
     "src/client/window-owner.mjs": "3e4296e26b458740b1511767e24de682ed5855ac9415659bac1e6d37a97a6a25",
     "src/edit-revision.mjs": "fd1186b12ebdcb9c60a8c007d1b670d019eaaad2e953cfedfefde17de8219713"
   },
-  "buildHost": "0.2.2-rc.5"
+  "buildHost": "0.2.2-rc.4"
 }

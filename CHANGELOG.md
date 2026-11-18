@@ -1,28 +1,34 @@
-# Oh My DSH 1.7.2 · DSH 0.2.2-rc.5
+# Oh My DSH 1.8.0 · DSH 0.2.2-rc.4
 
-[中文](#zh-172-rc5) · [English](#en-172-rc5)
+**未发布 / Unreleased.**
 
-<a id="zh-172-rc5"></a>
+[中文](#zh-180) · [English](#en-180)
+
+<a id="zh-180"></a>
 
 ## 中文
 
-### 其他变更
+### 体验优化
 
-- 适配 DSH 0.2.2-rc.5。从插件页安装对应宿主的固定包。
+- 切换工作区时保留尚未发送的草稿。侧栏会话关闭失败时可以重试，主题切换会等上一份外观完成清理。
+- 内置扩展编辑器会提示其他窗口已保存的修改。临时网页聊天不会被另一个窗口提前清理。
+- 可在 Unharnessed 设置中控制会话委派，后台完成提醒会随读取和撤销状态更新。
 
-<a id="en-172-rc5"></a>
+<a id="en-180"></a>
 
 ## English
 
-### Other changes
+### Improvements
 
-- Support DSH 0.2.2-rc.5. Install the package for your exact DSH version from the Plugins page.
+- Unsent drafts follow workspace changes. Sidebar sessions can retry failed closes and theme changes wait for the previous appearance to release.
+- The built-in extension editor reports edits saved by another window. Temporary web chats stay available while their window is open.
+- Control delegation in Unharnessed settings. Background completion notices follow reads and withdrawals.
 
 ## 安装 / Installation
 
-DSH **0.2.2-rc.5** · Node.js **24.9.0+**
+DSH **0.2.2-rc.4** · Node.js **24.9.0+**
 
-[安装包 / Package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.7.2/oh-my-dsh-0.2.2-rc.5.omd.1.7.2.tgz) · [使用说明 / Guide](https://github.com/gulagala001/oh-my-dsh/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.7.2/SHA256SUMS)
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.8.0/oh-my-dsh-0.2.2-rc.4.omd.1.8.0.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.8.0/SHA256SUMS)
 
 ---
 

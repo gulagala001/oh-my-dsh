@@ -1,3 +1,33 @@
+# Response ID Reuse 0.1.11 · DSH 0.2.2-rc.3
+
+**未发布 / Unreleased.**
+
+[中文](#zh-0111) · [English](#en-0111)
+
+<a id="zh-0111"></a>
+
+## 中文
+
+### 体验优化
+
+- 重新加载插件时，正在结束的旧连接会先完成清理，防止响应续传被重复接管。
+
+<a id="en-0111"></a>
+
+## English
+
+### Improvements
+
+- Plugin reloads finish retiring the previous connection before handing off response resumption.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.11-dsh.0.2.2-rc.3/gulagala001-dsh-response-id-reuse-0.1.11-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-response-id-reuse/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.11-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # Response ID Reuse 0.1.10 · DSH 0.2.2-rc.3
 
 [中文](#zh-0110) · [English](#en-0110)

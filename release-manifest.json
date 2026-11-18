@@ -2,15 +2,6 @@
   "schema": 1,
   "releases": [
     {
-      "version": "0.2.2-rc.5.omd.1.7.2",
-      "severity": "normal",
-      "title": "Oh My DSH 1.7.2 · DSH 0.2.2-rc.5",
-      "notes": [
-        "适配 DSH 0.2.2-rc.5。"
-      ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.5.omd.1.7.2"
-    },
-    {
       "version": "0.2.2-rc.4.omd.1.7.2",
       "severity": "normal",
       "title": "Oh My DSH 1.7.2 · DSH 0.2.2-rc.4",
