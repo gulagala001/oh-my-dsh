@@ -127,6 +127,12 @@ export function applySessionOverview(ctx, openCU) {
           },
         };
       }, [agents, jobsState, sessionId, durable, refreshProjection]);
+      const computerActive = props.usePresentation?.(value => value.activeTaskIds.includes(sessionId)) ?? false;
+      const hasContent = Boolean(data.outputs.length || data.sources.length || data.rows.length || data.jobs.length || computerActive);
+      const blank = sessions.byId?.[sessionId]?.blank === true;
+      useLayoutEffect(() => {
+        if (summaryPanel.container) summaryPanel.observeContent(blank, data.ready, hasContent, durable?.createdAt);
+      }, [summaryPanel.container, summaryPanel.observeContent, blank, data.ready, hasContent, durable?.createdAt]);
       useLayoutEffect(() => { states.set(sessionId, data); notify(); }, [sessionId, data]);
       useEffect(() => () => { states.delete(sessionId); notify(); }, [sessionId]);
       return <Original {...props} overview={data} summaryPanel={summaryPanel.container ? summaryPanel : undefined}/>;

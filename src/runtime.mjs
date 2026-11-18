@@ -7,6 +7,7 @@ import { acquirePersona } from '../plugins/persona/src/index.mjs';
 import { readJsonBody as readBody, rejectUntrusted, sendJson as send, withRequestSignal } from './http.mjs';
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
 import { legacySettings } from './legacy-settings.mjs';
+import { isUnharnessedPreset } from './experimental-presets.mjs';
 import { isOmdPreset } from './legacy-identity.mjs';
 import { migrateLegacyInstallation } from './legacy-migration.mjs';
 import { homedir } from 'node:os';
@@ -168,7 +169,8 @@ async function applyRuntime(ctx, config) {
   mountRecommendedPlugins(ctx, hub);
   mountPluginPreflight(ctx, hub, versionUpdater.progress);
   installForkProvenance(ctx, hub.store);
-  const isX = session => isOmdPreset(ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset);
+  const presetOf = session => ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset;
+  const isX = session => isOmdPreset(presetOf(session));
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
   installPtcLifecycle(ctx, { adaptiveBudgets: session => Boolean(session && (isX(session) || isOmaaEnhanced(session))) });
   installResultReduction(ctx, hub, session => isX(session) || isOmaaEnhanced(session));
@@ -185,7 +187,8 @@ async function applyRuntime(ctx, config) {
     },
     restore: (sessionId, snapshot) => hub.ultracode.restore(sessionId, snapshot),
   };
-  const monitored = session => !isBtwSession(session) && (isX(session) || (session.header.origin === 'subagent' && Boolean(hub.workflowBudget.owner(session))));
+  const managed = session => isX(session) || (session.header.origin === 'subagent' && Boolean(hub.workflowBudget.owner(session)));
+  const monitored = session => !isBtwSession(session) && (managed(session) || isUnharnessedPreset(presetOf(session)));
   installUltracodeProjection(ctx);
   installOverviewProjection(ctx);
   ctx.on('agent/inbox/claimed', ({ agent, message }) => { if(!isBtwSession(agent.session))hub.ultracode.claimed(agent, message); }, { global: true });
@@ -313,7 +316,7 @@ async function applyRuntime(ctx, config) {
     // A preset can have changed before disposal; release resources we owned.
     const id = agent.session.id;
     hub.requestStarts.delete(id);
-    if (!monitored(agent.session) && !hub.agents.has(id) && !hub.context.agents.has(id)) return;
+    if (!managed(agent.session) && !hub.agents.has(id) && !hub.context.agents.has(id)) return;
     const disposed = hub.context.dispose(id); hub.taskReviews.delete(id); hub.agents.delete(id);
     return disposed;
   }, { global: true });
@@ -328,7 +331,7 @@ async function applyRuntime(ctx, config) {
     hub.ultracode.lifecycle(agent, source);
     hub.workflowBudget.attach(agent.session);
     await hub.dream.sources.refreshScope(agent.session.header,signal);
-    if (!monitored(agent.session)) return;
+    if (!managed(agent.session)) return;
     const state = hub.store.state(agent.session.id);
     state.cwd = agent.session.header.cwd; state.parentSession = forkParentOf(agent.session.header, hub.store);
     state.origin = agent.session.header.origin ?? null;
@@ -365,7 +368,7 @@ async function applyRuntime(ctx, config) {
     hub.ultracode.committed(session, event);
     hub.workflowBudget.observe(session, event);
     if (!monitored(session) && !hub.requestStarts.has(session.id)) return;
-    hub.observe(session, event);
+    hub.observe(session, event, { monitorOnly: !managed(session) });
     if (isX(session)) hub.context.observe(session, event);
   }, { global: true });
   ctx.inject(btwPlugin.inject, async scope => { await scope.plugin(btwPlugin); });

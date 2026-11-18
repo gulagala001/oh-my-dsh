@@ -1,3 +1,49 @@
+# Oh My DSH 1.7.0 · DSH 0.2.2-rc.3
+
+[中文](#zh-170) · [English](#en-170)
+
+<a id="zh-170"></a>
+
+## 中文
+
+### 新增功能
+
+- 新会话首次有输出、来源、子智能体、后台进程或电脑操作时，会话总览自动展开并保持打开。可在「设置 → Oh My DSH → 功能」关闭自动展开。
+
+- 在「调用日志 → API 价格」立即刷新 models.dev 价格。选择美元或人民币，手填汇率或获取最新参考汇率后即可查看换算后的单价、调用费用和趋势。
+
+### 问题修复
+
+- 统计表将低于 50% 的缓存命中率标为「低命中」，可以区分部分命中与 0%。
+
+- 修复独立和内置 Unharnessed 预设的监控显示为零的问题。有原生回执的历史调用也会补入概览和日志。
+- 修复 GPT 在一次调用中穿插进度文字时，分段思考摘要在工具过程里显示成多行的问题。
+
+<a id="en-170"></a>
+
+## English
+
+### New features
+
+- The conversation overview opens when a new session has its first item and remembers your choice. Disable auto-open in Settings → Oh My DSH → Features.
+
+- Refresh models.dev prices from Call log → API prices. Select USD or CNY and enter an exchange rate or fetch the latest reference rate to convert unit prices, call costs and trends.
+
+### Bug fixes
+
+- Label cache hit rates below 50% as low in the statistics table so partial hits remain distinguishable from zero.
+
+- Restore monitoring for the standalone and bundled Unharnessed presets, including historical calls with native receipts.
+- Keep GPT reasoning summaries in one process row when the same call also emits a progress message.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[安装包 / Package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.7.0/oh-my-dsh-0.2.2-rc.3.omd.1.7.0.tgz) · [使用说明 / Guide](https://github.com/gulagala001/oh-my-dsh/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.7.0/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.6.1 · DSH 0.2.2-rc.3
 
 [中文](#zh-161) · [English](#en-161)

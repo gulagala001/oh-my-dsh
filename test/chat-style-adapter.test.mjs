@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { runInNewContext } from 'node:vm';
 import { readFile } from 'node:fs/promises';
 import { readComposerStats, buildChatStyleFactory } from '../scripts/chat-style-adapter.mjs';
 
@@ -45,4 +46,27 @@ test('missing, duplicate, unknown or dynamic registrations fail closed', () => {
 test('format tolerance never bypasses the upstream source fingerprint', () => {
   assert.throws(() => buildChatStyleFactory(raw.replace('name: "conversation.composer.dock"', 'name : "conversation.composer.dock"'), source), /SHA-256 differs/);
   assert.throws(() => buildChatStyleFactory(raw, { ...source, commit: 'unreviewed' }), /unsupported upstream source/);
+});
+
+test('the native process renderer groups split summaries and keeps the reply and real tool boundaries', () => {
+  const { code } = buildChatStyleFactory(raw, source, assets);
+  const render = bundle => {
+    const fn = bundle.slice(bundle.indexOf('function AssistantMarkdown({'), bundle.indexOf('function ProcessReasoning(')).trim().slice(0, -2);
+    const element = (type, props) => ({ type, ...props });
+    return runInNewContext('(' + fn + ')', { react: { useMemo: f => f() }, react_jsx_runtime: { jsx: element, jsxs: element },
+      markdownLabels: () => ({}), AssistantMarkdown_module_css_default: {}, ProcessReasoning: 'process', ReasoningRow: 'think',
+      _deepseek_ai_dsh_client_ui_primitives: { MarkdownText: 'text' } });
+  };
+  const blocks = ['summary A', 'progress', 'summary B'].map((text, i) => ({ kind: i === 1 ? 'text' : 'reasoning', text }));
+  const rows = (fn, part, sequence, streaming) => fn({ blocks: sequence, groupPart: part, streaming }).children.children[0];
+  assert.equal(rows(render(raw), 'reasoning', blocks, false).length, 2);
+  const adapted = render(code);
+  for (const streaming of [true, false]) {
+    const [row, ...extra] = rows(adapted, 'reasoning', blocks, streaming);
+    assert.equal(extra.length, 0);
+    assert.equal(row.children.text, 'summary A\n\nsummary B');
+    assert.equal(row.children.running, streaming);
+    assert.equal(rows(adapted, 'response', blocks, streaming)[0].text, 'progress');
+    assert.equal(rows(adapted, 'reasoning', [...blocks, { kind: 'tool-call' }, blocks[0]], streaming).length, 2);
+  }
 });

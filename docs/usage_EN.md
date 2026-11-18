@@ -33,7 +33,7 @@ The right-sidebar **OMD Console** has five pages, also linked from the input inf
 
 ## Tasks and progress
 
-**Conversation overview** starts with outputs and sources; other sections appear as needed, with staggered agent arrivals. Click to slide in/out; drag its edge to resize. Opening the workspace closes it; reopening floats it. Outside clicks keep it open.
+**Conversation overview** opens when a new chat first has an output, source, subagent, background process or computer session. It stays open until you close it. Use the header button to toggle it or drag its edge to resize. Turn off auto-open in Settings → Oh My DSH → Features.
 
 State your goal, material, scope and completion criteria. For multi-step work, `todo_write` records your words and derived tasks; `verify_link` attaches each task's check commands and results.
 
@@ -133,9 +133,7 @@ New installs use the DSH theme, logo and title. Upgrades keep your choices. In *
 
 ## Monitoring
 
-**OMD Console** Overview and logs cover this session or all sessions over a time range, with date, model and component filters.
-
-**`≥`** before a number means a known minimum; the real figure may be higher. Input, cache or output a provider did not report is shown as unknown, never as 0, and the cache hit rate is only computed from complete data. Context usage is an estimate, not a bill. See [monitoring](monitoring.md).
+In **OMD Console**, filter usage by session, date or model, including standalone and bundled Unharnessed sessions. In Call log → API prices, refresh prices, choose USD or CNY, and fetch or enter an exchange rate. **`≥`** marks a known minimum. See [monitoring](monitoring.md).
 
 ## CodeGraph
 

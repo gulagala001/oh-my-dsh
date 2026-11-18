@@ -340,14 +340,14 @@ export class Hub extends Service {
           ...(failure?.failure ? { failure: failure.failure } : {}) });
     }
   }
-  observe(session, event) {
+  observe(session, event, { monitorOnly = false } = {}) {
     if (event.type === 'step/end' || event.type === 'turn/end') {
       for (const key of imagePreflightsFor(this).keys()) if (key.startsWith(`${session.id}:${event.data.turn}:`) && (event.type === 'turn/end' || key === `${session.id}:${event.data.turn}:${event.data.step}`)) imagePreflightsFor(this).delete(key);
       // Preparation can abort before live.start, leaving no assistant settlement.
       const request = this.requestStarts.get(session.id);
       if (request?.turn === event.data.turn && (event.type === 'turn/end' || request.step === event.data.step)) this.requestStarts.delete(session.id);
     }
-    if (event.type === 'user/message' && event.data.source.kind === 'user') {
+    if (!monitorOnly && event.type === 'user/message' && event.data.source.kind === 'user') {
       const state = this.store.state(session.id);
       state.memoryScope ??= this.scope(session,{effective:false}).mode;
       state.cwd = session.header.cwd; state.parentSession = forkParentOf(session.header, this.store);
@@ -375,7 +375,7 @@ export class Hub extends Service {
       } finally {
         if (request && this.requestStarts.get(session.id) === request) this.requestStarts.delete(session.id);
       }
-      if (!failed && event.type === 'assistant/message' && event.data.message?.source?.kind === 'model' && event.data.stream?.length) this.context.mainSucceeded(session, event.data.message.source);
+      if (!monitorOnly && !failed && event.type === 'assistant/message' && event.data.message?.source?.kind === 'model' && event.data.stream?.length) this.context.mainSucceeded(session, event.data.message.source);
     }
   }
   finishTasks(agent, turn, signal) {

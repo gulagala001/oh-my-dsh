@@ -82,3 +82,20 @@ test('full monitor API reuses costs while custom settings remain immediately vis
   custom[0].currency = 'USD'; assert.equal(f.read().costSummary.totals[0].currency, 'USD');
   custom.length = 0; assert.notEqual(f.read().costSummary.totals[0].amount, 10);
 });
+
+test('overview, trend and call detail use the same exchange rate after a settings change', t => {
+  const f = fixture(t);
+  const settings = { monitorCurrency: 'CNY', monitorUsdCny: 7,
+    monitorPrices: [{ provider: 'fixture', model: 'm', currency: 'USD', inputTokens: 2 }] };
+  f.hub.config = () => settings;
+  f.hub.monitor.append({ id: 'exchange', sessionId: 'fixture', kind: 'main', provider: 'fixture', model: 'm',
+    at: Date.now() - 1, usage: { inputTokens: 1000000, totalTokens: 1000000 } });
+  for (const rate of [7, 6.5]) {
+    settings.monitorUsdCny = rate;
+    const full = f.read(), call = f.read('calls').activity.find(row => row.id === 'exchange');
+    assert.equal(call.cost.amount, 2 * rate);
+    assert.equal(call.price.currency, 'CNY');
+    assert.equal(full.costSummary.totals[0].amount, 2 * rate);
+    assert.equal(full.seriesSplit[0].costs.CNY, 2 * rate);
+  }
+});

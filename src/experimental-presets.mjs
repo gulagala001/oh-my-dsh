@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 
 export const UNHARNESSED_PRESET = 'omd-unharnessed';
+export const isUnharnessedPreset = id => id === 'unharnessed' || id === UNHARNESSED_PRESET;
 export const UNHARNESSED_SETTING = 'experimentalUnharnessedEnabled';
 
 export function unharnessedDefinition(directory) {

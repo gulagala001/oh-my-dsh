@@ -28,7 +28,9 @@ test('regional provider filters retain the same route as the selected call price
 
 test('exact regional price, tier and custom currency remain correct', () => {
   const call = { provider: 'zhipuai', model: 'glm-5v-turbo', usage: { inputTokens: 1000000, outputTokens: 1000000, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 2000000 } };
-  assert.equal(monitorCallCost(call).amount, 27);
+  const regional = catalog.entries.find(entry => entry.provider === call.provider && entry.model === call.model);
+  const effective = { ...regional.cost, ...regional.cost.tiers?.findLast(t => call.usage.inputTokens > t.above) };
+  assert.equal(monitorCallCost(call).amount, effective.input + effective.output);
   const model = catalog.entries.find(entry => entry.provider === 'minimax-cn' && entry.model === 'MiniMax-M3');
   const tier = model.cost.tiers.at(-1);
   const price = monitorCallPrice({ provider: model.provider, model: model.model, usage: { inputTokens: tier.above + 1 } });
@@ -99,4 +101,21 @@ test('route selections are bounded while tiers, overrides and refreshed catalogs
   assert.equal(costReads, 4); costs(); assert.equal(costReads, 4);
   assert.equal(pricing.price(call).inputTokens, 5, 'new catalog replaces cached entry selections');
   assert.equal(pricing.price({ ...call, usage: { inputTokens: 101 } }).inputTokens, 15);
+});
+
+test('manual refresh bypasses a fresh cache, shares one download and preserves prices on failure', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'omd-price-refresh-'));
+  let count = 0;
+  const pricing = new MonitorPricing(directory, { fetch: async () => { count++; return new Response(null, { status: 503 }); } });
+  t.after(async () => { await pricing.close(); await rm(directory, { recursive: true, force: true }); });
+  await pricing.loaded();
+  const original = pricing.catalog({ limit: 1 });
+  pricing.nextAt = Date.now() + 86400000;
+  await pricing.refresh();
+  assert.equal(count, 0);
+  await Promise.all([pricing.refresh(true), pricing.refresh(true)]);
+  assert.equal(count, 1);
+  assert.match(pricing.error, /503/);
+  assert.deepEqual(pricing.catalog({ limit: 1 }).items, original.items);
+  assert.equal(pricing.updatedAt, original.updatedAt);
 });

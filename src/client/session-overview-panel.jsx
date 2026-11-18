@@ -1,4 +1,5 @@
 import React, { useCallback, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { autoOverviewEnabled } from './overview-preference.mjs';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import { bindOverviewResize, readOverviewWidth, OVERVIEW_WIDTH_KEY } from './overview-panel-resize.mjs';
 
@@ -6,13 +7,34 @@ import { bindOverviewResize, readOverviewWidth, OVERVIEW_WIDTH_KEY } from './ove
 export function installOverviewPanel(ctx) {
   const panels = new Map(), listeners = new Set();
   let motionRevision = 0;
+  let autoSince = Date.now();
+  try {
+    const key = 'omd.overview.autoSince.v1', saved = Number(localStorage.getItem(key));
+    if (Number.isFinite(saved) && saved > 0) autoSince = saved;
+    else localStorage.setItem(key, String(autoSince));
+  } catch {}
   const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
   const empty = { open: false, motion: 0, sidebarExpanded: false, container: null };
   const read = sessionId => {
     if (!sessionId) return empty;
-    if (!panels.has(sessionId)) panels.set(sessionId, { ...empty,
-      toggle: () => update(sessionId, { open: !read(sessionId).open }),
-    });
+    if (!panels.has(sessionId)) {
+      const key = 'omd.overview.session.v1.' + sessionId;
+      let choice;
+      try { choice = localStorage.getItem(key); } catch {}
+      const choose = value => {
+        try { localStorage.setItem(key, value); } catch {}
+        update(sessionId, { choice: value, open: value === 'auto' || value === 'open' });
+      };
+      panels.set(sessionId, { ...empty, choice, open: choice === 'auto' || choice === 'open',
+        toggle: () => choose(read(sessionId).open ? 'closed' : 'open'),
+        observeContent(blank, ready, hasContent, createdAt) {
+          const current = read(sessionId).choice;
+          if (current && current !== 'armed') return;
+          if (hasContent && (blank || createdAt >= autoSince || current === 'armed')) choose(autoOverviewEnabled() ? 'auto' : 'closed');
+          else if (!current && (blank || ready && !hasContent)) choose('armed');
+        },
+      });
+    }
     return panels.get(sessionId);
   };
   const update = (sessionId, patch) => {
@@ -31,7 +53,8 @@ export function installOverviewPanel(ctx) {
     const expanded = props.useStore(value => value.bySession[props.sessionId]?.layout.expanded ?? false);
     useLayoutEffect(() => {
       const previous = read(props.sessionId);
-      update(props.sessionId, { sidebarExpanded: expanded, ...(expanded && !previous.sidebarExpanded ? { open: false } : {}) });
+      if (expanded && !previous.sidebarExpanded && previous.open && previous.choice !== 'auto') previous.toggle();
+      update(props.sessionId, { sidebarExpanded: expanded });
     }, [props.sessionId, expanded]);
     return <Original {...props}/>;
   }

@@ -2,6 +2,18 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.3.omd.1.7.0",
+      "severity": "normal",
+      "title": "Oh My DSH 1.7.0 · DSH 0.2.2-rc.3",
+      "notes": [
+        "新会话首次有可查看的条目时总览自动展开并常驻，可在设置中关闭。",
+        "监控收录独立及内置 Unharnessed 的调用和用量，并补回可读取的历史回执。",
+        "GPT 在同一次调用中穿插进度文字时，过程区的分段思考摘要合在一行。",
+        "API 价格页可立即刷新价格，并按手动或最新参考汇率显示美元和人民币费用。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.7.0"
+    },
+    {
       "version": "0.2.2-rc.3.omd.1.5.0",
       "severity": "normal",
       "title": "Oh My DSH 1.5.0 · DSH 0.2.2-rc.3",

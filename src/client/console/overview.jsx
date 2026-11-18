@@ -20,7 +20,7 @@ export function Overview({ sessionId, visible, range, period, go }) {
   const replacements = kinds.filter(x => SAVING_KINDS.includes(x.key)).reduce((n, x) => n + x.events, 0);
   const ctxTokens = d.meter?.totalTokens, cap = d.contextCapacity;
   const live = d.liveCalls || [], costSummary = d.costSummary || {}, costs = costSummary.totals || [];
-  const currency = costs.find(c => c.currency === selectedCurrency)?.currency || costs[0]?.currency || 'USD';
+  const currency = costs.find(c => c.currency === selectedCurrency)?.currency || costs[0]?.currency || d.displayCurrency || 'USD';
   const costFormat = amount => money({ amount, currency });
   const modelKeys = [...new Map((d.groups?.models || []).filter(m => m.key !== 'legacy-unattributed').map(m => {
     const key = JSON.stringify(m.model || null);

@@ -136,6 +136,8 @@ export class MonitorLedger {
       this.db.prepare('INSERT OR IGNORE INTO metadata VALUES(?,?)').run('schema', '1');
       this.db.prepare('INSERT OR IGNORE INTO metadata VALUES(?,?)').run('startedAt', String(now()));
       this.startedAt = Number(this.db.prepare('SELECT value FROM metadata WHERE key=?').get('startedAt').value);
+      this.db.prepare('INSERT OR IGNORE INTO metadata VALUES(?,?)').run('unharnessedLiveSince', String(now()));
+      this.historyBefore = Number(this.db.prepare('SELECT value FROM metadata WHERE key=?').get('unharnessedLiveSince').value);
       this.insert = this.db.prepare('INSERT OR IGNORE INTO calls VALUES(' + Array(21).fill('?').join(',') + ')');
       const columns=['sessionId','kind','at','provider','model','status','source','turn','step','eventSeq','startedAt','durationMs','effort','error',...fields];
       this.replace=this.db.prepare('INSERT INTO calls VALUES('+Array(21).fill('?').join(',')+') ON CONFLICT(id) DO UPDATE SET '+columns.map(key=>key+'=excluded.'+key).join(',')+' WHERE calls.sessionId=excluded.sessionId AND calls.kind=excluded.kind AND calls.source=excluded.source AND ((excluded.eventSeq IS NOT NULL AND (calls.eventSeq IS NULL OR excluded.eventSeq>=calls.eventSeq)) OR (excluded.eventSeq IS NULL AND excluded.at>=calls.at))');

@@ -232,7 +232,7 @@ OpenCU 使用的原始界面组件及来源记录。宿主／来源／素材，�
 
 模型价格数据。宿主／来源／素材，具体使用范围见来源记录。
 
-- 固定来源／版本: [SHA256:1e6f6274f532e79be26c37cab37a92352b74507f8893345792718c462a9f42ce](https://github.com/gulagala001/oh-my-dsh/blob/main/src/monitor-prices.json)
+- 固定来源／版本: [SHA256:2209cdcfb76ae98ee76c4f3a36d314940d0d2d125d053544fdea88ea24a41cf4](https://github.com/gulagala001/oh-my-dsh/blob/main/src/monitor-prices.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#modelsdev-api-pricing-data)
 
 ### Prompt Optimizer

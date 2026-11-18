@@ -1,5 +1,6 @@
 import { estimateToolsTokens } from './metering/estimate.mjs';
 import { monitorQuery, monitorEventQuery } from './monitor-ledger.mjs';
+import { displayPrice, latestUsdCny } from './monitor-exchange.mjs';
 import { monitorCallCost } from './monitor-call.mjs';
 import { monitorCallPrice, monitorPriceCatalog, monitorCostCacheKey } from './monitor-pricing.mjs';
 import { monitorSelection, monitorPerformance } from './monitoring.mjs';
@@ -9,6 +10,22 @@ import { coldNativeMonitorTarget } from './monitor-session.mjs';
 import { withRequestSignal } from './http.mjs';
 
 export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
+  if (url.pathname === '/oh-my-dsh/api/monitor/exchange-rate') {
+    if (req.method !== 'POST') { send(res, 405, { error: '不支持此方法' }); return true; }
+    await withRequestSignal(req, res, async signal => {
+      const quote = await latestUsdCny(AbortSignal.any([signal, AbortSignal.timeout(15000)]));
+      send(res, 200, quote);
+    });
+    return true;
+  }
+  if (url.pathname === '/oh-my-dsh/api/monitor/prices/refresh') {
+    if (req.method !== 'POST') { send(res, 405, { error: '不支持此方法' }); return true; }
+    await hub.pricing.loaded();
+    await hub.pricing.refresh(true);
+    const { error, updatedAt } = hub.pricing.catalog({ limit: 0 });
+    send(res, error ? 502 : 200, { error, updatedAt });
+    return true;
+  }
   if (url.pathname === '/oh-my-dsh/api/monitor/prices') {
     if (req.method !== 'GET') { send(res, 405, { error: '不支持此方法' }); return true; }
     const query = url.searchParams.get('query') || '', provider = url.searchParams.get('provider') || '';
@@ -17,7 +34,10 @@ export async function handleMonitorApi({ hub, ctx, req, res, url, send }) {
       || !Number.isInteger(limit) || limit < 1 || limit > 100) throw Error('价格筛选无效');
     hub.pricing?.refresh(); await hub.pricing?.loaded();
     res.setHeader('Cache-Control', 'no-store');
-    send(res, 200, hub.pricing ? hub.pricing.catalog({ query, provider, offset, limit }) : monitorPriceCatalog({ query, provider, offset, limit }));
+    const options = { query, provider, offset, limit };
+    const page = hub.pricing ? hub.pricing.catalog(options) : monitorPriceCatalog(options);
+    const { monitorCurrency, monitorUsdCny } = hub.config();
+    send(res, 200, { ...page, items: page.items.map(row => displayPrice(row, monitorCurrency, monitorUsdCny)) });
     return true;
   }
   if (url.pathname === '/oh-my-dsh/api/monitor/events') {
@@ -95,11 +115,12 @@ export function monitorSnapshot({ hub, ctx, params, id, session, agent, stored, 
     return { ...data, sessionId: id, coverage: { partial: Boolean(unreadable || hub.monitor.error),
       message: [unreadable ? `${unreadable} 份历史档案无法读取，结果不完整；原文件已保留。` : '', hub.monitor.error ? '部分监控记录写入失败；原生执行不受影响。' : ''].filter(Boolean).join(' ') } };
   }
-  const prices = hub.config().monitorPrices || [];
+  const { monitorPrices: prices = [], monitorCurrency, monitorUsdCny } = hub.config();
   hub.pricing?.refresh();
-  const priceOf = call => hub.pricing ? hub.pricing.price(call, prices) : monitorCallPrice(call, prices);
+  const priceOf = call => displayPrice(hub.pricing ? hub.pricing.price(call, prices) : monitorCallPrice(call, prices), monitorCurrency, monitorUsdCny);
   const costCacheKey = callsOnly ? undefined : hub.pricing ? hub.pricing.costCacheKey?.(prices) : monitorCostCacheKey(prices);
-  const data = hub.monitor.query(selection.selected, ids, query, call => monitorCallCost(call, prices, priceOf(call)), { callsOnly, costCacheKey });
+  const displayCacheKey = costCacheKey && { ...costCacheKey, custom: JSON.stringify([costCacheKey.custom, monitorCurrency, monitorUsdCny]) };
+  const data = hub.monitor.query(selection.selected, ids, query, call => monitorCallCost(call, prices, priceOf(call)), { callsOnly, costCacheKey: displayCacheKey });
   data.activity = data.activity.map(call => {
     const price = priceOf(call);
     return { ...call, price, cost: monitorCallCost(call, prices, price) };
@@ -140,7 +161,7 @@ export function monitorSnapshot({ hub, ctx, params, id, session, agent, stored, 
       heapUsedBytes: memory.heapUsed, heapTotalBytes: memory.heapTotal, uptimeSeconds: process.uptime() };
   });
   if (unreadable) warnings.push(`${unreadable} 份历史档案无法读取，结果不完整；原文件已保留。`);
-  return { ...data, sessionId: id, actions: selection.actions,
+  return { ...data, displayCurrency: monitorCurrency === 'CNY' ? 'CNY' : 'USD', sessionId: id, actions: selection.actions,
     actionsScope: '当前会话范围的累计计数，不随时间筛选变化',
     running: agent?.status ?? 'idle', liveCalls, meter, frame, toolsTokens, contextCapacity,
     budget, dream, resources,

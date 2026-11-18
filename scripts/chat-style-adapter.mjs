@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
-import { ownClientStyles, clientRegistration } from './host-build-contracts.mjs';
+import { ownClientStyles, clientRegistration, replaceExactly } from './host-build-contracts.mjs';
 
 const reviewedSource = {
   commits: ['1600d8a1e140dcde43a1a0941940a0480712c011', '687f282e8625c6b8d11ff58211a90524be2e4317', '1f81c047fc48fa190a683e469daa699857e9afe8'],
@@ -112,13 +112,36 @@ export function adaptChatStyleFactory(client) {
   return { code: adaptProcessHeader(client), stats: { cssStrings: 2, selectorReplacements: 0, emptyPredicates: 8, processHeaderLayouts: 1 } };
 }
 
+// The process seat and response seat render different parts of the same
+// Assistant. Text routed to the response seat cannot split a process row.
+function adaptReasoningRows(client) {
+  const original = [
+    'const next = blocks[i + 1];',
+    'if (next?.kind !== "reasoning") break;',
+    'parts.push(next.text);',
+    'i += 1;',
+  ];
+  const projected = [
+    'let nextIndex = i + 1;',
+    'while (blocks[nextIndex]?.kind === "text" && (groupPart === "reasoning" || !blocks[nextIndex].text.trim())) nextIndex++;',
+    'const next = blocks[nextIndex];',
+    'if (next?.kind !== "reasoning") break;',
+    'parts.push(next.text);',
+    'i = nextIndex;',
+  ];
+  const indent = '\n\t\t\t\t\t';
+  return replaceExactly(client, original.join(indent), projected.join(indent), 'Chat reasoning row grouping');
+}
+
 /** Shared by the host build and an isolated ui-chat factory rebuild. */
 export function buildChatStyleFactory(rawClient, source, assets = {}) {
   gate(reviewedFactories.has(source?.commit) && source?.sha256 === reviewedFactories.get(source.commit), 'unsupported upstream source; use the exact reviewed host factory');
   gate(createHash('sha256').update(rawClient).digest('hex') === source.sha256, 'upstream ui-chat lib SHA-256 differs from the snapshot');
   const composerStats = readComposerStats(rawClient);
   const adapted = adaptChatStyleFactory(inlineFactoryAssets(rawClient.replace(/^\/\/# sourceMappingURL=.*\n?/gm, ''), assets));
-  const owned = ownClientStyles(adapted.code, { moduleId: '@deepseek-ai/dsh-client-ui-chat', owner: 'oh-my-dsh/chat', namespace: 'oh-my-dsh/chat', count: 18 })
+  const projected = source.sha256 === reviewedFactories.get('38a6a5c965aa99ab525161efb7cc5cf1fe62fced')
+    ? adaptReasoningRows(adapted.code) : adapted.code;
+  const owned = ownClientStyles(projected, { moduleId: '@deepseek-ai/dsh-client-ui-chat', owner: 'oh-my-dsh/chat', namespace: 'oh-my-dsh/chat', count: 18 })
     .replace(/^([ \t]*\/\/#region \\0dsh-css:)[^\r\n]*?\/(packages\/[^\r\n]+)$/gm, '$1$2');
   const registration = clientRegistration(owned, '@deepseek-ai/dsh-client-ui-chat');
   const code = registration + `\nexport const composerStats = ${JSON.stringify(composerStats)};\nexport function createChat(require) { const component = registration.factory(require); Object.defineProperty(component, Symbol.for('omd.ui-chat.source.v1'), { value: ${JSON.stringify(source)} }); return component; }\n`;

@@ -1,3 +1,4 @@
+import { importUnharnessedHistory } from '../monitor-history.mjs';
 import { forkParentOf } from '../host/session-fork.mjs';
 import { basename } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -15,7 +16,7 @@ const ignoredTools = new Set(['recall', 'memory_search', 'todo_write', 'verify_l
 const unreadableSessionErrors = new Set(['SessionPersistenceCorruptionError', 'SessionFormatUnsupportedError']);
 // Successful reads persist their source revision so restarts skip unchanged
 // archives. Bump when inspection output changes, to rebuild every index entry.
-const INSPECTION_RULES = 'v2:';
+const INSPECTION_RULES = 'v3:';
 // Activity is a coarse ordering signal; coalesce per-event writes.
 const ACTIVITY_FLUSH_MS = 2000;
 // Source text is encoded in input JSON, then again inside the request message.
@@ -270,6 +271,8 @@ export class DreamSources {
     this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
     const old=this.store.session(id), sideQuestion=header.origin==='subagent'&&Boolean(btwDescriptor(events,inherited)), scope=await this.safeScope({...header,id},sideQuestion,signal);
     this.lifecycle.signal.throwIfAborted();signal?.throwIfAborted();
+    if (!sideQuestion && this.hub.monitor?.historyBefore > header.createdAt)
+      importUnharnessedHistory(this.hub.monitor, snapshot, this.hub.monitor.historyBefore);
     let activity=0,title=header.title||old?.title||id;
     for(const event of events) {
       if(actualUser(event)||(['assistant/message','tool/result','tool/call'].includes(event.type)&&!sourceName(messageOf(event)?.source)))activity=Math.max(activity,eventTime(event)||0);

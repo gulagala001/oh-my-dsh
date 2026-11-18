@@ -1,26 +1,42 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Input } from '../native-controls.jsx';
 import { useMotionVisible } from '../motion.mjs';
-import { api, qs, usePoll, Drawer, Card, Button, Alert, Empty, Search, Select, Table, Pager } from './ui.jsx';
+import { api, qs, usePoll, useAction, Drawer, Card, Button, Alert, Empty, Search, Select, Table, Pager } from './ui.jsx';
 
 const rates = [['inputTokens', '未缓存输入'], ['cacheReadTokens', '缓存读'], ['cacheWriteTokens', '缓存写'], ['outputTokens', '输出']];
 const blank = () => ({ provider: '', model: '', currency: 'USD', id: crypto.randomUUID() });
-const rateText = (row, key) => row[key] == null ? '未单列' : `${row.currency} ${row[key]}`;
+const rateText = (row, key) => row[key] == null ? '未单列' : `${row.currency} ${Number(row[key].toPrecision(12))}`;
 
 export function PricesDrawer({ onClose, onSaved }) {
   const visible = useMotionVisible();
   const [prices, setPrices] = useState(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const [query, setQuery] = useState(''), [provider, setProvider] = useState(''), [page, setPage] = useState(1);
   const lifecycle = useRef(null);
+  const [exchange, setExchange] = useState(null);
   const { data, error: catalogError, refresh } = usePoll(signal => api(`/monitor/prices?${qs({ query, provider, offset: (page - 1) * 20, limit: 20 })}`, undefined, signal),
     JSON.stringify([query, provider, page]), { enabled: visible, interval: 60000 });
   useEffect(() => {
     if (!visible) { setBusy(false); return; }
     const controller = new AbortController(); lifecycle.current = controller;
-    if (prices === null) api('/settings', undefined, controller.signal).then(c => { if (!controller.signal.aborted) setPrices((c.monitorPrices || []).map(p => ({ ...p, id: crypto.randomUUID() }))); })
+    if (prices === null) api('/settings', undefined, controller.signal).then(c => {
+      if (controller.signal.aborted) return;
+      setPrices((c.monitorPrices || []).map(p => ({ ...p, id: crypto.randomUUID() })));
+      setExchange({ currency: c.monitorCurrency, rate: String(c.monitorUsdCny), date: c.monitorRateDate });
+    })
       .catch(e => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
   }, [visible]);
+  const action = useAction(() => { refresh(); onSaved(); }, visible);
+  const saveExchange = async fetchLatest => {
+    const signal = lifecycle.current.signal;
+    let { currency, rate, date } = exchange;
+    if (fetchLatest) {
+      const quote = await api('/monitor/exchange-rate', {}, signal);
+      rate = String(quote.rate); date = quote.date;
+    }
+    await api('/settings', { monitorCurrency: currency, monitorUsdCny: Number(rate), monitorRateDate: date }, signal);
+    if (!signal.aborted) setExchange({ currency, rate, date });
+  };
   const change = (id, key, value) => setPrices(list => list.map(p => p.id === id ? { ...p, [key]: value } : p));
   const save = async e => {
     e.preventDefault(); if (!visible || busy || !prices) return;
@@ -37,6 +53,23 @@ export function PricesDrawer({ onClose, onSaved }) {
   return <Drawer title="API 价格" onClose={onClose}>
     <p className="omc-footnote">默认自动匹配公开 API 价格，每天自动更新；离线继续使用内置价格和上次成功缓存。无需手动配置，中转模型自动匹配同名模型。</p>
     <Alert action={<Button onClick={refresh}>重试</Button>}>{catalogError}</Alert>
+    <div className="omc-summary-line"><Button icon="refresh" kind="primary" busy={action.busy === 'prices'} disabled={Boolean(action.busy)}
+      onClick={() => action.run('prices', () => api('/monitor/prices/refresh', {}, lifecycle.current.signal), '公开价格已刷新')}>从 models.dev 获取最新价格</Button></div>
+    <Alert>{action.error || error}</Alert>
+    {action.notice && <span role="status" className="omc-footnote">{action.notice}</span>}
+    {exchange && <form className="omc-filters" onSubmit={e => {
+      e.preventDefault(); action.run('exchange', () => saveExchange(false), '费用显示设置已保存');
+    }}>
+      <Select label="显示币种" value={exchange.currency} disabled={Boolean(action.busy)}
+        options={[[ 'original', '原始币种' ], [ 'USD', '美元 USD' ], [ 'CNY', '人民币 CNY' ]]}
+        onChange={currency => setExchange({ ...exchange, currency })}/>
+      <label>汇率（人民币 / 美元）<Input aria-label="人民币兑每美元" type="number" min="0.00000001" step="any" required
+        disabled={Boolean(action.busy)} value={exchange.rate} onChange={e => setExchange({ ...exchange, rate: e.target.value, date: '' })}/></label>
+      <Button icon="refresh" disabled={Boolean(action.busy)} busy={action.busy === 'quote'}
+        onClick={() => action.run('quote', () => saveExchange(true), '已应用最新参考汇率')}>获取最新汇率</Button>
+      <Button type="submit" disabled={Boolean(action.busy)} busy={action.busy === 'exchange'}>应用换算</Button>
+      {exchange.date && <span className="omc-muted">参考汇率 · {exchange.date}</span>}
+    </form>}
     {data && <div className="omc-summary-line"><span>已收录 <b>{data.catalogTotal.toLocaleString()}</b> 条价格 · {data.providerCount} 个提供方</span><span>更新于 {new Date(data.updatedAt).toLocaleString('zh-CN')}</span><a href={data.source} target="_blank" rel="noreferrer">价格来源</a></div>}
     {data?.error && <Alert tone="info">{data.error}，继续使用已有价格。</Alert>}
     <div className="omc-filters">
@@ -57,7 +90,6 @@ export function PricesDrawer({ onClose, onSaved }) {
     <p className="omc-footnote">单价单位：每百万 Token。长上下文按用量自动选择阶梯；未单列缓存费率时按输入价计算，展开调用可查看所用口径。</p>
     <Card title="自定义覆盖（可选）">
       <p className="omc-footnote">仅特殊中转价需要设置，按提供方与模型精确匹配并优先于自动价格。币种可用 USD、CNY 等三位代码；空白表示未知，0 表示免费。</p>
-      <Alert>{error}</Alert>
       {prices && <form className="omc-form" onSubmit={save}>
         {prices.map(p => <Card key={p.id} title={`${p.provider || '提供方'} / ${p.model || '模型'}`} extra={<Button disabled={busy} onClick={() => setPrices(list => list.filter(row => row.id !== p.id))}>移除</Button>}>
           <div className="omc-form-grid">

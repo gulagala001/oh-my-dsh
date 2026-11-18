@@ -12,6 +12,7 @@ import { pluginApi } from './recommended-plugins.jsx';
 import { usePollingAction } from './use-polling-action.mjs';
 import { createSettingsState } from './settings-state.mjs';
 import { scaledSettingValue, savedBackground } from './settings-values.mjs';
+import { autoOverviewEnabled, setAutoOverview, subscribeAutoOverview } from './overview-preference.mjs';
 import { HISTORY_SIZE_KEY, HISTORY_SIZES, historySize } from './history-settings.jsx';
 import { VersionInfo } from './version-info.jsx';
 import { SettingsOutline, useSettingsOutline } from './settings-outline.jsx';
@@ -384,6 +385,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
     useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 6000); return () => clearTimeout(timer); }, [notice]);
     const report = useCallback(message => setNotice(message), []);
     const { config: c, directory, error, experimentalPresets, commit, reload } = useConfig(report);
+    const autoOverview = useSyncExternalStore(subscribeAutoOverview, autoOverviewEnabled);
     const features = usePollingAction(pluginApi, 2000);
     const components = usePollingAction(componentApi, 2500);
     const dream = usePollingAction(dreamApi, 30000);
@@ -412,6 +414,8 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
         {features.requestError && <Status error>{features.requestError}</Status>}
         {features_.map(plugin => <FeatureRow key={plugin.id} plugin={plugin} features={features}/>)}
         <CodeGraphRow components={components}/>
+        <Toggle title="有内容时自动展开会话总览" hint="首次出现输出、来源、子智能体、后台进程或电脑操作时展开。手动收起后，此会话保持收起。"
+          checked={autoOverview} onChange={enabled => { try { setAutoOverview(enabled); } catch { report('浏览器无法保存会话总览设置。'); } }}/>
         <Toggle title="提示词优化" hint="在输入框显示优化入口，发送前润色或整理草稿。" checked={prefs.enabled} onChange={enabled => setPref({ enabled })}/>
         <button type="button" className="omd-set-row omd-set-nav" onClick={() => go('third-party')}>
           <span className="omd-set-copy"><strong>第三方功能</strong><small>社区作者制作的功能，开启即自动安装。</small></span><Icon name="chevron" size={16}/>

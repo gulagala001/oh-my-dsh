@@ -30,14 +30,32 @@ test('overview closes on workspace expansion, reopens resident and floating, and
   const Main = slots.entries('main.conversation')[0].component, Corner = slots.entries('conversation.session.header.corner')[0].component;
   let mounts = 0;
   function Chat() { React.useEffect(() => { mounts++; }, []); return e('textarea', { defaultValue: 'retained draft' }); }
-  function Toggle() { const panel = usePanel('root'); return e('button', { onClick: panel.toggle }, 'toggle'); }
+  let other, muted;
+  function Toggle() { const panel = usePanel('root'); other = usePanel('new'); muted = usePanel('muted'); return e('button', { onClick: panel.toggle }, 'toggle'); }
   const { createRoot } = await import('react-dom/client'), root = createRoot(document.querySelector('main'));
   t.after(async () => { await act(() => root.unmount()); for (const off of cleanups.reverse()) off?.(); dom.window.close(); for (const [key, descriptor] of globals) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; } });
   await act(() => root.render(e(React.Fragment, null, e(Toggle), e(Corner, { sessionId: 'root', actions: { setExpanded() {} }, useStore: select => select(useSyncExternalStore(subscribe, () => sidebar)) }), e(Main, { sessionId: 'root', renderFactorySlot: () => e(Chat) }))));
+  await act(() => other.observeContent(true, true, false));
+  assert.equal(other.open, false);
+  await act(() => other.observeContent(false, true, true));
+  assert.equal(other.open, true);
+  await act(() => other.observeContent(false, true, false));
+  assert.equal(other.open, true);
+  await act(() => other.toggle());
+  await act(() => other.observeContent(false, true, true));
+  assert.equal(other.open, false);
+  assert.equal(localStorage.getItem('omd.overview.session.v1.new'), 'closed');
+  localStorage.setItem('omd.overview.autoOpen.v1', 'off');
+  await act(() => muted.observeContent(true, true, false));
+  await act(() => muted.observeContent(false, true, true));
+  assert.equal(muted.open, false);
+  await act(() => muted.toggle());
+  assert.equal(muted.open, true);
   const layout = document.querySelector('.omd-overview-layout'), toggle = document.querySelector('button');
   const measured = [];
   Object.defineProperty(layout, 'clientWidth', { configurable: true, get() { measured.push(layout.getAttribute('data-overview-animating')); return 1000; } });
   const expand = async expanded => act(() => { sidebar = { bySession: { root: { layout: { expanded } } } }; listeners.forEach(fn => fn()); });
+  // This session has content but automatic opening is disabled. Manual controls still work.
   await act(() => toggle.click()); assert.ok(layout.hasAttribute('data-overview-open'));
   assert.ok(measured.length && measured.every(Boolean), 'motion must be present before resize measurements flush the new width');
   await expand(true); assert.ok(!layout.hasAttribute('data-overview-open'));

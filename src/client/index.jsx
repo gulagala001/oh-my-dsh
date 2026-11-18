@@ -41,6 +41,7 @@ import { applyPromptStylePermissions } from './permission-prompt-style.jsx';
 import { acquirePersonaClient } from '../../plugins/persona/src/client/index.jsx';
 import { useMainConversation } from './main-conversation.mjs';
 import { apply as applyWorkflowClient } from '../../vendor/workflow/src/client/index.jsx';
+import { applyStatsCacheLabel } from './stats-cache.jsx';
 import { applySessionOverview } from './session-overview.jsx';
 import overviewPanelCss from './session-overview-panel.css';
 import motionCss from './motion.css';
@@ -162,6 +163,7 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
   applyModelPanel(ctx, { rememberModel: (id, selected, mode) => projectlessDrafts.rememberModel(id, selected, mode),
     preferredUltraEffort: (id, route, model) => projectlessDrafts.preferredUltraEffort(id, route, model) });
   applySubscriptionFast(ctx);
+  ctx.inject(['locale'], applyStatsCacheLabel);
   applyMemoryPermissions(ctx);
   applyPromptStylePermissions(ctx);
   await mountOptionalClient(ctx, '工作流', async () => ({ apply: applyWorkflowClient }), report);

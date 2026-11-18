@@ -238,8 +238,8 @@
       "source": "src/monitor-prices.json",
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#modelsdev-api-pricing-data",
-      "version": "SHA256:1e6f6274f532e79be26c37cab37a92352b74507f8893345792718c462a9f42ce",
-      "sourceSha256": "1e6f6274f532e79be26c37cab37a92352b74507f8893345792718c462a9f42ce",
+      "version": "SHA256:2209cdcfb76ae98ee76c4f3a36d314940d0d2d125d053544fdea88ea24a41cf4",
+      "sourceSha256": "2209cdcfb76ae98ee76c4f3a36d314940d0d2d125d053544fdea88ea24a41cf4",
       "group": "sources"
     },
     {

@@ -44,6 +44,11 @@ export function foldOverview(state, event) {
     return path ? { ...state, calls: { ...state.calls, [data.callId]: path } } : state;
   }
   if (event.type === 'tool/result' && event.surfaceOp === 'append') {
+    if (!data.message?.isError) {
+      const files = (data.message?.content ?? []).filter(block => block.type === 'file' && block.attachment?.attachmentId)
+        .map(({ attachment }) => ({ id: `delivery:${attachment.attachmentId}:${attachment.name}`, kind: 'file', file: attachment, label: attachment.name }));
+      if (files.length) state = { ...state, outputs: merge(state.outputs, files) };
+    }
     const id = data.message?.source?.callId, argumentPath = Object.hasOwn(state.calls, id) ? state.calls[id] : undefined;
     if (!argumentPath) return state;
     const calls = { ...state.calls }; delete calls[id];
@@ -88,12 +93,12 @@ export function foldOverview(state, event) {
   return state;
 }
 export function installOverviewProjection(ctx) {
-  const view = z.object({ sources: z.array(z.any()), outputs: z.array(z.any()), workflows: z.array(z.any()),
+  const view = z.object({ createdAt: z.number().optional(), sources: z.array(z.any()), outputs: z.array(z.any()), workflows: z.array(z.any()),
     directories: z.array(z.object({ seq: z.number().int(), cwd: z.string() })), activity: z.string().optional(), outcome: z.string().nullable().optional() });
   const schema = view.extend({ inheritedEventCount: z.number(), turn: z.number().optional(), calls: z.record(z.string(), z.string()) });
-  ctx.sessionProjections.register({ key: 'omdOverview', stateVersion: 4, stateSchema: schema,
-    init: (header, inheritedEventCount) => ({ inheritedEventCount, sources: [], outputs: [], workflows: [], calls: {},
+  ctx.sessionProjections.register({ key: 'omdOverview', stateVersion: 5, stateSchema: schema,
+    init: (header, inheritedEventCount) => ({ inheritedEventCount, createdAt: header.createdAt, sources: [], outputs: [], workflows: [], calls: {},
       directories: header.cwd ? [{ seq: -1, cwd: header.cwd }] : [] }), apply: foldOverview,
-    wire: { viewSchema: view, view: ({ sources, outputs, workflows, directories, activity, outcome }) => ({ sources, outputs, workflows, directories, ...(activity ? { activity } : {}), ...(outcome !== undefined ? { outcome } : {}) }) },
+    wire: { viewSchema: view, view: ({ createdAt, sources, outputs, workflows, directories, activity, outcome }) => ({ createdAt, sources, outputs, workflows, directories, ...(activity ? { activity } : {}), ...(outcome !== undefined ? { outcome } : {}) }) },
   });
 }

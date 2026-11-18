@@ -1,4 +1,5 @@
 import z from '@deepseek-ai/schemastery';
+import { DEFAULT_USD_CNY, DEFAULT_RATE_DATE } from './monitor-exchange.mjs';
 import { DEFAULT_IDENTITY } from './cc-adaptation/identity.mjs';
 import { personalityPatch, personalityPreset, migratePersonalityConfig } from './cc-adaptation/personality.mjs';
 import { CONTEXT_FREQUENCY_PRESETS } from './frequency.mjs';
@@ -16,6 +17,9 @@ export function configSnapshot(config = {}) {
 export const Config = z.object({
   dataDir: z.string(),
   projectlessWorkspaceRoot: z.string(),
+  monitorCurrency: z.union(['original', 'USD', 'CNY']).default('original'),
+  monitorUsdCny: z.number().default(DEFAULT_USD_CNY),
+  monitorRateDate: z.string().default(DEFAULT_RATE_DATE),
   monitorPrices: z.array(z.object({
     provider: z.string().pattern(/\S/).required(), model: z.string().pattern(/\S/).required(), currency: z.string().pattern(/^[A-Z]{3}$/).required(),
     inputTokens: z.number().min(0), outputTokens: z.number().min(0), cacheReadTokens: z.number().min(0), cacheWriteTokens: z.number().min(0),
@@ -109,6 +113,8 @@ export function contextConfig(raw = {}) {
   }
   const value = structuredClone(configSnapshot(Config(raw))), routes = new Set();
   validateImageRules(value.multiImageFixRules);
+  if (!Number.isFinite(value.monitorUsdCny) || value.monitorUsdCny <= 0) throw Error('美元兑人民币汇率必须为正数');
+  if (value.monitorRateDate && !/^\d{4}-\d{2}-\d{2}$/.test(value.monitorRateDate)) throw Error('汇率日期无效');
   for (const price of value.monitorPrices) {
     for (const key of ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']) {
       if (Object.hasOwn(price, key) && (typeof price[key] !== 'number' || !Number.isFinite(price[key]) || price[key] < 0)) throw new Error('单价必须是非负有限数值，未知请留空');

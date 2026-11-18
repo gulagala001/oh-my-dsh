@@ -160,22 +160,23 @@ export class MonitorPricing {
   price(call, custom) { return (this.current ?? bundled().pricing).price(call, custom); }
   costCacheKey(custom) { return (this.current ?? bundled().pricing).costCacheKey(custom); }
   catalog(options) { return { ...(this.current ?? bundled().pricing).catalog(options), updating: Boolean(this.pending), error: this.error, nextUpdateAt: this.nextAt }; }
-  refresh() {
+  refresh(force = false) {
     if (this.closed) return this.pending;
     if (!this.timer) { this.timer = setInterval(() => { void this.refresh(); }, 3600000); this.timer.unref?.(); }
-    if (this.now() < this.nextAt) return this.pending;
+    if (!force && this.now() < this.nextAt) return this.pending;
+    if (force) this.forceRefresh = true;
     if (this.pending) return this.pending;
     this.pending = this.update().catch(error => {
       if (!this.closed) { this.error = String(error.message); this.nextAt = this.now() + 3600000; }
-    }).finally(() => { this.pending = null; });
+    }).finally(() => { this.pending = null; this.forceRefresh = false; });
     return this.pending;
   }
   async update() {
     await this.loaded();
-    if (this.closed || this.now() < this.nextAt) return;
+    if (this.closed || (!this.forceRefresh && this.now() < this.nextAt)) return;
     this.controller = new AbortController();
     const signal = AbortSignal.any([this.controller.signal, AbortSignal.timeout(20000)]);
-    const response = await this.fetch(MONITOR_PRICE_SOURCE, { signal, headers: { Accept: 'application/json' } });
+    const response = await this.fetch(MONITOR_PRICE_SOURCE, { signal, cache: 'no-store', headers: { Accept: 'application/json' } });
     if (!response.ok) throw Error(`价格更新 HTTP ${response.status}`);
     const chunks = []; let bytes = 0;
     for await (const chunk of response.body) {

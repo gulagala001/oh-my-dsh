@@ -42,7 +42,7 @@ core.push('test/extensions-commands-native.test.mjs');
 core.push('test/extensions-skills-native.test.mjs');
 core.push('test/extensions-instructions-native.test.mjs');
 core.push('test/persona-settings-api.test.mjs');
-core.push('test/monitor-import.test.mjs', 'test/monitor-aggregate-cache.test.mjs');
+core.push('test/monitor-unharnessed.test.mjs', 'test/monitor-import.test.mjs', 'test/monitor-aggregate-cache.test.mjs');
 core.push('test/ptc-lifecycle.test.mjs', 'test/preset-projection.test.mjs');
 core.push('test/reasoning-replay.test.mjs');
 core.push(...[
