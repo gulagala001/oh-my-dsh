@@ -40,6 +40,32 @@ goal = _Goal()
 skills = _Skills()
 
 
+class _Agents:
+    async def spawn(self, prompt, description, name=None):
+        arguments = {"prompt": prompt, "description": description}
+        if name is not None:
+            arguments["name"] = name
+        return await self._call("spawn", arguments)
+
+    async def list(self):
+        return await self._call("list", {})
+
+    async def send(self, name, message):
+        return await self._call("send", {"agent": name, "message": message})
+
+    async def wait(self, timeout_ms=10000):
+        return await self._call("wait", {"timeout_ms": timeout_ms})
+
+    async def interrupt(self, name):
+        return await self._call("interrupt", {"agent": name})
+
+    async def _call(self, action, arguments):
+        return await _dsh_request("dsh.subagents", {"action": action, "arguments": arguments})
+
+
+_dsh_agents = agents = _Agents()
+
+
 class _Mcp:
     async def list_connections(self):
         return await _dsh_request("dsh.mcp", {"action": "list_connections"})

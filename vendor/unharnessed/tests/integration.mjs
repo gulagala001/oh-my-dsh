@@ -23,6 +23,8 @@ ctx.loader.builtins.group=(await import('@deepseek-ai/cordis-plugin-loader')).Gr
 for(const pkg of ['dsh-system-prompt','dsh-tools','dsh-tool-executor-native','dsh-session','dsh-session-projection','dsh-agent','dsh-llm','dsh-agent-loop','dsh-goal','dsh-commands','dsh-fs-local','dsh-working-directory','dsh-subprocess-local','dsh-sandbox-local','dsh-agent-preset-registry']) await mount(pkg)
 await mount('dsh-sandbox-policy',{mode:'danger-full-access'})
 await mount('dsh-token-meter')
+await mount('dsh-subagent')
+await mount('dsh-subagent-spawn-in-process')
 
 const YAML=(await import('yaml')).default
 const patch=YAML.parse(readFileSync('node_modules/dsh-unharnessed/cordis.patch.yml','utf8'))
@@ -207,8 +209,10 @@ try {
  assert.equal(ctx.goals.get(d).roundsStarted,2)
  pass('failing autonomous work stops at the native round limit')
  await dHandle.dispose()
+ await cell(b, "agents = 'existing user value'")
  await assert.rejects(cell(b,'import os\nos._exit(9)'),/kernel exited/)
  assert.match(await cell(b,"'x' in globals()"),/python-state-restored[\s\S]*False/)
+ assert.match(await cell(b,"print(agents, callable(_dsh_agents.spawn))"), /existing user value True/)
  pass('an unexpected kernel exit is reported and the next cell recovers cleanly')
  await mount('dsh-attachment-local', {dshHome:process.env.DSH_HOME})
  const png='iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEUlEQVR4nGNQaDjwH4QZYAwAT7QJfdl8EOkAAAAASUVORK5CYII='

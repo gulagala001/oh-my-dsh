@@ -6,6 +6,7 @@ export const inject = runtime.inject;
 export async function apply(ctx, config) {
   await runtime.apply(ctx, config, {
     projectionKey: 'omd-unharnessed-cancelled',
+    delegationProjectionKey: 'omd-unharnessed-subagents',
     activity: view => ctx.provide('omdUnharnessedRuntime', view),
   });
 }

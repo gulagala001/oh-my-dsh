@@ -7,7 +7,9 @@ import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import YAML from 'yaml'
 import { defineTool } from '@deepseek-ai/dsh-tools'
+import { scopeTarget } from '@deepseek-ai/dsh-scope'
 import { clearObsoleteNotifications } from './node_modules/dsh-unharnessed/lib/notifications.js'
+import { GATE_MARKER } from './node_modules/dsh-unharnessed/lib/goals.js'
 
 const ctx = new Context(), checks = []
 const pass = name => { checks.push(name); console.log('PASS', name) }
@@ -18,6 +20,14 @@ for (const name of ['system-prompt','tools','tool-executor-native','session','se
 }
 await ctx.plugin((await import('@deepseek-ai/dsh-sandbox-policy')).default, { mode: 'danger-full-access' })
 await ctx.plugin((await import('@deepseek-ai/dsh-agent-preset-registry')).default, { default: 'unharnessed' })
+for (const [name, config] of [
+  ['session-persistence-jsonl', { root: 'fixture-sessions' }],
+  ['session-query', {}],
+  ['subagent', {}],
+  ['subagent-spawn-in-process', {}],
+]) {
+  const mod = await import('@deepseek-ai/dsh-' + name); await ctx.plugin(mod.default ?? mod, config)
+}
 const definition = YAML.parse(readFileSync('node_modules/dsh-unharnessed/cordis.patch.yml', 'utf8'))[0].insert[0].config
 definition.plugins.find(row => row.id === 'unharnessed').config.snapshots = false
 await ctx.agentPresets.register(definition)
@@ -54,6 +64,88 @@ async function until(predicate) {
 }
 
 try {
+  const childArgs = []
+  const parentArgs = []
+  const childStarted = []
+  let checkedParent = false
+  const offStart = ctx.on('subagent/start', ({ id }) => childStarted.push(ctx.agents.get(id)))
+  const delegated = await makeAgent(options => {
+    const messages = JSON.stringify(options.messages)
+    if (messages.includes('Read the isolated Python namespace') && !messages.includes('PARENT_ONLY_CHAT')) {
+      childArgs.push(options)
+      if (childArgs.length === 1) return "assert 'parent_only_value' not in globals()\nchild_only_value = 739\nprint(child_only_value)"
+      return
+    }
+    parentArgs.push(options)
+    if (parentArgs.length === 1) return "parent_only_value = 271\nprint(await agents.spawn('Read the isolated Python namespace', 'Check Python state', name='isolation'))\nprint(await agents.wait())"
+    if (!checkedParent && messages.includes('subagent-settled')) {
+      checkedParent = true
+      return "assert parent_only_value == 271\nassert 'child_only_value' not in globals()"
+    }
+  })
+  try {
+    const parent = delegated.agent
+    const command = input => ctx.commands.execute(parent, '/unharnessed-subagents' + (input ? ' ' + input : ''), [], new AbortController().signal)
+    assert.match((await command()).result.text, /off/)
+    assert.match(await cell(parent, "await agents.spawn('not allowed', 'Check default')"), /mode is off/)
+    assert.equal((await command('on')).result.kind, 'success')
+    assert.deepEqual(ctx.tools.schemas(parent).map(tool => tool.name), ['ipython'])
+    const removeGuard = ctx.tools.guard(exec => exec.name === 'subagent' ? 'fixture native delegation denied' : undefined)
+    try {
+      assert.match(await cell(parent, "await agents.spawn('not allowed', 'Check native guard')"), /fixture native delegation denied/)
+    } finally { removeGuard() }
+    parent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'PARENT_ONLY_CHAT' }] }))
+    await until(() => parentArgs.some(options => JSON.stringify(options.messages).includes('subagent-settled')))
+    await parent.whenIdle()
+    assert.equal(childStarted.length, 1)
+    const [child] = childStarted
+    assert.equal(child.session.header.agentPreset, 'unharnessed')
+    assert.equal(child.session.header.parentSession, parent.id)
+    assert.deepEqual(childArgs[0].tools.map(tool => tool.name), ['ipython'])
+    assert.doesNotMatch(JSON.stringify(childArgs[0].messages), /PARENT_ONLY_CHAT/)
+    assert.match(JSON.stringify(childArgs[1].messages), /739/)
+    assert(parentArgs.some(options => JSON.stringify(options.messages).includes("timedOut': False")))
+    assert.match(await cell(parent, "print(parent_only_value, 'child_only_value' in globals())"), /271 False/)
+    assert.match(await cell(parent, 'await agents.list()'), /isolation/)
+    assert.equal((await command('off')).result.kind, 'success')
+    assert.match(await cell(parent, 'await agents.list()'), /mode is off/)
+    assert.equal((await command('on')).result.kind, 'success')
+    await ctx.sessions.flush(parent.session)
+    await delegated.dispose()
+    const resumed = await ctx.agents.resume({ resumeSessionId: parent.id,
+      setup: scope => ctx.agentPresets.mount(scope, 'unharnessed').then(() => undefined) })
+    try {
+      const status = await ctx.commands.execute(resumed.agent, '/unharnessed-subagents', [], new AbortController().signal)
+      assert.match(status.result.text, /on/)
+    } finally { await resumed.dispose() }
+    pass('opt-in Python delegation creates an isolated Unharnessed child and delivers its native result')
+  } finally { offStart(); await delegated.dispose() }
+
+  const releaseChild = Promise.withResolvers()
+  let runningChild = false
+  const gated = await makeAgent(async options => {
+    const messages = JSON.stringify(options.messages)
+    if (messages.includes('Run the gate fixture') && !runningChild) {
+      runningChild = true
+      await releaseChild.promise
+      return "from pathlib import Path\nPath('child-gate-ready').touch()"
+    }
+  })
+  try {
+    const parent = gated.agent
+    const enable = await ctx.commands.execute(parent, '/unharnessed-subagents on', [], new AbortController().signal)
+    assert.equal(enable.result.kind, 'success')
+    assert.match(await cell(parent, "await agents.spawn('Run the gate fixture', 'Prepare gate result')"), /agent-1/)
+    await until(() => runningChild)
+    const objective = 'Check the child result' + GATE_MARKER + JSON.stringify(['test -f child-gate-ready'])
+    ctx.goals.create(parent, { objective, maxGoalRounds: 1 })
+    ctx.emit(scopeTarget(parent, parent), 'agent/status', { agent: parent, status: 'idle' })
+    assert.equal(ctx.goals.get(parent).activation, 'armed', 'shell gates must not start while the child is working')
+    releaseChild.resolve()
+    await until(() => ctx.goals.get(parent)?.phase === 'complete')
+    pass('autonomous shell gates wait for the native child result')
+  } finally { releaseChild.resolve(); await gated.dispose() }
+
   const requests = []
   const handle = await makeAgent(options => {
     requests.push(JSON.stringify(options.messages))

@@ -39,6 +39,9 @@ def checkpoint(namespace, max_bytes, max_variable_bytes, prune=False):
     for name in sorted(repl._list_names(namespace)):
         try:
             value = namespace[name]
+            # An older checkpoint may already use "agents" as a user variable.
+            if name == "agents" and value is namespace.get("_dsh_agents"):
+                continue
             if isinstance(value, (asyncio.Future, BashHandle, io.IOBase, socket.socket, types.GeneratorType, types.CoroutineType, types.AsyncGeneratorType)):
                 skipped.append({"name": name, "reason": "live process, task, stream or iterator; restart explicitly"})
                 continue

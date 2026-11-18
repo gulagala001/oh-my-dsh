@@ -9,7 +9,7 @@ Use one persistent Python tool in DeepSeek Harness for coding, background comman
 Paste this package URL into **Plugins → Add plugin**:
 
 ```text
-https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.3-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.3-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.4-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.4-dsh.0.2.2-rc.3.tgz
 ```
 
 Select **Unharnessed** in a new chat. Existing chats can retain their original plugin revision; start a new chat or restart DSH normally after an update.
@@ -76,6 +76,12 @@ await display({'image/png': Path('plot.png').read_bytes()})
 PNG, JPEG, WebP and GIF images use DSH's image storage and validation. Generic files retain their original bytes. Audio and video are delivered as files; previews depend on DSH. HTML is a downloadable file. `display()` accepts MIME dictionaries with bytes or canonical base64 for binary data and text for text MIME types. `rlm.emit()` also supports image, text and file MIME output.
 
 Files are read relative to Python's current directory under its sandbox. Each attachment request defaults to a 10 MiB total limit. Attachment references persist in the chat. Generated media is labeled as tool output so it can be distinguished from new human input.
+
+## Subagents
+
+Subagent mode is off by default. Run `/unharnessed-subagents on` in your Unharnessed chat and describe which work can be delegated in parallel. Run `/unharnessed-subagents` to check the setting, or `/unharnessed-subagents off` to turn off delegation for that chat. The setting follows the chat across restarts. You can still see or stop existing children in the DSH subagent list.
+
+Each child uses Unharnessed with its own conversation and Python variables. DSH delivers the result to the parent chat. The parent can run several children in parallel. Children carry out their assigned work directly. The built-in Python `agents` helper provides `spawn`, `list`, `send`, `wait`, and `interrupt`. If `agents` is already a custom variable, use `_dsh_agents` to call these methods.
 
 ## Goals and autonomous checks
 

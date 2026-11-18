@@ -13,6 +13,8 @@ export function unharnessedDefinition(directory) {
       { id: 'agent-instructions', name: '@deepseek-ai/dsh-agent-instructions', config: { maxBytes: 65536 } },
       { id: 'skill-filesystem', name: '@deepseek-ai/dsh-skill-filesystem' },
       { id: 'command-goal', name: '@deepseek-ai/dsh-command-goal' },
+      { id: 'tool-subagent-control', name: '@deepseek-ai/dsh-tool-subagent-control' },
+      { id: 'tool-subagent', name: '@deepseek-ai/dsh-tool-subagent', config: { provider: 'spawn' } },
       { id: 'unharnessed', name: 'oh-my-dsh/unharnessed', isolate: { omdUnharnessedRuntime: true },
         config: { stateDirectory: join(directory, 'unharnessed-state') } },
       { id: 'compaction', name: 'cordis:group', group: true, isolate: { compaction: true }, config: [

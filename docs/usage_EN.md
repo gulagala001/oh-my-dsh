@@ -67,6 +67,8 @@ OMD keeps DSH's tools, permissions and cancellation. In OMD-PTC mode the AI call
 
 Per-session checkpoints restore variables and serializable functions after restart with matching directory, permissions and Python version; background processes need restarting. `/unharnessed-reset` resets Python; `/goal` manages goals. Before disabling, finish running work and background commands, pause active goals and change the default preset if needed. Re-enabling preserves history and checkpoints.
 
+`/unharnessed-subagents on` enables child agents with separate Unharnessed Python kernels in this chat.
+
 ## Context and memory
 
 - **Context optimization** (on by default): controlled in **Settings → Context and memory → Context optimization**. Tool results are trimmed, and reading the same file again only sends what changed. Click **View original** on a tool card to page through the raw result by line number, keyword, start or end. See [context optimization](context-optimization.md#english).

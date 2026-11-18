@@ -45,11 +45,12 @@ test('real host loads the optional preset and retains Python state across availa
   const { Context } = await import(host.resolve('@deepseek-ai/cordis'));
   const { default: Loader, Group } = await import(host.resolve('@deepseek-ai/cordis-plugin-loader'));
   const { SessionId } = await import(host.resolve('@deepseek-ai/dsh-session'));
+  const { LlmAdapter } = await import(host.resolve('@deepseek-ai/dsh-llm'));
   const dir = await mkdtemp(join(process.env.OMD_TEST_TEMP ?? tmpdir(), 'omd-unharnessed-'));
   const ctx = new Context(); let config = contextConfig({});
   t.after(async () => { await ctx.fiber.dispose(); await rm(dir, { recursive: true, force: true }); });
   await mkdir(join(dir, 'node_modules/@deepseek-ai'), { recursive: true });
-  for (const plugin of ['tool-executor-native', 'agent-instructions', 'skill-filesystem', 'command-goal', 'compaction-basic', 'command-compact']) {
+  for (const plugin of ['tool-executor-native', 'agent-instructions', 'skill-filesystem', 'command-goal', 'compaction-basic', 'command-compact', 'tool-subagent', 'tool-subagent-control']) {
     const name = '@deepseek-ai/dsh-' + plugin;
     await symlink(dirname(host.resolve(name + '/package.json')), join(dir, 'node_modules', name));
   }
@@ -64,6 +65,9 @@ test('real host loads the optional preset and retains Python state across availa
   await ctx.plugin(policy.default ?? policy, { mode: 'danger-full-access' });
   const registry = await import(host.resolve('@deepseek-ai/dsh-agent-preset-registry'));
   await ctx.plugin(registry.default ?? registry, { default: 'standard' });
+  for (const [name, config] of [['session-persistence-jsonl', { root: join(dir, 'sessions') }], ['subagent', {}], ['subagent-spawn-in-process', {}]]) {
+    const module = await import(host.resolve('@deepseek-ai/dsh-' + name)); await ctx.plugin(module.default ?? module, config);
+  }
   await ctx.agentPresets.register({ id: 'standard', plugins: [] });
   ctx.provide('settings', { configure() {}, async update(_name, patch) { config = { ...config, ...patch }; } });
   const manager = new ExperimentalPresets(ctx, { config: () => config, store: { dir: join(dir, 'omd') } });
@@ -75,7 +79,24 @@ test('real host loads the optional preset and retains Python state across availa
   await manager.start(); assert.ok(!(await ctx.agentPresets.list()).some(p => p.id === PRESET));
   await manager.update({ [SETTING]: true });
   assert.equal((await ctx.agentPresets.resolve(PRESET)).broken, undefined);
+  const childRequests = [];
+  class ChildAdapter extends LlmAdapter {
+    async resolveModel(provider, id) { return { provider, id, name: id, contextWindow: 100000, maxTokens: 1000 }; }
+    async *stream(options) {
+      childRequests.push(options);
+      const block = childRequests.length === 1
+        ? { type: 'tool-call', id: randomUUID(), name: 'ipython', arguments: JSON.stringify({ code: "print('x' in globals()); x = 10" }) }
+        : { type: 'text', text: 'Bundled child finished.' };
+      yield { type: 'block-start', index: 0, blockType: block.type };
+      if (block.type === 'tool-call') yield { type: 'tool-call-delta', index: 0, id: block.id, name: block.name, argumentsDelta: block.arguments };
+      else yield { type: 'text-delta', index: 0, text: block.text };
+      yield { type: 'block-end', index: 0, block };
+      yield { type: 'finish', reason: { kind: block.type === 'tool-call' ? 'tool-calls' : 'stop' } };
+    }
+  }
+  ctx.llm.registerAdapter(['fixture'], new ChildAdapter());
   const handle = await ctx.agents.create({ sessionId: SessionId('unharnessed-' + randomUUID()), meta: { cwd: dir, agentPreset: PRESET },
+    agentOptions: { provider: 'fixture', model: 'fixture' },
     setup: async scope => { await ctx.agentPresets.mount(scope, PRESET); } });
   const agent = handle.agent ?? handle;
   agent.followup = message => agent.inbox.append('next-turn', message);
@@ -85,6 +106,25 @@ test('real host loads the optional preset and retains Python state across availa
     calls: [{ type: 'tool-call', id: randomUUID(), name: 'ipython', arguments: JSON.stringify({ code }) }] })).results[0].result;
   assert.match((await cell('x = 41\nx + 1')).value, /42/);
   assert.match((await cell('await asyncio.sleep(0)\nx + 1')).value, /42/);
+  assert.match((await cell('await agents.list()')).value, /mode is off/);
+  const enable = await ctx.commands.execute(agent, '/unharnessed-subagents on', [], new AbortController().signal);
+  assert.equal(enable.result.kind, 'success', enable.result.text);
+  let child;
+  const settled = Promise.withResolvers();
+  const offStart = ctx.on('subagent/start', ({ id }) => { child = ctx.agents.get(id); });
+  const offEnd = ctx.on('subagent/end', ({ id }) => { if (child?.id === id) settled.resolve(); });
+  try {
+    const spawned = await cell("await agents.spawn('Check isolated Python state', 'Check Python state', name='bundled-child')");
+    assert.match(spawned.value, /bundled-child/);
+    assert.equal(child.session.header.agentPreset, PRESET);
+    await settled.promise;
+    assert.deepEqual(childRequests[0].tools.map(tool => tool.name), ['ipython']);
+    assert.match(JSON.stringify(childRequests[1].messages), /False/);
+    assert.match((await cell('x')).value, /41/);
+    const result = [...agent.inbox.nextTurn, ...agent.inbox.nextStep].find(message => message.source.kind === 'subagent-settled');
+    assert.match(result?.content.map(block => block.text).join('\n'), /Bundled child finished/);
+    agent.inbox.remove(result.id);
+  } finally { offStart(); offEnd(); }
   await cell("notice_job = bash('sleep 0.05; printf bundled-notice')");
   await cell('await asyncio.sleep(0.2)');
   const isNotice = message => message.content.some(item => item.text?.startsWith('[bash-done'));
@@ -101,6 +141,8 @@ test('real host loads the optional preset and retains Python state across availa
   assert.equal((await cell('x')).isError, true);
   await manager.update({ [SETTING]: true });
   assert.match((await cell('x + 1')).value, /42/);
+  const mode = await ctx.commands.execute(agent, '/unharnessed-subagents', [], new AbortController().signal);
+  assert.match(mode.result.text, /on/);
   assert.ok(ctx.agentPresets.serviceFor(agent, 'omdUnharnessedRuntime'));
   assert.equal(ctx.get('omdUnharnessedRuntime'), undefined, 'activity service remains in its preset realm');
   const missing = structuredClone(manager.definition);

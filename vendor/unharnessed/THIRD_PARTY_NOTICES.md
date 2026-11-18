@@ -47,4 +47,4 @@ DSH Desktop runtime `0.2.2-rc.3`.
 
 ## OMD integration
 
-OMD preserves the complete DSH Unharnessed distribution. Its wrapper uses a distinct preset and cancellation projection, an OMD-owned checkpoint directory, and a read-only activity callback for safe settings changes. The integration callback is optional; the standalone entry retains its original defaults. Source and adapted SHA-256 inventories are maintained in `../unharnessed.json`.
+OMD preserves the complete DSH Unharnessed distribution. Its wrapper uses a distinct preset and namespaced session projections, an OMD-owned checkpoint directory, and a read-only activity callback for safe settings changes. The integration callback is optional; the standalone entry retains its original defaults. Source and adapted SHA-256 inventories are maintained in `../unharnessed.json`.

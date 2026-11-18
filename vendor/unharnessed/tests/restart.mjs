@@ -8,7 +8,7 @@ import YAML from 'yaml'
 const ctx = new Context(), mode = process.argv[2]
 await ctx.plugin(Loader, { baseUrl: import.meta.url })
 ctx.loader.builtins.group = (await import('@deepseek-ai/cordis-plugin-loader')).Group
-for (const name of ['dsh-system-prompt','dsh-tools','dsh-tool-executor-native','dsh-session','dsh-session-projection','dsh-agent','dsh-llm','dsh-agent-loop','dsh-goal','dsh-commands','dsh-fs-local','dsh-working-directory','dsh-subprocess-local','dsh-sandbox-local','dsh-sandbox-policy','dsh-token-meter','dsh-agent-preset-registry']) {
+for (const name of ['dsh-system-prompt','dsh-tools','dsh-tool-executor-native','dsh-session','dsh-session-projection','dsh-agent','dsh-llm','dsh-agent-loop','dsh-goal','dsh-commands','dsh-fs-local','dsh-working-directory','dsh-subprocess-local','dsh-sandbox-local','dsh-sandbox-policy','dsh-token-meter','dsh-agent-preset-registry','dsh-subagent','dsh-subagent-spawn-in-process']) {
   const mod = await import('@deepseek-ai/' + name)
   await ctx.plugin(mod.default || mod, name === 'dsh-agent-preset-registry' ? { default: 'unharnessed' } : name === 'dsh-sandbox-policy' ? { mode: 'read-only' } : {})
 }

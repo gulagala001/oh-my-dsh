@@ -28,10 +28,32 @@ export function createBridges(ctx, config, catalog, deliver = (state, message) =
     if (!content.length || state.dead) return
     deliver(state, createUserMessage({ source: { kind: 'unharnessed-attachment' }, content: withAttachmentOrigin(content, producer) }))
   }
+  async function execute(state, name, args, signal, resolve, kind, id = randomUUID()) {
+    const execution = state.execution
+    const definition = resolve()
+    if (!definition) throw new Error(`${kind} tool is not available in this session: ${name}`)
+    if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error(`${kind} arguments must be an object`)
+    const invalid = validateJsonSchemaValue(definition.parameters, args, 'arguments')
+    if (invalid.length) throw new Error(`Invalid ${kind} arguments: ${invalid.join('; ')}`)
+    // The native pipeline applies guards, approvals, cancellation and result policies.
+    const pipeline = new ToolExecutionPipeline(ctx, { get: (requested, owner) => owner === state.agent && requested === name
+      && resolve() === definition ? definition : undefined })
+    const batch = await executeToolBatch({ agent: state.agent, signal, calls: [{ type: 'tool-call', id, name, arguments: JSON.stringify(args) }] }, pipeline, () => 1)
+    const result = batch.results[0]?.result
+    signal.throwIfAborted()
+    if (!result || result.isError) throw new Error(result?.content?.filter(x => x.type === 'text').map(x => x.text).join('\n') || `${kind} call failed`)
+    for (const context of batch.additionalContexts || []) {
+      const message = { ...context, content: withAttachmentOrigin(context.content, name) }
+      if (execution) execution.deferContext?.(message)
+      else deliver(state, message)
+    }
+    if (batch.concluded) execution?.concludeTurn?.()
+    publish(state, result.content.filter(x => x.type === 'image' || x.type === 'file'), name)
+    return result.value ?? { content: result.content }
+  }
   return {
     async mcp(state, data, signal) {
       signal.throwIfAborted()
-      const execution = state.execution
       const defs = definitions(state)
       if (data.action === 'list_connections') {
         const manager = ctx.get('mcpManager')
@@ -54,26 +76,13 @@ export function createBridges(ctx, config, catalog, deliver = (state, message) =
       if (!definition) throw new Error(`MCP tool is not available in this session: ${name}`)
       if (data.action === 'describe_tool') return summarize(definition)
       if (data.action !== 'call_tool') throw new Error('Unknown MCP action')
-      if (!data.arguments || typeof data.arguments !== 'object' || Array.isArray(data.arguments)) throw new Error('MCP arguments must be an object')
-      const invalid = validateJsonSchemaValue(definition.parameters, data.arguments, 'arguments')
-      if (invalid.length) throw new Error(`Invalid MCP arguments: ${invalid.join('; ')}`)
-      // Source lookup exempts only our presentation mask, retaining all other
-      // restrictions. The shared DSH pipeline still applies guards, approvals,
-      // validation, cancellation, output projection and post-execute policies.
-      const pipeline = new ToolExecutionPipeline(ctx, { get: (requested, owner) => owner === state.agent && requested === name
-        ? definitions(state).find(def => def === definition) : undefined })
-      const batch = await executeToolBatch({ agent: state.agent, signal, calls: [{ type: 'tool-call', id: randomUUID(), name, arguments: JSON.stringify(data.arguments) }] }, pipeline, () => 1)
-      const result = batch.results[0]?.result
-      signal.throwIfAborted()
-      if (!result || result.isError) throw new Error(result?.content?.filter(x => x.type === 'text').map(x => x.text).join('\n') || 'MCP call failed')
-      for (const context of batch.additionalContexts || []) {
-        const message = { ...context, content: withAttachmentOrigin(context.content, name) }
-        if (execution) execution.deferContext?.(message)
-        else deliver(state, message)
-      }
-      if (batch.concluded) execution?.concludeTurn?.()
-      publish(state, result.content.filter(x => x.type === 'image' || x.type === 'file'), name)
-      return result.value ?? { content: result.content }
+      return execute(state, name, data.arguments, signal, () => definitions(state).find(def => def === definition), 'MCP')
+    },
+
+    subagent(state, name, args, signal, resolve) {
+      // wait_agent deduplicates pending input within the same Python cell.
+      const id = name === 'wait_agent' ? state.execution.rootCallId ?? state.execution.callId : undefined
+      return execute(state, name, args, signal, resolve, 'Subagent', id)
     },
 
     async media(state, data, signal) {
