@@ -223,7 +223,7 @@ Responses 响应 ID 自动续传与完整请求回退。内置后端插件；共
 
 OpenCU 使用的原始界面组件及来源记录。宿主／来源／素材，具体使用范围见来源记录。
 
-- 固定来源／版本: [SHA256:004573a2ceac8eb0c830fca0a112b7f9504bb0a12bce80b13e009c8d0b0eef3e](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- 固定来源／版本: [SHA256:f71528bfd66102f0ba22dbbabdffb3c53b5959996b759301f092bfdbfdfe7da5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

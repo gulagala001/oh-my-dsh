@@ -5,7 +5,7 @@
   "description": "在 DeepSeek Harness 中使用持久 Python、后台命令、MCP、图片与文件附件和可恢复的任务状态。",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/shell.mjs && node tests/run.mjs",
+    "test": "node --test tests/shell.mjs tests/lifecycle.mjs && node tests/run.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "public:check": "node scripts/check-public-files.mjs",
     "prepack": "npm run docs:check && npm run public:check"

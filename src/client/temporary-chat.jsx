@@ -101,7 +101,7 @@ export function installTemporaryChat(ctx) {
       void close(entry).then(() => entries.delete(id)).catch(error => { entry.error = error.message; });
     }
   });
-  const leave = () => { for (const entry of entries.values()) if (entry.value?.id) navigator.sendBeacon('oh-my-dsh/api/temporary-chat/close', new Blob([JSON.stringify({ id: entry.value.id })], { type: 'application/json' })); };
+  const leave = event => { if (event.persisted) return; for (const entry of entries.values()) if (entry.value?.id) navigator.sendBeacon('oh-my-dsh/api/temporary-chat/close', new Blob([JSON.stringify({ id: entry.value.id })], { type: 'application/json' })); };
   window.addEventListener('pagehide', leave);
   ctx.effect(() => async () => {
     off(); window.removeEventListener('pagehide', leave); style.remove();

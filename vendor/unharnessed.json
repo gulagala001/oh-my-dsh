@@ -4,7 +4,7 @@
   "version": "0.2.4-dsh.0.2.2-rc.3",
   "host": "0.2.2-rc.5",
   "source": "https://github.com/gulagala001/dsh-unharnessed",
-  "sourceArchiveSha256": "399baf353c430f37d6e58aeeb53529473ac5553558c2f0d314870c0fd48cb0e6",
+  "sourceArchiveSha256": "56b0261c212d2377610d0c54350f9362d447b3be0862fcbe95519d29307ebcfd",
   "upstream": {
     "url": "https://github.com/unharnessed-agent/Unharnessed",
     "commit": "fe2cf2815f78463464b91c598fc0c31c0af98f4c"
@@ -14,13 +14,13 @@
     "vendor/LICENSE.dill": "998a48cdbbae6d2acd6f239551a8e4a450e967eb9d8fd8e242c34e9e64e40e26",
     "lib/bridges.js": "2c91945685e3e35064fcfa216886443c6b5002b708059a8c7322ef04d473b381",
     "lib/goals.js": "8551aef8decf7154f3c9bc91a94325842cdfe99e95d3894ae9877e831b716050",
-    "index.js": "e4b56947fc9ba0b2e69f0fe91470e3df66ce1d2730e613919ccdc66884cd7f6f",
-    "lib/kernel.js": "95857f8ba6bb68f714ef69dca8f0720acb8eaa9d3a5152f1288079c7f736284a",
+    "index.js": "883db912532fc8ebfab22c9a7bfe054e391de6f8a463f4054cc02c5effe6c974",
+    "lib/kernel.js": "2be06dd41f25d409982b5a54d771928926161fba13c695a4c5758dc331410a21",
     "lib/notifications.js": "9269a6d8884e36ac831b6f35964f869e6c8496ae86f8a8fd811f4de867074788",
     "lib/shell.js": "26418fb5652ce936846576c75509a931c3b7f1fefbc9e98d742ab3c14b1fb8c7",
-    "lib/snapshots.js": "c48657a45b59ae760298a61e45a1d254d14ae66b8e7db29ea45045966f6ee65c",
+    "lib/snapshots.js": "b7ca3a06800771229ae2ed25d957b0f53dc65fce89357658fac7fe95bfcd13c6",
     "locale/en.json": "dc9993c3daf0b03779892f71e2c4a0742aece9932e51c22f08c912c89faf888b",
-    "package.json": "4047db30492e98268df2bd10b3315ceeb57a9c2d32cddfb5ed4ba15fcbdd3c9d",
+    "package.json": "59a3f3c758fbe2db5604ce01f351b63fca4ecf17f7a1d16220ed03ed895f8767",
     "docs/structure.json": "332d8fdfdbec48e2a8201020645f23481b6145d7fdf7ade714a285ca57fb725b",
     "locale/zh.json": "97846d83bdbc639c18886220b87a3539a42bf353b90544e7512657aab86cf582",
     "CHANGELOG.md": "ca69681977b28baa6ce0ebce7f2f1b4998a2890372536cb84b7a754c3c687aba",
@@ -62,7 +62,8 @@
     "vendor/rlm/variables.py": "f34417be22045efe494a7039d2a7b8358f6afbfcf87f300b2ac30c6df6e0acaf",
     "icon.svg": "8bf82dc3958d7e0d0c0a4282c4bfa26806c81a5cfe7156e23961e558087fb60f",
     "vendor/LICENSE.Unharnessed": "47c5566b117c85a3943833107efe1431f90a2bc09fa8892007dbb66f56bdc114",
-    "cordis.patch.yml": "30b5e334164a77a876970f8bd37e4e9c7de8758cea229fb21bdfbe315ff644e7"
+    "cordis.patch.yml": "30b5e334164a77a876970f8bd37e4e9c7de8758cea229fb21bdfbe315ff644e7",
+    "tests/lifecycle.mjs": "dcaee43f92fa51ef30ca816c2ee53dc853a4ecc11a18f3f3aedf94220bd12c85"
   },
   "files": {
     "CHANGELOG.md": "ca69681977b28baa6ce0ebce7f2f1b4998a2890372536cb84b7a754c3c687aba",
@@ -74,16 +75,16 @@
     "cordis.patch.yml": "30b5e334164a77a876970f8bd37e4e9c7de8758cea229fb21bdfbe315ff644e7",
     "docs/structure.json": "332d8fdfdbec48e2a8201020645f23481b6145d7fdf7ade714a285ca57fb725b",
     "icon.svg": "8bf82dc3958d7e0d0c0a4282c4bfa26806c81a5cfe7156e23961e558087fb60f",
-    "index.js": "e60bb8e8415eec7ecb26a552b621d5a3d940764b070f4a6b9e55cf1c9fc9e337",
+    "index.js": "e5f5dc16e2d79e50a5e91b489bfbd0539535b1bdd32569beed5eac6cddf9b760",
     "lib/bridges.js": "2c91945685e3e35064fcfa216886443c6b5002b708059a8c7322ef04d473b381",
     "lib/goals.js": "8551aef8decf7154f3c9bc91a94325842cdfe99e95d3894ae9877e831b716050",
-    "lib/kernel.js": "95857f8ba6bb68f714ef69dca8f0720acb8eaa9d3a5152f1288079c7f736284a",
+    "lib/kernel.js": "2be06dd41f25d409982b5a54d771928926161fba13c695a4c5758dc331410a21",
     "lib/notifications.js": "9269a6d8884e36ac831b6f35964f869e6c8496ae86f8a8fd811f4de867074788",
     "lib/shell.js": "26418fb5652ce936846576c75509a931c3b7f1fefbc9e98d742ab3c14b1fb8c7",
-    "lib/snapshots.js": "c48657a45b59ae760298a61e45a1d254d14ae66b8e7db29ea45045966f6ee65c",
+    "lib/snapshots.js": "b7ca3a06800771229ae2ed25d957b0f53dc65fce89357658fac7fe95bfcd13c6",
     "locale/en.json": "dc9993c3daf0b03779892f71e2c4a0742aece9932e51c22f08c912c89faf888b",
     "locale/zh.json": "97846d83bdbc639c18886220b87a3539a42bf353b90544e7512657aab86cf582",
-    "package.json": "4047db30492e98268df2bd10b3315ceeb57a9c2d32cddfb5ed4ba15fcbdd3c9d",
+    "package.json": "59a3f3c758fbe2db5604ce01f351b63fca4ecf17f7a1d16220ed03ed895f8767",
     "python/bootstrap.py": "5038497f45fb607f9bd96b6a8a39bc2b963226cc262ab714458380a882b80efa",
     "python/entry.py": "0c8a21da182ad79be6c579c866ed66dcc68e051e315d4de45d690d99c45cc3e1",
     "python/state.py": "23ea016c7d7c55bde21667a9d70fa72faf7190c206fb948ff6497bc39042368a",
@@ -117,7 +118,8 @@
     "vendor/rlm/bash.py": "963438610e87ec991e6cdc3ba62eebd4cc89bcac365b66d655ceb75e17e2b979",
     "vendor/rlm/repl.md": "d5d417127550e1407df81be79a88125fa32fc190254e9cc30d13b55009ff9b37",
     "vendor/rlm/repl.py": "e6eebc1837197ab053cd4f27e4d0ff4fc030b8db690a9e0cca59b58aaba5904a",
-    "vendor/rlm/variables.py": "f34417be22045efe494a7039d2a7b8358f6afbfcf87f300b2ac30c6df6e0acaf"
+    "vendor/rlm/variables.py": "f34417be22045efe494a7039d2a7b8358f6afbfcf87f300b2ac30c6df6e0acaf",
+    "tests/lifecycle.mjs": "dcaee43f92fa51ef30ca816c2ee53dc853a4ecc11a18f3f3aedf94220bd12c85"
   },
   "adaptations": [
     {
@@ -129,5 +131,5 @@
       "reason": "Document OMD integration adaptations."
     }
   ],
-  "sourceCommit": "ce3b2d6be5e0a650d314546b573331096f343681"
+  "sourceCommit": "0857842e45e7dc510e4bd358e1f4625b7ef9425a"
 }

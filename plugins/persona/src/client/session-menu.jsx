@@ -6,7 +6,7 @@ async function request(sessionId, preset, signal) {
   const response = await fetch(API + '/session?session=' + encodeURIComponent(sessionId), { signal,
     ...(preset === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset }) }) });
   const data = await response.json();
-  if (!response.ok) throw Error(data.error || '会话人设读取失败');
+  if (!response.ok) throw Object.assign(Error(data.error || '会话人设读取失败'), { status: response.status });
   return data;
 }
 export class SessionMenu extends React.Component {
@@ -40,9 +40,13 @@ export class SessionMenu extends React.Component {
     try { const data = await request(sessionId, preset, controller.signal); if (active()) this.setState({ data }); }
     catch (error) {
       if (active()) {
-        this.setState({ error: error.message });
-        try { const data = await request(sessionId, undefined, controller.signal); if (active()) this.setState({ data }); }
-        catch (recovery) { if (active()) this.setState({ data: null, error: error.message + '；重新读取失败：' + recovery.message }); }
+        const rejected = error.status >= 400 && error.status < 500;
+        try {
+          const data = await request(sessionId, undefined, controller.signal);
+          if (active()) this.setState({ data, error: rejected ? error.message : data.preset === preset && !data.missing ? '' : '当前会话人设与本次选择不一致。' });
+        } catch (recovery) {
+          if (active()) this.setState({ data: null, error: (rejected ? error.message : '无法确认会话人设是否已保存') + '；重新读取失败：' + recovery.message });
+        }
       }
     } finally { if (active()) { this.pending = null; this.setState({ busy: false }); if (this.refreshPending) void this.load(true); } }
   };

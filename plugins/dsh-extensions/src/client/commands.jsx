@@ -2,11 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { Button, Input, Tag, IconCodeOutlineRegular, IconPlusOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { api, query } from './api.mjs';
 import { ActionsMenu, Confirm, Editor, Field, Group, Page, RefreshButton, Row, ScopePicker, Search, Select, Status, TextArea,
-  dirname, filter, folderActions, useAction, useOpeners, useResource, useScopes, useT } from './ui.jsx';
+  dirname, filter, folderActions, useAction, useOpeners, useResource, ScopedPage, useT } from './ui.jsx';
 
 export function CommandsPage() {
-  const { scope, scopes } = useScopes();
-  return <ScopedCommandsPage key={scope} scope={scope} scopes={scopes}/>;
+  return <ScopedPage component={ScopedCommandsPage}/>;
 }
 
 function ScopedCommandsPage({ scope, scopes }) {

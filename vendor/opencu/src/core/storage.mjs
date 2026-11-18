@@ -1,6 +1,7 @@
-import {mkdir, open, readFile, rename, unlink, lstat} from 'node:fs/promises';
+import {mkdir, open, readFile, rename, unlink, lstat, link, rm} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {randomUUID, createHash} from 'node:crypto';
+import {DatabaseSync} from 'node:sqlite';
 import {fail} from '../protocol.mjs';
 
 export async function createStorage(dataDir) {
@@ -9,25 +10,38 @@ export async function createStorage(dataDir) {
   await mkdir(directory, {recursive: true});
   const lockPath = join(directory, 'controller.lock');
   const token = randomUUID();
-  let lock;
+  const guard = new DatabaseSync(join(directory, 'controller-owner.sqlite'));
   try {
-    lock = await open(lockPath, 'wx', 0o600);
-  } catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-    let owner;
-    try { owner = JSON.parse(await readFile(lockPath, 'utf8')); }
-    catch { fail('DATA_DIR_LOCKED', 'Controller lock is unreadable; inspect it before recovery'); }
-    let alive = true;
-    try { process.kill(owner.pid, 0); }
-    catch (probe) { if (probe.code === 'ESRCH') alive = false; }
-    if (alive) fail('DATA_DIR_LOCKED', 'Another controller owns this dataDir', {pid: owner.pid});
-    await unlink(lockPath);
-    lock = await open(lockPath, 'wx', 0o600);
-  }
-  try {
-    try { await lock.writeFile(JSON.stringify({pid: process.pid, token})); }
-    finally { await lock.close(); }
-  } catch (error) { await unlink(lockPath); throw error; }
+    try { guard.exec('BEGIN IMMEDIATE'); }
+    catch (error) {
+      if (error.errcode === 5) fail('DATA_DIR_LOCKED', 'Another controller owns this dataDir');
+      throw error;
+    }
+    // Publish the complete legacy-compatible marker in one exclusive step.
+    // The OS releases the SQLite writer on exit, fencing concurrent reapers.
+    const candidate = join(directory, token + '.lock.tmp');
+    try {
+      const file = await open(candidate, 'wx', 0o600);
+      try { await file.writeFile(JSON.stringify({protocol: 2, pid: process.pid, token})); await file.sync(); }
+      finally { await file.close(); }
+      for (;;) {
+        try { await link(candidate, lockPath); break; }
+        catch (error) { if (error.code !== 'EEXIST') throw error; }
+        let owner;
+        try { owner = JSON.parse(await readFile(lockPath, 'utf8')); }
+        catch (error) {
+          if (error.code === 'ENOENT') continue;
+          fail('DATA_DIR_LOCKED', 'Controller lock is unreadable; inspect it before recovery');
+        }
+        if (!Number.isSafeInteger(owner?.pid) || owner.pid <= 0) fail('DATA_DIR_LOCKED', 'Controller lock owner is unknown');
+        if (owner.protocol !== 2) {
+          try { process.kill(owner.pid, 0); fail('DATA_DIR_LOCKED', 'Another controller owns this dataDir', {pid: owner.pid}); }
+          catch (error) { if (error.code !== 'ESRCH') throw error; }
+        }
+        await rm(lockPath, {force: true});
+      }
+    } finally { await rm(candidate, {force: true}); }
+  } catch (error) { guard.close(); throw error; }
   let tail = Promise.resolve();
   const committed = new Map();
   const stamp = info => info.isFile() ? `${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}` : null;
@@ -69,6 +83,7 @@ export async function createStorage(dataDir) {
       const owner = JSON.parse(await readFile(lockPath, 'utf8'));
       if (owner.token !== token) fail('DATA_DIR_LOCKED', 'Controller lock ownership changed');
       await unlink(lockPath);
+      guard.close();
     },
   };
 }

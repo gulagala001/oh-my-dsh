@@ -65,8 +65,8 @@ export async function apply(ctx, input = {}, integration = {}) {
   const states = new Map()
   const cleanups = new Set()
   let stopping = false
-  integration.activity?.({ busy: () => [...states.values()].some(state =>
-    state.execution || state.active.size || state.gateRun || state.resetting) })
+  integration.activity?.({ busy: agent => [...states.values()].some(state =>
+    (!agent || state.agent === agent) && (state.execution || state.active.size || state.gateRun || state.resetting)) })
   const cancellation = await ctx.sessionProjections.register({
     key: integration.projectionKey ?? 'unharnessed-cancelled', stateVersion: 1, stateSchema: zod.boolean(), init: () => false,
     apply: (state, event) => event.type === 'turn/end' ? event.data.reason.kind === 'aborted'
@@ -291,7 +291,7 @@ export async function apply(ctx, input = {}, integration = {}) {
           }
           state.notices.put('kernel-stopped', notice(`[Python kernel stopped] ${String(error.message ?? error)}\nIts variables and tasks were lost. The next ipython call starts a fresh kernel.`))
         }).catch(cause => ctx.logger.warn(String(cause)))
-      }, async data => {
+      }, async (data, displaySignal) => {
         if (!current() || state.turnSignal?.aborted || cancellation.stateOf(state.agent.session)) return
         for (const [mediaType, payload] of Object.entries(data || {})) {
           if (mediaType === 'text/plain' || mediaType.startsWith('application/vnd.')) continue
@@ -299,7 +299,7 @@ export async function apply(ctx, input = {}, integration = {}) {
           const isImage = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(mediaType)
           const extension = { 'text/html': 'html', 'application/json': 'json', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'audio/wav': 'wav', 'audio/mpeg': 'mp3', 'video/mp4': 'mp4', 'application/pdf': 'pdf' }[mediaType] || 'bin'
           await bridges.media(state, { action: isImage ? 'images' : 'files', items: [{ name: `output.${extension}`, mediaType,
-            data: mediaType.startsWith('text/') || mediaType === 'application/json' ? Buffer.from(payload).toString('base64') : payload }] }, AbortSignal.any([epoch.signal, state.execution?.signal || state.lifetime.signal]))
+            data: mediaType.startsWith('text/') || mediaType === 'application/json' ? Buffer.from(payload).toString('base64') : payload }] }, AbortSignal.any([epoch.signal, displaySignal ?? state.execution?.signal ?? state.lifetime.signal]))
         }
       })
       state.kernel = kernel; state.policy = key; state.hostCwd = cwd
@@ -456,6 +456,8 @@ export async function apply(ctx, input = {}, integration = {}) {
     const state = stateFor(agent)
     if (state.gateRun) return { kind: 'error', text: 'Wait for or stop the current gate check before resetting Python.' }
     await agent.runMaintenance(async () => {
+      await state.snapshots?.acquire()
+      if (state.snapshots?.readOnly) throw new Error(state.snapshots.ownerWarning())
       state.resetting = true
       try {
         state.kernelEpoch?.abort()

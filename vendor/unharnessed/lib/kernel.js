@@ -60,7 +60,7 @@ export class Kernel {
       ); return
     }
     const request = this.pending.get(frame.id)
-    if (!request) {
+    if (!request || request.done) {
       if (frame.event === 'stdout' || frame.event === 'stderr') {
         this.background = bounded(this.background + `[background ${frame.event}] ${frame.text}`, this.config.maxOutputChars)
       }
@@ -77,13 +77,20 @@ export class Kernel {
       // Rich output stays explicit; unbounded data and private activity signals never flood history.
       const text = frame.data?.['text/plain']
       if (typeof text === 'string') request.text = bounded(request.text + text, this.config.maxOutputChars)
-      request.displays.push(Promise.resolve().then(() => this.onDisplay(frame.data)).catch(error => {
+      request.displays.push(Promise.resolve().then(() => this.onDisplay(frame.data, request.media.signal)).catch(error => {
         request.displayError = true
         request.text = bounded(request.text + `[display error] ${error.message}`, this.config.maxOutputChars)
       }))
     } else if (frame.event === 'done') {
-      this.pending.delete(frame.id)
-      void Promise.all(request.displays).then(() => request.resolve({ ...frame, ...(request.displayError ? { status: 'error' } : {}), text: request.text }))
+      request.done = true
+      if (request.media.signal.aborted) { request.reject(request.media.signal.reason); return }
+      const settle = () => {
+        if (this.pending.get(frame.id) !== request) return
+        this.pending.delete(frame.id)
+        request.resolve({ ...frame, ...(request.displayError ? { status: 'error' } : {}), text: request.text })
+      }
+      if (request.displays.length) void Promise.all(request.displays).then(settle)
+      else settle()
     }
   }
 
@@ -98,7 +105,7 @@ export class Kernel {
     const hadPending = this.pending.size > 0
     this.closed = true
     this.readyReject(error)
-    for (const pending of this.pending.values()) pending.reject(error)
+    for (const pending of this.pending.values()) { pending.media.abort(error); pending.reject(error) }
     this.pending.clear()
     this.handle.terminate()
     this.onFailure(error, hadPending)
@@ -114,20 +121,26 @@ export class Kernel {
 
   async request(type, fields, signal, timeoutMs = this.config.cellTimeoutMs, handlers = {}) {
     signal.throwIfAborted()
-    const id = randomUUID()
+    if (this.closed) throw new Error('Python kernel is closed')
+    const id = randomUUID(), media = new AbortController()
     let killTimer
     let interrupted = false
     const interrupt = () => {
       if (interrupted) return
       interrupted = true
-      try { this.send({ type: 'interrupt', id }) } catch { return }
+      const reason = signal.reason ?? new Error(`Python cell exceeded ${timeoutMs} ms and was interrupted`)
+      media.abort(reason)
+      const pending = this.pending.get(id)
+      if (!pending) return
+      if (pending.done) { pending.reject(reason); return }
+      try { this.send({ type: 'interrupt', id }) } catch (error) { this.fail(error); return }
       killTimer = setTimeout(() => this.fail(new Error('Python did not stop after interrupt; kernel was reset')), this.config.interruptGraceMs)
     }
     const timer = setTimeout(interrupt, timeoutMs)
     signal.addEventListener('abort', interrupt, { once: true })
     try {
       const done = new Promise((resolve, reject) => {
-        this.pending.set(id, { resolve, reject, text: this.background, displays: [], ...handlers })
+        this.pending.set(id, { resolve, reject, text: this.background, displays: [], media, done: false, ...handlers })
         this.background = ''
       })
       try { this.send({ type, id, ...fields }) } catch (error) { this.fail(error) }
@@ -136,6 +149,7 @@ export class Kernel {
       if (interrupted) throw new Error(`Python cell exceeded ${timeoutMs} ms and was interrupted`)
       return result
     } finally {
+      this.pending.delete(id)
       clearTimeout(timer); clearTimeout(killTimer)
       signal.removeEventListener('abort', interrupt)
     }

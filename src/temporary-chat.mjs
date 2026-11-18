@@ -10,10 +10,23 @@ export class TemporaryChats {
     this.ctx = ctx; this.chats = new Map(); this.idleMs = idleMs; this.closed = false;
     this.storage = new TemporarySessionStorage(ctx, directory, cleanup);
     this.timer = setInterval(() => {
-      for (const chat of this.chats.values()) if (Date.now() - chat.touched > idleMs)
-        void this.close(chat.id).catch(error => ctx.logger?.warn?.(error.message));
+      const now = Date.now();
+      for (const chat of this.chats.values()) {
+        if (!chat.closed && (chat.opening || this.hasWork(chat.owner))) chat.touched = now;
+        else if (now - chat.touched > idleMs) void this.close(chat.id).catch(error => ctx.logger?.warn?.(error.message));
+      }
     }, Math.min(idleMs, 30000));
     this.timer.unref?.();
+  }
+  hasWork(owner) {
+    for (const id of owner.ids) {
+      const agent = this.ctx.agents.get(id);
+      if (agent && (agent.status === 'running' || agent.inbox.nextStep.length || agent.inbox.nextTurn.length)) return true;
+      if (agent && (this.ctx.get('goals')?.get(agent)?.phase === 'active'
+        || this.ctx.get('agentPresets')?.serviceFor?.(agent, 'omdUnharnessedRuntime')?.busy(agent))) return true;
+      if (this.ctx.get('jobs')?.list(id).some(job => ['running', 'stopping'].includes(job.status))) return true;
+    }
+    return false;
   }
   async open(parentId) {
     if (this.closed) throw Error('侧栏聊天已停止');
@@ -24,15 +37,15 @@ export class TemporaryChats {
       ?? (inherited.provider && inherited.model ? inherited : this.ctx.get('agentDefaultModel')?.currentSelection());
     if (!selection?.provider || !selection?.model) throw Error('请先选择聊天模型。');
     const currentDirectory = session && this.ctx.get('workingDirectory').get(session);
-    const id = `omd-sidebar-${randomUUID()}`, owner = this.storage.create(id);
-    const chat = { id, owner, touched: Date.now(), closed: false };
-    this.chats.set(id, chat);
     const presets = this.ctx.get('agentPresets');
     const preset = parent ? presets?.composedPreset(parent.ctx) : session?.header.agentPreset;
     const permission = parent?.ctx.get('permissionPresets')?.current(session);
     const sandbox = parent?.ctx.get('sandboxPolicy')?.overrideOf(session);
     const options = { ...inherited, provider: selection.provider, model: selection.model };
     if (selection.reasoningEffort === undefined) delete options.reasoningEffort; else options.reasoningEffort = selection.reasoningEffort;
+    const id = `omd-sidebar-${randomUUID()}`, owner = this.storage.create(id);
+    const chat = { id, owner, touched: Date.now(), opening: true, closed: false };
+    this.chats.set(id, chat);
     try {
       await owner.ready;
       owner.abort.signal.throwIfAborted();
@@ -52,6 +65,7 @@ export class TemporaryChats {
         },
       });
       owner.abort.signal.throwIfAborted();
+      chat.opening = false; chat.touched = Date.now();
       return { id, model: selection.model };
     } catch (error) {
       try { await this.close(id); } catch (cleanup) { throw new AggregateError([error, cleanup], '侧栏聊天创建与清理失败'); }
@@ -65,7 +79,7 @@ export class TemporaryChats {
   }
   async close(id) {
     const chat = this.chats.get(id);
-    if (!chat) return;
+    if (!chat) return this.storage.registry.recover(id);
     chat.closed = true;
     await this.storage.close(chat.owner);
     this.chats.delete(id);

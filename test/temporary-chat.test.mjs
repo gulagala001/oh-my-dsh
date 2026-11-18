@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import { HubStore } from '../src/hub-store.mjs';
 import { ContextStore } from '../src/context/store.mjs';
 import { TemporaryChats } from '../src/temporary-chat.mjs';
@@ -11,7 +12,7 @@ const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/
 const native = name => import(host.resolve('@deepseek-ai/dsh-' + name));
 const { Context } = await import(host.resolve('@deepseek-ai/cordis'));
 const { createUserMessage, LlmAdapter } = await native('llm');
-async function fixture(t) {
+async function fixture(t, options = {}) {
   await mkdir(resolve('../.local/temporary-native-tests'), { recursive: true });
   const directory = await mkdtemp(resolve('../.local/temporary-native-tests/test-')), ctx = new Context(), requests = [], started = Promise.withResolvers();
   let service;
@@ -39,7 +40,7 @@ async function fixture(t) {
   ctx.tools.register({ name: 'native_fixture', description: 'Synthetic tool', parameters: { type: 'object', properties: {} },
     output: { schema: { type: 'string' }, render: () => [] }, execute: () => 'ok' });
   const parent = await ctx.agents.create({ sessionId: 'ordinary-parent', agentOptions: { provider: 'fixture', model: 'local' }, meta: { cwd: directory } });
-  service = new TemporaryChats(ctx, { directory: join(directory, 'temporary') });
+  service = new TemporaryChats(ctx, { directory: join(directory, 'temporary'), ...options });
   return { ctx, parent, service, directory, requests, started };
 }
 const send = (agent, text) => agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] }));
@@ -138,4 +139,43 @@ test('cleanup failure is retryable and OMD sidecar deletion preserves ordinary s
   fail = false; await f.service.close(opened.id);
   assert.equal(hub.peek(opened.id), undefined); assert.equal(context.peek(opened.id), null);
   assert.ok(hub.peek(f.parent.agent.id)); assert.ok(context.peek(f.parent.agent.id));
+});
+
+test('expired renderer heartbeat retains a running sidebar but reclaims an abandoned idle one', { timeout: 10000 }, async t => {
+  const f = await fixture(t, { idleMs: 100 });
+  const { id } = await f.service.open(f.parent.agent.id), child = f.ctx.agents.get(id);
+  child.session.append('model/selection', { provider: 'fixture', model: 'wait' });
+  send(child, 'wait without a renderer'); await f.started.promise;
+  await new Promise(resolve => setTimeout(resolve, 350));
+  assert.equal(f.ctx.agents.get(id)?.status, 'running');
+  await f.service.close(id);
+  const idle = await f.service.open(f.parent.agent.id);
+  const deadline = Date.now() + 3000;
+  while (f.service.chats.has(idle.id) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
+  assert.equal(f.service.chats.has(idle.id), false);
+  await f.service.close(idle.id); // a lost close reply can be retried
+});
+
+test('restart reaps only proven orphan roots and fences late descendants', async t => {
+  const f = await fixture(t), directory = join(f.directory, 'recovery');
+  const id = 'omd-sidebar-1c8bb926-e2ff-4790-9537-d2da412b33b5';
+  const module = new URL('../src/temporary-session-registry.mjs', import.meta.url);
+  execFileSync(process.execPath, ['--input-type=module', '-e', `
+    import { TemporarySessionRegistry } from ${JSON.stringify(module.href)};
+    import { mkdirSync } from 'node:fs';
+    const [directory, id] = process.argv.slice(1);
+    const registry = new TemporarySessionRegistry(directory, () => {});
+    mkdirSync(registry.create(id)); registry.register(id, id); registry.register(id, 'old-child');
+    process.exit(0);
+  `, directory, id]);
+  const live = await f.service.open(f.parent.agent.id), cleaned = [];
+  const recovering = new TemporaryChats(f.ctx, { directory, cleanup: async ids => cleaned.push(...ids) });
+  try {
+    await recovering.close(id);
+    assert.deepEqual(new Set(cleaned), new Set([id, 'old-child']));
+    await assert.rejects(readdir(join(directory, id)), { code: 'ENOENT' });
+    await assert.rejects(f.ctx.agents.create({sessionId:'late-grandchild',meta:{parentSession:'old-child'}}), /已关闭/);
+    await assert.rejects(recovering.close('untracked-legacy-session'), e => e.statusCode === 409);
+    assert.ok(f.ctx.agents.get(live.id));
+  } finally { await recovering.dispose(); }
 });

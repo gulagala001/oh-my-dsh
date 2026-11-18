@@ -1,5 +1,9 @@
 import { API, SETTINGS_EVENT } from '../shared/protocol.mjs';
 
+const sameSetting = (a, b) => Object.is(a, b) || a != null && b != null && typeof a === 'object' && typeof b === 'object'
+  && Array.isArray(a) === Array.isArray(b) && Object.keys(a).length === Object.keys(b).length
+  && Object.keys(a).every(key => Object.hasOwn(b, key) && sameSetting(a[key], b[key]));
+
 export function createSettingsClient() {
   let snapshot = { config: null, error: '' }, queue = Promise.resolve(), generation = 0;
   const lifetime = new AbortController(), listeners = new Set(), revisions = new WeakMap();
@@ -16,7 +20,7 @@ export function createSettingsClient() {
     const etag = response.headers.get('etag');
     const valid = config && typeof config === 'object' && !Array.isArray(config) && /^"[a-f0-9]{64}"$/.test(etag ?? '');
     if (valid) revisions.set(config, etag);
-    if (!response.ok) throw Object.assign(Error(data.error || '人格设置读取失败'), { config: valid ? config : undefined });
+    if (!response.ok) throw Object.assign(Error(data.error || '人格设置读取失败'), { config: valid ? config : undefined, status: response.status });
     if (!valid) throw Error('人格设置回执无效，请重新读取');
     return config;
   };
@@ -41,16 +45,29 @@ export function createSettingsClient() {
       ++generation;
       const write = async () => {
         if (lifetime.signal.aborted) return false;
+        let config;
         try {
-          const config = await request(body, revision);
-          if (lifetime.signal.aborted) return false;
-          publish({ config, error: '' });
-          window.dispatchEvent(new CustomEvent(SETTINGS_EVENT, { detail: config }));
-          return true;
+          config = await request(body, revision);
         } catch (error) {
-          publish({ ...(error.config ? { config: error.config } : {}), error: '保存失败：' + error.message });
-          return false;
+          if (lifetime.signal.aborted) return false;
+          if (error.status >= 400 && error.status < 500) {
+            publish({ ...(error.config ? { config: error.config } : {}), error: '保存失败：' + error.message });
+            return false;
+          }
+          try { config = await request(); }
+          catch {
+            publish({ error: '无法确认人格设置是否已保存，请重新读取。' });
+            return false;
+          }
+          if (!Object.entries(JSON.parse(body)).every(([key, value]) => sameSetting(config[key], value))) {
+            publish({ config, error: '当前人格设置与本次修改不一致，请检查后再保存。' });
+            return false;
+          }
         }
+        if (lifetime.signal.aborted) return false;
+        publish({ config, error: '' });
+        window.dispatchEvent(new CustomEvent(SETTINGS_EVENT, { detail: config }));
+        return true;
       };
       queue = queue.then(write, write); return queue;
     },

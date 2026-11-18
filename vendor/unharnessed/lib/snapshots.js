@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, open, readFile, rename, rm, lstat } from 'node:fs/promises'
+import { mkdir, open, readFile, rename, rm, lstat, link } from 'node:fs/promises'
 import { openSync, writeSync, fsyncSync, closeSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { DatabaseSync } from 'node:sqlite'
 
 const held = new Map()
 const hash = value => createHash('sha256').update(value).digest('hex')
@@ -18,35 +19,76 @@ export class Snapshots {
     this.lock = join(this.dir, 'owner.json')
   }
 
-  async acquire() {
-    if (this.acquired) return
+  acquire() {
+    if (this.acquired) return Promise.resolve()
+    return this.acquiring ??= this.claim().finally(() => { this.acquiring = undefined })
+  }
+
+  async claim() {
     while (held.has(this.dir)) await held.get(this.dir)
     this.released = new Promise(resolve => { this.resolveRelease = resolve })
     held.set(this.dir, this.released)
     try {
       await mkdir(this.dir, { recursive: true, mode: 0o700 })
       if ((await lstat(this.dir)).isSymbolicLink()) throw new Error('Snapshot directory must not be a symlink')
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const fd = await open(this.lock, 'wx', 0o600)
-          await fd.writeFile(JSON.stringify({ pid: process.pid })); await fd.close()
-          this.acquired = true
-          return
-        } catch (error) {
-          if (error.code !== 'EEXIST') throw error
-          const prior = JSON.parse(await readFile(this.lock, 'utf8'))
-          if (!Number.isSafeInteger(prior.pid) || prior.pid < 1) throw new Error('Invalid snapshot owner; refusing concurrent access')
-          try { process.kill(prior.pid, 0); throw new Error('This session’s Python state is owned by another live process') }
-          catch (cause) { if (cause.code !== 'ESRCH') throw cause }
-          await rm(this.lock)
-        }
+      // SQLite's process lock is released by the OS on exit, including a crash
+      // during stale-owner reclamation. Keep owner.json for older plugin versions.
+      this.guard = new DatabaseSync(join(this.dir, 'ownership.sqlite'))
+      try { this.guard.exec('BEGIN IMMEDIATE') }
+      catch (error) {
+        if (error.errcode === 5) throw new Error('This session’s Python state is owned by another live process')
+        throw error
       }
-      throw new Error('Could not acquire Python snapshot ownership')
-    } catch (error) { held.delete(this.dir); this.resolveRelease(); throw error }
+      const nonce = randomUUID(), candidate = join(this.dir, nonce + '.owner.tmp')
+      try {
+        const fd = await open(candidate, 'wx', 0o600)
+        try { await fd.writeFile(JSON.stringify({ protocol: 2, pid: process.pid, nonce })); await fd.sync() }
+        finally { await fd.close() }
+        for (;;) {
+          try { await link(candidate, this.lock); this.nonce = nonce; break }
+          catch (error) { if (error.code !== 'EEXIST') throw error }
+          let prior
+          try { prior = JSON.parse(await readFile(this.lock, 'utf8')) }
+          catch (error) {
+            if (error.code === 'ENOENT') continue
+            if (!(error instanceof SyntaxError)) throw error
+          }
+          if (!Number.isSafeInteger(prior?.pid) || prior.pid < 1) {
+            // A legacy process can have created this file before writing its PID.
+            // Preserve it and the last valid checkpoint; live Python still works.
+            this.readOnly = true
+            break
+          }
+          // A v2 owner holds the SQLite write lock for its entire lifetime.
+          // Obtaining it proves that this leftover marker is stale even after PID reuse.
+          if (prior.protocol === 2 && typeof prior.nonce === 'string') { await rm(this.lock); continue }
+          try { process.kill(prior.pid, 0) }
+          catch (error) {
+            if (error.code !== 'ESRCH') throw error
+            await rm(this.lock, { force: true })
+            continue
+          }
+          throw new Error('This session’s Python state is owned by another live process')
+        }
+      } finally { await rm(candidate, { force: true }) }
+      this.acquired = true
+    } catch (error) {
+      this.guard?.close(); this.guard = undefined
+      held.delete(this.dir); this.resolveRelease(); throw error
+    }
   }
 
   async restore(kernel, binding, signal) {
     await this.acquire()
+    const notice = await this.readCheckpoint(kernel, binding, signal)
+    return [notice, this.readOnly && this.ownerWarning()].filter(Boolean).join('\n')
+  }
+
+  ownerWarning() {
+    return 'Python is running with read-only checkpoints because the previous snapshot owner is unknown. After all hosts using this session have stopped, move aside ' + this.lock + ' and reopen the session to resume saving.'
+  }
+
+  async readCheckpoint(kernel, binding, signal) {
     let meta
     try { meta = JSON.parse(await readFile(this.manifest, 'utf8')) }
     catch (error) { if (error.code === 'ENOENT') return ''; return '[python-state] Checkpoint metadata is damaged; started fresh.' }
@@ -70,6 +112,7 @@ export class Snapshots {
 
   async save(kernel, binding, signal, prune = false) {
     await this.acquire()
+    if (this.readOnly) throw new Error(this.ownerWarning())
     const file = `${randomUUID()}.bin`, target = join(this.dir, file), temporary = `${target}.tmp`
     let fd = openSync(temporary, 'wx', 0o600), total = 0, summary
     const digest = createHash('sha256')
@@ -109,6 +152,7 @@ export class Snapshots {
 
   async clear() {
     await this.acquire()
+    if (this.readOnly) throw new Error(this.ownerWarning())
     let meta
     try { meta = JSON.parse(await readFile(this.manifest, 'utf8')) } catch {}
     await rm(this.manifest, { force: true })
@@ -118,7 +162,12 @@ export class Snapshots {
   async release() {
     if (!this.acquired) return
     this.acquired = false
-    try { await rm(this.lock, { force: true }) }
-    finally { held.delete(this.dir); this.resolveRelease?.() }
+    try {
+      if (this.nonce && JSON.parse(await readFile(this.lock, 'utf8')).nonce === this.nonce) await rm(this.lock)
+    } catch (error) { if (error.code !== 'ENOENT') throw error }
+    finally {
+      this.nonce = undefined; this.readOnly = false; this.guard.close(); this.guard = undefined
+      held.delete(this.dir); this.resolveRelease?.()
+    }
   }
 }

@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { Button, Tag, IconListPenOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { api, query } from './api.mjs';
 import { ActionsMenu, Confirm, Detail, Editor, Facts, Group, Page, RefreshButton, Row, ScopePicker, Status, TextArea,
-  dirname, folderActions, formatSize, useAction, useOpeners, useResource, useScopes, useT } from './ui.jsx';
+  dirname, folderActions, formatSize, useAction, useOpeners, useResource, ScopedPage, useT } from './ui.jsx';
 
 const basename = path => path.split(/[\\/]/).pop();
 const when = ms => ms ? new Date(ms).toLocaleString() : '';
 
 export function InstructionsPage() {
-  const { scope, scopes } = useScopes();
-  return <ScopedInstructionsPage key={scope} scope={scope} scopes={scopes}/>;
+  return <ScopedPage component={ScopedInstructionsPage}/>;
 }
 
 function ScopedInstructionsPage({ scope, scopes }) {

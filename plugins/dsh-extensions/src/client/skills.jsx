@@ -2,15 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { Button, Input, Switch, Tag, IconSkillOutlineRegular, IconPlusOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { api, query } from './api.mjs';
 import { ActionsMenu, Confirm, Detail, Editor, Facts, Field, Group, Page, RefreshButton, Row, ScopePicker, Search, Select, Status, TextArea,
-  filter, folderActions, useAction, useOpeners, useResource, useScopes, useT } from './ui.jsx';
+  filter, folderActions, useAction, useOpeners, useResource, ScopedPage, useT } from './ui.jsx';
 
 const GROUPS = [['project', ['project-dsh', 'project-agents']], ['user', ['user-dsh', 'user-agents']], ['custom', ['custom']], ['bundled', ['bundled']]];
 const groupOf = source => GROUPS.find(([, sources]) => sources.includes(source))?.[0] ?? 'runtime';
 const ORDER = ['project', 'user', 'custom', 'bundled', 'runtime'];
 
 export function SkillsPage() {
-  const { scope, scopes } = useScopes();
-  return <ScopedSkillsPage key={scope} scope={scope} scopes={scopes}/>;
+  return <ScopedPage component={ScopedSkillsPage}/>;
 }
 
 function ScopedSkillsPage({ scope, scopes }) {
