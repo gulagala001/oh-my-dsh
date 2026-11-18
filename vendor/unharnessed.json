@@ -2,7 +2,7 @@
   "schema": 1,
   "package": "dsh-unharnessed",
   "version": "0.2.4-dsh.0.2.2-rc.3",
-  "host": "0.2.2-rc.3",
+  "host": "0.2.2-rc.5",
   "source": "https://github.com/gulagala001/dsh-unharnessed",
   "sourceArchiveSha256": "ad9e20fe198045503dac4cf3e46fa712639404f69ca25ee4a95d001c61024e98",
   "upstream": {

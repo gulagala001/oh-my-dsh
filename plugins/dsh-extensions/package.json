@@ -42,8 +42,8 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.3",
-    "@deepseek-ai/dsh-mcp-client": "0.2.2-rc.3"
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.5",
+    "@deepseek-ai/dsh-mcp-client": "0.2.2-rc.5"
   },
   "dsh": {
     "bundle": {
@@ -79,10 +79,10 @@
   "packageManager": "pnpm@11.28.5",
   "devDependencies": {
     "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.5",
     "esbuild": "0.25.12",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "@deepseek-ai/dsh-mcp-client": "0.2.2-rc.3"
+    "@deepseek-ai/dsh-mcp-client": "0.2.2-rc.5"
   }
 }
