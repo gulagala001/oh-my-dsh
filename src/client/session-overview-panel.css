@@ -45,7 +45,13 @@
 }
 .omd-overview-layout[data-overview-floating] { --omd-overview-width: min(var(--omd-overview-preferred-width, var(--omd-overview-default-width)), calc(100cqw - 16px)); }
 .omd-overview-layout[data-overview-floating] > .omd-overview-rail {
-  position: absolute; inset: 0 0 0 auto; z-index: 40; width: var(--omd-overview-width); transform: translateX(100%);
+  /* Keep the hit area and resize handle within the visible card row. */
+  position: absolute; inset: 0 0 0 auto; z-index: 40;
+  display: grid; grid-template-rows: minmax(0, max-content); align-content: start; pointer-events: none;
+  width: var(--omd-overview-width); transform: translateX(100%);
+}
+.omd-overview-layout[data-overview-floating][data-overview-open] > .omd-overview-rail > :is(.omd-overview-surface, .omd-overview-resize) {
+  grid-row: 1 / 2; min-height: 0; pointer-events: auto;
 }
 .omd-overview-layout[data-overview-floating][data-overview-open] > .omd-overview-rail { transform: translateX(0); }
 .omd-overview-resize {

@@ -1,3 +1,31 @@
+# Oh My DSH 1.7.1 · DSH 0.2.2-rc.3
+
+[中文](#zh-171) · [English](#en-171)
+
+<a id="zh-171"></a>
+
+## 中文
+
+### 问题修复
+
+- 打开工作区预览时，鼠标放在浮动总览下方也能滚动对话。
+
+<a id="en-171"></a>
+
+## English
+
+### Bug fixes
+
+- Scroll the conversation below the floating overview while a workspace preview is open.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[安装包 / Package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.7.1/oh-my-dsh-0.2.2-rc.3.omd.1.7.1.tgz) · [使用说明 / Guide](https://github.com/gulagala001/oh-my-dsh/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.7.1/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.7.0 · DSH 0.2.2-rc.3
 
 [中文](#zh-170) · [English](#en-170)
