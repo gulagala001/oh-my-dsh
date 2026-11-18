@@ -9,10 +9,10 @@ export function appearanceCoordinator(surface = document) {
   }
   const providers = new Map(), listeners = new Set(), foregroundOwners = new Map();
   let foreground = { sessionId: null, mode: null }, active, busy = false, pending = false, serial = 0;
-  let snapshot = Object.freeze({ foreground, owner: null, key: null, error: null, revision: 0 });
+  let snapshot = Object.freeze({ foreground, owner: null, key: null, error: null, phase: 'idle', revision: 0 });
   const publish = error => {
     snapshot = Object.freeze({ foreground: Object.freeze({ ...foreground }), owner: active?.entry.id ?? null,
-      key: active?.selection.key ?? null, error: error?.message ?? null, revision: snapshot.revision + 1 });
+      key: active?.selection.key ?? null, phase: active?.retiring ? 'cleanup-failed' : active ? 'active' : 'idle', error: error?.message ?? null, revision: snapshot.revision + 1 });
     for (const listener of [...listeners]) listener();
   };
   const reconcile = () => {
@@ -28,17 +28,30 @@ export function appearanceCoordinator(surface = document) {
             if (selection) { next = { entry, selection }; break; }
           } catch (error) { failure = error; }
         }
-        if (active?.entry === next?.entry && active?.selection.key === next?.selection.key) {
+        if (!active?.retiring && active?.entry === next?.entry && active?.selection.key === next?.selection.key) {
           publish(failure); continue;
         }
-        const previous = active; active = undefined;
-        try { previous?.dispose?.(); } catch (error) { failure = error; }
+        if (active) {
+          active.retiring = true;
+          try { active.dispose(); active = undefined; }
+          catch (error) { publish(error); break; }
+        }
+        // A disposer can change the roster synchronously. Select again before mounting.
+        if (pending) continue;
         if (next && providers.get(next.entry.id) === next.entry) {
+          let rollback;
           try {
-            const dispose = next.entry.mount(next.selection, foreground);
+            const dispose = next.entry.mount(next.selection, foreground, own => { rollback = own; });
             if (typeof dispose !== 'function') throw new Error('Appearance renderer must return a disposer');
             active = { ...next, dispose };
-          } catch (error) { failure = error; }
+          } catch (error) {
+            failure = error;
+            if (rollback) {
+              active = { ...next, dispose: rollback, retiring: true };
+              try { rollback(); active = undefined; }
+              catch (cleanup) { publish(new AggregateError([error, cleanup], error.message + '；' + cleanup.message)); break; }
+            }
+          }
         }
         publish(failure);
       } while (pending);
@@ -60,7 +73,7 @@ export function appearanceCoordinator(surface = document) {
       if (typeof id !== 'string' || !id || typeof select !== 'function' || typeof mount !== 'function' || !Number.isFinite(priority)) throw new TypeError('Invalid appearance provider');
       const entry = { id, priority, select, mount };
       providers.set(id, entry); reconcile();
-      return () => { if (providers.get(id) === entry) { providers.delete(id); reconcile(); } };
+      return () => { if (providers.get(id) === entry) providers.delete(id); else if (active?.entry !== entry) return; reconcile(); };
     },
     invalidate() { reconcile(); },
     observeForeground(owner) {

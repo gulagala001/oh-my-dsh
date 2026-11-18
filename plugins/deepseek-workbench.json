@@ -23,7 +23,7 @@
     "docs/structure.json": "48f5dafc18cb8e612e8378847383ded413e7ff22c7dd7ae63d980e1493793fa8",
     "docs/usage_EN.md": "399006309b532f2489b8f2877e86adb90e027e655b57abbaf3e38d04acbc76e4",
     "docs/usage.md": "ae75a7aa3d0b3d580d77423cb201d2ec0986a7fa4960f20417dd660279cbe4bb",
-    "lib/client.js": "0a228612df821687812bf8e0e676409f336e5cc0dae137ffa47b42de3c494b78",
+    "lib/client.js": "79b2adaf5d59ffcbea24d6114d7382ee89a6364bd3676510a7ff9da836223b4f",
     "package.json": "d7c80df3987a8b194b12401b64c23f0493584850f87aa4e366f47955ff5cf23c",
     "scripts/build.mjs": "70869d27e396cda01e08625aff9bd24fd856326c8f15cb987276422062fd54cb",
     "scripts/check-docs.mjs": "2592ee148ef6fd0164a0aa2a5be139c490a869b87e2a5d21e34d4defb943588e",
@@ -37,17 +37,19 @@
     "src/client/conversation-import.mjs": "d351cc3fd1e188423f6a7324fa8fd2c9156687141abe5fb98ccb66abbe456b0f",
     "src/client/extraction.mjs": "cd3fe83fdcceb8efcd7e5ed39c8cd930ce1e11f76c0e0a854e893c5ed48be141",
     "src/client/host-capabilities.mjs": "45f7a97ebf23a4bb2fe87b72f49acc107d4747c6e3b41bb90f73970479e67f5e",
-    "src/client/index.jsx": "ce066a0bb66ec457073b768da12bfe3de183247e033583fb44b8bc9dfffd7f47",
+    "src/client/index.jsx": "5826f9e0f9cf8c4ac58bc8d736e5f3142c661ce0bb1701d7ee13971949af9b68",
     "src/client/native-chat-bridge.mjs": "53ed137560adad54b692d85666e9aa43d29614f670295b2df35776083dd96a22",
     "src/client/native-chat.css": "6ebd71e47ce5042d051205b13d6bd0a925298f78310361c2368f1ae3289e72b4",
     "src/client/native-chat.jsx": "51692367b96e83f09504efd4db10d920392ef5a3fda2674aadf0b27d14eab619",
     "src/client/platform-page.jsx": "33e8af6eaa6d48835ee204795387b5c5798e49ebdb39e87498246d1b8bdc1483",
     "src/client/style.css": "14fa444b98107878fbcc99b79fee058d43efd60822b251c2470880f2c06ab23e",
     "src/client/temporary-sidebar.jsx": "2011fe0ab9e62fafa62bbe82e79648b5bc31fe9c4c403cf23d8d08bb329a5382",
-    "src/client/temporary-web.mjs": "b5ca0ef51f1e77b4235b1a43f0093b374adee902f46f23b31316ff26d8b6fb66",
+    "src/client/temporary-web.mjs": "de96a35552983c084c91ffae628ba9330ba698c4e988d5dd178241b8e85b592d",
     "src/component-lease.mjs": "1ccf50c63f18923300efab6c9d795ef2d306f8373aa6d34efaa5f2f2c1c1c756",
     "src/import.mjs": "20520bde14ac07877b85b5a16c5b133a33d9c587999ae5b1c1346014e46edc3b",
-    "src/index.mjs": "a072e4b62f7f6b228578d52e4188b0fa7f60dd73fb69c22451409429de635355"
+    "src/index.mjs": "a072e4b62f7f6b228578d52e4188b0fa7f60dd73fb69c22451409429de635355",
+    "src/client/temporary-ownership.mjs": "5865feb6367aac0803ae5707ffd99e92326f881124017e1a04d26defc18aaf0a",
+    "src/client/window-owner.mjs": "3e4296e26b458740b1511767e24de682ed5855ac9415659bac1e6d37a97a6a25"
   },
   "buildHost": "0.2.2-rc.5"
 }

@@ -20,7 +20,7 @@ export function HooksPage() {
   const groups = events.map(event => [event, hooks.filter(hook => hook.event === event)]).filter(([, items]) => items.length);
   const blank = { event: 'PreToolUse', matcher: '', command: '', timeout: '' };
   const add = () => { if (acknowledged) setEditor(blank); else setRisk(true); };
-  const edit = hook => setEditor({ id: hook.id, expected: hook.command, event: hook.event, matcher: hook.matcher, command: hook.command, timeout: hook.timeout ? String(hook.timeout) : '', enabled: hook.enabled });
+  const edit = hook => setEditor({ id: hook.id, revision: hook.revision, expected: hook.command, event: hook.event, matcher: hook.matcher, command: hook.command, timeout: hook.timeout ? String(hook.timeout) : '', enabled: hook.enabled });
   const matcherTag = hook => data.matcherEvents.includes(hook.event)
     ? <Tag tone="quiet">{hook.matcher || t(hook.event === 'SessionStart' ? 'hooks.allSources' : 'hooks.allTools')}</Tag> : null;
   return <Page
@@ -39,7 +39,7 @@ export function HooksPage() {
           {items.map(hook => <Row key={hook.id} icon={<IconSlidersTwoOutlineRegular size={20}/>} title={<code>{hook.command}</code>} muted={!hook.enabled || !data.enabled || !supported}
             tags={<>{matcherTag(hook)}{hook.timeout && <Tag tone="quiet">{hook.timeout}s</Tag>}</>} onOpen={supported ? () => edit(hook) : undefined}
             end={<><Switch label={t('toggle', { name: hook.command })} checked={hook.enabled} disabled={action.busy || !supported}
-              onChange={value => write({ action: 'enable', id: hook.id, expected: hook.command, enabled: value })}/>
+              onChange={value => write({ action: 'enable', id: hook.id, revision: hook.revision, expected: hook.command, enabled: value })}/>
               <ActionsMenu actions={[supported && { id: 'edit', label: t('edit'), run: () => edit(hook) }, { id: 'delete', label: t('delete'), run: () => setRemoving(hook) }]}/></>}/>)}
         </Group>;
       })}
@@ -61,7 +61,7 @@ export function HooksPage() {
     <Confirm open={!!removing} title={t('hooks.delete.title')} busy={action.busy} error={action.error}
       description={removing ? t('hooks.delete.desc', { event: data?.events.includes(removing.event) ? t(`hooks.event.${removing.event}`) : removing.event }) : ''}
       onCancel={() => { setRemoving(null); action.clear(); }}
-      onConfirm={async () => { if (await write({ action: 'delete', id: removing.id, expected: removing.command }, t('deleted'))) setRemoving(null); }}/>
+      onConfirm={async () => { if (await write({ action: 'delete', id: removing.id, revision: removing.revision, expected: removing.command }, t('deleted'))) setRemoving(null); }}/>
   </Page>;
 }
 
@@ -74,7 +74,7 @@ function HookEditor({ editor, data, onClose, onSaved }) {
   const timeout = () => draft.timeout.trim() ? Number(draft.timeout) : undefined;
   const matcher = data.matcherEvents.includes(draft.event);
   const save = async () => {
-    const input = { action: 'save', id: editor.id, expected: editor.expected, event: draft.event, matcher: matcher ? draft.matcher : '', command: draft.command, timeout: timeout(), enabled: editor.enabled ?? true };
+    const input = { action: 'save', id: editor.id, revision: editor.revision, expected: editor.expected, event: draft.event, matcher: matcher ? draft.matcher : '', command: draft.command, timeout: timeout(), enabled: editor.enabled ?? true };
     if (await action.run(() => api('/hooks', input))) onSaved();
   };
   const run = async () => {

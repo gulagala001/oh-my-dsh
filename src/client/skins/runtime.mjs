@@ -112,14 +112,15 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   };
   const release = () => {
     if (!owning) return;
-    owning = false; background.setEnabled(false); clearTheme();
+    background.setEnabled(false); clearTheme();
     disposeTokens?.(); disposeTokens = undefined;
-    releaseGlyph?.(); releaseGlyph = undefined;
+    releaseGlyph?.(); releaseGlyph = undefined; owning = false;
   };
   const apply = () => {
     if (!disposed) syncEffects();
     if (!state.active || disposed) { release(); return; }
     const active = prepared.get(state.selected);
+    owning = true;
     // Release a standalone Glyph owner BEFORE writing this owner's attributes
     // and tokens. Use the layout, since imported Glyph skins have their own ids.
     if (active?.skin.layout === 'glyph-motion' && !releaseGlyph) {
@@ -131,7 +132,6 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
     // Theme edits retain appearance ownership and the existing background DOM.
     // Only coordinator handoff/unload releases surfaces and their observers.
     clearTheme();
-    owning = true;
     // Native appearance needs the same interaction contract as selected skins.
     // Keep it for this owner's lifetime, including palette-only customization.
     windowStyle = document.createElement('style'); windowStyle.dataset.omdWindowChrome = '';
@@ -181,9 +181,11 @@ export function createSkinRuntime(ctx, adapterCss, layouts = {}, appearanceCss =
   const offTheme = ctx.on('theme/change', syncMode);
   const unregisterAppearance = coordinator.register({ ...owner,
     select: () => ({ key: 'omd-global' }),
-    mount: () => {
+    mount: (_selection, _foreground, onCleanup) => {
+      const stop = () => { state = { ...state, active: false }; release(); emit(); };
+      onCleanup?.(stop);
       state = { ...state, active: true }; apply(); emit();
-      return () => { state = { ...state, active: false }; release(); emit(); };
+      return stop;
     },
   });
   const offCompanion = companionBrand && coordinator.subscribe(() => {

@@ -157,8 +157,8 @@
       "source": "src/client/skins/runtime.mjs",
       "license": "MIT",
       "notice": "THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons",
-      "version": "SHA256:fbd3ddfd65e0e5d7acc8c208935dd092d126f6dae179c85114d8f0dfc8df7c87",
-      "sourceSha256": "fbd3ddfd65e0e5d7acc8c208935dd092d126f6dae179c85114d8f0dfc8df7c87",
+      "version": "SHA256:ae2ba11f181429d3b09a98f876d564feca03570e6e6f064d32b5aea3838c9e23",
+      "sourceSha256": "ae2ba11f181429d3b09a98f876d564feca03570e6e6f064d32b5aea3838c9e23",
       "group": "products"
     },
     {
@@ -218,8 +218,8 @@
       "license": "Original upstream rights apply",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
       "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json",
-      "version": "SHA256:a335b062fd646f9e3b5a4c22eb9599ca394400eb48f7545e78a390379d6a9af5",
-      "sourceSha256": "a335b062fd646f9e3b5a4c22eb9599ca394400eb48f7545e78a390379d6a9af5",
+      "version": "SHA256:442bc4f80c695f39cd275ce83b82cc93e587c3a48b77a75506a784ca6284bccb",
+      "sourceSha256": "442bc4f80c695f39cd275ce83b82cc93e587c3a48b77a75506a784ca6284bccb",
       "group": "sources"
     },
     {

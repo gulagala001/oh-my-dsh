@@ -1,3 +1,4 @@
+import { configRevision, checkRevision, fileRevision } from './edit-revision.mjs';
 import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
@@ -232,7 +233,7 @@ export class Hooks {
       (Array.isArray(document.hooks[event]) ? document.hooks[event] : []).forEach((group, groupIndex) => {
         (Array.isArray(group?.hooks) ? group.hooks : []).forEach((hook, hookIndex) => {
           if (hook?.type !== 'command') return;
-          items.push({ id: `${event}/${groupIndex}/${hookIndex}`, event, supported: EVENTS.includes(event), matcher: group.matcher ?? '',
+          items.push({ id: `${event}/${groupIndex}/${hookIndex}`, event, revision: configRevision([event,group.matcher ?? '',hook]), supported: EVENTS.includes(event), matcher: group.matcher ?? '',
             command: String(hook.command ?? ''), timeout: valid(hook.timeout) ? hook.timeout : null, enabled: hook.enabled !== false });
         });
       });
@@ -247,6 +248,7 @@ export class Hooks {
   }
   async write(change) {
     // The file is authoritative. A cached read is only for event dispatch/UI.
+    const fileBase = await fileRevision(this.file);
     const { document: current, error } = await this.load({ force: true });
     if (error) fail('hooks-file-invalid', 'hooks.json cannot be parsed; fix or remove it first', { file: this.file });
     const document = structuredClone(current);
@@ -255,13 +257,14 @@ export class Hooks {
       const groups = (document.hooks[event] ?? []).filter(group => !Array.isArray(group?.hooks) || group.hooks.length);
       if (groups.length) document.hooks[event] = groups; else delete document.hooks[event];
     }
-    await writeAtomic(this.file, JSON.stringify(document, null, 2) + '\n');
+    await writeAtomic(this.file, JSON.stringify(document, null, 2) + '\n', async () => checkRevision(fileBase, await fileRevision(this.file)), fileBase === 'absent');
     this.cache.mtime = undefined;
   }
-  static locate(document, id, expected) {
+  static locate(document, id, expected, revision) {
     const [event, group, hook] = String(id).split('/');
     const entry = document.hooks[event]?.[Number(group)]?.hooks?.[Number(hook)];
     if (!entry || (expected !== undefined && entry.command !== expected)) fail('hook-changed', 'hooks.json changed meanwhile; refresh and try again', {}, 409);
+    if (revision !== undefined) checkRevision(revision, configRevision([event,document.hooks[event][Number(group)].matcher ?? '',entry]));
     return { event, group: Number(group), hook: Number(hook), entry };
   }
   static validate({ event, matcher, command, timeout }) {
@@ -270,13 +273,13 @@ export class Hooks {
     if (timeout !== undefined && timeout !== null && !valid(timeout)) fail('invalid-hook-timeout', 'Timeout must be between 1 and 600 seconds');
     if (matcher && MATCHER_EVENTS.includes(event)) try { new RegExp(matcher); } catch { fail('invalid-hook-matcher', 'The matcher is not a valid regular expression'); }
   }
-  save({ id, expected, event, matcher = '', command, timeout, enabled = true }) {
+  save({ id, expected, revision, event, matcher = '', command, timeout, enabled = true }) {
     Hooks.validate({ event, matcher, command, timeout });
     const key = MATCHER_EVENTS.includes(event) ? matcher.trim() : '';
     return this.edit(document => {
       let hook = { type: 'command', command: command.trim() };
       if (id !== undefined) {
-        const found = Hooks.locate(document, id, expected);
+        const found = Hooks.locate(document, id, expected, revision);
         hook = { ...found.entry, ...hook };
         document.hooks[found.event][found.group].hooks.splice(found.hook, 1);
       }
@@ -287,9 +290,9 @@ export class Hooks {
       if (group) group.hooks.push(hook); else groups.push({ ...key ? { matcher: key } : {}, hooks: [hook] });
     });
   }
-  remove(id, expected) { return this.edit(document => { const found = Hooks.locate(document, id, expected); document.hooks[found.event][found.group].hooks.splice(found.hook, 1); }); }
-  setEnabled(id, expected, enabled) {
-    return this.edit(document => { const { entry } = Hooks.locate(document, id, expected); if (enabled) delete entry.enabled; else entry.enabled = false; });
+  remove(id, expected, revision) { return this.edit(document => { const found = Hooks.locate(document, id, expected, revision); document.hooks[found.event][found.group].hooks.splice(found.hook, 1); }); }
+  setEnabled(id, expected, enabled, revision) {
+    return this.edit(document => { const { entry } = Hooks.locate(document, id, expected, revision); if (enabled) delete entry.enabled; else entry.enabled = false; });
   }
   setAll(enabled) { return this.edit(document => { if (enabled) delete document.disableAllHooks; else document.disableAllHooks = true; }); }
   /** Try a command with a representative input; nothing reaches a session. */

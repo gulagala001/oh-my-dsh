@@ -26,14 +26,14 @@ function ScopedSkillsPage({ scope, scopes }) {
     if (done) await list.reload({ quiet: true });
     return done;
   };
-  const toggle = (skill, next) => write({ action: 'invocation', path: skill.path, ...next }, t('saved'));
+  const toggle = (skill, next) => write({ action: 'invocation', path: skill.path, revision: skill.revision, ...next }, t('saved'));
   const current = open && skills.find(skill => skill.key === open);
   const menu = skill => [skill.editable && { id: 'edit', label: t('edit'), run: () => openEditor(skill) },
     ...folderActions(t, opener, skill.directory, task => action.run(task)),
     skill.editable && { id: 'delete', label: t('delete'), run: () => setRemoving(skill) }];
   const openEditor = async skill => {
     const file = await action.run(() => api(query('/skills/file', { scope, key: skill.key })));
-    if (file) setEditor({ mode: 'edit', scope, path: skill.path, name: skill.name, content: file.content });
+    if (file) setEditor({ mode: 'edit', scope, path: skill.path, name: skill.name, revision: file.revision, content: file.content });
   };
   const locations = ['project', 'user'].filter(location => list.data?.roots?.[location]).map(value => ({ value, label: t(`location.${value}`) }));
   const location = { scope, locations, location: locations[0]?.value };
@@ -45,7 +45,7 @@ function ScopedSkillsPage({ scope, scopes }) {
     {editor && <SkillEditor editor={editor} onClose={() => setEditor(null)} onSaved={async path => { setEditor(null); const data = await list.reload({ quiet: true }); if (path) setOpen(data?.skills.find(skill => skill.path === path)?.key); }}/>}
     <Confirm open={!!removing} title={t('skills.delete.title')} description={removing ? t('skills.delete.desc', { name: removing.name, path: removing.bundle ? removing.directory : removing.path }) : ''}
       busy={action.busy} error={action.error} onCancel={() => { setRemoving(null); action.clear(); }}
-      onConfirm={async () => { if (await write({ action: 'delete', path: removing.path }, t('deleted'))) { setRemoving(null); setOpen(null); } }}/>
+      onConfirm={async () => { if (await write({ action: 'delete', path: removing.path, revision: removing.revision }, t('deleted'))) { setRemoving(null); setOpen(null); } }}/>
   </>;
   if (current) return <>
     <Detail title={current.name} onBack={() => setOpen(null)}
@@ -95,7 +95,7 @@ function SkillEditor({ editor, onClose, onSaved }) {
   const set = key => event => setDraft(current => ({ ...current, [key]: event.target.value }));
   const locations = draft.locations;
   const save = async () => {
-    const input = draft.mode === 'edit' ? { action: 'save', path: draft.path, content: draft.content }
+    const input = draft.mode === 'edit' ? { action: 'save', path: draft.path, revision: draft.revision, content: draft.content }
       : draft.mode === 'import' ? { action: 'import', location: draft.location, source: draft.source }
       : { action: 'create', location: draft.location, name: draft.name.trim(), description: draft.description, body: draft.body };
     const result = await action.run(() => api('/skills', { scope: draft.scope, ...input }));

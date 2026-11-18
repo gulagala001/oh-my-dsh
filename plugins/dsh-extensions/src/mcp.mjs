@@ -1,3 +1,4 @@
+import { configRevision, checkRevision, fileRevision } from './edit-revision.mjs';
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { errorText, fail, tilde, writeAtomic } from './common.mjs';
@@ -100,6 +101,7 @@ export class Mcp {
         for (const [name, raw] of Object.entries(document.mcpServers)) {
           try { next.set(name, normalizeServer(name, raw)); }
           catch (error) { next.set(name, { name, invalid: error.message, enabled: false, disabledTools: [] }); }
+          next.get(name).revision = configRevision(raw);
         }
         this.fileError = null;
       } catch (error) { this.fileError = errorText(error); return; }
@@ -291,7 +293,7 @@ export class Mcp {
       const hidden = new Set(server.disabledTools);
       const known = new Map((this.toolCache.get(server.name) ?? []).map(tool => [tool.name, tool]));
       for (const tool of visible) known.set(tool.name, tool);
-      return { name: server.name, transport: server.transport ?? null, status, error: server.invalid ?? record?.error ?? null,
+      return { name: server.name, revision: server.revision, transport: server.transport ?? null, status, error: server.invalid ?? record?.error ?? null,
         startError: record?.startError ? errorText(record.startError) : undefined,
         target: server.transport === 'stdio' ? [server.command, ...server.args].join(' ') : server.url ?? null,
         envKeys: Object.keys(server.env ?? {}), headerKeys: Object.keys(server.headers ?? {}), timeoutMs: server.timeoutMs ?? null,
@@ -306,24 +308,27 @@ export class Mcp {
     if (!server) fail('server-missing', `No MCP server named ${name}`, { name }, 404);
     if (server.invalid) {
       const raw = (await this.readDocument()).mcpServers[name];
-      return { name, raw };
+      if (raw === undefined) fail('server-missing', 'The MCP definition disappeared; refresh and try again', {name}, 404);
+      return { name, raw, revision: configRevision(raw) };
     }
-    return { name, raw: serializeServer(server) };
+    return { name, raw: serializeServer(server), revision: server.revision };
   }
   /** Read-modify-write the current file so hand edits made meanwhile survive. */
   edit(change) {
     if (this.closed) return Promise.reject(new Error('Extensions service is stopped'));
     return this.serial(async () => {
+      const fileBase = await fileRevision(this.file);
       let document;
       try { document = await this.readDocument(); }
       catch { fail('mcp-file-invalid', 'mcp.json cannot be parsed; fix or remove it first', { file: this.file }); }
       change(document.mcpServers);
-      await writeAtomic(this.file, JSON.stringify(document, null, 2) + '\n');
+      await writeAtomic(this.file, JSON.stringify(document, null, 2) + '\n', async () => checkRevision(fileBase, await fileRevision(this.file)), fileBase === 'absent');
     }).then(() => this.sync({ force: true }));
   }
-  save({ name, previous, server }) {
+  save({ name, previous, server, revision }) {
     const normalized = normalizeServer(name, server);
     return this.edit(servers => {
+      if (previous !== undefined && revision !== undefined) checkRevision(revision, configRevision(servers[previous]));
       if (name !== previous && servers[name] !== undefined) fail('server-exists', `A server named ${name} already exists`, { name }, 409);
       const old = previous !== undefined && servers[previous] && typeof servers[previous] === 'object' ? servers[previous] : undefined;
       if (previous !== undefined && previous !== name) delete servers[previous];
@@ -332,7 +337,7 @@ export class Mcp {
         disabledTools: Array.isArray(old?.disabledTools) ? old.disabledTools : normalized.disabledTools });
     });
   }
-  remove(name) { return this.edit(servers => { delete servers[name]; }); }
+  remove(name, revision) { return this.edit(servers => { if (revision !== undefined) checkRevision(revision, configRevision(servers[name])); delete servers[name]; }); }
   setEnabled(name, enabled) {
     return this.edit(servers => {
       if (!servers[name]) fail('server-missing', `No MCP server named ${name}`, { name }, 404);

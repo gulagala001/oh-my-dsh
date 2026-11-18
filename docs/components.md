@@ -75,7 +75,7 @@ DeepSeek 网页工作台和历史导入。内置工作台插件。
 
 主题、配色、背景、字体和外观管理。独立产品；OMD 与它共用外观源码。
 
-- 固定来源／版本: [SHA256:fbd3ddfd65e0e5d7acc8c208935dd092d126f6dae179c85114d8f0dfc8df7c87](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
+- 固定来源／版本: [SHA256:ae2ba11f181429d3b09a98f876d564feca03570e6e6f064d32b5aea3838c9e23](https://github.com/gulagala001/oh-my-dsh/blob/main/src/client/skins/runtime.mjs)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md#google-material-expressive-skin-fonts-and-icons)
 
 ### Glyph
@@ -223,7 +223,7 @@ Responses 响应 ID 自动续传与完整请求回退。内置后端插件；共
 
 OpenCU 使用的原始界面组件及来源记录。宿主／来源／素材，具体使用范围见来源记录。
 
-- 固定来源／版本: [SHA256:a335b062fd646f9e3b5a4c22eb9599ca394400eb48f7545e78a390379d6a9af5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- 固定来源／版本: [SHA256:442bc4f80c695f39cd275ce83b82cc93e587c3a48b77a75506a784ca6284bccb](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

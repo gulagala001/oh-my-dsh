@@ -131,8 +131,8 @@
     "host/tab-close-guards.ts": "aa02dadb15df800abec0af633ce0a8006f7ea101ace4bfc5d1d6700f8aac0d8e",
     "host/tool-visibility.mjs": "42229e426bba736a0a876a8ef84cb84995c2b0fa2afdbe7f707e73271645ec7b",
     "lib/browser-surface.html": "e59df9f6a09e34ab6e41952a0d8f7d63de236f8857002326c92e493e1afcc716",
-    "lib/browser-surface.js": "31dc60555b08502d88d8f6371e6141fa3d77f4a80b16942bb7472141effe9434",
-    "lib/client.js": "f4b7e48cc7623fd0a8781665b4310e48653465003361a683510ec694ca8efe2a",
+    "lib/browser-surface.js": "82578ecaa0685a92310dcd8c2e4c5760974edc45f6697a640fb3e7321ea9d40d",
+    "lib/client.js": "ee9a1059b80e9b9495fd5d6dbf440a2c7262555c8aa378bf8786515e81d17750",
     "lib/cursor.html": "4cb6dc405d432fb54a6b21ea18a5ef6617f1d3793e40928b0705b508f8736261",
     "lib/extension.zip": "7b2c5905ae55c3dbab21b059be5323de48c94c2046885212292c42d303c2e870",
     "lib/host-build.json": "951750b289713df2c7ee73b5ac25883867a29d7fdc8a7b1caf9f3b435356ab41",
@@ -449,7 +449,7 @@
     "lib/rea-assets/lua-ec4138ed9dd4.js": "076f861a8bf3292124ba64c8c0cb11e8780dfe13ef99413173ca82fd38d23d4f",
     "lib/rea-assets/luau-af32ac672287.js": "ed70e55bfc3f12337292553c90d236da6859fb47c1553be3e983647fb19dd64c",
     "lib/rea-assets/make-9a743bf89d5a.js": "b89fcc49263fc224bb981fc85c0bf879b766ec5df0285b445641cdfbd1378558",
-    "lib/rea-assets/manifest.json": "a335b062fd646f9e3b5a4c22eb9599ca394400eb48f7545e78a390379d6a9af5",
+    "lib/rea-assets/manifest.json": "442bc4f80c695f39cd275ce83b82cc93e587c3a48b77a75506a784ca6284bccb",
     "lib/rea-assets/markdown-1c15c2fc01dc.js": "c89ab0c9753185eec2faedae275ef59c59a6c40e430a9386f287250c8b485fe4",
     "lib/rea-assets/markdown-d7043fbbade8.js": "c6a081441a09aa7924d9a432fa4c5b7099f15472434d61786d580afbf4ae5a63",
     "lib/rea-assets/marko-4aec0bbd7e63.js": "e768995a4966c4bebebc4ffb7c7a1c2f835b9f3f331b4889c54a3437d4f917b9",
@@ -810,8 +810,8 @@
     "lib/rea-assets/opencu-chunk-M3CGUFOP.js": "0363baee4118c8fdeed541e146a829010b9a72e2e16464c41d88a8b0f859b7ba",
     "lib/rea-assets/opencu-chunk-AO4KILNR.js": "6b71dc8c57a2c0637073bbccaa1009088f5910a5227ad82f10ffe4052ae8437a",
     "lib/rea-assets/opencu-chunk-7UOLG4CU.js": "8a12b45e25982d1f55bf522a41392fa1d6d3c74b0232365ea73da29c8e9c18f1",
-    "lib/rea-assets/opencu-client-DOOYJVKA.js": "038e1d0d8d3ae90fa49338facce000161da6283bcb50da74414793f608cb822c"
+    "lib/rea-assets/opencu-client-KHXL4KXD.js": "2ba9a5ae1e29e80408f536f5d699313c12820122ee75b9ba2ee987bc13101b9f"
   },
-  "sourceCommit": "ba8a34a01caf01050393eb0313e359f578fd5d5a",
-  "clientSourceCommit": "ba8a34a01caf01050393eb0313e359f578fd5d5a"
+  "sourceCommit": "ad828da8354bbed054cb88050b5e46feb0336e34",
+  "clientSourceCommit": "ad828da8354bbed054cb88050b5e46feb0336e34"
 }

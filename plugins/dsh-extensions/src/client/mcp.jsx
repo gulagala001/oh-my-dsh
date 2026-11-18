@@ -42,7 +42,7 @@ export function McpPage() {
   };
   const edit = async name => {
     const server = await action.run(() => api(query('/mcp/server', { name })));
-    if (server) setEditor({ previous: name, name, raw: server.raw ?? {} });
+    if (server) setEditor({ previous: name, name, revision: server.revision, raw: server.raw ?? {} });
   };
   const menu = server => [server.configured && { id: 'edit', label: t('edit'), run: () => edit(server.name) },
     server.status === 'cleanup-failed' ? { id: 'cleanup', label: t('mcp.cleanup'), run: () => write({ action: 'cleanup', name: server.name }) }
@@ -54,7 +54,7 @@ export function McpPage() {
     {editor && <ServerEditor editor={editor} onClose={() => setEditor(null)} onSaved={async name => { setEditor(null); await list.reload({ quiet: true }); if (open) setOpen(name); }}/>}
     {importing && <ImportEditor onClose={() => setImporting(false)} onSaved={async () => { setImporting(false); await list.reload({ quiet: true }); }}/>}
     <Confirm open={!!removing} title={t('mcp.delete.title')} description={removing ? t('mcp.delete.desc', { name: removing.name }) : ''} busy={action.busy} error={action.error}
-      onCancel={() => { setRemoving(null); action.clear(); }} onConfirm={async () => { if (await write({ action: 'delete', name: removing.name }, t('deleted'))) { setRemoving(null); setOpen(null); } }}/>
+      onCancel={() => { setRemoving(null); action.clear(); }} onConfirm={async () => { if (await write({ action: 'delete', revision: removing.revision, name: removing.name }, t('deleted'))) { setRemoving(null); setOpen(null); } }}/>
   </>;
   if (current) return <>
     <Detail title={current.name} tags={<StatusTag status={current.status}/>} onBack={() => setOpen(null)}
@@ -117,7 +117,7 @@ function ServerEditor({ editor, onClose, onSaved }) {
       : { type: draft.transport === 'sse' ? 'sse' : 'http', url: draft.url.trim(), headers: pairs(draft.headers, ':') };
     if (timeout) server.timeout = timeout;
     const name = draft.name.trim();
-    if (await action.run(() => api('/mcp', { action: 'save', name, previous: editor.previous, server }))) onSaved(name);
+    if (await action.run(() => api('/mcp', { action: 'save', name, previous: editor.previous, revision: editor.revision, server }))) onSaved(name);
   };
   return <Editor open title={editor.previous ? t('mcp.edit.title', { name: editor.previous }) : t('mcp.new.title')} onClose={onClose} onSave={save} busy={action.busy} error={action.error} wide>
     <div className="dshx-field-row">

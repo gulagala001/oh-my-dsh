@@ -1,3 +1,4 @@
+import { fileRevision, checkRevision } from './edit-revision.mjs';
 import { readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { symbols } from '@deepseek-ai/cordis';
@@ -23,13 +24,14 @@ export function expandTemplate(body, raw = '') {
 }
 
 async function readCommand(path, name, location) {
-  const text = await readFile(path, 'utf8');
+  const revision = await fileRevision(path), text = await readFile(path, 'utf8');
+  checkRevision(revision, await fileRevision(path));
   let data = {}, body = text, error = null;
   try { const parsed = splitFrontmatter(text); data = parsed.data ?? {}; body = parsed.body; }
   catch (failure) { error = errorText(failure); }
   const firstLine = body.split('\n').map(line => line.replace(/^#+\s*/, '').trim()).find(Boolean) ?? '';
   const description = typeof data.description === 'string' && data.description.trim() ? data.description.trim() : firstLine.slice(0, 80) || name;
-  return { name, path, location, description, argumentHint: typeof data['argument-hint'] === 'string' ? data['argument-hint'].trim() : '', body: body.trim(), content: text, error };
+  return { name, path, location, revision, description, argumentHint: typeof data['argument-hint'] === 'string' ? data['argument-hint'].trim() : '', body: body.trim(), content: text, error };
 }
 async function readDirectory(dir, location) {
   let entries;
@@ -176,7 +178,7 @@ export class Commands {
     const root = scope.cwd ? await findProjectRoot(scope.cwd) : null;
     const project = root ? await this.updateProject(owner, root) : [];
     const builtin = this.builtin(owner, this.views(owner, root)), taken = new Set(builtin.map(row => row.name));
-    const describe = command => ({ name: command.name, description: command.description, argumentHint: command.argumentHint, path: command.path, location: command.location,
+    const describe = command => ({ name: command.name, revision: command.revision, description: command.description, argumentHint: command.argumentHint, path: command.path, location: command.location,
       error: command.error ?? null, conflict: taken.has(command.name) });
     return { user: [...owner.user.values()].map(entry => ({ ...describe(entry.command), error: entry.error ?? null })),
       project: project.map(command => ({ ...describe(command), error: command.error ?? [...owner.agents.values()].filter(entry => entry.root === root).map(entry => entry.commands.get(command.name)?.error).find(Boolean) ?? null })),
@@ -192,7 +194,7 @@ export class Commands {
     if (await kind(path) !== 'file') fail('command-missing', `/${name} no longer exists`, { name }, 404);
     return readCommand(path, name, location);
   }
-  save(scope, { location, name, previous, description, argumentHint, body }) { return this.run(async owner => {
+  save(scope, { location, name, previous, revision, description, argumentHint, body }) { return this.run(async owner => {
     if (!COMMAND_NAME.test(name ?? '')) fail('invalid-command-name', 'Command names start with a lowercase letter and use a-z, 0-9, - or _');
     if (typeof body !== 'string' || !body.trim()) fail('template-required', 'The prompt template is required');
     const root = location === 'project' && scope.cwd ? await findProjectRoot(scope.cwd) : null;
@@ -200,14 +202,25 @@ export class Commands {
     const dir = await this.locate(scope, location), path = join(dir, `${name}.md`);
     if (name !== previous && await kind(path)) fail('command-exists', `/${name} already exists`, { name }, 409);
     this.requireOwner(owner);
-    await writeAtomic(path, composeFrontmatter({ description: description?.trim(), 'argument-hint': argumentHint?.trim() }, body));
-    if (previous && previous !== name && COMMAND_NAME.test(previous)) await rm(join(dir, `${previous}.md`), { force: true });
+    const original = previous && COMMAND_NAME.test(previous) ? join(dir, previous + '.md') : null;
+    if (original) revision ??= await fileRevision(original);
+    if (previous && !original) fail('invalid-command-name','Invalid original command name');
+    const guard = async () => { this.requireOwner(owner); if (original) checkRevision(revision, await fileRevision(original)); };
+    await writeAtomic(path, composeFrontmatter({ description: description?.trim(), 'argument-hint': argumentHint?.trim() }, body), guard, name !== previous);
+    if (original && previous !== name) {
+      try { await guard(); await rm(original); }
+      catch (error) {
+        await this.afterChange(owner, scope, location, name);
+        fail('command-rename-partial', 'The new command was saved, but removal of the original was not confirmed. Refresh both entries.', {name, previous}, 409);
+      }
+    }
     await this.afterChange(owner, scope, location, name);
   }); }
-  remove(scope, location, name) { return this.run(async owner => {
+  remove(scope, location, name, revision) { return this.run(async owner => {
     if (!COMMAND_NAME.test(name ?? '')) fail('invalid-command-name', 'Invalid command name');
     const path = join(await this.locate(scope, location), `${name}.md`);
     this.requireOwner(owner);
+    if (revision !== undefined) checkRevision(revision, await fileRevision(path));
     await rm(path, { force: true });
     await this.afterChange(owner, scope, location);
   }); }

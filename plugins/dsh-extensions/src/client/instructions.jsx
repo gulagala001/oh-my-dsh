@@ -19,7 +19,7 @@ function ScopedInstructionsPage({ scope, scopes }) {
   const current = open && files.find(file => file.path === open);
   const edit = async file => {
     const loaded = await action.run(() => api(query('/instructions/file', { scope, path: file.path })));
-    if (loaded) setEditor({ scope, path: file.path, name: file.display, exists: file.exists, content: loaded.content });
+    if (loaded) setEditor({ scope, path: file.path, name: file.display, exists: loaded.exists, revision: loaded.revision, content: loaded.content });
   };
   const menu = file => [{ id: 'edit', label: file.exists ? t('edit') : t('instructions.create'), disabled: file.tooLarge, run: () => edit(file) },
     ...file.exists ? folderActions(t, opener, dirname(file.path), task => action.run(task)) : [],
@@ -29,9 +29,9 @@ function ScopedInstructionsPage({ scope, scopes }) {
     {file.partiallyLimited && <Tag tone="warning">{t('instructions.partiallyLimited')}</Tag>}</>;
   const dialogs = <>
     {editor && <InstructionEditor editor={editor} scope={editor.scope} onClose={() => setEditor(null)} onSaved={async () => { setEditor(null); await list.reload({ quiet: true }); }}/>}
-    <Confirm open={!!removing} title={t('instructions.delete.title')} description={removing ? t('instructions.delete.desc', { path: removing.path }) : ''} busy={action.busy} error={action.error}
+    <Confirm open={!!removing} title={t('instructions.delete.title')} description={removing ? t('instructions.delete.desc', { path: removing.path, revision: removing.revision }) : ''} busy={action.busy} error={action.error}
       onCancel={() => { setRemoving(null); action.clear(); }}
-      onConfirm={async () => { if (await action.run(() => api('/instructions', { scope: removing.scope, action: 'delete', path: removing.path }), t('deleted'))) { setRemoving(null); setOpen(null); await list.reload({ quiet: true }); } }}/>
+      onConfirm={async () => { if (await action.run(() => api('/instructions', { scope: removing.scope, action: 'delete', path: removing.path, revision: removing.revision }), t('deleted'))) { setRemoving(null); setOpen(null); await list.reload({ quiet: true }); } }}/>
   </>;
   if (current) return <>
     <Detail title={current.display} tags={tags(current)} onBack={() => setOpen(null)}
@@ -67,7 +67,7 @@ function InstructionContent({ scope, path, snapshot }) {
 
 function InstructionEditor({ editor, scope, onClose, onSaved }) {
   const t = useT(), action = useAction(), [content, setContent] = useState(editor.content);
-  const save = async () => { if (await action.run(() => api('/instructions', { scope, action: 'save', path: editor.path, content }))) onSaved(); };
+  const save = async () => { if (await action.run(() => api('/instructions', { scope, action: 'save', path: editor.path, revision: editor.revision, content }))) onSaved(); };
   return <Editor open wide title={t(editor.exists ? 'instructions.edit.title' : 'instructions.create.title', { name: editor.name })} description={editor.path}
     onClose={onClose} onSave={save} busy={action.busy} error={action.error} saveLabel={editor.exists ? undefined : t('create')}>
     <TextArea rows={22} value={content} onChange={event => setContent(event.target.value)} aria-label={editor.name} placeholder={t('instructions.placeholder')} data-modal-autofocus/>

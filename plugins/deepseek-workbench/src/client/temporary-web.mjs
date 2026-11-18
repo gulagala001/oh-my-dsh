@@ -1,12 +1,8 @@
 import { commandScript, statusScript } from './native-chat-bridge.mjs';
 
-export function chatIdentity(value) {
-  try {
-    const url = new URL(value);
-    const match = url.pathname.match(/^\/a\/[^/]+\/s\/([a-zA-Z0-9_-]+)\/?$/);
-    return url.origin === 'https://chat.deepseek.com' && match ? { id: match[1], url: url.origin + url.pathname } : null;
-  } catch { return null; }
-}
+import { chatIdentity, holdTemporaryOwner, recordTemporary, forgetTemporary, liveTemporaryOwners, recoverOwners } from './temporary-ownership.mjs';
+export { chatIdentity, liveTemporaryOwners };
+
 
 /** Runs inside the owned official page. Uses the site's own controller, never credentials. */
 export async function temporaryPageCommand(command) {
@@ -71,26 +67,10 @@ export async function temporaryPageCommand(command) {
 const temporaryPageSource = typeof __DSWB_TEMPORARY_SOURCE__ === 'string' ? __DSWB_TEMPORARY_SOURCE__ : temporaryPageCommand.toString();
 export const temporaryScript = command => `(${temporaryPageSource})(${JSON.stringify(command)})`;
 
-const ledgerKey = 'dsh-deepseek-workbench.pending-temporary.v1';
-export const liveTemporaryOwners = new Set();
-function pending(storage) {
-  const raw = storage.getItem(ledgerKey);
-  if (raw == null) return [];
-  try {
-    const rows = JSON.parse(raw);
-    if (!Array.isArray(rows) || rows.some(item => !item || !chatIdentity(item.url) || chatIdentity(item.url).id !== item.id)) throw Error();
-    return rows;
-  } catch { throw Error('临时聊天清理记录损坏，原记录已保留，请恢复记录后重试。'); }
-}
-function save(storage, rows) {
-  if (rows.length) storage.setItem(ledgerKey, JSON.stringify(rows));
-  else storage.removeItem(ledgerKey);
-}
-
 /** Holds only this guest's newly created conversation; normal web history is never claimed. */
 export class TemporaryWebChat {
-  constructor({ storage = localStorage, notify = () => {} } = {}) {
-    this.storage = storage; this.notify = notify; this.token = crypto.randomUUID();
+  constructor({ storage = localStorage, locks = globalThis.navigator?.locks, notify = () => {} } = {}) {
+    this.storage = storage; this.locks = locks; this.notify = notify; this.token = crypto.randomUUID();
     this.owned = new Map(); this.adapter = null; this.pending = null; this.closing = false; this.closed = false;
     this.armed = false; this.syncWarning = ''; this.closeError = ''; this.listeners = new Set();
     liveTemporaryOwners.add(this.token);
@@ -119,14 +99,13 @@ export class TemporaryWebChat {
           ? this.lastUrl : `https://chat.deepseek.com/a/chat/s/${receipt.id}` };
         this.owned.set(identity.id, identity);
       }
-      const rows = pending(this.storage);
-      save(this.storage, [...rows.filter(row => row.id !== identity.id), { ...identity, owner: this.token }]);
+      recordTemporary(this.storage, identity, this.token, !!this.releaseOwner);
       this.persisted = true;
       if (this.syncWarning) { this.syncWarning = ''; this.publish(); }
     } catch (error) { this.warnSync(error); throw error; }
   }
   async run(type, extra = {}) {
-    if (this.closing || this.closed || this.pending) throw Error('临时会话正在处理，请稍候。');
+    if (this.closing || this.closed || this.closeError || this.pending) throw Error('临时会话正在处理，请稍候。');
     if (!this.adapter) throw Error('网页尚未就绪。');
     if (!['send', 'think', 'search', 'upload', 'stop'].includes(type)) throw Error('临时会话不支持此操作。');
     const work = async () => {
@@ -136,10 +115,18 @@ export class TemporaryWebChat {
         throw Error('临时聊天已离开自己的页面，请关闭后重新打开；现有历史不会被修改。');
       }
       await this.adapter.extract(temporaryScript({ type: 'probe' }));
-      if (!this.recovered) { await recoverTemporaryChats(this.adapter, this.storage, liveTemporaryOwners); this.recovered = true; }
+      if (!this.recovered) { await recoverTemporaryChats(this.adapter, this.storage, liveTemporaryOwners, {locks:this.locks}); this.recovered = true; }
+      if (type === 'send' && this.armed && !this.owned.size) {
+        await this.capture(true);
+        if (!this.owned.size && (await this.adapter.extract(temporaryScript({type:'owned',token:this.token}))).started)
+          throw Error('上次创建结果尚未确认，请核对官网历史后再发送。');
+      }
       if (type === 'send' && !this.owned.size) {
+        this.releaseOwner ??= await holdTemporaryOwner(this.token, this.locks);
         await this.adapter.extract(temporaryScript({ type: 'arm', token: this.token }));
         this.armed = true;
+        try { recordTemporary(this.storage, null, this.token, !!this.releaseOwner); }
+        catch (error) { this.warnSync(error); }
       }
       try {
         const result = await this.adapter.extract(commandScript({ type, ...extra, expectedUrl: status.url }));
@@ -171,7 +158,7 @@ export class TemporaryWebChat {
           const receipt = await this.adapter.extract(temporaryScript({ type: 'owned', token: this.token }));
           if (receipt.pending) throw Error('官网创建仍未结束，请等待后重试关闭。');
           if (receipt.started) throw Error('官网创建结果未知，请保留此页，在官网历史中核对本次会话；未执行删除。');
-          // No successful official creation means there is nothing owned to delete.
+          forgetTemporary(this.storage, {id:null,owner:this.token});
         }
         if (this.owned.size && !this.adapter) throw Error('网页尚未就绪，无法确认删除；请重新加载后重试关闭。');
         for (const item of this.owned.values()) {
@@ -180,23 +167,28 @@ export class TemporaryWebChat {
             if (!receipt?.deleted || receipt.id !== item.id) throw Error('临时聊天删除回执不匹配。');
             item.deleted = true;
           }
-          save(this.storage, pending(this.storage).filter(row => row.id !== item.id));
+          forgetTemporary(this.storage, {id:item.id, owner:this.token});
           this.owned.delete(item.id);
         }
         this.closed = true;
-        liveTemporaryOwners.delete(this.token);
+        await this.detachOwner();
       } catch (error) { this.closeError = error.message; throw error; }
       finally { this.closing = false; this.cleanup = null; this.publish(); }
     })();
     return this.cleanup;
   }
+  async detachOwner() {
+    liveTemporaryOwners.delete(this.token);
+    await this.releaseOwner?.();
+    this.releaseOwner = undefined;
+  }
 }
 
-/** Crash recovery contains IDs only, never messages, prompts or attachment contents. */
-export async function recoverTemporaryChats(adapter, storage = localStorage, liveOwners = new Set()) {
-  for (const row of pending(storage).filter(row => !liveOwners.has(row.owner))) {
+/** A live window and a recovery worker take the same origin-wide owner lock. */
+export function recoverTemporaryChats(adapter, storage = localStorage, liveOwners = liveTemporaryOwners,
+  { locks = globalThis.navigator?.locks, confirmed = [] } = {}) {
+  return recoverOwners(storage, liveOwners, locks, confirmed, async row => {
     const result = await adapter.extract(temporaryScript({ type: 'delete', id: row.id }));
     if (!result?.deleted || result.id !== row.id) throw Error('上次临时聊天尚未清理，请重试。');
-    save(storage, pending(storage).filter(item => item.id !== row.id));
-  }
+  });
 }

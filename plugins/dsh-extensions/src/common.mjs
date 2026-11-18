@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { mkdir, rename, stat, writeFile, rm } from 'node:fs/promises';
+import { link, mkdir, rename, stat, writeFile, rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
 /** A failure the page can localize by code; `message` is the English fallback. */
@@ -41,10 +41,17 @@ export async function findProjectRoot(cwd, markers = ['.git']) {
   }
 }
 
-export async function writeAtomic(path, text, beforeCommit) {
+export async function writeAtomic(path, text, beforeCommit, createOnly = false) {
   await mkdir(dirname(path), { recursive: true });
   const temporary = join(dirname(path), `.${randomUUID()}.tmp`);
-  try { await writeFile(temporary, text, { mode: 0o600 }); await beforeCommit?.(); await rename(temporary, path); }
+  try {
+    await writeFile(temporary, text, { mode: 0o600 }); await beforeCommit?.();
+    if (createOnly) {
+      try { await link(temporary, path); }
+      catch (error) { if (error.code === 'EEXIST') fail('edit-conflict','The destination was created elsewhere',{},409); throw error; }
+      await rm(temporary);
+    } else await rename(temporary, path);
+  }
   catch (error) { await rm(temporary, { force: true }); throw error; }
 }
 

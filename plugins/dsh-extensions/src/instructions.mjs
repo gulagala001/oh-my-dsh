@@ -1,3 +1,4 @@
+import { fileRevision, fileStamp, checkRevision } from './edit-revision.mjs';
 import { createReadStream } from 'node:fs';
 import { lstat, realpath, rm, stat } from 'node:fs/promises';
 import { basename, join, relative, resolve } from 'node:path';
@@ -22,7 +23,7 @@ export class Instructions {
     const entry = await lstat(path).catch(error => { if (missing(error)) return null; throw error; });
     const info = entry?.isSymbolicLink() ? await stat(path) : entry;
     if (info && !info.isFile()) fail('instruction-path', 'The instruction path is not a regular file', {}, 403);
-    return { path, exists: !!info, size: info?.size ?? 0, modifiedAt: info?.mtimeMs ?? null, ...extra };
+    return { path, revision: fileStamp(info), exists: !!info, size: info?.size ?? 0, modifiedAt: info?.mtimeMs ?? null, ...extra };
   }
   async withFiles(scope, use, requestSignal) {
     const signal = requestSignal ? AbortSignal.any([this.controller.signal, requestSignal]) : this.controller.signal;
@@ -114,25 +115,26 @@ export class Instructions {
       for await (const chunk of createReadStream(path, { encoding: 'utf8', signal: readSignal })) {
         size += Buffer.byteLength(chunk); this.checkSize(file, size); content += chunk;
       }
-      await check(); return { ...file, content };
+      await check(); checkRevision(file.revision, await fileRevision(path)); return { ...file, content };
     }, signal);
   }
   mutate(scope, action, signal) {
     const task = this.pending.then(() => this.withFiles(scope, action, signal));
     this.pending = task.catch(() => {}); return task;
   }
-  save(scope, path, content, signal) {
+  save(scope, path, content, signal, revision) {
     return this.mutate(scope, async ({ files }, check) => {
       const file = this.allowed(files, path);
       if (typeof content !== 'string') fail('content-required', 'Content is required');
       this.checkSize(file, Buffer.byteLength(content));
+      revision ??= file.revision;
       const target = file.exists ? await realpath(path) : path;
-      await writeAtomic(target, content, check);
+      await writeAtomic(target, content, async () => { await check(); checkRevision(revision ?? file.revision, await fileRevision(path)); }, revision === 'absent');
     }, signal);
   }
-  remove(scope, path, signal) {
+  remove(scope, path, signal, revision) {
     return this.mutate(scope, async ({ files }, check) => {
-      const file = this.allowed(files, path); await check();
+      const file = this.allowed(files, path); await check(); checkRevision(revision ?? file.revision, await fileRevision(path));
       if (file.exists) await rm(path);
     }, signal);
   }

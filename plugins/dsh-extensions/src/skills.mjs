@@ -1,3 +1,4 @@
+import { fileRevision, checkRevision } from './edit-revision.mjs';
 import { cp, lstat, mkdir, mkdtemp, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { symbols } from '@deepseek-ai/cordis';
@@ -91,7 +92,7 @@ export class Skills {
   }
   async list(scope) {
     const { rows, roots } = await this.catalog(scope);
-    return { skills: rows.map(row => this.describe(row)), roots: this.destinations(roots) };
+    return { skills: await Promise.all(rows.map(async row => ({ ...this.describe(row), ...(row.editable && {revision: await fileRevision(row.path)}) }))), roots: this.destinations(roots) };
   }
   async find(scope, key) {
     const skill = (await this.catalog(scope)).rows.find(row => row.key === key || key && row.path === key);
@@ -102,7 +103,10 @@ export class Skills {
     const row = await this.find(scope, key);
     const definition = await row.provider.get(row.candidate, row.options);
     if (!definition) fail('skill-missing', 'This skill is no longer available; refresh and try again', {}, 404);
-    return { ...this.describe(row), content: row.editable ? await readFile(row.path, 'utf8') : definition.content };
+    if (!row.editable) return { ...this.describe(row), content: definition.content };
+    const revision = await fileRevision(row.path), content = await readFile(row.path,'utf8');
+    checkRevision(revision, await fileRevision(row.path));
+    return { ...this.describe(row), revision, content };
   }
   static validate(content) {
     let parsed;
@@ -146,22 +150,24 @@ export class Skills {
     this.controller.signal.throwIfAborted();
     return definition;
   }
-  async replace(skill, content) {
+  async replace(skill, content, revision) {
     Skills.validate(content);
+    revision ??= await fileRevision(skill.path);
     const target = await realpath(skill.path), stage = await mkdtemp(join(dirname(target), '.skill-edit-'));
     try {
       const file = join(stage, 'content');
       await writeFile(file, content, { mode: 0o600 });
       await this.validateFile(skill.provider, skill.candidate.source, file);
       this.assertOwner(skill);
+      checkRevision(revision, await fileRevision(skill.path));
       await rename(file, target);
       this.invalidate();
     } finally { await rm(stage, { recursive: true, force: true }); }
   }
-  save(scope, path, content) {
+  save(scope, path, content, revision) {
     return this.mutate(async () => {
       const skill = await this.find(scope, path); this.editable(skill);
-      await this.replace(skill, content);
+      await this.replace(skill, content, revision);
     });
   }
   async publish(root, name, prepare) {
@@ -199,14 +205,16 @@ export class Skills {
   invocation(scope, path, changes) {
     return this.mutate(async () => {
       const skill = await this.find(scope, path); this.editable(skill);
+      const revision = changes.revision ?? await fileRevision(skill.path);
       const text = await readFile(skill.path, 'utf8'), fields = {};
       if (Object.hasOwn(changes, 'model')) fields['disable-model-invocation'] = changes.model === false ? true : undefined;
       if (Object.hasOwn(changes, 'user')) fields['user-invocable'] = changes.user === false ? false : undefined;
-      await this.replace(skill, updateFrontmatter(text, fields));
+      await this.replace(skill, updateFrontmatter(text, fields), revision);
     });
   }
-  remove(scope, path) { return this.mutate(async () => {
+  remove(scope, path, revision) { return this.mutate(async () => {
     const skill = await this.find(scope, path); this.editable(skill);
+    revision ??= await fileRevision(skill.path);
     if (skill.bundle) {
       const directory = dirname(skill.path);
       const roots = (await this.catalog(scope)).roots.map(root => root.path);
@@ -219,8 +227,9 @@ export class Skills {
       }
       const linked = (await lstat(directory)).isSymbolicLink();
       this.assertOwner(skill);
+      checkRevision(revision, await fileRevision(skill.path));
       await rm(directory, { recursive: !linked });
-    } else { this.assertOwner(skill); await rm(skill.path); }
+    } else { this.assertOwner(skill); checkRevision(revision,await fileRevision(skill.path)); await rm(skill.path); }
     this.invalidate();
   });
   }

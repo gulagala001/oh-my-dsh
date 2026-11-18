@@ -17,7 +17,7 @@ function ScopedCommandsPage({ scope, scopes }) {
     .map(([key, items]) => [key, filter(items, search, ['name', 'description'])]).filter(([, items]) => items.length), [data, search]);
   const edit = async command => {
     const file = await action.run(() => api(query('/commands/file', { scope, location: command.location, name: command.name })));
-    if (file) setEditor({ previous: command.name, location: command.location, name: command.name, description: file.description === command.name ? '' : file.description,
+    if (file) setEditor({ previous: command.name, revision: file.revision, location: command.location, name: command.name, description: file.description === command.name ? '' : file.description,
       argumentHint: file.argumentHint, body: file.body });
   };
   const create = () => setEditor({ location: scope === 'global' ? 'user' : 'project', name: '', description: '', argumentHint: '', body: '' });
@@ -42,9 +42,9 @@ function ScopedCommandsPage({ scope, scopes }) {
       </Group>)}
     </>}
     {editor && <CommandEditor editor={editor} scope={scope} onClose={() => setEditor(null)} onSaved={async () => { setEditor(null); await list.reload({ quiet: true }); }}/>}
-    <Confirm open={!!removing} title={t('commands.delete.title')} description={removing ? t('commands.delete.desc', { name: removing.name, path: removing.path }) : ''} busy={action.busy} error={action.error}
+    <Confirm open={!!removing} title={t('commands.delete.title')} description={removing ? t('commands.delete.desc', { name: removing.name, path: removing.path, revision: removing.revision }) : ''} busy={action.busy} error={action.error}
       onCancel={() => { setRemoving(null); action.clear(); }}
-      onConfirm={async () => { if (await action.run(() => api('/commands', { scope, action: 'delete', location: removing.location, name: removing.name }), t('deleted'))) { setRemoving(null); await list.reload({ quiet: true }); } }}/>
+      onConfirm={async () => { if (await action.run(() => api('/commands', { scope, action: 'delete', location: removing.location, name: removing.name, revision: removing.revision }), t('deleted'))) { setRemoving(null); await list.reload({ quiet: true }); } }}/>
   </Page>;
 }
 
@@ -52,7 +52,7 @@ function CommandEditor({ editor, scope, onClose, onSaved }) {
   const t = useT(), action = useAction(), [draft, setDraft] = useState(editor);
   const set = key => event => setDraft(current => ({ ...current, [key]: event.target.value }));
   const save = async () => {
-    const input = { action: 'save', location: draft.location, name: draft.name.trim(), previous: editor.previous, description: draft.description, argumentHint: draft.argumentHint, body: draft.body };
+    const input = { action: 'save', location: draft.location, name: draft.name.trim(), previous: editor.previous, revision: editor.revision, description: draft.description, argumentHint: draft.argumentHint, body: draft.body };
     if (await action.run(() => api('/commands', { scope, ...input }))) onSaved();
   };
   return <Editor open wide title={editor.previous ? t('commands.edit.title', { name: editor.previous }) : t('commands.new')} onClose={onClose} onSave={save} busy={action.busy} error={action.error}

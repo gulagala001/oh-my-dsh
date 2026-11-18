@@ -1,3 +1,4 @@
+import { acquireWindowOwner } from './window-owner.mjs';
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -47,6 +48,7 @@ export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workben
   const [migration] = useState(() => new ConversationImport());
   const lastLoginState = useRef('');
   const [backend, retryBackend] = useBackendState(chat);
+  const [reviewCleanup, setReviewCleanup] = useState([]);
   const verificationStarted = useRef(false), cleanupRecovery = useRef(false);
   useEffect(() => {
     if (temporary || !native || !backend.demoVerify || !frame.ready || frame.loading || verificationStarted.current) return;
@@ -91,7 +93,7 @@ export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workben
     return () => { alive.current = false; ++generation.current; ownerSignal?.removeEventListener('abort', abort); if (temporary && !temporary.closed && adapter.current) {
       const page = adapter.current, holding = document.createElement('div');
       holding.hidden = true; document.body.append(holding); holding.append(page.element);
-      void temporary.close().catch(failure => console.error('临时网页聊天清理待重试:', failure.message)).finally(() => { liveTemporaryOwners.delete(temporary.token); controller.abort(); holding.remove(); });
+      void temporary.close().catch(failure => console.error('临时网页聊天清理待重试:', failure.message)).finally(() => { void temporary.detachOwner(); controller.abort(); holding.remove(); });
     } else controller.abort(); adapter.current = null; };
   }, [url, workspace, revision, ownerSignal]);
   const openImported = async (result, ticket) => {
@@ -118,11 +120,20 @@ export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workben
     finally { if (current()) setOperation(''); }
   };
   const retry = () => { setError(''); if (chat) retryBackend(); if (frame.ready) adapter.current?.reload(); else setRevision(value => value + 1); };
+  const recover = async (page, confirmed = []) => {
+    try {
+      const review = await recoverTemporaryChats(page, localStorage, liveTemporaryOwners, { confirmed });
+      if (alive.current && adapter.current === page) setReviewCleanup(review);
+    } catch (failure) { if (alive.current && adapter.current === page) { cleanupRecovery.current = false; setError('上次临时对话清理失败：' + failure.message); } }
+  };
   if (native) return <NativeChat temporary={temporary} frame={frame} adapter={adapter} guest={<div className="dswb-viewport" ref={container} aria-busy={frame.loading}/>}
     error={error || (backend.error ? '迁移服务不可用：' + backend.error : '')} setError={setError} onImport={extract} importing={operation === 'extract' ? '读取消息…' : operation === 'import' ? '正在迁移…' : ''}
-    canImport={frame.ready && !frame.loading && !operation && backend.enabled} retry={retry} onExternal={() => external(frame.url || url)} warnings={<WarningList warnings={[...frame.warnings, ...(!backend.loading && !backend.error && !backend.enabled ? ['迁移服务已停用，请启用 DeepSeek Workbench 插件后重试。'] : [])]}/>}
+    canImport={frame.ready && !frame.loading && !operation && backend.enabled} retry={retry} onExternal={() => external(frame.url || url)} warnings={<><WarningList warnings={[...frame.warnings, ...(!backend.loading && !backend.error && !backend.enabled ? ['迁移服务已停用，请启用 DeepSeek Workbench 插件后重试。'] : [])]}/>{reviewCleanup.length > 0 && <div role="status">有 {reviewCleanup.length} 条临时聊天尚不能确认原窗口已关闭。
+      <Button size="sm" onClick={() => {
+        if (adapter.current && window.confirm('请先关闭相关临时窗口。已知编号将删除对应官网聊天；创建结果未知的记录请先手动核对官网历史，确认后仅清除本地记录。\n' + reviewCleanup.map(row => row.id ?? '创建结果未知').join('\n'))) void recover(adapter.current, reviewCleanup);
+      }}>核对并清理</Button></div>}</>}
     onStatus={value => {
-      if (!temporary && value.ready && adapter.current && !cleanupRecovery.current) { cleanupRecovery.current = true; void recoverTemporaryChats(adapter.current, localStorage, liveTemporaryOwners).catch(failure => setError('上次临时对话清理失败：' + failure.message)); }
+      if (!temporary && value.ready && adapter.current && !cleanupRecovery.current) { cleanupRecovery.current = true; void recover(adapter.current); }
       if (!backend.demoOpen) return; const state = { ready: value.ready === true, signIn: value.signIn === true };
       const key = JSON.stringify(state); if (key !== lastLoginState.current) { lastLoginState.current = key; void api('/login-state', state).catch(() => {}); } }}/ >;
   return <div className="dswb-page" data-deepseek-workbench={chat ? 'chat' : 'platform'}>
@@ -235,16 +246,17 @@ function waitForPlatform(signal) {
     if (signal.aborted) abort(); else check();
   });
 }
-function mountClient(ctx) {
+function mountClient(ctx, own, signal) {
   let stopped = false;
   const bindings = new Set();
-  const keep = dispose => { let active = true; const stop = () => { if (!active) return; active = false; bindings.delete(stop); dispose?.(); }; bindings.add(stop); return stop; };
+  const keep = dispose => { let active = true; const stop = () => { if (!active) return; dispose?.(); active = false; bindings.delete(stop); }; bindings.add(stop); return stop; };
   const openChat = { current: null }, notices = { publish: () => {} }, platform = { pending: false, open: null };
   const notify = value => notices.publish(value);
-  const style = document.createElement('style'); style.dataset.plugin = 'dsh-deepseek-workbench'; style.textContent = css + nativeCss; document.head.append(style);
-    const host = document.createElement('div'); host.dataset.deepseekWorkbenchRoot = ''; document.body.append(host);
-    const root = createRoot(host); root.render(<PortalSurfaces ctx={ctx} notices={notices} platform={platform}/>);
+  const style = document.createElement('style'); style.dataset.plugin = 'dsh-deepseek-workbench'; style.textContent = css + nativeCss; document.head.append(style); own(() => style.remove());
+    const host = document.createElement('div'); host.dataset.deepseekWorkbenchRoot = ''; document.body.append(host); own(() => host.remove());
+    const root = createRoot(host); own(() => root.unmount()); root.render(<PortalSurfaces ctx={ctx} notices={notices} platform={platform}/>);
     const lifetime = new AbortController();
+    signal.addEventListener('abort', () => lifetime.abort(), { once:true });
     const openRequested = async event => {
       const page = event.detail?.page;
       if (!['chat', 'platform'].includes(page)) return;
@@ -262,9 +274,10 @@ function mountClient(ctx) {
       } catch (error) { platform.pending = false; if (!lifetime.signal.aborted) notify({ title: error.message, error: true }); }
     };
     window.addEventListener('deepseek-workbench:open', openRequested);
-  const stopUI = () => { lifetime.abort(); window.removeEventListener('deepseek-workbench:open', openRequested); root.unmount(); host.remove(); style.remove(); };
+  own(() => { lifetime.abort(); window.removeEventListener('deepseek-workbench:open', openRequested); });
+  own(() => { stopped = true; lifetime.abort(); for (const dispose of [...bindings]) dispose(); });
   const installMain = scope => {
-    if (stopped) return () => {};
+    if (stopped || signal.aborted) return () => {};
     const diagnostics = new AbortController();
     const abortDiagnostics = () => diagnostics.abort();
     lifetime.signal.addEventListener('abort', abortDiagnostics, { once: true });
@@ -295,10 +308,15 @@ function mountClient(ctx) {
     }).catch(error => { if (!diagnostics.signal.aborted) console.error('Workbench capability initialization failed', error); });
     return keep(() => { abortDiagnostics(); lifetime.signal.removeEventListener('abort', abortDiagnostics); if (openChat.current === open) openChat.current = null; disposeSlot?.(); });
   };
-  if (typeof ctx.inject === 'function') { ctx.inject(['layout'], installMain); ctx.inject(['sidebarRight', 'sidebarRightTabs', 'commandUi'], scope => { installTemporarySidebar(scope, BrowserPage); }); }
+  if (typeof ctx.inject === 'function') {
+    const layout = ctx.inject(['layout'], installMain);
+    if (layout?.dispose) own(() => layout.dispose());
+    const tabs = ctx.inject(['sidebarRight', 'sidebarRightTabs', 'commandUi'], scope => { if (!signal.aborted) installTemporarySidebar(scope, BrowserPage); });
+    if (tabs?.dispose) own(() => tabs.dispose());
+  }
   else if (ctx.layout) installMain(ctx);
-  if (typeof ctx.slots.inject === 'function') ctx.slots.inject('settings.section', () => {
-    if (stopped) return () => {};
+  if (typeof ctx.slots.inject === 'function') own(ctx.slots.inject('settings.section', () => {
+    if (stopped || signal.aborted) return () => {};
     let own;
     const sync = () => {
       const entries = ctx.slots.entries?.('settings.section');
@@ -309,28 +327,9 @@ function mountClient(ctx) {
     const off = ctx.slots.subscribe?.('settings.section', sync);
     sync();
     return keep(() => { off?.(); own?.(); own = null; });
-  });
-  return () => { if (stopped) return; stopped = true; for (const dispose of [...bindings]) dispose(); stopUI(); };
+  }));
 }
 export function apply(ctx) {
   if (typeof document === 'undefined') return;
-  const shared = window[identity] ??= { owners: new Map(), leader: null };
-  if (shared.owners.has(ctx)) return;
-  ctx.effect(() => {
-    const owner = { ctx, dispose: null };
-    shared.owners.set(ctx, owner);
-    const activate = () => {
-      if (shared.leader) return;
-      const next = shared.owners.values().next().value;
-      if (next) { shared.leader = next; next.dispose = mountClient(next.ctx); }
-    };
-    activate();
-    return () => {
-      if (shared.owners.get(ctx) !== owner) return;
-      shared.owners.delete(ctx);
-      if (shared.leader === owner) { owner.dispose?.(); shared.leader = null; activate(); }
-      if (!shared.owners.size && window[identity] === shared) delete window[identity];
-    };
-  });
+  return acquireWindowOwner(ctx, window, identity, mountClient);
 }
-

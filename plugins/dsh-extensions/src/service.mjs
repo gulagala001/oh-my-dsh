@@ -1,3 +1,4 @@
+import { requireRevision } from './edit-revision.mjs';
 import { Service } from '@deepseek-ai/cordis';
 import { ExtensionError, errorText, fail, homes } from './common.mjs';
 import { Skills } from './skills.mjs';
@@ -92,27 +93,34 @@ export class Extensions extends Service {
     if (!this.enabled) fail('service-missing', 'Extensions service is stopped', {}, 503);
     const scope = () => this.scope(input.scope);
     const done = (value = {}) => ({ ok: true, ...value });
+    // Interactive edits apply to the displayed snapshot. Direct service calls
+    // can instead express an operation on the state current at queue admission.
+    const revisionRequired = route === '/skills' && ['save','delete','invocation'].includes(input.action)
+      || route === '/instructions' && ['save','delete'].includes(input.action)
+      || ['/mcp','/commands'].includes(route) && (input.action === 'delete' || input.action === 'save' && input.previous !== undefined)
+      || route === '/hooks' && input.id !== undefined && ['save','delete','enable'].includes(input.action);
+    if (revisionRequired) requireRevision(input.revision);
     switch (`${route}#${input.action}`) {
       case '/skills#create': return done({ path: await this.skills.create(scope(), input) });
       case '/skills#import': return done({ path: await this.skills.import(scope(), input) });
-      case '/skills#save': await this.skills.save(scope(), input.path, input.content); return done();
+      case '/skills#save': await this.skills.save(scope(), input.path, input.content, input.revision); return done();
       case '/skills#invocation': await this.skills.invocation(scope(), input.path, input); return done();
-      case '/skills#delete': await this.skills.remove(scope(), input.path); return done();
+      case '/skills#delete': await this.skills.remove(scope(), input.path, input.revision); return done();
       case '/mcp#save': await this.mcp.save(input); return done();
-      case '/mcp#delete': await this.mcp.remove(input.name); return done();
+      case '/mcp#delete': await this.mcp.remove(input.name, input.revision); return done();
       case '/mcp#enable': await this.mcp.setEnabled(input.name, input.enabled === true); return done();
       case '/mcp#tool': await this.mcp.setTool(input.name, input.tool, input.enabled === true); return done();
       case '/mcp#import': return done({ names: await this.mcp.importJson(input.json) });
       case '/mcp#reconnect': await this.mcp.reconnect(input.name); return done();
       case '/mcp#cleanup': await this.mcp.cleanup(input.name); return done();
       case '/mcp#managed': return done({ result: await this.mcp.setManaged(input.entryId, input.enabled === true) });
-      case '/instructions#save': await this.instructions.save(scope(), input.path, input.content, signal); return done();
-      case '/instructions#delete': await this.instructions.remove(scope(), input.path, signal); return done();
+      case '/instructions#save': await this.instructions.save(scope(), input.path, input.content, signal, input.revision); return done();
+      case '/instructions#delete': await this.instructions.remove(scope(), input.path, signal, input.revision); return done();
       case '/commands#save': await this.commands.save(scope(), input); return done();
-      case '/commands#delete': await this.commands.remove(scope(), input.location, input.name); return done();
+      case '/commands#delete': await this.commands.remove(scope(), input.location, input.name, input.revision); return done();
       case '/hooks#save': await this.hooks.save(input); return done();
-      case '/hooks#delete': await this.hooks.remove(input.id, input.expected); return done();
-      case '/hooks#enable': await this.hooks.setEnabled(input.id, input.expected, input.enabled === true); return done();
+      case '/hooks#delete': await this.hooks.remove(input.id, input.expected, input.revision); return done();
+      case '/hooks#enable': await this.hooks.setEnabled(input.id, input.expected, input.enabled === true, input.revision); return done();
       case '/hooks#all': await this.hooks.setAll(input.enabled === true); return done();
       case '/hooks#test': return done({ run: await this.hooks.test(input, signal) });
       default: fail('not-found', 'Unknown action', {}, 404);

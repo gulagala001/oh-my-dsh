@@ -101,6 +101,8 @@ export const zh = {
   'error.hook-command-required': '请填写命令。', 'error.invalid-hook-timeout': '超时需在 1–600 秒之间。', 'error.invalid-hook-matcher': '匹配规则不是有效的正则表达式。',
   'error.hook-changed': 'hooks.json 已被修改，请刷新后重试。', 'error.hooks-file-invalid': 'hooks.json 无法解析，请先修复或删除。', 'error.invalid-hook-event': '请选择支持的事件。',
   'error.unknown-scope': '这个工作区已不可用。', 'error.instruction-too-large': '文件超过本次编辑上限（{limit} 字节）。', 'error.instruction-path': '这不是 DSH 在此读取的指令文件。',
+  'error.command-rename-partial': '新命令已保存，原命令尚未确认移除，请刷新并核对两项。',
+  'error.edit-revision-required': '请重新打开此项，读取最新版本。', 'error.edit-conflict': '此项已在另一处修改。本次操作未执行，请核对最新内容。',
   'error.instruction-changed': '指令预设已经变化，请刷新后重试。',
   'error.open-failed': '无法打开：{message}',
 };
@@ -206,6 +208,8 @@ export const en = {
   'error.hook-command-required': 'Enter a command.', 'error.invalid-hook-timeout': 'Timeout must be 1–600 seconds.', 'error.invalid-hook-matcher': 'The matcher is not a valid regular expression.',
   'error.hook-changed': 'hooks.json changed meanwhile. Refresh and try again.', 'error.hooks-file-invalid': 'hooks.json cannot be parsed. Fix or remove it first.', 'error.invalid-hook-event': 'Choose a supported event.',
   'error.unknown-scope': 'This workspace is no longer available.', 'error.instruction-too-large': 'The file exceeds the editing limit ({limit} bytes).', 'error.instruction-path': 'DSH does not read this file as an instruction file here.',
+  'error.command-rename-partial': 'The new command was saved. Refresh and check whether the original still exists.',
+  'error.edit-revision-required': 'Reopen this item to read its current version.', 'error.edit-conflict': 'This item changed elsewhere. Review the current version before applying changes.',
   'error.instruction-changed': 'The instruction preset changed; refresh and try again.',
   'error.open-failed': 'Cannot open: {message}',
 };
