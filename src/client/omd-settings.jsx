@@ -451,7 +451,12 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
       <Group title="实验预设" anchor="experiments">
         <Toggle title="Unharnessed" hint="默认关闭。开启后可在新会话的 Agent 预设中选择 Unharnessed（实验），使用持久 Python、MCP、附件和目标验收。需要已有 Python 3.11+ 与 POSIX shell。"
           checked={c.experimentalUnharnessedEnabled === true}
-          onChange={async enabled => { if (await commit({ experimentalUnharnessedEnabled: enabled })) await reload(); }}/>
+          onChange={async enabled => { if (await commit({ experimentalUnharnessedEnabled: enabled })) await reload(); }}
+          extra={c.experimentalUnharnessedEnabled === true && <div className="omd-set-nested">
+            <Toggle title="子代理" hint="允许 Unharnessed 会话委派任务。每个子代理使用独立的 Unharnessed 会话和 Python 内核。"
+              checked={c.experimentalUnharnessedSubagentsEnabled !== false}
+              onChange={enabled => commit({ experimentalUnharnessedSubagentsEnabled: enabled })}/>
+          </div>}/>
         <Status error action={<Button type="button" size="sm" variant="ghost" onClick={async () => { if (await commit({ experimentalUnharnessedEnabled: c.experimentalUnharnessedEnabled === true })) await reload(); }}>重试</Button>}>{experimentalPresets?.error}</Status>
       </Group>
       <Group title="关于" anchor="about">

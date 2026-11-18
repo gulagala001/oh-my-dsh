@@ -79,7 +79,7 @@ Files are read relative to Python's current directory under its sandbox. Each at
 
 ## Subagents
 
-Subagent mode is off by default. Run `/unharnessed-subagents on` in your Unharnessed chat and describe which work can be delegated in parallel. Run `/unharnessed-subagents` to check the setting, or `/unharnessed-subagents off` to turn off delegation for that chat. The setting follows the chat across restarts. You can still see or stop existing children in the DSH subagent list.
+Subagents are enabled by default. Set `subagentsEnabled: false` below to turn them off for all Unharnessed chats. When enabled, use `/unharnessed-subagents off` for the current chat and `/unharnessed-subagents default` to follow the setting again. You can still see or stop existing children in the DSH subagent list.
 
 Each child uses Unharnessed with its own conversation and Python variables. DSH delivers the result to the parent chat. The parent can run several children in parallel. Children carry out their assigned work directly. The built-in Python `agents` helper provides `spawn`, `list`, `send`, `wait`, and `interrupt`. If `agents` is already a custom variable, use `_dsh_agents` to call these methods.
 
@@ -119,6 +119,7 @@ Configure the `unharnessed` plugin in `cordis.patch.yml`. Time settings use mill
 | --- | --- | --- |
 | pythonCommand | auto | Existing Python executable |
 | bashCommand | bash | Discover Bash or use an explicit absolute path |
+| subagentsEnabled | true | Allow delegation in Unharnessed chats |
 | maxOutputChars | 16000 | Cell text limit |
 | cellTimeoutMs | 600000 | Cell deadline |
 | startupTimeoutMs | 15000 | Kernel startup deadline |

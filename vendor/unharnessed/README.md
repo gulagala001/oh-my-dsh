@@ -91,7 +91,7 @@ await display({'image/png': Path('plot.png').read_bytes()})
 
 ## 子代理
 
-子代理模式默认关闭。在当前 Unharnessed 聊天运行 `/unharnessed-subagents on`，然后交代哪些工作可以并行委派。运行 `/unharnessed-subagents` 查看状态，运行 `/unharnessed-subagents off` 关闭此聊天的委派入口。开关随聊天保存，关闭后仍可在 DSH 子代理列表查看或停止已启动的子代理。
+子代理模式默认开启。要对所有 Unharnessed 聊天关闭，设定下方的 `subagentsEnabled: false`。启用时，可以用 `/unharnessed-subagents off` 单独关闭当前聊天，用 `/unharnessed-subagents default` 恢复跟随设置。关闭后仍可在 DSH 子代理列表查看或停止已启动的子代理。
 
 子代理同样使用 Unharnessed，各有独立对话和 Python 变量，结果由 DSH 送回主聊天。主代理可以并行启动多个子代理，子代理只执行分配给自己的任务。Python 内置的 `agents` 提供 `spawn`、`list`、`send`、`wait` 和 `interrupt`。已有同名自定义变量时，可用 `_dsh_agents` 调用这些方法。
 
@@ -133,6 +133,7 @@ await skills.get('实际技能名')
 |---|---:|---|
 | `pythonCommand` | `auto` | 已有 Python；可指定绝对路径 |
 | `bashCommand` | `bash` | 自动查找 Bash，也可指定绝对路径 |
+| `subagentsEnabled` | true | 允许 Unharnessed 聊天使用子代理 |
 | `maxOutputChars` | 16000 | 单元格文本返回上限 |
 | `cellTimeoutMs` | 600000 | 单元格执行上限 |
 | `startupTimeoutMs` | 15000 | 内核启动期限 |

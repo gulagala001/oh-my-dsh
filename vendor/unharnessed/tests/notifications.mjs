@@ -86,9 +86,10 @@ try {
   try {
     const parent = delegated.agent
     const command = input => ctx.commands.execute(parent, '/unharnessed-subagents' + (input ? ' ' + input : ''), [], new AbortController().signal)
-    assert.match((await command()).result.text, /off/)
-    assert.match(await cell(parent, "await agents.spawn('not allowed', 'Check default')"), /mode is off/)
-    assert.equal((await command('on')).result.kind, 'success')
+    assert.match((await command()).result.text, /on/)
+    assert.equal((await command('off')).result.kind, 'success')
+    assert.match(await cell(parent, "await agents.spawn('not allowed', 'Check chat preference')"), /mode is off/)
+    assert.match((await command('default')).result.text, /on/)
     assert.deepEqual(ctx.tools.schemas(parent).map(tool => tool.name), ['ipython'])
     const removeGuard = ctx.tools.guard(exec => exec.name === 'subagent' ? 'fixture native delegation denied' : undefined)
     try {
@@ -109,16 +110,15 @@ try {
     assert.match(await cell(parent, 'await agents.list()'), /isolation/)
     assert.equal((await command('off')).result.kind, 'success')
     assert.match(await cell(parent, 'await agents.list()'), /mode is off/)
-    assert.equal((await command('on')).result.kind, 'success')
     await ctx.sessions.flush(parent.session)
     await delegated.dispose()
     const resumed = await ctx.agents.resume({ resumeSessionId: parent.id,
       setup: scope => ctx.agentPresets.mount(scope, 'unharnessed').then(() => undefined) })
     try {
       const status = await ctx.commands.execute(resumed.agent, '/unharnessed-subagents', [], new AbortController().signal)
-      assert.match(status.result.text, /on/)
+      assert.match(status.result.text, /off/)
     } finally { await resumed.dispose() }
-    pass('opt-in Python delegation creates an isolated Unharnessed child and delivers its native result')
+    pass('default-on Python delegation creates an isolated Unharnessed child, delivers its native result and restores a chat opt-out')
   } finally { offStart(); await delegated.dispose() }
 
   const releaseChild = Promise.withResolvers()

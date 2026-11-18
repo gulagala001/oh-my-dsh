@@ -70,6 +70,7 @@ test('real host loads the optional preset and retains Python state across availa
   }
   await ctx.agentPresets.register({ id: 'standard', plugins: [] });
   ctx.provide('settings', { configure() {}, async update(_name, patch) { config = { ...config, ...patch }; } });
+  ctx.provide('omd', { config: () => config });
   const manager = new ExperimentalPresets(ctx, { config: () => config, store: { dir: join(dir, 'omd') } });
   ctx.effect(() => () => manager.close());
   await ctx.agentPresets.register({ ...manager.definition, id: 'unharnessed', plugins: manager.definition.plugins.map(row =>
@@ -106,9 +107,15 @@ test('real host loads the optional preset and retains Python state across availa
     calls: [{ type: 'tool-call', id: randomUUID(), name: 'ipython', arguments: JSON.stringify({ code }) }] })).results[0].result;
   assert.match((await cell('x = 41\nx + 1')).value, /42/);
   assert.match((await cell('await asyncio.sleep(0)\nx + 1')).value, /42/);
-  assert.match((await cell('await agents.list()')).value, /mode is off/);
-  const enable = await ctx.commands.execute(agent, '/unharnessed-subagents on', [], new AbortController().signal);
-  assert.equal(enable.result.kind, 'success', enable.result.text);
+  const command = input => ctx.commands.execute(agent, '/unharnessed-subagents' + (input ? ' ' + input : ''), [], new AbortController().signal);
+  const setting = 'experimentalUnharnessedSubagentsEnabled';
+  assert.equal(config[setting], true);
+  assert.match((await command()).result.text, /on/);
+  await ctx.settings.update('oh-my-dsh', { [setting]: false });
+  assert.match((await cell("await agents.spawn('Unavailable', 'Check disabled setting')")).value, /disabled in Unharnessed settings/);
+  assert.equal((await command('on')).result.kind, 'error');
+  await ctx.settings.update('oh-my-dsh', { [setting]: true });
+  assert.match((await command()).result.text, /on/);
   let child;
   const settled = Promise.withResolvers();
   const offStart = ctx.on('subagent/start', ({ id }) => { child = ctx.agents.get(id); });

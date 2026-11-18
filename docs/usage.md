@@ -68,7 +68,7 @@ OMD 保留 DSH 原有的工具、权限和取消方式。OMD-PTC 模式下，AI 
 
 Python 变量和可保存函数会生成会话检查点；重启后在相同目录、权限与 Python 版本下恢复，后台进程需要重新启动。使用 `/unharnessed-reset` 重置 Python，使用 `/goal` 管理目标。关闭预设前先结束任务、后台命令并暂停活动目标；若已设为默认预设，先选择其他默认项。关闭保留会话记录与检查点，重新开启后可继续使用。
 
-在当前聊天里运行 `/unharnessed-subagents on` 可开启子代理模式。子代理也使用 Unharnessed，各有独立对话和 Python 内核，结果回到主聊天。运行 `/unharnessed-subagents off` 关闭此聊天的委派入口，已启动的子代理可在 DSH 子代理列表查看或停止。
+在 **实验预设 → Unharnessed → 子代理** 可关闭委派，默认开启。子代理各自使用 Unharnessed 会话和独立 Python 内核，结果回主聊天。用 `/unharnessed-subagents off` 单独关闭当前聊天，用 `/unharnessed-subagents default` 恢复跟随设置。
 
 ## 上下文与记忆
 

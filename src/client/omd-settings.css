@@ -48,6 +48,7 @@
 .omd-set-status > span { flex: 1; min-width: 0; }
 .omd-set-error { color: var(--cx-red); }
 .omd-set-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin-top: 10px; }
+.omd-set-nested { margin-inline-start: 16px; margin-top: 8px; }
 .omd-set-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .omd-set-field > span { font-size: 12px; color: var(--cx-muted); }
 .omd-set-field > :is(input, .omd-native-select), .omd-set-field > .omd-native-select > span, .omd-set-field > .omd-native-select button[aria-haspopup="menu"], .omd-set-field > span:has(> input) { width: 100%; }

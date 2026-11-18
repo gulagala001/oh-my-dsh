@@ -7,6 +7,7 @@ export async function apply(ctx, config) {
   await runtime.apply(ctx, config, {
     projectionKey: 'omd-unharnessed-cancelled',
     delegationProjectionKey: 'omd-unharnessed-subagents',
+    subagentsAllowed: () => ctx.get('omd')?.config().experimentalUnharnessedSubagentsEnabled !== false,
     activity: view => ctx.provide('omdUnharnessedRuntime', view),
   });
 }

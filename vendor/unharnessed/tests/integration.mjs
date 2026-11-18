@@ -58,6 +58,7 @@ try {
  const noShellDefinition=structuredClone(definition)
  noShellDefinition.id='unharnessed-no-shell'
  noShellDefinition.plugins.find(x=>x.id==='unharnessed').config.bashCommand=resolve('fixture-missing-shell')
+ noShellDefinition.plugins.find(x=>x.id==='unharnessed').config.subagentsEnabled=false
  await ctx.agentPresets.register(noShellDefinition)
  const noShellHandle=await ctx.agents.create({sessionId:SessionId('integration-no-shell'),meta:{cwd:process.cwd(),agentPreset:noShellDefinition.id},setup:scope=>ctx.agentPresets.mount(scope,noShellDefinition.id).then(()=>undefined)})
  try {
@@ -65,6 +66,7 @@ try {
   assert.match(await cell(noShell,'import sys\nshell_independent = 42\nshell_independent'),/42/)
   assert.match(await cell(noShell,"bash('printf must-not-run')"),/Configured bashCommand.*unavailable/)
   assert.match(await cell(noShell,'shell_independent'),/42/)
+  assert.match(await cell(noShell,'await agents.list()'),/disabled in Unharnessed settings/)
   assert.match(await cell(noShell,"import os\nos.environ.get('UNHARNESSED_BASH_SHELL') == ''"),/True/)
   const reset=await ctx.commands.execute(noShell,'/unharnessed-reset',[],signal())
   assert.equal(reset.result.kind,'success')

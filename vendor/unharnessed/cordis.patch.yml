@@ -24,6 +24,7 @@
             config:
               pythonCommand: auto
               bashCommand: bash
+              subagentsEnabled: true
               maxOutputChars: 16000
               cellTimeoutMs: 600000
               startupTimeoutMs: 15000

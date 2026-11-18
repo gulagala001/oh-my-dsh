@@ -19,6 +19,7 @@ export const inject = ['tools', 'systemPrompt', 'agents', 'subprocess', 'working
 export const Config = z.object({
   pythonCommand: z.string().default('auto'),
   bashCommand: z.string().default('bash'),
+  subagentsEnabled: z.boolean().default(true),
   maxOutputChars: z.number().step(1).min(1024).max(1048576).default(16000),
   cellTimeoutMs: z.number().step(1).min(100).max(2147483647).default(600000),
   startupTimeoutMs: z.number().step(1).min(100).max(2147483647).default(15000),
@@ -32,7 +33,7 @@ export const Config = z.object({
   maxAttachmentBytes: z.number().step(1).min(1024).max(10485760).default(10485760),
 })
 
-const DEFAULTS = { pythonCommand: 'auto', bashCommand: 'bash', maxOutputChars: 16000, cellTimeoutMs: 600000, startupTimeoutMs: 15000, interruptGraceMs: 3000, gateTimeoutMs: 60000,
+const DEFAULTS = { pythonCommand: 'auto', bashCommand: 'bash', subagentsEnabled: true, maxOutputChars: 16000, cellTimeoutMs: 600000, startupTimeoutMs: 15000, interruptGraceMs: 3000, gateTimeoutMs: 60000,
   snapshots: true, stateDirectory: '', snapshotMaxBytes: 268435456, snapshotVariableBytes: 16777216, snapshotTimeoutMs: 15000, maxAttachmentBytes: 10485760 }
 const bootstrap = readFileSync(new URL('./python/bootstrap.py', import.meta.url), 'utf8')
 const entry = fileURLToPath(new URL('./python/entry.py', import.meta.url))
@@ -72,13 +73,14 @@ export async function apply(ctx, input = {}, integration = {}) {
       : event.type === 'user/message' && event.data.source.kind === 'user' ? false : state,
   })
   const delegation = await ctx.sessionProjections.register({
-    key: integration.delegationProjectionKey ?? 'dsh-unharnessed-subagents', stateVersion: 1, stateSchema: zod.boolean(), init: () => false,
+    key: integration.delegationProjectionKey ?? 'dsh-unharnessed-subagents', stateVersion: 2, stateSchema: zod.boolean().nullable(), init: () => null,
     apply(state, event) {
       const record = pluginRecordOf(event)
-      return record?.type === SUBAGENTS_RECORD && typeof record.data === 'boolean' ? record.data : state
+      return record?.type === SUBAGENTS_RECORD && (record.data === null || typeof record.data === 'boolean') ? record.data : state
     },
   })
-  const delegationEnabled = agent => isRoot(agent) && delegation.stateOf(agent.session) === true
+  const subagentsAllowed = () => config.subagentsEnabled && (integration.subagentsAllowed?.() ?? true)
+  const delegationEnabled = agent => isRoot(agent) && subagentsAllowed() && delegation.stateOf(agent.session) !== false
   ctx.systemPrompt.section({ name: PERSONA_PREFIX_SECTION, order: ctx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_PREFIX'), text: PROMPT, interpolate: false })
   ctx.systemPrompt.section({ name: PERSONA_SUFFIX_SECTION, order: ctx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_SUFFIX'), text: '' })
   ctx.systemPrompt.context({
@@ -170,6 +172,7 @@ export async function apply(ctx, input = {}, integration = {}) {
     const signal = AbortSignal.any([epoch.signal, state.lifetime.signal, ...(state.execution ? [state.execution.signal] : []), ...(state.turnSignal ? [state.turnSignal] : [])])
     if (data.type === 'dsh.mcp') return bridges.mcp(state, data, signal)
     if (data.type === 'dsh.subagents') {
+      if (isRoot(agent) && !subagentsAllowed()) throw new Error('Subagents are disabled in Unharnessed settings.')
       if (!delegationEnabled(agent)) throw new Error('Subagent mode is off. The human can enable it in the parent chat with /unharnessed-subagents on.')
       const name = SUBAGENT_TOOLS.get(data.action)
       if (!name) throw new Error('Unknown subagent operation')
@@ -435,15 +438,18 @@ export async function apply(ctx, input = {}, integration = {}) {
     state.queue = job.catch(error => ctx.logger.warn(String(error)))
   })
 
-  ctx.commands.register({ name: SUBAGENTS_COMMAND, description: 'Set subagent mode for this chat (on or off), or show its current status.', handler({ agent, rawInput }) {
+  ctx.commands.register({ name: SUBAGENTS_COMMAND, description: 'Set subagent mode for this chat (on, off or default), or show its status.', handler({ agent, rawInput }) {
     const option = rawInput.trim().toLowerCase()
     if (!option) return { kind: 'success', text: `Unharnessed subagents: ${delegationEnabled(agent) ? 'on' : 'off'}.` }
-    if (option !== 'on' && option !== 'off') return { kind: 'error', text: `Usage: /${SUBAGENTS_COMMAND} [on|off]` }
+    if (!['on', 'off', 'default'].includes(option)) return { kind: 'error', text: `Usage: /${SUBAGENTS_COMMAND} [on|off|default]` }
     if (!isRoot(agent)) return { kind: 'error', text: 'Subagent mode is available in the parent chat only.' }
-    const enabled = option === 'on'
-    if (enabled && !nativeTool(stateFor(agent), 'subagent')) return { kind: 'error', text: 'DSH native subagent delegation is unavailable in this chat.' }
-    if (enabled !== delegationEnabled(agent)) appendPluginRecord(agent.session, SUBAGENTS_RECORD, enabled)
-    return { kind: 'success', text: `Unharnessed subagents: ${option}.` }
+    if (option === 'on') {
+      if (!subagentsAllowed()) return { kind: 'error', text: 'Enable subagents in Unharnessed settings first.' }
+      if (!nativeTool(stateFor(agent), 'subagent')) return { kind: 'error', text: 'DSH native subagent delegation is unavailable in this chat.' }
+    }
+    const preference = option === 'default' ? null : option === 'on'
+    if (preference !== delegation.stateOf(agent.session)) appendPluginRecord(agent.session, SUBAGENTS_RECORD, preference)
+    return { kind: 'success', text: `Unharnessed subagents: ${delegationEnabled(agent) ? 'on' : 'off'}.` }
   } })
   ctx.commands.register({ name: 'unharnessed-reset', description: 'Reset this session’s Python kernel and stop its background commands.', async handler({ agent }) {
     if (agent.status !== 'idle') return { kind: 'error', text: 'Stop the running turn before resetting Python.' }
