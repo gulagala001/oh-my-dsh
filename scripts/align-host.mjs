@@ -45,6 +45,10 @@ for (const pkg of pins.packages) {
 await writeFile(pinPath, JSON.stringify(pins, null, 2) + '\n');
 const { parse, stringify } = await import('yaml');
 const workspacePath = join(root, 'pnpm-workspace.yaml'), workspace = parse(await readFile(workspacePath, 'utf8'));
-workspace.overrides = { ...workspace.overrides, ...framework };
+// Keep source-linked overrides linked to the same package in the new SDK.
+const links = Object.fromEntries(Object.entries(workspace.overrides)
+  .filter(([, value]) => typeof value === 'string' && value.startsWith('link:../.local/dsh-sdk-'))
+  .map(([name, value]) => [name, value.replace(/dsh-sdk-[0-9a-f]{8}/, 'dsh-sdk-' + target.commit.slice(0, 8))]));
+workspace.overrides = { ...workspace.overrides, ...framework, ...links };
 await writeFile(workspacePath, stringify(workspace));
 console.log(JSON.stringify({ version, pluginVersion: manifest.version, framework, source, enums: pins.packages }));

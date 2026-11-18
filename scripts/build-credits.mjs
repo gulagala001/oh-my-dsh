@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { parse } from 'yaml';
+import { cacheName, commit, frozen } from './prepare-host-sdk.mjs';
 import { recommendedPlugins } from '../src/recommended-plugin-catalog.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = file => readFileSync(resolve(root, file), 'utf8');
@@ -45,10 +46,10 @@ for (const entry of projects) {
 }
 
 const lockFiles = ['pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/rc1/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/021rc2/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/022rc3/pnpm-lock.yaml', 'vendor/opencu/host/build-inputs/frontend/pnpm-lock.yaml'];
-const upstreamLock = 'https://github.com/deepseek-ai/deepseek-harness/blob/38a6a5c965aa99ab525161efb7cc5cf1fe62fced/pnpm-lock.yaml';
-const sdkRoot = resolve(root, '../.local/dsh-sdk-38a6a5c9');
+const upstreamLock = `https://github.com/deepseek-ai/deepseek-harness/blob/${commit}/pnpm-lock.yaml`;
+const sdkRoot = resolve(root, '../.local', cacheName);
 const sdkLock = readFileSync(resolve(sdkRoot, 'pnpm-lock.yaml'), 'utf8');
-if (digest(sdkLock) !== 'c24a38565023f08480f3832a554a676ad7479d36c0868063c85ad66ba6d3e68a') throw Error('Host source lock checksum mismatch');
+if (digest(sdkLock) !== frozen) throw Error('Host source lock checksum mismatch');
 const dependencies = new Map();
 for (const file of [...lockFiles, upstreamLock]) {
   const lock = parse(file === upstreamLock ? sdkLock : read(file));
