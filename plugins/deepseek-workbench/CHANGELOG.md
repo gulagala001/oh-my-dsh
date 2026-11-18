@@ -1,3 +1,33 @@
+# DeepSeek Workbench 0.1.12 · DSH 0.2.2-rc.3
+
+**未发布 / Unreleased.**
+
+[中文](#zh-0112) · [English](#en-0112)
+
+<a id="zh-0112"></a>
+
+## 中文
+
+### 体验优化
+
+- 在多个窗口使用临时网页聊天时保留正在使用的会话。重开后可核对旧清理记录，未取得官网会话编号时不会删除网站历史。
+
+<a id="en-0112"></a>
+
+## English
+
+### Improvements
+
+- Temporary chats stay open across windows. After reopening, you can review pending cleanup records. Website history is preserved when the chat ID is unknown.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.12-dsh.0.2.2-rc.3/dsh-deepseek-workbench-0.1.12-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-deepseek-workbench/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.12-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DeepSeek Workbench 0.1.11 · DSH 0.2.2-rc.3
 
 [中文](#zh-0111) · [English](#en-0111)

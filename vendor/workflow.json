@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "sourceCommit": "2bdbf5115056ec50272171993eaeac75341af77d",
+  "sourceCommit": "0d8e0653a00065cbab24e681100ad8993ea443dc",
   "package": "dsh-workflow-plus",
-  "version": "0.1.13-dsh.0.2.2-rc.5",
+  "version": "0.1.14-dsh.0.2.2-rc.5",
   "host": "0.2.2-rc.5",
   "upstream": {
     "repository": "https://github.com/deepseek-ai/deepseek-harness",
@@ -10,7 +10,7 @@
     "tag": "dsh-v0.2.2-rc.5"
   },
   "files": {
-    "CHANGELOG.md": "c8fadb4f2dda2b2f8441fd1d8b0dd3379842028c2752904817430c6e918f9c59",
+    "CHANGELOG.md": "ba791390b09ab6b4ce89fd7a2392c0b5ddf2aa17c791f163df3a5220758a9605",
     "cordis.patch.yml": "6f818b0977db06f8a4e745b15d44447d4c4632878a31a1639010cc0c639fbe6b",
     "docs/architecture.md": "315cca80c9bd7475073cb4d55df9d64e4500f1139e69f1aa1526d1ec0a0a1c6f",
     "docs/install_EN.md": "aaead39f9f890190ba01d8ab41551db806076edb0d0b3d2bae94877ca5718d50",
@@ -25,7 +25,7 @@
     "lib/host/workflow-ptc.factory.mjs": "f4e5e95f361e642824b9e26512267789181138e3f540a3697ff65d34adfc0472",
     "lib/host/workflow-spawn.factory.mjs": "4b10ac10f144997683b08a63084dbe6f3c3853492cb39773f3de2d09fe1c600d",
     "LICENSE": "5122e186494989a8d9a492cae953cfb88ac124239af0ab0ad8fb53eca1a1ccc5",
-    "package.json": "b10c419277b2465bd75656b07070a3b9baa7e80e92a3278c75a41527f732e3c6",
+    "package.json": "2fdd0735e2916a185171476c97834ce7b4bf6bf38e410732e9159eea6dfaa298",
     "README_EN.md": "daaf5a627fa020329311363b78c2942f43516f8730ed7081aefa513bd760bc4d",
     "README.md": "0f0a7506432fe935b7b797b32be45100720ea40a06a8b1cca52ec0c844487584",
     "scripts/build-client.mjs": "04f20a1f89daeba4e4f48203e3c2ceb734ebbbdcfa3b82a6cc1bd3070b418271",

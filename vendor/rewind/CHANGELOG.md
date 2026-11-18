@@ -1,3 +1,33 @@
+# DSH Undo 0.1.18 · DSH 0.2.2-rc.3
+
+**未发布 / Unreleased.**
+
+[中文](#zh-0118) · [English](#en-0118)
+
+<a id="zh-0118"></a>
+
+## 中文
+
+### 体验优化
+
+- 确认撤回、恢复文件和回填草稿使用同一次操作的结果，切换会话后保留尚未完成的回填。
+
+<a id="en-0118"></a>
+
+## English
+
+### Improvements
+
+- Undo confirmations, file restores and draft restoration stay with their original operation across conversation changes.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.18-dsh.0.2.2-rc.3/gulagala001-dsh-undo-plugin-0.1.18-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-undo-plugin/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.18-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DSH Undo 0.1.17 · DSH 0.2.2-rc.3
 
 [中文](#zh-0117) · [English](#en-0117)

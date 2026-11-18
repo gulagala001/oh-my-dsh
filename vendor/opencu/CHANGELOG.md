@@ -1,3 +1,35 @@
+# OpenCU 2.4.1 · DSH 0.2.2-rc.3
+
+**未发布 / Unreleased.**
+
+[中文](#zh-241) · [English](#en-241)
+
+<a id="zh-241"></a>
+
+## 中文
+
+### 体验优化
+
+- 页面拒绝关闭时保留浏览器标签及连接。重复打开或切换焦点时，过期结果不会替换正在使用的页面。
+- 批注、会话投递与控制请求回执归属于原操作，断开后可以核实再重试。
+
+<a id="en-241"></a>
+
+## English
+
+### Improvements
+
+- A page that refuses to close keeps its tab and connection. Repeated opens and focus changes no longer let stale results replace the active page.
+- Annotation, delivery and control receipts stay with their original operation and can be reconciled after disconnects.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.4.1-dsh.0.2.2-rc.3/opencu-2.4.1-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.1-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # OpenCU 2.4.0 · DSH 0.2.2-rc.3
 
 [中文](#zh-240) · [English](#en-240)

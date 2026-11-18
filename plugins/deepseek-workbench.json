@@ -1,10 +1,10 @@
 {
   "package": "dsh-deepseek-workbench",
-  "version": "0.1.11-dsh.0.2.2-rc.3",
+  "version": "0.1.12-dsh.0.2.2-rc.3",
   "host": "0.2.2-rc.3",
   "source": "../deepseek-workbench",
   "files": {
-    "CHANGELOG.md": "3cd02fb52342a1dd764f85889b465cc69b1d4cf43a24d05fcbf968afc2031414",
+    "CHANGELOG.md": "bdc957f1eb64a198312fa9884aa51e3ddcf147f86eb2c60d08905106582520da",
     "LICENSE": "34afbe3ace726d5a23cd5c54a95cf1e0ae2777153afc33959f55ac3e4bf6c187",
     "README_EN.md": "ecc70f2bbae4093ad80e8d4162ca973677624c070bca73521d1be33f05d79bf6",
     "README.md": "6be88f93d0f3837947d97130816a4b66064cb8bf017e7c90ea495639a327a604",
@@ -24,7 +24,7 @@
     "docs/usage_EN.md": "399006309b532f2489b8f2877e86adb90e027e655b57abbaf3e38d04acbc76e4",
     "docs/usage.md": "ae75a7aa3d0b3d580d77423cb201d2ec0986a7fa4960f20417dd660279cbe4bb",
     "lib/client.js": "79b2adaf5d59ffcbea24d6114d7382ee89a6364bd3676510a7ff9da836223b4f",
-    "package.json": "d7c80df3987a8b194b12401b64c23f0493584850f87aa4e366f47955ff5cf23c",
+    "package.json": "c675c8730e286e99acca351b0d50de7697215d94084d19efa15302f04c006892",
     "scripts/build.mjs": "70869d27e396cda01e08625aff9bd24fd856326c8f15cb987276422062fd54cb",
     "scripts/check-docs.mjs": "2592ee148ef6fd0164a0aa2a5be139c490a869b87e2a5d21e34d4defb943588e",
     "scripts/check-public-files.mjs": "2b5a86a744852fd0add41ba4a022388d605ce8d918af5eab63dcc64768c0e922",

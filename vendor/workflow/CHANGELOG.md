@@ -1,3 +1,33 @@
+# DSH Workflow 0.1.14 · DSH 0.2.2-rc.3
+
+**未发布 / Unreleased.**
+
+[中文](#zh-0114) · [English](#en-0114)
+
+<a id="zh-0114"></a>
+
+## 中文
+
+### 体验优化
+
+- 内置和独立工作流同时加载时共用一次运行登记，插件切换后保留正在执行的工作流。
+
+<a id="en-0114"></a>
+
+## English
+
+### Improvements
+
+- Bundled and standalone installations share workflow registration and retain active workflows across plugin handoffs.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.14-dsh.0.2.2-rc.3/dsh-workflow-plus-0.1.14-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-workflow/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-workflow/releases/download/v0.1.14-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DSH Workflow 0.1.13 · DSH 0.2.2-rc.3
 
 [中文](#zh-0113) · [English](#en-0113)
