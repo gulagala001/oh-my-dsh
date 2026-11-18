@@ -29,7 +29,7 @@ test('native overview builds with actual pinned inputs in a hoisted layout', asy
   await mkdir(join(dir, 'node_modules/@deepseek-ai/dsh'), { recursive: true });
   await copyFile(new URL('package.json', root), join(dir, 'package.json'));
   await copyFile(host.resolve('@deepseek-ai/dsh/package.json'), join(dir, 'node_modules/@deepseek-ai/dsh/package.json'));
-  for (const file of ['build-overview-native.mjs', 'host-build-contracts.mjs']) await copyFile(new URL('scripts/' + file, root), join(dir, 'scripts', file));
+  for (const file of ['build-overview-native.mjs', 'host-build-contracts.mjs', 'prepare-host-sdk.mjs', 'host-targets.mjs']) await copyFile(new URL('scripts/' + file, root), join(dir, 'scripts', file));
   await symlink(dirname(require.resolve('acorn/package.json')), join(dir, 'node_modules/acorn'), process.platform === 'win32' ? 'junction' : 'dir');
   for (const name of ['dsh-client-ui-agent-team', 'dsh-client-ui-jobs', 'dsh-client-ui-workflow-run']) {
     const manifest = host.resolve('@deepseek-ai/' + name + '/package.json'), target = join(dir, 'node_modules/@deepseek-ai', name);

@@ -85,4 +85,4 @@ export class PromptStyleMenu extends React.Component {
   }
 }
 
-export function applyPromptStylePermissions(ctx) { acquirePermissionMenu(ctx, 'omd-prompt-style', PromptStyleMenu); }
+export function applyPromptStylePermissions(ctx) { return acquirePermissionMenu(ctx, 'omd-prompt-style', PromptStyleMenu); }

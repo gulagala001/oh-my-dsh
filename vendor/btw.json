@@ -4,7 +4,7 @@
   "version": "0.1.11-dsh.0.2.2-rc.3",
   "host": "0.2.2-rc.3",
   "source": "../dsh-btw-plugin",
-  "sourceCommit": "91d72ecca098775f44005b64adc4383e7f9d1696",
+  "sourceCommit": "d68cc32aa210be217fee7c9ab5b3c3576ac6f3b9",
   "files": {
     "CHANGELOG.md": "9042cab3c2ed1846a6d319f41957261aad639631d0738af8ec21491497e1d211",
     "LICENSE": "34afbe3ace726d5a23cd5c54a95cf1e0ae2777153afc33959f55ac3e4bf6c187",
@@ -16,7 +16,7 @@
     "docs/install.md": "f37822468eb9dc931afca56cbbb6e4638af2d6d00971e95bdc71b689b93e2a1c",
     "docs/install.zh.md": "c57f94e2ab244d49ca8364d588356acd47d86494ac22be2d974638f227704a7b",
     "docs/structure.json": "73d652945c9728f59d9500f915dc481a91e5a7a2fca282c496ef840377dc3aaf",
-    "lib/client.js": "68e8c7beed87cfab236d900806a4afad337d3b60b4ea689e533ca6ca8f28802d",
+    "lib/client.js": "4c26fd4e56706838486b80b7f36ef7903d387e58cc55df2841ce728af1af74d8",
     "package.json": "7df914b1af8e079619c6a9402f1e9078ee0986a34c0a677705322c83abda0837",
     "scripts/build.mjs": "de04461003ace8245fcab71a0e14bd95ac3fa114ab00887702c16e509a71ba26",
     "scripts/check-docs.mjs": "2592ee148ef6fd0164a0aa2a5be139c490a869b87e2a5d21e34d4defb943588e",
@@ -27,11 +27,12 @@
     "src/client/index.jsx": "1aff41643ebb071918a8767aa0ee4fc0074b312c9b706a9f42a6c32b99f5fbfa",
     "src/client/store.mjs": "76011820b6db5a80f40f9913f813cff587f83baabb2e5575a67e13022caf4e6c",
     "src/client/style.css": "2c84656f7bd3ee4373f0a603166d73f615907a4c4e39b6a230b423c750a0c567",
+    "src/component-lease.mjs": "1ccf50c63f18923300efab6c9d795ef2d306f8373aa6d34efaa5f2f2c1c1c756",
     "src/context.mjs": "c5344875e3d55bc22655916c7634a13f05db238b644c73e8525c017e6e3ce689",
     "src/index.mjs": "17574a692e0871e373ed95669a76b62a14340fff057e6029b7485b676ce7a39d",
     "src/protocol.mjs": "0ef0fd2342f91a6126833c01dfec9f0e7cf9be8a7f3879059db0f233b57a22b4",
     "src/session-read.mjs": "c9ba4c3e5eb8aaec39d9cfa94eb8479e612f62d786435d0e293ea5b6157a0230",
-    "src/shared.mjs": "0c93c2277ac4791d5cfb3030d8f19d28ad5314fa0ff532351d4417329e43459b",
+    "src/shared.mjs": "e94179e4d7a0384d30d6eafc0217cc6c193a78457bb26bf4ed37447ed703a3fe",
     "src/snapshot.mjs": "6def8acba48044fc4cc8eeb75ed055878ca18bc7e7606021cbb9750e6821767c"
   }
 }

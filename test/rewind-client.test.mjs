@@ -32,5 +32,5 @@ test('rewind confirms directly and closes after success even when an attachment 
  await act(()=>document.querySelector('[data-rewind-plus-action]').click());
  const confirm=[...document.querySelectorAll('button')].find(b=>b.textContent==='确认撤回');assert.ok(confirm);assert.equal(confirm.disabled,false);assert.ok(!document.body.textContent.includes('停止当前会话并重新检查'));
  await act(()=>confirm.click());assert.equal(document.querySelector('[role="dialog"]'),null);assert.equal(snapshot.draft,'original request');assert.match(document.body.textContent,/附件暂时不可用/);assert.match(document.body.textContent,/回填撤回内容/);
- assert.deepEqual(calls,['state','preview','apply','attachment','state']);
+ assert.deepEqual(calls,['state','preview','apply','attachment']);
 });

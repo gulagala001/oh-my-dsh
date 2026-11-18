@@ -4,7 +4,7 @@
   "version": "0.2.4-dsh.0.2.2-rc.3",
   "host": "0.2.2-rc.5",
   "source": "https://github.com/gulagala001/dsh-unharnessed",
-  "sourceArchiveSha256": "56b0261c212d2377610d0c54350f9362d447b3be0862fcbe95519d29307ebcfd",
+  "sourceArchiveSha256": "c4d84c34b8cb474c1172bc5dcf91de132e31180428f6abf402f210299a8af752",
   "upstream": {
     "url": "https://github.com/unharnessed-agent/Unharnessed",
     "commit": "fe2cf2815f78463464b91c598fc0c31c0af98f4c"
@@ -16,7 +16,7 @@
     "lib/goals.js": "8551aef8decf7154f3c9bc91a94325842cdfe99e95d3894ae9877e831b716050",
     "index.js": "883db912532fc8ebfab22c9a7bfe054e391de6f8a463f4054cc02c5effe6c974",
     "lib/kernel.js": "2be06dd41f25d409982b5a54d771928926161fba13c695a4c5758dc331410a21",
-    "lib/notifications.js": "9269a6d8884e36ac831b6f35964f869e6c8496ae86f8a8fd811f4de867074788",
+    "lib/notifications.js": "8ea1a301cf5abe560f50907b79ba6bb2cfa96d3c8e4925a84da3c7c5880bc79c",
     "lib/shell.js": "26418fb5652ce936846576c75509a931c3b7f1fefbc9e98d742ab3c14b1fb8c7",
     "lib/snapshots.js": "b7ca3a06800771229ae2ed25d957b0f53dc65fce89357658fac7fe95bfcd13c6",
     "locale/en.json": "dc9993c3daf0b03779892f71e2c4a0742aece9932e51c22f08c912c89faf888b",
@@ -63,7 +63,7 @@
     "icon.svg": "8bf82dc3958d7e0d0c0a4282c4bfa26806c81a5cfe7156e23961e558087fb60f",
     "vendor/LICENSE.Unharnessed": "47c5566b117c85a3943833107efe1431f90a2bc09fa8892007dbb66f56bdc114",
     "cordis.patch.yml": "30b5e334164a77a876970f8bd37e4e9c7de8758cea229fb21bdfbe315ff644e7",
-    "tests/lifecycle.mjs": "dcaee43f92fa51ef30ca816c2ee53dc853a4ecc11a18f3f3aedf94220bd12c85"
+    "tests/lifecycle.mjs": "d69486a1d7b3af5c8ab17f516697428ecdad65bb26dc5e1098702cce25f110ca"
   },
   "files": {
     "CHANGELOG.md": "ca69681977b28baa6ce0ebce7f2f1b4998a2890372536cb84b7a754c3c687aba",
@@ -79,7 +79,7 @@
     "lib/bridges.js": "2c91945685e3e35064fcfa216886443c6b5002b708059a8c7322ef04d473b381",
     "lib/goals.js": "8551aef8decf7154f3c9bc91a94325842cdfe99e95d3894ae9877e831b716050",
     "lib/kernel.js": "2be06dd41f25d409982b5a54d771928926161fba13c695a4c5758dc331410a21",
-    "lib/notifications.js": "9269a6d8884e36ac831b6f35964f869e6c8496ae86f8a8fd811f4de867074788",
+    "lib/notifications.js": "8ea1a301cf5abe560f50907b79ba6bb2cfa96d3c8e4925a84da3c7c5880bc79c",
     "lib/shell.js": "26418fb5652ce936846576c75509a931c3b7f1fefbc9e98d742ab3c14b1fb8c7",
     "lib/snapshots.js": "b7ca3a06800771229ae2ed25d957b0f53dc65fce89357658fac7fe95bfcd13c6",
     "locale/en.json": "dc9993c3daf0b03779892f71e2c4a0742aece9932e51c22f08c912c89faf888b",
@@ -119,7 +119,7 @@
     "vendor/rlm/repl.md": "d5d417127550e1407df81be79a88125fa32fc190254e9cc30d13b55009ff9b37",
     "vendor/rlm/repl.py": "e6eebc1837197ab053cd4f27e4d0ff4fc030b8db690a9e0cca59b58aaba5904a",
     "vendor/rlm/variables.py": "f34417be22045efe494a7039d2a7b8358f6afbfcf87f300b2ac30c6df6e0acaf",
-    "tests/lifecycle.mjs": "dcaee43f92fa51ef30ca816c2ee53dc853a4ecc11a18f3f3aedf94220bd12c85"
+    "tests/lifecycle.mjs": "d69486a1d7b3af5c8ab17f516697428ecdad65bb26dc5e1098702cce25f110ca"
   },
   "adaptations": [
     {
@@ -131,5 +131,5 @@
       "reason": "Document OMD integration adaptations."
     }
   ],
-  "sourceCommit": "0857842e45e7dc510e4bd358e1f4625b7ef9425a"
+  "sourceCommit": "dec9a00a85ebdae6c6a519bbb9eeebed9ce5f78b"
 }

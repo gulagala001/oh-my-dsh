@@ -1,3 +1,4 @@
+import { retireEntry } from './shared/retirement.mjs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { PersonaStore, validateSessionId } from './store.mjs';
@@ -32,7 +33,7 @@ async function target(ctx, id) {
 export function acquirePersona(ctx, { legacy } = {}) {
   const root = ctx.root;
   let entry = roots.get(root);
-  if (entry?.retiring) return entry.retiring.then(() => {
+  if (entry?.retryRetirement || entry?.retiring) return (entry.retryRetirement?.() ?? entry.retiring).then(() => {
     ctx.fiber?.assertActive();
     return acquirePersona(ctx, { legacy });
   });
@@ -131,12 +132,8 @@ export function acquirePersona(ctx, { legacy } = {}) {
   ctx.effect(() => async () => {
     entry.leases.delete(lease);
     if (entry.leases.size) return;
-    entry.retiring = Promise.resolve().then(async () => {
-      entry.service.store.close();
-      await entry.api.dispose();
-      entry.offCreated(); entry.offSession(); entry.offDisposed(); entry.offPrompt(); entry.unprovide(); roots.delete(root);
-    });
-    await entry.retiring;
+    return retireEntry(roots, root, entry, [() => entry.service.store.close(), () => entry.api.dispose(),
+      entry.offCreated, entry.offSession, entry.offDisposed, entry.offPrompt, entry.unprovide]);
   });
   return entry.service;
 }

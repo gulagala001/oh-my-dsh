@@ -74,6 +74,7 @@ export class Components {
     if (this.closed) throw new Error('组件准备已停止');
     if (!Object.keys(patch).length) return this.configuring;
     return this.saving = (this.saving || Promise.resolve()).catch(() => {}).then(async () => {
+      if (this.closed) throw new Error('组件准备已停止');
       this.writingSettings = true;
       try { await this.ctx.settings.update('oh-my-dsh', patch); }
       finally { this.writingSettings = false; await this.reconfigure(); }

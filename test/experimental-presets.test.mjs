@@ -10,14 +10,14 @@ import { ExperimentalPresets, UNHARNESSED_PRESET as PRESET, UNHARNESSED_SETTING 
 import { contextConfig } from '../src/config.mjs';
 
 test('experimental preset is opt-in, transactional and fences disabled retained sessions', async () => {
-  let config = contextConfig({}), definition, guard, failSave = false, broken = false, active = false;
+  let config = contextConfig({}), definition, guard, failSave = false, loseReceipt = false, broken = false, active = false;
   const agents = [], hooks = new Map();
   const ctx = {
     tools: { guard: fn => { guard = fn; } }, on: (name, fn) => hooks.set(name, fn), get: () => undefined,
     sessionProjections: { stateOf: session => session.header.agentPreset }, agents: { list: () => agents }, logger: { warn() {} },
     agentPresets: { defaultId: 'oh-my-dsh', register: async value => { assert.equal(definition, undefined); definition = value; return async () => { definition = undefined; }; },
       resolve: async () => ({ broken: broken ? 'fixture load failure' : undefined }), serviceFor: () => ({ busy: () => active }) },
-    settings: { async update(_name, patch) { if (failSave) throw Error('disk failed'); config = { ...config, ...patch }; hooks.get('app-boot/config-reload')(); } },
+    settings: { async update(_name, patch) { if (failSave) throw Error('disk failed'); config = { ...config, ...patch }; hooks.get('app-boot/config-reload')(); if (loseReceipt) throw Error('lost after save'); } },
   };
   const manager = new ExperimentalPresets(ctx, { config: () => config, store: { dir: '/fixture/omd' } });
   await manager.start(); assert.equal(config[SETTING], false); assert.equal(definition, undefined);
@@ -29,7 +29,7 @@ test('experimental preset is opt-in, transactional and fences disabled retained 
   assert.equal(definition, undefined); assert.equal(config[SETTING], false);
   broken = false; failSave = true; await assert.rejects(manager.update({ [SETTING]: true }), /disk failed/);
   assert.equal(definition, undefined); assert.equal(config[SETTING], false);
-  failSave = false; await manager.update({ [SETTING]: true }); assert.equal(manager.enabled(), true); assert.equal(guard({ agent }), undefined);
+  failSave = false; loseReceipt = true; await manager.update({ [SETTING]: true }); loseReceipt = false; assert.equal(manager.enabled(), true); assert.equal(guard({ agent }), undefined);
   active = true; await assert.rejects(manager.update({ [SETTING]: false }), /后台命令/); assert.equal(config[SETTING], true);
   active = false; ctx.agentPresets.defaultId = PRESET; await assert.rejects(manager.update({ [SETTING]: false }), /默认预设/);
   ctx.agentPresets.defaultId = 'oh-my-dsh'; await manager.update({ [SETTING]: false });

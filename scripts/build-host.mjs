@@ -24,6 +24,11 @@ await verifyHostArtifacts(root, snapshot);
 if (snapshot.repository !== 'https://github.com/deepseek-ai/deepseek-harness' || snapshot.commit !== sourcePin.commit || snapshot.version !== sourcePin.version || snapshot.tag !== sourcePin.tag) throw new Error('DSH snapshot does not use the reviewed official source pin');
 const parent = JSON.parse(await readFile(`${root}package.json`, 'utf8'));
 const sdk = parent.devDependencies['@deepseek-ai/dsh'];
+const workflowPackage = JSON.parse(await readFile(join(root, 'vendor/workflow/package.json'), 'utf8'));
+const workflowSnapshot = JSON.parse(await readFile(join(root, 'vendor/workflow/vendor/dsh.json'), 'utf8'));
+if (workflowPackage.engines.dsh !== sdk || (workflowSnapshot.buildTarget?.version ?? workflowSnapshot.version) !== sdk) {
+  throw Error(`The embedded Workflow runtime must be built for DSH ${sdk} before building OMD`);
+}
 if (sdk !== (snapshot.buildTarget?.version ?? snapshot.version)) throw new Error(`DSH SDK ${sdk} does not match snapshot ${snapshot.version}`);
 for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) {
   for (const [name, version] of Object.entries(parent[section] ?? {})) {

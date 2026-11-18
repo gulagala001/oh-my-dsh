@@ -1,3 +1,4 @@
+import { retireEntry } from '../shared/retirement.mjs';
 import React, { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
 import { Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 import { createPermissionPicker } from '../../lib/host/permission-native.factory.mjs';
@@ -12,6 +13,10 @@ const NativeMenu = ({ sessionId, started, locked, ...props }) => <Menu {...props
 export function acquirePermissionMenu(ctx, id, Component) {
   const root = ctx.root;
   let entry = roots.get(root);
+  if (entry?.retryRetirement) return entry.retryRetirement().then(() => {
+    ctx.fiber?.assertActive();
+    return acquirePermissionMenu(ctx, id, Component);
+  });
   if (!entry) {
     entry = { owners: new Map(), listeners: new Set(), revision: 0 };
     roots.set(root, entry);
@@ -44,6 +49,6 @@ export function acquirePermissionMenu(ctx, id, Component) {
   ctx.effect(() => () => {
     entry.owners.delete(token); publish();
     if (entry.owners.size) return;
-    roots.delete(root); entry.listeners.clear(); return entry.fiber.dispose();
+    return retireEntry(roots, root, entry, [() => entry.listeners.clear(), () => entry.fiber.dispose()]);
   });
 }

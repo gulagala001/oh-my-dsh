@@ -45,3 +45,15 @@ test('a torn legacy lock preserves its checkpoint and permits a read-only kernel
   await owner.acquire()
   try { assert.equal(JSON.parse(await readFile(owner.lock, 'utf8')).protocol, 2) } finally { await owner.release() }
 })
+
+test('notification admission and withdrawal retry only unconfirmed effects', async () => {
+  const { Notifications } = await import('../lib/notifications.js')
+  const nextStep = [], inbox = { nextStep, nextTurn: [], remove() { throw Error('withdraw') } }
+  let calls = 0
+  const agent = { inbox, steer(message) { calls++; if (calls === 2) nextStep.push(message); throw Error('dispatch') } }
+  const notices = new Notifications(agent, () => true, () => false)
+  assert.throws(() => notices.put('key', { id: 'notice' }), /dispatch/)
+  assert.throws(() => notices.flush(), /dispatch/); notices.flush(); assert.equal(calls, 2)
+  assert.throws(() => notices.remove('key'), /withdraw/); assert.equal(notices.entries.size, 1)
+  inbox.remove = () => nextStep.pop(); notices.remove('key'); assert.equal(notices.entries.size, 0)
+})

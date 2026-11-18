@@ -143,7 +143,7 @@ export async function apply(ctx) {
 async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report }) {
   applyPluginPreflight(ctx);
   ctx.inject(['slots', 'locale', 'uiWorkspace'], installSidebarSections);
-  const persona = acquirePersonaClient(ctx, { embedded: true });
+  const persona = await acquirePersonaClient(ctx, { embedded: true });
   await mountOptionalClient(ctx, '打开工作目录', async () => createOpenInApp(require), report);
   applySessionTimeZone(ctx);
   applyFeatureClients(ctx, { 'dsh-deepseek-workbench': applyDeepSeekWorkbench, 'dsh-extensions': { apply: applyExtensions, inject: extensionsInject } });
@@ -164,8 +164,8 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
     preferredUltraEffort: (id, route, model) => projectlessDrafts.preferredUltraEffort(id, route, model) });
   applySubscriptionFast(ctx);
   ctx.inject(['locale'], applyStatsCacheLabel);
-  applyMemoryPermissions(ctx);
-  applyPromptStylePermissions(ctx);
+  await applyMemoryPermissions(ctx);
+  await applyPromptStylePermissions(ctx);
   await mountOptionalClient(ctx, '工作流', async () => ({ apply: applyWorkflowClient }), report);
   function RunningMarker(props) {
     const running = props.useSessionStatus(s => Boolean(s.get(props.sessionId)?.running));

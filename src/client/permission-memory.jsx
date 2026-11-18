@@ -72,4 +72,4 @@ class ScopeMenuControl extends React.Component {
   }
 }
 
-export function applyMemoryPermissions(ctx) { acquirePermissionMenu(ctx, 'omd-memory', ScopeMenuControl); }
+export function applyMemoryPermissions(ctx) { return acquirePermissionMenu(ctx, 'omd-memory', ScopeMenuControl); }

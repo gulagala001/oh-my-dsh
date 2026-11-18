@@ -3,6 +3,7 @@ import {createPortal} from 'react-dom';
 import {Button,Modal,Tooltip} from '@deepseek-ai/dsh-client-ui-primitives';
 import {decorateSlotComponent} from './slot-decoration.mjs';
 import {acquireShared} from '../shared.mjs';
+import {createConfirmation} from './confirmation.mjs';
 import {installEntryPoints} from './entry-points.mjs';
 import {hiddenNode,visibleGroup} from './visibility.mjs';
 export const name='dsh-undo-plugin-client';
@@ -53,8 +54,12 @@ export function install(ctx){
   function Controls(props){
     const id=props.sessionId,state=useStateOf(id),nodesRef=useRef();
     nodesRef.current=props.useChat(s=>s.nodes);
-    const [targets,setTargets]=useState([]),[dialog,setDialog]=useState(null),[plan,setPlan]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[pendingDraft,setPendingDraft]=useState(null);
-    useEffect(()=>{setPendingDraft(state.pendingDraft?.draft||null);},[state.pendingDraft]);
+    const [targets,setTargets]=useState([]),[error,setError]=useState('');
+    const confirmation=useMemo(createConfirmation,[id]), restoring=useRef(null);
+    const review=useSyncExternalStore(confirmation.subscribe,confirmation.read);
+    const dialog=review.target,plan=review.plan,busy=review.phase==='previewing'||review.phase==='applying';
+    const pendingDraft=state.pendingDraft;
+    useLayoutEffect(()=>()=>{confirmation.reset();restoring.current=null;},[confirmation]);
     useEffect(()=>{void load(id);let timer;const source=ctx.sessions.binding(id).eventSource;
       let lastSeq=source.getSnapshot().entries.at(-1)?.event?.seq??-1;
       const unsub=source.subscribe(()=>{const entries=source.getSnapshot().entries;let changed=false;for(let i=entries.length-1;i>=0;i--){const e=entries[i].event||entries[i];if(e.seq<=lastSeq)break;if(e.type==='plugin:dsh-rewind-plus/commit')changed=true;}lastSeq=(entries.at(-1)?.event||entries.at(-1))?.seq??lastSeq;if(changed){clearTimeout(timer);timer=setTimeout(()=>void load(id),60);}});
@@ -73,13 +78,24 @@ export function install(ctx){
       const observer=new MutationObserver(records=>{if(!queued&&records.some(r=>r.target.matches?.('[data-clock="start"]')||[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1&&(n.matches?.(rowSelector)||n.querySelector?.(rowSelector))))){queued=true;queueMicrotask(scan);}});observer.observe(document.body,{childList:true,subtree:true});scan();
       return()=>{disposed=true;observer.disconnect();};
     },[id,state.hiddenRanges]);
-    const inspect=async(next=dialog)=>{setDialog(next);setPlan(null);setError('');setBusy(true);try{setPlan(await api(next.undo?'undo-preview':'preview',{sessionId:id,messageSeq:next.seq}));}catch(e){setError(e.message);}finally{setBusy(false);}};
-    const actionsRef=useRef();actionsRef.current={inspect,blocked:()=>!!dialog||busy};
+    const inspect=async(next=confirmation.read().target)=>{
+      const attempt=confirmation.preview(next);
+      if(!attempt)return;
+      setError('');
+      try{confirmation.reviewed(attempt,await api(next.undo?'undo-preview':'preview',{sessionId:id,messageSeq:next.seq}));}
+      catch(e){confirmation.fail(attempt,e.message);}
+    };
+    const actionsRef=useRef();actionsRef.current={inspect,blocked:()=>confirmation.read().phase!=='closed'};
     useEffect(()=>{const handler={inspect:next=>actionsRef.current.inspect(next),blocked:()=>actionsRef.current.blocked()};handlers.set(id,handler);return()=>{if(handlers.get(id)===handler)handlers.delete(id);ctx.get('commandUi')?.dismiss('dsh-undo-picker');};},[id]);
-    const restore=async(draft,expectedRev)=>{
+    const restore=async(receipt,expectedRev)=>{
+      if(!receipt || states.get(id)?.pendingDraft?.id!==receipt.id || restoring.current?.id===receipt.id)return;
+      const attempt={id:receipt.id},draft=receipt.draft;
+      restoring.current=attempt;
+      const currentReceipt=()=>restoring.current===attempt && states.get(id)?.pendingDraft?.id===receipt.id;
+      try {
       const shell=input(id),current=shell.state.getSnapshot();
       const assertEditable=snapshot=>{if(['adjudicating','submitting','sending'].includes(snapshot.phase))throw Error('输入框正在发送，请稍后回填');};
-      if(current.draftRev!==expectedRev){setPendingDraft(draft);throw Error('输入框在操作期间有新编辑，已保留草稿。可点击“回填撤回内容”重试。');}
+      if(current.draftRev!==expectedRev){throw Error('输入框在操作期间有新编辑，已保留草稿。可点击“回填撤回内容”重试。');}
       assertEditable(current);
       let attachments=[],missing=0;
       if(draft.attachmentIds){
@@ -88,29 +104,42 @@ export function install(ctx){
       }else if(draft.attachments?.length){
         const files=[];
         for(const item of draft.attachments)try{const blob=await api('attachment',{sessionId:id,messageSeq:draft.seq,index:item.contentIndex},true).then(r=>r.blob());files.push(new File([blob],item.attachment?.name||`attachment-${item.contentIndex}`,{type:blob.type}));}catch{missing++;}
+        if(!currentReceipt())return;
+        if(shell.state.getSnapshot().draftRev!==expectedRev)throw Error('输入框已改变，撤回内容已保留待回填。');
+        assertEditable(shell.state.getSnapshot());
         attachments=ctx.conversation.createDrafts(id,files);
       }
-      if(shell.state.getSnapshot().draftRev!==expectedRev){setPendingDraft(draft);throw Error('输入框已改变，撤回内容已保留待回填。');}
+      if(shell.state.getSnapshot().draftRev!==expectedRev){throw Error('输入框已改变，撤回内容已保留待回填。');}
       assertEditable(shell.state.getSnapshot());
       shell.pruneAttachments([]);shell.setDraft(draft.text||'');
       if(!shell.addAttachments(attachments.map(a=>a.id)))throw Error('附件暂时不能回填，请重试');
       shell.persistDraft?.();
-      if(missing){setPendingDraft(draft);throw Error(`对话已撤回，文字已回填；${missing} 个附件暂时不可用，可重新添加或稍后回填。`);}
-      setPendingDraft(null);const receipt=states.get(id)?.pendingDraft;if(receipt)update(id,await api('ack',{sessionId:id,draftToken:receipt.id}));
+      if(missing){throw Error(`对话已撤回，文字已回填；${missing} 个附件暂时不可用，可重新添加或稍后回填。`);}
+      update(id,await api('ack',{sessionId:id,draftToken:receipt.id}));
+      } finally { if(restoring.current===attempt)restoring.current=null; }
     };
-    const confirm=async()=>{setBusy(true);setError('');const shell=input(id),before=shell.state.getSnapshot();
+    const confirm=async()=>{
+      const attempt=confirmation.apply();if(!attempt)return;
+      const {target,plan}=attempt;
       try{
-        const result=await api(dialog?.undo?'undo':'apply',{sessionId:id,planId:plan.planId,messageSeq:dialog.seq,draft:{text:before.draft,attachmentIds:before.attachmentIds}});
-        update(id,result.state);setPendingDraft(result.draft);setDialog(null);if(result.draft)await restore(result.draft,before.draftRev);
-      }catch(e){setError(e.message);void load(id);}finally{setBusy(false);}
+        const before=input(id).state.getSnapshot();
+        const result=await api(target.undo?'undo':'apply',{sessionId:id,planId:plan.planId,messageSeq:target.seq,draft:{text:before.draft,attachmentIds:before.attachmentIds}});
+        update(id,result.state);
+        if(confirmation.read()!==attempt)return;
+        try { await restore(result.state.pendingDraft,before.draftRev); }
+        catch(e){if(confirmation.read()===attempt)setError(e.message);}
+        confirmation.close(attempt);
+      }catch(e){confirmation.fail(attempt,e.message);void load(id);}
     };
     const action=<><span data-rewind-plus-status>{state.undoAvailable&&<Button size="sm" variant="ghost" onClick={()=>inspect({undo:true})}>撤销撤回</Button>}
       {pendingDraft&&<Button size="sm" variant="ghost" onClick={()=>{void restore(pendingDraft,input(id).state.getSnapshot().draftRev).catch(e=>setError(e.message));}}>回填撤回内容</Button>}
       {state.warning&&<span role="status" style={{fontSize:12}}>{state.warning}</span>}
+      {state.skipped?.length>0&&<details><summary>查看保留现状的文件（{state.skipped.length}）</summary>
+        <ul>{state.skipped.map((file,index)=><li key={index}><code>{file.path}</code> · {file.reason}</li>)}</ul></details>}
       {state.error&&<Button size="sm" variant="ghost" onClick={()=>{void api('recover',{sessionId:id}).then(result=>update(id,result.state)).catch(()=>load(id));}} title={state.error}>恢复中断操作 · 重试</Button>}
       {!dialog&&error&&<span role="alert">{error}</span>}</span>
       {targets.map(({container,seq})=>createPortal(<Tooltip label="撤回到发送此消息之前" side="bottom"><button type="button" className={container.querySelector('button')?.className} aria-label="撤回" data-rewind-plus-action onClick={()=>inspect({seq})}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M9 5 4 10l5 5M4 10h10a6 6 0 0 1 0 12" transform="translate(0 -2)"/></svg></button></Tooltip>,container,`${id}:${seq}`))}
-      <Modal open={!!dialog} title={dialog?.undo?'撤销撤回':'撤回到这条消息之前'} closeLabel="取消" onClose={()=>{if(!busy)setDialog(null);}} footer={<><Button variant="ghost" disabled={busy} onClick={()=>setDialog(null)}>取消</Button><Button variant="primary" disabled={busy||!plan?.canApply} onClick={confirm}>{busy?'处理中…':dialog?.undo?'确认恢复':'确认撤回'}</Button></>}>
+      <Modal open={!!dialog} title={dialog?.undo?'撤销撤回':'撤回到这条消息之前'} closeLabel="取消" onClose={()=>confirmation.close()} footer={<><Button variant="ghost" disabled={review.phase==='applying'} onClick={()=>confirmation.close()}>取消</Button><Button variant="primary" disabled={busy||!plan?.canApply} onClick={confirm}>{busy?'处理中…':dialog?.undo?'确认恢复':'确认撤回'}</Button></>}>
         {busy&&!plan&&<p>正在检查对话和文件…</p>}
         {plan&&dialog&&<><p>{dialog?.undo?'恢复撤回前的对话和文件，继续留在当前会话。':'这条消息及其之后的内容将撤回，原内容回填输入框。当前草稿暂存，可通过撤销恢复。'}</p>
           {!dialog.undo&&plan.target&&<p>选中消息：{plan.target.text.slice(0,240)||'（附件消息）'}{plan.target.text.length>240?'…':''}</p>}
@@ -119,7 +148,7 @@ export function install(ctx){
           {plan.warnings.map((w,i)=><p key={i} style={{fontSize:12,opacity:.75}}>{w}</p>)}
           {plan.reason&&<p role="alert">{plan.reason}</p>}
           {!plan.canApply&&<Button disabled={busy} onClick={()=>inspect()}>重新检查</Button>}</>}
-        {error&&<p role="alert">{error}</p>}
+        {review.error&&<><p role="alert">{review.error}</p><Button onClick={()=>inspect()}>重新检查</Button></>}
       </Modal></>;
     return action;
   }

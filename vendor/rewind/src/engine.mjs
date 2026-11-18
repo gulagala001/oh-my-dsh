@@ -131,7 +131,7 @@ export class RewindEngine {
       if(e.type==='step/start'&&hidden(internal,e.seq))maintenanceSteps++;
       if(e.type==='step/start'&&hidden(ranges,e.seq))hiddenStepSeqs.add(e.seq);
     }
-    return {revision:st.revision,hiddenRanges:ranges,hiddenTurns:[...new Set(hiddenTurns)],hiddenSteps:hiddenStepSeqs.size,maintenanceTurns:maintenanceTurns.length,maintenanceSteps,undoAvailable:st.undo.length>0,busy:!!st.journal,warning:st.warning||null,pendingDraft:st.pendingDraft||null};
+    return {revision:st.revision,hiddenRanges:ranges,hiddenTurns:[...new Set(hiddenTurns)],hiddenSteps:hiddenStepSeqs.size,maintenanceTurns:maintenanceTurns.length,maintenanceSteps,undoAvailable:st.undo.length>0,busy:!!st.journal,warning:st.warning||null,skipped:st.skipped??[],pendingDraft:st.pendingDraft||null};
   }
 
   async acknowledge(id,token){return this.store.lock(id,async()=>{const st=await this.store.load(id);if(st.pendingDraft?.id===token){st.pendingDraft=null;st.revision++;await this.store.save(st);}return this.state(st);});}
@@ -375,6 +375,7 @@ export class RewindEngine {
         st.journal.changes=restoredFiles.changes;
         if(!plan.undo)after.undo.at(-1).changes=restoredFiles.changes;
         const outcome=plan.undo?'对话已恢复':'对话已撤回';
+        after.skipped=skipped;
         after.warning=fileReason?`${outcome}，文件保持现状：${fileReason}`:skipped.length?`${outcome}，${skipped.length} 个文件保留现状。`:null;
         await this.store.save(st);
         appendPrepared(s,prepared);
@@ -405,7 +406,10 @@ export class RewindEngine {
     const recovered=eventsOf(s).findLast(e=>e.type==='plugin:dsh-rewind-plus/recovered'&&e.data.id===j.id);
     if(!recovered){
       const recoveredFiles=await this.files.recover(j.root,j.changes,'after',{bestEffort:true});
-      if(recoveredFiles.skipped.length)st.warning=`中断操作已恢复，${recoveredFiles.skipped.length} 个文件保留现状。`;
+      if(recoveredFiles.skipped.length){
+        st.skipped=recoveredFiles.skipped;
+        st.warning=`中断操作已恢复，${st.skipped.length} 个文件保留现状。`;
+      }
       const replay=prepareReplay(s,j.context,this.projections(),activeTurn);appendPrepared(s,replay);
     if(j.metadata.cwd)s.append('working-directory/change',{cwd:j.metadata.cwd});s.append('plan/mode',{active:j.metadata.plan});
       appendPluginRecord(s,'plugin:dsh-rewind-plus/recovered',{id:j.id});

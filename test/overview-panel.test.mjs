@@ -96,3 +96,12 @@ test('width preferences tolerate denied storage and clamp to the available layou
   assert.deepEqual(overviewWidthLimits(400), { min: 180, max: 180 });
   assert.deepEqual(overviewWidthLimits(400, true), { min: 200, max: 384 });
 });
+
+test('cross-window choice changes preserve the local sidebar and ignore invalid stored values', async () => {
+  const {overviewTransition:step}=await import('../src/client/overview-panel-state.mjs');
+  let view=step({choice:'auto',sidebarExpanded:false},{type:'sidebar',expanded:true});
+  assert.deepEqual(view,{choice:'auto',sidebarExpanded:true,open:true});
+  view=step(view,{type:'storage',value:'closed'});assert.equal(view.open,false);assert.equal(view.sidebarExpanded,true);
+  view=step(view,{type:'content',hasContent:true,enabled:true,recent:true});assert.equal(view.open,false);
+  assert.equal(step(view,{type:'storage',value:'invalid'}).choice,null);
+});

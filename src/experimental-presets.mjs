@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { join } from 'node:path';
 
 export const UNHARNESSED_PRESET = 'omd-unharnessed';
@@ -27,7 +28,7 @@ export function unharnessedDefinition(directory) {
 
 export class ExperimentalPresets {
   constructor(ctx, hub) {
-    this.ctx = ctx; this.hub = hub; this.tail = Promise.resolve(); this.error = '';
+    this.ctx = ctx; this.hub = hub; this.tail = Promise.resolve(); this.error = ''; this.phase = 'idle';
     this.definition = unharnessedDefinition(hub.store.dir);
     const denied = agent => agent?.session && this.owns(agent.session) && !this.enabled()
       ? '请先在设置 → Oh My DSH → 实验预设中开启 Unharnessed。会话记录与检查点已保留。' : undefined;
@@ -36,14 +37,14 @@ export class ExperimentalPresets {
       const reason = denied(agent); if (reason) throw Error(reason); return next();
     }, { global: true, prepend: true });
     ctx.on('app-boot/config-reload', () => {
-      if (!this.writing) void this.start();
+      if (this.phase !== 'persisting') void this.start();
     }, { global: true });
   }
   owns(session) {
     return (this.ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset) === UNHARNESSED_PRESET;
   }
-  enabled() { return !!this.unregister && !this.error && !this.changing && !this.closed && this.hub.config()[UNHARNESSED_SETTING] === true; }
-  inspect() { return { enabled: this.enabled(), error: this.error, preset: UNHARNESSED_PRESET }; }
+  enabled() { return !!this.unregister && !this.error && this.phase === 'idle' && !this.closed && this.hub.config()[UNHARNESSED_SETTING] === true; }
+  inspect() { return { enabled: this.enabled(), error: this.error, phase: this.closed ? 'closed' : this.phase, preset: UNHARNESSED_PRESET }; }
   enqueue(run) { const work = this.tail.then(run); this.tail = work.catch(() => {}); return work; }
   assertCanDisable() {
     if (this.ctx.agentPresets.defaultId === UNHARNESSED_PRESET) throw Error('请先在 Agent 预设设置中选择其他默认预设，再关闭 Unharnessed。');
@@ -86,22 +87,42 @@ export class ExperimentalPresets {
       if (this.closed) throw Error('实验预设服务已停止');
       const next = patch[UNHARNESSED_SETTING];
       if (typeof next !== 'boolean') throw Error('实验预设开关必须为开或关');
-      const previous = this.hub.config()[UNHARNESSED_SETTING] === true;
+      const section = () => this.ctx.settings.describe?.().find(row => row.ns === 'oh-my-dsh');
+      const before = section();
+      const previous = (before?.value ?? this.hub.config())[UNHARNESSED_SETTING] === true;
       if (!next) this.assertCanDisable();
-      this.changing = true; this.writing = true;
+      this.phase = 'registering';
       try {
         await this.reconcile(next);
         if (this.closed) throw Error('实验预设服务已停止');
-        await this.ctx.settings.update('oh-my-dsh', patch);
+        this.phase = 'persisting';
+        await this.ctx.settings.update('oh-my-dsh', patch, before?.revision);
         this.error = '';
       } catch (error) {
-        try { await this.reconcile(previous); }
+        let desired = previous;
+        if (this.phase === 'persisting') {
+          let current;
+          try {
+            const actual = section();
+            if (before && !actual) throw Error('宿主设置项已卸载');
+            current = actual?.value ?? this.hub.config();
+          } catch (readError) {
+            this.error = '实验预设设置结果待核实：' + readError.message;
+            throw new AggregateError([error, readError], this.error);
+          }
+          if (Object.entries(patch).every(([key, value]) => isDeepStrictEqual(current[key], value))) {
+            this.error = ''; return;
+          }
+          desired = current[UNHARNESSED_SETTING] === true;
+        }
+        this.phase = 'restoring';
+        try { await this.reconcile(desired); }
         catch (rollback) {
           this.error = '实验预设恢复失败：' + rollback.message;
           throw new AggregateError([error, rollback], error.message + '；' + this.error);
         }
         throw error;
-      } finally { this.changing = false; this.writing = false; }
+      } finally { this.phase = 'idle'; }
     });
   }
   async close() { this.closed = true; await this.tail; await this.reconcile(false); }

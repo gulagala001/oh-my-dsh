@@ -37,8 +37,8 @@
       "source": "vendor/workflow/package.json",
       "license": "MIT",
       "notice": "vendor/workflow/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.13-dsh.0.2.2-rc.3",
-      "sourceSha256": "70b8588ebc63f45ff573bdaeb477241559a1852100f6c714c97dc5e648664167",
+      "version": "0.1.13-dsh.0.2.2-rc.5",
+      "sourceSha256": "b10c419277b2465bd75656b07070a3b9baa7e80e92a3278c75a41527f732e3c6",
       "group": "products"
     },
     {
@@ -218,8 +218,8 @@
       "license": "Original upstream rights apply",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
       "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json",
-      "version": "SHA256:f71528bfd66102f0ba22dbbabdffb3c53b5959996b759301f092bfdbfdfe7da5",
-      "sourceSha256": "f71528bfd66102f0ba22dbbabdffb3c53b5959996b759301f092bfdbfdfe7da5",
+      "version": "SHA256:a335b062fd646f9e3b5a4c22eb9599ca394400eb48f7545e78a390379d6a9af5",
+      "sourceSha256": "a335b062fd646f9e3b5a4c22eb9599ca394400eb48f7545e78a390379d6a9af5",
       "group": "sources"
     },
     {

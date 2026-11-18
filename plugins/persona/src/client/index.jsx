@@ -1,3 +1,4 @@
+import { retireEntry } from '../shared/retirement.mjs';
 import React from 'react';
 import { acquirePermissionMenu } from './permission-menu.jsx';
 import { SessionMenu } from './session-menu.jsx';
@@ -9,13 +10,18 @@ const roots = globalThis[Symbol.for('dsh-persona-plugin.client.v1')] ??= new Wea
 export function acquirePersonaClient(ctx, { embedded = false } = {}) {
   const root = ctx.root;
   let entry = roots.get(root);
+  if (entry?.retryRetirement) return entry.retryRetirement().then(() => {
+    ctx.fiber?.assertActive();
+    return acquirePersonaClient(ctx, { embedded });
+  });
   if (!entry) {
     const client = createSettingsClient(), style = document.createElement('style');
     style.dataset.plugin = 'dsh-persona-plugin'; style.textContent = css; document.head.append(style);
     entry = { client, style, owners: new Map(), releasePage: null };
     roots.set(root, entry);
-    entry.fiber = root.inject(['slots'], scope => {
-      acquirePermissionMenu(scope, 'persona', SessionMenu);
+    entry.fiber = root.inject(['slots'], async scope => {
+      await acquirePermissionMenu(scope, 'persona', SessionMenu);
+      scope.fiber?.assertActive();
       entry.scope = scope;
       entry.refreshPage = () => {
         const visible = ![...entry.owners.values()].some(owner => owner.embedded);
@@ -30,8 +36,9 @@ export function acquirePersonaClient(ctx, { embedded = false } = {}) {
   ctx.effect(() => () => {
     entry.owners.delete(token);
     if (entry.owners.size) { entry.refreshPage?.(); return; }
-    roots.delete(root); entry.client.dispose(); entry.style.remove(); entry.releasePage?.(); return entry.fiber.dispose();
+    return retireEntry(roots, root, entry, [() => entry.client.dispose(), () => entry.style.remove(),
+      () => { entry.releasePage?.(); entry.releasePage = null; }, () => entry.fiber.dispose()]);
   });
   return entry.client;
 }
-export function apply(ctx) { acquirePersonaClient(ctx); }
+export async function apply(ctx) { await acquirePersonaClient(ctx); }

@@ -23,7 +23,7 @@
     "docs/structure.json": "48f5dafc18cb8e612e8378847383ded413e7ff22c7dd7ae63d980e1493793fa8",
     "docs/usage_EN.md": "399006309b532f2489b8f2877e86adb90e027e655b57abbaf3e38d04acbc76e4",
     "docs/usage.md": "ae75a7aa3d0b3d580d77423cb201d2ec0986a7fa4960f20417dd660279cbe4bb",
-    "lib/client.js": "771796cfbf683c835dc7476c5adca6cf3718dd1f18b977f289a373d26a00bf61",
+    "lib/client.js": "0a228612df821687812bf8e0e676409f336e5cc0dae137ffa47b42de3c494b78",
     "package.json": "d7c80df3987a8b194b12401b64c23f0493584850f87aa4e366f47955ff5cf23c",
     "scripts/build.mjs": "70869d27e396cda01e08625aff9bd24fd856326c8f15cb987276422062fd54cb",
     "scripts/check-docs.mjs": "2592ee148ef6fd0164a0aa2a5be139c490a869b87e2a5d21e34d4defb943588e",
@@ -33,7 +33,7 @@
     "scripts/prepack.mjs": "c45e3fc4bee8ab65e00452e0e5c197619da3aef9315d3ef7f9fd1470f46cf98b",
     "scripts/prepare-host-sdk.mjs": "e5ffa4c03231aef9178f98232d69b6c909cab1dbf6ae4f9c1cdf4e6ca0fc6b1d",
     "src/account-probe.mjs": "f1b27cf5286ea500e73c1f93759078f2218b7a487623e72c088ad4c5bfa6c4b7",
-    "src/client/browser-adapter.mjs": "1b7478c6c48ec60856ab678c56ef997a0cadf09d52d9ee0b3ece8d4266397cff",
+    "src/client/browser-adapter.mjs": "984a4f8095575d56c5b2b511df6745a932a20cd6acde485e0dee1f6e3879ce6e",
     "src/client/conversation-import.mjs": "d351cc3fd1e188423f6a7324fa8fd2c9156687141abe5fb98ccb66abbe456b0f",
     "src/client/extraction.mjs": "cd3fe83fdcceb8efcd7e5ed39c8cd930ce1e11f76c0e0a854e893c5ed48be141",
     "src/client/host-capabilities.mjs": "45f7a97ebf23a4bb2fe87b72f49acc107d4747c6e3b41bb90f73970479e67f5e",
@@ -45,8 +45,9 @@
     "src/client/style.css": "14fa444b98107878fbcc99b79fee058d43efd60822b251c2470880f2c06ab23e",
     "src/client/temporary-sidebar.jsx": "2011fe0ab9e62fafa62bbe82e79648b5bc31fe9c4c403cf23d8d08bb329a5382",
     "src/client/temporary-web.mjs": "b5ca0ef51f1e77b4235b1a43f0093b374adee902f46f23b31316ff26d8b6fb66",
+    "src/component-lease.mjs": "1ccf50c63f18923300efab6c9d795ef2d306f8373aa6d34efaa5f2f2c1c1c756",
     "src/import.mjs": "20520bde14ac07877b85b5a16c5b133a33d9c587999ae5b1c1346014e46edc3b",
-    "src/index.mjs": "9ba46f0254bdfd5d58d7791c506536cc2be99360cdd09ed0eece1f726527e138"
+    "src/index.mjs": "a072e4b62f7f6b228578d52e4188b0fa7f60dd73fb69c22451409429de635355"
   },
   "buildHost": "0.2.2-rc.5"
 }

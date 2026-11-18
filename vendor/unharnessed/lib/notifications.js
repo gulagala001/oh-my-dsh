@@ -10,26 +10,39 @@ export class Notifications {
   put(key, message, { wake = true, retain = true } = {}) {
     this.remove(key)
     if (!this.allowed()) return
-    this.entries.set(key, { message, wake, retain, sent: false })
+    this.entries.set(key, { message, wake, retain, phase: 'staged' })
     this.flush()
   }
   flush() {
     if (!this.allowed()) { this.clear(); return }
     if (this.busy()) return
     for (const [key, entry] of this.entries) {
-      if (entry.sent) continue
+      if (entry.phase !== 'staged') continue
       if (!this.allowed()) { this.clear(); return }
-      entry.sent = true
-      if (entry.wake) this.agent.steer(entry.message)
-      else this.agent.inject(entry.message)
+      entry.phase = 'delivering'
+      try {
+        if (entry.wake) this.agent.steer(entry.message)
+        else this.agent.inject(entry.message)
+        entry.phase = 'sent'
+      } catch (error) {
+        // Native inbox admission is synchronous. Inspect both queues before
+        // authorizing a retry if a downstream notification listener threw.
+        const queued = [...this.agent.inbox.nextStep, ...this.agent.inbox.nextTurn]
+        entry.phase = queued.some(message => message.id === entry.message.id) ? 'sent' : 'staged'
+        if (entry.phase === 'sent' && !entry.retain && this.entries.get(key) === entry) this.entries.delete(key)
+        throw error
+      }
       if (!entry.retain && this.entries.get(key) === entry) this.entries.delete(key)
     }
   }
   remove(key) {
     const entry = this.entries.get(key)
     if (!entry) return
-    this.entries.delete(key)
-    this.agent.inbox.remove(entry.message.id)
+    if (entry.phase !== 'staged') {
+      entry.phase = 'withdrawing'
+      this.agent.inbox.remove(entry.message.id)
+    }
+    if (this.entries.get(key) === entry) this.entries.delete(key)
   }
   forget(message) {
     for (const [key, entry] of this.entries) if (entry.message.id === message.id) this.entries.delete(key)

@@ -21,7 +21,7 @@ export async function createBrowserAdapter({ bridge, container, workspace = 'dee
   const reservation = await bridge.acquire(workspace, { profile: 'deepseek-workbench' });
   if (signal?.aborted) { await bridge.release(reservation.lease); return null; }
   let disposed = false, ready = false, initial = true, stopOpen, cleanupPromise;
-  let element;
+  let element, navigation = 0;
   const removers = [];
   const state = { loading: true, ready: false, url: target, title: '', error: '', canGoBack: false, canGoForward: false, warnings: browserLimitations(capabilities) };
   const publish = patch => { if (!disposed) { Object.assign(state, patch); onState({ ...state }); } };
@@ -34,8 +34,9 @@ export async function createBrowserAdapter({ bridge, container, workspace = 'dee
     if (disposed || !ready) throw new Error('网页仍在初始化，请稍后重试。');
     const next = httpUrl(value);
     if (!next) throw new Error('不支持此网页地址。');
+    const intent = ++navigation;
     publish({ loading: true, error: '', url: next });
-    try { await element.loadURL(next); } catch (error) { publish({ loading: false, error: error.message || '网页加载失败。' }); throw error; }
+    try { await element.loadURL(next); } catch (error) { if (intent === navigation) publish({ loading: false, error: error.message || '网页加载失败。' }); throw error; }
   };
   const dispose = () => {
     if (cleanupPromise) return cleanupPromise;
@@ -69,7 +70,7 @@ export async function createBrowserAdapter({ bridge, container, workspace = 'dee
       publish({ loading: false, error: event.errorDescription || `网页加载失败 (${event.errorCode ?? '未知'})` });
     });
     listen('render-process-gone', () => {
-      ready = false;
+      ++navigation; ready = false;
       publish({ ready: false, loading: false, canGoBack: false, canGoForward: false, error: '网页进程已退出，请重新打开页面。' });
     });
     stopOpen = bridge.onOpenRequested?.(reservation.lease, value => { const next = httpUrl(value); if (next) void navigate(next).catch(() => {}); });

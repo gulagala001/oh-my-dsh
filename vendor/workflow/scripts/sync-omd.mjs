@@ -8,6 +8,8 @@ if (args.length !== 2 || args[0] !== '--target') throw Error('Usage: node script
 const target = await realpath(resolve(root, args[1]));
 if (target !== await realpath(resolve(root, '../oh-my-dsh'))) throw Error('Sync target must be the sibling oh-my-dsh workspace');
 const { pkg, snapshot } = await validateInputs();
+const expected = (await readJson(join(target, 'package.json'))).engines.dsh;
+if (pkg.engines.dsh !== expected) throw Error(`Build Workflow for DSH ${expected} before syncing it into OMD`);
 const destination = join(target, 'vendor/workflow'), manifestPath = join(target, 'vendor/workflow.json');
 const vendor = join(target, 'vendor');
 if (await realpath(vendor) !== vendor) throw Error('Refusing symlinked target vendor directory');

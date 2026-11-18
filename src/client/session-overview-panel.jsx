@@ -1,4 +1,5 @@
 import React, { useCallback, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { overviewChoice, overviewTransition, isOverviewOpen } from './overview-panel-state.mjs';
 import { autoOverviewEnabled } from './overview-preference.mjs';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import { bindOverviewResize, readOverviewWidth, OVERVIEW_WIDTH_KEY } from './overview-panel-resize.mjs';
@@ -15,23 +16,24 @@ export function installOverviewPanel(ctx) {
   } catch {}
   const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
   const empty = { open: false, motion: 0, sidebarExpanded: false, container: null };
+  const prefix = 'omd.overview.session.v1.';
+  const dispatch = (sessionId, event) => {
+    if (!sessionId) return;
+    const previous = read(sessionId), next = overviewTransition(previous, event);
+    if (event.type !== 'storage' && previous.choice !== next.choice) {
+      try { localStorage.setItem(prefix + sessionId, next.choice); } catch {}
+    }
+    update(sessionId, next);
+  };
   const read = sessionId => {
     if (!sessionId) return empty;
     if (!panels.has(sessionId)) {
-      const key = 'omd.overview.session.v1.' + sessionId;
-      let choice;
-      try { choice = localStorage.getItem(key); } catch {}
-      const choose = value => {
-        try { localStorage.setItem(key, value); } catch {}
-        update(sessionId, { choice: value, open: value === 'auto' || value === 'open' });
-      };
-      panels.set(sessionId, { ...empty, choice, open: choice === 'auto' || choice === 'open',
-        toggle: () => choose(read(sessionId).open ? 'closed' : 'open'),
+      let choice = null;
+      try { choice = overviewChoice(localStorage.getItem(prefix + sessionId)); } catch {}
+      panels.set(sessionId, { ...empty, choice, open: isOverviewOpen(choice),
+        toggle: () => dispatch(sessionId, { type: 'toggle' }),
         observeContent(blank, ready, hasContent, createdAt) {
-          const current = read(sessionId).choice;
-          if (current && current !== 'armed') return;
-          if (hasContent && (blank || createdAt >= autoSince || current === 'armed')) choose(autoOverviewEnabled() ? 'auto' : 'closed');
-          else if (!current && (blank || ready && !hasContent)) choose('armed');
+          dispatch(sessionId, { type: 'content', blank, ready, hasContent, recent: createdAt >= autoSince, enabled: autoOverviewEnabled() });
         },
       });
     }
@@ -52,9 +54,7 @@ export function installOverviewPanel(ctx) {
   function SidebarState({ Original, ...props }) {
     const expanded = props.useStore(value => value.bySession[props.sessionId]?.layout.expanded ?? false);
     useLayoutEffect(() => {
-      const previous = read(props.sessionId);
-      if (expanded && !previous.sidebarExpanded && previous.open && previous.choice !== 'auto') previous.toggle();
-      update(props.sessionId, { sidebarExpanded: expanded });
+      dispatch(props.sessionId, { type: 'sidebar', expanded });
     }, [props.sessionId, expanded]);
     return <Original {...props}/>;
   }
@@ -108,6 +108,16 @@ export function installOverviewPanel(ctx) {
       return <Original {...props} renderFactorySlot={renderFactorySlot}/>;
     };
   }));
-  ctx.effect(() => () => { panels.clear(); listeners.clear(); });
+  ctx.effect(() => {
+    const sync = event => {
+      if (event.storageArea && event.storageArea !== window.localStorage) return;
+      for (const id of panels.keys()) if (event.key === null || event.key === prefix + id) {
+        // Read the latest persisted value, including after a competing local toggle.
+        try { dispatch(id, { type: 'storage', value: localStorage.getItem(prefix + id) }); } catch {}
+      }
+    };
+    window.addEventListener('storage', sync);
+    return () => { window.removeEventListener('storage', sync); panels.clear(); listeners.clear(); };
+  });
   return usePanel;
 }

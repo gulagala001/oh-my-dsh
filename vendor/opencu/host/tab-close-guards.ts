@@ -17,7 +17,8 @@ export class TabCloseGuards {
 
   /** Keep unguarded closes synchronous; guarded closes commit once after all checks accept. */
   close(commit: () => boolean): boolean | Promise<boolean> {
-    if (this.signal.aborted || this.pending) return false
+    if (this.signal.aborted) return false
+    if (this.pending) return this.pending
     if (!this.guards.size) return commit()
     const guards = [...this.guards]
     this.pending = Promise.resolve().then(async () => {
