@@ -144,24 +144,25 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
   function fetchFor(meta, baseFetch = fetchImpl) {
     return async (input, init) => {
       if (closed) return baseFetch(input, init);
-      const request = new Request(input instanceof Request ? input.clone() : input, init), url = request.url;
-      const endpoint = new URL(url);
+      const endpoint = URL.parse(input instanceof Request ? input.url : input);
+      if (!endpoint || !endpoint.pathname.endsWith('/responses')) return baseFetch(input, init);
       // Codex subscription requests require store:false. Keep them out of the
       // storage negotiation for public and compatible Responses API routes.
       const codexSubscription = endpoint.pathname === '/backend-api/codex/responses'
         && ['chatgpt.com', 'chat.openai.com'].includes(endpoint.hostname);
-      if (codexSubscription || request.method !== 'POST' || !endpoint.pathname.endsWith('/responses')) return baseFetch(input, init);
+      if (codexSubscription) return baseFetch(input, init);
+      const request = new Request(input, init), url = request.url;
+      const headers = request.headers;
+      if (request.method !== 'POST' || privateOnly(headers)) return baseFetch(request);
       let body, originalText;
-      try { originalText = await request.clone().text(); body = JSON.parse(originalText); } catch { return baseFetch(input, init); }
-      const headers = new Headers(request.headers);
-      if (!body || body.model !== meta.model || body.previous_response_id || body.conversation || body.background
-        || privateOnly(headers)) return baseFetch(input, init);
+      try { originalText = await request.clone().text(); body = JSON.parse(originalText); } catch { return baseFetch(request); }
+      if (!body || body.model !== meta.model || body.previous_response_id || body.conversation || body.background) return baseFetch(request);
       const session = meta.sessionId ?? body.prompt_cache_key;
-      if (typeof session !== 'string' || !session.length) return baseFetch(input, init);
+      if (typeof session !== 'string' || !session.length) return baseFetch(request);
       const originalBody = body;
       body = { ...body };
       if (typeof body.input === 'string') body.input = textInput(body.input);
-      if (!Array.isArray(body.input) || body.input.length > 8192) return baseFetch(input, init);
+      if (!Array.isArray(body.input) || body.input.length > 8192) return baseFetch(request);
       const scope = sha(canonical({ url, provider: meta.provider, model: body.model, headers: identityHeaders(headers) }));
       const { input: allInput, stream: _stream, store: _store, prompt_cache_key: _key, ...parameters } = body;
       // Gate only the request shape that was explicitly rejected. Text-only
@@ -177,7 +178,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       if (disabled) {
         stats.full++;
         const fullHeaders = new Headers(headers); fullHeaders.delete('content-length');
-        const response = effectiveBody === originalBody ? await baseFetch(input, init)
+        const response = effectiveBody === originalBody ? await baseFetch(request)
           : await baseFetch(new Request(request, { headers: fullHeaders, body: JSON.stringify(effectiveBody) }));
         stats.last = { provider: meta.provider, model: meta.model, mode: 'full', reason: checked.reason,
           inputItems: body.input.length, inputBytes: Buffer.byteLength(originalText) };

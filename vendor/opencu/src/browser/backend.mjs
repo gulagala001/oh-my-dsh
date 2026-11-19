@@ -94,12 +94,14 @@ export async function createBrowserBackend(options = {}) {
         await mkdir(profile, {recursive: true});
         const headless = options.launchOptions?.headless ?? options.headless ?? true;
         // Emulated DPR makes headed Retina Chromium zoom back and forth during captures.
-        context = await playwright.chromium.launchPersistentContext(profile, isolatedLaunchOptions({
+        const launchOptions = isolatedLaunchOptions({
           headless,
           viewport: options.viewport !== undefined ? options.viewport : headless ? {width: 1280, height: 800} : null,
           acceptDownloads: true,
           ...options.launchOptions,
-        }));
+        });
+        context = options.launchManaged ? await options.launchManaged(playwright.chromium, profile, launchOptions)
+          : await playwright.chromium.launchPersistentContext(profile, launchOptions);
         ownContext = true;
         browser = context.browser();
         connectionId = `owned:${randomUUID()}`;
@@ -339,6 +341,7 @@ export async function createBrowserBackend(options = {}) {
       creation = results[0].value;
       if (results[1].status === 'rejected') throw results[1].reason;
       next = await register(results[1].value);
+      if (options.managedFallback) next.sessionId = request.sessionId ?? record?.sessionId;
       checkSignal(request.signal);
       if (request.url) {
         const guard = next.dialogs.begin();
@@ -360,6 +363,7 @@ export async function createBrowserBackend(options = {}) {
     targetInfo ??= (await record.session.send('Target.getTargetInfo')).targetInfo;
     return {
       id: record.id, backend: 'browser', kind: 'tab', browserId,
+      ...(record.sessionId === undefined ? {} : { sessionId: record.sessionId }),
       sessionClipboard: record.sessionClipboard === true,
       title: targetInfo.title, url: targetInfo.url, identity: record.identity,
       capabilities: ['ax', 'screenshot', 'navigation', 'navigationWaits', 'tabs', 'focus', 'mouse', 'keyboard', 'uploads', 'fileChooserEvents', 'downloads', 'downloadEvents', 'hitTest', 'getDOM', 'designTweak', 'dialogs'],
@@ -425,14 +429,16 @@ export async function createBrowserBackend(options = {}) {
     })().finally(() => { releasing = undefined; });
   }
   return {
+    ...(options.managedFallback ? { async prepare() { await initialize(); return browserId; } } : {}),
     async listBrowsers() { return context && !closed ? [{id: browserId, provider: 'browser', name: 'Chromium', connected: true}] : []; },
-    async newTab(id, url, {signal} = {}) {
+    async newTab(id, url, {signal, sessionId} = {}) {
       if (id !== browserId) fail('TARGET_NOT_FOUND', 'Choose this connected browser ID');
       if (releaseFailures.some(failure => !failure.targetId)) fail('RELEASE_FAILED', 'Browser connection input release remains unconfirmed');
-      return (await newTab({url, signal})).target;
+      return (await newTab({url, signal, sessionId})).target;
     },
     async listTargets({signal} = {}) {
       checkSignal(signal);
+      if (options.managedFallback && !options.eagerInventory && !context) return [];
       await initialize();
       checkSignal(signal);
       await registerPages(context.pages());
@@ -467,6 +473,7 @@ export async function createBrowserBackend(options = {}) {
       return matches[0];
     },
     async focus(target) {
+      if (options.managedFallback) fail('VISIBLE_BROWSER_UNAVAILABLE', 'The managed browser runs in the background. Use a screenshot or a visible browser target.');
       const record = await recordFor(target);
       await record.dialogs.guard(() => record.page.bringToFront());
       return {focused: true, target: await descriptor(record)};

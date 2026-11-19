@@ -108,7 +108,7 @@ export class RecommendedPluginManager {
         const bundle = bundles.find(item => item.name === plugin.packageName);
         const record = this.records.get(plugin.id);
         const installed = !!bundle?.installed || bundle?.availability === 'installation';
-        const needsBuildSwitch = !!plugin.hostBuilds && installed && !!bundle.version && !!plugin.review && !bundle.version.startsWith(this.hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.');
+        const needsBuildSwitch = !!plugin.hostBuilds && installed && !!bundle.version && plugin.review?.dsh === this.hostVersion && !bundle.version.startsWith(this.hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.');
         return { id: plugin.id, installed, enabled: !!bundle?.enabled, readOnly: !!bundle?.readOnlyReason, removable: !!bundle?.removable && !bundle?.readOnlyReason, unavailable: this.unavailable(plugin),
           version: bundle?.version || null, ...record,
           expectedVersion: plugin.review?.version ?? null,
@@ -196,7 +196,7 @@ export class RecommendedPluginManager {
         // suffix. SemVer ranks that below upstream's stable release, so allow
         // only the catalog's exact, SHA-pinned migration to the fixed fork.
         const reviewedMigrationAllowed = version === plugin.review?.version && reviewedMigration(plugin, current?.version, this.hostVersion, automatic);
-        if (automatic && plugin.hostBuilds && current?.version && !current.version.startsWith(this.hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.')) { this.records.set(plugin.id, { ...this.records.get(plugin.id), message: '宿主已变更，请手动更新为对应核验构建；界面状态数据将保留。', error: '' }); return false; }
+        if (automatic && plugin.hostBuilds && plugin.review?.dsh === this.hostVersion && current?.version && !current.version.startsWith(this.hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.')) { this.records.set(plugin.id, { ...this.records.get(plugin.id), message: '宿主已变更，请手动更新为对应核验构建；界面状态数据将保留。', error: '' }); return false; }
         if (comparison !== null && ((comparison < 0 && !reviewedMigrationAllowed) || (comparison === 0 && !plugin.review?.source && this.records.get(plugin.id)?.failedInstallVersion !== version))) {
           this.records.set(plugin.id, { ...this.records.get(plugin.id), message: plugin.review ? (current.version === version ? '已是核验版本' : '当前版本高于核验版本，未降级') : '已是最新版本', error: '' });
           return false;

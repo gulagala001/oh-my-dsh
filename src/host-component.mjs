@@ -3,7 +3,6 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { symbols } from '@deepseek-ai/cordis';
-import pluginPackage from '../package.json' with { type: 'json' };
 
 async function privateComponentPath(candidate, specifier) {
   if (typeof candidate !== 'string' || !candidate.startsWith('file:')) return null;
@@ -17,7 +16,7 @@ async function privateComponentPath(candidate, specifier) {
       try { metadata = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8')); }
       catch (error) { if (error.code !== 'ENOENT') return null; }
       if (metadata) {
-        if (metadata.name !== specifier || metadata.version !== pluginPackage.engines.dsh || typeof metadata.main !== 'string') return null;
+        if (metadata.name !== specifier || typeof metadata.main !== 'string') return null;
         // The configured file must be the real entry of the matching package,
         // not just a similarly named directory or an arbitrary submodule.
         return await realpath(join(directory, metadata.main)) === file ? file : null;

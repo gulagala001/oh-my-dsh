@@ -159,8 +159,8 @@ export function createBrowserHost() {
       return { configured: true, connectedRenderers: renderers.length, targetCount,
         status: !renderers.length ? 'renderer_unavailable' : targetCount ? 'ready' : 'no_tabs',
         ...(!renderers.length ? { code: 'DSH_RENDERER_UNAVAILABLE',
-          message: 'No DSH sidebar browser renderer is connected. Installing the plugin alone does not provide a sidebar browser.',
-          nextStep: 'Open a DSH client with a supported sidebar browser adapter, or configure a browser extension or CDP connection.' }
+          message: 'No connected DSH window supports AI control of the sidebar browser.',
+          nextStep: 'Use an available managed browser or a configured extension or CDP connection. A compatible DSH desktop build supports AI control in the sidebar.' }
           : !targetCount ? { code: 'DSH_NO_BROWSER_TABS', message: 'The DSH browser renderer is connected but has no published browser tabs.',
             nextStep: 'Open a browser tab in the connected DSH client.' } : {}) };
     },

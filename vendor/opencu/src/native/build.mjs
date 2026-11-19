@@ -4,17 +4,17 @@ import {createHash} from 'node:crypto';
 import {access, mkdir, readFile, writeFile} from 'node:fs/promises';
 import {constants} from 'node:fs';
 import {join, resolve} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import { desktopResourcePath } from '../desktop-resource.mjs';
 import {NativeBackendError} from './protocol.mjs';
 
 const exec = promisify(execFile);
-const sourceDirectory = fileURLToPath(new URL('../../native/macos/', import.meta.url));
+const sourceDirectory = desktopResourcePath(new URL('../../native/macos/', import.meta.url));
 const sources = ['Protocol.swift', 'Responsibility.swift', 'Targets.swift', 'ReadOperation.swift', 'Accessibility.swift', 'Capture.swift', 'Video.swift', 'Input.swift', 'Activity.swift', 'Cursor.swift', 'Presentation.swift', 'main.swift'];
 const systemHeader = join(sourceDirectory, 'System.h');
 const infoPlist = join(sourceDirectory, 'Info.plist');
 
 export async function buildMacHelper(directory, {helperPath, compile = false} = {}) {
-  const packaged = helperPath ? resolve(helperPath) : fileURLToPath(new URL(`../../native/bin/darwin-${process.arch}/OpenCU Helper.app/Contents/MacOS/opencu-native`, import.meta.url));
+  const packaged = helperPath ? resolve(helperPath) : desktopResourcePath(new URL(`../../native/bin/darwin-${process.arch}/OpenCU Helper.app/Contents/MacOS/opencu-native`, import.meta.url));
   if (!compile) {
     try { await access(packaged, constants.X_OK); return packaged; }
     catch { throw new NativeBackendError('NATIVE_HELPER_UNAVAILABLE', 'The packaged macOS helper is missing or not executable. Install the matching architecture build; Xcode is not required at runtime.', {path: packaged, arch: process.arch}); }

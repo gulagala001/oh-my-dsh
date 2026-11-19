@@ -30,16 +30,14 @@ if (workflowPackage.engines.dsh !== sdk || (workflowSnapshot.buildTarget?.versio
   throw Error(`The embedded Workflow runtime must be built for DSH ${sdk} before building OMD`);
 }
 if (sdk !== (snapshot.buildTarget?.version ?? snapshot.version)) throw new Error(`DSH SDK ${sdk} does not match snapshot ${snapshot.version}`);
-for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) {
+for (const section of ['dependencies', 'devDependencies']) {
   for (const [name, version] of Object.entries(parent[section] ?? {})) {
     if (/^@deepseek-ai\/dsh(?:-|$)/.test(name) && version !== sdk) throw new Error(`DSH SDK ${section}.${name} ${version} does not match snapshot ${snapshot.version}`);
   }
 }
 const framework = { '@deepseek-ai/cordis': hostLayout.cordisVersion, '@deepseek-ai/schemastery': hostLayout.schemaVersion };
 for (const [name, version] of Object.entries(framework)) {
-  for (const section of ['devDependencies', 'peerDependencies']) {
-    if (parent[section]?.[name] !== version) throw new Error(`DSH ${sdk} requires ${section}.${name} ${version}`);
-  }
+  if (parent.devDependencies?.[name] !== version) throw new Error(`DSH ${sdk} requires ${name} ${version} for the build`);
 }
 for (const field of ['repository', 'commit', 'tag', 'version']) {
   if (chatSnapshot[field] !== snapshot[field]) throw new Error(`Public Chat snapshot has mismatched ${field}`);

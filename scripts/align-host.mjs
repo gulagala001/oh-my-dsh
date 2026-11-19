@@ -17,9 +17,9 @@ const path = join(root, 'package.json'), manifest = JSON.parse(await readFile(pa
 const feature = manifest.version.match(/[.-]omd\.(\d+\.\d+\.\d+)$/)?.[1];
 if (!feature) throw new Error('Expected a host-aligned OMD feature version');
 manifest.version = `${version}${version.includes('-') ? '.' : '-'}omd.${feature}`;
-manifest.engines.dsh = version;
+manifest.engines.dsh = '*';
 manifest.packageManager = sourceManifest.packageManager;
-for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) {
+for (const section of ['dependencies', 'devDependencies']) {
   for (const name of Object.keys(manifest[section] ?? {})) {
     if (/^@deepseek-ai\/dsh(?:-|$)/.test(name)) manifest[section][name] = version;
     if (framework[name]) manifest[section][name] = framework[name];

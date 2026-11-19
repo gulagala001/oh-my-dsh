@@ -503,20 +503,31 @@ export function createComputerRepl(request, report = () => {}) {
             Object.values(options).some(value => typeof value !== 'boolean')) throw invalidArgument('openBrowser accepts {reuseAuthorized?:boolean, visible?:boolean}');
         const destination = new URL(url);
         if (!['http:', 'https:'].includes(destination.protocol)) throw invalidArgument('openBrowser needs an HTTP(S) URL');
-        const { enabled, preference, builtIn, sessionId } = await call('browserRoute');
+        const { enabled, preference, builtIn, sessionId, managedFallback } = await call('browserRoute');
         if (!enabled) throw invalidArgument('Automatic browser routing requires OMD. Bind an explicit browser ID.');
         const inventory = await call('targets');
         const local = new Set(builtIn.filter(id => inventory.browsers?.some(browser => browser.id === id && !browser.pairingRequired)));
         const connected = new Set(inventory.browsers?.filter(browser => browser.connected === true && !browser.pairingRequired).map(browser => browser.id));
         const matching = inventory.targets.filter(target => target.backend === 'browser' && target.supported !== false && !target.error && target.url === destination.href);
-        const candidates = matching.filter(target => local.has(target.browserId) && target.sessionId === sessionId ||
+        const candidates = matching.filter(target => target.sessionId === sessionId &&
+          (local.has(target.browserId) || local.size === 0 && managedFallback && target.provider === 'browser' && connected.has(target.browserId)) ||
           preference === 'reuse' && options.reuseAuthorized === true && target.provider === 'extension' && connected.has(target.browserId));
+        const show = async tab => {
+          if (!managedFallback || tab.target.provider !== 'browser') return tab.focus();
+          try {
+            await tab.getScreenshot();
+            emit({ presentation: 'screenshot', targetId: tab.id, notice: 'The managed tab is running in the background. Its current screenshot is attached.' });
+          } catch (error) {
+            activeExecution();
+            emit({ targetId: tab.id, previewError: { code: error.code, message: error.message }, notice: 'The tab is open. Request a screenshot of this tab to try showing it again.' });
+          }
+        };
         if (candidates.length > 1) throw invalidArgument('Multiple tabs match this URL. List tabs and bind an explicit ID.');
         if (candidates.length === 1) {
           const candidate = candidates[0];
           const tab = await select({ id: candidate.id, browserId: candidate.browserId, identity: candidate.identity, expected: { url: destination.href } });
           if (options.visible === true) {
-            try { await tab.focus(); }
+            try { await show(tab); }
             catch (cause) {
               const details = { selected: true, target: candidate, stage: 'show', cause: { code: cause.code, message: cause.message, details: cause.details } };
               emit(details);
@@ -525,9 +536,13 @@ export function createComputerRepl(request, report = () => {}) {
           }
           return tab;
         }
-        if (local.size !== 1) throw invalidArgument(local.size ? 'Multiple built-in windows own this conversation. Choose one by ID.' :
-          'No built-in browser is connected for this conversation. Subagents and unmounted conversations need an explicit authorized browser ID.');
-        return createTab(local.values().next().value, destination.href, options.visible === undefined ? {} : { visible: options.visible });
+        if (local.size > 1) throw invalidArgument('Multiple built-in windows own this conversation. Choose one by ID.');
+        if (local.size === 1) return createTab(local.values().next().value, destination.href, options.visible === undefined ? {} : { visible: options.visible });
+        if (!managedFallback) throw invalidArgument('No built-in browser is connected for this conversation. Enable the managed browser or choose an explicit authorized browser ID.');
+        const { browserId } = await call('browserRoute/prepare');
+        const tab = await createTab(browserId, destination.href);
+        if (options.visible === true) await show(tab);
+        return tab;
       },
       downloads: { list: async (options = {}) => {
         const result = await call('deliveries', { emit: options.emit !== false });

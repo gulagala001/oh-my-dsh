@@ -6,7 +6,7 @@ const source = new URL('../../dsh-persona-plugin/', import.meta.url), target = n
 const pkg = JSON.parse(await readFile(new URL('package.json', source), 'utf8'));
 if (pkg.name !== '@gulagala001/dsh-persona-plugin') throw Error('Unexpected Persona source package');
 const host = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-if (pkg.engines.dsh !== host.engines.dsh) throw Error('Persona build target does not match OMD');
+if (pkg.engines.dsh !== host.devDependencies['@deepseek-ai/dsh']) throw Error('Persona build target does not match OMD');
 // The package's actual distribution is authoritative, including its documentation
 // and check inputs. A second, partial directory list drifts as the product grows.
 const [packed] = JSON.parse(execFileSync('npm', ['pack', '--json', '--ignore-scripts', '--dry-run'],

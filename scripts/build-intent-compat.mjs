@@ -9,7 +9,7 @@ export const upstream = Object.freeze({ version: '0.3.0',
   url: 'https://github.com/gulagala001/omd-prompt-optimizer/releases/download/v0.3.0/omd-prompt-optimizer-0.3.0.tgz',
   sha256: '8b9eb882ddd57c4098b874628663615858c4a987f49fd6927235d7bd1afdeadf' });
 const packageInfo = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-export const hostVersion = packageInfo.engines.dsh;
+export const hostVersion = packageInfo.devDependencies['@deepseek-ai/dsh'];
 export const version = hostVersion + '.intent.0.3.4';
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const replaceOnce = (source, before, after) => {
@@ -56,7 +56,7 @@ export async function buildIntentCompatibility(archive, output) {
     manifest.version = version;
     manifest.description = '需求理解：发送前梳理需求，保留原话，支持审查、自动发送与只读项目查证。';
     manifest.engines.dsh = hostVersion;
-    manifest.peerDependencies = { '@deepseek-ai/cordis': packageInfo.peerDependencies['@deepseek-ai/cordis'], '@deepseek-ai/dsh-llm': hostVersion, '@deepseek-ai/dsh-agent-loop': hostVersion };
+    manifest.peerDependencies = { '@deepseek-ai/cordis': packageInfo.devDependencies['@deepseek-ai/cordis'], '@deepseek-ai/dsh-llm': hostVersion, '@deepseek-ai/dsh-agent-loop': hostVersion };
     manifest.intentCompatibility = { upstreamVersion: upstream.version, upstreamUrl: upstream.url, upstreamSha256: upstream.sha256, hostVersion };
     manifest.files = [...new Set([...manifest.files, 'COMPATIBILITY.md', 'CHANGELOG.md'])];
     await writeFile(join(root, 'package.json'), JSON.stringify(manifest, null, 2) + '\n');

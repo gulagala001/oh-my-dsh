@@ -1,7 +1,7 @@
 import {mkdir, readFile} from 'node:fs/promises';
 import {AsyncLocalStorage} from 'node:async_hooks';
 import {resolve} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import { desktopResourcePath } from '../desktop-resource.mjs';
 import {buildMacHelper} from './build.mjs';
 import {createHelperTransport} from './transport.mjs';
 import {NativeBackendError, nativeError, normalizeAction} from './protocol.mjs';
@@ -74,7 +74,7 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     try {
       const hello = await current.request('hello');
       if (hello?.protocol !== 1) throw new NativeBackendError('HELPER_PROTOCOL', 'Native helper did not confirm the supported input protocol.');
-      if (process.platform === 'darwin') await current.request('configureCursor', {path: fileURLToPath(new URL('../../lib/cursor.html', import.meta.url))});
+      if (process.platform === 'darwin') await current.request('configureCursor', {path: desktopResourcePath(new URL('../../lib/cursor.html', import.meta.url))});
     } catch (error) {
       await current.close().catch(() => {});
       throw error;
@@ -85,9 +85,9 @@ export async function createNativeBackend({dataDir, helperPath, compileHelper = 
     if (process.platform === 'linux') {
       const helper = linuxHelper();
       handBack = helper === 'hyprland.py';
-      launchTransport = () => createHelperTransport(helperPath || '/usr/bin/python3', [fileURLToPath(new URL(`../../native/linux/${helper}`, import.meta.url)), '--data-dir', directory], transportOptions);
+      launchTransport = () => createHelperTransport(helperPath || '/usr/bin/python3', [desktopResourcePath(new URL(`../../native/linux/${helper}`, import.meta.url)), '--data-dir', directory], transportOptions);
     } else if (process.platform === 'win32') {
-      const script = fileURLToPath(new URL('../../native/windows/helper.ps1', import.meta.url));
+      const script = desktopResourcePath(new URL('../../native/windows/helper.ps1', import.meta.url));
       const literal = value => `'${value.replaceAll("'", "''")}'`;
       const command = helperPath || resolve(process.env.SystemRoot || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
       const source = await readFile(script, 'utf8');

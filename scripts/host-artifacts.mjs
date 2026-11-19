@@ -11,7 +11,7 @@ export async function verifyHostArtifacts(root, snapshot) {
   const bytes = await readFile(join(root, 'vendor/host-artifacts.json'));
   if (sha256(bytes) !== snapshot.buildTarget.artifactContractSha256) throw Error('Host artifact contract changed');
   const contract = JSON.parse(bytes), pkg = JSON.parse(await readFile(join(root, 'package.json')));
-  if (contract.schema !== 1 || !contract.packages?.length || contract.target.version !== pkg.engines.dsh
+  if (contract.schema !== 1 || !contract.packages?.length || contract.target.version !== pkg.devDependencies['@deepseek-ai/dsh']
     || contract.target.version !== snapshot.buildTarget.version || contract.target.officialBuildCommit !== snapshot.buildTarget.officialBuildCommit
     || ['repository', 'tag', 'commit', 'version'].some(key => contract.source[key] !== snapshot[key])) throw Error('Host artifact source/target mismatch');
   const wanted = new Set(contract.packages.map(p => p.name)), located = new Map(), queue = [join(root, 'package.json')], visited = new Set();

@@ -10,9 +10,9 @@ const manifest = JSON.parse(await readFile(join(source, 'package.json'), 'utf8')
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim();
 const host = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 if (manifest.name !== '@gulagala001/dsh-btw' || manifest.main !== 'src/index.mjs') throw new Error('Expected the standalone @gulagala001/dsh-btw package');
-if (manifest.engines?.dsh !== host.engines.dsh) throw new Error('BTW build target does not match OMD');
+if (manifest.engines?.dsh !== host.devDependencies['@deepseek-ai/dsh']) throw new Error('BTW build target does not match OMD');
 for (const [name, version] of Object.entries(manifest.peerDependencies ?? {})) {
-  if (name.startsWith('@deepseek-ai/') && (host.peerDependencies?.[name] ?? host.devDependencies?.[name]) !== version) {
+  if (name.startsWith('@deepseek-ai/') && (host.devDependencies?.[name] ?? host.peerDependencies?.[name]) !== version) {
     throw new Error(`Bundled BTW requires matching ${name} ${version}`);
   }
 }

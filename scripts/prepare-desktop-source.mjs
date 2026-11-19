@@ -3,15 +3,16 @@ import { constants } from 'node:fs';
 import { copyFile, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { packageFiles } from './check-opencu-delivery.mjs';
+import { publicationChanges } from './desktop-publication-source.mjs';
 import { hostTarget } from './host-targets.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const packageMember = 'package/package.json';
 const appId = 'io.github.gulagala001.oh-my-dsh';
 
 function replaceOnce(text, from, to, file) {
   if (text.split(from).length !== 2) throw new Error(`Desktop source has an unexpected layout: ${file}`);
-  return text.replace(from, to);
+  return text.replace(from, () => to);
 }
 
 /** Prepare a disposable, pinned Desktop source tree with OMD in the build's package set. */
@@ -20,7 +21,7 @@ export async function prepareDesktopSource({ source, archive, destination }) {
   archive = await realpath(archive);
   destination = resolve(destination);
   const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-  const version = manifest.engines.dsh;
+  const version = manifest.devDependencies['@deepseek-ai/dsh'];
   const target = hostTarget(version);
   const git = (args, options = {}) => execFileSync('git', args, { cwd: source, encoding: 'utf8', ...options });
   if (git(['rev-parse', 'HEAD']).trim() !== target.commit)
@@ -33,12 +34,22 @@ export async function prepareDesktopSource({ source, archive, destination }) {
     await mkdir(bundle);
     const packaged = join(bundle, 'oh-my-dsh.tgz');
     await copyFile(archive, packaged, constants.COPYFILE_EXCL);
-    const metadata = JSON.parse(execFileSync('tar', ['-xOf', packaged, packageMember], { encoding: 'utf8' }));
-    if (metadata.name !== manifest.name || metadata.version !== manifest.version || metadata.engines?.dsh !== version)
+    const files = packageFiles(await readFile(packaged));
+    const metadata = JSON.parse(files.get('package/package.json')?.bytes ?? 'null');
+    if (metadata?.name !== manifest.name || metadata.version !== manifest.version || metadata.devDependencies?.['@deepseek-ai/dsh'] !== version)
       throw new Error(`Use the built ${manifest.name}@${manifest.version} archive for DSH ${version}`);
-    const members = new Set(execFileSync('tar', ['-tf', packaged], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim().split(/\r?\n/));
-    for (const member of ['lib/client.js', 'src/index.mjs', 'cordis.patch.yml', 'vendor/opencu/lib/rea-assets/manifest.json']) {
-      if (!members.has(`package/${member}`)) throw new Error(`The OMD archive is missing ${member}`);
+    for (const file of ['lib/client.js', 'src/index.mjs', 'cordis.patch.yml']) {
+      if (!files.get('package/' + file)?.bytes.length) throw new Error('Missing desktop bundle input: ' + file);
+    }
+    // These adapters execute from the checkout and must match the payload that the app loads.
+    for (const [component, prefix] of [['vendor/opencu', 'host/'], ['plugins/deepseek-workbench', 'desktop/'], ['vendor/unharnessed', 'index.js']]) {
+      const inventory = component + '.json';
+      const baseline = await readFile(join(root, inventory));
+      if (!files.get('package/' + inventory)?.bytes.equals(baseline)) throw new Error('Desktop archive differs from checkout: ' + inventory);
+      for (const file of Object.keys(JSON.parse(baseline).files).filter(name => name.startsWith(prefix))) {
+        const path = component + '/' + file;
+        if (!files.get('package/' + path)?.bytes.equals(await readFile(join(root, path)))) throw new Error('Desktop archive differs from checkout: ' + path);
+      }
     }
 
     for (const adapter of ['vendor/opencu/host/apply.mjs', 'plugins/deepseek-workbench/desktop/apply-host.mjs']) {
@@ -58,15 +69,15 @@ export async function prepareDesktopSource({ source, archive, destination }) {
       ]],
       ['apps/desktop/scripts/desktop-package-environment.mjs', [
         ["DSH_DESKTOP_APP_ID: 'com.deepseek.harness'", `DSH_DESKTOP_APP_ID: '${appId}'`],
+        ["if (target.platform !== 'darwin' || !options.unsigned) resolveDesktopPolicyEnvironment(environment)", 'if (!options.unsigned) resolveDesktopPolicyEnvironment(environment)'],
         ['|DOWNLOAD_TEST_(?:ORIGIN|RELEASE_ID))$/u.test(name)', '|DOWNLOAD_TEST_(?:ORIGIN|RELEASE_ID)|DOWNLOAD_PROD_ORIGIN)$/u.test(name)'],
       ]],
-      ['apps/desktop/scripts/desktop-auto-update-environment.mjs', [
-        ["    originEnvName: undefined,\n    fixedOrigin: 'https://download.deepseek.com',", "    originEnvName: 'DOWNLOAD_PROD_ORIGIN',\n    fixedOrigin: undefined,"],
-        ['export function desktopWebsiteInstallerUrl(target) {\n  return `${UPDATE_ENVIRONMENTS.production.fixedOrigin}/desktop/${desktopLatestInstallerFilename(target)}`', 'export function desktopWebsiteInstallerUrl(target, env = process.env) {\n  const name = UPDATE_ENVIRONMENTS.production.originEnvName\n  return `${httpsOrigin(requiredEnvironmentValue(env, name), name)}/desktop/${desktopLatestInstallerFilename(target)}`'],
-        ['return `dsh-latest-', 'return `omd-latest-'],
-        ["let releasePrefix = 'dsh-desk'", "let releasePrefix = 'omd-desk'"],
-      ]],
+      ...publicationChanges,
       ['apps/desktop/scripts/electron-builder-config.mjs', [
+        ["import { prepareWindowsAsarUnpack", "import { omdUnpackPatterns, verifyOmdResources } from './omd-runtime-resources.mjs'\nimport { prepareWindowsAsarUnpack"],
+        ['    asarUnpack: unpack,', '    asarUnpack: [...unpack, ...omdUnpackPatterns],'],
+        ['      // Unsigned Windows builds skip', '      await verifyOmdResources(resourcesDir, buildPaths.dsh, resolvedPlatform, resolvedArch)\n      // Unsigned Windows builds skip'],
+        ['const policy = packagesMacOS && unsigned ? undefined : resolveDesktopPolicyEnvironment(env)', 'const policy = unsigned ? undefined : resolveDesktopPolicyEnvironment(env)'],
         ['  const buildVersion = resolveDesktopBuildVersion(env, productVersion)', `  const omdVersion = resolveDesktopBuildVersion({ DSH_DESKTOP_BUILD_VERSION: ${JSON.stringify(metadata.version)} }, productVersion)\n  const buildVersion = resolveDesktopBuildVersion(env, omdVersion)`],
         ["    protocols: [{ name: 'DeepSeek Harness', schemes: ['dsh'] }],", "    protocols: [{ name: 'Oh My DSH', schemes: ['oh-my-dsh'] }],"],
         ['      dshDesktopAppId: appId,', "      name: 'oh-my-dsh-desktop',\n      dshDesktopAppId: appId,"],
@@ -74,6 +85,7 @@ export async function prepareDesktopSource({ source, archive, destination }) {
         ["      { from: buildPaths.runtime, to: 'runtime' },", "      { from: buildPaths.runtime, to: 'runtime' },\n      { from: join(buildPaths.root, 'omd-browsers'), to: 'omd-browsers' },"],
       ]],
       ['apps/desktop/scripts/package-target.ts', [
+        ["const environment = target.platform === 'darwin' && invocation.unsigned", 'const environment = invocation.unsigned'],
         ['  if (requested === undefined) return productVersion', `  const omdVersion = validateDesktopBuildVersion(${JSON.stringify(metadata.version)}, productVersion)\n  if (requested === undefined) return omdVersion`],
         ['return validateDesktopBuildVersion(requested, productVersion)', 'return validateDesktopBuildVersion(requested, omdVersion)'],
         ['    productVersion, target: invocation.target.name,', '    productVersion: omdVersion, target: invocation.target.name,'],
@@ -84,7 +96,7 @@ export async function prepareDesktopSource({ source, archive, destination }) {
         ['let focusPrimaryWindow =', "// Keep durable data outside both applications' uninstallable Electron caches.\nprocess.env.DSH_HOME ??= join(app.getPath('appData'), 'oh-my-dsh-data')\nif (app.isPackaged) process.env.PLAYWRIGHT_BROWSERS_PATH ??= join(process.resourcesPath, 'omd-browsers')\n\nlet focusPrimaryWindow ="],
         ["app.setAsDefaultProtocolClient('dsh')", "app.setAsDefaultProtocolClient('oh-my-dsh')"],
         ["url === 'dsh://open' || url === 'dsh://open/'", "url === 'oh-my-dsh://open' || url === 'oh-my-dsh://open/'"],
-        ["          if (state.status === 'credential-stored' && attempt?.phase === 'succeeded' && welcomeWindow !== undefined) void enterWorkspace({ activate: false }).catch(() => undefined)", "          if (state.status === 'credential-stored' && attempt?.phase === 'succeeded' && welcomeWindow !== undefined && returnedAttempt !== attempt.id) {\n            returnedAttempt = attempt.id\n            void enterWorkspace().catch(() => undefined)\n          }"],
+        ["          if (state.status === 'credential-stored' && attempt?.phase === 'succeeded' && welcomeWindow !== undefined) void enterWorkspace({ activate: false }).catch(() => undefined)", "          if (state.status === 'credential-stored' && attempt?.phase === 'succeeded' && welcomeWindow !== undefined && returnedAttempt !== attempt.id) {\n            returnedAttempt = attempt.id\n            void enterWorkspace().catch((error: unknown) => {\n              if (returnedAttempt === attempt.id) returnedAttempt = undefined\n              reportFatal(error, 'main')\n            })\n          }"],
       ]],
       ['apps/desktop/scripts/smoke-packaged-runtime.ts', [
         ["'DeepSeek Harness.app'", "'Oh My DSH.app'"],
@@ -96,6 +108,9 @@ export async function prepareDesktopSource({ source, archive, destination }) {
       ]],
       ['apps/desktop/scripts/verify-retained-desktop.ts', [
         ["'DeepSeek Harness.app'", "'Oh My DSH.app'"],
+      ]],
+      ['apps/desktop/src/login-shell-environment.ts', [
+        ['if (SHELL_SESSION_KEYS.has(key) ||', "if ((key === 'PLAYWRIGHT_BROWSERS_PATH' && base[key] !== undefined) || SHELL_SESSION_KEYS.has(key) ||"],
       ]],
       ['apps/desktop/cli/dsh.cmd', [
         ['DeepSeek Harness.exe', 'Oh My DSH.exe'],
@@ -111,6 +126,22 @@ export async function prepareDesktopSource({ source, archive, destination }) {
   process.env.DSH_HOME ??= join(appData, 'oh-my-dsh-data')
   process.env.PLAYWRIGHT_BROWSERS_PATH ??= join(supportDir, '..', 'omd-browsers')
   await runCli({`],
+      ]],
+      ['apps/desktop/scripts/macos-runtime.ts', [
+        ["import { createHash }", "import { pathToFileURL } from 'node:url'\nimport { createHash }"],
+        ['  const bundles = new Set<string>()', `  const helper = 'node_modules/oh-my-dsh/vendor/opencu'
+  const bundlePrefix = helper + '/native/bin/darwin-' + arch + '/OpenCU Helper.app/'
+  if (kind === 'desktop') {
+    const { checkMacHelperIdentity } = await import(pathToFileURL(join(root, helper, 'src/native/macos-identity.mjs')).href)
+    await checkMacHelperIdentity(join(root, bundlePrefix))
+  }
+  const bundles = new Set<string>()`],
+        ['    const bundle = CUA_HELPER_BUNDLE', "    if (kind === 'desktop' && path.startsWith(bundlePrefix)) continue\n    const bundle = CUA_HELPER_BUNDLE"],
+      ]],
+      ['apps/desktop/scripts/runtime-file-policy.ts', [
+        ["  if (name.startsWith('@deepseek-ai/libreoffice-kit-'))", `  if (name === 'oh-my-dsh' && entry.startsWith('vendor/opencu/native/bin/darwin-')
+    && (target.platform !== 'darwin' || entry.split('/')[4] !== 'darwin-' + target.arch)) return 'OpenCU other platform'
+  if (name.startsWith('@deepseek-ai/libreoffice-kit-'))`],
       ]],
       ['apps/desktop/scripts/prepare-dsh.ts', [
         ["import { spawn } from 'node:child_process'", "import { spawn } from 'node:child_process'\nimport { createRequire } from 'node:module'"],
@@ -131,6 +162,7 @@ export async function prepareDesktopSource({ source, archive, destination }) {
       ]],
     ];
 
+    await copyFile(join(root, 'scripts/desktop-runtime-resources.mjs'), join(destination, 'apps/desktop/scripts/omd-runtime-resources.mjs'), constants.COPYFILE_EXCL);
     for (const [file, replacements] of changes) {
       const path = join(destination, file);
       let text = await readFile(path, 'utf8');

@@ -123,15 +123,24 @@ export function versionStatus(currentVersion, manifest, { hostVersion, includeUn
   // installing local development candidates that have no public release tag.
   const channel = manifest.releases.filter(r => (includeUnpublished === true || r.unpublished !== true)
     && (preview || !releaseIsPreview(r.version, manifest.versionPolicy) || migrate && hostBound(r.version)));
-  const eligible = hostVersion ? channel.filter(r => releaseHostVersion(r.version) && !updateHostRequirement(currentVersion, r.version, hostVersion)) : channel;
-  const newerHost = hostVersion && channel.find(r => compare(r.version, currentVersion) > 0 && updateHostRequirement(currentVersion, r.version, hostVersion));
-  const updates = eligible.filter(r => compare(r.version, currentVersion) > 0);
+  // Compare OMD features across host builds. Prefer an exact host when multiple
+  // archives deliver the same feature version; keep legacy release ordering.
+  const installed = alignedRelease(currentVersion);
+  const productCompare = (a, b) => {
+    const left = alignedRelease(a), right = alignedRelease(b);
+    return left?.omd && right?.omd ? compareVersions(left.omd, right.omd) : compare(a, b);
+  };
+  const byPreference = (left, right) => productCompare(right.version, left.version)
+    || Number(releaseHostVersion(right.version) === hostVersion) - Number(releaseHostVersion(left.version) === hostVersion)
+    || compare(right.version, left.version);
+  const eligible = installed?.omd ? [...channel].sort(byPreference)
+    : hostVersion ? channel.filter(row => releaseHostVersion(row.version) === hostVersion) : channel;
+  const updates = eligible.filter(r => productCompare(r.version, currentVersion) > 0);
   return { currentVersion, latestVersion: eligible[0]?.version || null,
-    status: updates.length ? 'update' : !eligible.length ? (channel.length && compare(currentVersion, channel[0].version) > 0 ? 'ahead' : 'unknown') : compare(currentVersion, eligible[0].version) > 0 ? 'ahead' : 'current',
+    status: updates.length ? 'update' : !eligible.length ? (channel.length && compare(currentVersion, channel[0].version) > 0 ? 'ahead' : 'unknown') : productCompare(currentVersion, eligible[0].version) > 0 ? 'ahead' : 'current',
     severity: updates.some(r => r.severity === 'required') ? 'required' : updates.length ? 'normal' : 'none',
     releases: updates, currentRelease: manifest.releases.find(r => compareVersions(r.version, currentVersion) === 0) || null,
-    ...(hostVersion ? { hostVersion } : {}),
-    ...(newerHost ? { hostUpgrade: { ...newerHost, requiredHostVersion: releaseHostVersion(newerHost.version) } } : {}) };
+    ...(hostVersion ? { hostVersion } : {}) };
 }
 
 async function readManifest(response) {

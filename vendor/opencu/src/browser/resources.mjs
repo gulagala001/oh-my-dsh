@@ -6,7 +6,7 @@ import { spawn } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
 
-/** Installs the matching Playwright resource only on an explicit settings action. */
+/** Owns resource installation for settings and the first managed browser request. */
 export function createBrowserResources() {
   let running, child, terminating, closed = false, error = null, output = '';
   async function status() {
@@ -29,8 +29,29 @@ export function createBrowserResources() {
     })();
     await terminating;
   }
-  return {
+  const resources = {
     status,
+    async launch(chromium, profile, options) {
+      if (closed) throw new Error('OpenCU browser resource installer is closed');
+      const { installed } = await status();
+      const channels = process.platform === 'win32' ? ['msedge', 'chrome'] : ['chrome', 'msedge'];
+      const failures = [];
+      for (const channel of installed ? ['chromium', ...channels] : channels) {
+        if (closed) throw new Error('OpenCU browser resource installer is closed');
+        try { return await chromium.launchPersistentContext(profile, { ...options, channel }); }
+        catch (failure) { failures.push(failure); }
+      }
+      try {
+        if (!installed) {
+          await resources.install(AbortSignal.timeout(120_000));
+          if (closed) throw new Error('OpenCU browser resource installer is closed');
+          return await chromium.launchPersistentContext(profile, { ...options, channel: 'chromium' });
+        }
+      } catch (failure) { failures.push(failure); }
+      const cause = failures.at(-1);
+      throw Object.assign(new AggregateError(failures, `Could not start the managed browser. ${cause.message}`, { cause }),
+        { code: 'MANAGED_BROWSER_UNAVAILABLE', details: { inputDispatched: false } });
+    },
     async install(signal) {
       if (closed) throw new Error('OpenCU browser resource installer is closed');
       signal?.throwIfAborted();
@@ -75,4 +96,5 @@ export function createBrowserResources() {
       try { await pending; } catch (error) { /* Cancellation failure remains in status; the installer has exited. */ }
     },
   };
+  return resources;
 }

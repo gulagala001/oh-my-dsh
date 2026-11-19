@@ -2,17 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { symbols } from '@deepseek-ai/cordis';
 import { readJsonBody } from './http.mjs';
-import { compareVersions, parseVersion, updateHostRequirement } from './version.mjs';
+import { compareVersions, parseVersion } from './version.mjs';
 import { requirePluginChange } from './plugin-operation.mjs';
 import { withPluginPreflight } from './plugin-preflight/service.mjs';
 
 const PACKAGE = 'oh-my-dsh';
 const failure = (message, statusCode = 409) => Object.assign(new Error(message), { statusCode });
-const hostReason = (current, target, host) => {
-  if (!target) return '';
-  const required = updateHostRequirement(current, target, host);
-  return required ? `此版本需要 DSH ${required.requiredHostVersion}，当前宿主为 ${required.hostVersion}。请先更新官方 DSH，再安装对应 OMD。` : '';
-};
 const bundledCandidates = JSON.parse(readFileSync(new URL('../release-manifest.json', import.meta.url), 'utf8')).releases.filter(row => row.unpublished === true);
 const unpublishedReason = (release, version, includeUnpublished) => {
   if (includeUnpublished || !version) return '';
@@ -59,7 +54,7 @@ export class VersionUpdater {
     if (bundle?.version && this.state.phase === 'restart-required') this.state = { phase: 'idle', targetVersion: null, error: '' };
     const release = this.versions.snapshot();
     const blockedReason = reason || unpublishedReason(release, release.latestVersion, this.includeUnpublished)
-      || hostReason(release.currentVersion, release.latestVersion, release.hostVersion) || (this.isRunning() ? '有任务正在运行，请等任务结束后更新。' : '');
+      || (this.isRunning() ? '有任务正在运行，请等任务结束后更新。' : '');
     return { ...this.snapshot(), available: !this.closed && !blockedReason, blockedReason };
   }
   start(version) {
@@ -84,8 +79,6 @@ export class VersionUpdater {
       if (release.error || release.stale) throw failure('未能确认最新发布信息，请重新检查更新后再试。');
       const publication = unpublishedReason(release, version, this.includeUnpublished);
       if (publication) throw failure(publication);
-      const requirement = hostReason(release.currentVersion, version, release.hostVersion);
-      if (requirement) throw failure(requirement);
       if (release.status !== 'update' || release.latestVersion !== version) throw failure('发布版本已变化，请重新检查更新。');
       if (inventory.reason) throw failure(inventory.reason);
       if (inventory.bundle.version && compareVersions(inventory.bundle.version, release.currentVersion) !== 0) throw failure('已安装的版本与运行版本不同，请先重启 DSH。');

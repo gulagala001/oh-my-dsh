@@ -17,7 +17,7 @@ import { writeAddon } from './recommended-native-package-manager.mjs';
 // Missing/wrong SDK fails the test; there is deliberately no skip or fake-manager fallback.
 const require = createRequire(import.meta.url);
 const host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
-const hostVersion = require('../../package.json').engines.dsh;
+const hostVersion = require('../../package.json').devDependencies['@deepseek-ai/dsh'];
 assert.equal(host('./package.json').version, hostVersion);
 for (const name of ['dsh-plugin-manager', 'dsh-app-boot', 'dsh-hmr']) {
   assert.equal(host(`@deepseek-ai/${name}/package.json`).version, hostVersion);

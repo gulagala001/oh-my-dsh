@@ -460,7 +460,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
         <Status error action={<Button type="button" size="sm" variant="ghost" onClick={async () => { if (await commit({ experimentalUnharnessedEnabled: c.experimentalUnharnessedEnabled === true })) await reload(); }}>重试</Button>}>{experimentalPresets?.error}</Status>
       </Group>
       <Group title="关于" anchor="about">
-        <Toggle title="插件安装预检" hint="安装前在临时环境检查启动和基础界面；通过后自动继续，失败时可选择仍然安装或复制 AI 修复信息。" checked={c.pluginPreflightEnabled !== false}
+        <Toggle title="插件安装预检" hint="安装前在临时环境检查启动和基础界面；通过后自动继续，失败时可选择仍然安装或复制 AI 修复信息。" checked={c.pluginPreflightEnabled === true}
           onChange={value => commit({ pluginPreflightEnabled: value })}/>
         <button type="button" className="omd-set-row omd-set-nav" onClick={() => go('credits')}>
           <span className="omd-set-copy"><strong>项目、组件与致谢</strong><small>查看独立产品、社区作者、组件来源与许可。</small></span><Icon name="chevron" size={16}/>

@@ -36,7 +36,9 @@ export const Config = z.object({
 const DEFAULTS = { pythonCommand: 'auto', bashCommand: 'bash', subagentsEnabled: true, maxOutputChars: 16000, cellTimeoutMs: 600000, startupTimeoutMs: 15000, interruptGraceMs: 3000, gateTimeoutMs: 60000,
   snapshots: true, stateDirectory: '', snapshotMaxBytes: 268435456, snapshotVariableBytes: 16777216, snapshotTimeoutMs: 15000, maxAttachmentBytes: 10485760 }
 const bootstrap = readFileSync(new URL('./python/bootstrap.py', import.meta.url), 'utf8')
-const entry = fileURLToPath(new URL('./python/entry.py', import.meta.url))
+const pythonEntry = fileURLToPath(new URL('./python/entry.py', import.meta.url))
+const entry = process.versions.electron
+  ? pythonEntry.replace(/([\\/])app\.asar(?=[\\/]dsh[\\/]node_modules[\\/])/u, '$1app.asar.unpacked') : pythonEntry
 const PROMPT = `You are Unharnessed, a coding agent running natively inside DeepSeek Harness.
 When a user's request needs investigation or several tool steps, send one brief progress update in the user's language before the first tool call. Say what you will check or do. Answer straightforward questions that need no tools directly.
 You have one tool, ipython: a persistent CPython REPL with top-level await. Write Python to read, search, edit, fetch, parse and automate. Save large data and reusable helpers in named variables; print only the relevant excerpts. Batch independent work into one cell.

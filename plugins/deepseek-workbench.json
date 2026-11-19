@@ -10,8 +10,8 @@
     "README.md": "6be88f93d0f3837947d97130816a4b66064cb8bf017e7c90ea495639a327a604",
     "THIRD_PARTY_NOTICES.md": "fd3a9f2e63b55321f2893f6da29508753dff5467bd72e11cd5e31f93bcf35e6d",
     "cordis.patch.yml": "f5e8623847bf4d11754487b9b74415a8588d22de54c3b858c5ba90b87de4bca6",
-    "desktop/apply-host.mjs": "7fb3919b13243a8da478037c41f6f5356fd20997a895a30fb1fa8fca9e2789c4",
-    "desktop/check-host.mjs": "4a9324e6424245a046a8d6f7eeee669171d7f7674ffaa3c5c1bc2fbfbf1ae303",
+    "desktop/apply-host.mjs": "b190a27de9b913a2d441e4051cfe0b0c167293edcf8fc05a7ce4911fae0e8f7e",
+    "desktop/check-host.mjs": "42de2964af1586dffc92230872733239d38f3a01d6dc223e862ffb153489c338",
     "desktop/deepseek-browser-policy.ts": "8a1e48cf3b053fd653e06dbf75ec7973c3ce0548598d858851ae3fe947a39067",
     "desktop/README_EN.md": "8be4a34339a087b6341c8c45f13c4d88627bc5e374f0d3c51265a94918b1c4d3",
     "desktop/README.md": "cf916538bb59dc79db4ebfbb08ad934046d0f5a59dd73a2b54d7ee781fd37a0f",
@@ -50,6 +50,6 @@
     "src/index.mjs": "a072e4b62f7f6b228578d52e4188b0fa7f60dd73fb69c22451409429de635355",
     "src/client/temporary-ownership.mjs": "5865feb6367aac0803ae5707ffd99e92326f881124017e1a04d26defc18aaf0a",
     "src/client/window-owner.mjs": "3e4296e26b458740b1511767e24de682ed5855ac9415659bac1e6d37a97a6a25",
-    "desktop/targets.mjs": "884d324c3f9e7bd06447d83254bd5a98c4136d664a668b994021b952fe5bde16"
+    "desktop/targets.mjs": "d88d99dccee6867d3cccd2685ea68517d68cd8822791cfb1c4e267e75fe63089"
   }
 }

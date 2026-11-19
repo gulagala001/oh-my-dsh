@@ -4,7 +4,7 @@ import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { mkdir, readFile, writeFile, rename, realpath, open, unlink } from 'node:fs/promises';
 import { basename, dirname, join, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { desktopResourcePath } from '../desktop-resource.mjs';
 import { createRuntime, DEFAULT_DATA_DIR } from '../runtime.mjs';
 import { publicConfig } from './config.mjs';
 import { modelResult } from './model-output.mjs';
@@ -46,7 +46,7 @@ export function createPluginRuntime(options = {}) {
   const deliveryFiles = createDeliveryFiles(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
   const appApprovals = createAppApprovals(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR), () => options.onAppApprovalsChanged?.());
   let imageRegistry, startedConfig, reconfiguring, recoveryOffer;
-  const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled, config.managedHeadless === true]);
+  const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled, config.managedHeadless === true, config.managedFallback === true]);
   async function start() {
     if (disposed) throw new Error('OpenCU plugin is unloading');
     if (reconfiguring) { await reconfiguring; return start(); }
@@ -74,7 +74,8 @@ export function createPluginRuntime(options = {}) {
         browserPairing = createBrowserPairing(join(dataDir, 'extension'));
         await browserPairing.ready;
       }
-      controller = await createRuntime({ ...config, dataDir, token, browserPairing, dshBrowser: options.dshBrowser, nativeOptions: { ...config.nativeOptions, onCursor: cursor => options.onCursor?.(cursor, cursorContext.getStore()) } });
+      controller = await createRuntime({ ...config, dataDir, token, browserPairing, dshBrowser: options.dshBrowser,
+        launchManaged: browserResources.launch, nativeOptions: { ...config.nativeOptions, onCursor: cursor => options.onCursor?.(cursor, cursorContext.getStore()) } });
       try {
         try { annotations = JSON.parse(await readFile(join(dataDir, 'annotations.json'), 'utf8')); }
         catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -243,7 +244,7 @@ export function createPluginRuntime(options = {}) {
     if (endpoint === 'appApprovals/respond') return { ok: true, ...await appApprovals.respond(args) };
     if (endpoint === 'stop' || endpoint === 'interrupt') appApprovals.cancel(sessionKey);
     if (endpoint === 'browserSettings/status') return { ok: true, connections: controller?.extensionConnections() ?? [] };
-    if (endpoint === 'extensionFiles') return { ok: true, path: fileURLToPath(new URL('../../extension/', import.meta.url)) };
+    if (endpoint === 'extensionFiles') return { ok: true, path: desktopResourcePath(new URL('../../extension/', import.meta.url)) };
     if (endpoint === 'browserResources/status') return { ok: true, resources: await browserResources.status() };
     if (endpoint === 'browserResources/install') return { ok: true, resources: await browserResources.install(signal) };
     if (endpoint === 'downloads/configure') return { ok: true, directory: await sidebarDownloads.location() };
@@ -275,6 +276,13 @@ export function createPluginRuntime(options = {}) {
     const runtime = await readOperation(start, signal);
     signal?.throwIfAborted();
     if (endpoint === 'reconfigure') return { ok: true, config: publicConfig(getConfig()) };
+    if (endpoint === 'browserRoute/prepare') {
+      if (!runtime.prepareManagedBrowser) throw error('MANAGED_BROWSER_UNAVAILABLE', 'The managed browser is disabled or another browser provider is configured.');
+      const state = await runtime.getState();
+      if (state.ok === false) return state;
+      if (state.state.explicitlyStopped) throw error('CONTROL_STOPPED', 'Resume computer use before opening a managed tab.');
+      return { ok: true, browserId: await readOperation(runtime.prepareManagedBrowser, signal) };
+    }
     if (endpoint === 'presentationContrast') return { ok: true, ...await runtime.presentationContrast(args) };
     if (endpoint === 'capabilities') return { ok: true, ...runtime.runtimeInfo, config: publicConfig(getConfig()),
       native: await runtime.permissions({signal}), browserResources: await browserResources.status(), connections: runtime.extensionConnections(), pairings: await runtime.browserPairings() };

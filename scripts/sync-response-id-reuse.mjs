@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const source = await realpath(resolve(process.argv[2] || join(root, '../dsh-response-id-reuse')));
 const pkg = JSON.parse(await readFile(join(source, 'package.json')));
 const host = JSON.parse(await readFile(join(root, 'package.json')));
-if (pkg.name !== '@gulagala001/dsh-response-id-reuse' || pkg.engines.dsh !== host.engines.dsh) throw Error('Response ID Reuse host/package mismatch');
+if (pkg.name !== '@gulagala001/dsh-response-id-reuse' || pkg.engines.dsh !== host.devDependencies['@deepseek-ai/dsh']) throw Error('Response ID Reuse host/package mismatch');
 execFileSync('git', ['diff', '--exit-code', 'HEAD'], { cwd: source, stdio: 'pipe' });
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim();
 const [packed] = JSON.parse(execFileSync('npm', ['pack', '--ignore-scripts', '--dry-run', '--json'], { cwd: source, encoding: 'utf8' }));

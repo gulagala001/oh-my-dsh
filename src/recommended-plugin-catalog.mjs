@@ -162,14 +162,15 @@ export const recommendedPlugins = [
 ];
 
 export function resolveRecommendedPlugin(plugin, hostVersion) {
-  if (plugin.supportedHostVersions && !plugin.supportedHostVersions.includes(hostVersion)) return { ...plugin,
-    unavailable: `此适配当前支持 DSH ${plugin.supportedHostVersions.join('、')}；其他宿主暂不提供安装或更新。已有安装仍可停用或卸载。`, unavailableHosts: undefined };
   if (!plugin.hostBuilds) return plugin;
-  const supportedHosts = Object.keys(plugin.hostBuilds);
-  const review = typeof hostVersion === 'string' && Object.hasOwn(plugin.hostBuilds, hostVersion) ? plugin.hostBuilds[hostVersion] : undefined;
+  const builds = Object.keys(plugin.hostBuilds).sort((left, right) => right.localeCompare(left, 'en', { numeric: true }));
+  const family = hostVersion?.split('-')[0];
+  const preferred = Object.hasOwn(plugin.hostBuilds, hostVersion) ? hostVersion
+    : builds.find(version => version.split('-')[0] === family) ?? builds[0];
+  const review = plugin.hostBuilds[preferred];
   if (plugin.unavailable && (!plugin.unavailableHosts || plugin.unavailableHosts.includes(hostVersion))) return { ...plugin, review };
-  if (!review) return { ...plugin, review: undefined, unavailable: hostVersion ? `当前 DSH ${hostVersion} 没有已核验的对应构建，暂不提供安装或更新。支持的完整宿主版本：${supportedHosts.join('、')}。已有安装仍可卸载。` : '未能核实当前 DSH 完整版本，暂不提供安装或更新。已有安装仍可卸载。', unavailableHosts: undefined };
-  const prefix = hostVersion + '.' + (plugin.versionSuffix || 'iui') + '.';
-  const valid = review.dsh === hostVersion && typeof review.version === 'string' && review.version.startsWith(prefix) && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.version.slice(prefix.length)) && review.releaseTag === 'v' + (review.releaseVersion || review.version) && (!review.releaseVersion || (review.releaseVersion.startsWith(hostVersion + '.omd.') && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.releaseVersion.slice((hostVersion + '.omd.').length)))) && review.asset === plugin.packageName + '-' + review.version + '.tgz' && /^[a-f0-9]{64}$/.test(review.sha256 ?? '');
+  if (!review) return { ...plugin, unavailable: '尚无可安装的发行包。' };
+  const prefix = preferred + '.' + (plugin.versionSuffix || 'iui') + '.';
+  const valid = review.dsh === preferred && typeof review.version === 'string' && review.version.startsWith(prefix) && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.version.slice(prefix.length)) && review.releaseTag === 'v' + (review.releaseVersion || review.version) && (!review.releaseVersion || (review.releaseVersion.startsWith(preferred + '.omd.') && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(review.releaseVersion.slice((preferred + '.omd.').length)))) && review.asset === plugin.packageName + '-' + review.version + '.tgz' && /^[a-f0-9]{64}$/.test(review.sha256 ?? '');
   return { ...plugin, review, unavailable: valid ? null : `DSH ${hostVersion} 对应的 ${plugin.name} 核验发行包尚未准备完成，暂不提供安装或更新。`, unavailableHosts: undefined };
 }

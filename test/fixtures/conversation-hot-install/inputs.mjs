@@ -10,7 +10,7 @@ import source from '../../../package.json' with { type: 'json' };
 
 // Deliberately narrower than the legacy non-CU fixture's parent-of-repo root.
 export const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
-export const hostVersion = source.engines.dsh;
+export const hostVersion = source.devDependencies['@deepseek-ai/dsh'];
 export const pins = { desktop: { version: hostVersion, sourceCommit: hostTarget(hostVersion).commit },
   plugin: { name: source.name, version: source.version } };
 export const inside = (root, path) => path === root || path.startsWith(root + sep);
@@ -82,12 +82,12 @@ export async function desktopInputs(env = process.env, platform = process.platfo
   const manifest = JSON.parse(files.get('package/package.json'));
   assert.equal(manifest.name, 'oh-my-dsh'); assert.equal(manifest.version, source.version);
   assert.equal(manifest.version.split('.omd.')[0], hostVersion, 'OMD archive host version');
-  assert.equal(manifest.engines.dsh, hostVersion);
+  assert.equal(manifest.engines.dsh, source.engines.dsh);
   assert.equal(manifest.devDependencies['@deepseek-ai/dsh'], hostVersion);
   assert.deepEqual(manifest.dsh.client.inject, source.dsh.client.inject);
   assert.deepEqual(manifest.dsh.bundle.patch, source.dsh.bundle.patch);
   for (const [name, version] of Object.entries(manifest.peerDependencies))
-    if (name.startsWith('@deepseek-ai/dsh-')) assert.equal(version, hostVersion, name);
+    if (name.startsWith('@deepseek-ai/dsh-')) assert.equal(version, source.peerDependencies[name], name);
   assert.equal(manifest.peerDependencies['@deepseek-ai/cordis'], source.peerDependencies['@deepseek-ai/cordis']);
   for (const file of ['lib/client.js', ...manifest.dsh.bundle.patch.map(path => path.replace(/^\.\//, ''))])
     assert(files.get('package/' + file)?.length, 'Missing frozen bundle member: ' + file);

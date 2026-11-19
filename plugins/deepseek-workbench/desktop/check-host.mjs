@@ -2,14 +2,13 @@
 import { readFile, realpath } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
-import { hostTargets } from './targets.mjs';
+import { readHostTarget } from './targets.mjs';
 
 const [source, sdk, mode] = process.argv.slice(2);
 if (mode !== undefined && mode !== '--syntax-only') throw Error('Unknown check mode');
 if (!source || !sdk) throw Error('Usage: node desktop/check-host.mjs /absolute/patched-dsh-source /absolute/toolchain-with-node_modules');
 const root = await realpath(resolve(source)), toolchain = await realpath(resolve(sdk));
-const host = JSON.parse(await readFile(join(root, 'package.json'))).version;
-if (!Object.hasOwn(hostTargets, host)) throw Error(`Unsupported DSH source version: ${host}`);
+const host = await readHostTarget(root);
 for (const [name, version] of [['typescript', '6.0.3'], ['electron', '44.7.0']]) {
   if (JSON.parse(await readFile(join(toolchain, 'node_modules', name, 'package.json'))).version !== version) throw Error(`Expected ${name} ${version}`);
 }

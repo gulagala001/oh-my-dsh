@@ -41,8 +41,13 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
   if (!entry) {
     entry = { root, leases: new Set(), tools: new Map(), config: () => config };
     entry.browserHost = createBrowserHost();
+    const routesEnabled = () => Boolean(root.get('omd') || [...entry.leases].some(owner => owner.namespace === 'omd-opencu'));
+    const browserConfig = () => {
+      const config = entry.config();
+      return { ...config, managedFallback: routesEnabled() && config.browserEnabled !== false && !config.cdpEndpoint && !config.browserOptions?.context };
+    };
     let cursorOwner;
-    entry.runtime = createPluginRuntime({ getConfig: () => entry.config(), dshBrowser: entry.browserHost.backend, onAppApprovalsChanged: () => entry.activity?.invalidate(),
+    entry.runtime = createPluginRuntime({ getConfig: browserConfig, dshBrowser: entry.browserHost.backend, onAppApprovalsChanged: () => entry.activity?.invalidate(),
       async onCursor(cursor, sessionId) {
         if (!cursor.visible) {
           const previous = cursorOwner; cursorOwner = undefined;
@@ -103,13 +108,19 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       if (endpoint.startsWith('recovery/')) throw new Error('Recovery confirmation is available only in browser connection settings');
       if (entry.retiring && !['stop', 'interrupt', 'browser/poll', 'browser/result', 'browser/disconnect'].includes(endpoint)) throw new Error('OpenCU is releasing the last lease; retry after cleanup');
       if (endpoint === 'browserRoute' || endpoint === 'browserRoute/enabled') {
-        const enabled = Boolean(root.get('omd') || [...entry.leases].some(owner => owner.namespace === 'omd-opencu'));
+        const enabled = routesEnabled();
         if (endpoint === 'browserRoute/enabled' || !enabled) return { ok: true, enabled };
         const sessionId = typeof sessionKey === 'string' ? sessionKey : undefined;
         const settings = await entry.preferences.read();
         return { ok: true, enabled, sessionId,
           preference: settings.values['browser-cu-target-preference'] === 'reuse' ? 'reuse' : 'built-in',
-          builtIn: sessionId ? entry.browserHost.browsersForSession(sessionId) : [] };
+          builtIn: sessionId ? entry.browserHost.browsersForSession(sessionId) : [],
+          managedFallback: !!sessionId && browserConfig().managedFallback };
+      }
+      if (endpoint === 'browserRoute/prepare') {
+        if (requestSource !== 'tool' || typeof sessionKey !== 'string' || !browserConfig().managedFallback)
+          throw Object.assign(new Error('Managed browser preparation requires an OMD conversation with the managed browser enabled.'), { code: 'MANAGED_BROWSER_UNAVAILABLE' });
+        return entry.runtime.request(endpoint, {}, { signal, sessionKey });
       }
       if (endpoint === 'settings/read') return { ok: true, settings: await entry.preferences.read() };
       if (endpoint === 'settings/write') return { ok: true, settings: await entry.preferences.write(args.key, args.value) };
@@ -141,8 +152,8 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
           if (!computer) { computer = createComputerSession((method, payload, waiting) => entry.request(method, payload, { signal: ['stop','interrupt'].includes(method) ? undefined : computer.signal, attachments: computer.attachments, sessionKey: id, modelProjection: true, requestSource:'tool', onApprovalWait: waiting?.onApprovalWait })); entry.computers.set(id, computer); }
           computer.attachments = attachments;
           result = endpoint === 'computer_use_reset' ? await computer.reset() : await computer.run(args, signal);
-        } else if (endpoint === 'openTarget' && String(args.browserId).startsWith('dsh:')) {
-          result = await entry.runtime.request(endpoint, { ...args, sessionId: typeof sessionKey === 'string' ? sessionKey : undefined }, { attachments, signal, sessionKey });
+        } else if (endpoint === 'openTarget' && args.browserId) {
+          result = await entry.runtime.request(endpoint, { ...args, sessionId: typeof sessionKey === 'string' ? sessionKey : undefined }, { attachments, signal, sessionKey, modelProjection, onApprovalWait, requestSource });
         } else {
           let onControlStart;
           if (endpoint === 'focus' || endpoint === 'act' && (args.inputMode === 'foreground' || ['focus', 'activate'].includes(args.action ?? args.type))) {

@@ -246,7 +246,7 @@ export function mountPluginPreflight(ctx, hub, progress) {
     } catch { /* The control stays available; an install reports the missing capability. */ }
     const service = new PluginPreflight({ manager: scope.pluginManager, profile, cli,
       hostVersion,
-      directory: join(hub.store.dir, 'plugin-preflight'), getEnabled: () => hub.config().pluginPreflightEnabled !== false,
+      directory: join(hub.store.dir, 'plugin-preflight'), getEnabled: () => hub.config().pluginPreflightEnabled === true,
       getEntryStates: async () => (await scope.pluginManager.listPlugins()).filter(row => typeof row.patchId === 'string' && !row.enabled)
         .map(row => ({ id: row.patchId, disabled: true })),
     }).bind();

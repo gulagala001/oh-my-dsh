@@ -45,7 +45,7 @@ if (args[0] === '--dir' || currentRelease) {
   };
   const metadata = JSON.parse(await read('metadata.json'));
   if (metadata.schema !== 1 || metadata.name !== pkg.name || metadata.version !== pkg.version
-    || metadata.hostVersion !== pkg.engines.dsh || metadata.file !== filename || metadata.filename !== filename
+    || metadata.hostVersion !== pkg.devDependencies['@deepseek-ai/dsh'] || metadata.file !== filename || metadata.filename !== filename
     || !/^[a-f0-9]{64}$/.test(metadata.sha256) || !/^[a-f0-9]{40}$/.test(metadata.sourceCommit))
     throw Error('Updater metadata does not match this exact package');
   if (local) {

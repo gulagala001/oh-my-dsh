@@ -70,6 +70,8 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 
 在 Windows x64 构建机上按对应 DSH 源码的打包流程构建，并使用 OMD 自己的签名和发行配置。正式发行通过 `DOWNLOAD_PROD_ORIGIN` 指定 OMD 的更新服务。准备脚本设定 OMD 的应用标识 `io.github.gulagala001.oh-my-dsh`、独立数据目录与登录回跳入口。桌面版本随所用 OMD 包更新，运行时仍匹配固定的 DSH 版本。
 
+在 GitHub Actions 运行 **Windows desktop preview** 可生成未签名的 Windows x64 预览安装器。通过安装、首次启动、侧栏与独立 Chromium 检查后，安装器与 SHA256SUMS 可从该次运行下载。
+
 产品边界、独立发行与共装行为见[插件架构](architecture.md)。发布包保留必要源码、对应编译资源与来源声明；普通用户从固定 Release 安装，源码主线不直接充当安装包。
 
 

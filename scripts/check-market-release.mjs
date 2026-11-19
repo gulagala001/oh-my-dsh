@@ -12,7 +12,7 @@ export function releaseTarget(pkg) {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !/^[\w.-]+$/.test(pkg.name)
     || !/^[\w.+-]+$/.test(pkg.version) || typeof pkg.engines?.dsh !== 'string') throw Error('Invalid package release identity');
   const tag = 'v' + pkg.version, filename = `${pkg.name}-${pkg.version}.tgz`;
-  return { repository, version: pkg.version, hostVersion: pkg.engines.dsh, tag, filename,
+  return { repository, version: pkg.version, hostVersion: pkg.devDependencies?.['@deepseek-ai/dsh'] ?? pkg.engines.dsh, tag, filename,
     url: `https://github.com/${repository}/releases/download/${tag}/${filename}`,
     entryPath: `data/plugins/${repository.replace('/', '__')}.yml` };
 }

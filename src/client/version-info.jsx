@@ -60,11 +60,10 @@ export function VersionInfo({ row = false, onCheck } = {}) {
           <a href="https://github.com/gulagala001/oh-my-dsh/releases" target="_blank" rel="noopener noreferrer">查看发布记录 ↗</a>
         </span></>}>
       {open && <>
-      <dl><div><dt>当前版本</dt><dd data-testid="omd-current-version">{data.currentVersion}</dd></div><div><dt>{data.hostVersion ? '最新兼容版本' : '最新版本'}</dt><dd>{data.latestVersion || '尚未确认'}</dd></div></dl>
+      <dl><div><dt>当前版本</dt><dd data-testid="omd-current-version">{data.currentVersion}</dd></div><div><dt>最新版本</dt><dd>{data.latestVersion || '尚未确认'}</dd></div></dl>
       <p className={'omd-version-status omd-level-' + severity} role="status">{statusText(data)}{data.stale ? '（上次检查结果）' : ''}</p>
       {data.error && <p className="omd-version-error" role="alert">{data.error}</p>}
       <VersionUpdate version={data.status === 'update' ? data.latestVersion : null} stale={!!data.stale || !!data.error}/>
-      {data.hostUpgrade && <p className="omd-version-update-hint">新版 {data.hostUpgrade.version} 需要 DSH {data.hostUpgrade.requiredHostVersion}，当前宿主为 {data.hostVersion}。请先更新官方 DSH，再安装对应 OMD。</p>}
       <div className="omd-version-releases">{(updates.length ? updates : data.currentRelease ? [data.currentRelease] : []).map(release => <section key={release.version}>
         <h3><span>{release.version}</span>{updates.length > 0 && <em data-severity={release.severity}>{release.severity === 'required' ? '必要更新' : '普通更新'}</em>}</h3>
         <strong>{release.title}</strong><ul>{release.notes?.map((note, i) => <li key={i}>{note}</li>)}</ul>

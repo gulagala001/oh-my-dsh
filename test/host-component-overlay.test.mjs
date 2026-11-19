@@ -12,7 +12,7 @@ async function overlay(t, name = 'tool-bash', metadata = {}) {
   t.after(() => rm(root, { recursive: true, force: true }));
   const dir = join(root, 'node_modules', '@deepseek-ai', 'dsh-' + name);
   await mkdir(join(dir, 'lib'), { recursive: true });
-  await writeFile(join(dir, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-' + name, version: pkg.engines.dsh, main: 'lib/index.js', ...metadata }));
+  await writeFile(join(dir, 'package.json'), JSON.stringify({ name: '@deepseek-ai/dsh-' + name, version: pkg.devDependencies['@deepseek-ai/dsh'], main: 'lib/index.js', ...metadata }));
   const file = join(dir, 'lib/index.js');
   // Resolving a registration must not execute the third-party file.
   await writeFile(file, 'throw Error("overlay entry must not execute during dependency resolution");');
@@ -24,7 +24,7 @@ const load = (entries, name = 'tool-bash') => loadHostModule(ctx(entries), name,
 
 test('file-registered shell components preserve the actual Loader dependency identity', async t => {
   for (const name of ['tool-bash', 'tool-pwsh']) {
-    const file = await overlay(t, name), identity = Symbol(name);
+    const file = await overlay(t, name, { version: '0.2.3' }), identity = Symbol(name);
     const tree = { async import(specifier) { assert.equal(specifier, 'host-dependency'); return { identity }; } };
     const result = await load([row(file.url, tree), row(file.url, tree)], name);
     assert.equal(result.identity, identity);
@@ -38,12 +38,10 @@ test('an original package registration retains priority over private shell entri
   assert.equal((await load([row(file.url, privateTree), row('@deepseek-ai/dsh-tool-bash', original)])).source, 'original');
 });
 
-test('private lookup rejects misleading package names, versions, submodules and non-shell components', async t => {
+test('private lookup rejects misleading package names, submodules and non-shell components', async t => {
   const tree = { async import() { throw Error('unmatched tree must not be used'); } };
-  for (const metadata of [{ name: 'another-package' }, { version: '0.0.0' }]) {
-    const file = await overlay(t, 'tool-bash', metadata);
-    await assert.rejects(load([row(file.url, tree)]), { code: 'OMD_HOST_COMPONENT_MISSING' });
-  }
+  const other = await overlay(t, 'tool-bash', { name: 'another-package' });
+  await assert.rejects(load([row(other.url, tree)]), { code: 'OMD_HOST_COMPONENT_MISSING' });
   const file = await overlay(t);
   const internal = join(file.dir, 'lib/internal.js'); await writeFile(internal, '');
   await assert.rejects(load([row(pathToFileURL(internal).href, tree)]), { code: 'OMD_HOST_COMPONENT_MISSING' });

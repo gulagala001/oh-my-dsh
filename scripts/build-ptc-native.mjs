@@ -7,7 +7,7 @@ import { build } from 'esbuild';
 import { replaceExactly } from './host-build-contracts.mjs';
 const root = new URL('../', import.meta.url), require = createRequire(import.meta.url);
 const host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
-const { engines: { dsh: target } } = JSON.parse(await readFile(new URL('package.json', root)));
+const { devDependencies: { '@deepseek-ai/dsh': target } } = JSON.parse(await readFile(new URL('package.json', root)));
 const file = host.resolve('@deepseek-ai/dsh-tool-executor-ptc');
 let source = await readFile(file, 'utf8');
 if (host('@deepseek-ai/dsh-tool-executor-ptc/package.json').version !== target || !reviewedNativeClients.has(target)

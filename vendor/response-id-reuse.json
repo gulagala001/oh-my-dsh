@@ -4,7 +4,7 @@
   "version": "0.1.11-dsh.0.2.2-rc.3",
   "host": "0.2.2-rc.3",
   "source": "../dsh-response-id-reuse",
-  "sourceCommit": "203d39d91c6518ec26e1b51bd3b7604131959f83",
+  "sourceCommit": "f9acdfed31007a0829b5dcbe25b9bf5f9add470c",
   "files": {
     "CHANGELOG.md": "be529112f4b228b5a2a1e97d6f52f98bf12b0e3465daee0e9730a3e7447526d0",
     "CONTRIBUTING.md": "f55b011271eaeb51be1862abd49181e0cb500b3828340df83832e571f32e3ee2",
@@ -18,8 +18,8 @@
     "scripts/check-public-files.mjs": "a39eef0fb12bce4bdc81b061d8eb15a538a0d373f70f45aba51b414cac7fedca",
     "scripts/prepare-host-sdk.mjs": "e5ffa4c03231aef9178f98232d69b6c909cab1dbf6ae4f9c1cdf4e6ca0fc6b1d",
     "src/component-lease.mjs": "1ccf50c63f18923300efab6c9d795ef2d306f8373aa6d34efaa5f2f2c1c1c756",
-    "src/engine.mjs": "e050b61a4bf006c9ff6b984023d0fa1adf76aaf7cb40dc12138f7feb4fcd48a3",
-    "src/index.mjs": "7266818b4cf94a6ac9fac9b1b9cc3da71255fe3d8fe5d922d33cab029c83774f",
+    "src/engine.mjs": "049a733383c0c506a1645985d91ab32980e8754f96fa725d8a0b694becbf51d1",
+    "src/index.mjs": "5d41bc8dc4245c5282c7b4401862144948e13fc42deddea935845d8e50573840",
     "src/recovery.mjs": "0b8f8c7006634b769a61650bc428c2a538df5ee2dbe315603cbe08e39ee94049",
     "src/replay.mjs": "8c0eb2f4d6e87c9c5626e0cf7914f431063905d4e0a2b3b1fad07587ea49ef6e",
     "src/shared.mjs": "d81a9c6f081aedb629917144bc66299b2332c48275e5b7da17cbe769e65a4840"

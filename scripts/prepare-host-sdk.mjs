@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { hostTarget } from './host-targets.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const { engines: { dsh: version }, packageManager } = JSON.parse(readFileSync(join(root, 'package.json')));
+const { devDependencies: { '@deepseek-ai/dsh': version }, packageManager } = JSON.parse(readFileSync(join(root, 'package.json')));
 const { commit, sdkLockSha256: frozen } = hostTarget(version);
 export { commit, frozen };
 export const reviewedNativeClients = new Set(['0.2.2-rc.3', '0.2.2-rc.4', '0.2.2-rc.5']);

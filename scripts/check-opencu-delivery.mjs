@@ -28,7 +28,7 @@ export async function deliveryBaseline(directory = root) {
 
 // npm pack emits regular-file USTAR entries. Read them once, without extracting
 // or executing anything in the package (including the native helper).
-function packageFiles(archive) {
+export function packageFiles(archive) {
   const tar = gunzipSync(archive), files = new Map();
   const text = (offset, size) => tar.subarray(offset, offset + size).toString('utf8').replace(/\0.*$/s, '');
   const octal = (offset, size) => {

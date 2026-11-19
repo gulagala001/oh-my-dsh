@@ -35,7 +35,7 @@ Send the following to an AI that can use a terminal on your computer (a chat-onl
 ```text
 Install or upgrade Oh My DSH (OMD) in the existing DeepSeek Harness (DSH) on this computer.
 First read https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install_EN.md
-Find out whether I use the desktop or web version, the full DSH version, the data directory (DSH_HOME) and the profile, and pick the OMD package that exactly matches that DSH version. If there is none, tell me; do not guess addresses or mix versions.
+Find out whether I use the desktop or web version, the full DSH version, the data directory (DSH_HOME) and the profile, and prefer the OMD package built for that host. If I supplied a universal OMD package, install it through the existing host.
 Keep my model settings, keys, conversations, attachments, settings and other plugins, and back up existing data first. If a task is running, tell me instead of interrupting it.
 Install through this DSH's own Plugins → Add plugin or its matching command line, and do not upgrade or downgrade DSH. OpenCU is built into OMD, so do not install it again.
 Afterwards, fully restart DSH, confirm OMD is enabled, new sessions can pick Oh My DSH and my data and plugins are still there, then tell me the installed version and where the backup is.
@@ -48,6 +48,7 @@ Afterwards, fully restart DSH, confirm OMD is enabled, new sessions can pick Oh 
 | Feature | Also needs |
 | --- | --- |
 | Conversations, appearance, tasks, context and memory | Just OMD and a configured model |
+| Let the AI open pages, fill forms and capture screenshots | The universal package uses the session sidebar or starts an isolated browser on first use. It provisions Chromium when needed. |
 | Operating web pages through the Chrome or Edge extension | Install the extension and allow the connection from **Settings → Computer & Browser** |
 | Embedded browser, sidebar annotations, native live view | A DSH desktop build with the matching adaptation, plus system permissions |
 

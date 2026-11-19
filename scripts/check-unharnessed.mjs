@@ -6,7 +6,7 @@ const root = new URL('../', import.meta.url), directory = new URL('vendor/unharn
 const inventory = JSON.parse(readFileSync(new URL('vendor/unharnessed.json', root)));
 const pkg = JSON.parse(readFileSync(new URL('package.json', directory)));
 const host = JSON.parse(readFileSync(new URL('package.json', root)));
-assert.equal(inventory.package, pkg.name); assert.equal(inventory.version, pkg.version); assert.equal(inventory.host, host.engines.dsh);
+assert.equal(inventory.package, pkg.name); assert.equal(inventory.version, pkg.version); assert.equal(inventory.host, host.devDependencies['@deepseek-ai/dsh']);
 assert.match(inventory.sourceArchiveSha256, /^[a-f0-9]{64}$/);
 const paths = readdirSync(directory, { recursive: true }).filter(path => !lstatSync(new URL(path, directory)).isDirectory()).sort();
 assert.deepEqual(paths, Object.keys(inventory.files).sort());

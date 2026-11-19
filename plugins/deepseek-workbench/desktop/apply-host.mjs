@@ -1,16 +1,13 @@
 import { readFile, writeFile, realpath } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
-import { hostTargets } from './targets.mjs';
+import { readHostTarget } from './targets.mjs';
 
 if (!process.argv[2]) throw new Error('Usage: node desktop/apply-host.mjs /absolute/owned/dsh-source');
 const root = await realpath(resolve(process.argv[2]));
-if (root.includes('.app/') || root.endsWith('.app') || root.includes('/oh-my-dsh/.cache/dsh-source/')) throw new Error('Workbench requires an independent owned source copy');
-const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-const target = hostTargets[manifest.version];
-if (!target || manifest.name !== '@deepseek-ai/dsh-root') throw new Error(`Workbench requires matching DSH source (${Object.keys(hostTargets).join(', ')})`);
-for (const [name, version] of [['cordis', target.cordisVersion], ['schemastery', target.schemaVersion]]) {
-  if (JSON.parse(await readFile(join(root, 'vendor', name, 'package.json'), 'utf8')).version !== version) throw new Error(`Workbench framework mismatch: ${name}`);
-}
+const portableRoot = root.replaceAll('\\', '/');
+if (/(?:^|\/)[^/]+\.app(?:\/|$)|\/oh-my-dsh\/\.cache\/dsh-source(?:\/|$)/iu.test(portableRoot))
+  throw new Error('Workbench requires an independent owned source copy');
+const host = await readHostTarget(root);
 const marker = '// deepseek-workbench-host:rc2-v3';
 const p = 'apps/desktop/src/';
 const pending = new Map();
@@ -182,4 +179,4 @@ for (const file of pending.keys()) {
   if (actual !== undefined ? actual !== target : await realpath(dirname(target)) !== dirname(target)) throw new Error(`Refusing non-owned adapter target: ${file}`);
 }
 for (const [file, text] of pending) await writeFile(join(root, file), text);
-console.log(JSON.stringify({ root, host: manifest.version, files: [...pending.keys()], revision: 'rc2-v3', strategy: withOpenCU ? 'Product profile added; existing release transaction retained' : 'Native rc.2 product profile; ordinary guest policy retained' }, null, 2));
+console.log(JSON.stringify({ root, host, files: [...pending.keys()], revision: 'rc2-v3', strategy: withOpenCU ? 'Product profile added; existing release transaction retained' : 'Native rc.2 product profile; ordinary guest policy retained' }, null, 2));

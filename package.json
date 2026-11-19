@@ -70,7 +70,7 @@
   },
   "engines": {
     "node": ">=24.9.0",
-    "dsh": "0.2.2-rc.5"
+    "dsh": "*"
   },
   "main": "src/index.mjs",
   "exports": {
@@ -187,22 +187,22 @@
     "typescript": "6.0.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.1.0",
-    "@deepseek-ai/dsh-agent": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-attachment": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-compaction": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-mcp-client": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-scope": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-session": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-subagent": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-tool-executor-native": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-tool-executor-ptc": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-tools": "0.2.2-rc.5",
-    "@deepseek-ai/dsh-util-values": "0.2.2-rc.5",
-    "@deepseek-ai/schemastery": "3.19.0",
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-agent": "*",
+    "@deepseek-ai/dsh-attachment": "*",
+    "@deepseek-ai/dsh-compaction": "*",
+    "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/dsh-mcp-client": "*",
+    "@deepseek-ai/dsh-scope": "*",
+    "@deepseek-ai/dsh-session": "*",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "*",
+    "@deepseek-ai/dsh-subagent": "*",
+    "@deepseek-ai/dsh-system-prompt": "*",
+    "@deepseek-ai/dsh-tool-executor-native": "*",
+    "@deepseek-ai/dsh-tool-executor-ptc": "*",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/dsh-util-values": "*",
+    "@deepseek-ai/schemastery": "*",
     "koffi": "3.1.1"
   },
   "peerDependenciesMeta": {

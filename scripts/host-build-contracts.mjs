@@ -13,7 +13,7 @@ export async function hostClientSource(root, name) {
   const require = createRequire(new URL('package.json', root));
   const hostPath = require.resolve('@deepseek-ai/dsh/package.json');
   const host = JSON.parse(await readFile(hostPath, 'utf8'));
-  if (!version || parent.engines?.dsh !== version || host.name !== '@deepseek-ai/dsh' || host.version !== version) fail('installed SDK does not match the declared host');
+  if (!version || host.name !== '@deepseek-ai/dsh' || host.version !== version) fail('installed SDK does not match the declared host');
   const manifest = createRequire(hostPath).resolve(name + '/package.json');
   const pkg = JSON.parse(await readFile(manifest, 'utf8'));
   if (pkg.name !== name || pkg.version !== version) fail(`wrong component identity or version: ${name}`);
