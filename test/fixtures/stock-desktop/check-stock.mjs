@@ -63,15 +63,30 @@ try {
         body: JSON.stringify({ method: 'browserRoute/enabled' }) });
       return response.ok && (await response.json()).enabled === true;
     }, null, { timeout: 30000, polling: 500 });
-    const call = (method, args = {}) => page.evaluate(async ({ method, args }) => {
+    const request = (method, args = {}) => page.evaluate(async ({ method, args }) => {
       const response = await fetch('/api/opencu', { method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ method, args }) });
-      const body = await response.text();
-      if (!response.ok || !body) throw new Error(method + ' returned HTTP ' + response.status + ': ' + body.slice(0, 320));
-      const result = JSON.parse(body);
+      return { status: response.status, body: await response.text() };
+    }, { method, args });
+    const call = async (method, args = {}) => {
+      let response = await request(method, args);
+      // A read can overlap the shell's initial Host handoff. Await readiness
+      // again without replaying inputs or filesystem operations.
+      if (method === 'capabilities' && response.status === 503) {
+        for (let attempt = 0; attempt < 10 && response.status === 503; attempt++) {
+          await sleep(500);
+          response = await request(method, args);
+        }
+        if (response.status === 503) {
+          const config = await request('config').catch(() => ({}));
+          console.log('Stock desktop transport diagnosis', { configStatus: config.status, rendererPaths: pages().map(value => new URL(value.url()).pathname) });
+        }
+      }
+      if (response.status !== 200 || !response.body) throw new Error(method + ' returned HTTP ' + response.status + ': ' + response.body.slice(0, 320));
+      const result = JSON.parse(response.body);
       if (!result.ok) throw new Error(method + ' failed: ' + JSON.stringify(result.error));
       return result;
-    }, { method, args });
+    };
     await mkdir(directory, { recursive: true });
     const fixturePath = await mkdtemp(resolve(directory, 'omd-stock-fixture-'));
     const workspaceName = basename(fixturePath);
@@ -108,11 +123,11 @@ try {
     await image.click();
     await page.waitForFunction(() => Array.from(document.querySelectorAll('*')).some(element =>
       element.shadowRoot?.querySelector('img[alt="stock-image.png"]')?.naturalWidth === 300));
-    await page.getByRole('button', { name: /添加评论|add comment/i }).click();
+    await page.getByRole('button', { name: /^(添加评论|comment|add (?:a )?comment)$/i }).click();
     const imageBounds = await page.locator('img[alt="stock-image.png"]').boundingBox();
     assert(imageBounds);
     await page.mouse.click(imageBounds.x + imageBounds.width / 2, imageBounds.y + imageBounds.height / 2);
-    const comment = page.getByRole('textbox', { name: /添加评论|编辑评论|add comment|edit comment/i });
+    const comment = page.getByRole('textbox', { name: /添加评论|编辑评论|add (?:a )?comment|edit comment/i });
     await comment.fill('Stock image annotation');
     await comment.press('Enter');
     await page.waitForFunction(() => Object.keys(localStorage).some(key => key.startsWith('opencu:image-comments:')
@@ -124,8 +139,8 @@ try {
     await visibleFile('stock-preview.pdf').click();
     const pdfText = page.getByText('Stock DSH document', { exact: true });
     await pdfText.waitFor();
-    await button(page, /请求修改|request changes/i).click();
-    await page.getByText(/选中内容并提出修改要求|select.*request.*change/i).waitFor();
+    await button(page, /请求修改|request (?:edits|changes)/i).click();
+    await page.getByText(/选中内容并提出修改要求|select content and ask for changes/i).waitFor();
     const textBounds = await pdfText.boundingBox();
     assert(textBounds);
     const textY = textBounds.y + textBounds.height / 2;
