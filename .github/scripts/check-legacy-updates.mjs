@@ -6,9 +6,12 @@ import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {validateManifest, versionStatus} from '../../src/version.mjs';
+import {compareVersions} from '../../src/version.mjs';
 
 const feed = JSON.parse(await readFile(new URL('../../release-manifest.json', import.meta.url)));
+const product = version => version.split('.omd.')[1];
+const publishedProducts = feed.releases.filter(row => !row.unpublished && /^\d+\.\d+\.\d+$/.test(product(row.version))).map(row => product(row.version));
+const latest = publishedProducts.sort((a,b) => compareVersions(b,a))[0];
 const archives = new Map();
 const originalDigests = [
   'de490f8a01cfb3c0e2ae152da6cfa0a674ddc93832f03c92fbeae57b3260c3b7',
@@ -50,8 +53,10 @@ try {
     const chosen = legacy.versionStatus(old,legacy.validateManifest(feed),{hostVersion:host});
     assert.equal(chosen.status,'update');
     assert.equal(legacy.updateHostRequirement(old,chosen.latestVersion,host),null);
-    await download(chosen.latestVersion);
-    const next = versionStatus(chosen.latestVersion,validateManifest(feed),{hostVersion:host});
+    const upgradedDir = await download(chosen.latestVersion);
+    const upgraded = await import(pathToFileURL(join(upgradedDir,'package/src/version.mjs')));
+    const next = upgraded.versionStatus(chosen.latestVersion,upgraded.validateManifest(feed),{hostVersion:host});
+    assert.equal(product(next.latestVersion), latest, 'The installed upgrade must discover the latest OMD product version');
     if (next.status==='update') await download(next.latestVersion);
     console.log(old,'->',chosen.latestVersion,'->',next.latestVersion);
   }
