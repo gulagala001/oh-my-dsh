@@ -165,6 +165,15 @@ try {
       try { return !!document.querySelector(selector)?.getURL(); } catch { return false; }
     }, activeGuest);
     await page.locator(activeGuest).evaluate((guest, url) => guest.loadURL(url), fixtureURL);
+    const siteInfoButton = button(page, /查看网站信息|view site information/i);
+    await siteInfoButton.click();
+    const siteInfo = page.getByRole('dialog', { name: /查看网站信息|view site information/i });
+    await siteInfo.getByText(new URL(fixtureURL).origin, { exact: true }).waitFor();
+    await button(siteInfo, /在外部浏览器中打开|open in external browser/i).waitFor();
+    await page.keyboard.press('Escape');
+    await siteInfo.waitFor({ state: 'hidden' });
+    assert.equal(await page.getByText('This DSH host needs the OpenCU website permission adapter').count(), 0);
+    console.log('Stock sidebar site information showed the permission policy without an adapter error.');
     let target;
     for (let attempt = 0; attempt < 20 && !target; attempt++) {
       target = (await call('targets')).targets.find(value => value.provider === 'dsh' && value.url === fixtureURL);
