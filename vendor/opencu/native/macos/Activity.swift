@@ -9,10 +9,24 @@ final class ActivityStore {
     private var source: CFRunLoopSource?
     private var watched: [String: [String: Any]] = [:]
     private var latest: [String: [String: Any]] = [:]
+    private var pendingReceipt: Int64?
+    private var receivedReceipt: Int64?
     private var sequence = 0
 
     init(targets: TargetStore) { self.targets = targets }
     deinit { close() }
+
+    // The existing passive tap can identify our own posts. No listening
+    // permission is requested and no other process's key data is retained.
+    func receipt(for event: CGEvent) -> (() -> Bool)? {
+        start()
+        guard let tap = tap, CGEvent.tapIsEnabled(tap: tap) else { return nil }
+        let token = Int64.random(in: 1...Int64.max)
+        pendingReceipt = token
+        receivedReceipt = nil
+        event.setIntegerValueField(.eventSourceUserData, value: token)
+        return { [weak self] in self?.receivedReceipt == token }
+    }
 
     func watch(_ target: [String: Any]) {
         guard let id = target["id"] as? String else { return }
@@ -32,7 +46,7 @@ final class ActivityStore {
 
     private func start() {
         guard tap == nil, CGPreflightListenEventAccess() else { return }
-        let types: [CGEventType] = [.leftMouseDown, .rightMouseDown, .otherMouseDown, .keyDown, .flagsChanged, .scrollWheel]
+        let types: [CGEventType] = [.leftMouseDown, .rightMouseDown, .otherMouseDown, .leftMouseUp, .rightMouseUp, .otherMouseUp, .keyDown, .keyUp, .flagsChanged, .scrollWheel]
         let mask = types.reduce(CGEventMask(0)) { $0 | (CGEventMask(1) << $1.rawValue) }
         guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .tailAppendEventTap, options: .listenOnly,
             eventsOfInterest: mask, callback: { _, type, event, context in
@@ -52,7 +66,13 @@ final class ActivityStore {
             return
         }
         // Posted input, including OpenCU's own events, is not physical user input.
-        guard event.getIntegerValueField(.eventSourceUnixProcessID) == 0 else { return }
+        let sourcePID = event.getIntegerValueField(.eventSourceUnixProcessID)
+        if sourcePID == Int64(getpid()), let token = pendingReceipt,
+           event.getIntegerValueField(.eventSourceUserData) == token {
+            receivedReceipt = token
+            pendingReceipt = nil
+        }
+        guard sourcePID == 0, ![.keyUp, .leftMouseUp, .rightMouseUp, .otherMouseUp].contains(type) else { return }
         let pointer = [.leftMouseDown, .rightMouseDown, .otherMouseDown, .scrollWheel].contains(type)
         let windows = targets.windows()
         let window = pointer ? windows.first(where: { $0.bounds.contains(event.location) }) : nil
