@@ -4,7 +4,7 @@
     {
       "version": "0.2.2-rc.5.omd.1.9.2",
       "severity": "normal",
-      "unpublished": true,
+      "unpublished": false,
       "title": "Oh My DSH 1.9.2",
       "notes": [
         "复制侧栏标签保留已访问的跨站地址，悬浮监看可显示光标。独立 Chromium 支持站点工具和清理站点数据。"
