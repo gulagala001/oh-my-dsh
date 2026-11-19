@@ -54,6 +54,7 @@ try {
     if (!page) await sleep(600);
   }
   assert(page, 'The product renderer did not load');
+  page.setDefaultTimeout(25000);
   await page.waitForFunction(() => typeof window.dshDesktop?.browser?.acquire === 'function');
   assert.equal(await page.evaluate(() => typeof window.dshDesktop.browser.acquireOpenCU), 'undefined', 'The test used a patched desktop');
   if (mode === 'exercise') {
@@ -65,7 +66,9 @@ try {
     const call = (method, args = {}) => page.evaluate(async ({ method, args }) => {
       const response = await fetch('/api/opencu', { method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ method, args }) });
-      const result = await response.json();
+      const body = await response.text();
+      if (!response.ok || !body) throw new Error(method + ' returned HTTP ' + response.status + ': ' + body.slice(0, 320));
+      const result = JSON.parse(body);
       if (!result.ok) throw new Error(method + ' failed: ' + JSON.stringify(result.error));
       return result;
     }, { method, args });
@@ -89,8 +92,9 @@ try {
     await button(page, /选择工作区|select workspace|choose workspace/i).filter({ hasText: workspaceName }).waitFor();
     const sidebar = button(page, /打开右侧边栏|open right sidebar/i);
     const files = button(page, /工作区文件|workspace files/i);
-    const filesTab = page.getByRole('tab', { name: /^(文件|files\b)/i });
-    const image = page.getByText('stock-image.png', { exact: true }).first();
+    const filesTab = page.getByRole('tab', { name: /^(文件|files\b)/i }).filter({ visible: true }).first();
+    const visibleFile = name => page.getByText(name, { exact: true }).filter({ visible: true }).first();
+    const image = visibleFile('stock-image.png');
     for (let attempt = 0; attempt < 12 && !await image.isVisible(); attempt++) {
       if (await sidebar.isVisible()) await sidebar.click();
       else if (await filesTab.isVisible() && await filesTab.getAttribute('aria-selected') === 'false') await filesTab.click();
@@ -114,10 +118,10 @@ try {
     await page.waitForFunction(() => Object.keys(localStorage).some(key => key.startsWith('opencu:image-comments:')
       && localStorage.getItem(key)?.includes('Stock image annotation')));
     console.log('Native workspace file tree and OpenCU image preview loaded with annotation controls.');
-    const showTree = button(page, /显示文件树|show file tree/i);
+    if (await filesTab.isVisible() && await filesTab.getAttribute('aria-selected') === 'false') await filesTab.click();
+    const showTree = button(page, /显示文件树|show file tree/i).filter({ visible: true }).first();
     if (await showTree.isVisible()) await showTree.click();
-    if (!await page.getByText('stock-preview.pdf', { exact: true }).first().isVisible() && await filesTab.isVisible()) await filesTab.click();
-    await page.getByText('stock-preview.pdf', { exact: true }).first().click();
+    await visibleFile('stock-preview.pdf').click();
     const pdfText = page.getByText('Stock DSH document', { exact: true });
     await pdfText.waitFor();
     await button(page, /请求修改|request changes/i).click();
@@ -141,13 +145,11 @@ try {
     fixture.listen(0, '127.0.0.1');
     await once(fixture, 'listening');
     const fixtureURL = 'http://127.0.0.1:' + fixture.address().port + '/';
-    await page.waitForFunction(() => [...document.querySelectorAll('webview')].some(guest => {
-      try { return !!guest.getURL(); } catch { return false; }
-    }));
-    await page.evaluate(async url => {
-      const guest = [...document.querySelectorAll('webview')].find(value => { try { return !!value.getURL(); } catch { return false; } });
-      await guest.loadURL(url);
-    }, fixtureURL);
+    const activeGuest = '[data-app-shell-focus-area="right-panel"] > webview';
+    await page.waitForFunction(selector => {
+      try { return !!document.querySelector(selector)?.getURL(); } catch { return false; }
+    }, activeGuest);
+    await page.locator(activeGuest).evaluate((guest, url) => guest.loadURL(url), fixtureURL);
     let target;
     for (let attempt = 0; attempt < 20 && !target; attempt++) {
       target = (await call('targets')).targets.find(value => value.provider === 'dsh' && value.url === fixtureURL);
@@ -180,7 +182,7 @@ try {
       return [bounds.x, bounds.y];
     }, fixtureURL);
     await page.mouse.click(guestX + 24, guestY + 14);
-    const webComment = page.getByRole('textbox', { name: /网页批注|注释|批注|comment|annotation/i }).last();
+    const webComment = page.getByRole('textbox', { name: /评论|注释|批注|comment|annotation/i }).last();
     await webComment.fill('Stock web annotation');
     await button(page, /^(评论|添加评论|保存|comment|add comment|save)$/i).last().click();
     await page.waitForFunction(() => Object.keys(localStorage).some(key => key.startsWith('opencu:annotations:')
@@ -202,7 +204,7 @@ try {
       await call('nativePresentation', { rendererId, operation: 'close' });
       await call('browser/disconnect', { rendererId, connectionId: registration.connectionId, released: true });
     }
-    await button(page, 'DeepSeek 网页聊天').click();
+    await button(page, /^(DeepSeek 网页聊天|DeepSeek web chat)$/i).click();
     await page.waitForFunction(() => document.querySelector('.dswb-managed-browser img')?.src.startsWith('data:image/'));
     console.log('Signed stock DSH loaded the plugin browser, previews, native monitor, extension folder and managed Workbench.');
   }

@@ -38,8 +38,18 @@ try {
     $cli = Join-Path $application 'resources/runtime/cli/bin/dsh.cmd'
     & $cli plugin --profile desktop add "file:$Archive" --ignore-scripts --yes
     if ($LASTEXITCODE -ne 0) { throw 'The official DSH CLI could not install the plugin' }
-    $app = Start-Process -FilePath $exe -ArgumentList $arguments -PassThru
-    try { Run-Check 'exercise' } finally { Stop-Stock $app }
+    $stdout = Join-Path $root.FullName 'desktop.out'
+    $stderr = Join-Path $root.FullName 'desktop.err'
+    $app = Start-Process -FilePath $exe -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+    try { Run-Check 'exercise' }
+    catch {
+        foreach ($log in @($stdout, $stderr)) {
+            Get-Content -LiteralPath $log -Tail 80 | Where-Object {
+                $_ -match '(opencu|managed.browser|panic|process exited|unhandled)' -and $_ -notmatch '(token=|authorization|cookie)'
+            }
+        }
+        throw
+    } finally { Stop-Stock $app }
     if ((Get-FileHash (Join-Path $application 'resources/app.asar')).Hash -ne $integrity) {
         throw 'The test changed the DSH desktop application'
     }
