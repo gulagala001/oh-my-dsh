@@ -123,11 +123,11 @@ try {
     await image.click();
     await page.waitForFunction(() => Array.from(document.querySelectorAll('*')).some(element =>
       element.shadowRoot?.querySelector('img[alt="stock-image.png"]')?.naturalWidth === 300));
-    await page.getByRole('button', { name: /添加评论|add comment/i }).click();
+    await page.getByRole('button', { name: /^(添加评论|comment|add (?:a )?comment)$/i }).click();
     const imageBounds = await page.locator('img[alt="stock-image.png"]').boundingBox();
     assert(imageBounds);
     await page.mouse.click(imageBounds.x + imageBounds.width / 2, imageBounds.y + imageBounds.height / 2);
-    const comment = page.getByRole('textbox', { name: /添加评论|编辑评论|add comment|edit comment/i });
+    const comment = page.getByRole('textbox', { name: /添加评论|编辑评论|add (?:a )?comment|edit comment/i });
     await comment.fill('Stock image annotation');
     await comment.press('Enter');
     await page.waitForFunction(() => Object.keys(localStorage).some(key => key.startsWith('opencu:image-comments:')
