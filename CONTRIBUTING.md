@@ -57,6 +57,8 @@
 4. Release 正文由 CHANGELOG 生成：`node scripts/check-docs.mjs --release-notes > notes.md`，再 `gh release create … --notes-file notes.md`。不再单独写发行页。
 5. 发布后把 `docs/structure.json` 的 `published` 改成新版本，运行 `npm run docs:check`，按报错更新徽章、安装链接和版本号；同步推荐目录的固定包。应用内更新装的是 Release 包，通用包按 OMD 功能版本更新，历史包保留各自的宿主标注。1.8.1 的更新器用完整版本拼接下载地址，并核对安装后的版本。rc.3 和 rc.4 各保留一个 1.9.0 升级入口，包内版本、界面版本、tag 和附件名一致，运行代码沿用同一通用发行。先公开并校验附件，再推送更新清单。后续通用版本由 1.9.0 更新器发现。
 
+正式包上传并公开后，GitHub Actions 的 **Synchronize plugin updates** 会根据正式 Release 的固定附件更新 main 上的清单。候选条目可以预先写中文说明及更新级别，公开后自动转正。撤回正式发行也会同步。若上传中断，补齐同一标签的附件后可手动重跑该工作流；本地可用 `node scripts/sync-release-feed.mjs` 核对差异。
+
 CI 只构建一次，用 `node scripts/test-ci.mjs run core --built` 跑全部回归检查；单独 `npm test` 也会准备计量模块。Release 附件工作流只在发布、编辑 Release 或手动触发时运行。
 
 运行包不含网站媒体、站点静态资源、文档站构建和评测工具，包内文档插图链接到公开地址。`scripts/package-policy.mjs` 同时用于公开文件检查、prepack 和实际包检查。离线准备、启动诊断、构建输入和 vendor 原始快照都保留在包里。

@@ -1,0 +1,65 @@
+name: Synchronize plugin updates
+on:
+  release:
+    types: [published, edited, unpublished, deleted, released, prereleased]
+  push:
+    branches: [main]
+    paths:
+      - release-manifest.json
+      - scripts/sync-release-feed.mjs
+      - .github/workflows/release-feed.yml
+      - .github/scripts/check-legacy-updates.mjs
+      - test/release-feed.test.mjs
+      - src/version.mjs
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: omd-public-release-feed
+  cancel-in-progress: false
+jobs:
+  synchronize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Reconcile public installable packages with main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            status=0
+            node scripts/sync-release-feed.mjs --write || status=$?
+            if [[ $status != 0 && $status != 2 ]]; then exit "$status"; fi
+            if git diff --quiet -- release-manifest.json; then exit "$status"; fi
+            git add -- release-manifest.json
+            git commit -m 'Synchronize the public OMD update feed'
+            if git push origin HEAD:main; then exit "$status"; fi
+          done
+          exit 1
+  legacy-windows:
+    needs: synchronize
+    runs-on: windows-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: node --test test/release-feed.test.mjs
+      - run: node .github/scripts/check-legacy-updates.mjs

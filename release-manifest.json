@@ -12,6 +12,16 @@
       "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.5.omd.1.9.0"
     },
     {
+      "version": "0.2.2-rc.4.omd.1.9.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.9.0",
+      "notes": [
+        "同一安装包可跨宿主版本启用。首次操作网页时自动选择可用浏览器。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.4.omd.1.9.0"
+    },
+    {
       "version": "0.2.2-rc.3.omd.1.9.0",
       "severity": "normal",
       "unpublished": false,
@@ -22,14 +32,52 @@
       "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.9.0"
     },
     {
-      "version": "0.2.2-rc.4.omd.1.9.0",
+      "version": "0.2.2-rc.5.omd.1.8.1",
       "severity": "normal",
       "unpublished": false,
-      "title": "Oh My DSH 1.9.0",
-      "notes": [
-        "同一安装包可跨宿主版本启用。首次操作网页时自动选择可用浏览器。"
-      ],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.4.omd.1.9.0"
+      "title": "Oh My DSH 1.8.1",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.5.omd.1.8.1"
+    },
+    {
+      "version": "0.2.2-rc.4.omd.1.8.1",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.8.1",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.4.omd.1.8.1"
+    },
+    {
+      "version": "0.2.2-rc.3.omd.1.8.1",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.8.1",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.8.1"
+    },
+    {
+      "version": "0.2.2-rc.5.omd.1.8.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.8.0",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.5.omd.1.8.0"
+    },
+    {
+      "version": "0.2.2-rc.4.omd.1.8.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.8.0",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.4.omd.1.8.0"
+    },
+    {
+      "version": "0.2.2-rc.3.omd.1.8.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.8.0",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.8.0"
     },
     {
       "version": "0.2.2-rc.5.omd.1.7.2",
@@ -71,6 +119,46 @@
       "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.7.0"
     },
     {
+      "version": "0.2.2-rc.3.omd.1.6.1",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.6.1",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.6.1"
+    },
+    {
+      "version": "0.2.2-rc.3.omd.1.6.0",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.6.0",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.6.0"
+    },
+    {
+      "version": "0.2.2-rc.3.omd.1.5.3",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.5.3",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.5.3"
+    },
+    {
+      "version": "0.2.2-rc.3.omd.1.5.2",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.5.2",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.5.2"
+    },
+    {
+      "version": "0.2.2-rc.3.omd.1.5.1",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.5.1",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.5.1"
+    },
+    {
       "version": "0.2.2-rc.3.omd.1.5.0",
       "severity": "normal",
       "title": "Oh My DSH 1.5.0 · DSH 0.2.2-rc.3",
@@ -92,6 +180,22 @@
         "分叉会话保留人格与提示词风格；更新内置工作台、电脑操作、扩展和工作流。"
       ],
       "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.4.0"
+    },
+    {
+      "version": "0.2.2-rc.3.omd.1.3.24",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.3.24",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.3.24"
+    },
+    {
+      "version": "0.2.2-rc.3.omd.1.3.23",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.3.23",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.3.omd.1.3.23"
     },
     {
       "version": "0.2.2-rc.3.omd.1.3.22",
@@ -277,16 +381,6 @@
       "notes": [
         "精确匹配新版宿主与独立组件，保留既有功能。",
         "原生注册表更新在预检通过后执行，失败恢复沿用宿主。"
-      ]
-    },
-    {
-      "version": "0.2.2-alpha.3.omd.1.3.2",
-      "severity": "normal",
-      "unpublished": true,
-      "title": "OMD 1.3.2 · DSH 0.2.2-alpha.3（未发布）",
-      "notes": [
-        "精确适配 DSH 0.2.2-alpha.3、Cordis 与对应 SDK，保留当前主线功能及修复。",
-        "复用原生配置、上传清理与插件生命周期；同步对应宿主的内置插件。"
       ]
     },
     {
@@ -487,6 +581,14 @@
       "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.102.0"
     },
     {
+      "version": "0.2.1-rc.3.omd.0.101.2",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 0.101.2",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.3.omd.0.101.2"
+    },
+    {
       "version": "0.2.1-rc.3.omd.0.101.1",
       "severity": "normal",
       "unpublished": false,
@@ -656,6 +758,16 @@
         "其他变更：oh-my-dsh 包名迁移、独立插件架构与共装、按 profile 的人格和独立功能数据、可选组件启动隔离、按需加载及固定工件交付。"
       ],
       "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.99.0"
+    },
+    {
+      "version": "0.2.2-alpha.3.omd.1.3.2",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "OMD 1.3.2 · DSH 0.2.2-alpha.3（未发布）",
+      "notes": [
+        "精确适配 DSH 0.2.2-alpha.3、Cordis 与对应 SDK，保留当前主线功能及修复。",
+        "复用原生配置、上传清理与插件生命周期；同步对应宿主的内置插件。"
+      ]
     },
     {
       "version": "0.2.1-rc.2.omd.0.18.8",

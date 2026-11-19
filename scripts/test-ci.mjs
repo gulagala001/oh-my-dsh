@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const core = [
-  'native-session-read', 'native-session-fork', 'market-release-check', 'alpha-tool-pipeline',
+  'native-session-read', 'native-session-fork', 'market-release-check', 'release-feed', 'alpha-tool-pipeline',
   'chat-style-adapter', 'host-build-contracts', 'file-context', 'permission-presets', 'startup-isolation',
   'metering-contract', 'console-dock', 'rewind-client', 'start', 'monitor-partial', 'monitor-read-cache',
   'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget',
