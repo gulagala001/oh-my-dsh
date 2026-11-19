@@ -55,7 +55,7 @@
 2. `main` 不跟踪构建产物。完整构建后，发版提交用 `git add -f lib plugins/*/lib` 带上产物，再打 tag。
 3. 上传前运行 `node scripts/check-release-assets.mjs --dir <待发目录>`，核对包的 SHA256、`metadata.json`（schema、包名、完整版本、hostVersion、file／filename、sourceCommit）和 `SHA256SUMS`。
 4. Release 正文由 CHANGELOG 生成：`node scripts/check-docs.mjs --release-notes > notes.md`，再 `gh release create … --notes-file notes.md`。不再单独写发行页。
-5. 发布后把 `docs/structure.json` 的 `published` 改成新版本，运行 `npm run docs:check`，按报错更新徽章、安装链接和版本号；同步推荐目录的固定包。应用内更新装的是 Release 包，通用包按 OMD 功能版本更新，历史包保留各自的宿主标注。
+5. 发布后把 `docs/structure.json` 的 `published` 改成新版本，运行 `npm run docs:check`，按报错更新徽章、安装链接和版本号；同步推荐目录的固定包。应用内更新装的是 Release 包，通用包按 OMD 功能版本更新，历史包保留各自的宿主标注。1.8.1 的更新器用完整版本拼接下载地址，并核对安装后的版本。rc.3 和 rc.4 各保留一个 1.9.0 升级入口，包内版本、界面版本、tag 和附件名一致，运行代码沿用同一通用发行。先公开并校验附件，再推送更新清单。后续通用版本由 1.9.0 更新器发现。
 
 CI 只构建一次，用 `node scripts/test-ci.mjs run core --built` 跑全部回归检查；单独 `npm test` 也会准备计量模块。Release 附件工作流只在发布、编辑 Release 或手动触发时运行。
 
