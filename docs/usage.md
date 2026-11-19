@@ -149,7 +149,7 @@ Glyph、DSH 原生、Codex Desktop、iOS Liquid Glass、Claude Desktop、Claude 
 
 ## 电脑与浏览器
 
-内置 OpenCU，AI 可以打开网页、读页面、填表，也能操作桌面应用，默认在后台进行，不抢你的窗口。浏览器可以用 Chrome／Edge 扩展、独立浏览器，或配套 DSH 桌面版里的内嵌浏览器；扩展第一次连接要你点允许。关闭预览不会停止任务，要停请用停止按钮。见[电脑与浏览器](computer-use.md)。
+内置 OpenCU，AI 可以在后台打开网页、读页面、填表，也能操作桌面应用。浏览器可以用原版 DSH 桌面版的侧栏、独立浏览器或 Chrome／Edge 扩展。扩展首次连接需要你允许。关闭预览后任务会继续运行，要结束任务请点停止按钮。见[电脑与浏览器](computer-use.md)。
 
 <a id="可选需求理解组件"></a>
 

@@ -32,7 +32,7 @@ Separate versions update on their own schedule; the table shows the current ones
 
 Basic chat loads first, and computer use, rewind, Workflow and other features load separately. If one is missing a dependency or fails to start, only that feature shows an error and chat keeps working.
 
-Some features depend on DSH itself: the embedded browser and native live view need a matching DSH desktop build, and persistent DeepSeek web sign-in and downloads need the desktop app. Installing a plugin never upgrades or replaces DSH.
+In the stock DSH desktop app, open **Settings → Computer and browsers** to check the embedded browser and native monitor features available in the current window. Persistent DeepSeek web sign-in and downloads also require the desktop app.
 
 ## Loaded when needed
 

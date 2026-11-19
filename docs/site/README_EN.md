@@ -43,6 +43,6 @@ The README and product page share the Oh My DSH character-whale hero image.
 
 ## Release Links
 
-Installation distinguishes new candidates from fixed historical releases. Do not select across hosts using GitHub latest. See [installation](../install_EN.md) for version matching and host-adapter requirements.
+Installation distinguishes new candidates from fixed historical releases. Do not select across hosts using GitHub latest. See [installation](../install_EN.md) for packages and stock DSH version requirements.
 
 Update host pairings, tags, assets, and text in both languages together. `scripts/check-docs.mjs` checks document structure and links; `scripts/build-docs.mjs` validates rendering, diagrams and generated pages. Existing documentation CI uses these entrypoints. Archive delivery checks validate packaged links separately. Report validation from the actual run.

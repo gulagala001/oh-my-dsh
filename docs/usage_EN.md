@@ -147,7 +147,7 @@ The first query waits for the index. If preparation fails, **Code understanding*
 
 ## Computer and browser
 
-OpenCU is built in. The AI can open web pages, read them and fill in forms, and also operate desktop apps, in the background by default so it never takes over your windows. Use the Chrome or Edge extension, a separate managed browser, or the embedded browser in a matching DSH desktop build; the extension asks you to allow the first connection. Closing the preview does not stop a task; use the stop button. See [computer and browser](computer-use.md).
+OpenCU is built in. The AI can open and read web pages, fill in forms and operate desktop apps in the background. Use the sidebar browser in the stock DSH desktop app, a separate managed browser or the Chrome or Edge extension. The extension asks you to allow the first connection. The task continues when you close the preview. To end it, click the stop button. See [computer and browser](computer-use.md).
 
 ## Extensions and third-party features
 

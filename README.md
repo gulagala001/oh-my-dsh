@@ -132,7 +132,7 @@ OMD 里的 Workflow、Rewind、Persona、Extensions、DeepSeek Workbench、OpenC
 | 功能 | 需要 |
 | --- | --- |
 | 对话、外观、任务、记忆 | DSH 和一个可用的模型 |
-| 浏览器和电脑操作 | 系统权限；内嵌浏览器画面需要配套的 DSH 桌面版 |
+| 浏览器和电脑操作 | 侧栏内嵌浏览器使用原版 DSH 桌面版，电脑操作按系统提示授权 |
 | DeepSeek 网页聊天和历史导入 | DSH 桌面版，并登录 DeepSeek 官网账号 |
 | 回退旧版 OMD | 历史安装包，见[安装指南](docs/install.md) |
 
@@ -150,7 +150,7 @@ OMD 里的 Workflow、Rewind、Persona、Extensions、DeepSeek Workbench、OpenC
 <details>
 <summary>为什么没有内嵌浏览器？</summary>
 
-内嵌浏览器、悬浮预览和侧栏批注需要配套的 DSH 桌面版。只装插件时，AI 仍然可以通过 Chrome／Edge 扩展或独立浏览器操作网页。[电脑与浏览器](docs/computer-use.md)
+在 Windows 或 macOS 的原版 DSH 桌面版安装 OMD 后，打开 **设置 → 电脑与浏览器** 查看当前窗口的侧栏、批注、预览和悬浮监看能力。侧栏不可用时，AI 可以操作独立浏览器或已连接的 Chrome／Edge。[电脑与浏览器](docs/computer-use.md)
 
 </details>
 

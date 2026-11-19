@@ -132,7 +132,7 @@ Workflow, Rewind, Persona, Extensions, DeepSeek Workbench, OpenCU and theme mana
 | Feature | Needs |
 | --- | --- |
 | Conversations, appearance, tasks, memory | DSH and a working model |
-| Browser and computer use | System permissions; the embedded browser view needs a matching DSH desktop build |
+| Browser and computer use | Use the stock DSH desktop app for the sidebar browser and grant system permissions when prompted for computer use |
 | DeepSeek web chat and history import | The DSH desktop app and a DeepSeek website account |
 | Rolling back OMD | Archived packages; see the [installation guide](docs/install_EN.md) |
 
@@ -150,7 +150,7 @@ Check that it went into the DSH you actually use (the desktop and web versions u
 <details>
 <summary>Why is there no embedded browser?</summary>
 
-The embedded browser, floating preview and sidebar annotations need a matching DSH desktop build. With just the plugin, the AI can still operate web pages through the Chrome or Edge extension or a separate browser. [Computer and browser](docs/computer-use.md)
+After installing OMD in the stock DSH desktop app on Windows or macOS, open **Settings → Computer and browsers** to check which sidebar, annotation, preview and floating monitor features are available in the current window. If the sidebar is unavailable, the AI can use a separate browser or a connected Chrome or Edge browser. [Computer and browser](docs/computer-use.md)
 
 </details>
 

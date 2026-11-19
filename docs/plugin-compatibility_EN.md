@@ -25,7 +25,7 @@ See [prompt sources](prompt-adaptation.md) (Chinese).
 
 With OMD installed there is no need to install OpenCU. You can also install OpenCU on its own; installed together, they share the same core and tools.
 
-The embedded browser, annotations and native live view need a matching DSH desktop build; installing the plugin never changes stock DSH. Plain text and file work does not need computer use set up first. See [computer and browser](computer-use.md) (Chinese).
+After installing OMD in the stock DSH desktop app on Windows or macOS, open **Settings → Computer and browsers** to check the embedded browser, annotation and native monitor features available in the current window. You can start text and file tasks right away. See [computer and browser](computer-use.md) (Chinese).
 
 ## Separate plugins
 
