@@ -64,6 +64,7 @@ final class InputStore {
     var moved: ((CGPoint, Bool) throws -> Void)?
     var pointerSettled: ((CGPoint) -> Void)?
     var released: (() -> Void)?
+    var eventReceipt: ((CGEvent) -> (() -> Bool)?)?
     let source = CGEventSource(stateID: .combinedSessionState)
     let backgroundSource = CGEventSource(stateID: .privateState)
     private let targets = TargetStore()
@@ -253,6 +254,35 @@ final class InputStore {
         return flags
     }
 
+    // Posting returns before the session event stream and its state table
+    // advance. Keep the journal until this edge is observed; never repost it.
+    private func postEdge(_ event: CGEvent, keyboard: Bool, releasing: Bool,
+                          details: [String: Any], matches: () -> Bool) throws {
+        let receipt = background ? nil : eventReceipt?(event)
+        try post(event, keyboard: keyboard, releasing: releasing)
+        if background {
+            // A PID-directed post does not update the global session state.
+            pump(0.012)
+            try requireInput()
+            return
+        }
+        let deadline = ProcessInfo.processInfo.systemUptime + 0.25
+        repeat {
+            if (receipt?() ?? true) && matches() && CGPreflightPostEventAccess() { return }
+            if !releasing && cancellation.current() != actionEpoch {
+                throw NativeFailure("CONTROL_STOPPED", "Input was interrupted while awaiting the posted event.")
+            }
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            if remaining <= 0 { break }
+            pump(min(remaining, 0.004))
+        } while true
+        var info = details
+        if let receipt = receipt { info["receiptObserved"] = receipt() }
+        info["stateMatched"] = matches()
+        info["permissions"] = permissions()
+        throw NativeFailure("INPUT_EVENT_UNCONFIRMED", "Posted input was not confirmed; held journal was retained.", info)
+    }
+
     func key(_ code: UInt16, down: Bool, releasing: Bool = false) throws {
         if !releasing { try check() }
         try requireInput()
@@ -268,10 +298,8 @@ final class InputStore {
         if !down { keys.remove(code) }
         event.flags = flags()
         keys = saved
-        try post(event, keyboard: true, releasing: releasing)
-        pump(0.012)
-        guard CGPreflightPostEventAccess(), background || CGEventSource.keyState(.combinedSessionState, key: code) == down else {
-            throw NativeFailure("INPUT_EVENT_UNCONFIRMED", "Keyboard state did not confirm the posted event; held journal was retained.", ["keyCode": code, "down": down, "permissions": permissions()])
+        try postEdge(event, keyboard: true, releasing: releasing, details: ["keyCode": code, "down": down]) {
+            CGEventSource.keyState(.combinedSessionState, key: code) == down
         }
         if !down {
             keys.remove(code)
@@ -293,9 +321,8 @@ final class InputStore {
         lastPoint = point
         if down { buttons.insert(button); try persist() }
         event.flags = flags(); event.setIntegerValueField(.mouseEventClickState, value: Int64(clicks))
-        try post(event, releasing: releasing); pump(0.012)
-        guard CGPreflightPostEventAccess(), background || CGEventSource.buttonState(.combinedSessionState, button: CGMouseButton(rawValue: UInt32(button))!) == down else {
-            throw NativeFailure("INPUT_EVENT_UNCONFIRMED", "Mouse state did not confirm the posted event; held journal was retained.", ["button": button, "down": down, "permissions": permissions()])
+        try postEdge(event, keyboard: false, releasing: releasing, details: ["button": button, "down": down]) {
+            CGEventSource.buttonState(.combinedSessionState, button: CGMouseButton(rawValue: UInt32(button))!) == down
         }
         if !down {
             buttons.remove(button)
@@ -363,9 +390,15 @@ final class InputStore {
                 up.keyboardSetUnicodeString(stringLength: chunk.count, unicodeString: ptr.baseAddress)
             }
             down.flags = []; up.flags = []
-            try post(down, keyboard: true); try post(up, keyboard: true, releasing: true); pump(0.01)
-            guard CGPreflightPostEventAccess(), background || !CGEventSource.keyState(.combinedSessionState, key: 0) else {
-                throw NativeFailure("INPUT_EVENT_UNCONFIRMED", "Unicode key-up was not confirmed; journal was retained.")
+            if background {
+                try post(down, keyboard: true)
+            } else {
+                try postEdge(down, keyboard: true, releasing: false, details: ["keyCode": 0, "down": true]) {
+                    CGEventSource.keyState(.combinedSessionState, key: 0)
+                }
+            }
+            try postEdge(up, keyboard: true, releasing: true, details: ["keyCode": 0, "down": false]) {
+                !CGEventSource.keyState(.combinedSessionState, key: 0)
             }
             keys.remove(0)
             do { try persist() } catch { keys.insert(0); throw error }

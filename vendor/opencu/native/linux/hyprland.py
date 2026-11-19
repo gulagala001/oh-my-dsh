@@ -227,6 +227,9 @@ def bounds(window):
 
 
 def target(window, active, applications=None):
+    geometry = bounds(window)
+    if geometry['width'] <= 0 or geometry['height'] <= 0:
+        fail('TARGET_GEOMETRY_UNAVAILABLE', 'The compositor has not assigned this window a usable extent')
     pid = window.get('pid')
     if not pid or pid <= 0:
         fail('TARGET_IDENTITY_UNAVAILABLE', 'Window has no process identity')
@@ -241,7 +244,7 @@ def target(window, active, applications=None):
     return dict(id='native:%d:window:%s' % (pid, address), kind='app', backend='native', platform='linux',
                 targetType='window', pid=pid, windowId=address, bundleId=executable,
                 name=window.get('class') or os.path.basename(executable), title=window.get('title') or '',
-                identity=identity, bounds=bounds(window), active=window['address'] == active,
+                identity=identity, bounds=geometry, active=window['address'] == active,
                 workspace=(window.get('workspace') or {}).get('id'), monitor=window.get('monitor'),
                 fullscreen=int(window.get('fullscreen') or 0), floating=bool(window.get('floating')),
                 displayServer='wayland', a11y=reach,

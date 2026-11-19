@@ -1,3 +1,35 @@
+# Oh My DSH 1.8.1 · DSH 0.2.2-rc.5
+
+**未发布 / Unreleased.**
+
+[中文](#zh-181) · [English](#en-181)
+
+<a id="zh-181"></a>
+
+## 中文
+
+### 体验优化
+
+- OpenCU 等待 macOS 确认已投递的前台按键和鼠标操作，减少短暂停顿造成的误报。Hyprland 窗口取得有效尺寸后才可选择。
+- 在支持的宿主上，可从推荐插件安装对应版本的 OMAA。
+
+<a id="en-181"></a>
+
+## English
+
+### Improvements
+
+- OpenCU waits for macOS to acknowledge foreground key and mouse events. Hyprland windows become selectable once their dimensions are available.
+- Recommended plugins offer the matching OMAA package on supported hosts.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.5** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/oh-my-dsh-0.2.2-rc.5.omd.1.8.1.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.8.0 · DSH 0.2.2-rc.5
 
 [中文](#zh-180) · [English](#en-180)

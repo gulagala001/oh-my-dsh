@@ -17,8 +17,8 @@
       "source": "vendor/opencu/package.json",
       "license": "See component notices",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
-      "version": "2.4.1-dsh.0.2.2-rc.5",
-      "sourceSha256": "2df0ceea3f7fa3d753e51c8171d6befd2fd974c45880585170d9dc82038eb408",
+      "version": "2.4.2-dsh.0.2.2-rc.5",
+      "sourceSha256": "799264fa855d21db3b4f83c043a315ce53387ad58658d04582312425f2a86534",
       "group": "products"
     },
     {
@@ -613,7 +613,7 @@
         "en": "Optional recommendation; see compatibility guide for current support"
       },
       "source": "src/recommended-plugin-catalog.mjs",
-      "version": "0.2.2-rc.3.omaa.0.17.14 / 0.2.2-rc.2.omaa.0.17.12 / 0.2.2-rc.1.omaa.0.17.10 / 0.2.1-rc.5.omaa.0.17.7 / 0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5",
+      "version": "0.2.2-rc.5.omaa.0.17.16 / 0.2.2-rc.3.omaa.0.17.16 / 0.2.2-rc.2.omaa.0.17.12 / 0.2.2-rc.1.omaa.0.17.10 / 0.2.1-rc.5.omaa.0.17.7 / 0.2.1-rc.3.omaa.0.17.6 / 0.2.1-rc.2.omaa.0.17.0 / 0.2.1-rc.1.omaa.0.16.5",
       "license": "See upstream license and notices",
       "notice": "docs/plugin-compatibility.md",
       "group": "optional"
