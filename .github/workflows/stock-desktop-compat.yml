@@ -67,6 +67,8 @@ jobs:
           $dependencies = Join-Path $env:RUNNER_TEMP 'omd-stock-test-deps'
           npm install --prefix $dependencies --no-audit --no-fund playwright@1.63.0 sharp@0.35.5
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node (Join-Path $dependencies 'node_modules/playwright/cli.js') install chromium
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "OMD_STOCK_TEST_DEPENDENCIES=$dependencies" >> $env:GITHUB_ENV
       - name: Download the signed official DSH desktop
         shell: pwsh

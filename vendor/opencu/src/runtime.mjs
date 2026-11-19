@@ -17,7 +17,7 @@ export async function createRuntime(options = {}) {
     if (browser === undefined && options.browserEnabled !== false && (!options.dshBrowser || managedFallback || options.managedHeadless === true || options.cdpEndpoint || options.browserOptions?.context)) {
       const { createBrowserBackend } = await import('./browser/backend.mjs');
       browser = await createBrowserBackend({ ...options.browserOptions, dataDir: join(dataDir, 'browser'), cdpEndpoint: options.cdpEndpoint,
-        ...(managedFallback ? { managedFallback, launchManaged: options.launchManaged, eagerInventory: options.managedHeadless === true } : {}),
+        ...(managedFallback ? { managedFallback, launchManaged: options.launchManaged, readSiteToolsPolicy: options.readSiteToolsPolicy, eagerInventory: options.managedHeadless === true } : {}),
         headless: managedHeadless || options.headless === true,
         ...(managedHeadless ? { launchOptions: { ...options.browserOptions?.launchOptions, headless: true } } : {}) });
     }
@@ -48,6 +48,7 @@ export async function createRuntime(options = {}) {
       releaseUnavailable: { browser: () => releaseUnavailableBrowser(join(dataDir, 'browser')) } }) : false;
     const controller = await createController({ dataDir, browser: composite, native: native || undefined });
     controller.prepareManagedBrowser = browser?.prepare;
+    controller.clearManagedBrowserData = browser?.clearManagedData;
     controller.runtimeInfo = { platform: process.platform, architecture: process.arch, backends: { browser: !!browser, native: !!native, extension: !!extension, dsh: !!options.dshBrowser }, warnings };
     // Configuration is not proof of a live renderer. Preserve legacy booleans,
     // but expose current provider readiness without launching or probing a browser.

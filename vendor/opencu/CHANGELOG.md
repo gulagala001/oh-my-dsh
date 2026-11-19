@@ -1,4 +1,28 @@
-# OpenCU 2.4.4 · DSH 0.2.2-rc.5（未发布）
+# OpenCU 2.4.5 · DSH 0.2.2-rc.5（未发布）
+
+[中文](#zh-245) · [English](#en-245)
+
+<a id="zh-245"></a>
+
+## 中文
+
+### 问题修复
+
+- 在原版桌面复制侧栏标签时可保留已访问的跨站地址，使用侧栏按钮前进或后退。
+- 在「电脑与浏览器」可以清除独立 Chromium 的站点数据和缓存。AI 可在独立 Chromium 使用网站公开的 WebMCP 工具。悬浮网页监看可显示 AI 操作光标。
+
+<a id="en-245"></a>
+
+## English
+
+### Fixes
+
+- Sidebar tabs duplicated in the standard desktop retain visited cross-site URLs for the sidebar back and forward controls.
+- Clear independent Chromium site data and cache from Computer and browsers. AI can use site-provided WebMCP tools in independent Chromium. The floating browser monitor can show the AI cursor.
+
+---
+
+# OpenCU 2.4.4 · DSH 0.2.2-rc.3（未发布）
 
 [中文](#zh-244) · [English](#en-244)
 

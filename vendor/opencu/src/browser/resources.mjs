@@ -3,6 +3,7 @@ import { constants } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
+import { managedProfileLaunch } from './managed-profile.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -33,21 +34,18 @@ export function createBrowserResources() {
     status,
     async launch(chromium, profile, options) {
       if (closed) throw new Error('OpenCU browser resource installer is closed');
-      const { installed } = await status();
       const channels = process.platform === 'win32' ? ['msedge', 'chrome'] : ['chrome', 'msedge'];
       const failures = [];
-      for (const channel of installed ? ['chromium', ...channels] : channels) {
+      try {
+        await resources.install(AbortSignal.timeout(120_000));
+        if (closed) throw new Error('OpenCU browser resource installer is closed');
+        return await chromium.launchPersistentContext(profile, { ...managedProfileLaunch(options), channel: 'chromium' });
+      } catch (failure) { failures.push(failure); }
+      for (const channel of channels) {
         if (closed) throw new Error('OpenCU browser resource installer is closed');
         try { return await chromium.launchPersistentContext(profile, { ...options, channel }); }
         catch (failure) { failures.push(failure); }
       }
-      try {
-        if (!installed) {
-          await resources.install(AbortSignal.timeout(120_000));
-          if (closed) throw new Error('OpenCU browser resource installer is closed');
-          return await chromium.launchPersistentContext(profile, { ...options, channel: 'chromium' });
-        }
-      } catch (failure) { failures.push(failure); }
       const cause = failures.at(-1);
       throw Object.assign(new AggregateError(failures, `Could not start the managed browser. ${cause.message}`, { cause }),
         { code: 'MANAGED_BROWSER_UNAVAILABLE', details: { inputDispatched: false } });

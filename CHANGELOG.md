@@ -1,3 +1,27 @@
+# Oh My DSH 1.9.2 · DSH 0.2.2 rc.3 / rc.4 / rc.5（未发布）
+
+[中文](#zh-192) · [English](#en-192)
+
+<a id="zh-192"></a>
+
+## 中文
+
+### 问题修复
+
+- 复制侧栏浏览器标签后，可以前进和后退访问已浏览的跨站地址。悬浮网页监看可显示 AI 操作光标。
+- 独立 Chromium 支持网页公开的 WebMCP 站点工具。可在「电脑与浏览器」清除该浏览器的站点数据和缓存。
+
+<a id="en-192"></a>
+
+## English
+
+### Fixes
+
+- Duplicated sidebar tabs retain visited cross-site URLs for back and forward navigation. Floating browser previews can show the AI cursor.
+- The independent Chromium can use WebMCP tools exposed by sites. Clear its site data and cache in Computer and browsers.
+
+---
+
 # Oh My DSH 1.9.1 · DSH 0.2.2 rc.3 / rc.4 / rc.5
 
 [中文](#zh-191) · [English](#en-191)

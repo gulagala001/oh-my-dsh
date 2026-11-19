@@ -22,7 +22,11 @@ function jsonInput(input) {
 /** Optional capabilities are discovered separately from baseline control routes. */
 export function createTargetCapabilities({target, act, active, show, navigationVersion}) {
   let revision = 0;
-  const supported = () => target().kind === 'tab' && target().backend === 'browser' && target().provider === 'dsh';
+  const supported = () => {
+    const current = target();
+    return current.kind === 'tab' && current.backend === 'browser' &&
+      (current.provider === 'dsh' || current.provider === 'browser' && current.capabilities?.includes('siteTools'));
+  };
   async function discover() {
     active();
     if (!supported()) return {available:false,tools:[]};

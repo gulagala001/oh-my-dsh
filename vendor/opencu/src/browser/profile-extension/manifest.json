@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "OpenCU managed browser profile maintenance",
+  "version": "1.0.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtVH7uqaxDpJL9PSgsj9PJjBZIqwdtOp2VV4Chy+neWubNjNJVuQ+mwttYXwEiiO2N7disw/TVW+HyWoE5cpop3H4WuzXhQrsKDBLYIeyk6ZO0RqATrKDkQLIpdCTEItXAU+DNQGuxRuK28X4+WAC+aHf2OAcCOsxWUmE5urLdiZlEniOBkSNZIm/nCHDHurI29GGDwN08qRFUbNqjvBRY3qsSrNtjS7YKW85/seAkIPgpe2562VLGQU6SMa5mA7dD9q9ZMl1MzqDC7u2ZubKtvQofucVuAgHT+IeD5lxNH8L/5Yi8ueu8SZz+fsECEnluzfA5yCMVKCpPBA9QCu10QIDAQAB",
+  "background": { "service_worker": "worker.js" },
+  "permissions": ["browsingData"]
+}

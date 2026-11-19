@@ -12,6 +12,8 @@ import {createUserActivityMonitor} from './user-activity.mjs';
 import {createPageDialogs} from './dialogs.mjs';
 import {createCDPFrameRouter} from '../../extension/frame-router.js';
 import {isolatedLaunchOptions} from './automation.mjs';
+import {clearManagedBrowserData} from './managed-profile.mjs';
+import {createPageSiteTools} from './page-site-tools.mjs';
 export {withIsolatedBrowser} from './automation.mjs';
 
 /** A lazy Chromium backend. Existing contexts/CDP browsers are never shut down as owned browsers. */
@@ -261,6 +263,10 @@ export async function createBrowserBackend(options = {}) {
         identity: {browserId, connectionId, targetId: targetInfo.targetId, contextId: targetInfo.browserContextId ?? 'default'},
         keys: new Set(), buttons: new Set(), pending: new Set(), elements: new Map(), nextElementId: 0, documentGeneration: 0, navigationGeneration: 0,
       };
+      if (options.managedFallback && ownContext) {
+        record.siteTools = createPageSiteTools({ getURL: () => page.url(), executeJavaScript: code => page.evaluate(code) },
+          () => record.navigationGeneration, () => record.documentGeneration, options.readSiteToolsPolicy);
+      }
       if (record.sessionClipboard) {
         const permissionBrowser = browser;
         record.clipboardPermissionSend = async (method,params) => {
@@ -366,7 +372,8 @@ export async function createBrowserBackend(options = {}) {
       ...(record.sessionId === undefined ? {} : { sessionId: record.sessionId }),
       sessionClipboard: record.sessionClipboard === true,
       title: targetInfo.title, url: targetInfo.url, identity: record.identity,
-      capabilities: ['ax', 'screenshot', 'navigation', 'navigationWaits', 'tabs', 'focus', 'mouse', 'keyboard', 'uploads', 'fileChooserEvents', 'downloads', 'downloadEvents', 'hitTest', 'getDOM', 'designTweak', 'dialogs'],
+      capabilities: ['ax', 'screenshot', 'navigation', 'navigationWaits', 'tabs', 'focus', 'mouse', 'keyboard', 'uploads', 'fileChooserEvents', 'downloads', 'downloadEvents', 'hitTest', 'getDOM', 'designTweak', 'dialogs',
+        ...(record.siteTools ? ['siteTools'] : [])],
     };
   }
   async function recordFor(target) {
@@ -430,6 +437,13 @@ export async function createBrowserBackend(options = {}) {
   }
   return {
     ...(options.managedFallback ? { async prepare() { await initialize(); return browserId; } } : {}),
+    ...(options.managedFallback && !options.cdpEndpoint && !options.context ? {
+      async clearManagedData(args) {
+        await initialize();
+        if (!ownContext || !context || closing || closed) fail('MANAGED_PROFILE_UNAVAILABLE', 'The independent browser profile is unavailable');
+        return clearManagedBrowserData(context, args);
+      },
+    } : {}),
     async listBrowsers() { return context && !closed ? [{id: browserId, provider: 'browser', name: 'Chromium', connected: true}] : []; },
     async newTab(id, url, {signal, sessionId} = {}) {
       if (id !== browserId) fail('TARGET_NOT_FOUND', 'Choose this connected browser ID');
@@ -537,6 +551,22 @@ export async function createBrowserBackend(options = {}) {
         return {...result,action:request.action,closedTargetId:record.id,inputDispatched:true,effectVerified:false,release};
       };
       try {
+        if (record.siteTools && request.action === 'siteTools') {
+          const result = await guard.wait(record.siteTools.list());
+          checkSignal(request.signal);
+          return { action: request.action, ...result, target: await descriptor(record) };
+        }
+        if (record.siteTools && request.action === 'invokeSiteTool') {
+          const work = record.siteTools.invoke({ ...request, requestId: randomUUID() });
+          try {
+            const result = await guard.wait(work);
+            checkSignal(request.signal);
+            return { action: request.action, ...result, inputDispatched: result.dispatched, target: await descriptor(record) };
+          } catch (error) {
+            await readOperation(() => record.siteTools.cancel(), AbortSignal.timeout(releaseTimeoutMs)).catch(() => {});
+            throw error;
+          }
+        }
         if (request.action === 'newTab') return await newTab(request, record);
         if (request.action === 'closeTab') {
           const failures = await releaseRecord(record);

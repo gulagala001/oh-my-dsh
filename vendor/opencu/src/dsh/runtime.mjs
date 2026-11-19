@@ -75,7 +75,8 @@ export function createPluginRuntime(options = {}) {
         await browserPairing.ready;
       }
       controller = await createRuntime({ ...config, dataDir, token, browserPairing, dshBrowser: options.dshBrowser,
-        launchManaged: browserResources.launch, nativeOptions: { ...config.nativeOptions, onCursor: cursor => options.onCursor?.(cursor, cursorContext.getStore()) } });
+        launchManaged: browserResources.launch, readSiteToolsPolicy: options.readSiteToolsPolicy,
+        nativeOptions: { ...config.nativeOptions, onCursor: cursor => options.onCursor?.(cursor, cursorContext.getStore()) } });
       try {
         try { annotations = JSON.parse(await readFile(join(dataDir, 'annotations.json'), 'utf8')); }
         catch (error) { if (error.code !== 'ENOENT') throw error; }
@@ -286,6 +287,11 @@ export function createPluginRuntime(options = {}) {
       if (state.ok === false) return state;
       if (state.state.explicitlyStopped) throw error('CONTROL_STOPPED', 'Resume computer use before opening a managed tab.');
       return { ok: true, browserId: await readOperation(runtime.prepareManagedBrowser, signal) };
+    }
+    if (endpoint === 'browserProfile/clear') {
+      if (requestSource !== 'interface' || args.confirmed !== true || !runtime.clearManagedBrowserData)
+        throw error('MANAGED_PROFILE_UNAVAILABLE', 'Confirm clearing the independent browser profile in settings.');
+      return { ok: true, ...await runtime.clearManagedBrowserData(args) };
     }
     if (endpoint === 'presentationContrast') return { ok: true, ...await runtime.presentationContrast(args) };
     if (endpoint === 'capabilities') return { ok: true, ...runtime.runtimeInfo, config: publicConfig(getConfig()),

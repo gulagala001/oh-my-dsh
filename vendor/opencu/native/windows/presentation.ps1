@@ -14,6 +14,7 @@ using System.Windows.Forms;
 public sealed class OpenCUMonitor : Form {
     private readonly JavaScriptSerializer serial = new JavaScriptSerializer { MaxJsonLength = 100000000, RecursionLimit = 36 };
     private readonly FlowLayoutPanel frames = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true };
+    private Dictionary<string, object> cursor;
     private bool exiting;
     protected override bool ShowWithoutActivation { get { return true; } }
 
@@ -60,6 +61,21 @@ public sealed class OpenCUMonitor : Form {
                     using (var decoded = Image.FromStream(bytes, false, true)) picture.Image = new Bitmap(decoded);
                 } catch { picture.Dispose(); throw; }
                 string id = Convert.ToString(row["presentationID"]);
+                picture.Name = id;
+                picture.Paint += delegate(object sender, PaintEventArgs args) {
+                    if (cursor == null || Convert.ToString(cursor["targetId"]) != id || picture.Image == null) return;
+                    float scale = Math.Min((float)picture.ClientSize.Width / picture.Image.Width,
+                        (float)picture.ClientSize.Height / picture.Image.Height);
+                    float w = picture.Image.Width * scale, h = picture.Image.Height * scale;
+                    float x = (picture.ClientSize.Width - w) / 2 + (float)Convert.ToDouble(cursor["x"]) * w;
+                    float y = (picture.ClientSize.Height - h) / 2 + (float)Convert.ToDouble(cursor["y"]) * h;
+                    using (var brush = new SolidBrush(Color.FromArgb(37, 99, 235)))
+                    using (var pen = new Pen(Color.White, 2)) {
+                        args.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                        args.Graphics.FillEllipse(brush, x - 5, y - 5, 10, 10);
+                        args.Graphics.DrawEllipse(pen, x - 5, y - 5, 10, 10);
+                    }
+                };
                 EventHandler focus = delegate { Write(new { @event = new { type = "focus", targetId = id } }); };
                 picture.Click += focus;
                 picture.KeyDown += delegate(object sender, KeyEventArgs args) { if (args.KeyCode == Keys.Enter) focus(sender, args); };
@@ -82,11 +98,19 @@ public sealed class OpenCUMonitor : Form {
                     break;
                 case "update":
                     var parameters = (Dictionary<string, object>)command["params"];
+                    object updateCursor;
+                    cursor = parameters.TryGetValue("cursor", out updateCursor) ? updateCursor as Dictionary<string, object> : null;
                     var input = ((IList)parameters["frames"]);
                     var values = new object[input.Count];
                     input.CopyTo(values, 0);
                     Render(values);
                     result = new { rendered = Visible, visible = Visible, ownerPid = System.Diagnostics.Process.GetCurrentProcess().Id };
+                    break;
+                case "cursor":
+                    var cursorParams = (Dictionary<string, object>)command["params"];
+                    cursor = cursorParams["cursor"] as Dictionary<string, object>;
+                    foreach (Control picture in frames.Controls) picture.Invalidate();
+                    result = new { visible = Visible && cursor != null };
                     break;
                 case "close":
                     Write(new { id = id, ok = true, result = new { released = true } });

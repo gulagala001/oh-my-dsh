@@ -15,6 +15,7 @@ import { createPresentationHost } from './presentation.mjs';
 import { createPreferences } from './preferences.mjs';
 import { createBrowserHistory } from './browser-history.mjs';
 import { createNativePresentation } from './native-presentation.mjs';
+import { siteToolsPolicyKey } from '../site-tools-policy.mjs';
 
 const key = Symbol.for('opencu.shared-root.v1');
 const roots = globalThis[key] ??= new WeakMap();
@@ -51,6 +52,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     };
     let cursorOwner;
     entry.runtime = createPluginRuntime({ getConfig: browserConfig, dshBrowser: entry.browserHost.backend, onAppApprovalsChanged: () => entry.activity?.invalidate(),
+      readSiteToolsPolicy: async () => (await entry.preferences.read()).values[siteToolsPolicyKey],
       async onCursor(cursor, sessionId) {
         if (!cursor.visible) {
           const previous = cursorOwner; cursorOwner = undefined;

@@ -23,7 +23,13 @@ const pages = () => browser.contexts().flatMap(context => context.pages());
 const button = (page, name) => page.getByRole('button', { name });
 const fixture = createServer((_request, response) => {
   response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  response.end('<!doctype html><title>OMD stock fixture</title><button onclick="this.textContent=\'clicked\'">Click fixture</button><br><input aria-label="Fixture text">');
+  response.end(`<!doctype html><title>OMD stock fixture</title><button onclick="this.textContent='clicked'">Click fixture</button><br><input aria-label="Fixture text">
+    <script>
+      document.modelContext?.registerTool({
+        name: 'opencu_fixture_echo', description: 'Echo a fixture value',
+        inputSchema: { type: 'object', properties: { value: { type: 'string' } } }, execute: input => input.value
+      });
+    </script>`);
 });
 
 function samplePDF() {
@@ -216,6 +222,22 @@ try {
       && !key.endsWith(':drafts') && localStorage.getItem(key)?.includes('Stock web annotation')));
     console.log('OpenCU controlled the stock sidebar page with mouse and keyboard and saved an annotation.');
 
+    const otherURL = fixtureURL.replace('127.0.0.1', 'localhost');
+    await page.locator(activeGuest).evaluate((guest, url) => guest.loadURL(url), otherURL);
+    const originalGuestId = await page.locator(activeGuest).evaluate(guest => guest.getWebContentsId());
+    const back = button(page, /^(Back|后退|返回上一页|上一页)$/i).filter({ visible: true }).first();
+    await back.click({ modifiers: ['ControlOrMeta', 'Shift'] });
+    await page.waitForFunction(({ selector, url }) => {
+      try { return document.querySelector(selector)?.getURL() === url; } catch { return false; }
+    }, { selector: activeGuest, url: fixtureURL });
+    assert.notEqual(await page.locator(activeGuest).evaluate(guest => guest.getWebContentsId()), originalGuestId);
+    const forward = button(page, /^(Forward|Next|前进|转到下一页|下一页)$/i).filter({ visible: true }).first();
+    await forward.click();
+    await page.waitForFunction(({ selector, url }) => {
+      try { return document.querySelector(selector)?.getURL() === url; } catch { return false; }
+    }, { selector: activeGuest, url: otherURL });
+    console.log('The original desktop restored and traversed a cross-origin branch.');
+
     const rendererId = crypto.randomUUID(), threadID = 'stock-monitor-fixture';
     const registration = await call('browser/connect', { rendererId, sessionIds: [threadID], browser: false, presentation: true });
     try {
@@ -227,6 +249,11 @@ try {
       } });
       assert.equal(visible.visible, true);
       assert.equal(visible.rendered, true);
+      const cursor = await call('nativePresentation', { rendererId, operation: 'cursor', args: {
+        visible: true, targetId: 'fixture', x: 35, y: 45, bounds: { x: 10, y: 20, width: 100, height: 100 },
+      } });
+      assert.equal(cursor.visible, true);
+      assert.equal((await call('nativePresentation', { rendererId, operation: 'cursor', args: { visible: false } })).visible, false);
     } finally {
       await call('nativePresentation', { rendererId, operation: 'close' });
       await call('browser/disconnect', { rendererId, connectionId: registration.connectionId, released: true });
@@ -242,8 +269,24 @@ try {
     }).waitFor();
     const available = settings.filter({ has: page.getByText(/^(可用|Available)$/i) });
     await available.nth(7).waitFor();
-    assert.equal(await available.count(), 8);
+    assert.ok(await available.count() >= 8);
+    const clean = settings.filter({ hasText: /独立浏览器数据|Independent browser data/i });
+    await button(clean, /^(Clear…|清除…)$/i).click();
+    await button(clean, /^(Clear data and cache|清除数据和缓存)$/i).click();
+    await clean.getByText(/^(Site data and cache cleared\.|站点数据和缓存已清除。)$/i).waitFor();
     await page.getByText(/^(未连接|Not connected)$/i).first().waitFor();
+    const managed = (await call('targets')).browsers.find(value => value.provider === 'browser' && value.connected);
+    assert(managed, 'The independent Chromium did not appear in the browser inventory');
+    const opened = (await call('openTarget', { browserId: managed.id, url: fixtureURL })).target;
+    const binding = { targetId: opened.id, targetIdentity: opened.identity };
+    await call('select', { reference: { id: opened.id } });
+    const listed = await call('act', { ...binding, action: 'siteTools' });
+    const tool = listed.result?.tools.find(value => value.name === 'opencu_fixture_echo');
+    assert(tool?.registrationId, 'The independent Chromium did not discover the registered page tool');
+    const invoked = await call('act', { ...binding, action: 'invokeSiteTool', registrationId: tool.registrationId,
+      input: { value: 'stock WebMCP result' } });
+    assert.equal(invoked.result?.output, 'stock WebMCP result');
+    console.log('The plugin on stock DSH called a real WebMCP site tool in its owned Chromium and cleared its site data via settings.');
     console.log('Signed stock DSH loaded the plugin browser, previews, native monitor, extension folder and managed Workbench.');
   }
 } finally {

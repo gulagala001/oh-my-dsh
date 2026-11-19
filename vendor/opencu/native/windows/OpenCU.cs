@@ -120,7 +120,14 @@ namespace OpenCU {
     }
     static int ButtonKey(int button) { return button == 1 ? 2 : button == 2 ? 4 : 1; }
     static void Button(int button, bool down, int expected = -1) { lock (inputLock) { if (!down && !buttons.Contains(button)) return; if (down && (expected != epoch || eof)) throw new Exception("CONTROL_STOPPED: input was cancelled"); if (down) { if (buttons.Contains(button)) return; if ((GetAsyncKeyState(ButtonKey(button)) & 0x8000) != 0) throw new Exception("INPUT_ALREADY_HELD: user already holds this button"); buttons.Add(button); Persist(); } uint flag = button == 1 ? (down ? 8u : 16u) : button == 2 ? (down ? 32u : 64u) : (down ? 2u : 4u); Send(new Input { Type = 0, Data = new InputUnion { Mouse = new MouseInput { Flags = flag } } }); if (!down) { if ((GetAsyncKeyState(ButtonKey(button)) & 0x8000) != 0) throw new Exception("RELEASE_FAILED: button remains down"); buttons.Remove(button); try { Persist(); } catch { buttons.Add(button); throw; } } } }
-    static void Cursor(Dictionary<string, object> target, Point at) { lock (outputLock) { Console.WriteLine(Json().Serialize(D("event", D("type", "cursor", "visible", true, "targetId", target["id"], "x", at.X, "y", at.Y, "space", "physical")))); Console.Out.Flush(); } }
+    static void Cursor(Dictionary<string, object> target, Point at) {
+      Rect rect;
+      var bounds = GetWindowRect(Handle(target), out rect) ? Bounds(rect) : null;
+      lock (outputLock) {
+        Console.WriteLine(Json().Serialize(D("event", D("type", "cursor", "visible", true, "targetId", target["id"], "x", at.X, "y", at.Y, "space", "physical", "bounds", bounds))));
+        Console.Out.Flush();
+      }
+    }
     static void Move(Dictionary<string, object> target, Point at, int expected) { lock (inputLock) { Check(expected, target); inputDispatched = true; if (!SetCursorPos(at.X, at.Y)) throw new Exception("INPUT_REJECTED: pointer move failed"); Cursor(target, at); } }
     static object Release() { lock (inputLock) { var failures = new List<string>(); foreach (int key in keys.ToArray().Reverse()) try { Key(key, false); } catch (Exception e) { failures.Add(e.Message); } foreach (int button in buttons.ToArray()) try { Button(button, false); } catch (Exception e) { failures.Add(e.Message); } lock (outputLock) { Console.WriteLine(Json().Serialize(D("event", D("type", "cursor", "visible", false)))); Console.Out.Flush(); } return D("released", failures.Count == 0, "failures", failures, "heldKeys", keys.ToArray(), "heldButtons", buttons.ToArray()); } }
     static void Check(int expected, Dictionary<string, object> target, bool foreground = true) { if (epoch != expected || eof) throw new Exception("CONTROL_STOPPED: input was cancelled"); Resolve(target, true); if (foreground) Foreground(target); }
