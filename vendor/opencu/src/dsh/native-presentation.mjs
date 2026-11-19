@@ -1,4 +1,5 @@
 import { join, resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { buildMacHelper } from '../native/build.mjs';
 import { checkMacHelperIdentity } from '../native/macos-identity.mjs';
 import { createHelperTransport } from '../native/transport.mjs';
@@ -29,7 +30,8 @@ export function createNativePresentation(dataDir) {
     } else {
       const powershell = join(process.env.SystemRoot || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
       const script = desktopResourcePath(new URL('../../native/windows/presentation.ps1', import.meta.url));
-      helper = createHelperTransport(powershell, ['-NoProfile', '-NonInteractive', '-STA', '-File', script], options);
+      const source = await readFile(script, 'utf8');
+      helper = createHelperTransport(powershell, ['-NoProfile', '-NonInteractive', '-STA', '-Command', `& { ${source} }`], options);
     }
     const record = { helper, events };
     records.set(id, record);

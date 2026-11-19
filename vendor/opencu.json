@@ -4,7 +4,7 @@
   "source": "opencu@2.4.4-dsh.0.2.2-rc.5",
   "policy": "rewritten-plugin",
   "hostVersion": "0.2.2-rc.5",
-  "archiveSha256": "49240cd8c00645036dbc19a01b9b80eeffb3ddcfcb5c2758abb2b2461de348f9",
+  "archiveSha256": "3b370ca5db235463b8a165295a6752af8be87553d53299d5588e761f18549230",
   "files": {
     "CHANGELOG.md": "5c6deb3c64690cc20e43adab7405d4a143ff5015cfa2edc1ff1f707cc4cc8af8",
     "DEVELOPMENT.md": "43d2638e8bf1aa4dd4cfdf67456bd1ad1c0f59eb15a95aca6f9b50dbcaa27a6a",
@@ -134,8 +134,8 @@
     "host/tab-close-guards.ts": "aa02dadb15df800abec0af633ce0a8006f7ea101ace4bfc5d1d6700f8aac0d8e",
     "host/tool-visibility.mjs": "42229e426bba736a0a876a8ef84cb84995c2b0fa2afdbe7f707e73271645ec7b",
     "lib/browser-surface.html": "e59df9f6a09e34ab6e41952a0d8f7d63de236f8857002326c92e493e1afcc716",
-    "lib/browser-surface.js": "d2e25e085b890a85f210e9d0199c008449745580c773ae65a6df6c73ad106376",
-    "lib/client.js": "de891729df70b17ce4dfe1cd1cb26ae7ca349cbbb77925b41fca2fd707b246e0",
+    "lib/browser-surface.js": "c96cbe0f717a3c5e899d3f344137b10a2aff81c1f4cd2bfdf0f06871e3410c6f",
+    "lib/client.js": "98a0855871da6ce56f039185a1aec74736c2a0b3352f9a8d2ac9600ad25d1e2d",
     "lib/cursor.html": "4cb6dc405d432fb54a6b21ea18a5ef6617f1d3793e40928b0705b508f8736261",
     "lib/extension.zip": "7b2c5905ae55c3dbab21b059be5323de48c94c2046885212292c42d303c2e870",
     "lib/host-build.json": "379db26d2938294d4346c5c9431079f984d2f8c762500750ea13b7e17f6d723b",
@@ -452,7 +452,7 @@
     "lib/rea-assets/lua-ec4138ed9dd4.js": "076f861a8bf3292124ba64c8c0cb11e8780dfe13ef99413173ca82fd38d23d4f",
     "lib/rea-assets/luau-af32ac672287.js": "ed70e55bfc3f12337292553c90d236da6859fb47c1553be3e983647fb19dd64c",
     "lib/rea-assets/make-9a743bf89d5a.js": "b89fcc49263fc224bb981fc85c0bf879b766ec5df0285b445641cdfbd1378558",
-    "lib/rea-assets/manifest.json": "b056984a89ecdfe2081aee586d31629e86578615676dcd01257760c79bc3acbe",
+    "lib/rea-assets/manifest.json": "1b4350c5b189b1d133c029cfa5d69975f632e73cb4d6ece5a1b4867b306467f4",
     "lib/rea-assets/markdown-1c15c2fc01dc.js": "c89ab0c9753185eec2faedae275ef59c59a6c40e430a9386f287250c8b485fe4",
     "lib/rea-assets/markdown-d7043fbbade8.js": "c6a081441a09aa7924d9a432fa4c5b7099f15472434d61786d580afbf4ae5a63",
     "lib/rea-assets/marko-4aec0bbd7e63.js": "e768995a4966c4bebebc4ffb7c7a1c2f835b9f3f331b4889c54a3437d4f917b9",
@@ -517,7 +517,7 @@
     "lib/rea-assets/opencu-chunk-YGBIRJVP.js": "36cf51d1bfa14300412493f6fd0432d8a90e76a9f2c73f38936e330aa3cd4145",
     "lib/rea-assets/opencu-chunk-YPFUCPIN.js": "eea1692e2915c44a5bb49864bbc1d169573a772301656b477c3f052c6e94b908",
     "lib/rea-assets/opencu-chunk-ZWFXAUBW.js": "0ce3472ccf9f9b899877c6f8ef68a074da83549652a40f3648ee28dd8bf41b04",
-    "lib/rea-assets/opencu-client-QHJSJCYR.js": "1e49da2a1bce823a98bd039ebf5df96ec68a9062cf9f88748f8207415cc4402d",
+    "lib/rea-assets/opencu-client-2OS7KQCQ.js": "54fb93874e68229001c36a507b7bea20c16c4e25f606f55790207e9cff64eaac",
     "lib/rea-assets/openscad-8dbac786f981.js": "12626c2f8d3754456f7e22da8b679a6beca86265bfefa4b9ed043092b2b80780",
     "lib/rea-assets/ordinal-9b87408e3342.js": "e55fe9782b7d678f376d9593d5d353162752484123617ea555712f64cb6786f4",
     "lib/rea-assets/packet-7NZHBO7P-a556b9452792.js": "c6f2772b807f518fa25be78e1f498c8234c5e1e51b256b3ced062d94a23e8835",
@@ -744,7 +744,7 @@
     "native/windows/Activity.cs": "5ee9dace021e3970e3a493ccc25f654da78add476c46436b97ebc6e542d2ce1d",
     "native/windows/OpenCU.cs": "d566f16b7b530d16039363bf024ba9b5c50da5db518bc362852cdbcca1227204",
     "native/windows/helper.ps1": "a509cd49a9213089a8dc36337c3a939f89c484d722bba3b8b6bbeccf81ca4993",
-    "native/windows/presentation.ps1": "5945bb3839a0c7549b98b2e8592a87e933fba62a5fa2e4c760ba918624e02108",
+    "native/windows/presentation.ps1": "be4b93b33b4d6b1f3590de1ef688db71a52773f90f8b1ed18749c8c6bd99608d",
     "package.json": "babd4c0d278ac70c113e7c66e42e30ce25c1238ad25455d4ab5afff229ac8bdb",
     "scripts/check-docs.mjs": "2592ee148ef6fd0164a0aa2a5be139c490a869b87e2a5d21e34d4defb943588e",
     "scripts/check-release-assets.mjs": "3b3e2f03b719c9733a0209cbed756d58fa6bded8a54b7bacc1fe02c38e358ed3",
@@ -789,7 +789,7 @@
     "src/dsh/index.mjs": "e88256d915d4ad36b8589f83509b9f0e03bd47cfbfa153bce1363aeafb2bb564",
     "src/dsh/input-release.mjs": "a772a91ea2a612eaec47fc2b8202205705753e40435f7108f57e4c849f2b4133",
     "src/dsh/model-output.mjs": "07eb694024c5770bdfd2ab65b9b4615f03b1b02f55705114c5c2a37f4e1f78f5",
-    "src/dsh/native-presentation.mjs": "c3caadd048a27f19d9d23dc8d10c73de0599dc256739b7e29378d1333e8b9d7d",
+    "src/dsh/native-presentation.mjs": "918d37c3e46d4a7198dbdf438d6a3d6ab79a6b1f06c0ef5fcc76a2f065aad058",
     "src/dsh/observation-output.mjs": "a61ec26db2404ca704a92b32bb3c2d16e08227168433b8c98db9aafb0620da63",
     "src/dsh/preferences.mjs": "287cd47e73f7383cae11d2a9d764aef3251dcb4602bb0b85c5b5add0423d5c4d",
     "src/dsh/presentation.mjs": "bb0a542010683c3783769c9290209b5d8034dd69ba5cac8e62250b22280a9070",
@@ -819,5 +819,5 @@
     "src/runtime.mjs": "80f86241999988de8a1ac43a787b3e72d12056cf3c1367107f2d7c7913faba20",
     "src/site-tools-policy.mjs": "2d5200203c30075c850203d8dca6592b5728b88950df2edcc111c19e584b9f90"
   },
-  "sourceCommit": "41bf35f41dcb8144ab5cfabcd5b534c8cd3b3f0e"
+  "sourceCommit": "ca4aab80d88994d6b0ec1e33d914923a66307c3d"
 }

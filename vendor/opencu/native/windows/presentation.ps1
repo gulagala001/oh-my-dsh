@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Drawing, System.Windows.Forms, System.Web.Extensions
-Add-Type -Language CSharp -ReferencedAssemblies System.Drawing, System.Windows.Forms, System.Web.Extensions -TypeDefinition @'
+$framework = [System.Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
+$references = @('System.dll', 'System.Core.dll', 'System.Drawing.dll', 'System.Windows.Forms.dll', 'System.Web.Extensions.dll') | ForEach-Object { Join-Path $framework $_ }
+Add-Type -Language CSharp -ReferencedAssemblies $references -TypeDefinition @'
 using System;
 using System.Collections;
 using System.Collections.Generic;

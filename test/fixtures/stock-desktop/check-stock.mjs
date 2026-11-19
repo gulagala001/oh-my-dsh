@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 const from = createRequire(process.env.OMD_STOCK_TEST_DEPENDENCIES
   ? join(process.env.OMD_STOCK_TEST_DEPENDENCIES, 'package.json') : import.meta.url);
@@ -23,7 +23,7 @@ const pages = () => browser.contexts().flatMap(context => context.pages());
 const button = (page, name) => page.getByRole('button', { name });
 const fixture = createServer((_request, response) => {
   response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  response.end('<!doctype html><title>OMD stock fixture</title><button onclick="this.textContent=\'clicked\'">Click fixture</button>');
+  response.end('<!doctype html><title>OMD stock fixture</title><button onclick="this.textContent=\'clicked\'">Click fixture</button><br><input aria-label="Fixture text">');
 });
 
 function samplePDF() {
@@ -69,8 +69,9 @@ try {
       if (!result.ok) throw new Error(method + ' failed: ' + JSON.stringify(result.error));
       return result;
     }, { method, args });
-    const fixturePath = join(directory, 'omd-stock-fixture');
-    await mkdir(fixturePath, { recursive: true });
+    await mkdir(directory, { recursive: true });
+    const fixturePath = await mkdtemp(resolve(directory, 'omd-stock-fixture-'));
+    const workspaceName = basename(fixturePath);
     await writeFile(join(fixturePath, 'stock-preview.csv'), 'name,value\nfixture,42\n');
     await writeFile(join(fixturePath, 'stock-preview.pdf'), samplePDF());
     await sharp({ create: { width: 300, height: 200, channels: 3, background: '#4479be' } }).png().toFile(join(fixturePath, 'stock-image.png'));
@@ -82,19 +83,21 @@ try {
       return (await response.json()).result.ok;
     }, fixturePath), true);
     await page.reload();
-    const workspace = page.getByRole('treeitem').filter({ hasText: 'omd-stock-fixture' }).first();
+    const workspace = page.getByRole('treeitem').filter({ hasText: workspaceName }).first();
     await workspace.hover();
     await button(workspace, /新建会话|new session|new chat/i).click();
-    await button(page, /选择工作区|select workspace|choose workspace/i).filter({ hasText: 'omd-stock-fixture' }).waitFor();
+    await button(page, /选择工作区|select workspace|choose workspace/i).filter({ hasText: workspaceName }).waitFor();
     const sidebar = button(page, /打开右侧边栏|open right sidebar/i);
     const files = button(page, /工作区文件|workspace files/i);
+    const filesTab = page.getByRole('tab', { name: /^(文件|files\b)/i });
     const image = page.getByText('stock-image.png', { exact: true }).first();
     for (let attempt = 0; attempt < 12 && !await image.isVisible(); attempt++) {
       if (await sidebar.isVisible()) await sidebar.click();
-      else if (await files.isVisible()) await files.click();
+      else if (await filesTab.isVisible() && await filesTab.getAttribute('aria-selected') === 'false') await filesTab.click();
       else {
         const show = button(page, /显示文件树|show file tree/i);
         if (await show.isVisible()) await show.click();
+        else if (await files.isVisible()) await files.click();
       }
       await sleep(300);
     }
@@ -113,11 +116,24 @@ try {
     console.log('Native workspace file tree and OpenCU image preview loaded with annotation controls.');
     const showTree = button(page, /显示文件树|show file tree/i);
     if (await showTree.isVisible()) await showTree.click();
+    if (!await page.getByText('stock-preview.pdf', { exact: true }).first().isVisible() && await filesTab.isVisible()) await filesTab.click();
     await page.getByText('stock-preview.pdf', { exact: true }).first().click();
-    await page.getByText('Stock DSH document', { exact: true }).waitFor();
+    const pdfText = page.getByText('Stock DSH document', { exact: true });
+    await pdfText.waitFor();
     await button(page, /请求修改|request changes/i).click();
     await page.getByText(/选中内容并提出修改要求|select.*request.*change/i).waitFor();
-    console.log('The stock file tree opened the OpenCU document viewer.');
+    const textBounds = await pdfText.boundingBox();
+    assert(textBounds);
+    const textY = textBounds.y + textBounds.height / 2;
+    await page.mouse.move(textBounds.x + 2, textY);
+    await page.mouse.down();
+    await page.mouse.move(textBounds.x + textBounds.width - 2, textY, { steps: 15 });
+    await page.mouse.up();
+    await page.getByRole('textbox', { name: /PDF 注释|PDF annotation/i }).fill('Stock document annotation');
+    await button(page, /^(评论|comment)$/i).click();
+    await page.waitForFunction(() => Object.keys(localStorage).some(key => key.startsWith('opencu:document-comments:')
+      && localStorage.getItem(key)?.includes('Stock document annotation')));
+    console.log('The stock file tree opened the OpenCU document viewer and saved a PDF annotation.');
 
     const addon = button(page, /新标签页|new tab/i);
     if (await addon.isVisible()) await addon.click();
@@ -147,16 +163,29 @@ try {
     const screenshot = capture.observation?.screenshot ?? capture.screenshot;
     assert(screenshot?.id && screenshot.width > 0);
     await call('act', { action: 'click', x: 24, y: 14, screenshotId: screenshot.id });
-    assert.equal(await page.evaluate(async url => {
+    const guestRead = expression => page.evaluate(async ({ url, expression }) => {
       const guest = [...document.querySelectorAll('webview')].find(value => { try { return value.getURL() === url; } catch { return false; } });
-      return guest.executeJavaScript('document.querySelector("button").textContent');
-    }, fixtureURL), 'clicked');
-    await button(page, /为此页面添加批注|annotate this page/i).waitFor();
-    assert.equal(await page.evaluate(async url => {
+      return guest.executeJavaScript(expression);
+    }, { url: fixtureURL, expression });
+    assert.equal(await guestRead('document.querySelector("button").textContent'), 'clicked');
+    const [x, y] = await guestRead('(() => { const r = document.querySelector("input").getBoundingClientRect(); return [r.x + 12, r.y + r.height / 2]; })()');
+    await call('act', { action: 'click', x, y });
+    await call('act', { action: 'type', text: 'stock browser input' });
+    assert.equal(await guestRead('document.querySelector("input").value'), 'stock browser input');
+    const annotate = button(page, /为此页面添加批注|annotate this page/i);
+    await annotate.click();
+    const [guestX, guestY] = await page.evaluate(url => {
       const guest = [...document.querySelectorAll('webview')].find(value => { try { return value.getURL() === url; } catch { return false; } });
-      return guest.executeJavaScript('typeof globalThis.__opencuAnnotations?.dispatch === "function"');
-    }, fixtureURL), true);
-    console.log('OpenCU controlled the stock sidebar page and installed its page annotation runtime.');
+      const bounds = guest.getBoundingClientRect();
+      return [bounds.x, bounds.y];
+    }, fixtureURL);
+    await page.mouse.click(guestX + 24, guestY + 14);
+    const webComment = page.getByRole('textbox', { name: /网页批注|注释|批注|comment|annotation/i }).last();
+    await webComment.fill('Stock web annotation');
+    await button(page, /^(评论|添加评论|保存|comment|add comment|save)$/i).last().click();
+    await page.waitForFunction(() => Object.keys(localStorage).some(key => key.startsWith('opencu:annotations:')
+      && !key.endsWith(':drafts') && localStorage.getItem(key)?.includes('Stock web annotation')));
+    console.log('OpenCU controlled the stock sidebar page with mouse and keyboard and saved an annotation.');
 
     const rendererId = crypto.randomUUID(), threadID = 'stock-monitor-fixture';
     const registration = await call('browser/connect', { rendererId, sessionIds: [threadID], browser: false, presentation: true });
