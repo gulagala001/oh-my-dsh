@@ -7,6 +7,7 @@ import { hostTarget } from './host-targets.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const packageMember = 'package/package.json';
+const appId = 'io.github.gulagala001.oh-my-dsh';
 
 function replaceOnce(text, from, to, file) {
   if (text.split(from).length !== 2) throw new Error(`Desktop source has an unexpected layout: ${file}`);
@@ -52,31 +53,81 @@ export async function prepareDesktopSource({ source, archive, destination }) {
       ['apps/desktop/src/project-manager.ts', [
         ['  initProfile(projectDir, WEB_PROFILE.bundles)', "  initProfile(projectDir, [...WEB_PROFILE.bundles, 'oh-my-dsh'])"],
       ]],
+      ['apps/desktop/scripts/desktop-release-environment.mjs', [
+        ['  const appId = requireEnvironmentValue(env, DESKTOP_APP_ID_ENV)', `  const appId = env[DESKTOP_APP_ID_ENV]?.trim() || '${appId}'\n  if (appId !== '${appId}') throw new Error('OMD Desktop requires its own application ID')`],
+      ]],
+      ['apps/desktop/scripts/desktop-package-environment.mjs', [
+        ["DSH_DESKTOP_APP_ID: 'com.deepseek.harness'", `DSH_DESKTOP_APP_ID: '${appId}'`],
+        ['|DOWNLOAD_TEST_(?:ORIGIN|RELEASE_ID))$/u.test(name)', '|DOWNLOAD_TEST_(?:ORIGIN|RELEASE_ID)|DOWNLOAD_PROD_ORIGIN)$/u.test(name)'],
+      ]],
+      ['apps/desktop/scripts/desktop-auto-update-environment.mjs', [
+        ["    originEnvName: undefined,\n    fixedOrigin: 'https://download.deepseek.com',", "    originEnvName: 'DOWNLOAD_PROD_ORIGIN',\n    fixedOrigin: undefined,"],
+        ['export function desktopWebsiteInstallerUrl(target) {\n  return `${UPDATE_ENVIRONMENTS.production.fixedOrigin}/desktop/${desktopLatestInstallerFilename(target)}`', 'export function desktopWebsiteInstallerUrl(target, env = process.env) {\n  const name = UPDATE_ENVIRONMENTS.production.originEnvName\n  return `${httpsOrigin(requiredEnvironmentValue(env, name), name)}/desktop/${desktopLatestInstallerFilename(target)}`'],
+        ['return `dsh-latest-', 'return `omd-latest-'],
+        ["let releasePrefix = 'dsh-desk'", "let releasePrefix = 'omd-desk'"],
+      ]],
       ['apps/desktop/scripts/electron-builder-config.mjs', [
-        ['  const appId = resolveDesktopAppId(env)', "  const appId = resolveDesktopAppId(env)\n  if (appId !== 'io.github.gulagala001.oh-my-dsh') throw new Error('OMD Desktop requires its own application ID')"],
+        ['  const buildVersion = resolveDesktopBuildVersion(env, productVersion)', `  const omdVersion = resolveDesktopBuildVersion({ DSH_DESKTOP_BUILD_VERSION: ${JSON.stringify(metadata.version)} }, productVersion)\n  const buildVersion = resolveDesktopBuildVersion(env, omdVersion)`],
+        ["    protocols: [{ name: 'DeepSeek Harness', schemes: ['dsh'] }],", "    protocols: [{ name: 'Oh My DSH', schemes: ['oh-my-dsh'] }],"],
+        ['      dshDesktopAppId: appId,', "      name: 'oh-my-dsh-desktop',\n      dshDesktopAppId: appId,"],
         ["    productName: 'DeepSeek Harness',", "    productName: 'Oh My DSH',"],
+        ["      { from: buildPaths.runtime, to: 'runtime' },", "      { from: buildPaths.runtime, to: 'runtime' },\n      { from: join(buildPaths.root, 'omd-browsers'), to: 'omd-browsers' },"],
+      ]],
+      ['apps/desktop/scripts/package-target.ts', [
+        ['  if (requested === undefined) return productVersion', `  const omdVersion = validateDesktopBuildVersion(${JSON.stringify(metadata.version)}, productVersion)\n  if (requested === undefined) return omdVersion`],
+        ['return validateDesktopBuildVersion(requested, productVersion)', 'return validateDesktopBuildVersion(requested, omdVersion)'],
+        ['    productVersion, target: invocation.target.name,', '    productVersion: omdVersion, target: invocation.target.name,'],
+        ["const appPath = join(buildPaths.artifacts, target.arch === 'arm64' ? 'mac-arm64' : 'mac', 'DeepSeek Harness.app')", "const appPath = join(buildPaths.artifacts, target.arch === 'arm64' ? 'mac-arm64' : 'mac', 'Oh My DSH.app')"],
+        ["const appPath = join(artifactsRoot, target.arch === 'arm64' ? 'mac-arm64' : 'mac', 'DeepSeek Harness.app')", "const appPath = join(artifactsRoot, target.arch === 'arm64' ? 'mac-arm64' : 'mac', 'Oh My DSH.app')"],
       ]],
       ['apps/desktop/src/main.ts', [
-        ['let focusPrimaryWindow =', "// Keep OMD's desktop profile separate from a stock DSH installation.\nprocess.env.DSH_HOME ??= join(app.getPath('userData'), 'harness')\n\nlet focusPrimaryWindow ="],
+        ['let focusPrimaryWindow =', "// Keep durable data outside both applications' uninstallable Electron caches.\nprocess.env.DSH_HOME ??= join(app.getPath('appData'), 'oh-my-dsh-data')\nif (app.isPackaged) process.env.PLAYWRIGHT_BROWSERS_PATH ??= join(process.resourcesPath, 'omd-browsers')\n\nlet focusPrimaryWindow ="],
+        ["app.setAsDefaultProtocolClient('dsh')", "app.setAsDefaultProtocolClient('oh-my-dsh')"],
+        ["url === 'dsh://open' || url === 'dsh://open/'", "url === 'oh-my-dsh://open' || url === 'oh-my-dsh://open/'"],
+        ["          if (state.status === 'credential-stored' && attempt?.phase === 'succeeded' && welcomeWindow !== undefined) void enterWorkspace({ activate: false }).catch(() => undefined)", "          if (state.status === 'credential-stored' && attempt?.phase === 'succeeded' && welcomeWindow !== undefined && returnedAttempt !== attempt.id) {\n            returnedAttempt = attempt.id\n            void enterWorkspace().catch(() => undefined)\n          }"],
       ]],
       ['apps/desktop/scripts/smoke-packaged-runtime.ts', [
+        ["'DeepSeek Harness.app'", "'Oh My DSH.app'"],
         ["'DeepSeek Harness.exe'", "'Oh My DSH.exe'"],
         ["join(application, 'MacOS', 'DeepSeek Harness')", "join(application, 'MacOS', 'Oh My DSH')"],
       ]],
+      ['apps/desktop/scripts/package-macos.ts', [
+        ["'DeepSeek Harness.app'", "'Oh My DSH.app'"],
+      ]],
+      ['apps/desktop/scripts/verify-retained-desktop.ts', [
+        ["'DeepSeek Harness.app'", "'Oh My DSH.app'"],
+      ]],
+      ['apps/desktop/cli/dsh.cmd', [
+        ['DeepSeek Harness.exe', 'Oh My DSH.exe'],
+      ]],
+      ['apps/desktop/cli/dsh', [
+        ['MacOS/DeepSeek Harness', 'MacOS/Oh My DSH'],
+      ]],
+      ['apps/desktop-host/src/cli.ts', [
+        ["import { basename, delimiter, dirname, join, resolve } from 'node:path'", "import { basename, delimiter, dirname, join, resolve } from 'node:path'\nimport { homedir } from 'node:os'"],
+        ['  await runCli({', `  const appData = process.platform === 'win32'
+    ? process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming')
+    : join(homedir(), 'Library', 'Application Support')
+  process.env.DSH_HOME ??= join(appData, 'oh-my-dsh-data')
+  process.env.PLAYWRIGHT_BROWSERS_PATH ??= join(supportDir, '..', 'omd-browsers')
+  await runCli({`],
+      ]],
       ['apps/desktop/scripts/prepare-dsh.ts', [
+        ["import { spawn } from 'node:child_process'", "import { spawn } from 'node:child_process'\nimport { createRequire } from 'node:module'"],
+        ["import { delimiter, join, relative, resolve } from 'node:path'", "import { delimiter, dirname, join, relative, resolve } from 'node:path'"],
         ["    await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:manifests'", `    await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:omd-browser', () => new Promise<void>((done, reject) => {
-      const child = spawn(NODE, [join(DSH_OUTPUT_ROOT, 'node_modules', 'playwright', 'cli.js'), 'install', 'chromium'], {
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', PLAYWRIGHT_BROWSERS_PATH: join(DSH_OUTPUT_ROOT, 'omd-browsers') },
+      const browsers = join(BUILD_PATHS.root, 'omd-browsers')
+      const omdRequire = createRequire(join(DSH_OUTPUT_ROOT, 'node_modules', 'oh-my-dsh', 'package.json'))
+      const playwright = join(dirname(omdRequire.resolve('playwright/package.json')), 'cli.js')
+      rmSync(browsers, { recursive: true, force: true })
+      const child = spawn(NODE, [playwright, 'install', 'chromium'], {
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', PLAYWRIGHT_BROWSERS_PATH: browsers },
         stdio: 'inherit', windowsHide: true,
       })
       child.once('error', reject)
       child.once('close', (code, signal) => code === 0 ? done() : reject(new Error(\`OMD browser provisioning failed (\${signal ?? code})\`)))
     }))
     await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:manifests'`],
-      ]],
-      ['apps/desktop-host/src/index.ts', [
-        ["import { delimiter, join } from 'node:path'", "import { delimiter, join } from 'node:path'\nimport { existsSync } from 'node:fs'"],
-        ['  const projectDir = process.argv[3] as string', "  const projectDir = process.argv[3] as string\n  const bundledBrowsers = join(runtimeDir, 'omd-browsers')\n  if (existsSync(bundledBrowsers)) process.env.PLAYWRIGHT_BROWSERS_PATH ??= bundledBrowsers"],
       ]],
     ];
 
