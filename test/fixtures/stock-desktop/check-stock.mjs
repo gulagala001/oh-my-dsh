@@ -209,6 +209,17 @@ try {
     }
     await button(page, /^(DeepSeek 网页聊天|DeepSeek web chat)$/i).click();
     await page.waitForFunction(() => document.querySelector('.dswb-managed-browser img')?.src.startsWith('data:image/'));
+    await button(page, /账号菜单|account menu/i).click();
+    await page.getByRole('menuitem', { name: /^(设置|settings)/i }).click();
+    await page.getByText(/^(电脑与浏览器|Computer and browsers)$/i).click();
+    const settings = page.locator('div[class*="@container/settings-row"]');
+    await settings.filter({ hasText: /AI 操作侧栏浏览器|AI control in the sidebar/i }).filter({
+      has: page.getByText(/^(可用|Available)$/i),
+    }).waitFor();
+    const available = settings.filter({ has: page.getByText(/^(可用|Available)$/i) });
+    await available.nth(7).waitFor();
+    assert.equal(await available.count(), 8);
+    await page.getByText(/^(未连接|Not connected)$/i).first().waitFor();
     console.log('Signed stock DSH loaded the plugin browser, previews, native monitor, extension folder and managed Workbench.');
   }
 } finally {
