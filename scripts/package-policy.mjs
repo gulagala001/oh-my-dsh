@@ -2,7 +2,7 @@
 // published documentation retain them; vendored runtime snapshots stay whole.
 import { documentLinks, visibleMarkdown } from './documentation-links.mjs';
 
-export const isRuntimeExcluded = path => /^(?:docs\/images\/|docs\/index(?:_EN)?\.html$|docs\/site\/.*\.(?:css|js)$|scripts\/(?:tool-performance\/|simulator\/|simulate\.mjs$|build-docs\.mjs$|plugin-submissions\.mjs$)|euler-neon-fluid\.html$)/.test(path);
+export const isRuntimeExcluded = path => /(?:^|\/)__pycache__\/|\.py[co]$/i.test(path) || /^(?:docs\/images\/|docs\/index(?:_EN)?\.html$|docs\/site\/.*\.(?:css|js)$|scripts\/(?:tool-performance\/|simulator\/|simulate\.mjs$|build-docs\.mjs$|plugin-submissions\.mjs$)|euler-neon-fluid\.html$)/.test(path);
 
 export function assertPackageScope(paths) {
   const unexpected = paths.filter(isRuntimeExcluded);
