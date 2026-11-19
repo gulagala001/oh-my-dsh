@@ -1,19 +1,8 @@
-import metadata from '../package.json' with { type: 'json' };
-import { createRequire } from 'node:module';
-import { readFile } from 'node:fs/promises';
-
 /** Resolve capability identities from the installed host's own Loader tree. */
 export async function loadHostModule(ctx, name, factory, dependencies) {
   const entry = [...ctx.loader.entries()].find(row => row.options.name === `@deepseek-ai/dsh-${name}`);
-  if (!entry?.parent?.tree?.import) throw Error(`DSH Workflow requires the original ${name} registration from DSH ${metadata.engines.dsh}`);
+  if (typeof entry?.parent?.tree?.import !== 'function') throw Error(`DSH Workflow requires the host's ${name} loader registration`);
   const tree = entry.parent.tree;
-  const specifier = `@deepseek-ai/dsh-${name}/package.json`;
-  // Tree.import does not forward JSON import attributes. Use its exact
-  // resolver/base for metadata too; runtime modules still go through the tree.
-  const pkg = tree.ctx.loader.internal
-    ? await tree.ctx.loader.internal.import(specifier, tree.ctx.baseUrl, { type: 'json' })
-    : JSON.parse(await readFile(createRequire(tree.ctx.baseUrl).resolve(specifier), 'utf8'));
-  if ((pkg.default ?? pkg).version !== metadata.engines.dsh) throw Error(`DSH Workflow requires exactly DSH ${metadata.engines.dsh}`);
   const importHostModule = async specifier => specifier.startsWith('node:') ? import(specifier) : tree.import(specifier);
   const modules = new Map(await Promise.all(dependencies.map(async specifier =>
     [specifier, await importHostModule(specifier)])));

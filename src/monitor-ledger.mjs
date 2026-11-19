@@ -131,19 +131,19 @@ export class MonitorLedger {
           status TEXT NOT NULL,title TEXT,detail TEXT,count REAL,savedTokens REAL,inputTokens REAL,outputTokens REAL,data TEXT);
         CREATE INDEX IF NOT EXISTS events_session_time ON events(sessionId,at DESC,id);
         CREATE INDEX IF NOT EXISTS events_time ON events(at DESC,id);`);
-      const schema = this.db.prepare('SELECT value FROM metadata WHERE key=?').get('schema');
-      if (schema && schema.value !== '1') throw Error('监控数据版本不兼容');
-      this.db.prepare('INSERT OR IGNORE INTO metadata VALUES(?,?)').run('schema', '1');
-      this.db.prepare('INSERT OR IGNORE INTO metadata VALUES(?,?)').run('startedAt', String(now()));
+      this.db.prepare('INSERT INTO metadata(key,value) VALUES(?,?) ON CONFLICT(key) DO NOTHING').run('schema', '1');
+      this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES(?,?)').run('startedAt', String(now()));
       this.startedAt = Number(this.db.prepare('SELECT value FROM metadata WHERE key=?').get('startedAt').value);
-      this.db.prepare('INSERT OR IGNORE INTO metadata VALUES(?,?)').run('unharnessedLiveSince', String(now()));
+      this.db.prepare('INSERT OR IGNORE INTO metadata(key,value) VALUES(?,?)').run('unharnessedLiveSince', String(now()));
       this.historyBefore = Number(this.db.prepare('SELECT value FROM metadata WHERE key=?').get('unharnessedLiveSince').value);
-      this.insert = this.db.prepare('INSERT OR IGNORE INTO calls VALUES(' + Array(21).fill('?').join(',') + ')');
       const columns=['sessionId','kind','at','provider','model','status','source','turn','step','eventSeq','startedAt','durationMs','effort','error',...fields];
-      this.replace=this.db.prepare('INSERT INTO calls VALUES('+Array(21).fill('?').join(',')+') ON CONFLICT(id) DO UPDATE SET '+columns.map(key=>key+'=excluded.'+key).join(',')+' WHERE calls.sessionId=excluded.sessionId AND calls.kind=excluded.kind AND calls.source=excluded.source AND ((excluded.eventSeq IS NOT NULL AND (calls.eventSeq IS NULL OR excluded.eventSeq>=calls.eventSeq)) OR (excluded.eventSeq IS NULL AND excluded.at>=calls.at))');
-      this.insertTiming = this.db.prepare('INSERT OR IGNORE INTO call_timings VALUES(?,?)');
-      this.insertEvent = this.db.prepare('INSERT OR IGNORE INTO events VALUES(' + Array(12).fill('?').join(',') + ')');
-      this.replaceEvent = this.db.prepare('INSERT INTO events VALUES(' + Array(12).fill('?').join(',') + ') ON CONFLICT(id) DO UPDATE SET status=excluded.status,title=excluded.title,detail=excluded.detail,data=excluded.data WHERE events.sessionId=excluded.sessionId AND events.kind=excluded.kind');
+      const callFields = ['id', ...columns].join(',');
+      const eventFields = 'id,sessionId,kind,at,status,title,detail,count,savedTokens,inputTokens,outputTokens,data';
+      this.insert = this.db.prepare('INSERT OR IGNORE INTO calls(' + callFields + ') VALUES(' + Array(21).fill('?').join(',') + ')');
+      this.replace=this.db.prepare('INSERT INTO calls(' + callFields + ') VALUES('+Array(21).fill('?').join(',')+') ON CONFLICT(id) DO UPDATE SET '+columns.map(key=>key+'=excluded.'+key).join(',')+' WHERE calls.sessionId=excluded.sessionId AND calls.kind=excluded.kind AND calls.source=excluded.source AND ((excluded.eventSeq IS NOT NULL AND (calls.eventSeq IS NULL OR excluded.eventSeq>=calls.eventSeq)) OR (excluded.eventSeq IS NULL AND excluded.at>=calls.at))');
+      this.insertTiming = this.db.prepare('INSERT OR IGNORE INTO call_timings(id,firstTokenMs) VALUES(?,?)');
+      this.insertEvent = this.db.prepare('INSERT OR IGNORE INTO events(' + eventFields + ') VALUES(' + Array(12).fill('?').join(',') + ')');
+      this.replaceEvent = this.db.prepare('INSERT INTO events(' + eventFields + ') VALUES(' + Array(12).fill('?').join(',') + ') ON CONFLICT(id) DO UPDATE SET status=excluded.status,title=excluded.title,detail=excluded.detail,data=excluded.data WHERE events.sessionId=excluded.sessionId AND events.kind=excluded.kind');
     } catch (error) {
       this.error = String(error.message); try { this.db?.close(); } catch {} this.db = null;
     }

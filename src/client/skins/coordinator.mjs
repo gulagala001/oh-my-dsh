@@ -3,10 +3,8 @@
 const KEY = Symbol.for('omd.omaa.appearance.v1');
 
 export function appearanceCoordinator(surface = document) {
-  if (surface[KEY]) {
-    if (surface[KEY].version !== 1) throw new Error('Incompatible appearance coordinator');
-    return surface[KEY];
-  }
+  // The shared owner arbitrates both renderers, including newer implementations.
+  if (surface[KEY]) return surface[KEY];
   const providers = new Map(), listeners = new Set(), foregroundOwners = new Map();
   let foreground = { sessionId: null, mode: null }, active, busy = false, pending = false, serial = 0;
   let snapshot = Object.freeze({ foreground, owner: null, key: null, error: null, phase: 'idle', revision: 0 });

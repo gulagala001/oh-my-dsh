@@ -37,9 +37,7 @@ export class DreamStore {
       if(!this.db.prepare('PRAGMA table_info(job_targets)').all().some(column=>column.name==='failed'))
         this.db.prepare('ALTER TABLE job_targets ADD COLUMN failed INTEGER NOT NULL DEFAULT 0').run();
     });
-    const schema = this.meta('schema');
-    if (schema !== null && schema !== 1) { this.db.close(); throw Error('Dream 数据版本不兼容；原文件保留'); }
-    this.setMeta('schema', 1);
+    this.db.prepare('INSERT INTO meta(key,data) VALUES(?,?) ON CONFLICT(key) DO NOTHING').run('schema', encode(1));
   }
   tx(fn) {
     this.db.exec('BEGIN IMMEDIATE');
@@ -47,14 +45,14 @@ export class DreamStore {
     catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
   meta(key) { return decode(this.db.prepare('SELECT data FROM meta WHERE key=?').get(key)); }
-  setMeta(key, value) { this.db.prepare('INSERT INTO meta VALUES(?,?) ON CONFLICT(key) DO UPDATE SET data=excluded.data').run(key, encode(value)); }
+  setMeta(key, value) { this.db.prepare('INSERT INTO meta(key,data) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET data=excluded.data').run(key, encode(value)); }
   bumpCatalog() { const n = (this.meta('catalogRevision') || 0) + 1; this.setMeta('catalogRevision', n); return n; }
   session(id) { return decode(this.db.prepare('SELECT data FROM sessions WHERE id=?').get(id)); }
   saveSession(value) {
     const old = this.session(value.id);
     if (encode(old) === encode(value)) return false;
     this.tx(() => {
-      this.db.prepare(`INSERT INTO sessions VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET project=excluded.project,shared=excluded.shared,title=excluded.title,activity=excluded.activity,data=excluded.data`)
+      this.db.prepare(`INSERT INTO sessions(id,project,shared,title,activity,data) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET project=excluded.project,shared=excluded.shared,title=excluded.title,activity=excluded.activity,data=excluded.data`)
         .run(value.id, value.project || '', Number(value.shared), value.title || value.id, value.activity || 0, encode(value));
       // A log generation owns its memory just as a shared scope owns a parent.
       // Preserve old versions for explicit recall; they cannot seed a new log.
@@ -87,14 +85,14 @@ export class DreamStore {
   putSource(source) {
     const existing = this.source(source.id);
     if (existing && encode(existing) !== encode(source)) throw Error('Dream 来源编号发生冲突');
-    this.db.prepare('INSERT OR IGNORE INTO sources VALUES(?,?,?,?)').run(source.id, source.sessionId ?? null, source.kind, encode(source));
+    this.db.prepare('INSERT OR IGNORE INTO sources(id,session,kind,data) VALUES(?,?,?,?)').run(source.id, source.sessionId ?? null, source.kind, encode(source));
   }
   acquire(ttl = 60000) {
     return this.tx(() => {
       const before = this.db.prepare('SELECT * FROM lease WHERE id=1').get(), now = this.now();
       if (before && before.expires > now && before.owner !== this.owner) return null;
       const epoch = (before?.epoch || 0) + 1;
-      this.db.prepare('INSERT INTO lease VALUES(1,?,?,?) ON CONFLICT(id) DO UPDATE SET owner=excluded.owner,epoch=excluded.epoch,expires=excluded.expires').run(this.owner, epoch, now + ttl);
+      this.db.prepare('INSERT INTO lease(id,owner,epoch,expires) VALUES(1,?,?,?) ON CONFLICT(id) DO UPDATE SET owner=excluded.owner,epoch=excluded.epoch,expires=excluded.expires').run(this.owner, epoch, now + ttl);
       return epoch;
     });
   }
@@ -132,7 +130,7 @@ export class DreamStore {
       // only sources actually rebuilt into the new body may be skipped.
       if (old?.invalid)
         this.db.prepare('DELETE FROM progress WHERE node=?').run(key);
-      for (const item of consumed) this.db.prepare('INSERT INTO progress VALUES(?,?,?,?) ON CONFLICT(node,source) DO UPDATE SET fingerprint=excluded.fingerprint,data=excluded.data').run(key, item.key, item.fingerprint, encode(item));
+      for (const item of consumed) this.db.prepare('INSERT INTO progress(node,source,fingerprint,data) VALUES(?,?,?,?) ON CONFLICT(node,source) DO UPDATE SET fingerprint=excluded.fingerprint,data=excluded.data').run(key, item.key, item.fingerprint, encode(item));
       // Source coverage is committed even if the concise text did not change.
       // Its new provenance still needs a revision for parent invalidation.
       if (old && !old.invalid && old.summary === summary && consumed.length === 0) return old;
@@ -142,10 +140,10 @@ export class DreamStore {
       if (previous) this.putSource({ id: previous, kind: 'memory', key, revision: old.revision });
       for (const source of [...new Set([...references, ...(previous ? [previous] : [])])]) {
         if (!this.source(source)) throw Error('Dream 引用不存在');
-        this.db.prepare('INSERT INTO edges VALUES(?,?,?)').run(key, revision, source);
+        this.db.prepare('INSERT INTO edges(node,revision,source) VALUES(?,?,?)').run(key, revision, source);
       }
-      this.db.prepare('INSERT INTO versions VALUES(?,?,?)').run(key, revision, encode(value));
-      this.db.prepare('INSERT INTO memories VALUES(?,?,?,?,?) ON CONFLICT(key) DO UPDATE SET revision=excluded.revision,data=excluded.data').run(key,kind,target,revision,encode(value));
+      this.db.prepare('INSERT INTO versions(key,revision,data) VALUES(?,?,?)').run(key, revision, encode(value));
+      this.db.prepare('INSERT INTO memories(key,kind,target,revision,data) VALUES(?,?,?,?,?) ON CONFLICT(key) DO UPDATE SET revision=excluded.revision,data=excluded.data').run(key,kind,target,revision,encode(value));
       this.putSource({ id: ref, kind: 'memory', key, revision });
       this.bumpCatalog(); return value;
     });
@@ -169,7 +167,7 @@ export class DreamStore {
       if (automatic && latest?.state==='failed' && latest.automatic)
         return this.updateJob(latest.id, { ...extra, state: 'queued' });
       const value = { id: randomUUID(), scope, target, automatic, state:'queued', createdAt:this.now(), done:0, calls:0, ...extra };
-      this.db.prepare('INSERT INTO jobs VALUES(?,?,?,?,?,?,?)').run(value.id,scope,target,value.state,Number(automatic),value.createdAt,encode(value));
+      this.db.prepare('INSERT INTO jobs(id,scope,target,state,automatic,created,data) VALUES(?,?,?,?,?,?,?)').run(value.id,scope,target,value.state,Number(automatic),value.createdAt,encode(value));
       return value;
     });
   }
@@ -290,7 +288,7 @@ export class DreamStore {
       const job=meta.jobId?this.requireJob(meta.jobId,epoch):null;
       if (this.usage().used + amount > cap) return null;
       const id=randomUUID(),day=quotaDay(this.now()),value={id,day,at:this.now(),estimated:true,...meta};
-      this.db.prepare('INSERT INTO calls VALUES(?,?,?,?,?)').run(id,day,amount,amount,encode(value));
+      this.db.prepare('INSERT INTO calls(id,day,reserved,charged,data) VALUES(?,?,?,?,?)').run(id,day,amount,amount,encode(value));
       if(job)this.updateJob(job.id,{calls:(job.calls||0)+1});
       return id;
     });

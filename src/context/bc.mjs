@@ -7,7 +7,7 @@ import { latestTaskContext } from '../task-context.mjs';
 import { sourceName } from '../message-source.mjs';
 import { isBtwSession } from '../dream/side-question.mjs';
 import { hash, activeRecords, liveSpan } from './core.mjs';
-import { BC_VERSION, BC_TOOL_NAMES, BC_EXCLUSIVE_TOOLS } from './bc-policy.mjs';
+import { BC_TOOL_NAMES, BC_EXCLUSIVE_TOOLS } from './bc-policy.mjs';
 
 export { BC_VERSION } from './bc-policy.mjs';
 export const BC_TOOLS = new Set(BC_TOOL_NAMES);
@@ -112,33 +112,42 @@ export class BillionContext {
   async connect(signal) {
     if (this.closed) throw Error('上下文组件已关闭');
     const state = this.native();
-    if (!state) throw Error('请先安装并启用 Billion Context 0.1.202，再选择 BC 模式。');
+    if (!state) throw Error('请先安装并启用 Billion Context，再选择 BC 模式。');
     if (!state.origin) await ready(state.ready, signal);
     let origin = state.origin;
     if (!origin || !/^https?:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?$/.test(origin)) throw Error('BC 本地代理尚未就绪；保留当前模式与历史。');
-    // BC can update/restart on the same port. Never cache a version decision
-    // by origin across requests, which would silently admit a different build.
+    // Version discovery is optional. A successful live operation is authoritative.
+    const describe = async () => {
+      try { return await this.api(origin, '/manifest', undefined, signal); }
+      catch (error) {
+        if (error.status === 404 || error.status === 405 || error instanceof SyntaxError) return null;
+        throw error;
+      }
+    };
     let manifest;
-    try { manifest = await this.api(origin, '/manifest', undefined, signal); }
+    try { manifest = await describe(); }
     catch (error) {
       signal?.throwIfAborted();
       if (!state.respawn || error.status) throw error;
-      // Keep BC's own single-flight recovery and all existing session data.
       state.ready = state.respawn();
       const recovered = await ready(state.ready, signal);
       origin = state.origin || recovered;
       if (!origin || !/^https?:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?$/.test(origin)) throw error;
-      manifest = await this.api(origin, '/manifest', undefined, signal);
+      manifest = await describe();
     }
     if (this.closed) throw Error('上下文组件已关闭');
-    if (manifest.version !== BC_VERSION) throw Error(`BC ${manifest.version || '未知版本'} 尚未适配；当前要求 ${BC_VERSION}。`);
+    this.detectedVersion = typeof manifest?.version === 'string' ? manifest.version : null;
     return origin;
   }
   async api(origin, path, body, signal) {
     const response = await fetch(`${origin}/__bili/plugin${path}`, { ...(body === undefined ? {} : { method: 'POST', headers: jsonHeaders, body: JSON.stringify(body) }),
       signal: AbortSignal.any([AbortSignal.timeout(30000), ...(signal ? [signal] : [])]) });
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw Object.assign(Error(data?.error || `BC 请求失败（${response.status}）`), { status: response.status });
+    }
     const data = await response.json();
-    if (!response.ok || data.ok === false) throw Object.assign(Error(data.error || `BC 请求失败（${response.status}）`), { status: response.status });
+    if (data?.ok === false) throw Object.assign(Error(data.error || `BC 请求失败（${response.status}）`), { status: response.status });
     return data;
   }
   identity(session) {
@@ -255,7 +264,7 @@ export class BillionContext {
     this.meters.set(session.id, current); return current;
   }
   view(session) { return { backend: this.backend(session), pendingBackend: this.hub.context.store.peek(session.id)?.pendingBackend ?? null,
-    available: Boolean(globalThis[BC_STATE]), version: BC_VERSION, status: this.meters.get(session.id) ?? null,
+    available: Boolean(globalThis[BC_STATE]), version: this.detectedVersion ?? null, status: this.meters.get(session.id) ?? null,
     switchError: this.state(session).backendError ?? null, error: this.state(session).bc?.error ?? null }; }
   effectiveTokens(session, hostTokens) {
     if (!this.active(session)) return hostTokens;

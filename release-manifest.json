@@ -2,6 +2,15 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.5.omd.1.9.0",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "Oh My DSH 1.9.0",
+      "notes": [
+        "同一安装包可跨宿主版本启用。首次操作网页时自动选择可用浏览器。"
+      ]
+    },
+    {
       "version": "0.2.2-rc.5.omd.1.7.2",
       "severity": "normal",
       "title": "Oh My DSH 1.7.2 · DSH 0.2.2-rc.5",
