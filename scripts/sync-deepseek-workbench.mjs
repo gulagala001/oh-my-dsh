@@ -6,14 +6,16 @@ import { dirname, join, resolve } from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
 const adapterOnly = args[0] === '--desktop-adapter';
-if (adapterOnly) args.shift();
-if (args.length > 1 || args[0]?.startsWith('-')) throw Error('Usage: sync-deepseek-workbench.mjs [--desktop-adapter] [source]');
+const bundled = args[0] === '--bundled';
+if (adapterOnly || bundled) args.shift();
+if (args.length > 1 || args[0]?.startsWith('-')) throw Error('Usage: sync-deepseek-workbench.mjs [--desktop-adapter|--bundled] [source]');
 const source = resolve(args[0] ?? fileURLToPath(new URL('../../deepseek-workbench/', import.meta.url)));
 const manifest = JSON.parse(await readFile(join(source, 'package.json'), 'utf8'));
 const host = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const provenance = join(root, 'plugins/deepseek-workbench.json');
 const current = JSON.parse(await readFile(provenance, 'utf8'));
-if (manifest.name !== 'dsh-deepseek-workbench' || (adapterOnly ? (manifest.version !== current.version || manifest.engines.dsh !== current.host) : manifest.engines.dsh !== host.devDependencies['@deepseek-ai/dsh']))
+const expectedHost = adapterOnly || bundled ? current.host : host.devDependencies['@deepseek-ai/dsh'];
+if (manifest.name !== 'dsh-deepseek-workbench' || manifest.engines.dsh !== expectedHost || adapterOnly && manifest.version !== current.version)
   throw Error('Matching standalone Workbench source required');
 const [packed] = JSON.parse(execFileSync('npm', ['pack', '--ignore-scripts', '--dry-run', '--json'], { cwd: source, encoding: 'utf8' }));
 const isAdapter = path => path.startsWith('desktop/') || /^docs\/desktop-host(?:_EN)?\.md$/.test(path);

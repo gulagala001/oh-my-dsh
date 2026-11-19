@@ -48,11 +48,12 @@ Afterwards, fully restart DSH, confirm OMD is enabled, new sessions can pick Oh 
 | Feature | Also needs |
 | --- | --- |
 | Conversations, appearance, tasks, context and memory | Just OMD and a configured model |
-| Let the AI open pages, fill forms and capture screenshots | The universal package uses the session sidebar or starts an isolated browser on first use. It provisions Chromium when needed. |
+| Let the AI open pages, fill forms and capture screenshots | Use the session sidebar in the desktop app or start a managed browser. OMD provisions Chromium when needed. |
 | Operating web pages through the Chrome or Edge extension | Install the extension and allow the connection from **Settings → Computer & Browser** |
-| Embedded browser, sidebar annotations, native live view | A DSH desktop build with the matching adaptation, plus system permissions |
+| Web page annotations, document and image previews, native floating monitor | Open **Settings → Computer and browsers** in the Windows or macOS desktop app to check the available features |
+| DeepSeek Workbench persistent sign-in and downloads | Open **DeepSeek Web Chat** in the desktop app and sign in to its dedicated browser. Choose **Save** after downloading a file. |
 
-host-adapters.zip in each release holds adaptation sources and build notes for the DSH desktop source. It is not a plugin, and there is no ready-made full desktop installer yet. For the embedded browser, see [development](development_EN.md) and [computer and browser](computer-use.md) (Chinese).
+Install OMD in the standard DSH desktop app. The host-adapters.zip from older releases contains desktop source adaptation materials. For browser options and system permissions, see [computer and browsers](computer-use.md) (Chinese).
 
 By default OMD lets the AI read and write files and run commands without asking each time; permissions you set in your profile take precedence. Model calls and background work are billed by your provider.
 

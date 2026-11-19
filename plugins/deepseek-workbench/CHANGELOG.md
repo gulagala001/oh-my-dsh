@@ -1,6 +1,26 @@
-# DeepSeek Workbench 0.1.12 · DSH 0.2.2-rc.3
+# DeepSeek Workbench 0.1.13 · DSH 0.2.2-rc.3（未发布）
 
-**未发布 / Unreleased.**
+[中文](#zh-0113) · [English](#en-0113)
+
+<a id="zh-0113"></a>
+
+## 中文
+
+### 问题修复
+
+- 在原版桌面版中使用工作台的专属浏览器，关闭并重开后保留登录状态，并可在网页内保存下载。
+
+<a id="en-0113"></a>
+
+## English
+
+### Fixes
+
+- The dedicated Workbench browser keeps sign-in across restarts and lets you save downloads from the web page in the standard desktop app.
+
+---
+
+# DeepSeek Workbench 0.1.12 · DSH 0.2.2-rc.3
 
 [中文](#zh-0112) · [English](#en-0112)
 

@@ -14,6 +14,7 @@ import { createBrowserHost } from './browser-host.mjs';
 import { createPresentationHost } from './presentation.mjs';
 import { createPreferences } from './preferences.mjs';
 import { createBrowserHistory } from './browser-history.mjs';
+import { createNativePresentation } from './native-presentation.mjs';
 
 const key = Symbol.for('opencu.shared-root.v1');
 const roots = globalThis[key] ??= new WeakMap();
@@ -40,7 +41,9 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
   if (entry?.retiring) throw new Error('OpenCU is releasing the last lease; retry after cleanup');
   if (!entry) {
     entry = { root, leases: new Set(), tools: new Map(), config: () => config };
-    entry.browserHost = createBrowserHost();
+    entry.browserHost = createBrowserHost({ onDisconnect: id => {
+      void entry.nativePresentation.close(id).catch(error => console.error('OpenCU native monitor cleanup', error));
+    } });
     const routesEnabled = () => Boolean(root.get('omd') || [...entry.leases].some(owner => owner.namespace === 'omd-opencu'));
     const browserConfig = () => {
       const config = entry.config();
@@ -103,10 +106,12 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       }).catch(error => console.error('OpenCU computer session cleanup', error));
     }, { global: true });
     entry.presentation = createPresentationHost({ runtime: entry.runtime, activity: entry.activity, browserHost: entry.browserHost, preferences: entry.preferences });
+    entry.nativePresentation = createNativePresentation(entry.runtime.dataDir);
     entry.request = async (endpoint, args = {}, { signal, attachments, sessionKey, modelProjection = false, onApprovalWait, requestSource = 'interface' } = {}) => {
       signal?.throwIfAborted();
       if (endpoint.startsWith('recovery/')) throw new Error('Recovery confirmation is available only in browser connection settings');
-      if (entry.retiring && !['stop', 'interrupt', 'browser/poll', 'browser/result', 'browser/disconnect'].includes(endpoint)) throw new Error('OpenCU is releasing the last lease; retry after cleanup');
+      const closingMonitor = endpoint === 'nativePresentation' && ['hide', 'close'].includes(args.operation);
+      if (entry.retiring && !closingMonitor && !['stop', 'interrupt', 'browser/poll', 'browser/result', 'browser/disconnect'].includes(endpoint)) throw new Error('OpenCU is releasing the last lease; retry after cleanup');
       if (endpoint === 'browserRoute' || endpoint === 'browserRoute/enabled') {
         const enabled = routesEnabled();
         if (endpoint === 'browserRoute/enabled' || !enabled) return { ok: true, enabled };
@@ -130,6 +135,14 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
         return snapshot.unchanged ? snapshot : { ...snapshot, appApprovals: entry.runtime.pendingAppApprovals() };
       }
       if (endpoint === 'presentation/event') return entry.presentation.event(args);
+      if (endpoint === 'nativePresentation') {
+        const owner = entry.browserHost.presentationConnection(args.rendererId);
+        if (requestSource !== 'interface' || !owner) throw new Error('The monitoring window is no longer connected');
+        const data = args.args ?? {};
+        if (args.operation === 'update' && !(Array.isArray(data.frames) && data.frames.every(frame =>
+          entry.browserHost.isPresentationSession(args.rendererId, frame?.threadID)))) throw new Error('The monitor frame does not belong to this window');
+        return { ok: true, ...await entry.nativePresentation.operate(owner, args.operation, data) };
+      }
       if (endpoint.startsWith('presentation/')) return entry.presentation.handle(endpoint.slice(13), args);
       if (endpoint.startsWith('browser/')) {
         const result = await entry.browserHost.handle(endpoint, args, signal);
@@ -247,7 +260,8 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
         const resets = await Promise.allSettled(computers.map(computer => computer.close()));
         let shutdown;
         await Promise.all([
-          release(() => entry.presentation.close()), release(async () => { shutdown = await entry.runtime.close(); }),
+          release(async () => { try { await entry.presentation.close(); } finally { await entry.nativePresentation.dispose(); } }),
+          release(async () => { shutdown = await entry.runtime.close(); }),
           release(() => entry.preferences.close()), release(() => entry.history.close()),
         ]);
         if (shutdown?.ok === true && shutdown.state?.closed === true && shutdown.state.mode === 'closed' &&

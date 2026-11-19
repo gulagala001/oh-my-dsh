@@ -52,6 +52,8 @@ Copy-Item -LiteralPath $omdDataDir -Destination $omdBackupDir -Recurse -ErrorAct
 
 **设置 → Oh My DSH → 关于** 里的更新只换当前 profile 的 OMD，不会升级 DSH。
 
+升级后在 **设置 → 电脑与浏览器** 查看当前窗口的侧栏、批注、预览、悬浮监看和工作台状态。
+
 装完检查：版本对、OMD 已启用、新会话能选 Oh My DSH，原来的模型、会话、附件、外观和其他插件都在。少了东西先核对数据目录和 profile，不要先删数据或重建。
 
 <a id="package-name"></a>

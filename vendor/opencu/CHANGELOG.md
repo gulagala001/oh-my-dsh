@@ -1,4 +1,28 @@
-# OpenCU 2.4.2 · DSH 0.2.2-rc.5
+# OpenCU 2.4.4 · DSH 0.2.2-rc.5（未发布）
+
+[中文](#zh-244) · [English](#en-244)
+
+<a id="zh-244"></a>
+
+## 中文
+
+### 问题修复
+
+- 在「电脑与浏览器」查看当前窗口的侧栏操作、网页批注、文件预览和监看是否可用。仅提供监看接口的桌面窗口也能建立监看连接。
+- 从配套桌面版直接打开扩展所在目录。文件管理器打开失败时，可以复制目录路径。
+
+<a id="en-244"></a>
+
+## English
+
+### Fixes
+
+- Computer and browsers shows the availability of sidebar control, page annotations, previews and monitoring for the current window. Monitoring can connect when the window provides only the monitoring adapter.
+- Open the extension folder directly from an adapted desktop. If the file manager cannot open it, copy the folder path.
+
+---
+
+# OpenCU 2.4.2 · DSH 0.2.2-rc.3
 
 [中文](#zh-242) · [English](#en-242)
 
@@ -22,9 +46,9 @@
 
 ## 安装 / Installation
 
-DSH **0.2.2-rc.5** · Node.js **24.9.0+**
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
 
-[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.5/opencu-2.4.2-dsh.0.2.2-rc.5.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.5/SHA256SUMS)
+[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/opencu-2.4.2-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/SHA256SUMS)
 
 ---
 

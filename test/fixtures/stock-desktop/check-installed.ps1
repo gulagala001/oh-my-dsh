@@ -1,0 +1,52 @@
+param(
+    [Parameter(Mandatory=$true)][string]$Installer,
+    [Parameter(Mandatory=$true)][string]$Archive
+)
+$ErrorActionPreference = 'Stop'
+$root = New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP ('omd-stock-' + [guid]::NewGuid().ToString()))
+$application = Join-Path $root.FullName 'application'
+$env:DSH_HOME = Join-Path $root.FullName 'dsh-home'
+$electronData = Join-Path $root.FullName 'electron'
+$exe = Join-Path $application 'DeepSeek Harness.exe'
+$profile = Join-Path $env:DSH_HOME 'profiles/desktop/package.json'
+$listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
+$listener.Start()
+try { $port = $listener.LocalEndpoint.Port } finally { $listener.Stop() }
+
+function Run-Check([string]$Mode) {
+    node (Join-Path $PSScriptRoot 'check-stock.mjs') $port $Mode $root.FullName
+    if ($LASTEXITCODE -ne 0) { throw "Stock DSH check failed ($Mode)" }
+}
+
+function Stop-Stock($process) {
+    if ($process.HasExited) { return }
+    [void]$process.CloseMainWindow()
+    if (!$process.WaitForExit(15000)) {
+        taskkill.exe /PID $process.Id /T /F | Out-Null
+        if (!$process.WaitForExit(10000)) { throw 'The isolated DSH process did not exit' }
+    }
+}
+
+try {
+    $setup = Start-Process -FilePath $Installer -ArgumentList "/S /D=$application" -PassThru -Wait
+    if ($setup.ExitCode -ne 0 -or !(Test-Path -LiteralPath $exe)) { throw "Official installer failed ($($setup.ExitCode))" }
+    $integrity = (Get-FileHash (Join-Path $application 'resources/app.asar')).Hash
+    $arguments = @('--no-open', "--user-data-dir=$electronData", "--remote-debugging-port=$port", '--remote-debugging-address=127.0.0.1')
+    $app = Start-Process -FilePath $exe -ArgumentList $arguments -PassThru
+    try { Run-Check 'init' } finally { Stop-Stock $app }
+    if (!(Test-Path -LiteralPath $profile)) { throw 'DSH did not initialize the isolated profile' }
+    $cli = Join-Path $application 'resources/runtime/cli/bin/dsh.cmd'
+    & $cli plugin --profile desktop add "file:$Archive" --ignore-scripts --yes
+    if ($LASTEXITCODE -ne 0) { throw 'The official DSH CLI could not install the plugin' }
+    $app = Start-Process -FilePath $exe -ArgumentList $arguments -PassThru
+    try { Run-Check 'exercise' } finally { Stop-Stock $app }
+    if ((Get-FileHash (Join-Path $application 'resources/app.asar')).Hash -ne $integrity) {
+        throw 'The test changed the DSH desktop application'
+    }
+} finally {
+    $uninstaller = if (Test-Path -LiteralPath $application) { Get-ChildItem -LiteralPath $application -Filter 'Uninstall*.exe' -File | Select-Object -First 1 }
+    if ($uninstaller) {
+        $remove = Start-Process -FilePath $uninstaller.FullName -ArgumentList '/S' -PassThru -Wait
+        if ($remove.ExitCode -ne 0) { throw "The isolated DSH uninstall failed ($($remove.ExitCode))" }
+    }
+}

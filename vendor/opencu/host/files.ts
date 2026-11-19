@@ -18,7 +18,13 @@ export async function operateOpenCUFile(owner: WebContents, operation: unknown, 
   const attachments = await realpath(join(home, 'attachments')).catch((error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return join(home, 'attachments'); throw error })
   const editable = path !== attachments && !path.startsWith(attachments + sep)
   if (operation === 'metadata') return { kind: info.isDirectory() ? 'directory' : info.isFile() ? 'file' : 'other', sizeBytes: info.size, modifiedAtMs: info.mtimeMs, editable }
-  if (operation === 'reveal') { shell.showItemInFolder(path); return { success: true } }
+  if (operation === 'reveal') {
+    if (info.isDirectory()) {
+      const failure = await shell.openPath(path)
+      if (failure) throw new Error(failure)
+    } else shell.showItemInFolder(path)
+    return { success: true }
+  }
   if (!info.isFile()) throw new Error('A regular local file is required')
   if (operation === 'targets') {
     const icon = (await app.getFileIcon(path, { size: 'small' })).toDataURL()

@@ -17,8 +17,8 @@
       "source": "vendor/opencu/package.json",
       "license": "See component notices",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
-      "version": "2.4.2-dsh.0.2.2-rc.5",
-      "sourceSha256": "799264fa855d21db3b4f83c043a315ce53387ad58658d04582312425f2a86534",
+      "version": "2.4.4-dsh.0.2.2-rc.5",
+      "sourceSha256": "babd4c0d278ac70c113e7c66e42e30ce25c1238ad25455d4ab5afff229ac8bdb",
       "group": "products"
     },
     {
@@ -117,8 +117,8 @@
       "source": "plugins/deepseek-workbench/package.json",
       "license": "MIT",
       "notice": "plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.12-dsh.0.2.2-rc.3",
-      "sourceSha256": "c675c8730e286e99acca351b0d50de7697215d94084d19efa15302f04c006892",
+      "version": "0.1.13-dsh.0.2.2-rc.3",
+      "sourceSha256": "9802290843fdcc28ceab6f29a8d9cf05a7ca21e882b1aa7d25dbe1722d10b81b",
       "group": "products"
     },
     {
@@ -218,8 +218,8 @@
       "license": "Original upstream rights apply",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
       "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json",
-      "version": "SHA256:feefc739925430b21c25cbf3772e5b214a1776396d3455fdd0a627c54c51bdf6",
-      "sourceSha256": "feefc739925430b21c25cbf3772e5b214a1776396d3455fdd0a627c54c51bdf6",
+      "version": "SHA256:b056984a89ecdfe2081aee586d31629e86578615676dcd01257760c79bc3acbe",
+      "sourceSha256": "b056984a89ecdfe2081aee586d31629e86578615676dcd01257760c79bc3acbe",
       "group": "sources"
     },
     {

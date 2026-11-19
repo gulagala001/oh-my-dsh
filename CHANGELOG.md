@@ -1,3 +1,27 @@
+# Oh My DSH 1.9.1 · DSH 0.2.2 rc.3 / rc.4 / rc.5（未发布）
+
+[中文](#zh-191) · [English](#en-191)
+
+<a id="zh-191"></a>
+
+## 中文
+
+### 问题修复
+
+- 在原版 Windows 和 macOS 桌面版启用 OpenCU 侧栏浏览器、网页批注和增强文件预览。通过「电脑与浏览器」查看当前窗口的可用能力，并打开浏览器扩展目录。
+- 使用插件自带的原生悬浮窗监看任务。DeepSeek 工作台保留专属网页登录状态，支持保存网页下载。
+
+<a id="en-191"></a>
+
+## English
+
+### Fixes
+
+- Use the OpenCU sidebar browser, page annotations and enhanced file previews on the standard Windows and macOS desktop apps. Check the features available in the current window and open the browser extension folder from Computer and browsers.
+- Monitor tasks in a native floating window. DeepSeek Workbench keeps its own web sign-in and lets you save browser downloads.
+
+---
+
 # Oh My DSH 1.9.0 · DSH 0.2.2 rc.3 / rc.4 / rc.5
 
 [中文](#zh-190) · [English](#en-190)

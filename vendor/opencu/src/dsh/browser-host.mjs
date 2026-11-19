@@ -3,13 +3,14 @@ import { checkExpected, errorJSON, fail, inputReleased, json, referenceMatches, 
 import { compactPresentationImages } from '../presentation-images.mjs';
 
 /** The authenticated DSH renderer owns each real sidebar guest, not a screenshot proxy. */
-export function createBrowserHost() {
+export function createBrowserHost({ onDisconnect } = {}) {
   const clients = new Map(), pending = new Map(), sessionOwners = new Map(), bindings = new Map(), retired = new Map();
   let closed = false;
   const resetPresentationImages = client => { client.presentationSequence++; client.presentationFrames = []; };
   function disconnect(client, reason) {
     resetPresentationImages(client);
     if (clients.get(client.id) === client) clients.delete(client.id);
+    onDisconnect?.(client.connectionId);
     client.wake?.();
     for (const [id, task] of pending) if (task.client === client) {
       task.reject(Object.assign(new Error(reason), { code: 'BROWSER_HOST_DISCONNECTED' }));
@@ -136,6 +137,7 @@ export function createBrowserHost() {
       }));
     }
   }
+  const browserClients = () => liveClients().filter(client => client.browser);
   function presentationOwner(target, sessionId) {
     const available = liveClients().filter(client => client.presentation && (!sessionId || client.sessionIds.includes(sessionId)));
     const ownerId = target.identity?.rendererId ?? sessionOwners.get(sessionId);
@@ -145,16 +147,16 @@ export function createBrowserHost() {
   }
   const backend = {
     kind: 'browser',
-    async listBrowsers() { return liveClients().map(client => ({id: `dsh:${client.id}`, provider: 'dsh', name: 'DSH Browser'})); },
+    async listBrowsers() { return browserClients().map(client => ({id: `dsh:${client.id}`, provider: 'dsh', name: 'DSH Browser'})); },
     async newTab(browserId, url, {sessionId, signal} = {}) {
       signal?.throwIfAborted();
-      const client = liveClients().find(client => browserId === `dsh:${client.id}`);
+      const client = browserClients().find(client => browserId === `dsh:${client.id}`);
       if (!client) fail('BROWSER_HOST_DISCONNECTED', 'Choose one connected sidebar browser');
       const result = await creation(client, 'openTab', {sessionId, url}, signal);
       return result.target;
     },
     getDiagnostics() {
-      const renderers = liveClients();
+      const renderers = browserClients();
       const targetCount = renderers.reduce((count, client) => count + client.targets.length, 0);
       return { configured: true, connectedRenderers: renderers.length, targetCount,
         status: !renderers.length ? 'renderer_unavailable' : targetCount ? 'ready' : 'no_tabs',
@@ -314,9 +316,9 @@ export function createBrowserHost() {
   };
   return {
     backend,
-    listBrowsers() { return liveClients().map(client => ({ id: `dsh:${client.id}`, provider: 'dsh', name: 'DSH Browser' })); },
+    listBrowsers() { return browserClients().map(client => ({ id: `dsh:${client.id}`, provider: 'dsh', name: 'DSH Browser' })); },
     browsersForSession(sessionId) {
-      return liveClients().filter(client => client.sessionIds.includes(sessionId)).map(client => `dsh:${client.id}`);
+      return browserClients().filter(client => client.sessionIds.includes(sessionId)).map(client => `dsh:${client.id}`);
     },
     presentationOwner,
     revealTab({ id, identity }, sessionId, signal) {
@@ -324,6 +326,7 @@ export function createBrowserHost() {
       return request(clientFor(target), 'revealTab', { target, sessionId }, true, signal);
     },
     isPresentationSession(rendererId, sessionId) { return liveClients().some(client => client.id === rendererId && client.presentation && client.sessionIds.includes(sessionId)); },
+    presentationConnection(rendererId) { return liveClients().find(client => client.id === rendererId && client.presentation)?.connectionId; },
     async cursor(payload, ownerId) {
       const owner = liveClients().find(client => client.id === ownerId && client.presentation);
       if (!owner) fail('PRESENTATION_HOST_UNAVAILABLE', 'The cursor owning DSH window is no longer available');
@@ -360,7 +363,7 @@ export function createBrowserHost() {
       }));
     }, 
     async openTab({ browserId, sessionId, url, signal }) {
-      const matches = liveClients().filter(client => !browserId || browserId === `dsh:${client.id}`);
+      const matches = browserClients().filter(client => !browserId || browserId === `dsh:${client.id}`);
       if (matches.length !== 1) fail('AMBIGUOUS_TARGET', 'Choose one connected sidebar browser');
       const result = await creation(matches[0], 'openTab', { sessionId, url }, signal);
       return result.target;
@@ -373,7 +376,7 @@ export function createBrowserHost() {
         const previous = clients.get(id);
         if (previous) disconnect(previous, 'The sidebar renderer reconnected; the previous command outcome is unknown');
         const connectionId = randomUUID();
-        clients.set(id, { id, connectionId, presentation: args.presentation === true, presentationImages: args.presentationImages === 1, presentationFrames: [], presentationSequence: 0,
+        clients.set(id, { id, connectionId, browser: args.browser !== false, presentation: args.presentation === true, presentationImages: args.presentationImages === 1, presentationFrames: [], presentationSequence: 0,
           sessionIds: Array.isArray(args.sessionIds) ? args.sessionIds.filter(id => typeof id === 'string') : [],
           targets: [], commands: [], commandSequence: 0, wake: null, lastSeen: Date.now() });
         for (const sessionId of clients.get(id).sessionIds) sessionOwners.set(sessionId, id);
@@ -402,6 +405,7 @@ export function createBrowserHost() {
       }
       if (method === 'browser/publish') {
         if (!Array.isArray(args.targets)) fail('INVALID_TARGET', 'Expected the live sidebar target list');
+        if (!client.browser && args.targets.length) fail('INVALID_TARGET', 'This window has no sidebar browser adapter');
         const validate = target => {
           if (typeof target.id !== 'string' || typeof target.identity?.guestId !== 'string' || target.identity.rendererId !== client.id) fail('INVALID_TARGET', 'Invalid sidebar guest identity');
           const current = client.targets.find(item => item.id === target.id);

@@ -8,6 +8,7 @@ import { NativeChat } from './native-chat.jsx';
 import { NativePlatformPage } from './platform-page.jsx';
 import { statusScript, previewScript, commandScript } from './native-chat-bridge.mjs';
 import { initializeHostCapabilities } from './host-capabilities.mjs';
+import { createManagedBrowserAdapter } from './managed-browser.mjs';
 import { ConversationImport } from './conversation-import.mjs';
 import css from './style.css';
 import nativeCss from './native-chat.css';
@@ -89,7 +90,12 @@ export function BrowserPage({ ctx, url = CHAT_URL, workspace = 'deepseek-workben
     if (ownerSignal?.aborted) controller.abort();
     setFrame({ loading: true, ready: false, url, warnings: [] });
     setError(''); setOperation('');
-    createBrowserAdapter({ bridge: window.dshDesktop?.browser, container: container.current, workspace, url, signal: controller.signal, onState: value => { temporary?.observe(value.url); setFrame(value); } }).then(value => { if (!controller.signal.aborted) { adapter.current = value; if (temporary) { temporary.adapter = value; if (temporary.closed) void value?.dispose(); } } }, failure => { if (!controller.signal.aborted) { setFrame(old => ({ ...old, loading: false })); setError(failure.message); } });
+    const managed = async options => {
+      const state = await api('/state', undefined, controller.signal);
+      return state.managedBrowser ? createManagedBrowserAdapter({ ...options, api }) : undefined;
+    };
+    createBrowserAdapter({ bridge: window.dshDesktop?.browser, container: container.current, workspace, url, signal: controller.signal, managed,
+      onState: value => { temporary?.observe(value.url); setFrame(value); } }).then(value => { if (!controller.signal.aborted) { adapter.current = value; if (temporary) { temporary.adapter = value; if (temporary.closed) void value?.dispose(); } } }, failure => { if (!controller.signal.aborted) { setFrame(old => ({ ...old, loading: false })); setError(failure.message); } });
     return () => { alive.current = false; ++generation.current; ownerSignal?.removeEventListener('abort', abort); if (temporary && !temporary.closed && adapter.current) {
       const page = adapter.current, holding = document.createElement('div');
       holding.hidden = true; document.body.append(holding); holding.append(page.element);

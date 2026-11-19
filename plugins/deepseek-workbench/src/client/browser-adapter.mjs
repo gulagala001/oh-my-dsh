@@ -11,13 +11,17 @@ export function httpUrl(value) {
 }
 /** One adapter owns exactly one lease. Keeping the component mounted preserves
  * its guest while native tabs are hidden. Disposal also handles a late acquire. */
-export async function createBrowserAdapter({ bridge, container, workspace = 'deepseek-workbench', url = CHAT_URL, signal, onState = () => {}, createElement = () => document.createElement('webview') }) {
+export async function createBrowserAdapter({ bridge, container, workspace = 'deepseek-workbench', url = CHAT_URL, signal, onState = () => {}, managed, createElement = () => document.createElement('webview') }) {
   if (!bridge || typeof bridge.acquire !== 'function' || typeof bridge.release !== 'function') throw new Error('此页面需要 DSH 桌面宿主的内置浏览器。请使用桌面版，或在外部浏览器打开。');
   const target = httpUrl(url);
   if (!target) throw new Error('不支持此网页地址。');
   let capabilities = {};
   try { capabilities = await bridge.capabilities?.() ?? {}; } catch { /* Feature detection falls back to the known non-persistent guest. */ }
   if (signal?.aborted) return null;
+  if (managed && (!capabilities.persistentProfiles || !capabilities.downloads)) {
+    const adapter = await managed({ container, url: target, signal, onState });
+    if (adapter || signal?.aborted) return adapter;
+  }
   const reservation = await bridge.acquire(workspace, { profile: 'deepseek-workbench' });
   if (signal?.aborted) { await bridge.release(reservation.lease); return null; }
   let disposed = false, ready = false, initial = true, stopOpen, cleanupPromise;

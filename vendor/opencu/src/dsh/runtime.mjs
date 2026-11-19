@@ -4,7 +4,6 @@ import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { mkdir, readFile, writeFile, rename, realpath, open, unlink } from 'node:fs/promises';
 import { basename, dirname, join, resolve, sep } from 'node:path';
-import { desktopResourcePath } from '../desktop-resource.mjs';
 import { createRuntime, DEFAULT_DATA_DIR } from '../runtime.mjs';
 import { publicConfig } from './config.mjs';
 import { modelResult } from './model-output.mjs';
@@ -14,6 +13,7 @@ import { createDeliveryFiles } from './delivery-files.mjs';
 import { createImageRegistry } from './image-registry.mjs';
 import { createAppApprovals } from './app-approvals.mjs';
 import { createBrowserPairing } from '../extension/pairing.mjs';
+import { extensionFolderPath, openExtensionFolder } from './extension-folder.mjs';
 import { listenExtension } from '../extension/listen.mjs';
 import { referenceMatches, sameIdentity, checkExpected, json, readOperation } from '../protocol.mjs';
 
@@ -244,7 +244,11 @@ export function createPluginRuntime(options = {}) {
     if (endpoint === 'appApprovals/respond') return { ok: true, ...await appApprovals.respond(args) };
     if (endpoint === 'stop' || endpoint === 'interrupt') appApprovals.cancel(sessionKey);
     if (endpoint === 'browserSettings/status') return { ok: true, connections: controller?.extensionConnections() ?? [] };
-    if (endpoint === 'extensionFiles') return { ok: true, path: desktopResourcePath(new URL('../../extension/', import.meta.url)) };
+    if (endpoint === 'extensionFiles') return { ok: true, path: extensionFolderPath() };
+    if (endpoint === 'extensionFiles/open') {
+      if (requestSource !== 'interface') throw error('INVALID_ARGUMENT', 'The extension folder can only be opened from settings');
+      return { ok: true, ...await openExtensionFolder(signal) };
+    }
     if (endpoint === 'browserResources/status') return { ok: true, resources: await browserResources.status() };
     if (endpoint === 'browserResources/install') return { ok: true, resources: await browserResources.install(signal) };
     if (endpoint === 'downloads/configure') return { ok: true, directory: await sidebarDownloads.location() };

@@ -3,8 +3,10 @@ import { Context, Service } from '@deepseek-ai/cordis';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
 import { ConversationImporter, MAX_IMPORT_BYTES } from './import.mjs';
 import { saveAccountProbe } from './account-probe.mjs';
+import { createManagedWorkbench } from './managed-browser.mjs';
 
 import manifest from '../package.json' with { type: 'json' };
 
@@ -27,16 +29,29 @@ export class DeepSeekWorkbench extends Service {
   constructor(ctx) {
     super(ctx, 'deepseekWorkbench');
     this.enabled = true;
+    const directory = resolve(process.env.DSH_HOME || resolve(homedir(), '.dsh'), 'deepseek-workbench');
+    const browser = process.versions.electron ? createManagedWorkbench(directory) : undefined;
     if (process.env.DSW_ACCOUNT_DIAGNOSTICS === '1') ctx.inject(['deepseekAccount'], scope => {
       void saveAccountProbe(scope.deepseekAccount, resolve(process.env.DSH_HOME || resolve(homedir(), '.dsh'), 'deepseek-workbench'));
     });
-    this.importer = new ConversationImporter({ ctx, directory: resolve(process.env.DSH_HOME || resolve(homedir(), '.dsh'), 'deepseek-workbench', 'imports') });
+    this.importer = new ConversationImporter({ ctx, directory: resolve(directory, 'imports') });
     ctx.effect(() => ctx.webServer.register({ kind: 'prefix', path: '/deepseek-workbench/api', handler: async (req, res) => {
       const denied = ctx.connection.requestRejection(req);
       if (denied !== undefined) { res.writeHead(denied); res.end(); return; }
       const path = new URL(req.url, 'http://localhost').pathname;
       try {
-        if (path === '/deepseek-workbench/api/state' && req.method === 'GET') { send(res, 200, { enabled: this.enabled, version: VERSION, accountDiagnostics: process.env.DSW_ACCOUNT_DIAGNOSTICS === '1', demoOpen: process.env.DSW_DEMO_OPEN === '1', demoVerify: process.env.DSW_DEMO_VERIFY === '1' }); return; }
+        if (path === '/deepseek-workbench/api/state' && req.method === 'GET') { send(res, 200, { enabled: this.enabled, version: VERSION, managedBrowser: !!browser, accountDiagnostics: process.env.DSW_ACCOUNT_DIAGNOSTICS === '1', demoOpen: process.env.DSW_DEMO_OPEN === '1', demoVerify: process.env.DSW_DEMO_VERIFY === '1' }); return; }
+        if (browser && path === '/deepseek-workbench/api/browser' && req.method === 'POST') {
+          send(res, 200, await browser.request(await body(req))); return;
+        }
+        if (browser && path === '/deepseek-workbench/api/browser/download' && req.method === 'GET') {
+          const query = new URL(req.url, 'http://localhost').searchParams;
+          const { stream, name } = await browser.download(query.get('page'), query.get('item'));
+          const filename = encodeURIComponent(name).replace(/[!-'()*]/g, character => '%' + character.charCodeAt(0).toString(16));
+          res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'X-Content-Type-Options': 'nosniff',
+            'Content-Disposition': "attachment; filename*=UTF-8''" + filename, 'Cache-Control': 'no-store' });
+          await pipeline(stream, res); return;
+        }
         if (path === '/deepseek-workbench/api/verification-result' && req.method === 'POST' && process.env.DSW_DEMO_VERIFY === '1') {
           const value = await body(req);
           const directory = resolve(process.env.DSH_HOME || resolve(homedir(), '.dsh'), 'deepseek-workbench');
@@ -64,9 +79,9 @@ export class DeepSeekWorkbench extends Service {
         }
         if (path === '/deepseek-workbench/api/import' && req.method === 'POST') { send(res, 200, await this.importer.import(await body(req))); return; }
         send(res, path === '/deepseek-workbench/api/state' || path === '/deepseek-workbench/api/import' ? 405 : 404, { error: '此请求不可用' });
-      } catch (error) { send(res, 400, { error: error.message }); }
+      } catch (error) { if (!res.headersSent) send(res, 400, { error: error.message }); else res.destroy(error); }
     } }));
-    ctx.effect(() => () => { this.enabled = false; });
+    ctx.effect(() => async () => { this.enabled = false; await browser?.dispose(); });
   }
 }
 

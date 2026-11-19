@@ -52,6 +52,8 @@ After backing up, open DSH, paste the package address from the [installation gui
 
 Updates from **Settings → Oh My DSH → About** only replace OMD in the current profile; they never upgrade DSH.
 
+After upgrading, open **Settings → Computer and browsers** to check the sidebar, annotations, previews, floating monitor and Workbench features available in this window.
+
 Then check: the version is right, OMD is enabled, new sessions can pick Oh My DSH, and your models, conversations, attachments, appearance and other plugins are all there. If something is missing, check the data directory and profile before deleting or rebuilding anything.
 
 <a id="package-name"></a>
