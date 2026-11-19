@@ -105,7 +105,7 @@ try {
     const imageBounds = await page.locator('img[alt="stock-image.png"]').boundingBox();
     assert(imageBounds);
     await page.mouse.click(imageBounds.x + imageBounds.width / 2, imageBounds.y + imageBounds.height / 2);
-    const comment = page.getByRole('textbox', { name: /添加评论|add comment/i });
+    const comment = page.getByRole('textbox', { name: /添加评论|编辑评论|add comment|edit comment/i });
     await comment.fill('Stock image annotation');
     await comment.press('Enter');
     await page.waitForFunction(() => Object.keys(localStorage).some(key => key.startsWith('opencu:image-comments:')
@@ -115,7 +115,8 @@ try {
     if (await showTree.isVisible()) await showTree.click();
     await page.getByText('stock-preview.pdf', { exact: true }).first().click();
     await page.getByText('Stock DSH document', { exact: true }).waitFor();
-    await page.getByRole('button', { name: /评论|批注|annotation|comment/i }).last().waitFor();
+    await button(page, /请求修改|request changes/i).click();
+    await page.getByText(/选中内容并提出修改要求|select.*request.*change/i).waitFor();
     console.log('The stock file tree opened the OpenCU document viewer.');
 
     const addon = button(page, /新标签页|new tab/i);
@@ -138,6 +139,10 @@ try {
     }
     assert(target, 'The plugin did not publish the real sidebar page');
     await call('select', { reference: { id: target.id } });
+    const { state } = await call('state');
+    if (state.mode === 'recovery_required' && !state.explicitlyStopped) {
+      await call('resume', { targetId: target.id, targetIdentity: target.identity });
+    }
     const capture = await call('observe', { format: 'both' });
     const screenshot = capture.observation?.screenshot ?? capture.screenshot;
     assert(screenshot?.id && screenshot.width > 0);
@@ -146,6 +151,12 @@ try {
       const guest = [...document.querySelectorAll('webview')].find(value => { try { return value.getURL() === url; } catch { return false; } });
       return guest.executeJavaScript('document.querySelector("button").textContent');
     }, fixtureURL), 'clicked');
+    await button(page, /为此页面添加批注|annotate this page/i).waitFor();
+    assert.equal(await page.evaluate(async url => {
+      const guest = [...document.querySelectorAll('webview')].find(value => { try { return value.getURL() === url; } catch { return false; } });
+      return guest.executeJavaScript('typeof globalThis.__opencuAnnotations?.dispatch === "function"');
+    }, fixtureURL), true);
+    console.log('OpenCU controlled the stock sidebar page and installed its page annotation runtime.');
 
     const rendererId = crypto.randomUUID(), threadID = 'stock-monitor-fixture';
     const registration = await call('browser/connect', { rendererId, sessionIds: [threadID], browser: false, presentation: true });
