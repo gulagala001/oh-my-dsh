@@ -4,13 +4,8 @@ import { reviewedNativeClients } from './prepare-host-sdk.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
-import { hostClientSource, replaceExactly, ownClientStyles, clientRegistration } from './host-build-contracts.mjs';
+import { hostClientSource, replaceExactly, ownClientStyles, clientRegistration, walkAst } from './host-build-contracts.mjs';
 const root = new URL('../', import.meta.url);
-function walk(node, callback) {
-  if (!node || typeof node !== 'object') return;
-  callback(node);
-  for (const value of Object.values(node)) if (Array.isArray(value)) value.forEach(item => walk(item, callback)); else if (value && typeof value === 'object') walk(value, callback);
-}
 const field = (node, name) => node?.properties?.find(p => p.key?.name === name || p.key?.value === name)?.value;
 const sources = [];
 const reviewed = {
@@ -25,7 +20,7 @@ for (const [name, exportName] of [['dsh-client-ui-agent-team', 'createTeamOvervi
   if (!reviewedNativeClients.has(version) || hash !== reviewed[name]) throw Error(`Unreviewed native overview source: ${name} ${version}`);
   const ast = parse(source, { ecmaVersion: 'latest', sourceType: 'script' });
   const functions = new Map(), duplicates = new Set();
-  walk(ast, node => { if (node.type === 'FunctionDeclaration' && node.id) {
+  walkAst(ast, node => { if (node.type === 'FunctionDeclaration' && node.id) {
     if (functions.has(node.id.name)) duplicates.add(node.id.name);
     functions.set(node.id.name, node);
   } });
@@ -64,7 +59,7 @@ for (const [name, exportName] of [['dsh-client-ui-agent-team', 'createTeamOvervi
       exports.WorkflowPanel = function(props) { return react.createElement(OverviewAvatarContext.Provider, {value:props.renderAvatar}, react.createElement(WorkflowRunPanel, props)); };`;
   } else {
     const bodies = [];
-    walk(functions.get('JobListAction'), node => {
+    walkAst(functions.get('JobListAction'), node => {
       if (node.type === 'CallExpression' && source.slice(field(node.arguments?.[1], 'className')?.start, field(node.arguments?.[1], 'className')?.end) === 'JobListAction_module_css_default.menuBody') bodies.push(node);
     });
     const [body] = bodies;

@@ -40,11 +40,12 @@
 
 ## 文档
 
-- 写法、页面职责和体积上限见工作区的 DOCUMENTATION.md。增删页面时同步 `docs/structure.json`、中英入口、`scripts/build-docs.mjs` 的导航和 package.json 的 `files`。
+- 页面职责和体积上限见 `docs/structure.json`。增删页面时同步 `docs/structure.json`、中英入口、`scripts/build-docs.mjs` 的导航和 package.json 的 `files`。
 - 提交前运行 `npm run docs:check`。它检查链接、锚点、版本号、内部用语、英文页的全角标点、中英标题数量和体积上限。
 - 文档站：`node scripts/build-docs.mjs` 检查链接并渲染 Mermaid 图，不用启动 DSH。CI 通过 `OMD_DOCS_CHROMIUM` 复用 runner 自带的 Chrome。main 上的相关改动通过检查后自动发布。
+- 中英文致谢页共用一张依赖表和一份 JSON 清单。改动项目目录或锁文件后，运行 `npm run credits:write` 重新生成。
 - 首页截图和动图放在 `docs/images/`，中英文同步，尺寸不超过原图，在 `docs/images/readme-screenshots.json` 记录来源、尺寸和哈希。
-- 公开文件检查：`node scripts/check-public-files.mjs` 核对 Git 文件、新增历史和安装包里有没有私人资料。本地没有 `origin/main` 时，它会说明没检查新增历史。
+- 公开文件检查：`node scripts/check-public-files.mjs` 核对 Git 文件、新增历史和安装包里有没有私人资料。在含有 `origin/main` 的检出中运行。
 
 ## 发版
 

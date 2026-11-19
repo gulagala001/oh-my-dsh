@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
-import { ownClientStyles, clientRegistration, replaceExactly } from './host-build-contracts.mjs';
+import { ownClientStyles, clientRegistration, replaceExactly, walkAst } from './host-build-contracts.mjs';
 
 const reviewedSource = {
   commits: ['1600d8a1e140dcde43a1a0941940a0480712c011', '687f282e8625c6b8d11ff58211a90524be2e4317', '1f81c047fc48fa190a683e469daa699857e9afe8'],
@@ -13,7 +13,6 @@ reviewedFactories.set('38a6a5c965aa99ab525161efb7cc5cf1fe62fced', '41ba7801797f1
 reviewedFactories.set('9c2670d3bce5275e0d1610272958121af87787bb', '41ba7801797f1dfbeedcfc0a64dfc4553ea45f513a947815176f8f0bb341fdee');
 reviewedFactories.set('ddac96760b6edf8fa0fe17cbdcf0b512f4c12b2c', '41ba7801797f1dfbeedcfc0a64dfc4553ea45f513a947815176f8f0bb341fdee');
 const before = '.EvIC1a_column:has(>.EvIC1a_older)>[data-slot="conversation.chat.flow"]>';
-const after = '.EvIC1a_column>.EvIC1a_older~[data-slot="conversation.chat.flow"]>';
 const empty = '.EvIC1a_flowItem:is(:empty,:has(>[data-slot="conversation.chat.node"]:empty))';
 const count = (source, text) => source.split(text).length - 1;
 const gate = (condition, message) => { if (!condition) throw new Error(`Chat style adapter format gate: ${message}`); };
@@ -25,8 +24,7 @@ export function readComposerStats(client) {
   const entries = [], key = node => node?.type === 'Identifier' ? node.name : node?.value;
   const member = (node, name) => node?.type === 'MemberExpression'
     && (!node.computed || node.property.type === 'Literal') && key(node.property) === name;
-  const walk = node => {
-    if (!node || typeof node !== 'object') return;
+  walkAst(ast, node => {
     if (node.type === 'CallExpression' && member(node.callee, 'register') && member(node.callee.object, 'slots')) {
       const object = node.arguments[0];
       if (object?.type === 'ObjectExpression' && object.properties.some(p => key(p.key) === 'name' && p.value?.value === 'conversation.composer.dock')) {
@@ -47,12 +45,7 @@ export function readComposerStats(client) {
         entries.push({ id: id.value, order: value });
       }
     }
-    for (const value of Object.values(node)) {
-      if (Array.isArray(value)) value.forEach(walk);
-      else if (value && typeof value === 'object') walk(value);
-    }
-  };
-  walk(ast);
+  });
   gate(entries.length === 2 && new Set(entries.map(entry => entry.id)).size === 2,
     'expected exactly one activity and one usage composer registration');
   return entries;
@@ -90,13 +83,10 @@ export function inlineFactoryAssets(client, assets) {
     }
     throw Error('Unsupported native CSS asset expression');
   };
-  const walk = node => {
-    if (!node || typeof node !== 'object') return;
+  walkAst(ast, node => {
     if (node.type === 'VariableDeclarator' && /^css(?:\$\d+)?$/.test(node.id.name) && node.init.type !== 'Literal')
       edits.push([node.init.start, node.init.end, JSON.stringify(value(node.init))]);
-    for (const child of Object.values(node)) if (Array.isArray(child)) child.forEach(walk); else if (child && typeof child === 'object') walk(child);
-  };
-  walk(ast);
+  });
   for (const [start, end, replacement] of edits.sort((a,b) => b[0]-a[0])) client = client.slice(0,start)+replacement+client.slice(end);
   return client;
 }

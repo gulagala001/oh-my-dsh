@@ -1,6 +1,6 @@
-import { hash, activeRecords, createSurfaceIndex, liveSpan, prepareCandidate, candidateInput, decodeResult, validatePrepared, newRecord, backlogView } from './core.mjs';
+import { hash, activeRecords, createSurfaceIndex, liveSpan, candidateInput, decodeResult, validatePrepared, newRecord, backlogView } from './core.mjs';
 import { preparationRequest, preparationEvents } from './input-budget.mjs';
-import { SUMMARY_PROMPT_VERSION, PREPARE_SYSTEM, PREPARE_TOOL } from './prompts.mjs';
+import { SUMMARY_PROMPT_VERSION, PREPARE_TOOL } from './prompts.mjs';
 import { decodeCachedPreparation } from './cached-preparation.mjs';
 import { cachedRouteKey } from './request-snapshots.mjs';
 

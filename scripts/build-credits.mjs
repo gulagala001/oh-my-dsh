@@ -85,9 +85,17 @@ function page(language) {
     }
   }
   value += `## ${english ? 'Locked dependency inventory' : '完整锁定依赖清单'}\n\n`;
-  value += english ? `All ${dependencyList.length} distinct package versions in the OMD, DSH SDK and embedded OpenCU host/frontend lockfiles are listed below, including direct, transitive, build and optional platform dependencies. These are dependency inputs, not a claim that every package is loaded at runtime. Package pages provide original maintainers and license metadata; distributed licenses remain authoritative. [Machine-readable inventory](dependencies.json).\n\n` : `下表列出 OMD、DSH SDK 与内置 OpenCU 宿主／前端锁文件中的全部 ${dependencyList.length} 个不同包版本，覆盖直接、间接、构建和可选平台依赖。它们是依赖输入，不代表全部在运行时加载。包页面提供原作者／维护者与许可信息，实际随包许可为准。[机器可读清单](dependencies.json)。\n\n`;
-  value += `| ${english ? 'Package' : '依赖'} | ${english ? 'Version' : '版本'} | ${english ? 'Lockfile sources' : '来源锁文件'} |\n| --- | --- | --- |\n`;
-  for (const item of dependencyList) value += `| [${item.name}](https://www.npmjs.com/package/${item.name}/v/${item.version}) | ${item.version} | ${item.sources.map(source => source === upstreamLock ? `[DSH SDK](${upstreamLock})` : `[${source}](${link(source)})`).join(' · ')} |\n`;
+  if (english) {
+    value += `[Browse all ${dependencyList.length} package versions and lockfiles](components.md#完整锁定依赖清单) or [download the JSON inventory](dependencies.json).\n`;
+  } else {
+    value += `共 ${dependencyList.length} 个包版本，涵盖 OMD、DSH SDK 和 OpenCU 的直接、间接、构建及可选依赖。[下载 JSON 清单](dependencies.json)。\n\n`;
+    value += '| 包 Package | 版本 Version | 来源 Lockfile |\n| --- | --- | --- |\n';
+    for (const { name, version, sources } of dependencyList) {
+      value += `| [${name}](https://www.npmjs.com/package/${name}/v/${version}) | ${version} | ${sources.map(file => file === upstreamLock ? '[DSH SDK]' : `[${file}]`).join(' · ')} |\n`;
+    }
+    value += `\n[DSH SDK]: ${upstreamLock}\n`;
+    for (const file of lockFiles) value += `[${file}]: ${link(file)}\n`;
+  }
   value += `\n## ${english ? 'History and maintenance' : '历史与维护'}\n\n`;
   value += english ? 'The JasonQQ BTW implementation was used through OMD 0.99.0 and replaced by DSH BTW in 0.99.1. Historical release sources retain their applicable attribution. Current entries are generated from `src/project-catalog.json`, the recommendation catalog, component manifests and dependency lockfiles. Run `npm run credits:write` after changing these inputs; `npm run credits:check` rejects stale documentation or runtime catalog data.\n' : 'JasonQQ 的 BTW 实现在 OMD 0.99.0 及以前使用，0.99.1 已切换为自有 DSH BTW；历史发行来源保留对应署名。当前条目由 `src/project-catalog.json`、推荐目录、组件清单和依赖锁文件共同生成。改变输入后运行 `npm run credits:write`；`npm run credits:check` 会拒绝过期文档或运行时清单。\n';
   return value;

@@ -4,7 +4,7 @@ import { isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { assertCachedRequestPrefix } from './request-prefix.mjs';
 import { taskContextMeta } from '../task-context.mjs';
 import { ADAPTIVE_TASK, SUMMARY_PROMPT_VERSION } from './prompts.mjs';
-import { activeRecords, candidateInput, hash, liveSpan, newRecord, normalizeChoices, preparationWorkload, prepareCandidate, recordBlocks, recordSnapshot, userRevision, validatePrepared, assertPreparationTools } from './core.mjs';
+import { activeRecords, candidateInput, hash, liveSpan, newRecord, normalizeChoices, preparationWorkload, recordBlocks, recordSnapshot, userRevision, validatePrepared, assertPreparationTools } from './core.mjs';
 import { messageTokens } from './materials.mjs';
 import { RequestSnapshots, cachedRouteKey, cachedBudgetReason } from './request-snapshots.mjs';
 import { cachedPreparationInput } from './cached-preparation.mjs';

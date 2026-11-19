@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, copyFile, writeFile, readFile, access, rm, realpath } from 'node:fs/promises';
+import { mkdtemp, mkdir, copyFile, writeFile, readFile, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve, relative } from 'node:path';
+import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 test('starting from another cwd preserves relative home, explicit permissions and a spaced host path', async t => {

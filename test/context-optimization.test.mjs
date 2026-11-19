@@ -1,4 +1,4 @@
-import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
+import { installTools, executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
@@ -8,7 +8,6 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { createRequire } from 'node:module';
 import { Context } from '@deepseek-ai/cordis';
-import { ToolRuntime } from '@deepseek-ai/dsh-tools';
 import { createToolResultMessage, markAgentLoopRequest } from '@deepseek-ai/dsh-llm';
 import { FixtureSession } from './context-fixture.mjs';
 import { installResultReduction } from '../src/result-reduction/service.mjs';

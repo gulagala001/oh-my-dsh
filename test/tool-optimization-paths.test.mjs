@@ -1,4 +1,4 @@
-import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
+import { installTools, executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';

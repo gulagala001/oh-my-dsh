@@ -78,7 +78,7 @@ test('matching root and vendor baselines must still reference the same runtime',
 });
 
 test('actual runtime archive rejects website media and maintainer-only tools', async t => {
-  for (const name of ['docs/images/hero.png', 'scripts/deepswe/run.py']) {
+  for (const name of ['docs/images/hero.png', 'scripts/simulator/README.md']) {
     const files = entries(); files.set('package/' + name, Buffer.from('not a runtime resource'));
     const packed = await archive(t, files);
     assert.throws(() => verifyDeliveryArchive(packed, baseline), /Non-runtime files in OMD package/);

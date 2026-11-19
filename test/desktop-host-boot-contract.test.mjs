@@ -7,7 +7,6 @@ import { randomUUID } from 'node:crypto';
 import { resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runInNewContext } from 'node:vm';
-import { spawnSync } from 'node:child_process';
 import { desktopInputs, desktopIdentity, assertDesktopPaths, assertExternalBackends, digest, inside, repoRoot } from './fixtures/desktop-host-boot/inputs.mjs';
 import { desktopEnvironment } from '../scripts/desktop-test-environment.mjs';
 import { assertComputerBrowserPanel } from './fixtures/desktop-host-boot/settings-panel.mjs';

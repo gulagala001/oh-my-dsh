@@ -5,7 +5,7 @@ import { build } from 'esbuild';
 import { JSDOM } from 'jsdom';
 import React, { act, useContext, useSyncExternalStore } from 'react';
 import { absolutePath, directoryAt, resolveFilePath, fileImageUrl } from '../src/file-paths.mjs';
-import { foldOverview, installOverviewProjection } from '../src/session-overview-projection.mjs';
+import { installOverviewProjection } from '../src/session-overview-projection.mjs';
 
 const require = createRequire(import.meta.url);
 const compiled = await build({ entryPoints: [new URL('../src/client/file-context.jsx', import.meta.url).pathname],
