@@ -1,9 +1,9 @@
-name: Stock desktop diagnostic
+name: Stock desktop baseline
 
 on:
   workflow_dispatch:
   push:
-    branches: [ci/stock-desktop-diagnostic]
+    branches: [ci/stock-desktop-baseline]
 
 permissions:
   contents: read
@@ -26,12 +26,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - uses: actions/download-artifact@v8
-        with:
-          github-token: ${{ github.token }}
-          run-id: 44536693142
-          name: stock-desktop-plugin
-          path: ${{ runner.temp }}/omd-stock-package
+      - name: Download the current official OMD release
+        shell: pwsh
+        run: |
+          $dir = New-Item -ItemType Directory (Join-Path $env:RUNNER_TEMP 'omd-stock-package')
+          $archive = Join-Path $dir.FullName 'oh-my-dsh-0.2.2-rc.5.omd.1.9.0.tgz'
+          curl.exe --fail --location --retry 3 --silent --show-error 'https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/oh-my-dsh-0.2.2-rc.5.omd.1.9.0.tgz' -o $archive
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ((Get-FileHash $archive).Hash -ne 'd2bd726cbfb791e00e0e21f3ea5dbee7a6095bc42d5a8e1f5e6f8467a82a3414') { throw 'OMD baseline hash mismatch' }
       - name: Install the fixture dependencies
         shell: pwsh
         run: |
