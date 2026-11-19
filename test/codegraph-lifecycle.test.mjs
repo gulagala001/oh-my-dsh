@@ -1,10 +1,11 @@
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { CodegraphRuntime } from '../src/codegraph.mjs';
 import { apply as installAgent, exploreResult } from '../src/codegraph-agent.mjs';
 
-const cwd = new URL('../', import.meta.url).pathname;
+const cwd = fileURLToPath(new URL('../', import.meta.url));
 const deferred = () => Promise.withResolvers();
 const connection = () => ({ closed: false, diagnostics: () => ({}), client: {
   listTools: async () => ({ tools: [{ name: 'codegraph_search', inputSchema: { type: 'object', properties: {} } }] }),

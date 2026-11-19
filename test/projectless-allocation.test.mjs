@@ -111,11 +111,12 @@ test('concurrent allocations keep other requests, user symlinks and confirmed pa
   const f = await fixture(t);
   const first = await f.service.prepare(f.input), otherId = 'second-message';
   const originalClaim = await fs.readFile(f.claimFile, 'utf8');
-  await fs.symlink(first.cwd, first.cwd + '-2');
+  await fs.symlink(first.cwd, first.cwd + '-2', process.platform === 'win32' ? 'junction' : 'dir');
   const [second, third] = await Promise.all([otherId, 'third-message'].map(requestId => f.reopen().prepare({ ...f.input, requestId })));
   assert.equal(new Set([first.cwd, second.cwd, third.cwd]).size, 3);
   assert.equal(await fs.readFile(f.claimFile, 'utf8'), originalClaim);
-  assert.equal(await fs.readlink(first.cwd + '-2'), first.cwd);
+  assert.equal((await fs.lstat(first.cwd + '-2')).isSymbolicLink(), true);
+  assert.equal(await fs.realpath(first.cwd + '-2'), await fs.realpath(first.cwd));
   assert.deepEqual(await f.reopen().prepare(f.input), first);
   for (const result of [first, second, third]) assert.equal(await f.service.owns(result.cwd), true);
   assert.equal((await fs.readdir(path.dirname(f.claimFile))).length, 3);

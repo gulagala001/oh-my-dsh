@@ -83,3 +83,47 @@ jobs:
           name: core-opencu-delivery
           path: ${{ env.OMD_DELIVERY_ROOT }}
           if-no-files-found: warn
+  windows-source:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Preserve the SDK lock and hashed source bytes
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: node scripts/prepare-host-sdk.mjs
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: npm run prepack
+      - name: Run Windows build and runtime regressions
+        run: >-
+          node --test --test-timeout=60000
+          test/monitor-metadata.test.mjs test/monitor-import.test.mjs
+          test/monitor-pricing-route.test.mjs test/monitor-overview-cache.test.mjs
+          test/opencu-delivery.test.mjs test/opencu-source-sync.test.mjs
+          test/permission-presets.test.mjs test/native-session-read.test.mjs
+          test/console-dock.test.mjs test/file-context.test.mjs
+          test/codegraph-failure.test.mjs test/codegraph-lifecycle.test.mjs
+          test/startup-isolation.test.mjs test/projectless-allocation.test.mjs
+          test/legacy-identity.test.mjs test/session-plugin-records.test.mjs
+      - name: Prepare and verify a relocatable offline plugin
+        run: |
+          $offline = Join-Path $env:RUNNER_TEMP 'omd-offline'
+          node scripts/prepare-offline.mjs $offline
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $moved = Join-Path $env:RUNNER_TEMP 'omd-offline-moved'
+          Move-Item -LiteralPath $offline -Destination $moved
+          & (Join-Path $moved 'check-offline.cmd')
+          exit $LASTEXITCODE

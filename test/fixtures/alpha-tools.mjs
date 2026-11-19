@@ -1,10 +1,11 @@
+import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { executeNativeTool } from '../../src/host/native-tool-call.mjs';
 const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
-export const { NativeToolExecutor } = await import(host.resolve('@deepseek-ai/dsh-tool-executor-native'));
+export const { NativeToolExecutor } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-tool-executor-native')));
 export async function installTools(ctx, mode = 'native') {
-  await ctx.plugin((await import(host.resolve('@deepseek-ai/dsh-tools'))).ToolRuntime);
-  await ctx.plugin(await import(host.resolve('@deepseek-ai/dsh-tool-executor-' + mode)));
+  await ctx.plugin((await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-tools')))).ToolRuntime);
+  await ctx.plugin(await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-tool-executor-' + mode))));
 }
 export async function executeTool(ctx, input) {
   if (input.parent !== undefined) return executeNativeTool(ctx, input);

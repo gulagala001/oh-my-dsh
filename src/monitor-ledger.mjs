@@ -116,6 +116,9 @@ export class MonitorLedger {
     try {
       mkdirSync(join(directory, 'monitor-v1'), { recursive: true, mode: 0o700 });
       this.db = new DatabaseSync(join(directory, 'monitor-v1', 'usage.sqlite'));
+      // SQLite's localtime uses the C runtime time zone. On Windows that
+      // can differ from Node's IANA time zone, including after a TZ change.
+      this.db.function('omd_bucket', (at, grain) => bucketLabel(new Date(at), grain));
       // Monitoring must not delay execution behind another process's database lock.
       this.db.exec(`PRAGMA busy_timeout=50; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;
         CREATE TABLE IF NOT EXISTS calls(id TEXT PRIMARY KEY,sessionId TEXT,kind TEXT NOT NULL,
@@ -317,11 +320,11 @@ export class MonitorLedger {
         MAX(at) endedAt,COUNT(*) calls,
         SUM(CASE WHEN startedAt<=at OR durationMs<=at THEN 0 ELSE 1 END) untimedCalls
         FROM calls WHERE ${where} GROUP BY sessionId`).all(...args);
-      const buckets = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,MIN(at) at,${metricsSQL},
+      const buckets = this.db.prepare(`SELECT omd_bucket(at,'${grain}') label,MIN(at) at,${metricsSQL},
         COALESCE(SUM(CASE WHEN kind IN ('main','subagent') THEN ${knownTotalSQL} END),0) main,
         COALESCE(SUM(CASE WHEN kind NOT IN ('main','subagent') THEN ${knownTotalSQL} END),0) background
         FROM calls WHERE ${where} GROUP BY label ORDER BY label`).all(...args);
-      const modelBuckets = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,
+      const modelBuckets = this.db.prepare(`SELECT omd_bucket(at,'${grain}') label,
         NULLIF(model,'') model,COALESCE(SUM(${knownTotalSQL}),0) tokens FROM calls WHERE ${where} GROUP BY label,NULLIF(model,'')`).all(...args);
       value = { performance, sessionSpans, buckets, modelBuckets };
       // One overview, at most 512 KiB serialized; large histories still use
@@ -342,7 +345,7 @@ export class MonitorLedger {
       this.costCache = null;
       const summary = { totals: [], unpricedCalls: 0, partialCalls: 0 }, buckets = new Map(), totals = new Map();
       // Preserve receipt order, per-call tiers, missing usage and floating-point sums.
-      const receipts = this.db.prepare(`SELECT strftime('${grain}',at/1000,'unixepoch','localtime') label,provider,model,${fields.join(',')} FROM calls WHERE ${where}`);
+      const receipts = this.db.prepare(`SELECT omd_bucket(at,'${grain}') label,provider,model,${fields.join(',')} FROM calls WHERE ${where}`);
       // Stream positional rows directly into the callback contract. Avoid a
       // named SQLite object plus filter/map entry arrays for every receipt.
       const positional = typeof receipts.setReturnArrays === 'function';
@@ -541,20 +544,29 @@ export class MonitorLedger {
     }
     return result;
   }
-  close() { this.closed = true; this.groupCache = null; this.usageCache = null; this.legacyCache = null; this.legacyCountCache = null; this.overviewCache = null; this.costCache = null; try { this.db?.close(); } catch (error) { this.error = String(error.message); } }
+  close() {
+    this.closed = true;
+    this.groupCache = this.usageCache = this.legacyCache = this.legacyCountCache = this.overviewCache = this.costCache = null;
+    try { this.db?.close(); this.db = null; } catch (error) { this.error = String(error.message); }
+  }
 }
 
-// Empty buckets keep the console trend on a steady time axis. Labels follow
-// SQLite's localtime strftime, which uses this process's time zone as Date does.
+const p2 = number => String(number).padStart(2, '0');
+function bucketLabel(date, grain) {
+  const month = `${date.getFullYear()}-${p2(date.getMonth() + 1)}`;
+  if (grain === '%Y-%m') return month;
+  const day = `${month}-${p2(date.getDate())}`;
+  return grain === '%Y-%m-%d' ? day : `${day} ${p2(date.getHours())}:00`;
+}
+
+// Empty buckets use the same local calendar as receipt grouping and filtering.
 function fillBuckets(rows, grain, start, end, blank) {
   if (!rows.length || number(start) === null) return rows;
-  const p2 = n => String(n).padStart(2, '0'), hour = grain.includes('%H'), month = grain === '%Y-%m';
-  const label = d => month ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}`
-    : `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}${hour ? ` ${p2(d.getHours())}:00` : ''}`;
+  const hour = grain.includes('%H'), month = grain === '%Y-%m';
   const d = new Date(start); d.setMinutes(0, 0, 0); if (!hour) d.setHours(0); if (month) d.setDate(1);
   const byLabel = new Map(rows.map(row => [row.label, row])), out = [];
   while (d.getTime() <= end && out.length < 400) {
-    const key = label(d); out.push(byLabel.get(key) ?? { label: key, ...blank }); byLabel.delete(key);
+    const key = bucketLabel(d, grain); out.push(byLabel.get(key) ?? { label: key, ...blank }); byLabel.delete(key);
     if (hour) d.setHours(d.getHours() + 1); else if (month) d.setMonth(d.getMonth() + 1); else d.setDate(d.getDate() + 1);
   }
   return [...out, ...byLabel.values()].sort((a, b) => a.label < b.label ? -1 : a.label > b.label ? 1 : 0);

@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { setPresentedExecutor } from '../src/host/prompt-provider.mjs';
 import { projectToolDeclarations } from '../src/cc-adaptation/adapter.mjs';
 import test from 'node:test';
@@ -18,10 +19,10 @@ import { PROMPT_STYLES } from '../src/prompt-styles/options.mjs';
 import { isTaskVerificationReminder } from '../src/task-context.mjs';
 
 const native = createRequire(realpathSync(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json')));
-const { Context } = await import(native.resolve('@deepseek-ai/cordis'));
-const { ToolRuntime } = await import(native.resolve('@deepseek-ai/dsh-tools'));
-const { SystemPrompt } = await import(native.resolve('@deepseek-ai/dsh-system-prompt'));
-const { createScope } = await import(native.resolve('@deepseek-ai/dsh-scope'));
+const { Context } = await import(pathToFileURL(native.resolve('@deepseek-ai/cordis')));
+const { ToolRuntime } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-tools')));
+const { SystemPrompt } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-system-prompt')));
+const { createScope } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-scope')));
 
 async function fixture(t, mode = 'native') {
   const directory = await mkdtemp(join(tmpdir(), 'omd-task-mode-')), root = new Context();
@@ -38,8 +39,8 @@ async function fixture(t, mode = 'native') {
   ctx.provide('ptcRuntime', runtime);
   await ctx.plugin(SystemPrompt);
   await ctx.plugin(ToolRuntime);
-  const { NativeToolExecutor } = await import(native.resolve('@deepseek-ai/dsh-tool-executor-native'));
-  const { PtcExecutor } = await import(native.resolve('@deepseek-ai/dsh-tool-executor-ptc'));
+  const { NativeToolExecutor } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-tool-executor-native')));
+  const { PtcExecutor } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-tool-executor-ptc')));
   setPresentedExecutor(ctx, mode === 'ptc' ? new PtcExecutor(ctx) : new NativeToolExecutor(ctx), (model, definitions, context) => projectToolDeclarations(ctx, model, definitions, context));
   await root.inject(['omd', 'systemPrompt', 'tools', 'sessionProjections', 'ptcRuntime'], scope => { ctx = scope; });
   const key = {}, owner = createScope(ctx, key).ctx;

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -8,7 +9,7 @@ import { absolutePath, directoryAt, resolveFilePath, fileImageUrl } from '../src
 import { installOverviewProjection } from '../src/session-overview-projection.mjs';
 
 const require = createRequire(import.meta.url);
-const compiled = await build({ entryPoints: [new URL('../src/client/file-context.jsx', import.meta.url).pathname],
+const compiled = await build({ entryPoints: [fileURLToPath(new URL('../src/client/file-context.jsx', import.meta.url))],
   bundle: true, write: false, platform: 'node', format: 'cjs', packages: 'external' });
 const store = value => {
   const listeners = new Set();

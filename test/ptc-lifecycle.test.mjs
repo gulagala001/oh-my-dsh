@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,9 +10,9 @@ import { installToolCancellationPresentation } from '../src/tool-cancellation.mj
 
 const anchor = createRequire(realpathSync(process.env.OMD_PTC_TEST_HOST
   ?? createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json')));
-const { Context } = await import(anchor.resolve('@deepseek-ai/cordis'));
-const { ToolRuntime } = await import(anchor.resolve('@deepseek-ai/dsh-tools'));
-const { createScope } = await import(anchor.resolve('@deepseek-ai/dsh-scope'));
+const { Context } = await import(pathToFileURL(anchor.resolve('@deepseek-ai/cordis')));
+const { ToolRuntime } = await import(pathToFileURL(anchor.resolve('@deepseek-ai/dsh-tools')));
+const { createScope } = await import(pathToFileURL(anchor.resolve('@deepseek-ai/dsh-scope')));
 const baseline = process.env.OMD_PTC_BASELINE === '1';
 const deadline = promise => Promise.race([promise, delay(350).then(() => 'hung')]);
 

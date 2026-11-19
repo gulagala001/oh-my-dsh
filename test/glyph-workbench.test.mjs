@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
@@ -5,7 +6,7 @@ import { launchFixtureBrowser } from './fixtures/browser.mjs';
 
 test('native workbench surfaces mask glyphs through fullscreen, floating and layout changes', async () => {
   const { outputFiles } = await build({
-    entryPoints: [new URL('../plugins/glyph-theme/src/theme/renderer.mjs', import.meta.url).pathname],
+    entryPoints: [fileURLToPath(new URL('../plugins/glyph-theme/src/theme/renderer.mjs', import.meta.url))],
     bundle: true, write: false, format: 'iife', globalName: 'GlyphReplay',
   });
   const browser = await launchFixtureBrowser();

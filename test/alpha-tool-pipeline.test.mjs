@@ -1,14 +1,15 @@
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { setPresentedExecutor, beforeToolResolution } from '../src/host/prompt-provider.mjs';
 import { executeNativeTool } from '../src/host/native-tool-call.mjs';
 const host=createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
-const { Context }=await import(host.resolve('@deepseek-ai/cordis'));
-const { ToolRuntime }=await import(host.resolve('@deepseek-ai/dsh-tools'));
-const { SystemPrompt }=await import(host.resolve('@deepseek-ai/dsh-system-prompt'));
-const { NativeToolExecutor }=await import(host.resolve('@deepseek-ai/dsh-tool-executor-native'));
-const { createScope }=await import(host.resolve('@deepseek-ai/dsh-scope'));
+const { Context }=await import(pathToFileURL(host.resolve('@deepseek-ai/cordis')));
+const { ToolRuntime }=await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-tools')));
+const { SystemPrompt }=await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-system-prompt')));
+const { NativeToolExecutor }=await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-tool-executor-native')));
+const { createScope }=await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-scope')));
 const tool=(name,execute)=>({name,description:name,parameters:{type:'object',properties:{}},output:{schema:{type:'string'},render:(_,v)=>[{type:'text',text:v}]},execute});
 const call=async(ctx,agent,name,extra={})=>(await ctx.tools.execute({calls:[{type:'tool-call',id:name,name,arguments:'{}'}],agent,signal:new AbortController().signal,...extra})).results[0].result;
 test('locked-host providers retain scoped declarations and one admitted tool set through child execution',async t=>{
@@ -40,7 +41,7 @@ test('reviewed Loader-resolved PTC executor exposes only admitted controls and g
  root.provide('sandboxPolicy',{resolve:()=>({mode:sandboxMode})});
  root.provide('ptcRuntime',{language:'typescript',programFormat:'repl',sandboxMode:'workspace-write',timeout:{defaultMs:1000,maxMs:5000},resolve:spec=>spec,run(){throw Error('Unexpected program dispatch')}});
  root.provide('omd',{prepareBackground(){},backgroundOptions:()=>({interruptibleWait:enabled}),config:()=>({})});
- root.provide('loader',{entries:()=>[{options:{name:'@deepseek-ai/dsh-tools'},parent:{tree:{import:spec=>import(host.resolve(spec))}}}]});
+ root.provide('loader',{entries:()=>[{options:{name:'@deepseek-ai/dsh-tools'},parent:{tree:{import:spec=>import(pathToFileURL(host.resolve(spec)))}}}]});
  let injected;await root.inject(['tools','systemPrompt','ptcRuntime','omd','loader'],ctx=>{injected=ctx});
  const preset={},owner=createScope(injected,preset).ctx,agent={session:{id:'ptc-presentation',header:{}}};agent.ctx=createScope(owner,agent,{parent:preset}).ctx;
  owner.tools.register({...tool('job_output',()=> 'control'),parameters:{type:'object',properties:{wait:{type:'boolean'}}}});

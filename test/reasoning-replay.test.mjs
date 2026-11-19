@@ -8,7 +8,7 @@ import { installCommandCodeCompatibility } from '../src/commandcode-compat.mjs';
 
 const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
 const adapterPath = host.resolve('@deepseek-ai/dsh-llm-pi-ai');
-const { PiAiAdapter } = await import(adapterPath);
+const { PiAiAdapter } = await import(pathToFileURL(adapterPath));
 const apiDirectory = join(dirname(findPackageJSON('@earendil-works/pi-ai', pathToFileURL(adapterPath))), 'dist/api');
 const { convertResponsesMessages } = await import(pathToFileURL(join(apiDirectory, 'openai-responses-shared.js')));
 

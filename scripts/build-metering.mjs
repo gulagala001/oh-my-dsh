@@ -29,7 +29,7 @@ for(const [name,entry,reference] of [['token-meter','service','token-meter'],['c
     banner:{js:'export function createModule(require, importHostModule) { const module={exports:{}}; const exports=module.exports;'},
     footer:{js:'return module.exports; }'},legalComments:'eof',
     plugins:[{name:'native-summary-export',setup(build){
-      build.onLoad({filter:/metering\/native\/summarizer\.ts$/},async args=>({contents:replaceExactly(await readFile(args.path,'utf8'),'const COMPACTION_INSTRUCTION =','export const COMPACTION_INSTRUCTION =','Native compaction instruction export'),loader:'ts'}));
+      build.onLoad({filter:/metering[\\/]native[\\/]summarizer\.ts$/},async args=>({contents:replaceExactly(await readFile(args.path,'utf8'),'const COMPACTION_INSTRUCTION =','export const COMPACTION_INSTRUCTION =','Native compaction instruction export'),loader:'ts'}));
     }}]});
   const dependencies=await finishHostFactory(result,root+`lib/host/${name}.factory.mjs`);
   const {writeFile}=await import('node:fs/promises');

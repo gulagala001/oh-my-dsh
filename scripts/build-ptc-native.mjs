@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { reviewedNativeClients } from './prepare-host-sdk.mjs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -18,7 +19,7 @@ source = replaceExactly(source, 'schemas: [projectToolSchema(this.requirePtcTran
 source = replaceExactly(source, 'knownNames: [RUN_CODE_NAME]', `knownNames: [RUN_CODE_NAME, ..._tools.filter(tool => ${controls}.includes(tool.name)).map(tool => tool.name)]`, 'PTC known control names');
 await mkdir(new URL('lib/host/', root), { recursive: true });
 const result = await build({ tsconfigRaw: {}, stdin: { contents: source, resolveDir: dirname(file), sourcefile: 'reviewed-ptc-executor.js' },
-  outfile: new URL('lib/host/ptc-native.factory.mjs', root).pathname, bundle: true, platform: 'node', format: 'cjs', target: 'node22', packages: 'external', metafile: true,
+  outfile: fileURLToPath(new URL('lib/host/ptc-native.factory.mjs', root)), bundle: true, platform: 'node', format: 'cjs', target: 'node22', packages: 'external', metafile: true,
   banner: { js: 'export function createModule(require) { const module={exports:{}}; const exports=module.exports;' }, footer: { js: 'return module.exports; }' } });
 const deps = [...new Set(Object.values(result.metafile.outputs).flatMap(output => output.imports.filter(x => x.external).map(x => x.path)))];
 await writeFile(new URL('lib/host/ptc-native.dependencies.json', root), JSON.stringify(deps, null, 2)+'\n');

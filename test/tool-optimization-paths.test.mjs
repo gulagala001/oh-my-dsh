@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { installTools, executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,8 +19,8 @@ import { transformAssembly } from '../src/cc-adaptation/adapter.mjs';
 import { measureRequest } from '../src/metering/estimate.mjs';
 
 const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
-const { NodePtcRuntime } = await import(host.resolve('@deepseek-ai/dsh-ptc-runtime-node'));
-const { LocalSubprocessRuntime } = await import(host.resolve('@deepseek-ai/dsh-subprocess-local'));
+const { NodePtcRuntime } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-ptc-runtime-node')));
+const { LocalSubprocessRuntime } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-subprocess-local')));
 const text = value => [{ type: 'text', text: value }];
 async function fixture(t, mode = 'ptc') {
   const dir = await mkdtemp(join(tmpdir(), 'omd-tool-paths-')), ctx = new Context(), session = Session.create('s1'), agent = { ctx, session };
@@ -80,7 +81,7 @@ test('document views and original recall work through the real PTC pipeline with
   f.ctx.fs = { processPathFromHostPath: path => path, async resolve() { return { targetKey: '/approved/table.csv', displayPath: '/approved/table.csv' }; },
     processPath: t => t.displayPath, async stat() { return { type: 'file', size: bytes.length, version: 'v1' }; },
     async readBytes() { return bytes; }, async readText() { return bytes.toString(); }, async streamText() { return [bytes.toString()]; } };
-  const native = await import(host.resolve('@deepseek-ai/dsh-tool-fs'));
+  const native = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-tool-fs')));
   native.apply(f.ctx, native.Config({ readImage: false, write: false, edit: false }));
   registerContextViews(f.ctx, f.hub); registerContextRecall(f.ctx, f.hub);
   const r = await f.program('return await tools.context_view({file:"table.csv",view:"article"});');
@@ -208,7 +209,7 @@ test('identical immutable images are folded at the final message boundary includ
 
 test('native fs write-intent prevents incomplete PTC reconstruction and accepts complete ranged reads', async t => {
   const { installFileReadIntegrity } = await import('../src/file-read-integrity.mjs');
-  const native = await import(host.resolve('@deepseek-ai/dsh-tool-fs'));
+  const native = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-tool-fs')));
   const f = await fixture(t);
   let body = Array.from({length:1200},(_,i)=>String(i).padStart(5,'0') + 'x'.repeat(90)).join('\n'), version = 'v1', writes = 0;
   const fs = { processPathFromHostPath: path=>path, async resolve(path) { return { targetKey: '/authorized/file', displayPath: path }; }, processPath: t=>t.displayPath,

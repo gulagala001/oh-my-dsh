@@ -1,6 +1,7 @@
 name: Stock desktop compatibility
 
 on:
+  workflow_call:
   workflow_dispatch:
   push:
     branches: [ci/stock-desktop-compat]
@@ -33,10 +34,14 @@ jobs:
           npm run prepack
           mkdir -p "$RUNNER_TEMP/omd-stock-package"
           OMD_NPM_ENTRY="$(npm root -g)/npm/bin/npm-cli.js" node scripts/pack-local.mjs "$RUNNER_TEMP/omd-stock-package"
+          cd "$RUNNER_TEMP/omd-stock-package"
+          sha256sum ./*.tgz > SHA256SUMS
       - uses: actions/upload-artifact@v7
         with:
           name: stock-desktop-plugin
-          path: ${{ runner.temp }}/omd-stock-package/*.tgz
+          path: |
+            ${{ runner.temp }}/omd-stock-package/*.tgz
+            ${{ runner.temp }}/omd-stock-package/SHA256SUMS
           if-no-files-found: error
 
   windows:

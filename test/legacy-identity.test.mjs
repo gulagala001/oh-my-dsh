@@ -71,7 +71,8 @@ test('profile rows, module names, default preset and settings receipt follow the
   assert.match(text, new RegExp(`name: ${OMD_ID}/host/ui-chat`));
   assert.match(text, new RegExp(`default: ${OMD_ID}\\n    selectedDefault: ${OMD_ID}`));
   assert.match(text, /# user patch\n- id: llm-pi-ai/);
-  assert.equal(lstatSync(patchPath).mode & 0o777, 0o600);
+  assert.ok(lstatSync(patchPath).isFile());
+  if (process.platform !== 'win32') assert.equal(lstatSync(patchPath).mode & 0o777, 0o600);
   assert.equal(readFileSync(join(dir, `.${OMD_ID}-settings-v4.json`), 'utf8'), '{"imported":[]}\n');
   assert.equal(migrateLegacyProfilePatches({ dir, patchPath }, root).changed, false);
 });

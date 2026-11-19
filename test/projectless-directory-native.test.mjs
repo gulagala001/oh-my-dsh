@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,7 +11,7 @@ import { protectedEvent } from '../src/context/core.mjs';
 import { protectBcContext } from '../src/context/bc.mjs';
 
 const host = createRequire(import.meta.resolve('@deepseek-ai/dsh/package.json'));
-const native = name => import(host.resolve('@deepseek-ai/' + name));
+const native = name => import(pathToFileURL(host.resolve('@deepseek-ai/' + name)));
 const { Context } = await native('cordis');
 const { LlmAdapter, createUserMessage } = await native('dsh-llm');
 const { Session } = await native('dsh-session');

@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -9,8 +10,8 @@ import { Context } from '@deepseek-ai/cordis';
 import { Commands } from '../plugins/dsh-extensions/src/commands.mjs';
 
 const native = createRequire(import.meta.resolve('@deepseek-ai/dsh/package.json'));
-const { CommandRuntime } = await import(native.resolve('@deepseek-ai/dsh-commands'));
-const { createScope } = await import(native.resolve('@deepseek-ai/dsh-scope'));
+const { CommandRuntime } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-commands')));
+const { createScope } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-scope')));
 
 async function fixture(t) {
   const directory = await mkdtemp(join(process.env.DSHX_TEST_TMPDIR || tmpdir(), 'commands-native-'));

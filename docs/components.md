@@ -39,7 +39,7 @@
 
 人格导入、管理、全局和会话选择。内置人格插件。
 
-- 固定来源／版本: [0.2.6-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
+- 固定来源／版本: [0.2.6-dsh.0.2.2-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
 - 许可／归属: MIT · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/THIRD_PARTY_NOTICES.md)
 
 ### DSH Extensions
@@ -223,7 +223,7 @@ Responses 响应 ID 自动续传与完整请求回退。内置后端插件；共
 
 OpenCU 使用的原始界面组件及来源记录。宿主／来源／素材，具体使用范围见来源记录。
 
-- 固定来源／版本: [SHA256:e1e1f966a71844694c71aefd06150a89a0d274d1a3d7ade28213c3bc91e4d1d9](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- 固定来源／版本: [SHA256:5fbd4de119ec7bbdb64d3e19ac5f409fc508af7b751cf6bd8503a8bfb6b12233](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - 许可／归属: Original upstream rights apply · [详细声明](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

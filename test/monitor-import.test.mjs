@@ -6,10 +6,14 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { MonitorLedger } from '../src/monitor-ledger.mjs';
 
-function fixture(t) {
+function fixture(t, beforeCleanup) {
   const directory = mkdtempSync(join(tmpdir(), 'omd-monitor-import-'));
   const ledger = new MonitorLedger(directory, { now: () => 1000 });
-  t.after(() => { ledger.close(); rmSync(directory, { recursive: true, force: true }); });
+  t.after(() => {
+    beforeCleanup?.();
+    ledger.close();
+    rmSync(directory, { recursive: true, force: true, maxRetries: 3 });
+  });
   assert.ok(ledger.db, ledger.error); return ledger;
 }
 const states = [{ id: 'isolated', activity: [{ id: 'first', at: 100, kind: 'main', firstTokenMs: 5 }, { id: 'second', at: 200, kind: 'prepare' }] }];
@@ -93,8 +97,9 @@ test('failed identity lookup leaves the import retryable without publishing fing
 
 
 test('identity lookup reserves the writer before reading and never loses a racing receipt', t => {
-  const ledger = fixture(t), file = ledger.db.prepare('PRAGMA database_list').get().file;
-  const writer = new DatabaseSync(file); t.after(() => writer.close());
+  let writer;
+  const ledger = fixture(t, () => writer?.close());
+  writer = new DatabaseSync(ledger.db.prepare('PRAGMA database_list').get().file);
   const prepare = ledger.db.prepare.bind(ledger.db); let blocked = false;
   ledger.db.prepare = sql => {
     const statement = prepare(sql);

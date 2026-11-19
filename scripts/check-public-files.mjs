@@ -12,7 +12,10 @@ const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8',maxBuffer:64*1
 check(git(['ls-files','--cached','--others','--exclude-standard','-z']).split('\0').filter(Boolean),'Git public files');
 const base=git(['rev-parse','origin/main']).trim();
 for(const ref of git(['rev-list',`${base}..HEAD`]).trim().split('\n').filter(Boolean)) check(git(['ls-tree','-r','--name-only','-z',ref]).split('\0').filter(Boolean),'New history '+ref);
-const packed=JSON.parse(execFileSync('npm',['pack','--ignore-scripts','--dry-run','--json'],{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024,stdio:['ignore','pipe','pipe']}))[0];
+const packArgs = ['pack', '--ignore-scripts', '--dry-run', '--json'];
+const npm = process.platform === 'win32' ? process.env.ComSpec || 'cmd.exe' : 'npm';
+const npmArgs = process.platform === 'win32' ? ['/d', '/c', 'npm.cmd', ...packArgs] : packArgs;
+const packed=JSON.parse(execFileSync(npm,npmArgs,{cwd:root,encoding:'utf8',maxBuffer:64*1024*1024,stdio:['ignore','pipe','pipe']}))[0];
 check(packed.files.map(f=>f.path),'Actual npm package');
 assertPackageScope(packed.files.map(f=>f.path));
 assertPackageDocumentation(packed.files.map(f=>f.path),file=>readFileSync(new URL('../'+file,import.meta.url)));

@@ -89,10 +89,10 @@ node scripts/prepare-offline.mjs 'C:\omd-offline'
 if ($LASTEXITCODE -ne 0) { throw 'Offline preparation failed' }
 ```
 
-On macOS / Linux, run `node scripts/prepare-offline.mjs /absolute/path/omd-offline`. The script takes only the release files, installs a fresh copy of dependencies without symbolic links, builds it and checks the OMD entry, `sharp` and CodeGraph. It never copies your settings, keys or conversations, and produces no directory if a check fails.
+On macOS / Linux, run `node scripts/prepare-offline.mjs /absolute/path/omd-offline`. The script builds and checks OMD, then outputs the plugin and its local dependencies. The stock DSH app on the offline computer supplies its own SDK. The output contains only product files and dependencies.
 
 1. Zip the whole output directory (including `node_modules`), copy it to the offline computer and unzip it to a fixed place such as `D:\omd-offline`. Do not split it up or overwrite DSH's own `node_modules`.
-2. On Windows, run `.\check-offline.cmd` in that directory; it uses the bundled runtime, so no Node install is needed. On other systems, run `node scripts/check-offline.mjs`.
+2. On Windows, run `.\check-offline.cmd` in that directory to check the plugin files and local dependencies. On other systems, run `node scripts/check-offline.mjs`.
 3. In the desktop app, enter `link:D:\omd-offline` (your actual path) under **Plugins → Install → Local**. **Link the whole directory; do not install a `.tgz` or `file:` package.** Keep the directory in place, and reinstall if you move it.
 4. Check that the DSH version matches `hostVersion` in `offline-manifest.json`, fully restart and try a new session with a tool call. For the web version, keep the same `DSH_HOME` and profile and add `link:/absolute/unzipped/path` from the command line, with `--offline` if needed.
 

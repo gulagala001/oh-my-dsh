@@ -1,3 +1,4 @@
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -11,8 +12,8 @@ const native = createSidebarNative(name=>name==='@deepseek-ai/dsh-client-ui-prim
 
 test('installer decorates the real native slot ledger and rebinds after host registration reload', async t => {
   const host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
-  const { SlotCore } = await import(host.resolve('@deepseek-ai/dsh-client-ui-slots'));
-  const compiled = await build({entryPoints:[new URL('../src/client/sidebar-sections.jsx',import.meta.url).pathname],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',loader:{'.css':'text'}});
+  const { SlotCore } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-client-ui-slots')));
+  const compiled = await build({entryPoints:[fileURLToPath(new URL('../src/client/sidebar-sections.jsx',import.meta.url))],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',loader:{'.css':'text'}});
   const module={exports:{}};
   const resolve=name=>name==='@deepseek-ai/dsh-client-ui-primitives'||name==='@deepseek-ai/dsh-client-store'?{}:require(name);
   new Function('require','module','exports',compiled.outputFiles[0].text)(resolve,module,module.exports);
@@ -74,9 +75,9 @@ for(const key of ['window','document','Node','HTMLElement','Element','MouseEvent
 globalThis.requestAnimationFrame=dom.window.requestAnimationFrame.bind(dom.window);globalThis.cancelAnimationFrame=dom.window.cancelAnimationFrame.bind(dom.window);globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const e=React.createElement;
 const primitives=new Proxy({Tooltip:({children})=>children,HoverCard:({anchor})=>anchor,relativeTime:()=>({unit:'now',n:0}),useRowDragPreview:()=>({start(){},clear(){return false;}}),Menu:({anchor})=>anchor,AnimatedRows:({children})=>e('div',{},children),HoverCardGroup:({children})=>e('div',{},children)}, {get:(target,key)=>target[key]??(()=>null)});
-const compiled=await build({entryPoints:[new URL('../src/client/sidebar-sections.jsx',import.meta.url).pathname],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',loader:{'.css':'text'}}),module={exports:{}};
+const compiled=await build({entryPoints:[fileURLToPath(new URL('../src/client/sidebar-sections.jsx',import.meta.url))],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',loader:{'.css':'text'}}),module={exports:{}};
 new Function('require','module','exports',compiled.outputFiles[0].text)(name=>name==='@deepseek-ai/dsh-client-ui-primitives'?primitives:name==='@deepseek-ai/dsh-client-store'?{}:require(name),module,module.exports);
-const host=createRequire(require.resolve('@deepseek-ai/dsh/package.json')), {SlotCore}=await import(host.resolve('@deepseek-ai/dsh-client-ui-slots'));
+const host=createRequire(require.resolve('@deepseek-ai/dsh/package.json')), {SlotCore}=await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-client-ui-slots')));
 const slots=new SlotCore(),off=[];const effect=fn=>{const result=fn();if(result)off.push(result);};slots.inject=(_name,fn)=>effect(fn);
 slots.register({name:'root',children:{'sidebar.workspaces':{kind:'single',scope:'root'}}},()=>null);
 slots.register({name:'sidebar.workspaces',locale:'workspace',children:{'sidebar.workspaces.session.row.action':{kind:'list',scope:'root'}}},()=>null);

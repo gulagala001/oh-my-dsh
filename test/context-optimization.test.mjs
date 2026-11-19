@@ -1,3 +1,4 @@
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { installTools, executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -22,7 +23,7 @@ import { sendJson } from '../src/http.mjs';
 const text = value => [{ type: 'text', text: value }];
 const hostRequire = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
 async function nativeReads(f, fs, cwd = '/project') {
-  const tools = await import(hostRequire.resolve('@deepseek-ai/dsh-tool-fs'));
+  const tools = await import(pathToFileURL(hostRequire.resolve('@deepseek-ai/dsh-tool-fs')));
   f.ctx.reflect.provide('fs', fs);
   f.ctx.reflect.provide('workingDirectory', { async ensure() { return cwd; } });
   tools.apply(f.ctx, tools.Config({ readImage: false, write: false, edit: false }));
@@ -130,7 +131,7 @@ test('CodeGraph keeps its index but no connection visibility leaks between chats
   const connections = []; runtime.connect = async () => { const c = { client: { async callTool() { return { content: [] }; } } }; connections.push(c); return c; };
   runtime.close = async () => {};
   t.after(() => runtime.dispose());
-  const cwd = new URL('../', import.meta.url).pathname;
+  const cwd = fileURLToPath(new URL('../', import.meta.url));
   await runtime.call('codegraph_explore', {}, { cwd, sessionKey: 'chat-a' });
   await runtime.call('codegraph_explore', {}, { cwd, sessionKey: 'chat-b' });
   await runtime.call('codegraph_explore', {}, { cwd, sessionKey: 'chat-a' });
@@ -250,7 +251,7 @@ test('real local snapshots preserve the native session directory and symlink tar
   await mkdir(cwd);
   await writeFile(join(cwd, 'source.js'), source);
   await symlink('source.js', join(cwd, 'alias.js'), 'file');
-  const { LocalFileSystem } = await import(hostRequire.resolve('@deepseek-ai/dsh-fs-local'));
+  const { LocalFileSystem } = await import(pathToFileURL(hostRequire.resolve('@deepseek-ai/dsh-fs-local')));
   const backend = new Context();
   await backend.plugin(LocalFileSystem, { cwd: f.directory });
   t.after(() => backend.fiber.dispose());

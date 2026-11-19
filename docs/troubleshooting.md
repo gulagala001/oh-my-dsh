@@ -88,10 +88,10 @@ node scripts/prepare-offline.mjs 'C:\omd-offline'
 if ($LASTEXITCODE -ne 0) { throw '离线准备失败' }
 ```
 
-macOS／Linux 用 `node scripts/prepare-offline.mjs /绝对路径/omd-offline`。脚本只拿发行文件，重新装一份不含符号链接的依赖，构建后检查 OMD 入口、`sharp` 和 CodeGraph；不会带走你的配置、密钥和会话。检查不通过就不会产出目录。
+macOS／Linux 用 `node scripts/prepare-offline.mjs /绝对路径/omd-offline`。脚本构建并验证 OMD，输出插件及其本机依赖。离线电脑安装时由原版 DSH 提供自己的 SDK。输出目录只包含产品文件和依赖。
 
 1. 把整个输出目录（含 `node_modules`）压缩，拷到离线电脑，解压到固定位置，比如 `D:\omd-offline`。不要拆散文件，也不要覆盖 DSH 自己的 `node_modules`。
-2. Windows 离线电脑在解压目录运行 `.\check-offline.cmd`，它用随包的运行时，不用另装 Node。其他系统用 `node scripts/check-offline.mjs`。
+2. Windows 离线电脑在解压目录运行 `.\check-offline.cmd` 检查插件文件和本机依赖。其他系统用 `node scripts/check-offline.mjs`。
 3. 桌面版在 **插件 → 安装 → 本地** 填 `link:D:\omd-offline`（换成实际路径）。**链接整个目录，不要装 `.tgz` 或 `file:` 包**。这个目录要一直留着，挪了位置就重新装。
 4. 确认 DSH 版本和离线目录里 `offline-manifest.json` 的 `hostVersion` 一致，完整重启后试新会话和工具调用。网页版用原来的 `DSH_HOME` 和 profile，通过命令行添加 `link:/解压目录绝对路径`，必要时加 `--offline`。
 

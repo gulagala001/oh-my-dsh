@@ -1,8 +1,9 @@
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CodegraphRuntime } from '../src/codegraph.mjs';
 
-const cwd = new URL('../', import.meta.url).pathname;
+const cwd = fileURLToPath(new URL('../', import.meta.url));
 
 test('index preparation retains a readable plain-object failure', async () => {
   const runtime = new CodegraphRuntime();

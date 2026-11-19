@@ -311,7 +311,7 @@ test('package preparation reuses an existing Corepack cache without exposing it 
 
 async function nativeUpdateFixture(t, { probe, failTarget = false } = {}) {
   const require = createRequire(import.meta.url), host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
-  const { PluginManager } = await import(host.resolve('@deepseek-ai/dsh-plugin-manager'));
+  const { PluginManager } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-plugin-manager')));
   let installed = '1.0.0';
   const f = await fixture(t, probe, (manager, calls, root) => Object.assign(manager, {
     profile: { dir: root }, installedFrom: new Map([['fixture', 'https://previous.invalid']]),

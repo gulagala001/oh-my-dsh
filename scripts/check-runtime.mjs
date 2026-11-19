@@ -68,7 +68,9 @@ async function checkArticleWorker(directory) {
 
 export async function checkDeferredDependencies(directory, options = {}) {
   const checks = [], errors = [], require = createRequire(join(directory, 'package.json'));
-  for (const name of ['@modelcontextprotocol/client', '@modelcontextprotocol/client/stdio', '@deepseek-ai/dsh-mcp-client', 'playwright', 'ws']) {
+  const modules = ['@modelcontextprotocol/client', '@modelcontextprotocol/client/stdio', 'playwright', 'ws'];
+  if (!options.hostProvided) modules.push('@deepseek-ai/dsh-mcp-client');
+  for (const name of modules) {
     try { await import(pathToFileURL(dependencyPath(directory, require.resolve(name), options.portable)).href); checks.push(name); }
     catch (error) { errors.push(`${name}: ${failure(error)}`); }
   }

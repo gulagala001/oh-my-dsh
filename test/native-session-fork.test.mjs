@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -14,9 +15,9 @@ import { installPromptAdapter } from '../src/cc-adaptation/adapter.mjs';
 import { PERSONALITY_SCOPE } from '../plugins/persona/src/shared/prompt.mjs';
 
 const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
-const { Context } = await import(host.resolve('@deepseek-ai/cordis'));
-const { SessionStore } = await import(host.resolve('@deepseek-ai/dsh-session'));
-const { SessionQueryEngine } = await import(host.resolve('@deepseek-ai/dsh-session-query'));
+const { Context } = await import(pathToFileURL(host.resolve('@deepseek-ai/cordis')));
+const { SessionStore } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-session')));
+const { SessionQueryEngine } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-session-query')));
 
 test('native independent forks retain only verified OMD archive lineage across concurrent calls and restart', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'omd-fork-'));
@@ -67,7 +68,7 @@ test('native seeded activation and a later turn keep the completed parent settin
   let config = { promptStyle: 'codex' };
   t.after(async () => { await ctx.fiber.dispose(); await rm(directory, { recursive: true, force: true }); });
   ctx.provide('profileContext', { home: directory, dir: directory });
-  const native = name => import(host.resolve('@deepseek-ai/dsh-' + name));
+  const native = name => import(pathToFileURL(host.resolve('@deepseek-ai/dsh-' + name)));
   for (const name of ['session', 'session-projection', 'agent', 'llm', 'system-prompt', 'tools', 'tool-executor-native',
     'fs-local', 'working-directory', 'agent-loop', 'subagent', 'subagent-fork-in-process']) {
     const module = await native(name); await ctx.plugin(module.default ?? module, name === 'subagent-fork-in-process' ? { providerName: 'fork' } : undefined);

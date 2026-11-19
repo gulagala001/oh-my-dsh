@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { installTools, executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,10 +11,10 @@ import { execFileSync } from 'node:child_process';
 const modulePath = process.env.SEARCH_COMPAT_MODULE ?? '../src/search-compat.mjs';
 const { bindSearchSubprocess, copyNonExecutableSearchBinary, installSearchCompatibility } = await import(modulePath);
 const native = createRequire(realpathSync(process.env.SEARCH_TEST_HOST ?? createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json')));
-const { Context } = await import(native.resolve('@deepseek-ai/cordis'));
-const { ToolRuntime } = await import(native.resolve('@deepseek-ai/dsh-tools'));
-const { createScope } = await import(native.resolve('@deepseek-ai/dsh-scope'));
-const search = await import(native.resolve('@deepseek-ai/dsh-tool-fs-search'));
+const { Context } = await import(pathToFileURL(native.resolve('@deepseek-ai/cordis')));
+const { ToolRuntime } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-tools')));
+const { createScope } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-scope')));
+const search = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-tool-fs-search')));
 const posix = { skip: process.platform === 'win32' };
 const copy = { source: '/packaged/rg', executable: '/private/rg' };
 

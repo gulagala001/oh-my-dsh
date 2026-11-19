@@ -129,7 +129,13 @@ export class HubStore {
         // Concurrent panels share only this in-flight file read. A cancelled
         // caller finishes the current file without cancelling another caller.
         const current = pending;
-        pending.promise = readFile(file, 'utf8').then(raw => {
+        // NTFS can refuse replacement while a read handle is open. Keep each
+        // Windows read and its close in one turn so HubStore writes can still
+        // replace the file atomically. The scan continues to yield between files.
+        const readArchive = process.platform === 'win32'
+          ? Promise.resolve().then(() => readFileSync(file, 'utf8'))
+          : readFile(file, 'utf8');
+        pending.promise = readArchive.then(raw => {
           // Async I/O can overlap activation, replacement or deletion. Never
           // publish old bytes under a newer file's identity or over live state.
           if (this.states.has(id) || fileSignature(statSync(file, { bigint: true })) !== signature) return this.monitorState(id);

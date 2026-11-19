@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -9,7 +10,7 @@ import { MOTION_MS } from '../src/client/motion.mjs';
 const require = createRequire(import.meta.url), host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
 const primitives = createRequire(host.resolve('@deepseek-ai/dsh-client-ui-primitives'));
 const compiled = await build({ stdin: { contents: `export { applyDock } from './src/client/console/dock.jsx';
-  export { BarChart } from './src/client/console/ui.jsx'; export { bindSidebar } from './src/client/console/nav.mjs';`, resolveDir: new URL('../', import.meta.url).pathname },
+  export { BarChart } from './src/client/console/ui.jsx'; export { bindSidebar } from './src/client/console/nav.mjs';`, resolveDir: fileURLToPath(new URL('../', import.meta.url)) },
   bundle: true, write: false, format: 'cjs', platform: 'node', treeShaking: true,
   external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
   plugins: [{ name: 'test-css', setup(b) { b.onLoad({ filter: /\.css$/ }, () => ({ contents: 'export default {}', loader: 'js' })); } }],

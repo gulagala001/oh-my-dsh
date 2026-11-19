@@ -1,3 +1,4 @@
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { installTools, executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,13 +10,13 @@ import {installToolDefinitions} from '../vendor/opencu/src/dsh/tools.mjs';
 import {createComputerSession} from '../vendor/opencu/src/dsh/computer.mjs';
 
 const require = createRequire(realpathSync(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json')));
-const {Context} = await import(require.resolve('@deepseek-ai/cordis'));
-const {ToolRuntime} = await import(require.resolve('@deepseek-ai/dsh-tools'));
-const {NodePtcRuntime} = await import(require.resolve('@deepseek-ai/dsh-ptc-runtime-node'));
-const {LocalSubprocessRuntime} = await import(require.resolve('@deepseek-ai/dsh-subprocess-local'));
+const {Context} = await import(pathToFileURL(require.resolve('@deepseek-ai/cordis')));
+const {ToolRuntime} = await import(pathToFileURL(require.resolve('@deepseek-ai/dsh-tools')));
+const {NodePtcRuntime} = await import(pathToFileURL(require.resolve('@deepseek-ai/dsh-ptc-runtime-node')));
+const {LocalSubprocessRuntime} = await import(pathToFileURL(require.resolve('@deepseek-ai/dsh-subprocess-local')));
 
 for (const mode of ['native','ptc']) test(`bundled CU diagnostics survive the real ${mode} tool error channel`, async t => {
-  const parent = new URL('../../.local/',import.meta.url).pathname; await mkdir(parent,{recursive:true});
+  const parent = fileURLToPath(new URL('../../.local/',import.meta.url)); await mkdir(parent,{recursive:true});
   const directory = await mkdtemp(join(parent,'cu-tool-channel-')), ctx = new Context();
   const session = {id:'synthetic-continuity',append(){}}, agent = {ctx,session};
   ctx.reflect.provide('systemPrompt',{tools(){},section(){},getSectionOrder(){return 0;}});

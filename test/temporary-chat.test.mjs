@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
@@ -9,8 +10,8 @@ import { ContextStore } from '../src/context/store.mjs';
 import { TemporaryChats } from '../src/temporary-chat.mjs';
 
 const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
-const native = name => import(host.resolve('@deepseek-ai/dsh-' + name));
-const { Context } = await import(host.resolve('@deepseek-ai/cordis'));
+const native = name => import(pathToFileURL(host.resolve('@deepseek-ai/dsh-' + name)));
+const { Context } = await import(pathToFileURL(host.resolve('@deepseek-ai/cordis')));
 const { createUserMessage, LlmAdapter } = await native('llm');
 async function fixture(t, options = {}) {
   await mkdir(resolve('../.local/temporary-native-tests'), { recursive: true });

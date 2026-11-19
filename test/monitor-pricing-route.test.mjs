@@ -50,11 +50,15 @@ test('route selections are bounded while tiers, overrides and refreshed catalogs
     }])),
   }])));
   const pricing = new MonitorPricing(directory, { now: () => now, fetch: async () => new Response(source()) });
-  t.after(async () => { await pricing.close(); await rm(directory, { recursive: true, force: true }); });
+  const ledger = new MonitorLedger(directory, { now: () => now });
+  t.after(async () => {
+    ledger.close();
+    await pricing.close();
+    await rm(directory, { recursive: true, force: true, maxRetries: 3 });
+  });
   await pricing.refresh();
   const initialCosts = pricing.costCacheKey();
   assert.deepEqual(pricing.costCacheKey(), initialCosts);
-  const ledger = new MonitorLedger(directory, { now: () => now }); t.after(() => ledger.close());
   for (const inputTokens of [100, 101]) assert.equal(ledger.append({ id: String(inputTokens), sessionId: 'fixture', kind: 'main',
     provider: 'fixture-0', model: 'model-0', at: now - inputTokens,
     usage: { inputTokens, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 } }), true);

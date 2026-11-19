@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, copyFile, rm, chmod, stat } from 'node:fs/promises';
@@ -9,7 +10,7 @@ import { createHash } from 'node:crypto';
 const exec = promisify(execFile), hash = value => createHash('sha256').update(value).digest('hex');
 async function fixture(t) {
   const parent = new URL('../../.local/', import.meta.url); await mkdir(parent, { recursive: true });
-  const root = await mkdtemp(new URL('opencu-source-sync-', parent).pathname); t.after(() => rm(root, { recursive: true, force: true }));
+  const root = await mkdtemp(fileURLToPath(new URL('opencu-source-sync-', parent))); t.after(() => rm(root, { recursive: true, force: true }));
   const host = join(root, 'omd'), source = join(root, 'opencu'), bundled = join(host, 'vendor/opencu');
   for (const path of [join(host, 'scripts'), join(source, 'src/dsh'), join(bundled, 'src/dsh'), join(bundled, 'lib')]) await mkdir(path, { recursive: true });
   await copyFile(new URL('../scripts/sync-opencu.mjs', import.meta.url), join(host, 'scripts/sync-opencu.mjs'));
@@ -31,7 +32,9 @@ async function fixture(t) {
 test('source sync changes committed files and digests while preserving generated output bytes', async t => {
   const f = await fixture(t); await f.sync(['src/dsh/downloads.mjs']);
   assert.equal(await readFile(join(f.bundled, 'src/dsh/downloads.mjs'), 'utf8'), 'export const current = true;\n');
-  assert.equal((await stat(join(f.bundled, 'src/dsh/downloads.mjs'))).mode & 0o777, 0o755);
+  const info = await stat(join(f.bundled, 'src/dsh/downloads.mjs'));
+  assert.ok(info.isFile());
+  if (process.platform !== 'win32') assert.equal(info.mode & 0o777, 0o755);
   assert.equal(await readFile(join(f.bundled, 'lib/client.js'), 'utf8'), 'existing host-specific client\n');
   const manifest = JSON.parse(await readFile(join(f.host, 'vendor/opencu.json'), 'utf8'));
   assert.equal(manifest.files['src/dsh/downloads.mjs'], hash(await readFile(join(f.source, 'src/dsh/downloads.mjs'))));

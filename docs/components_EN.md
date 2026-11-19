@@ -39,7 +39,7 @@ Turn undo and conversation rewind. Bundled undo plugin.
 
 Personality import, management and global or per-chat selection. Bundled personality plugin.
 
-- Pinned source / version: [0.2.6-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
+- Pinned source / version: [0.2.6-dsh.0.2.2-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/THIRD_PARTY_NOTICES.md)
 
 ### DSH Extensions
@@ -223,7 +223,7 @@ Host, sessions, tools and UI components. Host, source or asset; scope documented
 
 Original frontend assets used by OpenCU and provenance. Host, source or asset; scope documented in provenance.
 
-- Pinned source / version: [SHA256:e1e1f966a71844694c71aefd06150a89a0d274d1a3d7ade28213c3bc91e4d1d9](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- Pinned source / version: [SHA256:5fbd4de119ec7bbdb64d3e19ac5f409fc508af7b751cf6bd8503a8bfb6b12233](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev

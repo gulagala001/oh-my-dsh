@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { gunzipSync } from 'node:zlib';
+import { gzipSync, gunzipSync } from 'node:zlib';
 import { nativePackageModes } from '../scripts/native-package-modes.mjs';
 import { deliveryBaseline, verifyDeliveryArchive } from '../scripts/check-opencu-delivery.mjs';
 
@@ -36,16 +36,26 @@ async function directory(t) {
   return path;
 }
 
-async function archive(t, files = entries(), helperMode = 0o755, ordinaryMode = 0o644) {
-  const path = await directory(t);
+// Write the requested ustar modes directly. NTFS chmod cannot model Unix modes.
+function archive(files = entries(), helperMode = 0o755, ordinaryMode = 0o644) {
+  const parts = [];
   for (const [name, bytes] of files) {
-    await mkdir(dirname(join(path, name)), { recursive: true });
-    await writeFile(join(path, name), bytes);
-    await chmod(join(path, name), name === 'package/vendor/opencu/' + helper ? helperMode : ordinaryMode);
+    const header = Buffer.alloc(512);
+    const split = name.length > 100 ? name.lastIndexOf('/') : -1;
+    header.write(name.slice(split + 1), 0, 100);
+    if (split !== -1) header.write(name.slice(0, split), 345, 155);
+    const mode = name === 'package/vendor/opencu/' + helper ? helperMode : ordinaryMode;
+    header.write(mode.toString(8).padStart(7, '0') + '\0', 100);
+    header.write('0000000\0'.repeat(2), 108);
+    header.write(bytes.length.toString(8).padStart(11, '0') + '\0', 124);
+    header.write('00000000000\0', 136);
+    header.fill(32, 148, 156);
+    header[156] = 48;
+    header.write('ustar\0' + '00', 257);
+    header.write(header.reduce((sum, byte) => sum + byte, 0).toString(8).padStart(6, '0') + '\0 ', 148);
+    parts.push(header, bytes, Buffer.alloc((512 - bytes.length % 512) % 512));
   }
-  const output = join(path, 'actual.tgz');
-  execFileSync('tar', ['--format=ustar', '-czf', output, '-C', path, ...files.keys()]);
-  return readFile(output);
+  return gzipSync(Buffer.concat([...parts, Buffer.alloc(1024)]));
 }
 
 test('rebuilt root runtime must equal HEAD even for a whitespace-only change', async t => {
@@ -63,90 +73,90 @@ test('rebuilt root runtime must equal HEAD even for a whitespace-only change', a
   await assert.rejects(deliveryBaseline(path), /Rebuilt lib\/client.js differs from HEAD/);
 });
 
-test('actual tgz matches every vendor hash with only the classic client excluded', async t => {
-  const result = verifyDeliveryArchive(await archive(t), baseline);
+test('actual tgz matches every vendor hash with only the classic client excluded', () => {
+  const result = verifyDeliveryArchive(archive(), baseline);
   assert.equal(result.vendorMembers, 4);
   assert.equal(result.rootClientSha256, hash(client));
   assert.deepEqual(result.helpers, [{ file: helper, mode: '0755' }]);
 });
 
-test('matching root and vendor baselines must still reference the same runtime', async t => {
+test('matching root and vendor baselines must still reference the same runtime', () => {
   const stale = Buffer.from('import("/api/opencu/rea-assets/opencu-client-BBBBBBBB.js")');
   const files = entries(); files.set('package/lib/client.js', stale);
-  const packed = await archive(t, files);
+  const packed = archive(files);
   assert.throws(() => verifyDeliveryArchive(packed, {...baseline, client:stale}), /differs from the served OpenCU runtime/);
 });
 
-test('actual runtime archive rejects website media and maintainer-only tools', async t => {
+test('actual runtime archive rejects website media and maintainer-only tools', () => {
   for (const name of ['docs/images/hero.png', 'scripts/simulator/README.md']) {
     const files = entries(); files.set('package/' + name, Buffer.from('not a runtime resource'));
-    const packed = await archive(t, files);
+    const packed = archive(files);
     assert.throws(() => verifyDeliveryArchive(packed, baseline), /Non-runtime files in OMD package/);
   }
 });
 
-test('actual archive cannot drop an entrypoint or rewrite its manifest to hide it', async t => {
+test('actual archive cannot drop an entrypoint or rewrite its manifest to hide it', () => {
   const files = entries(); files.delete('package/src/index.mjs');
-  const missing = await archive(t, files);
+  const missing = archive(files);
   assert.throws(() => verifyDeliveryArchive(missing, baseline), /Missing package entrypoint: src\/index.mjs/);
   files.set('package/package.json', Buffer.from(JSON.stringify({ main: 'lib/client.js' })));
-  const disguised = await archive(t, files);
+  const disguised = archive(files);
   assert.throws(() => verifyDeliveryArchive(disguised, baseline), /package.json differs/);
 });
 
-test('packaged documentation checks final inventory and ignores fenced examples', async t => {
+test('packaged documentation checks final inventory and ignores fenced examples', () => {
   const files = entries(); files.set('package/README.md', Buffer.from('[site](docs/index.html)'));
-  const broken = await archive(t, files);
+  const broken = archive(files);
   assert.throws(() => verifyDeliveryArchive(broken, baseline), /Missing packaged documentation targets/);
   files.set('package/README.md', Buffer.from('[site](https://example.invalid/)\n```md\n[example](not-shipped)\n```\n'));
-  verifyDeliveryArchive(await archive(t, files), baseline);
+  verifyDeliveryArchive(archive(files), baseline);
 });
 
-for (const mode of [0o644, 0o700]) test(`actual tgz helper mode ${mode.toString(8)} fails despite matching bytes`, async t => {
-  const packed = await archive(t, entries(), mode);
+for (const mode of [0o644, 0o700]) test(`actual tgz helper mode ${mode.toString(8)} fails despite matching bytes`, () => {
+  const packed = archive(entries(), mode);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed macOS helper must be 0755/);
 });
 
-test('actual tgz cannot omit a required vendor member', async t => {
+test('actual tgz cannot omit a required vendor member', () => {
   const files = entries(); files.delete('package/vendor/opencu/src/dsh/shared.mjs');
-  const packed = await archive(t, files);
+  const packed = archive(files);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Missing packed OpenCU member: src\/dsh\/shared.mjs/);
 });
 
-test('actual tgz cannot add a vendor member', async t => {
+test('actual tgz cannot add a vendor member', () => {
   const files = entries(); files.set('package/vendor/opencu/src/unexpected.mjs', Buffer.from('extra'));
-  const packed = await archive(t, files);
+  const packed = archive(files);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Unexpected packed OpenCU member: src\/unexpected.mjs/);
 });
 
-test('actual tgz cannot replace a missing member with an extra member of the same count', async t => {
+test('actual tgz cannot replace a missing member with an extra member of the same count', () => {
   const files = entries(); files.delete('package/vendor/opencu/src/dsh/shared.mjs');
   files.set('package/vendor/opencu/src/stale.mjs', vendor['src/dsh/shared.mjs']);
-  const packed = await archive(t, files);
+  const packed = archive(files);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Unexpected packed OpenCU member: src\/stale.mjs/);
 });
 
-test('actual tgz cannot change member bytes while retaining its name and length', async t => {
+test('actual tgz cannot change member bytes while retaining its name and length', () => {
   const files = entries(); files.set('package/vendor/opencu/src/dsh/shared.mjs', Buffer.from(vendor['src/dsh/shared.mjs'].toString().replace('true', 'null')));
-  const packed = await archive(t, files);
+  const packed = archive(files);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed OpenCU hash mismatch: src\/dsh\/shared.mjs/);
 });
 
-test('classic client must stay excluded rather than silently increasing the allowance', async t => {
+test('classic client must stay excluded rather than silently increasing the allowance', () => {
   const files = entries(); files.set('package/vendor/opencu/lib/client.js', vendor['lib/client.js']);
-  const packed = await archive(t, files);
+  const packed = archive(files);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Unexpected packed OpenCU member: lib\/client.js/);
 });
 
-test('actual tgz root client must equal the committed rebuild', async t => {
+test('actual tgz root client must equal the committed rebuild', () => {
   const files = entries(); files.set('package/lib/client.js', Buffer.from('stale bundle'));
-  const packed = await archive(t, files);
+  const packed = archive(files);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed lib\/client.js differs/);
 });
 
-test('a changed package manifest cannot redefine the expected vendor hashes', async t => {
+test('a changed package manifest cannot redefine the expected vendor hashes', () => {
   const files = entries(); files.set('package/vendor/opencu.json', Buffer.from('{"files":{}}'));
-  const packed = await archive(t, files);
+  const packed = archive(files);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed vendor\/opencu.json differs from HEAD/);
 });
 
@@ -165,7 +175,7 @@ for (const mode of [0o644, 0o700]) test(`production pack normalizes ${mode.toStr
     ['package/lib/client.js', client], ['package/vendor/opencu.json', actualManifest],
     ...Object.entries(actualVendor).filter(([name]) => name !== 'lib/client.js').map(([name, bytes]) => ['package/vendor/opencu/' + name, bytes]),
   ]);
-  const raw = await archive(t, files, mode);
+  const raw = archive(files, mode);
   assert.throws(() => verifyDeliveryArchive(raw, actualBaseline), /Packed macOS helper must be 0755/);
   const path = await directory(t), rawPath = join(path, 'raw.tgz'), finalPath = join(path, 'final.tgz');
   await writeFile(rawPath, raw); await writeFile(finalPath, raw);
@@ -192,7 +202,7 @@ for (const mode of [0o644, 0o700]) test(`production pack normalizes ${mode.toStr
   assert.deepEqual(before, after, 'only helper mode and its header checksum change; every payload byte remains identical');
 });
 
-test('actual tgz ordinary vendor files cannot retain temporary 0600 modes', async t => {
-  const packed = await archive(t, entries(), 0o755, 0o600);
+test('actual tgz ordinary vendor files cannot retain temporary 0600 modes', () => {
+  const packed = archive(entries(), 0o755, 0o600);
   assert.throws(() => verifyDeliveryArchive(packed, baseline), /Packed OpenCU file must be 0644/);
 });

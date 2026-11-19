@@ -42,31 +42,31 @@ test('experimental preset is opt-in, transactional and fences disabled retained 
 
 test('real host loads the optional preset and retains Python state across availability changes', { timeout: 30000 }, async t => {
   const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
-  const { Context } = await import(host.resolve('@deepseek-ai/cordis'));
-  const { default: Loader, Group } = await import(host.resolve('@deepseek-ai/cordis-plugin-loader'));
-  const { SessionId } = await import(host.resolve('@deepseek-ai/dsh-session'));
-  const { LlmAdapter } = await import(host.resolve('@deepseek-ai/dsh-llm'));
+  const { Context } = await import(pathToFileURL(host.resolve('@deepseek-ai/cordis')));
+  const { default: Loader, Group } = await import(pathToFileURL(host.resolve('@deepseek-ai/cordis-plugin-loader')));
+  const { SessionId } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-session')));
+  const { LlmAdapter } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-llm')));
   const dir = await mkdtemp(join(process.env.OMD_TEST_TEMP ?? tmpdir(), 'omd-unharnessed-'));
   const ctx = new Context(); let config = contextConfig({});
   t.after(async () => { await ctx.fiber.dispose(); await rm(dir, { recursive: true, force: true }); });
   await mkdir(join(dir, 'node_modules/@deepseek-ai'), { recursive: true });
   for (const plugin of ['tool-executor-native', 'agent-instructions', 'skill-filesystem', 'command-goal', 'compaction-basic', 'command-compact', 'tool-subagent', 'tool-subagent-control']) {
     const name = '@deepseek-ai/dsh-' + plugin;
-    await symlink(dirname(host.resolve(name + '/package.json')), join(dir, 'node_modules', name));
+    await symlink(dirname(host.resolve(name + '/package.json')), join(dir, 'node_modules', name), process.platform === 'win32' ? 'junction' : 'dir');
   }
-  await symlink(fileURLToPath(new URL('../', import.meta.url)), join(dir, 'node_modules/oh-my-dsh'));
+  await symlink(fileURLToPath(new URL('../', import.meta.url)), join(dir, 'node_modules/oh-my-dsh'), process.platform === 'win32' ? 'junction' : 'dir');
   ctx.baseUrl = pathToFileURL(join(dir, 'host.mjs')).href;
   await ctx.plugin(Loader, { baseUrl: ctx.baseUrl });
   ctx.loader.builtins.group = Group;
   for (const name of ['system-prompt', 'tools', 'tool-executor-native', 'session', 'session-projection', 'agent', 'llm', 'agent-loop', 'goal', 'commands', 'skill', 'fs-local', 'working-directory', 'subprocess-local', 'sandbox-local', 'token-meter']) {
-    const module = await import(host.resolve('@deepseek-ai/dsh-' + name)); await ctx.plugin(module.default ?? module);
+    const module = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-' + name))); await ctx.plugin(module.default ?? module);
   }
-  const policy = await import(host.resolve('@deepseek-ai/dsh-sandbox-policy'));
+  const policy = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-sandbox-policy')));
   await ctx.plugin(policy.default ?? policy, { mode: 'danger-full-access' });
-  const registry = await import(host.resolve('@deepseek-ai/dsh-agent-preset-registry'));
+  const registry = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-agent-preset-registry')));
   await ctx.plugin(registry.default ?? registry, { default: 'standard' });
   for (const [name, config] of [['session-persistence-jsonl', { root: join(dir, 'sessions') }], ['subagent', {}], ['subagent-spawn-in-process', {}]]) {
-    const module = await import(host.resolve('@deepseek-ai/dsh-' + name)); await ctx.plugin(module.default ?? module, config);
+    const module = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-' + name))); await ctx.plugin(module.default ?? module, config);
   }
   await ctx.agentPresets.register({ id: 'standard', plugins: [] });
   ctx.provide('settings', { configure() {}, async update(_name, patch) { config = { ...config, ...patch }; } });

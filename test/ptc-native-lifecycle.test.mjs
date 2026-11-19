@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -10,8 +11,8 @@ import { installPtcLifecycle, currentPtcBudget } from '../src/ptc-lifecycle.mjs'
 
 const anchor = createRequire(realpathSync(process.env.OMD_PTC_TEST_HOST
   ?? createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json')));
-const load = name => import(anchor.resolve('@deepseek-ai/dsh-' + name));
-const { Context, symbols } = await import(anchor.resolve('@deepseek-ai/cordis'));
+const load = name => import(pathToFileURL(anchor.resolve('@deepseek-ai/dsh-' + name)));
+const { Context, symbols } = await import(pathToFileURL(anchor.resolve('@deepseek-ai/cordis')));
 const [{ ToolRuntime }, { NodePtcRuntime }, { LocalSubprocessRuntime }] = await Promise.all([
   load('tools'), load('ptc-runtime-node'), load('subprocess-local'),
 ]);

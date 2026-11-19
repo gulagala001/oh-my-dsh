@@ -1,17 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Context } from '@deepseek-ai/cordis';
 
 const require = createRequire(import.meta.url);
 const host = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
-const { composeEntries, loadOptionalPatches } = await import(host.resolve('@deepseek-ai/dsh-app-boot'));
-const { default: Permission } = await import(host.resolve('@deepseek-ai/dsh-permission-presets'));
+const { composeEntries, loadOptionalPatches } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-app-boot')));
+const { default: Permission } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-permission-presets')));
 const base = loadOptionalPatches('test', host.resolve('@deepseek-ai/dsh-base/cordis.patch.yml'));
 const bundle = loadOptionalPatches('test', fileURLToPath(new URL('../cordis.patch.yml', import.meta.url)));
 
-const { interpolate } = await import(host.resolve('@deepseek-ai/cordis-plugin-loader'));
+const { interpolate } = await import(pathToFileURL(host.resolve('@deepseek-ai/cordis-plugin-loader')));
 
 for (const [title, envMode, profile, expected] of [
   ['workspace override', undefined, [{ id: 'sandbox-policy', config: { mode: 'workspace-write' } }], 'workspace-write'],

@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -11,7 +12,7 @@ test('a blank temporary sidebar uses the native conversation directly without th
   const dom = new JSDOM('<main></main>', { url: 'http://localhost/' });
   const globals = new Map(['window','document','Event','IS_REACT_ACT_ENVIRONMENT'].map(key => [key,Object.getOwnPropertyDescriptor(globalThis,key)]));
   Object.assign(globalThis,{window:dom.window,document:dom.window.document,Event:dom.window.Event,IS_REACT_ACT_ENVIRONMENT:true});
-  const source = await build({entryPoints:[new URL('../src/client/temporary-chat.jsx',import.meta.url).pathname],bundle:true,write:false,format:'cjs',platform:'node',packages:'external',loader:{'.css':'text'}});
+  const source = await build({entryPoints:[fileURLToPath(new URL('../src/client/temporary-chat.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',packages:'external',loader:{'.css':'text'}});
   const load = code => {const module={exports:{}};new Function('require','module','exports',code)(name=>name==='@deepseek-ai/dsh-client-ui-primitives'?{Button:()=>null}:name.endsWith('.css')?{}:require(name),module,module.exports);return module.exports;};
   const sdk = createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
   const nativePath = sdk.resolve('@deepseek-ai/dsh-client-ui-subagent/package.json').replace(/package.json$/, 'src/client/sidebar-chat/index.tsx');
@@ -44,7 +45,7 @@ for (const scenario of ['pending-close', 'failed-close', 'unload-pending']) test
   const ctx={effect(fn){cleanups.push(fn());},slots:{inject(_name,fn){cleanups.push(fn());},register(options,component){slots.set(options.name,component);return()=>slots.delete(options.name);},subscribe:()=>()=>{},entriesOfSlot:()=>[]},
     sessions:{retain(){refs++;retained++;return{release(){refs--;released++;}};},refresh:async()=>{}},sidebarRightTabs:{register:()=>()=>{}},commandUi:{register:()=>()=>{}},
     sidebarRight:{registerCloseHandler(_kind,fn){closeHandler=fn;return()=>{closeHandler=undefined;};},closeIn(parent,id){closeHandler?.(parent,tab);assert.equal(id,tab.id);removed++;present=false;subscriber?.();},openTabs:{subscribe(fn){subscriber=fn;return()=>{subscriber=undefined;};},getSnapshot:()=>present?[{kind:'omd-temporary-chat',tabId:tab.id}]:[]}}};
-  const compiled=await build({entryPoints:[new URL('../src/client/temporary-chat.jsx',import.meta.url).pathname],bundle:true,write:false,format:'cjs',platform:'node',packages:'external',loader:{'.css':'text'}}),module={exports:{}};
+  const compiled=await build({entryPoints:[fileURLToPath(new URL('../src/client/temporary-chat.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',packages:'external',loader:{'.css':'text'}}),module={exports:{}};
   new Function('require','module','exports',compiled.outputFiles[0].text)(name=>name==='@deepseek-ai/dsh-client-ui-primitives'?{Button:({children,onClick,disabled})=>React.createElement('button',{onClick,disabled},children)}:require(name),module,module.exports);
   module.exports.installTemporaryChat(ctx);
   const {createRoot}=await import('react-dom/client'),root=createRoot(document.querySelector('main'));

@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -8,8 +9,8 @@ import { Context } from '@deepseek-ai/cordis';
 import { Instructions } from '../plugins/dsh-extensions/src/instructions.mjs';
 
 const host = createRequire(import.meta.resolve('@deepseek-ai/dsh/package.json'));
-const native = await import(host.resolve('@deepseek-ai/dsh-agent-instructions'));
-const { createScope } = await import(host.resolve('@deepseek-ai/dsh-scope'));
+const native = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-agent-instructions')));
+const { createScope } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-scope')));
 
 async function fixture(t, config = {}) {
   const directory = await mkdtemp(join(process.env.DSHX_TEST_TMPDIR || tmpdir(), 'instructions-native-'));
@@ -17,7 +18,7 @@ async function fixture(t, config = {}) {
   ctx.provide('sessionProjections', {});
   ctx.provide('workingDirectory', { get: session => session.header.cwd });
   ctx.provide('agents', { list: () => agents });
-  ctx.provide('loader', { import: name => import(host.resolve(name)) });
+  ctx.provide('loader', { import: name => import(pathToFileURL(host.resolve(name))) });
   const key = {}, scope = createScope(ctx, key); let leases = 0;
   const provider = scope.ctx.plugin(native, { maxBytes: 65536, ...config }); await provider;
   ctx.provide('agentPresets', { defaultId: 'default', acquireScope: async () => {

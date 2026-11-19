@@ -1,12 +1,13 @@
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const { readNativeSession } = await import(process.env.NATIVE_SESSION_READ_MODULE ?? '../src/host/session-read.mjs');
 
 const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
-const { Context } = await import(host.resolve('@deepseek-ai/cordis'));
-const { Session } = await import(host.resolve('@deepseek-ai/dsh-session'));
-const { SessionQueryEngine } = await import(host.resolve('@deepseek-ai/dsh-session-query'));
+const { Context } = await import(pathToFileURL(host.resolve('@deepseek-ai/cordis')));
+const { Session } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-session')));
+const { SessionQueryEngine } = await import(pathToFileURL(host.resolve('@deepseek-ai/dsh-session-query')));
 
 test('native cold observations retain their boundary without activating sessions and release every lease', async t => {
   const ctx = new Context(), persisted = Session.create('stored'), live = new Map();

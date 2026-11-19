@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -5,8 +6,8 @@ import { createRequire } from 'node:module';
 
 const host = createRequire(import.meta.resolve('@deepseek-ai/dsh/package.json'));
 const nativePath = host.resolve('@deepseek-ai/dsh-web-fetch-http'), resolver = createRequire(nativePath);
-const { HttpFetchProvider } = await import(nativePath);
-const { Agent, getGlobalDispatcher, setGlobalDispatcher } = await import(resolver.resolve('undici'));
+const { HttpFetchProvider } = await import(pathToFileURL(nativePath));
+const { Agent, getGlobalDispatcher, setGlobalDispatcher } = await import(pathToFileURL(resolver.resolve('undici')));
 const limits = { maxResponseBytes: 1024, maxBodyChars: 1000, timeoutMs: 3000, maxRedirects: 2, userAgent: 'native-fetch-fixture' };
 
 test('native shared transport reuses connections and retains redirect, cancellation and size policies', async t => {

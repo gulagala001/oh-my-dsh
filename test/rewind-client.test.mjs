@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -6,7 +7,7 @@ import {JSDOM} from 'jsdom';
 import React,{act} from 'react';
 const require=createRequire(import.meta.url),host=createRequire(require.resolve('@deepseek-ai/dsh/package.json'));
 const primitives=createRequire(host.resolve('@deepseek-ai/dsh-client-ui-primitives'));
-const compiled=await build({entryPoints:[new URL('../vendor/rewind/src/client/index.jsx',import.meta.url).pathname],bundle:true,write:false,format:'cjs',platform:'node',plugins:[{name:'test-css',setup(b){b.onLoad({filter:/\.css$/},()=>({contents:'export default {}',loader:'js'}));}}],external:['react','react-dom','react-dom/client','react/jsx-runtime'],alias:{'@deepseek-ai/dsh-client-ui-primitives':host.resolve('@deepseek-ai/dsh-client-ui-primitives')}});
+const compiled=await build({entryPoints:[fileURLToPath(new URL('../vendor/rewind/src/client/index.jsx',import.meta.url))],bundle:true,write:false,format:'cjs',platform:'node',plugins:[{name:'test-css',setup(b){b.onLoad({filter:/\.css$/},()=>({contents:'export default {}',loader:'js'}));}}],external:['react','react-dom','react-dom/client','react/jsx-runtime'],alias:{'@deepseek-ai/dsh-client-ui-primitives':host.resolve('@deepseek-ai/dsh-client-ui-primitives')}});
 
 test('rewind confirms directly and closes after success even when an attachment is missing',async t=>{
  const dom=new JSDOM('<!doctype html><div data-conversation-session="synthetic"><div data-chat-anchor-key="user-1" data-chat-flow-kind="user"><div data-clock="start"><button>copy</button></div></div></div><div id="root"></div>',{url:'http://localhost/',pretendToBeVisual:true});

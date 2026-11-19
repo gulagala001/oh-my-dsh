@@ -66,11 +66,7 @@ Closing the browser does not stop the background service. Use Ctrl+C to stop a f
 
 ### Prepare the Windows desktop build
 
-Build the OMD plugin archive, then run `node scripts/prepare-desktop-source.mjs <pinned DSH checkout> <OMD archive.tgz> <new build directory>`. This applies the matching OpenCU and Workbench desktop adapters and includes OMD in the packaged runtime and in the initial desktop profile. Desktop packaging prepares matching Chromium resources.
-
-Run **Windows desktop preview** in GitHub Actions to build an unsigned Windows x64 installer. The run provides the installer and SHA256SUMS after checking installation, first launch, the sidebar browser and bundled Chromium.
-
-Run the pinned DSH packaging flow on a Windows x64 builder with OMD's signing and release configuration. Set `DOWNLOAD_PROD_ORIGIN` to OMD's update service for a production release. The preparation script assigns OMD its own application ID, `io.github.gulagala001.oh-my-dsh`, data directory, and activation link. The desktop version follows the OMD package, and the runtime keeps the pinned DSH version.
+Run **Windows desktop preview** in GitHub Actions. It builds the OMD plugin and checks installation, first launch, the sidebar and Workbench on an isolated copy of the stock Windows x64 DSH app. Download the plugin archive and SHA256SUMS from a passing run, then install it through DSH's plugin installer.
 
 See [plugin architecture](architecture_EN.md) for product boundaries, independent releases and coinstallation. Fixed packages retain required source, matching compiled resources and provenance. End users install fixed Release assets; the source branch is not an installation package.
 

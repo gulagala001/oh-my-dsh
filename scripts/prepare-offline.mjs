@@ -1,10 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, lstatSync, realpathSync } from 'node:fs';
-import { copyFile, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse, stringify } from 'yaml';
 import { checkLinks, inside } from './check-offline.mjs';
+import { prepareSdk } from './prepare-host-sdk.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const packageCommand = name => process.platform === 'win32' ? name + '.cmd' : name;
@@ -31,7 +32,8 @@ export async function prepareOffline(destination, source = root) {
   // Windows rejects mkdir on a drive root, even with recursive: true.
   if (parent !== dirname(parent)) await mkdir(parent, { recursive: true });
   // Stage on the destination volume: C: -> D: must not fail at the final rename.
-  const staging = await mkdtemp(join(parent, '.omd-offline-'));
+  const scratch = await mkdtemp(join(parent, '.omd-offline-'));
+  const staging = join(scratch, 'plugin');
   const env = { ...process.env, PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' };
   const run = (command, args, cwd = staging) => execFileSync(command, args, {
     cwd, env, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, timeout: 600000,
@@ -48,29 +50,41 @@ export async function prepareOffline(destination, source = root) {
       await mkdir(dirname(target), { recursive: true });
       await copyFile(join(source, file.path), target);
     }
+    // npm excludes the classic OpenCU client because the OMD build embeds it.
+    // The source check here still needs that build input.
+    const classic = 'vendor/opencu/lib/client.js';
+    await copyFile(join(source, classic), join(staging, classic));
     await copyFile(join(source, 'pnpm-lock.yaml'), join(staging, 'pnpm-lock.yaml'));
     const config = parse(await readFile(join(source, 'pnpm-workspace.yaml'), 'utf8')) ?? {};
     config.nodeLinker = 'hoisted';
     config.packageImportMethod = 'copy';
     await writeFile(join(staging, 'pnpm-workspace.yaml'), stringify(config));
+    const sdk = await realpath(prepareSdk(staging));
     console.log('在隔离目录安装本机平台依赖（不改动原安装）…');
     run(packageCommand('pnpm'), ['install', '--frozen-lockfile']);
     console.log('构建离线插件…');
     run(process.execPath, ['scripts/build.mjs']);
+    await rm(join(staging, classic));
+    await rm(join(staging, 'vendor/opencu/lib/client.factory.mjs'));
+    // Exercise real entry imports against the pinned SDK before removing its
+    // development links. An installed plugin uses the target DSH's SDK.
+    console.log(run(process.execPath, ['scripts/check-runtime.mjs']).trim());
     // Unix .bin entries are symlinks. Runtime entry points use explicit paths;
     // remove build-only launchers so ZIP extraction never depends on link support.
     const removeBins = async directory => {
       for (const entry of await readdir(directory, { withFileTypes: true })) {
         const path = join(directory, entry.name);
         if (entry.name === '.bin') await rm(path, { recursive: true, force: true });
-        else if (entry.isDirectory()) await removeBins(path);
+        else if (entry.isSymbolicLink()) {
+          if (inside(sdk, await realpath(path))) await unlink(path);
+        } else if (entry.isDirectory()) await removeBins(path);
       }
     };
     await removeBins(join(staging, 'node_modules'));
     const links = checkLinks(staging, true);
     if (links.length) throw new Error(links.join('\n'));
     await writeFile(join(staging, 'offline-manifest.json'), JSON.stringify({
-      schema: 1, version: pkg.version, hostVersion: pkg.devDependencies['@deepseek-ai/dsh'],
+      schema: 2, version: pkg.version, hostVersion: pkg.devDependencies['@deepseek-ai/dsh'],
       platform: process.platform, arch: process.arch, node: process.versions.node,
     }, null, 2) + '\n');
     // CodeGraph already carries a Node runtime. The offline Windows computer
@@ -91,7 +105,7 @@ export async function prepareOffline(destination, source = root) {
     if (error.stdout) console.error(String(error.stdout).slice(-12000));
     if (error.stderr) console.error(String(error.stderr).slice(-12000));
     throw error;
-  } finally { await rm(staging, { recursive: true, force: true }); }
+  } finally { await rm(scratch, { recursive: true, force: true, maxRetries: 5 }); }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

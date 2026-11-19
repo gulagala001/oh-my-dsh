@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -9,9 +10,9 @@ import { Context } from '@deepseek-ai/cordis';
 import { Skills } from '../plugins/dsh-extensions/src/skills.mjs';
 
 const native = createRequire(import.meta.resolve('@deepseek-ai/dsh/package.json'));
-const { SkillRegistry } = await import(native.resolve('@deepseek-ai/dsh-skill'));
-const filesystem = await import(native.resolve('@deepseek-ai/dsh-skill-filesystem'));
-const { createScope } = await import(native.resolve('@deepseek-ai/dsh-scope'));
+const { SkillRegistry } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-skill')));
+const filesystem = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-skill-filesystem')));
+const { createScope } = await import(pathToFileURL(native.resolve('@deepseek-ai/dsh-scope')));
 
 async function fixture(t, config = {}) {
   const directory = await realpath(await mkdtemp(join(process.env.DSHX_TEST_TMPDIR || tmpdir(), 'skills-native-')));
@@ -133,7 +134,7 @@ test('invalid or incomplete imports leave no active partial bundle and can be re
     await rm(fifo);
   }
   const alias = join(f.directory, 'import-alias');
-  await symlink(join(f.directory, 'incoming/imported'), alias, 'dir');
+  await symlink(join(f.directory, 'incoming/imported'), alias, process.platform === 'win32' ? 'junction' : 'dir');
   const imported = await f.skills.import({}, { source: alias });
   assert.equal(await readFile(join(imported, '../reference.txt'), 'utf8'), 'reference');
   assert.equal((await f.ctx.skills.get('imported')).content, 'body');
@@ -157,7 +158,7 @@ test('symlinked bundles are removed as links, preserving the original resource d
   const external = await f.file(join(f.directory, 'external'), 'linked');
   await mkdir(join(f.homes.dsh, 'skills'), { recursive: true });
   const link = join(f.homes.dsh, 'skills/linked');
-  await symlink(join(external, '..'), link, 'dir');
+  await symlink(join(external, '..'), link, process.platform === 'win32' ? 'junction' : 'dir');
   const [row] = (await f.skills.list({})).skills;
   assert.equal(row.path, join(link, 'SKILL.md'));
   await f.skills.remove({}, row.path);

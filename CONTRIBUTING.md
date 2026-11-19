@@ -25,7 +25,7 @@
 - 自有工具用 `checkedTool` 注册，范围和互斥要求由工具执行层校验。`npm run tools:check` 核对 Native 对象参数和 TypeScript／Python SDK，构建、CI 和 prepack 都会运行。
 - 宿主浏览器组件用 `scripts/host-build-contracts.mjs` 核对 SDK 和组件身份、ModuleLoader 注册、样式归属和唯一替换锚点。依赖通过宿主解析，不扫描 `.pnpm` 目录挑副本；离线平铺布局要能生成相同产物。源码编辑按原始 AST 从后往前应用。
 - 宿主构建通过 `scripts/prepare-host-sdk.mjs` 获取固定 tag，核对 SDK 提交、依赖锁和原生客户端完整摘要。 vendored 源码及补丁见 `vendor/dsh.json`；桌面适配按对应版本的 OpenCU 构建入口操作。
-- Windows 桌面包先用 `scripts/prepare-desktop-source.mjs` 准备固定宿主、内置插件与默认 profile，再在 Windows x64 构建机上运行该宿主的安装包流程。见[开发说明](docs/development.md#准备-windows-桌面构建)。
+- Windows 预览构建 OMD 插件包，在原版 Windows x64 DSH 上检查安装和桌面功能。见[开发说明](docs/development.md#准备-windows-桌面构建)。
 - 测试用隔离的数据目录和受控模型。个人配置、会话、密钥和用户原始报告不进提交和安装包。
 - 尽量少写测试：按需做最小构建和启动检查，只为具体问题做定点验证。兼容问题查[插件兼容](docs/plugin-compatibility.md)。
 - PR 写清问题、改后的行为、做过的检查和没覆盖的范围。跳过或模拟通过的检查要如实写。

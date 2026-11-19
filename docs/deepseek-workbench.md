@@ -11,8 +11,7 @@
 
 | DSH | 能用什么 |
 | --- | --- |
-| 标准桌面版 | 内嵌网页和读取历史；重启后要重新登录，不能下载官网文件 |
-| 打过适配的桌面版 | 全部功能，包括保持登录和下载 |
+| 原版 Windows 或 macOS 桌面版 | 使用工作台的专属浏览器，保持网页登录、下载文件并读取历史 |
 | 网页版 | 从外部浏览器打开 |
 
 独立版和安装说明见 [dsh-deepseek-workbench](https://github.com/gulagala001/dsh-deepseek-workbench)（[English](https://github.com/gulagala001/dsh-deepseek-workbench/blob/main/README_EN.md)）。

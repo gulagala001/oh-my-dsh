@@ -37,21 +37,22 @@ for (const warm of [false, true]) test(`CodeGraph shares the MCP ESM environment
       return next(url, context);
     } });
     const { codegraphEnvironment } = await import(${JSON.stringify(new URL('../src/codegraph.mjs', import.meta.url).href)});
-    process.env.TERM = 'codegraph-environment-first';
+    const inherited = process.platform === 'win32' ? 'COMSPEC' : 'TERM';
+    process.env[inherited] = 'codegraph-environment-first';
     process.env.CODEGRAPH_TEST_SECRET = 'synthetic-not-inherited';
     const first = codegraphEnvironment();
-    assert.equal(first.TERM, 'codegraph-environment-first');
+    assert.equal(first[inherited], 'codegraph-environment-first');
     assert.equal(first.CODEGRAPH_TEST_SECRET, undefined);
     const { getDefaultEnvironment } = await import('@modelcontextprotocol/client/stdio');
     assert.deepEqual(first, { ...getDefaultEnvironment(), CODEGRAPH_TELEMETRY: '0', CODEGRAPH_NO_DOWNLOAD: '1',
       CODEGRAPH_NO_DAEMON: '1', CODEGRAPH_HOST_PPID: String(process.pid), NO_COLOR: '1', CODEGRAPH_EXPLORE_DEDUP: '0',
       CODEGRAPH_MCP_TOOLS: 'explore,node,search,callers,callees,impact,files,status' });
-    process.env.TERM = 'codegraph-environment-second';
-    assert.equal(codegraphEnvironment().TERM, 'codegraph-environment-second');
-    first.TERM = 'caller-owned';
-    assert.equal(codegraphEnvironment().TERM, 'codegraph-environment-second');
-    process.env.TERM = '() { unsafe shell function; }';
-    assert.equal(codegraphEnvironment().TERM, undefined);
+    process.env[inherited] = 'codegraph-environment-second';
+    assert.equal(codegraphEnvironment()[inherited], 'codegraph-environment-second');
+    first[inherited] = 'caller-owned';
+    assert.equal(codegraphEnvironment()[inherited], 'codegraph-environment-second');
+    process.env[inherited] = '() { unsafe shell function; }';
+    assert.equal(codegraphEnvironment()[inherited], undefined);
   `);
 });
 

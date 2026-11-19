@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, writeFile, rm, readdir } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import { zstdCompressSync } from 'node:zlib';
 import { Context } from '@deepseek-ai/cordis';
 import { Session } from '@deepseek-ai/dsh-session';
@@ -13,7 +14,11 @@ import { ResultReduction } from '../src/result-reduction/service.mjs';
 import { OPTIMIZATION_RECORD, installSessionRecordRepair, repairOptimizationRecords } from '../src/session-record-repair.mjs';
 
 const here = createRequire(import.meta.url), host = createRequire(here.resolve('@deepseek-ai/dsh/package.json'));
-const support = createModule(id => { try { return here(id); } catch (error) { if (error.code !== 'MODULE_NOT_FOUND') throw error; return host(id); } });
+function resolveModule(id) {
+  try { return here.resolve(id); } catch (error) { if (error.code !== 'MODULE_NOT_FOUND') throw error; return host.resolve(id); }
+}
+const support = createModule(id => here(resolveModule(id)),
+  id => import(id.startsWith('node:') ? id : pathToFileURL(resolveModule(id))));
 const row = sessionId => ({ version: 1, sessionId, id: 'tool-optimization:fixture', at: 1, status: 'success', rules: [], beforeTokens: 10, afterTokens: 5, estimatedNetTokens: 5 });
 async function fixture(t, compression = 'zstd', type = OPTIMIZATION_RECORD) {
   const dir = await mkdtemp(join(tmpdir(), 'omd-records-')), root = join(dir, 'sessions'), dataDir = join(dir, 'omd');

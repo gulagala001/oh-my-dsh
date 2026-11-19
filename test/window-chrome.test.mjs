@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
@@ -7,7 +8,7 @@ import { chromium } from 'playwright';
 // declarations/lifecycle; OS window movement is verified separately in Electron.
 test('appearance owners keep paint-only portals neutral and controls interactive', async () => {
   const { outputFiles } = await build({
-    entryPoints: [new URL('../src/client/skins/runtime.mjs', import.meta.url).pathname],
+    entryPoints: [fileURLToPath(new URL('../src/client/skins/runtime.mjs', import.meta.url))],
     bundle: true, write: false, format: 'iife', globalName: 'AppearanceReplay', loader: { '.css': 'text' },
   });
   const browser = await chromium.launch({ headless: true });

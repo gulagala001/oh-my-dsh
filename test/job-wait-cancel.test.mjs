@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { installTools, executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,7 +12,7 @@ import { RewindEngine } from '../vendor/rewind/src/engine.mjs';
 
 const host = createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh/package.json'));
 async function component(factory, names) {
-  const modules = new Map(await Promise.all(names.map(async name => [name, await import(name.startsWith('node:') ? name : host.resolve(name))])));
+  const modules = new Map(await Promise.all(names.map(async name => [name, await import(name.startsWith('node:') ? name : pathToFileURL(host.resolve(name)))])));
   return factory(name => name === '@deepseek-ai/schemastery' ? modules.get(name).default : { ...modules.get(name), __esModule: true });
 }
 async function fixture(t) {

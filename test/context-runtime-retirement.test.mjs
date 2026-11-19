@@ -174,7 +174,7 @@ test('shutdown during recovery cannot admit a new runtime-removal transaction af
 
 async function nativeOwnerFixture(t, controls = {}) {
   const host = createRequire(import.meta.resolve('@deepseek-ai/dsh/package.json'));
-  const native = name => import(host.resolve('@deepseek-ai/' + name));
+  const native = name => import(pathToFileURL(host.resolve('@deepseek-ai/' + name)));
   const dir = await mkdtemp(resolve('.local/runtime-owner-')), ctx = new Context(), requests = [], errors = [];
   for (const name of ['dsh-session', 'dsh-session-projection', 'dsh-agent', 'dsh-llm',
     'dsh-system-prompt', 'dsh-tools', 'dsh-tool-executor-native', 'dsh-agent-loop']) {
