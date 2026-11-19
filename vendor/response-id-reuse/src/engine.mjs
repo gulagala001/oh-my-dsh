@@ -145,7 +145,12 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
     return async (input, init) => {
       if (closed) return baseFetch(input, init);
       const request = new Request(input instanceof Request ? input.clone() : input, init), url = request.url;
-      if (request.method !== 'POST' || !new URL(url).pathname.endsWith('/responses')) return baseFetch(input, init);
+      const endpoint = new URL(url);
+      // Codex subscription requests require store:false. Keep them out of the
+      // storage negotiation for public and compatible Responses API routes.
+      const codexSubscription = endpoint.pathname === '/backend-api/codex/responses'
+        && ['chatgpt.com', 'chat.openai.com'].includes(endpoint.hostname);
+      if (codexSubscription || request.method !== 'POST' || !endpoint.pathname.endsWith('/responses')) return baseFetch(input, init);
       let body, originalText;
       try { originalText = await request.clone().text(); body = JSON.parse(originalText); } catch { return baseFetch(input, init); }
       const headers = new Headers(request.headers);

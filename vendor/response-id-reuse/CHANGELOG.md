@@ -1,7 +1,5 @@
 # Response ID Reuse 0.1.11 · DSH 0.2.2-rc.3
 
-**未发布 / Unreleased.**
-
 [中文](#zh-0111) · [English](#en-0111)
 
 <a id="zh-0111"></a>
