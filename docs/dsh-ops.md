@@ -26,7 +26,7 @@ Intel Mac、Linux ARM64、Windows ARM64 没有安装包。
 
 | DSH | 安装包 | 校验 |
 | --- | --- | --- |
-| 0.2.2-rc.5 | [dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.0/dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.0/SHA256SUMS) |
+| 0.2.2-rc.5 | [dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/SHA256SUMS) |
 <!-- history -->
 | 0.2.2-rc.4 | [dsh-ops-0.2.2-rc.4.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.8.0/dsh-ops-0.2.2-rc.4.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.8.0/SHA256SUMS) |
 | 0.2.2-rc.3 | [dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.8.0/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.8.0/SHA256SUMS) |
