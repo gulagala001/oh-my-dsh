@@ -43,9 +43,9 @@ try {
     $app = Start-Process -FilePath $exe -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
     try { Run-Check 'exercise' }
     catch {
-        $logDirectory = Join-Path $electronData 'logs'
+        $logDirectories = @((Join-Path $electronData 'logs'), (Join-Path $env:APPDATA 'DeepSeek Harness/logs'))
         for ($attempt = 0; $attempt -lt 10; $attempt++) {
-            $crash = Get-ChildItem -LiteralPath $logDirectory -Filter 'crash-*.log' -File -ErrorAction SilentlyContinue |
+            $crash = Get-ChildItem -LiteralPath $logDirectories -Filter 'crash-*.log' -File -ErrorAction SilentlyContinue |
                 Sort-Object LastWriteTime -Descending | Select-Object -First 1
             if ($crash) { break }
             Start-Sleep -Milliseconds 200
@@ -54,6 +54,23 @@ try {
             Get-Content -LiteralPath $crash.FullName -TotalCount 65 |
                 Where-Object { $_ -notmatch '(token=|authorization|cookie|api[-_ ]?key|password|https?://)' }
         }
+        Get-WinEvent -FilterHashtable @{LogName='Application'; Id=1000; StartTime=$app.StartTime} -ErrorAction SilentlyContinue |
+            Where-Object { $_.Message -match 'DeepSeek Harness\.exe' } |
+            Select-Object -First 2 -ExpandProperty Message
+        $probe = Join-Path $PSScriptRoot 'probe-installed-runtime.mjs'
+        $runtime = Join-Path $env:DSH_HOME 'profiles/desktop/node_modules/oh-my-dsh/vendor/opencu/src/runtime.mjs'
+        $probeDir = Join-Path $root.FullName 'runtime-probe'
+        $probeLog = Join-Path $root.FullName 'runtime-probe.log'
+        $env:ELECTRON_RUN_AS_NODE = '1'
+        try {
+            $runner = Start-Process -FilePath $exe -ArgumentList @($probe, $runtime, $probeDir, $probeLog) -PassThru
+            if (!$runner.WaitForExit(35000)) {
+                taskkill.exe /PID $runner.Id /T /F | Out-Null
+                [void]$runner.WaitForExit(5000)
+            }
+            Write-Output "Bundled Node probe exit: $($runner.ExitCode)"
+            Get-Content -LiteralPath $probeLog -ErrorAction SilentlyContinue
+        } finally { Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue }
         foreach ($log in @($stdout, $stderr)) {
             Get-Content -LiteralPath $log -Tail 80 | Where-Object {
                 $_ -match '(opencu|managed.browser|panic|process exited|unhandled)' -and $_ -notmatch '(token=|authorization|cookie)'

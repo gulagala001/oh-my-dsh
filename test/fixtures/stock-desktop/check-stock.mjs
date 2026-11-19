@@ -63,15 +63,30 @@ try {
         body: JSON.stringify({ method: 'browserRoute/enabled' }) });
       return response.ok && (await response.json()).enabled === true;
     }, null, { timeout: 30000, polling: 500 });
-    const call = (method, args = {}) => page.evaluate(async ({ method, args }) => {
+    const request = (method, args = {}) => page.evaluate(async ({ method, args }) => {
       const response = await fetch('/api/opencu', { method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ method, args }) });
-      const body = await response.text();
-      if (!response.ok || !body) throw new Error(method + ' returned HTTP ' + response.status + ': ' + body.slice(0, 320));
-      const result = JSON.parse(body);
+      return { status: response.status, body: await response.text() };
+    }, { method, args });
+    const call = async (method, args = {}) => {
+      let response = await request(method, args);
+      // A read can overlap the shell's initial Host handoff. Await readiness
+      // again without replaying inputs or filesystem operations.
+      if (method === 'capabilities' && response.status === 503) {
+        for (let attempt = 0; attempt < 10 && response.status === 503; attempt++) {
+          await sleep(500);
+          response = await request(method, args);
+        }
+        if (response.status === 503) {
+          const config = await request('config').catch(() => ({}));
+          console.log('Stock desktop transport diagnosis', { configStatus: config.status, rendererPaths: pages().map(value => new URL(value.url()).pathname) });
+        }
+      }
+      if (response.status !== 200 || !response.body) throw new Error(method + ' returned HTTP ' + response.status + ': ' + response.body.slice(0, 320));
+      const result = JSON.parse(response.body);
       if (!result.ok) throw new Error(method + ' failed: ' + JSON.stringify(result.error));
       return result;
-    }, { method, args });
+    };
     await mkdir(directory, { recursive: true });
     const fixturePath = await mkdtemp(resolve(directory, 'omd-stock-fixture-'));
     const workspaceName = basename(fixturePath);
