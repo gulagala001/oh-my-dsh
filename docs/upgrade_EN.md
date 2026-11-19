@@ -10,7 +10,7 @@ For a first install, see the [installation guide](install_EN.md). This page is f
 
 Note the full DSH version, desktop or web, the data directory (`DSH_HOME`) and the profile. The desktop profile is `desktop`; the web version keeps the profile in your start command. The `dsh` on your terminal path may not be the one you actually use.
 
-OMD 1.9.1 uses one package across DSH versions. DSH 0.2.2 builds rc.3, rc.4 and rc.5 can all use it. You can also try the same package on other versions.
+OMD 1.9.2 uses one package across DSH versions. DSH 0.2.2 builds rc.3, rc.4 and rc.5 can all use it. You can also try the same package on other versions.
 
 <a id="backup"></a>
 
