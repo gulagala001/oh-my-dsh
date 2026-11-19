@@ -64,7 +64,6 @@ export const ago = at => {
   return s < 45 ? '刚刚' : s < 3600 ? `${Math.round(s / 60)} 分钟前` : s < 86400 ? `${Math.round(s / 3600)} 小时前` : `${Math.round(s / 86400)} 天前`;
 };
 export const clock = at => at ? new Date(at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '—';
-export const pct = (a, b) => b > 0 ? `${(a / b * 100).toFixed(a / b >= .995 ? 0 : 1)}%` : '—';
 export const money = cost => {
   if (!Number.isFinite(cost?.amount) || cost.amount < 0 || !/^[A-Z]{3}$/.test(cost.currency)) return '—';
   const amount = cost.amount > 0 && cost.amount < .000001 ? '<0.000001'

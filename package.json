@@ -145,7 +145,6 @@
     "!docs/site/*.js",
     "!scripts/build-docs.mjs",
     "!scripts/plugin-submissions.mjs",
-    "!scripts/deepswe",
     "!scripts/tool-performance",
     "vendor",
     "!vendor/opencu/lib/client.js",

@@ -1,7 +1,7 @@
-import { installTools, executeTool, NativeToolExecutor } from './fixtures/alpha-tools.mjs';
+import { installTools, executeTool } from './fixtures/alpha-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { createServer, request as nodeRequest } from 'node:http';
 import { once } from 'node:events';

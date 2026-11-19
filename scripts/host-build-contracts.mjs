@@ -5,6 +5,15 @@ import { parse } from 'acorn';
 
 const fail = message => { throw new Error('Host build contract: ' + message); };
 
+export function walkAst(node, visit) {
+  if (!node || typeof node !== 'object') return;
+  visit(node);
+  for (const child of Object.values(node)) {
+    if (Array.isArray(child)) child.forEach(item => walkAst(item, visit));
+    else if (child && typeof child === 'object') walkAst(child, visit);
+  }
+}
+
 // Resolve through the installed SDK, for both pnpm and hoisted/offline layouts.
 // Never select an unrelated copy by searching package-manager internals.
 export async function hostClientSource(root, name) {

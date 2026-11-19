@@ -1,7 +1,6 @@
 import { setHostStyle } from '../../plugins/glyph-theme/src/shared/host-styles.mjs';
 import { Icon } from './native-icons.jsx';
 import { applyAppearanceBrand } from './appearance-brand.jsx';
-import { createPoller } from './polling.mjs';
 import { createConversation } from '../../lib/host/ui-conversation.factory.mjs';
 import { installSidebarSections } from './sidebar-sections.jsx';
 import { installTemporaryChat } from './temporary-chat.jsx';
@@ -64,8 +63,6 @@ const api = async (path, value, signal) => {
   return data;
 };
 const suffix = id => `?${id ? `session=${encodeURIComponent(id)}` : ''}`;
-const fmt = n => Number(n || 0).toLocaleString();
-const shortDate = at => at == null ? '时间未记录' : new Date(at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 function BetterTodoChip(props) {
   const preset = props.useSessions(s => s.byId[props.sessionId]?.projectionValues?.agentPreset);
   const main = useMainConversation(props);

@@ -142,15 +142,8 @@ node ../opencu/scripts/cu-liveness.mjs verify --root ./vendor/opencu --profile b
 
 完成 OMD 构建并提交内置来源清单后，对将实际安装的包运行 `node scripts/check-opencu-delivery.mjs /absolute/path/to/actual-package.tgz`。该入口只读核对包内源码与逐文件摘要、native 执行位、根客户端字节、入口及文档；不会修复传入的包。无参模式仅为自建临时包恢复 helper 执行位后自检，不能代替实际安装包校验。包检查不替代嵌入副本的动态验证或真实宿主生效检查。
 
-DeepSWE 的本地适配器位于 `scripts/deepswe/`，通过固定版本的 [Pier](https://github.com/datacurve-ai/pier) 在官方 Linux 任务环境中运行实际 DSH／OMD PTC。`snapshot.mjs <已安装 profile> <本地私有 bundle 目录>` 保存模型、插件和配置快照，不复制聊天或记忆；`run.py <评测目录> doctor` 核对环境，`run --task <任务名>`、`run --sample 10 --seed 0` 或 `run --all` 选择范围，`report` 查看回执。评测目录须包含固定的任务集、Pier 虚拟环境、Linux 运行包和 `config/local.json`；凭据、任务原文、参考答案、镜像与运行结果全部留在工作区 `.local/`。每题独立配置与数据，模型运行前比对实际 OMD 配置，官方评分器只在独立干净容器中验证提交的补丁。保留插件配置，但 Linux 环境不提供 macOS 桌面或 Blender 服务；网络遵循任务隔离规则，仅放行已选推理端点。Apple Silicon 上的本地 Colima 环境使用 QEMU，避免 Rosetta 执行宿主原生扩展时卡住；`start`／`stop` 管理专用评测虚拟机。默认串行、一次尝试，失败单列；真实调用消耗所选渠道额度，单题结果不代表全量成绩。该流程按需运行，不接入日常 CI。
-
-`order` 冻结仅依公开题面需求规模预估的难／易交替顺序；`run --concurrency 2` 按此顺序每批最多同时运行两题，已评分题只运行一次。执行异常时清理未评分结果并保留用量汇总，自动重跑一次；再次异常则停止派发，已启动的另一题允许完成。用户明确要求后也可用 `--retry-errors` 重跑未评分的异常或取消题，已评分题不重跑。`monitor` 启动仅监听 `127.0.0.1` 的只读看板（默认 8765，也可用 `--port` 指定），`report` 输出同口径 JSON。每题结束后独立审计，实时显示阶段通过率、费用／Token 趋势、缓存、耗时和队列；网关保留百炼 Session Cache 请求头；仅当本题已知续传返回特定 InvalidParameter 500 时，使用内存中本题已完成的上下文回退完整请求，保留模型、工具与强度；上下文缺失时拒绝回退。2 并发或异常重跑必须通过实际多轮续传及至少一次 500 回退检查。历史连通试跑与合成检查单列，不进入正式成绩。网关 POST 回执按请求去重，GET 回读不重复计费，缓存包含在输入、思考包含在输出；执行异常、取消及待审题不进入通过率分母，缺失用量单列，费用依据 `config/monitor.json`（默认 `monitor-defaults.json`）冻结的公开费率估算，不等同账户实扣。官方 max 为外部参考；图读成本、未公开 Token 及渠道差异明确标记，不冒充同条件实测。轻量离线验证：`python -m unittest discover -s scripts/deepswe -p test_monitor.py`。
-
-防作弊边界位于独立 TLS 网关和容器层：真实凭据不进入任务容器，只放行指定模型的 Responses 请求与本题响应回读；阻止托管搜索、远程媒体、跨题响应、更换主 PTC 强度及普通外网／DNS 出站。任务不能访问控制器、参考答案或 Docker 接口。配置与插件文件在结束时再次核验；官方测试报告在另一个无网络、只读容器中复算，可疑补丁、分数不一致和缺失证据单列待复核，不计可信通过，原始结果保留。可信通过率以请求的全部任务为分母。`probe.py <评测目录>`、`--positive`、`--scoring` 分别验证攻击边界、真实 OMD 调用及评分审计。此流程不保证识别所有运行时测试取巧。
-
-- `pnpm test`（或 `pnpm test:smoke`）：运行 `scripts/test-ci.mjs` 列出的核心回归，不反复安装宿主、不启动完整桌面。
+- `pnpm test`：运行 `scripts/test-ci.mjs` 列出的核心回归，不反复安装宿主、不启动完整桌面。
 - 单项回归：`node --test test/<name>.test.mjs`，仅指定实际保留的文件。
-- `pnpm test:all`：兼容入口，运行同一组最小检查，不再另设重型全量套件；结果只说明这些检查的有限范围。
 - 需要运行检查时，使用隔离数据/profile，保持当前工作 DSH 原状。
 
 工具执行性能可用 `npm run perf:tools -- --root <源码根> --out <本地 .local/report.json> --repeats 7` 按需评测。先准备匹配 SDK 依赖及计量生成物；真实宿主 Workflow 场景还需模拟器已有构建，截图场景使用已安装 Chromium，不自动下载。基线和候选使用同一份评测工具、宿主、环境及 `size`／`repeats`／`idle-ms`，候选附 `--baseline <基线 JSON>`；`--cases` 可限定场景。报告分列新进程初始化后的首次操作与热操作，记录完整耗时、首个有效回执、局部阶段、事件循环延迟、CPU、采样进程树 RSS、闲置、取消清理和结果等价性；没有观测到的指标保留 null。21 个系列逐项注明实际覆盖层级，隔离宿主使用本地协议模型，不代表远端模型或 GUI 性能。嵌套阶段不可相加，小样本 p95 只描述本次样本，未清空操作系统缓存。`--idle-ms 31000 --cases article` 可观察正文计算 worker 的自动回收，显式关闭耗时另列；AST 场景会先执行取消检查，其闲置数据不单独证明自动回收。`node scripts/tool-performance/native-candidates.mjs --root <源码根> --out <本地 .local/candidates.json>` 单独测原生写入／编辑的大差异回执与持久 Bash 的实际轮询、就绪等待和取消；其中 worker 只是等价计算候选，不会安装到宿主。

@@ -65,10 +65,3 @@ export function collectAgents(rootId, state, statuses) {
   return { rows, parents, teams, projectionIssues, workflows: [...discoveredWorkflows.values()],
     active: rows.filter(row => ['running', 'provisioning'].includes(row.status)), completed: rows.filter(row => row.status === 'completed').length };
 }
-export function agentDuration(row, now = Date.now()) {
-  const timing = row.timing;
-  if (!timing) return '';
-  const ms = timing.settledMs + (timing.active ? Math.max(0, (row.status === 'running' ? now : timing.active.through) - timing.active.since) : 0);
-  const seconds = Math.floor(ms / 1000);
-  return seconds < 60 ? `${seconds}秒` : seconds < 3600 ? `${Math.floor(seconds / 60)}分 ${seconds % 60}秒` : `${Math.floor(seconds / 3600)}小时 ${Math.floor(seconds / 60) % 60}分`;
-}

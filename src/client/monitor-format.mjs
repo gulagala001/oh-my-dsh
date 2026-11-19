@@ -23,8 +23,6 @@ export const tokenPartial = metric => known(metric?.totalUnreported) ? metric.to
 // A rounded-up number after ≥ would overstate the known lower bound.
 const boundCompact = value => !known(value) ? '—' : value >= 1e6 ? `${Math.floor(value / 1e4) / 100}M` : value >= 1e3 ? `${Math.floor(value / 100) / 10}k` : fmt(value);
 export const tokenAmount = (metric, format = compact) => known(tokens(metric)) ? `${tokenPartial(metric) ? '≥' : ''}${tokenPartial(metric) && format === compact ? boundCompact(tokens(metric)) : format(tokens(metric))}` : '未返回';
-export const inputAmount = (metric, format = compact) => known(input(metric)) ? `${inputPartial(metric) ? '≥' : ''}${inputPartial(metric) && format === compact ? boundCompact(input(metric)) : format(input(metric))}` : '未返回';
-export const outputAmount = (metric, format = compact) => known(metric?.outputTokens) ? `${number(metric?.outputUnreported) ? '≥' : ''}${number(metric?.outputUnreported) && format === compact ? boundCompact(metric.outputTokens) : format(metric.outputTokens)}` : '未返回';
 const cacheSample = metric => {
   if (Object.hasOwn(metric || {}, 'cacheMeasuredCalls')) return number(metric.cacheMeasuredCalls) > 0
     ? { total: metric.cacheMeasuredInputTokens, read: metric.cacheMeasuredReadTokens } : {};
@@ -62,16 +60,9 @@ export const duration = value => {
   return seconds >= 3600 ? `${Math.floor(seconds / 3600)}h ${Math.floor(seconds % 3600 / 60)}m`
     : seconds >= 60 ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : `${(value / 1000).toFixed(1)}s`;
 };
-export const durationAmount = metric => !known(metric?.durationMs) ? '未知'
-  : number(metric?.durationUnreported) > 0 ? `${duration(metric.durationMs)}（已知小计）` : duration(metric.durationMs);
 export const date = at => { const value = new Date(at); return at && Number.isFinite(value.getTime()) ? value.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'; };
-export const callKey = call => String(call?.id ?? `${call?.sessionId}:${call?.kind}:${call?.at}:${call?.eventSeq ?? call?.step ?? ''}`);
 export const bucketAmount = (metric, key, format = fmt) => {
   const counter = { inputTokens: 'inputBucketUnreported', cacheReadTokens: 'cacheUnreported', cacheWriteTokens: 'cacheWriteUnreported', outputTokens: 'outputUnreported' }[key];
   const partial = number(metric?.[counter]) > 0, value = metric?.[key];
   return known(value) ? `${partial ? '≥' : ''}${partial && format === compact ? boundCompact(value) : format(value)}` : '—';
 };
-export const tokenParts = metric => [
-  ['fresh', '未缓存输入', metric?.inputTokens], ['read', '缓存读取', metric?.cacheReadTokens],
-  ['write', '缓存写入', metric?.cacheWriteTokens], ['output', '输出', metric?.outputTokens],
-];

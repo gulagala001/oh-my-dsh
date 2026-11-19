@@ -3,7 +3,6 @@ import { classifyShutdownErrors } from './fixtures/conversation-hot-install/shut
 import './fixtures/conversation-hot-install/resources-contract.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { archiveFiles, pins } from './fixtures/conversation-hot-install/inputs.mjs';
 import { assertReport, stages } from './fixtures/conversation-hot-install/contract.mjs';
