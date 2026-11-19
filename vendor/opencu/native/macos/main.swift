@@ -40,6 +40,7 @@ final class NativeService {
         try FileManager.default.createDirectory(at: screenshots, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         capture = CaptureStore(directory: screenshots)
         input = try InputStore(directory: directory, cancellation: cancellation)
+        input.eventReceipt = { [weak self] event in self?.activity.receipt(for: event) }
         input.moved = { [weak self] point, continuous in try self?.cursor.show(point, continuous: continuous) }
         input.pointerSettled = { [weak self] point in self?.cursor.settled(point) }
         input.released = { [weak self] in self?.cursor.hide() }

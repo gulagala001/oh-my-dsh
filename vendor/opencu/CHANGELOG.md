@@ -1,6 +1,36 @@
-# OpenCU 2.4.1 · DSH 0.2.2-rc.3
+# OpenCU 2.4.2 · DSH 0.2.2-rc.3
 
 **未发布 / Unreleased.**
+
+[中文](#zh-242) · [English](#en-242)
+
+<a id="zh-242"></a>
+
+## 中文
+
+### 体验优化
+
+- 在 macOS 上等待已投递的前台按键和鼠标状态得到确认。按键、组合键和文本输入的回执超时后保留释放记录。
+- Hyprland 窗口获得有效布局尺寸后才会出现，避免捕获刚打开的空窗口。
+
+<a id="en-242"></a>
+
+## English
+
+### Improvements
+
+- Waits for macOS to confirm foreground keyboard and mouse events and retains release information when confirmation times out.
+- Hyprland windows appear after the compositor assigns a usable size, so newly mapped windows can be captured reliably.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/opencu-2.4.2-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
+# OpenCU 2.4.1 · DSH 0.2.2-rc.3
 
 [中文](#zh-241) · [English](#en-241)
 
