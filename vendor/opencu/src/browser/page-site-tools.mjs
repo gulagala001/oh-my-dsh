@@ -6,7 +6,9 @@ async function siteToolOperation(key, request) {
   if (location.href !== request.url) return { stale: true };
   const context = document.modelContext ?? navigator.modelContext;
   if (typeof context?.getTools !== 'function' || typeof context?.executeTool !== 'function') return { available: false, tools: [] };
-  const state = globalThis[key] ??= { revision: 0, calls: new Map(), cancelled: new Set(), context };
+  const previous = globalThis[key];
+  if (request.operation !== 'list' && (!previous || previous.document !== request.document)) return { stale: true };
+  const state = previous ?? (globalThis[key] = { document: crypto.randomUUID(), revision: 0, calls: new Map(), cancelled: new Set(), context });
   if (state.context !== context) return { stale: true };
   if (!state.listening) {
     state.listening = true;
@@ -27,7 +29,7 @@ async function siteToolOperation(key, request) {
   const revision = state.revision;
   const tools = (await context.getTools()).filter(tool => tool.window === window && tool.origin === location.origin);
   if (location.href !== request.url || revision !== state.revision) return { stale: true };
-  if (request.operation === 'list') return { available: true, revision, tools: tools.slice(0, 128).map(tool => ({
+  if (request.operation === 'list') return { available: true, document: state.document, revision, tools: tools.slice(0, 128).map(tool => ({
     name: tool.name, title: tool.title, description: tool.description, origin: tool.origin,
     inputSchema: typeof tool.inputSchema === 'string' ? JSON.parse(tool.inputSchema) : tool.inputSchema ?? null,
     annotations: tool.annotations,
@@ -68,9 +70,9 @@ export function createPageSiteTools(element, occurrence, documentIdentity, readP
     const next = new Map(), origin = new URL(url).origin;
     for (const tool of result.tools) {
       if (tool?.origin !== origin || typeof tool.name !== 'string' || !tool.name || next.has(tool.name)) continue;
-      const signature = JSON.stringify([current, result.revision, tool]), previous = registrations.get(tool.name);
+      const signature = JSON.stringify([current, result.document, result.revision, tool]), previous = registrations.get(tool.name);
       const descriptor = { ...tool, registrationId: previous?.signature === signature ? previous.descriptor.registrationId : crypto.randomUUID() };
-      next.set(tool.name, { descriptor, signature, revision: result.revision });
+      next.set(tool.name, { descriptor, signature, document: result.document, revision: result.revision });
     }
     registrations = next;
     return { available: true, tools: [...next.values()].map(item => item.descriptor) };
@@ -91,8 +93,9 @@ export function createPageSiteTools(element, occurrence, documentIdentity, readP
         const selected = tools.find(tool => tool.registrationId === registrationId);
         if (!selected || current !== occurrence() || url !== element.getURL()) throw stale();
         if (call.cancelled) throw Object.assign(new Error('Site tool invocation cancelled'), { code: 'CONTROL_STOPPED', details: { inputDispatched: false } });
-        call.started = true;
-        const result = await run({ operation: 'invoke', url, requestId, input, name: selected.name, revision: registrations.get(selected.name).revision });
+        const { document, revision } = registrations.get(selected.name);
+        call.pageDocument = document;
+        const result = await run({ operation: 'invoke', url, requestId, input, name: selected.name, document, revision });
         if (result?.stale || result?.available === false) throw stale();
         if (result?.cancelled) throw Object.assign(new Error('Site tool invocation cancelled'), { code: 'CONTROL_STOPPED', details: { inputDispatched: false } });
         if (result?.dispatched !== true) throw new Error('The site tool returned no execution receipt. Inspect this page before retrying.');
@@ -111,9 +114,9 @@ export function createPageSiteTools(element, occurrence, documentIdentity, readP
     const calls = [...active].filter(([id]) => !requestId || requestId === id);
     for (const [id, call] of calls) {
       call.cancelled = true;
-      if (call.started && call.document === documentIdentity()) {
-        const result = await run({ operation: 'cancel', requestId: id, url: element.getURL() });
-        if (result?.cancelled !== true && call.document === documentIdentity()) throw new Error('The site tool did not acknowledge cancellation');
+      if (call.pageDocument && call.document === documentIdentity()) {
+        const result = await run({ operation: 'cancel', requestId: id, url: element.getURL(), document: call.pageDocument });
+        if (result?.cancelled !== true && !result?.stale && call.document === documentIdentity()) throw new Error('The site tool did not acknowledge cancellation');
       }
     }
     return { cancelled: calls.length > 0 };

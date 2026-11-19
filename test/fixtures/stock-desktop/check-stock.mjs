@@ -225,7 +225,7 @@ try {
     const otherURL = fixtureURL.replace('127.0.0.1', 'localhost');
     await page.locator(activeGuest).evaluate((guest, url) => guest.loadURL(url), otherURL);
     const originalGuestId = await page.locator(activeGuest).evaluate(guest => guest.getWebContentsId());
-    const back = button(page, /^(Back|后退|返回上一页|上一页)$/i).filter({ visible: true }).first();
+    const back = button(page, /^(Back|后退|返回|返回上一页|上一页)$/i).filter({ visible: true }).first();
     await back.click({ modifiers: ['ControlOrMeta', 'Shift'] });
     await page.waitForFunction(({ selector, url }) => {
       try { return document.querySelector(selector)?.getURL() === url; } catch { return false; }
@@ -254,6 +254,7 @@ try {
       } });
       assert.equal(cursor.visible, true);
       assert.equal((await call('nativePresentation', { rendererId, operation: 'cursor', args: { visible: false } })).visible, false);
+      console.log('The native monitor acknowledged showing and hiding the cursor in its visible frame.');
     } finally {
       await call('nativePresentation', { rendererId, operation: 'close' });
       await call('browser/disconnect', { rendererId, connectionId: registration.connectionId, released: true });
