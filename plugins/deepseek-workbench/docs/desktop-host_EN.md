@@ -8,7 +8,7 @@ With just the plugin installed, the standard DSH desktop app gives you web chat,
 - Downloading files from DeepSeek chats.
 - The API Keys platform page embedded in DSH.
 
-The adapter script at `desktop/apply-host.mjs` supports DSH **0.2.2-rc.3, rc.4, and rc.5**, plus **0.2.1-rc.2**. See the [source build steps](../desktop/README_EN.md).
+The adapter script at `desktop/apply-host.mjs` supports DSH **0.2.2-rc.3, rc.4, and rc.5**, plus **0.2.1-rc.2**. Other versions can use the same adapter when their source interfaces match. See the [source build steps](../desktop/README_EN.md).
 
 ## What works where
 

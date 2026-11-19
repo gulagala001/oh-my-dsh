@@ -33,6 +33,9 @@ export function presentDreamRead(hub, value, args = {}) {
 
 export async function handleDreamApi({hub,ctx,req,res,url,send,readBody}){
   const path=url.pathname.replace('/oh-my-dsh/api','');if(!path.startsWith('/dream'))return false;
+  if (hub.dream.storageError && path !== '/dream' && path !== '/dream/settings') {
+    send(res,503,{error:hub.dream.storageError});return true;
+  }
   const id=url.searchParams.get('session')||'',agent=id?ctx.agents.get(id):null;
   const requester=agent?.session||{id:id||'dream-reader',header:{cwd:(id?hub.store.peek?.(id)?.cwd:null)||process.cwd()}};
   // Folder list is derived state: a failure here must never fail the request.

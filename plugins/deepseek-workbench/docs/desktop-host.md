@@ -8,7 +8,7 @@
 - 下载官网聊天里的文件。
 - 在 DSH 里内嵌显示 API Keys 平台页。
 
-适配脚本是 `desktop/apply-host.mjs`，支持 DSH **0.2.2-rc.3、rc.4、rc.5** 和旧版 **0.2.1-rc.2**。构建步骤见 [desktop/README.md](../desktop/README.md)。
+适配脚本是 `desktop/apply-host.mjs`，支持 DSH **0.2.2-rc.3、rc.4、rc.5** 和旧版 **0.2.1-rc.2**。其他版本按实际源码接口应用。构建步骤见 [desktop/README.md](../desktop/README.md)。
 
 ## 各环境能用什么
 

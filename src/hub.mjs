@@ -139,7 +139,7 @@ export class Hub extends Service {
     for (const refresh of this.taskVerificationControllers ?? []) refresh();
   }
   scope(session, { effective = true } = {}) {
-    if(effective&&this.dream?.sources?.projectlessKnown?.(session.header))return {mode:'session',project:`session:${session.id}`};
+    if(effective && (this.dream?.storageError || this.dream?.sources?.projectlessKnown?.(session.header)))return {mode:'session',project:`session:${session.id}`};
     const state = this.store.peek ? this.store.peek(session.id) ?? { id: session.id } : this.store.state(session.id);
     const prepared=effective&&this.context?.store?.peek?.(session.id);
     if(prepared?.binding?.scope==='session'&&(state.started||prepared.records?.length))return {mode:'session',project:`session:${session.id}`};

@@ -2,7 +2,7 @@ import { readFile, writeFile, realpath, access } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { targetFor, adapterRevision, browserCapabilities } from './compatibility.mjs';
+import { targetFor, hostTargets, adapterRevision, browserCapabilities } from './compatibility.mjs';
 import { applyComposerReferences } from './composer-references.mjs';
 import { applyToolVisibility } from './tool-visibility.mjs';
 import { applyRuntimeLifecycle } from './runtime-lifecycle.mjs';
@@ -14,7 +14,9 @@ if (root.includes('.app/') || root.endsWith('.app') || root.includes('/oh-my-dsh
 const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const explicitTarget = process.argv[3] === '--target' && process.argv[4];
 if (process.argv.length > 3 && (!explicitTarget || process.argv.length !== 5)) throw Error('Usage: node host/apply.mjs <owned-source> [--target <exact-version>]');
-const target = targetFor(explicitTarget || manifest.version);
+if (manifest.name !== '@deepseek-ai/dsh-root' || typeof manifest.version !== 'string') throw Error('OpenCU needs a DSH source checkout');
+const registered = Object.values(hostTargets).some(entry => entry.version === manifest.version);
+const target = (explicitTarget || registered) ? targetFor(explicitTarget || manifest.version) : { version: manifest.version, id: manifest.version };
 if (target.sourceVersion) {
   if (manifest.version !== target.sourceVersion) throw Error('Source version does not match the reviewed artifact-equivalent source');
   const receipt = JSON.parse(await readFile(new URL('./build-inputs/' + target.id + '/source.json', import.meta.url)));
@@ -26,7 +28,7 @@ if (target.sourceVersion) {
       throw Error('Desktop baseline differs from the exact official artifact: ' + name);
   }
 } else if (manifest.version !== target.version) throw Error('Desktop source version mismatch');
-for (const [name, version] of [['cordis', target.sourceCordis ?? target.cordis], ['schemastery', target.sourceSchema ?? target.schema]]) {
+if (explicitTarget) for (const [name, version] of [['cordis', target.sourceCordis ?? target.cordis], ['schemastery', target.sourceSchema ?? target.schema]]) {
   const framework = JSON.parse(await readFile(join(root, 'vendor', name, 'package.json'), 'utf8'));
   if (framework.version !== version) throw new Error(`OpenCU ${target.id} framework mismatch: ${name}: ${framework.version}, expected ${version}`);
 }
@@ -120,7 +122,7 @@ await patch(desktop + 'preload-browser.ts', [
     return () => { ipcRenderer.removeListener(channel, receive) }
   }
   return {
-    openCU: { revision: ${adapterRevision}, hostVersion: '${target.version}', capabilities: ${JSON.stringify([...browserCapabilities, 'presentation', 'files', 'cursor', 'accessory'])} },
+    openCU: { revision: ${adapterRevision}, hostVersion: ${JSON.stringify(target.version)}, capabilities: ${JSON.stringify([...browserCapabilities, 'presentation', 'files', 'cursor', 'accessory'])} },
     acquireOpenCU: () => ipcRenderer.invoke('dsh-desktop:opencu-acquire'),
     ${browserCapabilities.map(name => `${name}: (lease, operation, args) => ipcRenderer.invoke('dsh-desktop:opencu-${name}', lease, operation, args),`).join('\n    ')}
     presentation: (operation, payload) => ipcRenderer.invoke('dsh-desktop:opencu-presentation', operation, payload),
@@ -516,7 +518,11 @@ await patch(sidebar + 'stores.ts', [
             : planned.ops))`],
 ], 'Background opens cannot replace');
 await applyRuntimeLifecycle(patch, target);
-if (['0.2.1-rc.5', '0.2.2-rc.1', '0.2.2-rc.2', '0.2.2-rc.3', '0.2.2-rc.4', '0.2.2-rc.5'].includes(target.version)) {
+const prepareDsh = await source('apps/desktop/scripts/prepare-dsh.ts').catch(error => {
+  if (error.code === 'ENOENT') return '';
+  throw error;
+});
+if (prepareDsh.includes("import { packagingStep } from './packaging-step.mjs'")) {
   const preparation = 'apps/desktop/scripts/prepare-dsh.ts';
   await patch(preparation, [
     ["import { packagingStep } from './packaging-step.mjs'", "import { packagingStep } from './packaging-step.mjs'\nimport { prepareNativeRuntime } from './opencu-native-runtime.mjs'"],

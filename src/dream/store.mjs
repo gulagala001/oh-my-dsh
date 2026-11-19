@@ -10,10 +10,14 @@ const decode = row => row ? JSON.parse(row.data) : null;
 
 /** Separate derived store: no writes to the source archives or manual global file. */
 export class DreamStore {
-  constructor(directory, { now = Date.now } = {}) {
-    mkdirSync(join(directory, 'dream-v1'), { recursive: true, mode: 0o700 });
+  constructor(directory, { now = Date.now, transient = false } = {}) {
+    if (!transient) mkdirSync(join(directory, 'dream-v1'), { recursive: true, mode: 0o700 });
     this.now = now; this.owner = randomUUID(); this.closed = false;
-    this.db = new DatabaseSync(join(directory, 'dream-v1', 'memory.sqlite'));
+    this.db = new DatabaseSync(transient ? ':memory:' : join(directory, 'dream-v1', 'memory.sqlite'));
+    try { this.initialize(); }
+    catch (error) { this.db.close(); throw error; }
+  }
+  initialize() {
     this.db.exec(`PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;
       CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY,project TEXT NOT NULL,shared INTEGER NOT NULL,title TEXT NOT NULL,activity REAL NOT NULL,data TEXT NOT NULL);

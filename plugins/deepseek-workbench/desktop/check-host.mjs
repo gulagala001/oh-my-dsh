@@ -9,9 +9,8 @@ if (mode !== undefined && mode !== '--syntax-only') throw Error('Unknown check m
 if (!source || !sdk) throw Error('Usage: node desktop/check-host.mjs /absolute/patched-dsh-source /absolute/toolchain-with-node_modules');
 const root = await realpath(resolve(source)), toolchain = await realpath(resolve(sdk));
 const host = await readHostTarget(root);
-for (const [name, version] of [['typescript', '6.0.3'], ['electron', '44.7.0']]) {
-  if (JSON.parse(await readFile(join(toolchain, 'node_modules', name, 'package.json'))).version !== version) throw Error(`Expected ${name} ${version}`);
-}
+const toolVersion = async name => JSON.parse(await readFile(join(toolchain, 'node_modules', name, 'package.json'))).version;
+const typescript = await toolVersion('typescript'), electron = await toolVersion('electron');
 const ts = createRequire(join(toolchain, 'package.json'))('typescript');
 const config = ts.readConfigFile(join(root, 'tsconfig.base.json'), ts.sys.readFile);
 if (config.error) throw Error(ts.flattenDiagnosticMessageText(config.error.messageText, '\n'));
@@ -39,4 +38,4 @@ const diagnostics = [...syntax, ...ts.getPreEmitDiagnostics(program)];
 if (diagnostics.length) {
   process.stderr.write(ts.formatDiagnosticsWithColorAndContext(diagnostics, { getCanonicalFileName: file => file, getCurrentDirectory: () => root, getNewLine: () => '\n' }));
   process.exitCode = 1;
-} else console.log(JSON.stringify({ status: 'passed', host, typescript: '6.0.3', electron: '44.7.0', semantic: semanticFiles, syntax: files, scope: 'Guest boundary semantic check and adapter source syntax; not a complete desktop build' }, null, 2));
+} else console.log(JSON.stringify({ status: 'passed', host, typescript, electron, semantic: semanticFiles, syntax: files, scope: 'Guest boundary semantic check and adapter source syntax; not a complete desktop build' }, null, 2));

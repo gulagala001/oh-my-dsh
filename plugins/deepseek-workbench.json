@@ -11,12 +11,12 @@
     "THIRD_PARTY_NOTICES.md": "fd3a9f2e63b55321f2893f6da29508753dff5467bd72e11cd5e31f93bcf35e6d",
     "cordis.patch.yml": "f5e8623847bf4d11754487b9b74415a8588d22de54c3b858c5ba90b87de4bca6",
     "desktop/apply-host.mjs": "b190a27de9b913a2d441e4051cfe0b0c167293edcf8fc05a7ce4911fae0e8f7e",
-    "desktop/check-host.mjs": "42de2964af1586dffc92230872733239d38f3a01d6dc223e862ffb153489c338",
+    "desktop/check-host.mjs": "83ee7efc2359e64439662ccf9367d136c8164c0a6403ec18a6c3f33bf977bdde",
     "desktop/deepseek-browser-policy.ts": "8a1e48cf3b053fd653e06dbf75ec7973c3ce0548598d858851ae3fe947a39067",
-    "desktop/README_EN.md": "8be4a34339a087b6341c8c45f13c4d88627bc5e374f0d3c51265a94918b1c4d3",
-    "desktop/README.md": "cf916538bb59dc79db4ebfbb08ad934046d0f5a59dd73a2b54d7ee781fd37a0f",
-    "docs/desktop-host_EN.md": "b45d8be918fdca179d5ec425730286ac4947fd0ba135b4bc9fb4794325c748f6",
-    "docs/desktop-host.md": "093cf5fdb95e626f5423c67612d6b3baae4a4705b8c54c381e31fc25ad367c6c",
+    "desktop/README_EN.md": "26168c82f53429881d091019e7ef211fede562ca8255424e13ec8326c546b138",
+    "desktop/README.md": "31589d3abd5f2ec7bc9d9e2400115e6db400150f0bab450c9c9915f1529b5f1d",
+    "docs/desktop-host_EN.md": "4193e899f59dbe91bc3dcf09996fa681da1d4e52b596ab90060b9d91b21b0e19",
+    "docs/desktop-host.md": "384ecdcc03be6cecc31e2516e263186cbd0aae2e646d99da448023dc98a20a92",
     "docs/images/temporary-chat.png": "d01c44e39d7cc438725bebeb3940bd0489cad10788a82e403429698c071b4b84",
     "docs/install_EN.md": "e47f27681cdb5d79fd13906de53a14fdb09528782e8bd66635ceb2150285918e",
     "docs/install.md": "c78e75781dc31682064b4d782e3599f396c58619ff94f6e27b57f8b6e1ccb0e4",
@@ -50,6 +50,6 @@
     "src/index.mjs": "a072e4b62f7f6b228578d52e4188b0fa7f60dd73fb69c22451409429de635355",
     "src/client/temporary-ownership.mjs": "5865feb6367aac0803ae5707ffd99e92326f881124017e1a04d26defc18aaf0a",
     "src/client/window-owner.mjs": "3e4296e26b458740b1511767e24de682ed5855ac9415659bac1e6d37a97a6a25",
-    "desktop/targets.mjs": "d88d99dccee6867d3cccd2685ea68517d68cd8822791cfb1c4e267e75fe63089"
+    "desktop/targets.mjs": "fa3c8f7a3309e7ffdf81d3af7d6b29bcce878982c66c98e0a11fb55e387c0cb2"
   }
 }

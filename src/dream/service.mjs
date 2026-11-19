@@ -23,7 +23,15 @@ export class DreamService {
   #consumersRetired;
   constructor(hub, { store, sources, generate, consumersRetired } = {}) {
     this.#consumersRetired=consumersRetired;
-    this.hub=hub;this.store=store||new DreamStore(hub.store.dir);this.sources=sources||new DreamSources(hub,this.store);
+    this.hub = hub;
+    try { this.store = store ?? new DreamStore(hub.store.dir); }
+    catch (error) {
+      this.storageError = `Dream 记忆库暂不可用：${error.message}。修复存储后重新加载可恢复记忆整理。`;
+      hub.ctx?.logger?.warn?.(this.storageError);
+      // Keep a session-local index for foreground tools, without spending a fresh budget or acknowledging durable jobs.
+      this.store = new DreamStore(hub.store.dir, { transient: true });
+    }
+    this.sources = sources ?? new DreamSources(hub, this.store);
     this.generateOverride=generate;this.closed=false;this.draining=null;this.controller=null;this.timer=null;this.epoch=null;
     this.lifecycle=new AbortController();this.ready=null;this.ticking=null;this.closing=null;this.generating=new Set();this.cleanupFailures=new Set();
   }
@@ -37,7 +45,7 @@ export class DreamService {
   }
   start(){return this.ready??=this.initialize();}
   async initialize(){
-    if(this.closed)return;
+    if(this.closed || this.storageError)return;
     try{await this.sources.sync(this.lifecycle.signal);if(!this.closed)this.store.setMeta('indexError',null);}catch(e){if(!this.closed)this.store.setMeta('indexError',e.message);}
     if(this.closed)return;
     this.timer=setInterval(()=>{void this.tick().catch(e=>this.notice(e));},30000);this.timer.unref?.();
@@ -50,6 +58,7 @@ export class DreamService {
   notice(error){if(!this.closed)this.store.setMeta('lastError',String(error?.message||error));}
   async enqueue(scope,target,agent){
     this.lifecycle.signal.throwIfAborted();
+    if (this.storageError) throw Error(this.storageError);
     validateScope(scope);
     if(scope!=='global'&&(typeof target!=='string'||!target))throw Error('请选择要整理的会话或项目');
     const route=this.route(agent);
@@ -97,7 +106,7 @@ export class DreamService {
     }
     return current;
   }
-  tick(){if(this.ticking)return this.ticking;return this.ticking=this.checkQueue().finally(()=>{this.ticking=null;});}
+  tick(){if(this.storageError)return Promise.resolve();if(this.ticking)return this.ticking;return this.ticking=this.checkQueue().finally(()=>{this.ticking=null;});}
   async checkQueue(){
     if(this.closed||this.draining)return;
     const c=this.config(),now=Date.now();
@@ -381,7 +390,7 @@ export class DreamService {
   status(id){
     const s=id?this.store.session(id):null;
     return {session:s,sessionMemory:s?this.store.memory(nodeKey('session',id)):null,projectMemory:s?this.store.memory(nodeKey('project',s.project)):null,
-      globalMemory:this.store.memory('global'),jobs:this.store.jobs(20,{includeUnfinished:true}).map(job=>({...job,targetTitle:job.scope==='session'?this.store.session(job.target)?.title||job.target:job.scope==='global'?'全部共享项目':job.target==='@unclassified'?'未归类':job.target})),usage:this.store.usage(),catalogRevision:this.store.meta('catalogRevision')||0,indexWarnings:this.store.meta('indexWarnings')||[],indexError:this.store.meta('indexError'),notice:(this.config().dreamAutoEnabled && this.store.meta('autoNotice'))||this.store.meta('lastError'),
+      globalMemory:this.store.memory('global'),jobs:this.store.jobs(20,{includeUnfinished:true}).map(job=>({...job,targetTitle:job.scope==='session'?this.store.session(job.target)?.title||job.target:job.scope==='global'?'全部共享项目':job.target==='@unclassified'?'未归类':job.target})),usage:this.store.usage(),catalogRevision:this.store.meta('catalogRevision')||0,indexWarnings:this.store.meta('indexWarnings')||[],indexError:this.store.meta('indexError'),notice:this.storageError||(this.config().dreamAutoEnabled && this.store.meta('autoNotice'))||this.store.meta('lastError'),
       settings:{enabled:Boolean(this.config().dreamAutoEnabled),intervalMs:this.config().dreamIntervalMs||3600000,deepAgeMs:this.config().dreamDeepAgeMs??604800000,dailyTokens:this.config().dreamDailyTokens??200000,provider:this.config().dreamProvider||'',model:this.config().dreamModel||'',dreamProjects:(Array.isArray(this.config().dreamProjects)?this.config().dreamProjects:[]).filter(x=>typeof x==='string')}};
   }
   close(){return this.closing??=this.shutdown();}

@@ -218,8 +218,8 @@
       "license": "Original upstream rights apply",
       "notice": "vendor/opencu/THIRD_PARTY_NOTICES.md",
       "provenance": "https://github.com/gulagala001/opencu/blob/main/src/client/rea/provenance.json",
-      "version": "SHA256:75c2c8e9cfadda21b53d37122694d43c085104e1e832f58ef9c5f271e37d31e5",
-      "sourceSha256": "75c2c8e9cfadda21b53d37122694d43c085104e1e832f58ef9c5f271e37d31e5",
+      "version": "SHA256:feefc739925430b21c25cbf3772e5b214a1776396d3455fdd0a627c54c51bdf6",
+      "sourceSha256": "feefc739925430b21c25cbf3772e5b214a1776396d3455fdd0a627c54c51bdf6",
       "group": "sources"
     },
     {

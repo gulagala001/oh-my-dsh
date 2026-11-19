@@ -78,8 +78,15 @@ async function createHostModule(originalEntry, createModule, dependencies) {
 
 export async function mountHostComponent(ctx, name, createModule, dependencies, config) {
   const originalEntry = await requireHostEntry(ctx, name);
-  const component = await createHostModule(originalEntry, createModule, dependencies);
   const tree = originalEntry.parent.tree;
+  let component;
+  try { component = await createHostModule(originalEntry, createModule, dependencies); }
+  catch (error) {
+    // No plugin has been mounted yet. Use the loader's own entry and config if the enhancement cannot be built.
+    try { component = await tree.import(originalEntry.options.name); }
+    catch (nativeError) { throw new AggregateError([error, nativeError], `Cannot load the enhanced or native ${name} component`); }
+    ctx.logger?.warn?.('OMD %s 使用宿主原有实现：%s', name, error.message);
+  }
   const inherited = ['jobs-local', 'bash-sandbox', 'pwsh-sandbox', 'compaction-basic', 'token-meter'].includes(name);
   let effective = config;
   let inheritedConfig;
