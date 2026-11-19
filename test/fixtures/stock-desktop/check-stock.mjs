@@ -164,7 +164,10 @@ try {
     const capture = await call('observe', { format: 'both' });
     const screenshot = capture.observation?.screenshot ?? capture.screenshot;
     assert(screenshot?.id && screenshot.width > 0);
-    await call('act', { action: 'click', x: 24, y: 14, screenshotId: screenshot.id });
+    assert.match(capture.observation.ax, /button "Click fixture"/);
+    const viewport = screenshot.viewport;
+    await call('act', { action: 'click', x: 24 * screenshot.width / viewport.width, y: 14 * screenshot.height / viewport.height,
+      coordinateSpace: 'screenshot-pixels', screenshotId: screenshot.id });
     const guestRead = expression => page.evaluate(async ({ url, expression }) => {
       const guest = [...document.querySelectorAll('webview')].find(value => { try { return value.getURL() === url; } catch { return false; } });
       return guest.executeJavaScript(expression);

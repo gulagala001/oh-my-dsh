@@ -2,6 +2,16 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.5.omd.1.9.1",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "Oh My DSH 1.9.1",
+      "notes": [
+        "恢复原版 Windows 和 macOS 桌面中的侧栏浏览器、批注、预览和悬浮监看，支持工作台持续登录和下载。"
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.5.omd.1.9.1"
+    },
+    {
       "version": "0.2.2-rc.5.omd.1.9.0",
       "severity": "normal",
       "unpublished": false,
