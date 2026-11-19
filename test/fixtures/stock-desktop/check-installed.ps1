@@ -43,6 +43,17 @@ try {
     $app = Start-Process -FilePath $exe -ArgumentList $arguments -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
     try { Run-Check 'exercise' }
     catch {
+        $logDirectory = Join-Path $electronData 'logs'
+        for ($attempt = 0; $attempt -lt 10; $attempt++) {
+            $crash = Get-ChildItem -LiteralPath $logDirectory -Filter 'crash-*.log' -File -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($crash) { break }
+            Start-Sleep -Milliseconds 200
+        }
+        if ($crash) {
+            Get-Content -LiteralPath $crash.FullName -TotalCount 65 |
+                Where-Object { $_ -notmatch '(token=|authorization|cookie|api[-_ ]?key|password|https?://)' }
+        }
         foreach ($log in @($stdout, $stderr)) {
             Get-Content -LiteralPath $log -Tail 80 | Where-Object {
                 $_ -match '(opencu|managed.browser|panic|process exited|unhandled)' -and $_ -notmatch '(token=|authorization|cookie)'

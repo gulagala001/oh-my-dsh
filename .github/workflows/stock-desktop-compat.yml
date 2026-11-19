@@ -80,4 +80,5 @@ jobs:
           if ($archives.Count -ne 1) { throw 'Expected one plugin package' }
           ./test/fixtures/stock-desktop/check-installed.ps1 -Installer (Join-Path $env:RUNNER_TEMP 'dsh-rc3-official.exe') -Archive $archives[0].FullName
       - name: Verify Workbench profile restart and download bytes
+        if: success() || failure()
         run: node test/fixtures/stock-desktop/check-workbench.mjs
