@@ -139,8 +139,8 @@ try {
     await visibleFile('stock-preview.pdf').click();
     const pdfText = page.getByText('Stock DSH document', { exact: true });
     await pdfText.waitFor();
-    await button(page, /请求修改|request changes/i).click();
-    await page.getByText(/选中内容并提出修改要求|select.*request.*change/i).waitFor();
+    await button(page, /请求修改|request (?:edits|changes)/i).click();
+    await page.getByText(/选中内容并提出修改要求|select content and ask for changes/i).waitFor();
     const textBounds = await pdfText.boundingBox();
     assert(textBounds);
     const textY = textBounds.y + textBounds.height / 2;
