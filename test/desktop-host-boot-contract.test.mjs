@@ -268,9 +268,9 @@ test('installed UI identity requires the exact disabled originals and active rep
   }
 });
 
-test('rc.2 input accepts only the frozen current bundle and its exact isolated paths', async t => {
+test('Desktop input accepts only the frozen current bundle and its exact isolated paths', async t => {
   const env = await fixture(t), value = await desktopInputs(env, 'win32', 'x64');
-  assert.equal(value.hostVersion, '0.2.2-rc.3'); assert.equal(value.manifest.version, source.version);
+  assert.equal(value.hostVersion, source.engines.dsh); assert.equal(value.manifest.version, source.version);
   assert.equal(value.archive, env.OMD_PLUGIN_ARCHIVE);
   assert.equal(await realpath(repoRoot), await realpath(new URL('../', import.meta.url)));
 });

@@ -5,10 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import { clientComponents } from './client-identity.mjs';
+import source from '../../../package.json' with { type: 'json' };
 
 // Deliberately narrower than the legacy non-CU fixture's parent-of-repo root.
 export const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
-export const hostVersion = '0.2.2-rc.3';
+export const hostVersion = source.engines.dsh;
 export const inside = (root, path) => path === root || path.startsWith(root + sep);
 export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sdkNames = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host', '@deepseek-ai/dsh-app-boot',
@@ -86,9 +87,8 @@ export async function desktopInputs(env = process.env, platform = process.platfo
   assert.equal(sha256, env.OMD_PLUGIN_ARCHIVE_SHA256, 'Frozen tgz SHA-256');
   const files = archiveFiles(bytes);
   const manifest = JSON.parse(files.get('package/package.json'));
-  const source = JSON.parse(await readFile(new URL('../../../package.json', import.meta.url)));
   assert.equal(manifest.name, 'oh-my-dsh'); assert.equal(manifest.version, source.version);
-  assert.match(manifest.version, /^0\.2\.2-rc\.2\.omd\.\d+\.\d+\.\d+$/);
+  assert.equal(manifest.version.split('.omd.')[0], hostVersion, 'OMD archive host version');
   assert.equal(manifest.engines.dsh, hostVersion);
   assert.equal(manifest.devDependencies['@deepseek-ai/dsh'], hostVersion);
   assert.deepEqual(manifest.dsh.client.inject, source.dsh.client.inject);
@@ -99,7 +99,7 @@ export async function desktopInputs(env = process.env, platform = process.platfo
   for (const file of ['lib/client.js', ...manifest.dsh.bundle.patch.map(path => path.replace(/^\.\//, ''))])
     assert(files.get('package/' + file)?.length, 'Missing frozen bundle member: ' + file);
   const releases = JSON.parse(files.get('package/release-manifest.json'));
-  assert(releases.releases.some(row => row.version === manifest.version), 'Current rc.2 release identity');
+  assert(releases.releases.some(row => row.version === manifest.version), 'Current OMD release identity');
   return { root, executablePath: paths.OMD_DESKTOP_EXECUTABLE, appRoot: paths.OMD_DESKTOP_APP_ROOT,
     archive: paths.OMD_PLUGIN_ARCHIVE, sha256, executableSha256: digest(await readFile(executable)), manifest,
     clientSha256: digest(files.get('package/lib/client.js')), sdkNames, hostVersion,

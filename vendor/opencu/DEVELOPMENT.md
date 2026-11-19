@@ -64,16 +64,16 @@ Chrome / Edge 扩展的 loopback bridge 由插件自动管理，监听本机 193
 
 ## 构建和本地插件包
 
-默认源码及根 `package-lock.json` 精确锁定 rc.2，先运行 `node scripts/prepare-host-sdk.mjs` 准备官方标签对应的 SDK，再运行 `npm ci`。发布构建使用独立 SDK、独立 staging 和真实 REA 编译。实际 SDK 清单、完整 pnpm 锁与必要 workspace overrides 固定在 `host/build-inputs/{rc1,021rc2}/`；这些 SDK 输入保留原构建使用的字节，两个宿主均使用 Electron `44.7.0`。REA 的独立清单与完整锁固定在 `host/build-inputs/frontend/`。
+先运行 `node scripts/prepare-host-sdk.mjs`，再运行 `npm ci`。宿主版本取自当前检出版本的 `package.json`。准备脚本会核对根 `package-lock.json` 与该宿主的固定依赖图，并准备对应官方 SDK。各宿主的构建输入在 `host/build-inputs/`，前端构建依赖在 `host/build-inputs/frontend/`。
 
 `scripts/build-targets.mjs` 从公开输入创建本地 SDK 和前端工作目录，始终使用 `--frozen-lockfile --ignore-scripts`，缺锁、清单不匹配或输入 SHA-256 不匹配即失败，不自动重新解析。构建前还核对安装后的完整解析锁和全部实际 DSH 包版本，拒绝混入另一宿主版本。固定输入的 SHA-256 见 `host/build-inputs/manifest.json`；包内 `lib/host-build.json` 与输出目录 `build.json` 保存所用输入哈希、实际 DSH 包清单与安装解析锁哈希，可直接对照公开源码。
 
 ```sh
 # NODE 为 Node >=24.9.0，PNPM 为 pnpm 11.28.5 的 pnpm.mjs 入口。
-OPENCU_PNPM="$PNPM" "$NODE" scripts/build-targets.mjs
+OPENCU_PNPM="$PNPM" "$NODE" scripts/build-targets.mjs 022rc5
 ```
 
-默认构建 `rc1` 与 `021rc2` 两个宿主，也可在命令末尾只指定其中一项。
+示例生成 rc.5 安装包。构建 rc.3 或 rc.4 时，将目标改为 `022rc3` 或 `022rc4`。可在同一命令中传入多个目标。源码发行标签应使用对应输出目录中的 `source-package-lock.json` 作为根锁，并从干净检出执行上述安装与校验。
 
 本地复核可设置 `OPENCU_BUILD_ROOT` 和 `OPENCU_PACKAGE_OUT` 指向独立构建与输出目录，保留既有发行工件。
 
@@ -169,6 +169,6 @@ node scripts/cu-direct.mjs --data-dir /absolute/isolated/cu/data --output-dir /a
 
 `host/build-inputs/022rc1/` 锁定 rc.1 SDK 与 Electron。`source.json` 分别记录原始公开源码提交、官方 rc.1 桌面包及构建提交；七个原始桌面入口重建后必须与该官方包逐字节一致。随后在该独立源码目录执行 `node host/apply.mjs <source> --target 0.2.2-rc.1`，该入口核对 Git 来源、未改动源码和全部原始桌面入口摘要后才应用适配。不能更改旧源码的版本冒充新版来源。
 
-### DSH 0.2.2-rc.3 构建输入
+### DSH 0.2.2 构建输入
 
-`host/build-inputs/022rc2/` 固定插件依赖。构建命令为 `OPENCU_PNPM="$PNPM" node scripts/build-targets.mjs 022rc2`。SDK 取自官方标签 `dsh-v0.2.2-rc.3` 的提交 `38a6a5c965aa99ab525161efb7cc5cf1fe62fced`，使用上游冻结锁构建。桌面适配保留宿主原有的登录回执，并在打包时检查原生终端和文档转换模块。
+`host/build-inputs/022rc3/`、`022rc4/` 和 `022rc5/` 分别保存对应宿主的依赖图。`host/compatibility.mjs` 指向各自的官方提交，构建时校验上游冻结锁和 SDK 身份。桌面适配沿用宿主登录回执，并在打包时检查原生终端和文档转换模块。

@@ -2,13 +2,13 @@
 
 [简体中文](README.md) · [Capabilities and compatibility](../docs/desktop-host_EN.md)
 
-Targets official **DSH 0.2.1-rc.2** source with **Cordis 4.0.5** and **Schemastery 3.18.5**.
+Targets official DSH **0.2.2-rc.3, rc.4, and rc.5** with Cordis 4.1.0 and Schemastery 3.19.0, plus **0.2.1-rc.2** with Cordis 4.0.5 and Schemastery 3.18.5.
 
 Standard DSH can already embed web pages and read them. This adapter adds a DeepSeek sign-in profile that survives restarts, downloads checked for origin and redirects, an official-resource policy, the API Keys platform page, and a flag that tells the plugin these features are ready. Other sidebar web pages behave as before.
 
 ## Build from source
 
-1. Obtain the [pinned DSH rc.2 source](https://github.com/deepseek-ai/deepseek-harness/tree/687f282e8625c6b8d11ff58211a90524be2e4317) and use an independent source copy you own. Do not target an installed application or shared source cache.
+1. Obtain the [pinned DSH source](https://github.com/deepseek-ai/deepseek-harness/tags) matching the plugin and use an independent source copy you own.
 2. Run from this plugin's directory:
 
    ```bash

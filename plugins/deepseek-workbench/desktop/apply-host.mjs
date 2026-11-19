@@ -1,14 +1,13 @@
 import { readFile, writeFile, realpath } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
-
-const hostTargets = { '0.2.1-rc.2': { cordisVersion: '4.0.5', schemaVersion: '3.18.5' } };
+import { hostTargets } from './targets.mjs';
 
 if (!process.argv[2]) throw new Error('Usage: node desktop/apply-host.mjs /absolute/owned/dsh-source');
 const root = await realpath(resolve(process.argv[2]));
 if (root.includes('.app/') || root.endsWith('.app') || root.includes('/oh-my-dsh/.cache/dsh-source/')) throw new Error('Workbench requires an independent owned source copy');
 const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const target = hostTargets[manifest.version];
-if (!target || manifest.name !== '@deepseek-ai/dsh-root') throw new Error('Workbench requires the actual DSH 0.2.1-rc.2 source');
+if (!target || manifest.name !== '@deepseek-ai/dsh-root') throw new Error(`Workbench requires matching DSH source (${Object.keys(hostTargets).join(', ')})`);
 for (const [name, version] of [['cordis', target.cordisVersion], ['schemastery', target.schemaVersion]]) {
   if (JSON.parse(await readFile(join(root, 'vendor', name, 'package.json'), 'utf8')).version !== version) throw new Error(`Workbench framework mismatch: ${name}`);
 }

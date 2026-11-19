@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.4.1-dsh.0.2.2-rc.3"><img alt="OpenCU 2.4.1" src="https://img.shields.io/badge/release-2.4.1-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.4.2-dsh.0.2.2-rc.3"><img alt="OpenCU 2.4.2" src="https://img.shields.io/badge/release-2.4.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub 累计下载" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20total%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>
@@ -22,17 +22,19 @@
 
 ## 快速开始
 
-**需要：** DSH **0.2.2-rc.3**，Node.js **24.9.0+**。已经装了 OMD 的话不用再装，OMD 里已经带了 OpenCU。
+**需要：** DSH **0.2.2-rc.3 或 rc.5**，Node.js **24.9.0+**。已经装了 OMD 的话不用再装，OMD 里已经带了 OpenCU。
 
 ### 1. 安装
 
 在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
+使用 **rc.5** 时，复制 [rc.5 安装包链接](https://github.com/gulagala001/opencu/releases/download/v2.4.3-dsh.0.2.2-rc.5/opencu-2.4.3-dsh.0.2.2-rc.5.tgz)（[rc.5 校验文件](https://github.com/gulagala001/opencu/releases/download/v2.4.3-dsh.0.2.2-rc.5/SHA256SUMS)）。使用 **rc.3** 时，复制下面的地址。
+
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.4.1-dsh.0.2.2-rc.3/opencu-2.4.1-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/opencu-2.4.2-dsh.0.2.2-rc.3.tgz
 ```
 
-等手头的任务跑完，按提示完整重启 DSH，原来的设置和会话都还在。命令行安装、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.1-dsh.0.2.2-rc.3/SHA256SUMS)。
+等手头的任务跑完，按提示完整重启 DSH，原来的设置和会话都还在。命令行安装、升级和卸载见[安装指南](docs/install.md)，校验文件：[rc.3 SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/SHA256SUMS)。
 
 ### 2. 先试一件事
 

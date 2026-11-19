@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.4.1-dsh.0.2.2-rc.3"><img alt="OpenCU 2.4.1" src="https://img.shields.io/badge/release-2.4.1-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/opencu/releases/tag/v2.4.2-dsh.0.2.2-rc.3"><img alt="OpenCU 2.4.2" src="https://img.shields.io/badge/release-2.4.2-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/releases"><img alt="GitHub total downloads" src="https://img.shields.io/github/downloads/gulagala001/opencu/total?style=flat-square&amp;label=GitHub%20total%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/opencu/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/opencu?style=flat-square&amp;color=0969da"></a>
@@ -22,17 +22,19 @@
 
 ## Quick start
 
-**Requires:** DSH **0.2.2-rc.3** and Node.js **24.9.0+**. If you already use OMD, skip this: OMD includes OpenCU.
+**Requires:** DSH **0.2.2-rc.3 or rc.5** and Node.js **24.9.0+**. If you already use OMD, skip this: OMD includes OpenCU.
 
 ### 1. Install
 
 In DSH, open **Plugins → Add plugin** and paste:
 
+For **rc.5**, copy the [rc.5 package URL](https://github.com/gulagala001/opencu/releases/download/v2.4.3-dsh.0.2.2-rc.5/opencu-2.4.3-dsh.0.2.2-rc.5.tgz) ([rc.5 checksums](https://github.com/gulagala001/opencu/releases/download/v2.4.3-dsh.0.2.2-rc.5/SHA256SUMS)). For **rc.3**, use the URL below.
+
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.4.1-dsh.0.2.2-rc.3/opencu-2.4.1-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/opencu-2.4.2-dsh.0.2.2-rc.3.tgz
 ```
 
-When your current task finishes, fully restart DSH when prompted. Your settings and conversations stay as they were. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.1-dsh.0.2.2-rc.3/SHA256SUMS).
+When your current task finishes, fully restart DSH when prompted. Your settings and conversations stay as they were. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [rc.3 SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/SHA256SUMS).
 
 ### 2. Try it
 

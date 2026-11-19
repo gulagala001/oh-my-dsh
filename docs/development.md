@@ -64,6 +64,12 @@ macOS 的 `node scripts/launch-macos.mjs` 使用默认数据目录和端口，�
 
 ## 构建和职责
 
+### 准备 Windows 桌面构建
+
+用当前 OMD 源码构建插件包，然后用 `node scripts/prepare-desktop-source.mjs <固定 DSH 检出目录> <OMD 安装包.tgz> <新构建目录>` 准备独立的桌面源码。脚本锁定宿主版本，应用 OpenCU 和 Workbench 适配，并将 OMD 加入桌面运行时和新 profile 的默认包。桌面构建时一并准备匹配的 Chromium 文件。
+
+在 Windows x64 构建机上按对应 DSH 源码的打包流程构建，设置 OMD 的应用标识 `io.github.gulagala001.oh-my-dsh`，并使用 OMD 自己的签名和发行配置。
+
 产品边界、独立发行与共装行为见[插件架构](architecture.md)。发布包保留必要源码、对应编译资源与来源声明；普通用户从固定 Release 安装，源码主线不直接充当安装包。
 
 

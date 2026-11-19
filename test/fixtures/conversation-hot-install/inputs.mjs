@@ -3,15 +3,16 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { publishedTar } from './published-tar.mjs';
 import { clientComponents } from './client-identity.mjs';
+import { hostTarget } from '../../../scripts/host-targets.mjs';
+import source from '../../../package.json' with { type: 'json' };
 
 // Deliberately narrower than the legacy non-CU fixture's parent-of-repo root.
 export const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
-export const hostVersion = '0.2.1-rc.2';
-export const pins = { desktop: { version: hostVersion, sourceCommit: '687f282e8625c6b8d11ff58211a90524be2e4317' },
-  plugin: { name: 'oh-my-dsh', version: JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url))).version } };
+export const hostVersion = source.engines.dsh;
+export const pins = { desktop: { version: hostVersion, sourceCommit: hostTarget(hostVersion).commit },
+  plugin: { name: source.name, version: source.version } };
 export const inside = (root, path) => path === root || path.startsWith(root + sep);
 export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sdkNames = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host', '@deepseek-ai/dsh-app-boot',
@@ -79,9 +80,8 @@ export async function desktopInputs(env = process.env, platform = process.platfo
   assert(helperModes.length > 0); for (const row of helperModes) assert.equal(row.mode, '0755', 'Frozen helper mode');
   const files = new Map([...members].map(([name, row]) => [name, row.bytes]));
   const manifest = JSON.parse(files.get('package/package.json'));
-  const source = JSON.parse(await readFile(new URL('../../../package.json', import.meta.url)));
   assert.equal(manifest.name, 'oh-my-dsh'); assert.equal(manifest.version, source.version);
-  assert.match(manifest.version, /^0\.2\.1-rc\.2\.omd\.\d+\.\d+\.\d+$/);
+  assert.equal(manifest.version.split('.omd.')[0], hostVersion, 'OMD archive host version');
   assert.equal(manifest.engines.dsh, hostVersion);
   assert.equal(manifest.devDependencies['@deepseek-ai/dsh'], hostVersion);
   assert.deepEqual(manifest.dsh.client.inject, source.dsh.client.inject);
@@ -92,7 +92,7 @@ export async function desktopInputs(env = process.env, platform = process.platfo
   for (const file of ['lib/client.js', ...manifest.dsh.bundle.patch.map(path => path.replace(/^\.\//, ''))])
     assert(files.get('package/' + file)?.length, 'Missing frozen bundle member: ' + file);
   const releases = JSON.parse(files.get('package/release-manifest.json'));
-  assert(releases.releases.some(row => row.version === manifest.version), 'Current rc.2 release identity');
+  assert(releases.releases.some(row => row.version === manifest.version), 'Current OMD release identity');
   return { root, executablePath: paths.OMD_DESKTOP_EXECUTABLE, appRoot: paths.OMD_DESKTOP_APP_ROOT,
     archive: paths.OMD_PLUGIN_ARCHIVE, sha256, helperModes, executableSha256: digest(await readFile(executable)), manifest,
     clientSha256: digest(files.get('package/lib/client.js')), sdkNames, hostVersion,

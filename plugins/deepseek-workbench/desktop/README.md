@@ -2,13 +2,13 @@
 
 [English](README_EN.md) · [兼容与能力说明](../docs/desktop-host.md)
 
-适配 **DSH 0.2.1-rc.2**、Cordis **4.0.5**、Schemastery **3.18.5** 的官方源码。
+支持 DSH **0.2.2-rc.3、rc.4、rc.5**（Cordis 4.1.0、Schemastery 3.19.0）和 **0.2.1-rc.2**（Cordis 4.0.5、Schemastery 3.18.5）的官方源码。
 
 标准 DSH 已能内嵌网页和读取页面。这份适配再加上：DeepSeek 专用、跨重启保留的登录 profile，核对来源和重定向的下载，官网资源策略，API Keys 平台页，以及告诉插件这些能力已就绪的声明。其他侧栏网页的行为不变。
 
 ## 从源码构建
 
-1. 获取并解压 [DSH rc.2 固定源码](https://github.com/deepseek-ai/deepseek-harness/tree/687f282e8625c6b8d11ff58211a90524be2e4317)，使用自己拥有的独立副本。不要指定已安装应用或共享源码缓存。
+1. 获取与插件匹配的 [DSH 固定发行源码](https://github.com/deepseek-ai/deepseek-harness/tags)，使用自己拥有的独立副本。
 2. 从本插件目录应用适配：
 
    ```bash

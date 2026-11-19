@@ -1,7 +1,5 @@
 # OpenCU 2.4.2 · DSH 0.2.2-rc.5
 
-**未发布 / Unreleased.**
-
 [中文](#zh-242) · [English](#en-242)
 
 <a id="zh-242"></a>
@@ -27,6 +25,34 @@
 DSH **0.2.2-rc.5** · Node.js **24.9.0+**
 
 [固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.5/opencu-2.4.2-dsh.0.2.2-rc.5.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.5/SHA256SUMS)
+
+---
+
+# OpenCU 2.4.3 · DSH 0.2.2-rc.5
+
+[中文](#zh-243) · [English](#en-243)
+
+<a id="zh-243"></a>
+
+## 中文
+
+### 体验优化
+
+- 在 DSH rc.5 上从源码安装或构建 OpenCU 时，开发依赖和校验流程会使用与安装包一致的宿主版本。
+
+<a id="en-243"></a>
+
+## English
+
+### Improvements
+
+- Source installs and builds for DSH rc.5 use the same host dependencies as the release package.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.5** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.4.3-dsh.0.2.2-rc.5/opencu-2.4.3-dsh.0.2.2-rc.5.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.3-dsh.0.2.2-rc.5/SHA256SUMS)
 
 ---
 

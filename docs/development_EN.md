@@ -64,6 +64,12 @@ Closing the browser does not stop the background service. Use Ctrl+C to stop a f
 
 ## Build Responsibilities
 
+### Prepare the Windows desktop build
+
+Build the OMD plugin archive, then run `node scripts/prepare-desktop-source.mjs <pinned DSH checkout> <OMD archive.tgz> <new build directory>`. This applies the matching OpenCU and Workbench desktop adapters and includes OMD in the packaged runtime and in the initial desktop profile. Desktop packaging prepares matching Chromium resources.
+
+Run the pinned DSH packaging flow on a Windows x64 builder, with the application ID `io.github.gulagala001.oh-my-dsh` and OMD's signing and release configuration.
+
 See [plugin architecture](architecture_EN.md) for product boundaries, independent releases and coinstallation. Fixed packages retain required source, matching compiled resources and provenance. End users install fixed Release assets; the source branch is not an installation package.
 
 

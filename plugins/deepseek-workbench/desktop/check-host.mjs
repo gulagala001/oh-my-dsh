@@ -2,14 +2,14 @@
 import { readFile, realpath } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
+import { hostTargets } from './targets.mjs';
 
 const [source, sdk, mode] = process.argv.slice(2);
 if (mode !== undefined && mode !== '--syntax-only') throw Error('Unknown check mode');
 if (!source || !sdk) throw Error('Usage: node desktop/check-host.mjs /absolute/patched-dsh-source /absolute/toolchain-with-node_modules');
 const root = await realpath(resolve(source)), toolchain = await realpath(resolve(sdk));
-for (const [file, version] of [['package.json', '0.2.1-rc.2']]) {
-  if (JSON.parse(await readFile(join(root, file))).version !== version) throw Error('Expected DSH 0.2.1-rc.2');
-}
+const host = JSON.parse(await readFile(join(root, 'package.json'))).version;
+if (!Object.hasOwn(hostTargets, host)) throw Error(`Unsupported DSH source version: ${host}`);
 for (const [name, version] of [['typescript', '6.0.3'], ['electron', '44.7.0']]) {
   if (JSON.parse(await readFile(join(toolchain, 'node_modules', name, 'package.json'))).version !== version) throw Error(`Expected ${name} ${version}`);
 }
@@ -25,7 +25,7 @@ for (const file of files) {
 }
 if (mode === '--syntax-only') {
   if (syntax.length) throw Error(ts.formatDiagnosticsWithColorAndContext(syntax, { getCanonicalFileName: file => file, getCurrentDirectory: () => root, getNewLine: () => '\n' }));
-  console.log(JSON.stringify({ status: 'passed', host: '0.2.1-rc.2', syntax: files, scope: 'Adapter TypeScript syntax only; no semantic typecheck or desktop build' }, null, 2));
+  console.log(JSON.stringify({ status: 'passed', host, syntax: files, scope: 'Adapter TypeScript syntax only; no semantic typecheck or desktop build' }, null, 2));
   process.exit(0);
 }
 const parsed = ts.parseJsonConfigFileContent({ compilerOptions: config.config.compilerOptions }, ts.sys, root);
@@ -40,4 +40,4 @@ const diagnostics = [...syntax, ...ts.getPreEmitDiagnostics(program)];
 if (diagnostics.length) {
   process.stderr.write(ts.formatDiagnosticsWithColorAndContext(diagnostics, { getCanonicalFileName: file => file, getCurrentDirectory: () => root, getNewLine: () => '\n' }));
   process.exitCode = 1;
-} else console.log(JSON.stringify({ status: 'passed', host: '0.2.1-rc.2', typescript: '6.0.3', electron: '44.7.0', semantic: semanticFiles, syntax: files, scope: 'Guest boundary semantic check and adapter source syntax; not a complete desktop build' }, null, 2));
+} else console.log(JSON.stringify({ status: 'passed', host, typescript: '6.0.3', electron: '44.7.0', semantic: semanticFiles, syntax: files, scope: 'Guest boundary semantic check and adapter source syntax; not a complete desktop build' }, null, 2));

@@ -79,14 +79,16 @@
       "sha256": {
         "package.json": "43052b5f47dca2a148e91609a81fe77c838c1613ee1a85ec60c12df02790ba12",
         "pnpm-lock.yaml": "dd5c510f3f3c0f2b3b6440a0cd5e88b8295d2b188e0119971f529a159cfafccf",
-        "pnpm-workspace.yaml": "ffbd28581ab35da3922d598355f58588704f7210b43316a0c52638e2881fd6b9"
+        "pnpm-workspace.yaml": "ffbd28581ab35da3922d598355f58588704f7210b43316a0c52638e2881fd6b9",
+        "package-lock.json": "2d7142389274be72ae85999edd23362abfdb5dce9d351f300c975d36875cff71"
       }
     },
     "022rc5": {
       "sha256": {
         "package.json": "0ab5a137af53ad823a6974d575bbf06150e1297da49cf26adc5f3dc87debc497",
         "pnpm-lock.yaml": "65535e3a89caede5d94b8e44c1ecf8bb90b3cf5bc2b6241ccefea5815551b2e0",
-        "pnpm-workspace.yaml": "3b75812571f9ef566aff670e3c6139e10c575d00bb8cae7cf5b4745f660e8d09"
+        "pnpm-workspace.yaml": "3b75812571f9ef566aff670e3c6139e10c575d00bb8cae7cf5b4745f660e8d09",
+        "package-lock.json": "a3b6d27574b86ce208b38a8144e9260ce77d441dd6c528fbe54a9a2fa6dbcdc1"
       }
     }
   },

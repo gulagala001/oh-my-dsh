@@ -10,13 +10,13 @@
     "README.md": "6be88f93d0f3837947d97130816a4b66064cb8bf017e7c90ea495639a327a604",
     "THIRD_PARTY_NOTICES.md": "fd3a9f2e63b55321f2893f6da29508753dff5467bd72e11cd5e31f93bcf35e6d",
     "cordis.patch.yml": "f5e8623847bf4d11754487b9b74415a8588d22de54c3b858c5ba90b87de4bca6",
-    "desktop/apply-host.mjs": "a45a952b98f9fa13441868e5499dbd4c337748a05cc6fd12f07aa6c68e5010b7",
-    "desktop/check-host.mjs": "10a624d9be20bdf7a163421462a80124086f4d9013efe83151d940a983285d66",
+    "desktop/apply-host.mjs": "7fb3919b13243a8da478037c41f6f5356fd20997a895a30fb1fa8fca9e2789c4",
+    "desktop/check-host.mjs": "4a9324e6424245a046a8d6f7eeee669171d7f7674ffaa3c5c1bc2fbfbf1ae303",
     "desktop/deepseek-browser-policy.ts": "8a1e48cf3b053fd653e06dbf75ec7973c3ce0548598d858851ae3fe947a39067",
-    "desktop/README_EN.md": "d6570ad356d9ebe39aa39f67baa57d514ec2902d94d73af07951831fc7d19bc1",
-    "desktop/README.md": "09ea837b746d07f2ea276e6d9b2ca9b64082d3abf9d4b8b7628c90c5bfec6747",
-    "docs/desktop-host_EN.md": "2aa9272be6b33f4a7430722551a12052b42afc5d38b60937ba7762b438ef412b",
-    "docs/desktop-host.md": "a0bff28e552753b896ccf20f08670fb9fe5d3625b9a889746bb9c7667847ddcd",
+    "desktop/README_EN.md": "8be4a34339a087b6341c8c45f13c4d88627bc5e374f0d3c51265a94918b1c4d3",
+    "desktop/README.md": "cf916538bb59dc79db4ebfbb08ad934046d0f5a59dd73a2b54d7ee781fd37a0f",
+    "docs/desktop-host_EN.md": "b45d8be918fdca179d5ec425730286ac4947fd0ba135b4bc9fb4794325c748f6",
+    "docs/desktop-host.md": "093cf5fdb95e626f5423c67612d6b3baae4a4705b8c54c381e31fc25ad367c6c",
     "docs/images/temporary-chat.png": "d01c44e39d7cc438725bebeb3940bd0489cad10788a82e403429698c071b4b84",
     "docs/install_EN.md": "e47f27681cdb5d79fd13906de53a14fdb09528782e8bd66635ceb2150285918e",
     "docs/install.md": "c78e75781dc31682064b4d782e3599f396c58619ff94f6e27b57f8b6e1ccb0e4",
@@ -49,7 +49,7 @@
     "src/import.mjs": "20520bde14ac07877b85b5a16c5b133a33d9c587999ae5b1c1346014e46edc3b",
     "src/index.mjs": "a072e4b62f7f6b228578d52e4188b0fa7f60dd73fb69c22451409429de635355",
     "src/client/temporary-ownership.mjs": "5865feb6367aac0803ae5707ffd99e92326f881124017e1a04d26defc18aaf0a",
-    "src/client/window-owner.mjs": "3e4296e26b458740b1511767e24de682ed5855ac9415659bac1e6d37a97a6a25"
-  },
-  "buildHost": "0.2.2-rc.5"
+    "src/client/window-owner.mjs": "3e4296e26b458740b1511767e24de682ed5855ac9415659bac1e6d37a97a6a25",
+    "desktop/targets.mjs": "884d324c3f9e7bd06447d83254bd5a98c4136d664a668b994021b952fe5bde16"
+  }
 }
