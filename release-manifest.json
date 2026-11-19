@@ -4,11 +4,12 @@
     {
       "version": "0.2.2-rc.5.omd.1.9.0",
       "severity": "normal",
-      "unpublished": true,
+      "unpublished": false,
       "title": "Oh My DSH 1.9.0",
       "notes": [
         "同一安装包可跨宿主版本启用。首次操作网页时自动选择可用浏览器。"
-      ]
+      ],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.5.omd.1.9.0"
     },
     {
       "version": "0.2.2-rc.5.omd.1.7.2",

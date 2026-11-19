@@ -15,7 +15,7 @@ test('OPS compatibility recognizes pure PTC and reviewed controls, but rejects d
   assert.equal(isPtc(assembly(['run_code'], '')), false);
 });
 
-test('OPS installation is pinned per full host, and incompatible installed versions cannot be enabled', async t => {
+test('OPS prefers the matching build, falls back to a pinned archive and enables existing installations', async t => {
   const entry = recommendedPlugins.find(p => p.id === 'dsh-ops');
   for (const host of ['0.2.1-rc.1', '0.2.1-rc.2', '0.2.1-rc.3']) {
     const plugin = resolveRecommendedPlugin(entry, host);
@@ -25,7 +25,11 @@ test('OPS installation is pinned per full host, and incompatible installed versi
     assert.ok(pluginInstallSpec(plugin, plugin.review.version).includes('/releases/download/' + plugin.review.releaseTag + '/'));
     assert.throws(() => pluginInstallSpec(plugin, '9.0.0'));
   }
-  for (const host of [null, '0.2.1', '0.2.1-rc.4', '0.2.2']) assert.ok(resolveRecommendedPlugin(entry, host).unavailable);
+  for (const [host, expected] of [[null, '0.2.2-rc.5'], ['0.2.1', '0.2.1-rc.5'], ['0.2.1-rc.4', '0.2.1-rc.5'], ['0.2.2', '0.2.2-rc.5']]) {
+    const plugin = resolveRecommendedPlugin(entry, host);
+    assert.equal(plugin.unavailable, null);
+    assert.equal(plugin.review, entry.hostBuilds[expected]);
+  }
   const rc3 = entry.hostBuilds['0.2.1-rc.3'];
   for (const releaseVersion of ['0.2.1-rc.2.omd.1.0.1', '0.2.1-rc.3.omd.latest', '0.2.1-rc.3.ops.1.0.1']) {
     const altered = { ...entry, hostBuilds: { '0.2.1-rc.3': { ...rc3, releaseVersion, releaseTag: 'v' + releaseVersion } } };
@@ -38,8 +42,7 @@ test('OPS installation is pinned per full host, and incompatible installed versi
     getConfig: () => ({}), saveConfig() {} });
   t.after(() => service.close());
   await service.start('dsh-ops', 'enable');
-  assert.match((await service.status()).plugins[0].error, /兼容目录|原生运行时/);
-  assert.deepEqual(changes, []);
+  assert.deepEqual(changes, [true]);
   await service.start('dsh-ops', 'disable');
-  assert.deepEqual(changes, [false]);
+  assert.deepEqual(changes, [true, false]);
 });

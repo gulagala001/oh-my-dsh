@@ -2,13 +2,13 @@
 
 [中文](plugin-compatibility.md) · [Docs](README_EN.md) · [Install](install_EN.md) · [Plugin structure](architecture_EN.md)
 
-OMD keeps DSH's native tools, skills, sessions and third-party plugin entries. **Use plugins that match your full DSH version.**
+OMD keeps DSH's native tools, skills, sessions and third-party plugin entries.
 
-## Versions must match
+## Installation and coexistence
 
-OMD 1.8.1 is for DSH 0.2.2-rc.5, with OpenCU built in. Older DSH versions use their own older packages. IUI, OMAA and other separate projects also need the build for your DSH version.
+OMD 1.9.0 uses one package across DSH versions. DSH 0.2.2 builds rc.3, rc.4 and rc.5 can all use it. You can also try the same package on other versions.
 
-Do not overwrite an install with an old package or by turning off version checks. Back up your data first and keep your settings, accounts and third-party sources.
+For other plugins, follow their installation instructions.
 
 ## Who owns the tools
 
@@ -45,17 +45,17 @@ Workflow, Rewind, DeepSeek Workbench, Persona, Extensions, OpenCU and theme mana
 
 ## Third-party catalog
 
-**Settings → Oh My DSH → Third-party** lists each plugin's purpose, original author, fixed source, supported DSH version, SHA-256 and status. Entries without a matching DSH version, a package or a release show no install button. Installs use the current profile's plugin manager; the desktop app uses itself or its bundled command line.
+**Settings → Oh My DSH → Third-party** lists each plugin's purpose, original author, fixed source, supported DSH version, SHA-256 and status. The catalog prefers a matching build and offers an existing fixed package for other host versions. Installs use the current profile's plugin manager; the desktop app uses itself or its bundled command line.
 
 Current catalog: Billion Context 0.1.202, dsh-ops 0.1.0, Subscription Login 0.9.12, OpenDesign 0.1.0-omd.1.0.0, Intent assistant 0.3.4, Plugin Market 1.70.3, Infinite Gen 4 0.4.0, Status Rotator 0.38.0, DSH × Blender 2.6.1 and Balance Whale Widget 0.4.2. Set up accounts, Blender connections and paid requests as each plugin requires.
 
 - Older or incompatible installs show an **Update** button.
-- Automatic updates are off by default and only handle installed, enabled catalog entries. They never cross DSH versions, approve scripts or restart.
+- Automatic updates are off by default and only handle installed, enabled catalog entries. You retain control of build approvals and restarts.
 - dsh-ops only installs registered compatibility builds, never upstream latest. If you install another version from a market or the command line, check it yourself.
 
 ## Plugin install pre-check
 
-When you install, update or enable a plugin from the DSH Plugins page, a tool call or the desktop dsh-market, OMD first tries it in a temporary DSH. The plugin has to appear in the plugin list and load; blank pages, script errors and runtime errors are stopped. If it takes too long, it is marked "pre-check incomplete". It checks that the plugin starts properly, not that every feature works.
+DSH installs plugins directly by default. If you enable the pre-check in Settings → Oh My DSH → About, when you install, update or enable a plugin from the DSH Plugins page, a tool call or the desktop dsh-market, OMD first tries it in a temporary DSH. The plugin has to appear in the plugin list and load; blank pages, script errors and runtime errors are stopped. If it takes too long, it is marked "pre-check incomplete". It checks that the plugin starts properly, not that every feature works.
 
 - The pre-check uses the plugin code and enabled state you selected and copies no third-party private settings or accounts, so plugins that need external services may only show "incomplete". No API key is needed.
 - If first launch shows onboarding it continues through it; going straight to the main screen also counts as normal.

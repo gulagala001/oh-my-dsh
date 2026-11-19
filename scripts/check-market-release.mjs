@@ -37,9 +37,13 @@ export function catalogEntry(source, target) {
     metadataUrl: new URL('metadata.json', parsed).href };
 }
 
+function coversHost(target, host) {
+  return typeof host === 'string' && (host === target.hostVersion || target.verifiedHosts?.includes(host) === true);
+}
+
 export function marketState({ target, entry, previousHost, liveEntry, pending = [], catalogAvailable = true }) {
   if (entry.tarball !== target.url) {
-    if (previousHost !== target.hostVersion) return 'needs-host-review';
+    if (!coversHost(target, previousHost)) return 'needs-host-review';
     return pending.length ? 'awaiting-review' : 'needs-entry-update';
   }
   if (!catalogAvailable) return 'catalog-unavailable';
@@ -57,6 +61,7 @@ export async function inspectMarketRelease(pkg, { json, text, now = () => new Da
     || metadata.hostVersion !== target.hostVersion || metadata.file !== target.filename || metadata.filename !== target.filename
     || !/^[a-f0-9]{40}$/.test(metadata.sourceCommit ?? '') || !/^[a-f0-9]{64}$/.test(metadata.sha256 ?? '')
     || archive.digest !== 'sha256:' + metadata.sha256) throw Error('Release metadata, exact host and asset digest do not agree');
+  if (Array.isArray(metadata.verifiedHosts)) target.verifiedHosts = metadata.verifiedHosts.filter(host => typeof host === 'string');
   const entrySource = await text(`https://raw.githubusercontent.com/${catalogRepository}/main/${target.entryPath}`);
   const entry = catalogEntry(entrySource, target);
   let previousHost = target.hostVersion;
@@ -70,7 +75,7 @@ export async function inspectMarketRelease(pkg, { json, text, now = () => new Da
     if (!Array.isArray(catalog.plugins)) throw Error('Invalid published catalog');
   } catch (error) { catalogError = error.message; }
   const pending = [];
-  if (entry.tarball !== target.url && previousHost === target.hostVersion) {
+  if (entry.tarball !== target.url && coversHost(target, previousHost)) {
     const query = `repo:${catalogRepository} is:pull-request is:open "${pkg.name}"`;
     const search = await json(`https://api.github.com/search/issues?q=${encodeURIComponent(query)}&per_page=100`);
     if (!Array.isArray(search.items) || search.incomplete_results || !Number.isSafeInteger(search.total_count)
@@ -92,7 +97,7 @@ export async function inspectMarketRelease(pkg, { json, text, now = () => new Da
   return { schema: 1, checkedAt: now(), status, release: release.html_url, target,
     entry: { url: `https://github.com/${catalogRepository}/blob/main/${target.entryPath}`, tarball: entry.tarball, hostVersion: previousHost },
     catalog: { url: catalogUrl, updated: catalog?.updated ?? null, tarball: liveEntry?.tarball ?? null, version: liveEntry?.version ?? null, error: catalogError },
-    pending, guidelines, proposedEntry: previousHost === target.hostVersion ? entry.proposedEntry : null };
+    pending, guidelines, proposedEntry: coversHost(target, previousHost) ? entry.proposedEntry : null };
 }
 
 async function readPublic(url) {
@@ -122,7 +127,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       await writeFile(path, result.proposedEntry);
     }
   }
-  const summary = `Market installation: **${result.status}**\n\nRelease: ${result.release}\n\nExact DSH: ${result.target.hostVersion}\n\nCatalog entry: ${result.entry.url}\n\n${result.pending.map(pr => `Existing PR: ${pr.url}`).join('\n')}\n\nReview the current [contribution rules](${guidelines}) before any external write. No PR or comment is created by this check.\n`;
+  const summary = `Market installation: **${result.status}**\n\nRelease: ${result.release}\n\nBuild SDK: ${result.target.hostVersion}\n\nCatalog entry: ${result.entry.url}\n\n${result.pending.map(pr => `Existing PR: ${pr.url}`).join('\n')}\n\nReview the current [contribution rules](${guidelines}) before any external write. No PR or comment is created by this check.\n`;
   if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, summary);
   if (process.env.GITHUB_ACTIONS && result.status !== 'installation-synced') console.log(`::warning::Market installation state: ${result.status}; see the release job summary and market-status.json`);
   console.log(JSON.stringify(result, null, 2));

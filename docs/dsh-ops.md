@@ -10,7 +10,7 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| DSH | 0.2.2-rc.5，每个 DSH 版本用各自的安装包 |
+| DSH | 0.2.2-rc.5，优先使用对应宿主的构建 |
 | 平台 | Windows x64、Linux x64、macOS Apple Silicon |
 | Shell | Linux／macOS 用本机 Bash；Windows 用随包的可选 Bash，PowerShell 由 DSH 管理 |
 
@@ -20,13 +20,13 @@ Intel Mac、Linux ARM64、Windows ARM64 没有安装包。
 
 ## 安装
 
-在 **设置 → Oh My DSH → 第三方 → dsh-ops** 打开开关即可。OMD 会按你的 DSH 版本和平台选对应的安装包，并核对 SHA-256；版本或平台不支持时不会显示安装入口。
+在 **设置 → Oh My DSH → 第三方 → dsh-ops** 打开开关即可。OMD 会按你的 DSH 版本和平台选对应的安装包，并核对 SHA-256；其他 DSH 版本可尝试现有构建，安装包需要提供当前平台的原生组件。
 
 手动安装时，把对应的安装包交给目标 profile 的插件管理：桌面版用应用自带的命令行，网页版用它配套的命令行。见[安装指南](install.md)。
 
 | DSH | 安装包 | 校验 |
 | --- | --- | --- |
-| 0.2.2-rc.5 | [dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/SHA256SUMS) |
+| 0.2.2-rc.5 | [dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/SHA256SUMS) |
 <!-- history -->
 | 0.2.2-rc.4 | [dsh-ops-0.2.2-rc.4.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.8.0/dsh-ops-0.2.2-rc.4.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.8.0/SHA256SUMS) |
 | 0.2.2-rc.3 | [dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.8.0/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.8.0/SHA256SUMS) |

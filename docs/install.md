@@ -2,7 +2,7 @@
 
 [English](install_EN.md) · [首页](../README.md) · [升级](upgrade.md) · [首次使用](getting-started.md)
 
-**需要：** DSH **0.2.2-rc.5**，Node.js **24.9.0+**。OMD 已经内置 OpenCU，不用再单独装。还没有 DSH 的话，先装 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)。
+**需要：** DSH 和 Node.js **24.9.0+**。DSH 0.2.2 系列的 rc.3、rc.4、rc.5 都可以使用同一个包，其他版本也可以直接尝试。OMD 已经内置 OpenCU，不用再单独装。还没有 DSH 的话，先装 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)。
 
 下面两种方式选一种。已经装过 OMD 的，先看[升级](upgrade.md)备份数据。
 
@@ -15,14 +15,14 @@
 3. 点左侧 **插件**，再点右上角 **＋ 添加插件**，粘贴：
 
    ```text
-   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/oh-my-dsh-0.2.2-rc.5.omd.1.8.1.tgz
+   https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/oh-my-dsh-0.2.2-rc.5.omd.1.9.0.tgz
    ```
 
 4. 点 **安装**，装完确认 Oh My DSH 已启用。
 5. 完整退出再打开桌面版；网页版要重启原来的 Web 服务，只刷新网页不算。
 6. 新建会话，预设选 **Oh My DSH**。
 
-安装包名里前半段是 DSH 版本，`omd.` 后面的才是 OMD 版本。请用上面的固定安装包，不要直接装仓库的 main 分支，也不用下载 Source code 或 host-adapters.zip。校验文件：[SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/SHA256SUMS)。
+安装包名前半段记录构建时的 DSH SDK 版本，`omd.` 后面的才是 OMD 版本。请用上面的固定安装包，不要直接装仓库的 main 分支，也不用下载 Source code 或 host-adapters.zip。校验文件：[SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/SHA256SUMS)。
 
 安装报错时先核对 DSH 版本。提示"构建脚本未批准"时，看[安装脚本处理](upgrade.md#build-approval)。
 
@@ -35,7 +35,7 @@
 ```text
 请在这台电脑现有的 DeepSeek Harness（DSH）里安装或升级 Oh My DSH（OMD）。
 先读 https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md
-确认我用的是桌面版还是网页版、DSH 的完整版本、数据目录（DSH_HOME）和 profile，优先选为这个 DSH 构建的 OMD 包。如果我提供了通用安装包，直接通过宿主安装，不必更换 DSH 版本。
+确认我用的是桌面版还是网页版、DSH 的完整版本、数据目录（DSH_HOME）和 profile，通过这个宿主安装指南中的通用包。
 保留原来的模型配置、密钥、会话、附件、设置和其他插件，先备份已有数据；有任务在跑时先告诉我，不要强行中断。
 用这个 DSH 自带的"插件 → 添加插件"或配套的命令行安装，不要升级或降级 DSH。OMD 已内置 OpenCU，不要重复安装。
 装好后完整重启 DSH，确认 OMD 已启用、新会话能选 Oh My DSH、原来的数据和插件都在，最后告诉我实际版本和备份位置。
@@ -65,7 +65,7 @@ OMD 默认让 AI 直接读写文件、运行命令，不逐条询问；你在 pr
 
 ```sh
 dsh --version
-dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/oh-my-dsh-0.2.2-rc.5.omd.1.8.1.tgz
+dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/oh-my-dsh-0.2.2-rc.5.omd.1.9.0.tgz
 ```
 
 然后按原来的方式启动，数据目录和端口都不变。
@@ -73,7 +73,7 @@ dsh plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/d
 第一次用网页版（Windows 请用 PowerShell 7）：
 
 ```sh
-npx --yes @deepseek-ai/dsh@0.2.2-rc.5 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/oh-my-dsh-0.2.2-rc.5.omd.1.8.1.tgz
+npx --yes @deepseek-ai/dsh@0.2.2-rc.5 plugin --profile web add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/oh-my-dsh-0.2.2-rc.5.omd.1.9.0.tgz
 npx --yes @deepseek-ai/dsh@0.2.2-rc.5 --profile web
 ```
 
@@ -83,7 +83,7 @@ macOS 桌面版默认位置的命令行：
 
 ```sh
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" --version
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/oh-my-dsh-0.2.2-rc.5.omd.1.8.1.tgz
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile desktop add https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/oh-my-dsh-0.2.2-rc.5.omd.1.9.0.tgz
 ```
 
 Windows 桌面版建议直接用插件页安装。
@@ -91,6 +91,8 @@ Windows 桌面版建议直接用插件页安装。
 </details>
 
 ## 旧版 DSH
+
+以下历史包供回退使用。
 
 <!-- history -->
 | DSH | OMD 安装包 |
@@ -100,4 +102,4 @@ Windows 桌面版建议直接用插件页安装。
 | 0.2.1-rc.1 | [OMD 0.100.0](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.1-rc.1.omd.0.100.0/oh-my-dsh-0.2.1-rc.1.omd.0.100.0.tgz) |
 <!-- /history -->
 
-其他版本到 [Releases](https://github.com/gulagala001/oh-my-dsh/releases) 找名字以你的 DSH 版本开头的包。装好之后看[首次使用](getting-started.md)。
+其他 DSH 版本也可先试上方的通用包。装好之后看[首次使用](getting-started.md)。

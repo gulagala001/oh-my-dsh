@@ -8,7 +8,7 @@ Find your symptom below. Keep the full error from the first failure; reinstallin
 
 ## Check that OMD is in the right place
 
-1. **Version**: the current version in **Settings → Oh My DSH → About** is the OMD that is running; the latest version is only what is online. Check the DSH version separately. OMD 1.8.1 is for DSH 0.2.2-rc.5.
+1. **Version**: the current version in **Settings → Oh My DSH → About** is the OMD that is running; the latest version is only what is online. Check the DSH version separately. OMD 1.9.0 uses one package across DSH versions. DSH 0.2.2 builds rc.3, rc.4 and rc.5 can all use it. You can also try the same package on other versions.
 2. **Desktop or web**: the desktop app installs into the `desktop` profile, the web version into the profile in its start command, and the two do not share plugins.
 3. **Data directory**: the web default is `.dsh` in your user folder. With `pnpm start` from source it is `data/dsh/` in the repository, profile `oh-my-dsh`, port 3083.
 4. **Fully restart and try once**: wait for tasks to finish, fully quit and reopen the desktop app or restart the web service. Create an Oh My DSH session and send a message; after an upgrade, also open an old session.
@@ -17,7 +17,7 @@ Find your symptom below. Keep the full error from the first failure; reinstallin
 
 ### Check the install source
 
-The repository is `gulagala001/oh-my-dsh` and the package is `oh-my-dsh`. Use the fixed package from the [installation guide](install_EN.md#gui). If the package name, repository or DSH version in the install log does not match, stop and check before updating the wrong target again.
+The repository is `gulagala001/oh-my-dsh` and the package is `oh-my-dsh`. Use the fixed package from the [installation guide](install_EN.md#gui). If the package name or repository in the install log does not match, stop and check before updating the wrong target again.
 
 <a id="by-symptom"></a>
 
@@ -26,7 +26,7 @@ The repository is `gulagala001/oh-my-dsh` and the package is `oh-my-dsh`. Use th
 | Symptom | What to do |
 | --- | --- |
 | `pnpm` not found, or Node is too old | The web version and source need Node.js 24.9.0+ and pnpm. The desktop app has its own runtime; install plugins inside the app and do not replace it with system Node |
-| Install says it is incompatible with DSH | Note the actual DSH version and use the matching package from the [installation guide](install_EN.md). Do not switch to `latest` or skip the version check |
+| Install says it is incompatible with DSH | Install the universal package from the [installation guide](install_EN.md). If it still fails, record the DSH version and first installation error |
 | Build scripts were not approved | See [install scripts were blocked](upgrade_EN.md#build-approval) |
 | Offline check reports missing `node_modules` or a broken manifest | Plain source packages have no offline dependencies. Prepare again on a computer with the same system and architecture, as in [offline install](#offline) |
 | Installed, but OMD does not appear | Check it is in the current profile and enabled, then fully restart. Create a session with Oh My DSH; old sessions keep their preset |

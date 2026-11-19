@@ -10,7 +10,7 @@ This is a compatibility build of upstream **0.4.1**, with DSH adaptation maintai
 
 | Item | Requirement |
 | --- | --- |
-| DSH | 0.2.2-rc.5; each DSH version has its own package |
+| DSH | 0.2.2-rc.5; prefer the build for your host |
 | Platform | Windows x64, Linux x64, macOS Apple Silicon |
 | Shell | Local Bash on Linux / macOS; optional bundled Bash on Windows, with PowerShell managed by DSH |
 
@@ -20,13 +20,13 @@ Document reading covers CSV / TSV, DOCX body paragraphs and the text layer of PD
 
 ## Install
 
-Turn on **Settings → Oh My DSH → Third-party → dsh-ops**. OMD picks the package for your DSH version and platform and checks its SHA-256; unsupported versions or platforms show no install option.
+Turn on **Settings → Oh My DSH → Third-party → dsh-ops**. OMD picks the package for your DSH version and platform and checks its SHA-256; other DSH versions can try an existing build on a platform with the required native runtime.
 
 To install by hand, give the matching package to the target profile's plugin manager: the desktop app's bundled command line, or the web version's matching command line. See the [installation guide](install_EN.md).
 
 | DSH | Package | Checksums |
 | --- | --- | --- |
-| 0.2.2-rc.5 | [dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.8.1/SHA256SUMS) |
+| 0.2.2-rc.5 | [dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/dsh-ops-0.2.2-rc.5.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/SHA256SUMS) |
 <!-- history -->
 | 0.2.2-rc.4 | [dsh-ops-0.2.2-rc.4.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.8.0/dsh-ops-0.2.2-rc.4.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.4.omd.1.8.0/SHA256SUMS) |
 | 0.2.2-rc.3 | [dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.8.0/dsh-ops-0.2.2-rc.3.ops.0.1.0.tgz) | [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.3.omd.1.8.0/SHA256SUMS) |

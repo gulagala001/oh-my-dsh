@@ -80,7 +80,6 @@ export class RecommendedPluginManager {
   }
   unavailable(plugin) {
     plugin = resolveRecommendedPlugin(plugin, this.hostVersion);
-    if (plugin.unavailable && plugin.unavailableHosts && !this.hostVersion) return '未能核实当前 DSH 完整版本，暂不提供安装或更新。已有安装仍可卸载。';
     if (plugin.unavailable && (!plugin.unavailableHosts || plugin.unavailableHosts.includes(this.hostVersion))) return plugin.unavailable;
     if (plugin.supportedRuntimeTargets && !plugin.supportedRuntimeTargets.includes(`${process.platform}-${process.arch}`))
       return `此插件没有当前平台 ${process.platform}-${process.arch} 的原生运行时。支持：${plugin.supportedRuntimeTargets.join('、')}。已有安装仍可卸载。`;
@@ -116,7 +115,7 @@ export class RecommendedPluginManager {
           ...(plugin.hostBuilds ? { hostVersion: this.hostVersion, review: plugin.review ?? null, expectedVersion: plugin.review?.version ?? null, needsBuildSwitch,
             ...(needsBuildSwitch && !record?.error ? { message: this.unavailable(plugin)
               ? '当前安装包面向其他宿主，安装与更新暂未开放；已有界面状态数据将保留。'
-              : `当前安装包面向其他宿主，请点“更新”换成 DSH ${this.hostVersion} 对应的 ${plugin.review.version}；界面状态数据将保留。` } : {}) } : {}),
+              : `已有安装可继续使用，也可点“更新”换成 DSH ${this.hostVersion} 对应的 ${plugin.review.version}；界面状态数据将保留。` } : {}) } : {}),
           ...(bundle?.error ? this.current?.id === plugin.id
             ? { inventoryWarning: pluginManagementError(bundle.error) }
             : { error: this.records.get(plugin.id)?.error || pluginManagementError(bundle.error) } : {}) };
@@ -159,10 +158,6 @@ export class RecommendedPluginManager {
     const present = !!bundle?.installed || bundle?.availability === 'installation';
     if (['enable', 'disable'].includes(action)) {
       if (bundle?.readOnlyReason) throw Error('此插件由宿主管理，无法在这里修改');
-      if (action === 'enable' && plugin.requireReviewedVersion) {
-        if (this.unavailable(plugin)) throw Error(this.unavailable(plugin));
-        if (present && bundle.version !== plugin.review?.version) throw Error('当前安装版本不在兼容目录中，请先切换到当前宿主的固定版本；目录未登记的外部新版可卸载后重新开启。');
-      }
       if (present) return this.finish(plugin, action, await this.manager.setBundleEnabled(plugin.packageName, action === 'enable'));
       if (action === 'disable') return this.finish(plugin, action, { application: 'applied' });
       // Enabling an absent feature is one operation: download, install and activate.

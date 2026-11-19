@@ -1,3 +1,35 @@
+# Oh My DSH 1.9.0 · DSH 0.2.2 rc.3 / rc.4 / rc.5
+
+[中文](#zh-190) · [English](#en-190)
+
+<a id="zh-190"></a>
+
+## 中文
+
+### 体验优化
+
+- 在 DSH 的“添加插件”里安装同一个通用包即可使用 OMD。首次操作网页时会选择可用浏览器，需要时自动准备 Chromium。
+- 插件安装默认走 DSH 原生流程。需要在临时环境试装时，可在 OMD 设置中开启预检。
+- Dream 记忆库暂时无法打开时，会话仍可继续，原有记忆文件会保留。工作流可在提供所需接口的宿主上启用。
+
+<a id="en-190"></a>
+
+## English
+
+### Improvements
+
+- Install one universal package from Add plugin in DSH. On first browser use, OMD selects an available browser and provisions Chromium if needed.
+- Plugins use the native DSH installer by default. You can enable a trial installation in a temporary environment from OMD settings.
+- Conversations continue when Dream cannot open its memory database, and existing memory files are preserved. Workflows can run on hosts that provide the required interfaces.
+
+## 安装 / Installation
+
+DSH **0.2.2 rc.3 / rc.4 / rc.5** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/oh-my-dsh-0.2.2-rc.5.omd.1.9.0.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.0/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.8.1 · DSH 0.2.2-rc.5
 
 [中文](#zh-181) · [English](#en-181)
