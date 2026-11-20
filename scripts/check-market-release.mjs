@@ -101,6 +101,8 @@ export async function inspectMarketRelease(pkg, { json, text, now = () => new Da
 }
 
 async function readPublic(url) {
+  // The full marketplace catalog is much larger than the per-release responses.
+  const maxMiB = url === catalogUrl ? 64 : 16;
   const headers = { Accept: 'application/vnd.github+json' };
   if (new URL(url).origin === 'https://api.github.com' && process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const response = await fetch(url, { headers, signal: AbortSignal.timeout(30000) });
@@ -108,7 +110,7 @@ async function readPublic(url) {
   const chunks = []; let size = 0;
   for await (const chunk of response.body) {
     size += chunk.length;
-    if (size > 16 * 1024 * 1024) throw Error('Public release/catalog response exceeds 16 MiB');
+    if (size > maxMiB * 1024 * 1024) throw Error(`Public release/catalog response exceeds ${maxMiB} MiB`);
     chunks.push(chunk);
   }
   return Buffer.concat(chunks).toString('utf8');
