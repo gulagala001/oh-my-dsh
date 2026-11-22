@@ -6,7 +6,7 @@ OMD keeps DSH's native tools, skills, sessions and third-party plugin entries.
 
 ## Installation and coexistence
 
-OMD 1.9.3 uses one package across DSH versions. DSH 0.2.2 builds rc.3, rc.4 and rc.5 can all use it. You can also try the same package on other versions.
+OMD 1.9.4 uses one package across DSH versions. DSH 0.2.2 builds rc.3, rc.4 and rc.5 can all use it. You can also try the same package on other versions.
 
 For other plugins, follow their installation instructions.
 

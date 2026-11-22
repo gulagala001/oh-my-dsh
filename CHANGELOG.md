@@ -1,4 +1,4 @@
-# Oh My DSH 1.9.4 · DSH 0.2.2 rc.3 / rc.4 / rc.5（未发布）
+# Oh My DSH 1.9.4 · DSH 0.2.2 rc.3 / rc.4 / rc.5
 
 [中文](#zh-194) · [English](#en-194)
 
