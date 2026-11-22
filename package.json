@@ -91,7 +91,8 @@
     "./token-meter": "./lib/host/token-meter.mjs",
     "./compaction": "./lib/host/compaction.mjs",
     "./native-executor": "./src/native-executor.mjs",
-    "./unharnessed": "./src/unharnessed-agent.mjs"
+    "./unharnessed": "./src/unharnessed-agent.mjs",
+    "./unharnessed-headless": "./src/unharnessed-headless.mjs"
   },
   "dsh": {
     "bundle": {

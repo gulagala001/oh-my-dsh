@@ -1,13 +1,11 @@
-import { IMAGE_OFFLOAD_REQUIRED_CODE, isAgentLoopRequest } from '@deepseek-ai/dsh-llm';
+import * as llm from '@deepseek-ai/dsh-llm';
 import { requestImageDimensions } from '@deepseek-ai/dsh-attachment';
 import { providerProfile } from './llm-request-projection.mjs';
 import { imageRule } from './image-rules.mjs';
 import { imageSourceValue, rememberRequestImages } from './image-request-state.mjs';
 
-export const IMAGE_BATCH_POLICY = Object.freeze({ triggerRatio: 0.9, targetRatio: 0.6, keepNewest: 2 });
 export const IMAGE_REPAIR_CODE = 'OMD_IMAGE_OFFLOAD_REQUIRED';
 export const IMAGE_LIMIT_CODE = 'OMD_IMAGE_LIMIT_EXCEEDED';
-const DEFAULT_LIMIT = 20 * 1024 * 1024;
 const REPLAY_WAIT = '图片限制或编码设置已变化，等待符合限制的成功主请求；缓存前缀和原图保留';
 const identity = block => JSON.stringify(imageSourceValue(block));
 export function requestImages(messages) {
@@ -20,28 +18,20 @@ export function requestImages(messages) {
   return result;
 }
 
-// Count occurrences, not unique files; byte lengths are the actual request versions.
-export function imageOffloadPlan(messages, versionBytes, limit, policy = IMAGE_BATCH_POLICY) {
-  const entries = requestImages(messages);
-  const lengths = entries.map(({ block }) => 4 * Math.ceil(versionBytes(block) / 3));
-  const totalBytes = lengths.reduce((a, b) => a + b, 0);
+function imageOffloadPlan(messages, entries, versionBytes, measured, policy) {
+  if (measured.bytes <= policy.maxBytes && measured.images <= policy.maxImages) return { selected: [] };
   const latestAssistant = messages.findLastIndex(message => message.role === 'assistant');
   const latestBatch = entries.filter(entry => messages.indexOf(entry.message) > latestAssistant).length;
-  const maxImages = policy.maxImages ?? Infinity;
-  if (totalBytes <= limit * policy.triggerRatio && entries.length <= maxImages)
-    return { count: 0, totalBytes, retainedBytes: totalBytes, images: entries.length, selected: [] };
-  const protectedCount = Math.max(policy.keepNewest, latestBatch);
-  const removable = Math.max(0, entries.length - protectedCount);
-  let count = 0, retainedBytes = totalBytes;
-  const targetCount = Number.isFinite(maxImages) ? Math.max(protectedCount, policy.targetImages ?? policy.keepNewest) : Infinity;
-  while (count < removable && (retainedBytes > limit * policy.targetRatio || entries.length - count > targetCount)) {
-    const entry = entries[count];
-    // The native durable projection accepts input images, never assistant output.
-    if (!['user', 'tool'].includes(entry.message.role) || entry.path.length !== 1) break;
-    retainedBytes -= lengths[count++];
-  }
-  return { count, totalBytes, retainedBytes, images: entries.length, selected: entries.slice(0, count),
-    blocked: retainedBytes > limit || entries.length - count > maxImages };
+  const count = llm.requiredImageOffload([{ content: entries.map(({ block }) => block) }], {
+    representation: 'base64', maxBytes: policy.maxBytes,
+    maxImages: Math.max(latestBatch, policy.keepImages),
+  }, versionBytes);
+  const selected = entries.slice(0, count);
+  // The host stores durable offloads only on input messages. Keep the entire
+  // unread batch and refuse to substitute a different source occurrence.
+  const blocked = latestBatch > policy.maxImages || count > entries.length - latestBatch
+    || selected.some(({ message, path }) => !['user', 'tool'].includes(message.role) || path.length !== 1);
+  return { selected, blocked };
 }
 
 // Resolve exact source occurrences after request projections have removed duplicates
@@ -78,15 +68,24 @@ export function installImageBudget(ctx, supportsImageBudget, hub) {
   const encoding = options => JSON.stringify([...new Map(requestImages(options.messages)
     .map(({ block }) => [block.attachment.attachmentId, block.attachment])).values()]
     .map(ref => [ref.attachmentId, target(options, ref)]));
-  const limitFor = (options, rule) => Math.min(rule.maxBytes, providerProfile(ctx, options.provider)?.maxRequestImageBytes ?? Infinity);
+  const policyFor = provider => {
+    const rule = typeof llm.requiredImageOffload === 'function' ? imageRule(config(), provider) : undefined;
+    const profile = providerProfile(ctx, provider);
+    if (!rule && !profile) return;
+    const maxImages = Math.min(rule?.maxImages ?? Infinity, profile?.maxRequestImages ?? Infinity);
+    return {
+      maxImages, maxBytes: Math.min(rule?.maxBytes ?? Infinity, profile?.maxRequestImageBytes ?? Infinity),
+      keepImages: rule && Math.min(rule.keepImages, maxImages),
+    };
+  };
   const service = {
     snapshotReason(snapshot) {
-      const request = snapshot.request, rule = imageRule(config(), snapshot.provider);
-      if (!rule || !request || !requestImages(request.messages).length) return null;
+      const request = snapshot.request, policy = policyFor(snapshot.provider);
+      if (!policy || !request || !requestImages(request.messages).length) return null;
       const info = snapshot.images;
       if (info?.textOnly) return null;
       try {
-        if (!info || info.images > rule.maxImages || info.bytes > limitFor(request, rule) || info.encoding !== encoding(request)) return REPLAY_WAIT;
+        if (!info || info.images > policy.maxImages || info.bytes > policy.maxBytes || info.encoding !== encoding(request)) return REPLAY_WAIT;
       } catch { return REPLAY_WAIT; }
       return null;
     },
@@ -95,7 +94,7 @@ export function installImageBudget(ctx, supportsImageBudget, hub) {
     if (failure.code !== IMAGE_REPAIR_CODE) return next();
     const item = pending.get(agent.session.id); pending.delete(agent.session.id);
     if (!item || item.session !== agent.session || item.signal !== signal || signal.aborted) return next();
-    if (item.rule !== JSON.stringify(imageRule(config(), item.provider))) return { kind: 'retry' };
+    if (item.policy !== JSON.stringify(policyFor(item.provider))) return { kind: 'retry' };
     // Summary replacement already finished before this frozen request was built.
     // A new concurrent replacement must never receive this request's selections.
     const targets = imageOffloadTargets(agent.session, item.selected);
@@ -107,16 +106,15 @@ export function installImageBudget(ctx, supportsImageBudget, hub) {
   ctx.on('session/disposed', session => pending.delete(session.id), { global: true });
   ctx.on('agent/disposed', ({ agent }) => pending.delete(agent.session.id), { global: true });
   ctx.on('llm/stream', async function* (options, next) {
-    const main = isAgentLoopRequest(options), session = options.sessionId && ctx.sessions.get(options.sessionId);
+    const main = llm.isAgentLoopRequest(options), session = options.sessionId && ctx.sessions.get(options.sessionId);
     if (!session) { yield* next(); return; }
-    const rule = imageRule(config(), options.provider);
-    if (!supportsImageBudget(session, rule)) { yield* next(); return; }
+    const policy = policyFor(options.provider), override = Boolean(policy?.keepImages);
+    if (!supportsImageBudget(session, override)) { yield* next(); return; }
     if (main) pending.delete(session.id);
     const entries = requestImages(options.messages);
     if (!entries.length) { rememberRequestImages(options, { images: 0, bytes: 0, encoding: '[]' }); yield* next(); return; }
-    const profile = providerProfile(ctx, options.provider);
-    const legacy = !rule && main && session.header?.origin !== 'subagent' && profile;
-    if (!rule && !legacy) { yield* next(); return; }
+    if (!policy || !override && !main) { yield* next(); return; }
+    const policyStamp = JSON.stringify(policy);
     let plan, measured;
     try {
       options.signal?.throwIfAborted();
@@ -140,41 +138,37 @@ export function installImageBudget(ctx, supportsImageBudget, hub) {
           sizes.set(id, bytes);
         }));
         options.signal?.throwIfAborted();
-        if (encodingBefore !== encoding(options) || JSON.stringify(rule) !== JSON.stringify(imageRule(config(), options.provider))) throw Error('图片设置在预检期间已变化，请重试');
-        const limit = rule ? limitFor(options, rule) : profile.maxRequestImageBytes ?? DEFAULT_LIMIT;
-        plan = imageOffloadPlan(options.messages, block => sizes.get(block.attachment.attachmentId), limit,
-          rule ? { triggerRatio: 1, targetRatio: 0.6, keepNewest: 1, targetImages: rule.keepImages, maxImages: rule.maxImages } : IMAGE_BATCH_POLICY);
-        measured = { images: entries.length, bytes: plan.totalBytes, encoding: encodingBefore };
+        if (encodingBefore !== encoding(options) || policyStamp !== JSON.stringify(policyFor(options.provider))) throw Error('图片设置在预检期间已变化，请重试');
+        const versionBytes = block => sizes.get(block.attachment.attachmentId);
+        measured = { images: entries.length, bytes: entries.reduce((total, { block }) => total + 4 * Math.ceil(versionBytes(block) / 3), 0), encoding: encodingBefore };
+        if (override) plan = imageOffloadPlan(options.messages, entries, versionBytes, measured, policy);
       }
     } catch (error) {
       options.signal?.throwIfAborted();
-      if (rule) {
+      if (override) {
         yield { type: 'finish', reason: { kind: 'error', failure: { code: IMAGE_LIMIT_CODE, message: `多图请求修复预检失败：${error.message}；原图保留。` } } }; return;
       }
       ctx.logger?.warn?.('图片批量预检未完成，沿用宿主限制：' + error.message);
     }
-    if (rule && plan?.blocked) {
+    if (plan?.blocked) {
       yield { type: 'finish', reason: { kind: 'error', failure: { code: IMAGE_LIMIT_CODE,
         message: '最新未读图片或无法安全卸载的图片超过渠道上限；请分批读取或提高该渠道的图片限制。原图未删除。' } } }; return;
     }
-    if (plan?.count > 0) {
-      if (rule && !main) {
+    if (plan?.selected.length) {
+      if (!main) {
         // A detached background/side request has no authority to alter the parent
         // surface or an already successful cache prefix. Never silently reproject it.
         yield { type: 'finish', reason: { kind: 'error', failure: { code: IMAGE_LIMIT_CODE, message: REPLAY_WAIT } } }; return;
       }
-      if (rule) {
-        const targets = imageOffloadTargets(session, plan.selected);
-        if (!targets?.length) {
-          yield { type: 'finish', reason: { kind: 'error', failure: { code: IMAGE_LIMIT_CODE, message: '无法定位待整理图片的原始消息，未更改历史或重发超限请求。' } } }; return;
-        }
-        pending.set(session.id, { session, signal: options.signal, provider: options.provider,
-          rule: JSON.stringify(rule), targets, selected: plan.selected });
+      const targets = imageOffloadTargets(session, plan.selected);
+      if (!targets?.length) {
+        yield { type: 'finish', reason: { kind: 'error', failure: { code: IMAGE_LIMIT_CODE, message: '无法定位待整理图片的原始消息，未更改历史或重发超限请求。' } } }; return;
       }
+      pending.set(session.id, { session, signal: options.signal, provider: options.provider,
+        policy: policyStamp, targets, selected: plan.selected });
       yield { type: 'finish', reason: { kind: 'error', failure: {
-        code: rule ? IMAGE_REPAIR_CODE : IMAGE_OFFLOAD_REQUIRED_CODE,
-        ...(rule ? {} : { offloadImages: plan.count }),
-        message: `Image budget preflight: offload ${plan.count} oldest image occurrence(s); ${plan.totalBytes} -> ${plan.retainedBytes} base64 bytes. Original files are retained.`,
+        code: IMAGE_REPAIR_CODE,
+        message: `Image budget preflight: offload ${plan.selected.length} oldest image occurrence(s). Original files are retained.`,
       } } }; return;
     }
     if (measured) rememberRequestImages(options, measured);

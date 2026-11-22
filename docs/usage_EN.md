@@ -67,12 +67,14 @@ OMD keeps DSH's tools, permissions and cancellation. In OMD-PTC mode the AI call
 
 Per-session checkpoints restore variables and serializable functions after restart with matching directory, permissions and Python version; background processes need restarting. `/unharnessed-reset` resets Python; `/goal` manages goals. Before disabling, finish running work and background commands, pause active goals and change the default preset if needed. Re-enabling preserves history and checkpoints.
 
-Unharnessed subagents have separate Python kernels. Toggle them under **Experimental presets → Unharnessed**.
+Toggle subagents under **Experimental presets → Unharnessed**.
+
+[Run Unharnessed from the terminal](install_EN.md#unharnessed-headless).
 
 ## Context and memory
 
 - **Context optimization** (on by default): controlled in **Settings → Context and memory → Context optimization**. Tool results are trimmed, and reading the same file again only sends what changed. Click **View original** on a tool card to page through the raw result by line number, keyword, start or end. See [context optimization](context-optimization.md#english).
-- **Multi-image request repair** (on by default): when a request carries too many images, older ones stop being sent and can still be looked up. The defaults are 20 images and 10 MB, keeping 10 after cleanup, adjustable per channel.
+- **Multi-image request repair** (on by default) lets you lower the DSH image limits per channel. CMD defaults to 20 images and 10 MB and aims to keep 10. Original attachments stay available. With the switch off, the DSH channel settings apply.
 - **Compaction**: choose OMD or Billion Context per session in **Context → Context management** (Billion Context 0.1.202 must be installed from the third-party page). Only compaction is exclusive; Dream, archives, lookups, tasks and personalities keep working. See [OMD and Billion Context](context-workflow.md#omd-与-billion-context).
 - **Asynchronous compaction**: history is tidied in the background so the main model never waits. `/compact` applies the prepared plan, `/compact-p` replaces prepared parts with summaries, and `/compact-f` asks the model to summarize again. A failure never deletes the original. See [compaction and lookups](context-workflow.md).
 - **Memory cache mode** (on by default): background cleanup reuses the main request's model and prefix to hit the cache more often. Whether it hits is up to the provider, and background work still uses tokens.

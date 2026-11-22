@@ -71,11 +71,11 @@
     "LICENSE": "33e40e7e3b2b80f3b344a837af44a6926384efb697f0ab0d1b98d66037010414",
     "README.md": "3e8e0ca62d222604b46ac49522105b62ad18fa25441c4921ef0a92a0f15aa638",
     "README_EN.md": "5dfd49724710870cc42bf598d9eb9e80f61c234f547daa13382066002b071ee7",
-    "THIRD_PARTY_NOTICES.md": "a6783a9c454a3a69673ad3447d96702a88f2092840b93a0dffa3b04ff70445f4",
+    "THIRD_PARTY_NOTICES.md": "1e01cff63bda23ab556c7d35d773e131dd00698458cffef86fa71d958c88e95d",
     "cordis.patch.yml": "30b5e334164a77a876970f8bd37e4e9c7de8758cea229fb21bdfbe315ff644e7",
     "docs/structure.json": "332d8fdfdbec48e2a8201020645f23481b6145d7fdf7ade714a285ca57fb725b",
     "icon.svg": "8bf82dc3958d7e0d0c0a4282c4bfa26806c81a5cfe7156e23961e558087fb60f",
-    "index.js": "bdd019feb5d5e3a6dbc2f2e5e1215380e45a731b7fd34788aa46c58bfbba8ea8",
+    "index.js": "12dfe0bd8d927cdfad9a5984e4098c215e220b16c0a3359af0f01e5e3e7b191f",
     "lib/bridges.js": "2c91945685e3e35064fcfa216886443c6b5002b708059a8c7322ef04d473b381",
     "lib/goals.js": "8551aef8decf7154f3c9bc91a94325842cdfe99e95d3894ae9877e831b716050",
     "lib/kernel.js": "2be06dd41f25d409982b5a54d771928926161fba13c695a4c5758dc331410a21",
@@ -124,7 +124,7 @@
   "adaptations": [
     {
       "file": "index.js",
-      "reason": "Optional integration callbacks report activity and apply OMD settings; session projections are namespaced. The bundled prompt gives a brief progress update before multi-step tool work. The Python entry uses its unpacked path in Desktop."
+      "reason": "Optional integration callbacks report activity and apply OMD settings; session projections are namespaced. The bundled prompt gives a brief progress update before multi-step tool work and can mount in the native headless agent scope. The Python entry uses its unpacked path in Desktop."
     },
     {
       "file": "THIRD_PARTY_NOTICES.md",

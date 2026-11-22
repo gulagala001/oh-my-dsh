@@ -1,14 +1,20 @@
 - insert:
     - id: oh-my-dsh
       name: oh-my-dsh
+    - id: omd-unharnessed-headless
+      name: oh-my-dsh/unharnessed-headless
+      disabled: !!js "ctx.get('profileContext')?.name !== 'omd-unharnessed' || !ctx.get('profileContext')?.startedBundles?.includes('@deepseek-ai/dsh-headless')"
     - id: omd-deepseek-workbench
       name: oh-my-dsh/deepseek-workbench
+      disabled: !!js "ctx.get('profileContext')?.startedBundles?.includes('@deepseek-ai/dsh-headless') === true"
     - id: omd-extensions
       name: oh-my-dsh/extensions
+      disabled: !!js "ctx.get('profileContext')?.startedBundles?.includes('@deepseek-ai/dsh-headless') === true"
     - id: omd-opencu
       name: oh-my-dsh/opencu
     - id: omd-rewind
       name: oh-my-dsh/rewind
+      disabled: !!js "ctx.get('profileContext')?.startedBundles?.includes('@deepseek-ai/dsh-headless') === true"
     - id: omd-response-id-reuse
       name: oh-my-dsh/response-id-reuse
 

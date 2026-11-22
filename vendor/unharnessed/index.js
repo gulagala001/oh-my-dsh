@@ -84,8 +84,11 @@ export async function apply(ctx, input = {}, integration = {}) {
   })
   const subagentsAllowed = () => config.subagentsEnabled && (integration.subagentsAllowed?.() ?? true)
   const delegationEnabled = agent => isRoot(agent) && subagentsAllowed() && delegation.stateOf(agent.session) !== false
-  ctx.systemPrompt.section({ name: PERSONA_PREFIX_SECTION, order: ctx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_PREFIX'), text: PROMPT, interpolate: false })
-  ctx.systemPrompt.section({ name: PERSONA_SUFFIX_SECTION, order: ctx.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_SUFFIX'), text: '' })
+  const installPersona = scope => {
+    scope.systemPrompt.section({ name: PERSONA_PREFIX_SECTION, order: scope.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_PREFIX'), text: PROMPT, interpolate: false })
+    scope.systemPrompt.section({ name: PERSONA_SUFFIX_SECTION, order: scope.systemPrompt.getSectionOrder('DEPLOYMENT_PERSONA_SUFFIX'), text: '' })
+  }
+  if (!integration.agentScopedPersona) installPersona(ctx)
   ctx.systemPrompt.context({
     name: 'unharnessed:subagents', order: ctx.systemPrompt.getContextOrder('SUBAGENT_DELEGATION'), required: true,
     text: ({ agent }) => agent && delegationEnabled(agent)
@@ -129,6 +132,7 @@ export async function apply(ctx, input = {}, integration = {}) {
   }
 
   ctx.on('agent/created', ({ agent }) => {
+    if (integration.agentScopedPersona) installPersona(agent.ctx)
     const state = stateFor(agent)
     // Restrictions belong to the viewing Agent: a preset-scope empty allowlist
     // would also hide the preset's inherited ipython from its descendants.

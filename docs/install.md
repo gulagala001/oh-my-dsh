@@ -91,6 +91,20 @@ Windows 桌面版建议直接用插件页安装。
 
 </details>
 
+<a id="unharnessed-headless"></a>
+
+## 在终端运行 Unharnessed
+
+在终端或脚本中运行 Unharnessed 时，首次从 DSH 的 headless 模板创建 `omd-unharnessed` profile，再把 OMD 安装包添加到该 profile。把 `OMD_PACKAGE` 设为安装包的固定地址或 `file:` 路径。
+
+```sh
+dsh --profile omd-unharnessed --from-default-profile headless --dump-config
+dsh plugin --profile omd-unharnessed add "$OMD_PACKAGE"
+dsh --profile omd-unharnessed --json "检查当前目录的项目说明"
+```
+
+使用默认 DeepSeek 模型时，通过环境变量或 `.env` 提供 `DEEPSEEK_API_KEY`。用其他渠道时，在这个 profile 配置默认模型和对应密钥。去掉 `--json` 可只输出最终答复。在原工作目录用 `--session-id` 传入首次运行返回的会话 ID，即可续接会话并恢复已保存的 Python 检查点。
+
 ## 旧版 DSH
 
 以下历史包供回退使用。

@@ -91,6 +91,20 @@ On the Windows desktop app, installing from the Plugins page is simpler.
 
 </details>
 
+<a id="unharnessed-headless"></a>
+
+## Run Unharnessed from the terminal
+
+For terminal or script runs, create an `omd-unharnessed` profile from the DSH headless template once, then install the OMD package into it. Set `OMD_PACKAGE` to a fixed package URL or a `file:` path.
+
+```sh
+dsh --profile omd-unharnessed --from-default-profile headless --dump-config
+dsh plugin --profile omd-unharnessed add "$OMD_PACKAGE"
+dsh --profile omd-unharnessed --json "Review the project instructions in this directory"
+```
+
+For the default DeepSeek model, set `DEEPSEEK_API_KEY` in the environment or `.env`. For another provider, configure the model and key for this profile. Omit `--json` to print the final answer only. To continue in the same directory, pass the returned session ID with `--session-id` to restore the session and its saved Python checkpoint.
+
 ## Older DSH versions
 
 Use the archived packages below when rolling back.

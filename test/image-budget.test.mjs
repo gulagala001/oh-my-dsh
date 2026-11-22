@@ -122,6 +122,21 @@ test('rule-only sessions offload older Unharnessed user-message images before re
   assert.equal(requestImages(f.session.deriveMessages()).length, 10);
 });
 
+test('an override inherits the stricter host limits and disabling it delegates overflow to the host', async () => {
+  const f = fixture({ maxImages: 18, keepImages: 10, maxBytes: 10000000 }, 'mistral-pro');
+  f.profile.maxRequestImages = 6;
+  for (let i = 0; i < 8; i++) f.append(100);
+  f.config.multiImageFixEnabled = false;
+  assert.equal((await f.send(f.request())).kind, 'stop');
+  assert.equal(requestImages(f.session.deriveMessages()).length, 8);
+  f.config.multiImageFixEnabled = true;
+  const request = f.request(), failure = (await f.send(request)).failure;
+  assert.equal(failure.code, IMAGE_REPAIR_CODE);
+  assert.equal((await f.recover(request, failure)).kind, 'retry');
+  assert.equal(requestImages(f.session.deriveMessages()).length, 6);
+  assert.equal((await f.send(f.request())).kind, 'stop');
+});
+
 test('unseen batches stay intact and bytes can require fewer images than the count target', async () => {
   const f = fixture({ maxImages: 4, keepImages: 2, maxBytes: 10000000 });
   const images = Array.from({ length: 5 }, (_, i) => ({ type: 'image', attachment: { attachmentId: `new-${i}`, bytes: 100, width: 2, height: 2, mediaType: 'image/png' } }));

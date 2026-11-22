@@ -7,7 +7,7 @@ import { acquirePersona } from '../plugins/persona/src/index.mjs';
 import { readJsonBody as readBody, rejectUntrusted, sendJson as send, withRequestSignal } from './http.mjs';
 import { installFileUploadCompatibility } from './file-upload-compat.mjs';
 import { legacySettings } from './legacy-settings.mjs';
-import { isUnharnessedPreset } from './experimental-presets.mjs';
+import { isUnharnessedHeadlessProfile, isUnharnessedPreset } from './experimental-presets.mjs';
 import { isOmdPreset } from './legacy-identity.mjs';
 import { migrateLegacyInstallation } from './legacy-migration.mjs';
 import { homedir } from 'node:os';
@@ -171,7 +171,8 @@ async function applyRuntime(ctx, config) {
   installForkProvenance(ctx, hub.store);
   const presetOf = session => ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset;
   const isX = session => isOmdPreset(presetOf(session));
-  const isUnharnessed = session => isUnharnessedPreset(presetOf(session));
+  const headlessUnharnessed = isUnharnessedHeadlessProfile(ctx.get('profileContext'));
+  const isUnharnessed = session => headlessUnharnessed || isUnharnessedPreset(presetOf(session));
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
   installPtcLifecycle(ctx, { adaptiveBudgets: session => Boolean(session && (isX(session) || isOmaaEnhanced(session))) });
   installResultReduction(ctx, hub, session => isX(session) || isOmaaEnhanced(session));
@@ -197,7 +198,7 @@ async function applyRuntime(ctx, config) {
     ? hub.ultracode.assemble(context.agent, next) : next(), { global: true, prepend: true });
   installBackground(ctx, hub, isX);
   trackProviderProfiles(ctx);
-  hub.images = installImageBudget(ctx, (session, rule) => isX(session) || isOmaaEnhanced(session) || Boolean(rule && isUnharnessed(session)), hub);
+  hub.images = installImageBudget(ctx, (session, override) => isX(session) || isOmaaEnhanced(session) || override && isUnharnessed(session), hub);
   installCommandCodeCompatibility(ctx);
   installComputerUseImageCompatibility(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);

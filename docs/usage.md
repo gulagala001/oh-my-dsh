@@ -68,12 +68,14 @@ OMD 保留 DSH 原有的工具、权限和取消方式。OMD-PTC 模式下，AI 
 
 Python 变量和可保存函数会生成会话检查点；重启后在相同目录、权限与 Python 版本下恢复，后台进程需要重新启动。使用 `/unharnessed-reset` 重置 Python，使用 `/goal` 管理目标。关闭预设前先结束任务、后台命令并暂停活动目标；若已设为默认预设，先选择其他默认项。关闭保留会话记录与检查点，重新开启后可继续使用。
 
-在 **实验预设 → Unharnessed → 子代理** 可关闭委派，默认开启。子代理各自使用 Unharnessed 会话和独立 Python 内核，结果回主聊天。用 `/unharnessed-subagents off` 单独关闭当前聊天，用 `/unharnessed-subagents default` 恢复跟随设置。
+在 **实验预设 → Unharnessed → 子代理** 可切换委派。子代理使用独立 Python 内核。用 `/unharnessed-subagents off` 单独关闭当前聊天，用 `/unharnessed-subagents default` 恢复跟随设置。
+
+[在终端运行 Unharnessed](install.md#unharnessed-headless)。
 
 ## 上下文与记忆
 
 - **上下文优化**（默认开）：在 **设置 → 上下文与记忆 → 上下文优化** 控制。工具结果会精简，重复读同一个文件时只发变化。点工具卡片上的 **查看原文**，可以按行号、关键词或开头结尾翻原始结果。详见[上下文优化](context-optimization.md#中文)。
-- **多图请求修复**（默认开）：一次请求里图片太多时，自动停发较早的图片，原图还能回查。默认上限是 20 张、10 MB，整理后保留 10 张，可以按渠道改。
+- **多图请求修复**（默认开）：可按渠道收紧 DSH 的图片上限。默认给 CMD 设置 20 张、10 MB，整理时尽量保留最近 10 张。原图还能回查，关闭后沿用 DSH 渠道设置。
 - **压缩方式**：在 **上下文 → 上下文管理** 里按会话选 OMD 或 Billion Context（需要在第三方功能里装好 0.1.202 版）。两者只是压缩互斥，Dream、档案、回查、任务和人格照常工作。见 [OMD 与 Billion Context](context-workflow.md#omd-与-billion-context)。
 - **异步压缩**：后台整理历史，主模型不用停下来等。`/compact` 应用已准备好的方案，`/compact-p` 把准备好的片段换成摘要，`/compact-f` 让模型重新汇总。失败不会删原文。见[压缩与原文回查](context-workflow.md)。
 - **记忆缓存模式**（默认开）：后台整理优先复用主请求的模型和前缀，更容易命中缓存。命中与否由服务商决定，后台照样有用量。

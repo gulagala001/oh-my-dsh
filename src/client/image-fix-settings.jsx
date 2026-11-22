@@ -78,7 +78,7 @@ export function ImageFixSettings({ config, directory, commit }) {
         <Button type="button" size="sm" disabled={!enabled || pending || !available.some(item => item.id === choice)} onClick={() => void add()}>添加</Button>
         <Button type="button" size="sm" variant="ghost" aria-label="取消添加" onClick={() => setAdding(false)}><Icon name="close" size={14}/></Button>
       </div> : <Button type="button" variant="ghost" size="sm" disabled={!enabled || pending || !available.length} onClick={() => setAdding(true)}>＋ 添加渠道</Button>}
-      <p className="omd-image-note">仅对所选渠道生效。批量减少历史图片发送，原图仍可回查；最新未读图片受保护。整理可能影响当次缓存。</p>
+      <p className="omd-image-note">所选渠道取这里与 DSH 渠道设置中更严格的上限。整理时保留最新未读图片，原图仍可回查。关闭后沿用 DSH 渠道设置。</p>
     </div></Collapse>
   </div>;
 }

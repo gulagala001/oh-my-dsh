@@ -2,6 +2,7 @@
 - insert:
     - id: preset-oh-my-dsh
       name: '@deepseek-ai/dsh-agent-preset'
+      disabled: !!js "ctx.get('profileContext')?.startedBundles?.includes('@deepseek-ai/dsh-headless') === true"
       config:
         id: oh-my-dsh
         name: "Oh My DSH"
@@ -138,6 +139,7 @@
             name: '@deepseek-ai/dsh-tool-present'
     - id: preset-omd-ptc
       name: '@deepseek-ai/dsh-agent-preset'
+      disabled: !!js "ctx.get('profileContext')?.startedBundles?.includes('@deepseek-ai/dsh-headless') === true"
       config:
         id: omd-ptc
         name: "omd-ptc"
