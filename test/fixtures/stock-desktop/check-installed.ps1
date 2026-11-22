@@ -14,7 +14,7 @@ $listener.Start()
 try { $port = $listener.LocalEndpoint.Port } finally { $listener.Stop() }
 
 function Run-Check([string]$Mode) {
-    node (Join-Path $PSScriptRoot 'check-stock.mjs') $port $Mode $root.FullName
+    node (Join-Path $PSScriptRoot 'check-issue-94.mjs') $port $Mode $root.FullName
     if ($LASTEXITCODE -ne 0) { throw "Stock DSH check failed ($Mode)" }
 }
 
