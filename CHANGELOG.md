@@ -1,3 +1,39 @@
+# Oh My DSH 1.9.4 · DSH 0.2.2 rc.3 / rc.4 / rc.5（未发布）
+
+[中文](#zh-194) · [English](#en-194)
+
+<a id="zh-194"></a>
+
+## 中文
+
+### 新增功能
+
+- 在终端或脚本中运行 Unharnessed。可输出 JSON 事件，并用会话 ID 续接任务和恢复已保存的 Python 检查点。
+
+### 体验优化
+
+- 多图请求沿用 DSH 的图片卸载规则。OMD 设置可按渠道收紧图片上限，原附件仍可回查。
+
+<a id="en-194"></a>
+
+## English
+
+### Added
+
+- Run Unharnessed from a terminal or script. Stream JSON events, then use the session ID to continue the task and restore its saved Python checkpoint.
+
+### Improvements
+
+- Multi-image requests use DSH's image offload rules. OMD can lower the limits per channel, and original attachments remain available.
+
+## 安装 / Installation
+
+DSH **0.2.2 rc.3 / rc.4 / rc.5** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.4/oh-my-dsh-0.2.2-rc.5.omd.1.9.4.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.4/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.9.3 · DSH 0.2.2 rc.3 / rc.4 / rc.5
 
 [中文](#zh-193) · [English](#en-193)
