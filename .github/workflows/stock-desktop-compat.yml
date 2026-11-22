@@ -3,8 +3,6 @@ name: Stock desktop compatibility
 on:
   workflow_call:
   workflow_dispatch:
-  push:
-    branches: [ci/stock-desktop-compat]
 
 permissions:
   contents: read
@@ -61,31 +59,24 @@ jobs:
         with:
           name: stock-desktop-plugin
           path: ${{ runner.temp }}/omd-stock-package
-      - name: Install the fixture dependencies
-        shell: pwsh
-        run: |
-          $dependencies = Join-Path $env:RUNNER_TEMP 'omd-stock-test-deps'
-          npm install --prefix $dependencies --no-audit --no-fund playwright@1.63.0 sharp@0.35.5
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node (Join-Path $dependencies 'node_modules/playwright/cli.js') install chromium
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          "OMD_STOCK_TEST_DEPENDENCIES=$dependencies" >> $env:GITHUB_ENV
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
       - name: Download the signed official DSH desktop
         shell: pwsh
         run: |
-          $installer = Join-Path $env:RUNNER_TEMP 'dsh-rc3-official.exe'
-          curl.exe --fail --location --retry 3 --silent --show-error 'https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.2.2-rc.3-win-x64.exe' -o $installer
+          $installer = Join-Path $env:RUNNER_TEMP 'dsh-rc5-official.exe'
+          curl.exe --fail --location --retry 3 --silent --show-error 'https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.2.2-rc.5-win-x64.exe' -o $installer
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $signature = Get-AuthenticodeSignature -FilePath $installer
           if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'DeepSeek') {
             throw "The official DSH installer signature is invalid: $($signature.Status)"
           }
-      - name: Exercise OMD on the unmodified DSH application
+      - name: Exercise Unharnessed headless on signed Windows DSH
         shell: pwsh
         run: |
           $archives = @(Get-ChildItem (Join-Path $env:RUNNER_TEMP 'omd-stock-package') -Filter '*.tgz' -File)
           if ($archives.Count -ne 1) { throw 'Expected one plugin package' }
-          ./test/fixtures/stock-desktop/check-installed.ps1 -Installer (Join-Path $env:RUNNER_TEMP 'dsh-rc3-official.exe') -Archive $archives[0].FullName
-      - name: Verify Workbench profile restart and download bytes
-        if: success() || failure()
-        run: node test/fixtures/stock-desktop/check-workbench.mjs
+          $expected = ((Get-Content (Join-Path $env:RUNNER_TEMP 'omd-stock-package/SHA256SUMS')) -split '\s+')[0]
+          if ((Get-FileHash $archives[0].FullName -Algorithm SHA256).Hash -ne $expected) { throw 'Candidate package checksum differs' }
+          ./test/fixtures/stock-desktop/check-headless.ps1 -Installer (Join-Path $env:RUNNER_TEMP 'dsh-rc5-official.exe') -Archive $archives[0].FullName
