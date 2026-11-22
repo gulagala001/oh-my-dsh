@@ -202,12 +202,12 @@ html.omd[data-omd-layout="ios-liquid"] :is([role=tooltip],.tx-cu-live-banner) { 
     grid-column: 3; grid-row: 1;
   }
   /* The original six sidebar actions become a floating bottom dock on phones. */
-  html.omd[data-omd-layout="ios-liquid"] .pI_x6G_frame[data-sidebar-collapsed="true"] {
+  html.omd[data-omd-layout="ios-liquid"]:not(:where([data-windows-titlebar])) .pI_x6G_frame[data-sidebar-collapsed="true"] {
     grid-template-columns: 0 minmax(0, 1fr) 0 !important;
     box-sizing: border-box; padding-bottom: calc(78px + env(safe-area-inset-bottom));
     grid-template-rows: minmax(0, 1fr);
   }
-  html.omd[data-omd-layout="ios-liquid"] [data-sidebar-collapsed="true"] .pI_x6G_sidebarCol {
+  html.omd[data-omd-layout="ios-liquid"]:not(:where([data-windows-titlebar])) [data-sidebar-collapsed="true"] .pI_x6G_sidebarCol {
     position: fixed; bottom: max(10px, env(safe-area-inset-bottom)); left: 12px; right: 12px; height: 60px; z-index: 12; overflow: visible;
   }
   html.omd[data-omd-layout="ios-liquid"] [data-sidebar-collapsed="true"] .pI_x6G_centerCol { grid-column: 2; grid-row: 1; }
@@ -217,7 +217,7 @@ html.omd[data-omd-layout="ios-liquid"] :is([role=tooltip],.tx-cu-live-banner) { 
     align-items: center; justify-content: space-around; gap: 2px; border-radius: 28px;
   }
   html.omd[data-omd-layout="ios-liquid"] [data-sidebar-collapsed="true"] :is(.hHd-Xa_logoRow,.hHd-Xa_newSession,.hHd-Xa_panelList,.hHd-Xa_panelRow,.hHd-Xa_footArea) { margin: 0; padding: 0; flex: 0 0 auto; border: 0; }
-  html.omd[data-omd-layout="ios-liquid"] [data-sidebar-collapsed="true"] :is(.hHd-Xa_regionArea,.bhn1Oq_rail) { display: flex; flex: 0 0 auto; flex-direction: row; align-items: center; padding: 0; margin: 0; overflow: visible; }
+  html.omd[data-omd-layout="ios-liquid"]:not(:where([data-windows-titlebar])) [data-sidebar-collapsed="true"] :is(.hHd-Xa_regionArea,.bhn1Oq_rail) { display: flex; flex: 0 0 auto; flex-direction: row; align-items: center; padding: 0; margin: 0; overflow: visible; }
   html.omd[data-omd-layout="ios-liquid"] [data-sidebar-collapsed="true"] .bhn1Oq_sectionHeader { display: contents; }
   html.omd[data-omd-layout="ios-liquid"] [data-sidebar-collapsed="true"] .bhn1Oq_listArea:empty { display: none; }
   html.omd[data-omd-layout="ios-liquid"] [data-sidebar-collapsed="true"] :is(.bhn1Oq_headerActions,.VOzbGW_triggerRow) { padding: 0; margin: 0; height: auto; }

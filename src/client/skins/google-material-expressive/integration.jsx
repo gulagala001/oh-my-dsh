@@ -18,6 +18,7 @@ function containTab(event, root) {
 function Navigation({ ctx }) {
   const ref = useRef(null), [expanded, setExpanded] = useState(false);
   useEffect(() => {
+    if (document.documentElement.hasAttribute('data-windows-titlebar')) return;
     const narrow = matchMedia('(max-width: 839px)');
     let frame, sidebar, restoreInert = () => {}, modal = false, previousFocus, regions = [];
     const close = () => { if (modal && frame?.dataset.sidebarCollapsed !== 'true') ctx.layout.toggleSidebar(); };

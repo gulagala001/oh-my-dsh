@@ -171,6 +171,7 @@ async function applyRuntime(ctx, config) {
   installForkProvenance(ctx, hub.store);
   const presetOf = session => ctx.sessionProjections.stateOf(session, 'agentPreset') ?? session.header.agentPreset;
   const isX = session => isOmdPreset(presetOf(session));
+  const isUnharnessed = session => isUnharnessedPreset(presetOf(session));
   const isOmaaEnhanced = session => Boolean(ctx.get('omaa')?.enhancementEnabled(session));
   installPtcLifecycle(ctx, { adaptiveBudgets: session => Boolean(session && (isX(session) || isOmaaEnhanced(session))) });
   installResultReduction(ctx, hub, session => isX(session) || isOmaaEnhanced(session));
@@ -188,7 +189,7 @@ async function applyRuntime(ctx, config) {
     restore: (sessionId, snapshot) => hub.ultracode.restore(sessionId, snapshot),
   };
   const managed = session => isX(session) || (session.header.origin === 'subagent' && Boolean(hub.workflowBudget.owner(session)));
-  const monitored = session => !isBtwSession(session) && (managed(session) || isUnharnessedPreset(presetOf(session)));
+  const monitored = session => !isBtwSession(session) && (managed(session) || isUnharnessed(session));
   installUltracodeProjection(ctx);
   installOverviewProjection(ctx);
   ctx.on('agent/inbox/claimed', ({ agent, message }) => { if(!isBtwSession(agent.session))hub.ultracode.claimed(agent, message); }, { global: true });
@@ -196,7 +197,7 @@ async function applyRuntime(ctx, config) {
     ? hub.ultracode.assemble(context.agent, next) : next(), { global: true, prepend: true });
   installBackground(ctx, hub, isX);
   trackProviderProfiles(ctx);
-  hub.images = installImageBudget(ctx, session => isX(session) || isOmaaEnhanced(session), hub);
+  hub.images = installImageBudget(ctx, (session, rule) => isX(session) || isOmaaEnhanced(session) || Boolean(rule && isUnharnessed(session)), hub);
   installCommandCodeCompatibility(ctx);
   installComputerUseImageCompatibility(ctx, isX);
   installTraceCleanup(ctx, isX, hub.context);

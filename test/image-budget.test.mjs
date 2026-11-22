@@ -23,7 +23,7 @@ const { imageOffloadProjection } = await import(pathToFileURL(join(native, 'type
 const { offloadOldestImages } = await import(pathToFileURL(join(native, 'types/image-offload.js')));
 const signal = () => new AbortController().signal;
 
-function fixture(rule = DEFAULT_IMAGE_RULE, provider = 'cmdgoat-responses') {
+function fixture(rule = DEFAULT_IMAGE_RULE, provider = 'cmdgoat-responses', supportsImageBudget = () => true) {
   const session = Session.create('image-budget', [], undefined, 0, [imageOffloadProjection]);
   session.append('user/message', { id: 'user', role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'Inspect the synthetic UI.' }] }, { surfaceOp: 'append' });
   const config = { multiImageFixEnabled: true, multiImageFixRules: [{ provider, ...rule }] };
@@ -34,7 +34,7 @@ function fixture(rule = DEFAULT_IMAGE_RULE, provider = 'cmdgoat-responses') {
     sessions: { get: id => id === session.id ? session : undefined, async flush() { stats.flushes++; return true; } },
     llm: { async resolveModelInfo() { return { inputModalities: ['text', 'image'] }; },
       imageRequestTarget(_p, _m, ref) { return { width: ref.width, height: ref.height, maxBytes: profile.requestImageMaxBytes ?? 1048576 }; } } };
-  const hub = { config: () => config }, service = installImageBudget(ctx, () => true, hub);
+  const hub = { config: () => config }, service = installImageBudget(ctx, supportsImageBudget, hub);
   hub.images = service;
   const request = (extra = {}, main = true) => {
     const value = Object.freeze({ provider, model: 'synthetic', sessionId: session.id, messages: Object.freeze(session.deriveMessages()), signal: signal(), ...extra });
@@ -91,6 +91,35 @@ test('unselected and disabled channels keep their existing image behavior; renam
   const request = f.request(), failed = await f.send(request);
   assert.equal(failed.failure.code, IMAGE_REPAIR_CODE); await f.recover(request, failed.failure);
   assert.equal(requestImages(f.session.deriveMessages()).length, 2);
+});
+
+test('rule-only sessions offload older Unharnessed user-message images before retrying', async () => {
+  const f = fixture({ maxImages: 18, keepImages: 10, maxBytes: 10000000 }, 'mistral-pro', (_session, rule) => Boolean(rule));
+  for (let batch = 0; batch < 8; batch++) {
+    const content = Array.from({ length: batch < 5 ? 3 : 2 }, (_, index) => ({ type: 'image', attachment: {
+      attachmentId: `unharnessed-${batch}-${index}`, bytes: 100, width: 2, height: 2, mediaType: 'image/png',
+    } }));
+    f.session.append('user/message', { id: `capture-${batch}`, role: 'user', source: { kind: 'user' }, content }, { surfaceOp: 'append' });
+    if (batch < 7) f.session.append('assistant/message', { turn: batch + 1, step: 1, stream: [], message: {
+      id: `reply-${batch}`, role: 'assistant', source: { kind: 'model', provider: 'mistral-pro', model: 'synthetic' },
+      content: [{ type: 'text', text: 'Captured.' }],
+    } }, { surfaceOp: 'append' });
+  }
+  f.config.multiImageFixEnabled = false;
+  assert.equal((await f.send(f.request())).kind, 'stop');
+  assert.equal(f.stats.reads, 0);
+  f.config.multiImageFixEnabled = true;
+  const request = f.request(), before = structuredClone(f.session.snapshotEvents());
+  assert.equal(requestImages(request.messages).length, 21);
+  const failed = await f.send(request);
+  assert.equal(failed.failure.code, IMAGE_REPAIR_CODE);
+  assert.equal(f.stats.sent, 1);
+  assert.equal((await f.recover(request, failed.failure)).kind, 'retry');
+  const events = f.session.snapshotEvents();
+  assert.deepEqual(events.slice(0, before.length), before);
+  assert.equal(events.at(-1).type, 'image/offload');
+  assert.equal((await f.send(f.request())).kind, 'stop');
+  assert.equal(requestImages(f.session.deriveMessages()).length, 10);
 });
 
 test('unseen batches stay intact and bytes can require fewer images than the count target', async () => {

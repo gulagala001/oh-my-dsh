@@ -1,3 +1,33 @@
+# Oh My DSH 1.9.3 · DSH 0.2.2 rc.3 / rc.4 / rc.5（未发布）
+
+[中文](#zh-193) · [English](#en-193)
+
+<a id="zh-193"></a>
+
+## 中文
+
+### 问题修复
+
+- Unharnessed 会话会按已启用的渠道规则整理超限图片，原图仍可回查。
+- Windows 上使用 Google Material 收起侧栏后，新建会话按钮与「应用」菜单各自可点。开启「降低透明与动态效果」时，新会话顶部与内容区保持连贯。
+
+<a id="en-193"></a>
+
+## English
+
+### Fixes
+
+- Unharnessed sessions use the enabled provider rules to trim over-limit image requests. Original attachments are still available.
+- On Windows, the New Session button and the App menu remain independently clickable with the Google Material sidebar collapsed. The new-session header blends into the conversation with Reduce transparency and motion enabled.
+
+## 安装 / Installation
+
+DSH **0.2.2 rc.3 / rc.4 / rc.5** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.3/oh-my-dsh-0.2.2-rc.5.omd.1.9.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.3/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.9.2 · DSH 0.2.2 rc.3 / rc.4 / rc.5
 
 [中文](#zh-192) · [English](#en-192)

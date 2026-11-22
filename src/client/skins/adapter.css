@@ -26,7 +26,7 @@ html.omd[data-omd-skin] :where(.cx-card,.tx-card,[role=dialog],dialog,[role=menu
 html.omd[data-omd-skin] :where(pre,code) { font-family: var(--omd-font-mono); }
 html.omd[data-omd-skin] :where(button,input,select,textarea):focus-visible { outline-color: var(--omd-focus); }
 html.omd[data-omd-skin] :where(.tx-button.tx-primary,.cx-btn.primary,.uV2eYG_primary) { background: var(--omd-button-bg, var(--omd-accent)); color: var(--omd-button-fg, var(--omd-on-accent)); }
-html.omd[data-omd-skin][data-omd-reduce-effects] :is([data-composer-card],.hHd-Xa_root,.wSkVaW_header,.tx-workbench,.cx-integrated,.VOzbGW_panel,[role=dialog],dialog,[role=menu]) { background: var(--omd-surface-solid) !important; }
+html.omd[data-omd-skin][data-omd-reduce-effects] :is([data-composer-card],.hHd-Xa_root,.wSkVaW_header:not(:where(.wSkVaW_headerBlank)),.tx-workbench,.cx-integrated,.VOzbGW_panel,[role=dialog],dialog,[role=menu]) { background: var(--omd-surface-solid) !important; }
 html.omd[data-omd-skin][data-omd-reduce-effects] *, html.omd[data-omd-skin][data-omd-reduce-effects] *::before, html.omd[data-omd-skin][data-omd-reduce-effects] *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; animation: none !important; transition: none !important; }
 html.omd[data-omd-skin] :where(button,input,select,textarea) { transition-duration: var(--omd-duration); }
 @media (prefers-reduced-motion: reduce) {
@@ -39,6 +39,16 @@ html.omd[data-omd-skin] [data-chat-flow-kind] { font-family: var(--omd-font-body
    filter would make that narrow sidebar the overlay's containing block. */
 html.omd[data-omd-skin] :is([data-omd-part="sidebar"], [data-omd-surface="sidebar"], [data-omd-surface="sidebar-column"]):has([role="dialog"]) {
   backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+
+/* Windows places these controls in the caption, where the host reserves
+   28px per button ahead of the application menu. */
+html.omd[data-omd-layout][data-windows-titlebar] :is(.pI_x6G_sidebarCol,.hHd-Xa_root) {
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+html.omd[data-omd-layout][data-windows-titlebar] .hHd-Xa_root.hHd-Xa_collapsed { padding: 0; }
+html.omd[data-omd-layout][data-windows-titlebar] .hHd-Xa_root :is(.hHd-Xa_toggle,.hHd-Xa_collapsed .hHd-Xa_newSession) {
+  box-sizing: border-box; width: 28px; height: 28px; min-width: 28px; min-height: 28px; margin: 0; padding: 0;
 }
 
 /* Form internals are host-owned: skins theme them without replacing semantics. */

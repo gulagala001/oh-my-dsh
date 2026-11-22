@@ -66,7 +66,7 @@ export function imageOffloadTargets(session, selected) {
   return [...targets].map(([seq, imageIndexes]) => ({ seq, imageIndexes: imageIndexes.sort((a, b) => a - b) }));
 }
 
-export function installImageBudget(ctx, isManagedSession, hub) {
+export function installImageBudget(ctx, supportsImageBudget, hub) {
   const caches = new WeakMap(), pending = new Map();
   const config = () => hub?.config() ?? { multiImageFixEnabled: false };
   const target = (options, ref) => {
@@ -108,9 +108,10 @@ export function installImageBudget(ctx, isManagedSession, hub) {
   ctx.on('agent/disposed', ({ agent }) => pending.delete(agent.session.id), { global: true });
   ctx.on('llm/stream', async function* (options, next) {
     const main = isAgentLoopRequest(options), session = options.sessionId && ctx.sessions.get(options.sessionId);
-    if (!session || !isManagedSession(session)) { yield* next(); return; }
-    if (main) pending.delete(session.id);
+    if (!session) { yield* next(); return; }
     const rule = imageRule(config(), options.provider);
+    if (!supportsImageBudget(session, rule)) { yield* next(); return; }
+    if (main) pending.delete(session.id);
     const entries = requestImages(options.messages);
     if (!entries.length) { rememberRequestImages(options, { images: 0, bytes: 0, encoding: '[]' }); yield* next(); return; }
     const profile = providerProfile(ctx, options.provider);
