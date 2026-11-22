@@ -2,6 +2,14 @@
   "schema": 1,
   "releases": [
     {
+      "version": "0.2.2-rc.5.omd.1.9.3",
+      "severity": "normal",
+      "unpublished": false,
+      "title": "Oh My DSH 1.9.3",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.5.omd.1.9.3"
+    },
+    {
       "version": "0.2.2-rc.5.omd.1.9.2",
       "severity": "normal",
       "unpublished": false,
