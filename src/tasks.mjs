@@ -181,7 +181,7 @@ export function registerTasks(ctx, store) {
     output: { schema: { type: 'string' }, render: (_args, text) => [{ type: 'text', text }] },
     execute(args, exec) {
       const { agent, signal } = exec, session = agent.session;
-      const job = (pending.get(session.id) || Promise.resolve()).catch(() => {}).then(async () => {
+      const execute = async () => {
         signal?.throwIfAborted();
         if (name === 'verify_link' && !verificationEnabled(session)) throw Error('Task verification is disabled for this conversation.');
         const schema = operations.oneOf.find(branch => branch.properties.op.enum.includes(args?.op)) ?? parameters;
@@ -190,7 +190,10 @@ export function registerTasks(ctx, store) {
         const result = await run(args, session, exec);
         if (result.isError) throw new Error(result.text);
         return result.text;
-      });
+      };
+      // A read observes the last committed snapshot, including while a verification is running.
+      if (name === 'todo_write' && args.op === 'view') return execute();
+      const job = (pending.get(session.id) || Promise.resolve()).catch(() => {}).then(execute);
       pending.set(session.id, job);
       return job.finally(() => { if (pending.get(session.id) === job) pending.delete(session.id); });
     },

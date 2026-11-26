@@ -149,15 +149,16 @@ async function applyEnhancements(ctx, { chatSettings, projectlessDrafts, report 
   installDesktopLifecycle(ctx);
   await mountOptionalClient(ctx, '旁聊', async () => ({ inject: btwInject, apply: applyBtw }), report);
   await mountOptionalClient(ctx, '回合撤回', async () => ({ inject: rewindInject, apply: applyRewind }), report);
+  const provideOverviewPresenter = applySessionOverview(ctx);
   await mountOptionalClient(ctx, '电脑操作', async () => {
     const openCU = createOpenCU(require);
     return { ...openCU, async apply(scope, config) {
       await openCU.apply(scope, config);
-      applySessionOverview(scope, openCU);
+      scope.effect(() => provideOverviewPresenter(openCU.getOverviewSlot?.(scope) ?? openCU.OverviewSlot));
     } };
   }, report);
   const optimizer = applyPromptOptimizer(ctx);
-  applyModelPanel(ctx, { rememberModel: (id, selected, mode) => projectlessDrafts.rememberModel(id, selected, mode),
+  applyModelPanel(ctx, { beforeModelChoice: id => projectlessDrafts.beforeModelChoice(id), rememberModel: (id, selected, mode) => projectlessDrafts.rememberModel(id, selected, mode),
     preferredUltraEffort: (id, route, model) => projectlessDrafts.preferredUltraEffort(id, route, model) });
   applySubscriptionFast(ctx);
   ctx.inject(['locale'], applyStatsCacheLabel);

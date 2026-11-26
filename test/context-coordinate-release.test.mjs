@@ -193,3 +193,33 @@ test('a detached session releases its state after its remaining Dream consumer r
   assert.equal(pipeline.releasing.has(agent.session.id), false);
   assert.equal(pipeline.store.peek(agent.session.id).steps, 8);
 });
+
+test('context reload follows the effective pipeline settings across reloads', () => {
+  let raw = {}, reload, calls = 0;
+  const pipeline = Object.create(ContextPipeline.prototype);
+  pipeline.hub = { config: () => raw };
+  pipeline.reconfigure = () => { calls++; };
+  pipeline.watchSettings({ on(event, handler) { assert.equal(event, 'app-boot/config-reload'); reload = handler; } });
+
+  raw = { monitorCurrency: 'CNY', recommendedPluginsPageEnabled: false, identityPrompt: 'New author',
+    taskVerificationMode: 'off', codegraphEnabled: false, prepareInputTokens: pipeline.config().prepareInputTokens };
+  reload();
+  assert.equal(calls, 0);
+  for (const patch of [{ prepareInputTokens: 123456 }, { memoryCacheEnabled: false }, { backgroundConcurrency: 3 },
+    { backgroundMode: 'separate', background: { model: 'small', provider: 'local' } }, { jobTimeoutMs: 5000 }]) {
+    const before = calls;
+    Object.assign(raw, patch);
+    reload(); reload();
+    assert.equal(calls, before + 1);
+  }
+  raw.background = { provider: 'local', model: 'small' }; // same effective route in another key order
+  reload();
+  assert.equal(calls, 5);
+  raw.background.legacyMetadata = { label: 'Old UI decoration' };
+  reload();
+  assert.equal(calls, 5);
+  assert.equal(raw.background.legacyMetadata.label, 'Old UI decoration');
+  raw.background.model = 'large'; // a volatile legacy overlay can mutate nested values in place
+  reload();
+  assert.equal(calls, 6);
+});

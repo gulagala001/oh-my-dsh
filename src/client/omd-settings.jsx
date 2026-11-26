@@ -11,6 +11,7 @@ import projectCredits from '../project-credits.json';
 import { pluginApi } from './recommended-plugins.jsx';
 import { usePollingAction } from './use-polling-action.mjs';
 import { createSettingsState } from './settings-state.mjs';
+import { createModelDirectoryState } from './model-directory-state.mjs';
 import { scaledSettingValue, savedBackground } from './settings-values.mjs';
 import { autoOverviewEnabled, setAutoOverview, subscribeAutoOverview } from './overview-preference.mjs';
 import { HISTORY_SIZE_KEY, HISTORY_SIZES, historySize } from './history-settings.jsx';
@@ -86,15 +87,45 @@ function useConfig(report) {
   const [view, setView] = useState({ config: null, directory: [], error: '' });
   const current = useRef(null);
   useEffect(() => {
-    const owner = createSettingsState({ read: () => api('/state'), write: patch => api('/settings', patch),
+    const controller = new AbortController();
+    const owner = createSettingsState({ read: () => api('/state', undefined, controller.signal), write: patch => api('/settings', patch),
       onChange: setView, onError: report,
       onSaved: config => window.dispatchEvent(new CustomEvent('omd:settings-saved', { detail: config })) });
     current.current = owner; void owner.load();
-    return () => { owner.dispose(); if (current.current === owner) current.current = null; };
+    return () => { owner.dispose(); controller.abort(); if (current.current === owner) current.current = null; };
   }, [report]);
   const commit = useCallback(patch => current.current?.commit(patch) ?? Promise.resolve(false), []);
   const reload = useCallback(() => current.current?.load(), []);
   return { ...view, commit, reload };
+}
+
+function useModelDirectory() {
+  const [view, setView] = useState({ directory: [], ready: false, loading: true, error: '' });
+  const current = useRef(null);
+  useEffect(() => {
+    const owner = createModelDirectoryState({
+      readProviders: async signal => (await api('/model-directory', undefined, signal)).providers,
+      readModels: async (id, signal) => (await api('/model-directory?provider=' + encodeURIComponent(id), undefined, signal)).models,
+      onChange: setView,
+    });
+    current.current = owner; void owner.load();
+    return () => { owner.dispose(); if (current.current === owner) current.current = null; };
+  }, []);
+  const reload = useCallback(() => current.current?.load(), []);
+  const retry = useCallback(id => current.current?.retry(id), []);
+  const select = useCallback(ids => current.current?.select(ids), []);
+  return { ...view, reload, retry, select };
+}
+
+function ModelDirectoryStatus({ resource }) {
+  return <>
+    {resource.loading && <Status>正在读取提供方目录…</Status>}
+    <Status error action={<Button type="button" size="sm" variant="ghost" onClick={resource.reload}>重新读取</Button>}>{resource.error}</Status>
+    {resource.directory.filter(item => item.loading || item.error).map(item => <Status key={item.id} error={Boolean(item.error)}
+      action={item.error && <Button type="button" size="sm" variant="ghost" onClick={() => void resource.retry(item.id)}>重试</Button>}>
+      {item.name || item.id}：{item.loading ? '正在读取模型列表…' : item.error}
+    </Status>)}
+  </>;
 }
 
 const componentApi = (body, signal) => request('oh-my-dsh/components', body, signal);
@@ -215,7 +246,7 @@ function RouteEditor({ title, value, directory, onChange }) {
   </Fields></div>;
 }
 
-function BackgroundModels({ config: c, directory, commit, dream, commitDream }) {
+function BackgroundModels({ config: c, directory, selectProviders, commit, dream, commitDream }) {
   const [editUnified, setEditUnified] = useState(false);
   const savedRouting = contextRouteMode(c), routing = savedRouting === 'follow' && editUnified ? 'unified' : savedRouting;
   const choose = async mode => {
@@ -226,6 +257,11 @@ function BackgroundModels({ config: c, directory, commit, dream, commitDream }) 
   };
   const s = dream.state, [pendingProvider, setPendingProvider] = useState(null);
   const dreamProvider = pendingProvider ?? s?.provider ?? '';
+  const preparationProvider = routing === 'separate' ? c.background?.provider : routing === 'unified' ? c.unifiedBackground?.provider : '';
+  const coordinatorProvider = routing === 'separate' ? c.surgeon?.provider : '';
+  useEffect(() => { selectProviders([preparationProvider, coordinatorProvider, dreamProvider]); },
+    [selectProviders, preparationProvider, coordinatorProvider, dreamProvider]);
+  useEffect(() => () => selectProviders([]), [selectProviders]);
   const dreamModels = directory.find(p => p.id === dreamProvider)?.models || [];
   const routeEmpty = routing === 'follow';
   return <>
@@ -242,7 +278,7 @@ function BackgroundModels({ config: c, directory, commit, dream, commitDream }) 
           onChange={model => { if (!model) return; setPendingProvider(null); void commitDream({ dreamProvider, dreamModel: model }); }}/></label>
       </Fields>}>
       <Choice disabled={dream.pending} aria-label="Dream 提供方" value={dreamProvider}
-        options={[{ value: '', label: '沿用后台模型' }, ...directory.map(p => ({ value: p.id, label: p.name || p.id }))]}
+        options={[{ value: '', label: '沿用后台模型' }, ...(dreamProvider && !directory.some(p => p.id === dreamProvider) ? [{ value: dreamProvider, label: dreamProvider }] : []), ...directory.map(p => ({ value: p.id, label: p.name || p.id }))]}
         onChange={provider => { if (!provider) { setPendingProvider(null); void commitDream({ dreamProvider: '', dreamModel: '' }); } else setPendingProvider(provider); }}/>
     </Row>}
   </>;
@@ -384,7 +420,8 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
     const [notice, setNotice] = useState('');
     useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 6000); return () => clearTimeout(timer); }, [notice]);
     const report = useCallback(message => setNotice(message), []);
-    const { config: c, directory, error, experimentalPresets, commit, reload } = useConfig(report);
+    const { config: c, error, experimentalPresets, commit, reload } = useConfig(report);
+    const models = useModelDirectory(), { directory } = models;
     const autoOverview = useSyncExternalStore(subscribeAutoOverview, autoOverviewEnabled);
     const features = usePollingAction(pluginApi, 2000);
     const components = usePollingAction(componentApi, 2500);
@@ -405,10 +442,8 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
 
     const features_ = recommendedPlugins.filter(plugin => plugin.section === 'features');
     const featureUpdating = features.state?.updating || features.state?.busy?.action === 'update';
-    const content = page === 'credits' ? <ProjectCredits onBack={() => go('main')}/> : page === 'third-party' ? <ThirdParty features={features} onBack={() => go('main')}/> : !c ? <div className="omd-set-empty">
-      {error ? <Status error action={<Button type="button" size="sm" variant="ghost" onClick={reload}>重试</Button>}>{error}</Status> : <p>正在读取设置…</p>}
-    </div> : <>
-      <Status error action={<Button type="button" size="sm" variant="ghost" onClick={reload}>重新读取</Button>}>{error}</Status>
+    const content = page === 'credits' ? <ProjectCredits onBack={() => go('main')}/> : page === 'third-party' ? <ThirdParty features={features} onBack={() => go('main')}/> : <>
+      <Status error={Boolean(error)} action={error && <Button type="button" size="sm" variant="ghost" onClick={reload}>重新读取</Button>}>{error || (!c ? '正在读取设置…' : '')}</Status>
       <Group title="功能" anchor="features">
         {features.error && <Status error action={<Button type="button" size="sm" variant="ghost" onClick={() => features.refresh()}>重新读取</Button>}>{features.error}</Status>}
         {features.requestError && <Status error>{features.requestError}</Status>}
@@ -422,8 +457,9 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
         </button>
       </Group>
       <Group title="人格" anchor="personality"><PersonaSettings client={persona}/></Group>
+      {c && <>
       <Group title="上下文与记忆" anchor="context">
-        <ImageFixSettings config={c} directory={directory} commit={commit}/>
+        <ImageFixSettings config={c} directory={directory} directoryReady={models.ready && !models.loading && !models.error} commit={commit}/>
         <Toggle title="上下文优化" hint="默认开启：精简重复内容、按需加载工具，保留原文供回查。关闭不影响 CodeGraph、历史压缩和记忆。" checked={c.contextOptimizationEnabled !== false} onChange={v => commit({ contextOptimizationEnabled: v })}/>
         <Toggle title="后台预处理与中枢" hint="提前生成基础摘要和详细资料，再判断如何替换。" checked={c.contextEnabled} onChange={v => commit({ contextEnabled: v })}/>
         <Toggle title="自动应用已完成决定" hint="在请求边界应用；关闭后仍可手动替换。" checked={c.automaticReplace} onChange={v => commit({ automaticReplace: v })}/>
@@ -445,8 +481,10 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
           extra={c.traceEnabled && <Fields><NumberField label="推理文本字符上限" value={c.traceMaxChars} min={0} hint="0 保留全文；正数保留尾部并标注截取。" onCommit={v => commit({ traceMaxChars: v })}/></Fields>}/>
         <div data-anchor="dream"><Dream dream={dream} commit={commitDream}/></div>
       </Group>
-      <Group title="后台模型" anchor="models"><BackgroundModels config={c} directory={directory} commit={commit} dream={dream} commitDream={commitDream}/></Group>
+      <Group title="后台模型" anchor="models"><ModelDirectoryStatus resource={models}/><BackgroundModels config={c} directory={directory} selectProviders={models.select} commit={commit} dream={dream} commitDream={commitDream}/></Group>
+      </>}
       <Group title="全局背景" anchor="background"><GlobalBackground/></Group>
+      {c && <>
       <Group title="智能体" anchor="agents"><AgentHints config={c} commit={commit}/></Group>
       <Group title="实验预设" anchor="experiments">
         <Toggle title="Unharnessed" hint="默认关闭。开启后可在新会话的 Agent 预设中选择 Unharnessed（实验），使用持久 Python、MCP、附件和目标验收。需要已有 Python 3.11+ 与 POSIX shell。"
@@ -459,9 +497,10 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
           </div>}/>
         <Status error action={<Button type="button" size="sm" variant="ghost" onClick={async () => { if (await commit({ experimentalUnharnessedEnabled: c.experimentalUnharnessedEnabled === true })) await reload(); }}>重试</Button>}>{experimentalPresets?.error}</Status>
       </Group>
+      </>}
       <Group title="关于" anchor="about">
-        <Toggle title="插件安装预检" hint="安装前在临时环境检查启动和基础界面；通过后自动继续，失败时可选择仍然安装或复制 AI 修复信息。" checked={c.pluginPreflightEnabled === true}
-          onChange={value => commit({ pluginPreflightEnabled: value })}/>
+        {c && <Toggle title="插件安装预检" hint="安装前在临时环境检查启动和基础界面；通过后自动继续，失败时可选择仍然安装或复制 AI 修复信息。" checked={c.pluginPreflightEnabled === true}
+          onChange={value => commit({ pluginPreflightEnabled: value })}/>}
         <button type="button" className="omd-set-row omd-set-nav" onClick={() => go('credits')}>
           <span className="omd-set-copy"><strong>项目、组件与致谢</strong><small>查看独立产品、社区作者、组件来源与许可。</small></span><Icon name="chevron" size={16}/>
         </button>
@@ -473,6 +512,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
       </Group>
       <details className="omd-set-advanced" data-anchor="advanced">
         <summary>高级</summary>
+        {c && <>
         <Group title="预处理与额度">
           <Row extra={<Fields>
             <NumberField label="参考前文 · 事件数" value={c.digestLookback} min={0} onCommit={v => commit({ digestLookback: v })}/>
@@ -498,6 +538,7 @@ export function applyOmdSettings(ctx, { optimizer, persona }) {
             <NumberField label="后台超时 · 秒" value={c.jobTimeoutMs} min={0} scale={1000} hint="默认 600 秒；0 不设置插件超时。" onCommit={v => commit({ jobTimeoutMs: v })}/>
           </Fields>}/>
         </Group>
+        </>}
         <Group title="其他">
           <Toggle title="启动时自动准备依赖" hint="关闭后，代码理解需要手动准备运行环境。" checked={components.state?.automatic} disabled={!components.state || components.pending}
             onChange={v => components.act({ action: 'settings', patch: { componentAutoSetup: v } })}/>

@@ -10,9 +10,9 @@ import { hostTarget } from './host-targets.mjs';
 import { verifyHostArtifacts } from './host-artifacts.mjs';
 import { checkMacHelperDistribution } from './check-opencu-native.mjs';
 import { buildChatStyleFactory } from './chat-style-adapter.mjs';
-import { ownClientStyles, clientRegistration, replaceExactly } from './host-build-contracts.mjs';
+import { ownClientStyles, clientRegistration } from './host-build-contracts.mjs';
 import { finishHostFactory } from './host-factory-imports.mjs';
-import { PTC_CONTROL_NAMES, REWIND_WORKSPACE_INDEPENDENT } from '../src/ptc-control-compat.mjs';
+import { adaptHostTool } from './host-tool-adapter.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (process.platform === 'darwin') await checkMacHelperDistribution(join(root, 'vendor/opencu'));
@@ -73,29 +73,6 @@ for (const [directory, manifest] of [['vendor/dsh', snapshot], ['vendor/dsh/ui-c
 }
 const modules = ['jobs-local', 'tool-jobs', 'tool-bash', 'tool-pwsh', 'bash-sandbox', 'pwsh-sandbox'];
 const hostEntry = name => `${root}vendor/dsh/${name}/src/index.ts`;
-function adaptHostTool(name, source) {
-  if (name === 'jobs-local') {
-    // Preserve the caller's abort identity. The native deadline still owns
-    // timeout and settlement, and cancelling a wait never stops its job.
-    source = replaceExactly(source, 'if (signal?.aborted) throw waitAborted()', 'if (signal?.aborted) throw signal.reason ?? waitAborted()', name);
-    return replaceExactly(source, 'reject(waitAborted())', 'reject(signal?.reason ?? waitAborted())', name);
-  }
-  if (name === 'tool-jobs') {
-    const first = "ctx.tools.register(defineTool({\n    name: 'job_output',";
-    source = replaceExactly(source, first, `const registerWorkspaceIndependent = (tool: ReturnType<typeof defineTool>) =>
-    ctx.tools.register(Object.assign(tool, { [Symbol.for(${JSON.stringify(REWIND_WORKSPACE_INDEPENDENT)})]: true }))
-  ${first}`, name);
-    for (const control of PTC_CONTROL_NAMES.filter(name => name.startsWith('job_'))) {
-      const tool = `defineTool({\n    name: '${control}',`;
-      source = replaceExactly(source, 'ctx.tools.register(' + tool,
-        `registerWorkspaceIndependent(${tool}`, name + ' ' + control);
-    }
-    return source;
-  }
-  // A process still stopping after this grace remains owned by the job registry.
-  return replaceExactly(source, 'const settled = await registry.wait(attached.id, timeoutMs, owner)',
-    'const settled = await registry.wait(attached.id, 1000, owner)', name);
-}
 const localHostImport = specifier => {
   if (/^@deepseek-ai\/dsh-(bash|pwsh)-local$/.test(specifier)) return `${root}vendor/dsh/${specifier.split('dsh-')[1]}/src/index.ts`;
   if (/^\.\.\/\.\.\/\.\.\/(session|subagent)\//.test(specifier)) return `${root}vendor/dsh/${specifier.split('/').slice(4).join('/')}`;
@@ -103,9 +80,9 @@ const localHostImport = specifier => {
 };
 const hostEnums = await createHostConstEnums({ root, snapshot,
   entryPoints: [...modules.map(hostEntry), `${root}src/session-migration-support.ts`], resolveImport: localHostImport,
-  adaptSource(path, source) {
+  adaptSource(path, source, ts) {
     const name = ['jobs-local', 'tool-jobs', 'tool-bash', 'tool-pwsh'].find(name => path === hostEntry(name));
-    if (name) return adaptHostTool(name, source);
+    if (name) return adaptHostTool(ts, name, source);
   },
 });
 async function ownedOutput(path, directory = false) {

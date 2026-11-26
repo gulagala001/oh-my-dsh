@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const core = [
-  'native-session-read', 'native-session-fork', 'market-release-check', 'release-feed', 'alpha-tool-pipeline',
+  'native-session-read', 'native-session-fork', 'market-release-check', 'release-feed', 'release-notes', 'alpha-tool-pipeline',
   'chat-style-adapter', 'host-build-contracts', 'file-context', 'permission-presets', 'startup-isolation',
   'metering-contract', 'console-dock', 'rewind-client', 'start', 'monitor-partial', 'monitor-read-cache',
   'monitor-metadata', 'monitor-pricing-route', 'monitor-overview-cache', 'workflow-budget',
@@ -28,7 +28,7 @@ const core = [
   'monitor-aggregate-cache', 'ptc-lifecycle', 'preset-projection', 'reasoning-replay', 'desktop-deny-contract',
   'task-sdk-schema', 'auto-compact-surface-index', 'auto-compact-native-session', 'auto-compact-coordinate',
   'auto-compact-retry', 'auto-compact-native-boundaries', 'recommended-update-native', 'build-opencu-imports',
-  'conversation-controller-readiness',
+  'conversation-controller-readiness', 'model-directory',
 ].map(name => `test/${name}.test.mjs`);
 const builtChecks = ['test/opencu-delivery.test.mjs', 'test/titlebar-clearance.test.mjs', 'test/job-wait-cancel.test.mjs'];
 

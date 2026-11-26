@@ -23,6 +23,7 @@ import { installPtcLifecycle } from './ptc-lifecycle.mjs';
 import { installSearchCompatibility } from './search-compat.mjs';
 import { monitorSelection, compactMonitorSnapshot, unavailableMonitorMetrics } from './monitoring.mjs';
 import { handleMonitorApi } from './monitor-api.mjs';
+import { handleModelDirectoryApi } from './model-directory.mjs';
 import { coldNativeMonitorTarget } from './monitor-session.mjs';
 import { monitorQuery } from './monitor-ledger.mjs';
 import { monitorCallStream } from './monitor-call.mjs';
@@ -154,13 +155,7 @@ async function applyRuntime(ctx, config) {
   };
   ctx.effect(() => () => versionUpdater.close());
   ctx.on('plugin-manager/install-state', progress => versionUpdater.progress(progress), { global: true });
-  let currentConfig = JSON.stringify(hub.config());
-  ctx.on('app-boot/config-reload', () => {
-    const next = JSON.stringify(hub.config());
-    if (next === currentConfig) return;
-    currentConfig = next;
-    hub.context.reconfigure();
-  });
+  hub.context.watchSettings(ctx);
   const computer = acquireComputer();
   hub.installOmaaEnhancement = scope => installOmaaEnhancement(scope, computer);
   hub.components = new Components(ctx, hub);
@@ -403,6 +398,7 @@ async function applyRuntime(ctx, config) {
         if (await handleVersionUpdateApi({ req, res, url, service: versionUpdater, send })) return;
         if (await handlePromptOptimizerApi({ ctx, service: promptOptimizer, req, res, url, getSession: () => id ? ctx.agents.get(id)?.session ?? ctx.sessions.get(id) : undefined, send })) return;
         if (await handleMonitorApi({ hub, ctx, req, res, url, send })) return;
+        if (await handleModelDirectoryApi({ ctx, req, res, url, send })) return;
         if (url.pathname === '/oh-my-dsh/api/state' && req.method === 'GET' && url.searchParams.get('view') === 'summary') {
           if (id) validateSessionId(id);
           const query = monitorQuery({ session: id || '', range: url.searchParams.get('range') || 'session' });
@@ -450,12 +446,11 @@ async function applyRuntime(ctx, config) {
           send(res, 200, hub.taskReminders(scopeSession)); return;
         }
         if (url.pathname === '/oh-my-dsh/api/state' && req.method === 'GET') {
-          // Settings read config and providers; the record view reads notes and tasks.
+          // Settings read config; provider/model discovery has an independent API.
           // Usage and context meters are served by /monitor and /context.
-          const directory = id ? [] : await Promise.all(ctx.llm.listProviders().map(async provider => ({ ...provider, models: await ctx.llm.listModels(provider.id).catch(() => []) })));
           res.setHeader('Cache-Control', 'no-store');
           send(res, 200, {
-            config: hub.config(), directory, experimentalPresets: hub.experimentalPresets?.inspect(),
+            config: hub.config(), directory: [], experimentalPresets: hub.experimentalPresets?.inspect(),
             taskVerificationMode: hub.taskReminders(scopeSession).verificationMode,
             notes: stored?.notes || [],
             legacyContext: stored && (stored.status || stored.pins?.length || stored.memoryContext?.doc || stored.checkpoint || stored.digests?.length || stored.probe || stored.probeNotes?.length) ? {

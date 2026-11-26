@@ -35,7 +35,7 @@ function RuleFields({ rule, disabled, change }) {
   </div>;
 }
 
-export function ImageFixSettings({ config, directory, commit }) {
+export function ImageFixSettings({ config, directory, directoryReady = true, commit }) {
   const [expanded, setExpanded] = useState(false), [opened, setOpened] = useState(''), [adding, setAdding] = useState(false);
   const [choice, setChoice] = useState(''), [pending, setPending] = useState(false), id = useId();
   const enabled = config.multiImageFixEnabled !== false, rules = config.multiImageFixRules ?? DEFAULT_IMAGE_RULES;
@@ -65,7 +65,7 @@ export function ImageFixSettings({ config, directory, commit }) {
             <Button type="button" variant="ghost" className="omd-image-disclosure" aria-expanded={opened === rule.provider}
               aria-controls={`${id}-channel-${index}`} onClick={() => setOpened(opened === rule.provider ? '' : rule.provider)}>
               <Icon name="chevron" size={14} className={opened === rule.provider ? 'omd-image-open' : ''}/><span>{name(rule.provider)}</span>
-              {!directory.some(item => item.id === rule.provider) && <small className="omd-image-unavailable">未配置</small>}
+              {directoryReady && !directory.some(item => item.id === rule.provider) && <small className="omd-image-unavailable">未配置</small>}
             </Button>
             <Button type="button" variant="ghost" size="sm" aria-label={`移除 ${name(rule.provider)}`} disabled={!enabled || pending} onClick={() => void remove(rule.provider)}><Icon name="close" size={14}/></Button>
           </div>

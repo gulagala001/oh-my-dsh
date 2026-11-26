@@ -37,13 +37,65 @@ export function replaceExactly(source, before, after, label) {
 }
 
 export function ownClientStyles(source, { moduleId, owner, namespace, count }) {
-  const escaped = moduleId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const tags = new RegExp('(?:const tagId(?:\\$\\d+)?\\s*=\\s*)["`]' + escaped + '/', 'g');
-  const dataset = new RegExp('tag\\.dataset\\.plugin\\s*=\\s*(["`])' + escaped + '\\1', 'g');
-  if (!Number.isSafeInteger(count) || count < 1 || [...source.matchAll(tags)].length !== count ||
-    [...source.matchAll(dataset)].length !== count) fail(moduleId + ': style owner count changed');
-  return source.replace(tags, match => match.replace(moduleId + '/', namespace + '/'))
-    .replace(dataset, match => match.replace(moduleId, owner));
+  const edits = [], styleIds = new Set();
+  let owners = 0;
+  const literal = node => node?.type === 'Literal' && typeof node.value === 'string' ? node.value
+    : node?.type === 'TemplateLiteral' && node.expressions.length === 0 ? node.quasis[0].value.cooked : null;
+  const member = (node, name) => node?.type === 'MemberExpression' && !node.computed && node.property.name === name;
+  const propertyName = node => node?.type === 'MemberExpression'
+    ? node.computed ? literal(node.property) : node.property.name : null;
+  function datasetTarget(assignment, key) {
+    const left = assignment?.left;
+    if (assignment?.type === 'AssignmentExpression' && assignment.operator === '=' && member(left, key)
+      && member(left.object, 'dataset') && left.object.object.type === 'Identifier') return left.object.object.name;
+  }
+  walkAst(parse(source, { ecmaVersion: 'latest', sourceType: 'script' }), node => {
+    if (datasetTarget(node, 'plugin') && literal(node.right) === moduleId) owners++;
+    if (node.type !== 'BlockStatement' && node.type !== 'Program') return;
+    // A CSS registration publishes its own module and the enclosing style ID on
+    // the same element. Follow those bindings, including compiler-renamed locals.
+    const bindings = new Map();
+    for (const statement of node.body) {
+      if (statement.type === 'VariableDeclaration' && statement.kind === 'const') {
+        for (const { id, init } of statement.declarations) {
+          if (id.type === 'Identifier' && literal(init)?.startsWith(moduleId + '/')) bindings.set(id.name, init);
+        }
+      }
+      if (statement.type !== 'IfStatement' || statement.consequent.type !== 'BlockStatement') continue;
+      const body = statement.consequent.body;
+      const assignments = body.filter(s => s.type === 'ExpressionStatement').map(s => s.expression);
+      const locals = body.filter(s => s.type === 'VariableDeclaration').flatMap(s => s.declarations);
+      for (const assignment of assignments) {
+        const target = datasetTarget(assignment, 'plugin');
+        if (!target || literal(assignment.right) !== moduleId) continue;
+        // A second direct or conditional write can override either tag after registration.
+        const writes = new Set();
+        walkAst(statement.consequent, other => {
+          let left;
+          if (other.type === 'AssignmentExpression') left = other.left;
+          else if (other.type === 'UpdateExpression' || other.type === 'UnaryExpression' && other.operator === 'delete') left = other.argument;
+          else return;
+          if (propertyName(left.object) !== 'dataset' || left.object.object.name !== target) return;
+          const key = propertyName(left);
+          if (key === null || writes.has(key)) fail(moduleId + ': ambiguous style metadata');
+          if (key === 'plugin' || key === 'pluginCss') writes.add(key);
+        });
+        const ids = assignments.filter(other => datasetTarget(other, 'pluginCss') === target);
+        const binding = ids.length === 1 && ids[0].right.type === 'Identifier' && bindings.get(ids[0].right.name);
+        const element = locals.find(decl => decl.id.type === 'Identifier' && decl.id.name === target)?.init;
+        if (element?.type !== 'CallExpression' || !member(element.callee, 'createElement') || element.callee.object.name !== 'document' ||
+            element.arguments.length !== 1 || literal(element.arguments[0]) !== 'style') fail(moduleId + ': unexpected style element');
+        if (!binding || locals.some(decl => decl.id.name === ids[0].right.name) || styleIds.has(literal(binding))) fail(moduleId + ': ambiguous style ID');
+        styleIds.add(literal(binding));
+        edits.push({ node: binding, value: namespace + literal(binding).slice(moduleId.length) }, { node: assignment.right, value: owner });
+      }
+    }
+  });
+  if (!Number.isSafeInteger(count) || count < 1 || owners !== count || styleIds.size !== count) fail(moduleId + ': style owner count changed');
+  for (const { node, value } of edits.sort((a, b) => b.node.start - a.node.start)) {
+    source = source.slice(0, node.start) + JSON.stringify(value) + source.slice(node.end);
+  }
+  return source;
 }
 
 // Preserve comments and factory bytes while removing only the loader call.

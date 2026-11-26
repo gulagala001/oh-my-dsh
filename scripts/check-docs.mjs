@@ -35,7 +35,8 @@ function changelogEntry(product) {
 }
 
 if (args[0] === '--release-notes') {
-  const product = parseVersion(args[1])?.product || args[1] || published?.product;
+  const version = args[1] ?? pkg.version;
+  const product = parseVersion(version)?.product ?? version;
   const entry = changelogEntry(product);
   if (!entry) { console.error(`CHANGELOG.md has no entry titled "… ${product} · DSH …"`); process.exit(1); }
   process.stdout.write(entry);

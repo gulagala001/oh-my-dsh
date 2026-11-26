@@ -4,7 +4,7 @@ import { ProjectlessDrafts, initializeDraft } from '../src/client/projectless-st
 
 const defaultModel = { provider: 'native', model: 'default', reasoningEffort: 'high' };
 const otherModel = { provider: 'native', model: 'other', reasoningEffort: 'max' };
-function fixture(t, { blocked = false } = {}) {
+function fixture(t, { blocked = false, workflowAvailable = true } = {}) {
   const opened = [], created = [], initialized = [], notices = [], selections = [], allocations = [], modeSelections = [];
   const models = [{ id: 'default' }, { id: 'other' }].map(model => ({ ...model, reasoning: { efforts: ['low', 'high', 'xhigh', 'max'].map(id => ({ id })) } }));
   const data = new Map();
@@ -46,7 +46,7 @@ function fixture(t, { blocked = false } = {}) {
       await ctx.remote.session.selectModel({ sessionId: id, provider: input.provider, model: input.model, reasoningEffort: input.reasoningEffort });
       rows[id].mode = input.mode; rows[id].submode = input.submode;
     }
-    return { mode: rows[id].mode ?? 'off', submode: rows[id].submode ?? 'free', eligible: true, teamAvailable: false, selected: rows[id].selected, revision: selections.length };
+    return { mode: rows[id].mode ?? 'off', submode: rows[id].submode ?? 'free', eligible: true, teamAvailable: false, workflowAvailable, selected: rows[id].selected, revision: selections.length };
   }, storage: { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) } });
   drafts.managed.set('saved', { cwd: rows.saved.cwd, managed: true });
   t.after(() => drafts.dispose());
@@ -68,37 +68,51 @@ test('Ultra effort is remembered with model and workspace, survives reload and o
   assert.equal(reloaded.preferredUltraEffort('a', otherModel, { reasoning: { efforts: [{ id: 'high' }] } }), undefined);
 });
 
+async function openAndRestore(f, ...args) {
+  await f.drafts.startDraft(...args);
+  await f.drafts.modelRestores.get(f.opened.at(-1))?.done;
+}
+
 test('new drafts restore Ultra with the model and effort, while another workspace keeps its own mode', async t => {
   const f = fixture(t);
   f.drafts.rememberModel('current', otherModel, { mode: 'ultra', submode: 'workflow' });
   f.drafts.rememberModel('b', defaultModel);
-  await f.drafts.startDraft('current');
+  await openAndRestore(f, 'current');
   assert.equal(f.rows.saved.mode, 'ultra'); assert.equal(f.rows.saved.submode, 'workflow');
   assert.deepEqual(f.rows.saved.selected, otherModel);
   const count = f.modeSelections.length;
-  await f.drafts.startDraft('current');
+  await openAndRestore(f, 'current');
   assert.equal(f.modeSelections.length, count, 'reopening unchanged draft does not rewrite model/mode');
   f.rows.saved.blank = false;
-  await f.drafts.startDraft('saved');
+  await openAndRestore(f, 'saved');
   assert.equal(f.rows[f.opened.at(-1)].mode, 'ultra');
   assert.deepEqual(f.rows[f.opened.at(-1)].selected, otherModel);
-  await f.drafts.startDraft('b', undefined, 'B');
+  await openAndRestore(f, 'b', undefined, 'B');
   assert.equal(f.rows[f.opened.at(-1)].mode, 'off');
   f.drafts.rememberModel('current', otherModel);
-  await f.drafts.startDraft('current');
+  await openAndRestore(f, 'current');
   assert.equal(f.rows[f.opened.at(-1)].mode, 'off', 'ordinary preference clears Ultra even if raw effort matches');
+});
+
+test('a draft restores its model without switching the saved Workflow strategy when resume is unavailable', async t => {
+  const f = fixture(t, { workflowAvailable: false });
+  f.drafts.rememberModel('current', otherModel, { mode: 'ultra', submode: 'workflow' });
+  await openAndRestore(f, 'current');
+  assert.equal(f.rows.saved.mode, 'off');
+  assert.deepEqual(f.rows.saved.selected, otherModel);
+  assert.deepEqual(f.drafts.preferences().global.modelMode, { mode: 'ultra', submode: 'workflow' });
 });
 
 test('one global native draft is reused across presets and a started chat gets a new independent draft', async t => {
   const f = fixture(t), original = structuredClone(f.draftsById.saved);
-  await f.drafts.startDraft('current');
-  await f.drafts.startDraft('current', { agentPreset: 'cordis', prompt: 'Create a plugin', whenDraftExists: 'append' });
+  await openAndRestore(f, 'current');
+  await openAndRestore(f, 'current', { agentPreset: 'cordis', prompt: 'Create a plugin', whenDraftExists: 'append' });
   assert.deepEqual(f.opened, ['saved', 'saved']); assert.equal(f.minted, 0);
   assert.equal(f.rows.saved.projectionValues.agentPreset, 'cordis');
   assert.deepEqual(f.draftsById.saved, original);
   assert.equal(f.initialized[0][0], 'saved');
   f.rows.saved.blank = false;
-  await f.drafts.startDraft('saved');
+  await openAndRestore(f, 'saved');
   assert.notEqual(f.opened.at(-1), 'saved');
   assert.equal(f.allocations.length, 1);
   assert.equal(f.created.at(-1).sessionId, f.opened.at(-1));
@@ -109,9 +123,9 @@ test('each workspace owns one draft and manual preferences without copying the v
   const f = fixture(t);
   f.drafts.rememberModel('a', otherModel);
   f.rows.a.selected = { provider: 'retired', model: 'old' };
-  await f.drafts.startDraft('a', undefined, 'A');
-  await f.drafts.startDraft('b', undefined, 'B');
-  await f.drafts.startDraft('a', undefined, 'A');
+  await openAndRestore(f, 'a', undefined, 'A');
+  await openAndRestore(f, 'b', undefined, 'B');
+  await openAndRestore(f, 'a', undefined, 'A');
   assert.deepEqual(f.opened, ['draft-a', 'fresh-1', 'draft-a']); assert.equal(f.minted, 1);
   assert.deepEqual(f.rows['draft-a'].selected, otherModel);
   assert.deepEqual(f.rows['fresh-1'].selected, defaultModel, 'B pins its default so later host-wide changes cannot move the draft');
@@ -122,7 +136,7 @@ test('each workspace owns one draft and manual preferences without copying the v
 test('invalid remembered routes preserve the draft and preference for explicit reselection', async t => {
   const f = fixture(t), missing = { provider: 'retired', model: 'gpt-6.1-sol', reasoningEffort: 'medium' };
   f.drafts.rememberModel('current', missing);
-  await f.drafts.startDraft('current');
+  await openAndRestore(f, 'current');
   assert.deepEqual(f.opened, ['saved']); assert.equal(f.selections.length, 0);
   assert.match(f.notices[0][1], /retired.*gpt-6.1-sol/);
   assert.deepEqual(f.drafts.preferences().global.model, missing);
@@ -134,8 +148,40 @@ test('an in-flight catalog read cannot change a draft that started a turn', asyn
   f.drafts.rememberModel('current', otherModel); f.gate(pending.promise);
   const opening = f.drafts.startDraft('current');
   await new Promise(setImmediate); f.rows.saved.blank = false;
-  pending.resolve(); await opening;
+  await opening;
+  const restored = f.drafts.modelRestores.get('saved').done;
+  pending.resolve(); await restored;
   assert.equal(f.selections.length, 0);
+});
+
+test('catalog failure leaves the original draft open and offers a model retry on that session', async t => {
+  const f = fixture(t), gate = Promise.withResolvers();
+  f.drafts.rememberModel('current', otherModel);
+  f.gate(gate.promise);
+  const before = structuredClone(f.draftsById.saved);
+  await f.drafts.startDraft('current');
+  const restore = f.drafts.modelRestores.get('saved');
+  assert.deepEqual(f.opened, ['saved']); assert.match(restore.reason, /恢复模型/);
+  gate.reject(Error('catalog offline')); await restore.done;
+  assert.equal(restore.failed, true); assert.match(restore.reason, /catalog offline/);
+  assert.deepEqual(f.draftsById.saved, before);
+  f.gate(Promise.resolve()); await f.drafts.restoreModel('saved', 'global');
+  assert.equal(f.drafts.modelRestores.has('saved'), false);
+  assert.deepEqual(f.rows.saved.selected, otherModel); assert.deepEqual(f.opened, ['saved']);
+});
+
+test('a manual selection wins while an older catalog is unavailable', async t => {
+  const f = fixture(t), gate = Promise.withResolvers();
+  f.drafts.rememberModel('current', otherModel);
+  f.gate(gate.promise);
+  await f.drafts.startDraft('current');
+  const restore = f.drafts.modelRestores.get('saved');
+  await f.drafts.beforeModelChoice('saved');
+  await f.drafts.ctx.remote.session.selectModel({ sessionId: 'saved', ...defaultModel });
+  f.drafts.rememberModel('saved', defaultModel);
+  gate.resolve(); await restore.done;
+  assert.deepEqual(f.selections, [{ sessionId: 'saved', ...defaultModel }]);
+  assert.equal(f.drafts.modelRestores.has('saved'), false);
 });
 
 test('a submitting draft keeps its content when initialization is blocked', async t => {

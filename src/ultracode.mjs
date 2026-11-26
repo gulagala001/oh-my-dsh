@@ -52,14 +52,21 @@ export function hasNativeTeamTools(schemas = []) {
     'team_task_create', 'team_task_list', 'team_task_get', 'team_task_update'].every(name => tools.has(name))
     && Object.hasOwn(tools.get('send_message').parameters?.properties ?? {}, 'agent');
 }
-function modeView(state, route, mode, eligible, teamAvailable = false) {
+function hasWorkflowResume(schemas) {
+  return schemas.some(tool => tool.name === 'workflow' && tool.parameters?.properties?.resumeFromRunId);
+}
+function effectiveStrategy(mode, submode, { eligible, workflowAvailable, teamAvailable }) {
+  return { mode: eligible && (submode !== 'workflow' || workflowAvailable) ? mode : 'off',
+    submode: submode === 'team' && !teamAvailable ? 'free' : submode };
+}
+function modeView(state, route, mode, capabilities) {
   const selected = route ? { provider: route.provider, model: route.model, ...(route.reasoningEffort === undefined ? {} : { reasoningEffort: route.reasoningEffort }) } : null;
   const remembered = savedUltraMode(mode);
   const saved = state.model && mode?.selectionSeq === state.model.seq ? remembered.mode : 'off';
-  const submode = remembered.submode === 'team' && !teamAvailable ? 'free' : remembered.submode;
-  return { selected, mode: eligible ? saved : 'off', submode, savedSubmode: remembered.submode,
+  const effective = effectiveStrategy(saved, remembered.submode, capabilities);
+  return { selected, ...effective, ...capabilities, savedSubmode: remembered.submode,
     savedReasoningEffort: mode?.reasoningEffort ?? (saved === 'ultra' ? selected?.reasoningEffort : undefined),
-    teamAvailable, savedMode: saved, enabled: saved !== 'off' && eligible, savedEnabled: saved !== 'off', eligible, revision: state.model?.seq ?? -1 };
+    savedMode: saved, enabled: effective.mode !== 'off', savedEnabled: saved !== 'off', revision: state.model?.seq ?? -1 };
 }
 export function installUltracodeProjection(ctx) {
   const schema = z.object({ revision: z.number() });
@@ -105,11 +112,16 @@ export class UltracodeControl {
     this.store.update(state, { ultracode: next });
   }
   eligible(agent) {
-    if (!agent || agent.session.header.origin === 'subagent' || !this.isOmd(agent.session)) return false;
-    return Boolean(agent.ctx.get('tools')?.schemas(agent).find(tool => tool.name === 'workflow')?.parameters?.properties?.resumeFromRunId);
+    return Boolean(agent && agent.session.header.origin !== 'subagent' && this.isOmd(agent.session));
   }
-  teamAvailable(agent) {
-    return Boolean(agent && this.ctx.get('agentTeams')?.isEnabled(agent) && hasNativeTeamTools(agent.ctx.get('tools')?.schemas(agent)));
+  teamAvailable(agent, schemas) {
+    return Boolean(agent && this.ctx.get('agentTeams')?.isEnabled(agent)
+      && hasNativeTeamTools(schemas ?? agent.ctx.get('tools')?.schemas(agent)));
+  }
+  capabilities(agent) {
+    const eligible = this.eligible(agent);
+    const schemas = eligible ? agent.ctx.get('tools')?.schemas(agent) ?? [] : [];
+    return { eligible, workflowAvailable: hasWorkflowResume(schemas), teamAvailable: eligible && this.teamAvailable(agent, schemas) };
   }
   coldTeamAvailable(events) {
     // Native Team tools are installed per live Agent. For a cold session only
@@ -120,13 +132,12 @@ export class UltracodeControl {
   view(session, agent = this.ctx.agents.get(session.id)) {
     const state = this.fold(session);
     const route = state.pendingModel ?? state.request?.config ?? session.requestHeader?.()?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
-    const view = modeView(state, route, this.store.peek(session.id)?.ultracode, this.eligible(agent), this.teamAvailable(agent));
-    const active = agent && this.active.get(agent);
-    const activeSubmode = active?.submode === 'team' && !view.teamAvailable ? 'free' : active?.submode;
-    const currentMode = view.eligible && agent?.status === 'running' && active ? active.mode : view.mode;
-    const currentSubmode = agent?.status === 'running' && active ? activeSubmode : view.submode;
-    return { ...view, currentMode, currentSubmode,
-      pending: agent?.status === 'running' && Boolean(active && (currentMode !== view.mode || currentSubmode !== view.submode)) };
+    const capabilities = this.capabilities(agent);
+    const view = modeView(state, route, this.store.peek(session.id)?.ultracode, capabilities);
+    const active = agent?.status === 'running' && this.active.get(agent);
+    const current = active ? effectiveStrategy(active.mode, active.submode, capabilities) : view;
+    return { ...view, currentMode: current.mode, currentSubmode: current.submode,
+      pending: Boolean(active && (current.mode !== view.mode || current.submode !== view.submode)) };
   }
   async settled(sessionId, signal) {
     let pending;
@@ -159,24 +170,27 @@ export class UltracodeControl {
     if (header?.origin === 'subagent' || agent && parent && this.ctx.agents.isOwnedBy?.(agent.id, parent)) throw Error('不能通过模型面板接管子代理会话');
   }
   async coldCapability(preset, signal) {
-    const unavailable = reason => ({ eligible: false, capability: 'cold-unavailable', workflowResumeReady: false,
-      reason: reason + ' 冷会话尚未 hydration，Workflow resume 能力未就绪。' });
+    const unavailable = reason => ({ eligible: false, workflowAvailable: false, capability: 'cold-unavailable',
+      workflowResumeReady: false, reason });
     if (!isOmdPreset(preset)) return unavailable('原生历史当前不是 OMD preset；工作模式未启用。');
     const presets = this.ctx.get('agentPresets'), tools = this.ctx.get('tools');
-    if (typeof presets?.compositionInventory !== 'function' || typeof presets?.acquireScope !== 'function' || typeof tools?.schemas !== 'function') return unavailable('冷会话尚未 hydration；宿主不能只读核对当前 preset 与 Workflow。');
+    if (typeof presets?.compositionInventory !== 'function') return unavailable('宿主不能只读核对当前 OMD preset。');
     const inventory = await presets.compositionInventory(); signal?.throwIfAborted();
     if (!Array.isArray(inventory)) throw Error('原生 preset 配置查询无效');
     const current = inventory.find(row => row.id === preset);
-    if (!current || current.broken !== undefined || !current.rows?.some(row => row.moduleName === 'oh-my-dsh/host/tool-workflow' && row.enabled === true && row.fiberState === 2)) return unavailable('当前 OMD Workflow bundle 不可用；保留已保存模式，恢复后需重新核对。');
-    // The native cold-read lease exposes the standing preset's public tool view.
-    // It neither creates/binds an Agent nor mounts a new preset revision.
+    if (!current || current.broken !== undefined) return unavailable('当前 OMD preset 不可用；保留已保存模式。');
+    const result = { eligible: true, capability: 'cold-preset', workflowAvailable: false, workflowResumeReady: false,
+      reason: '已核对 OMD preset；未确认 Workflow 续跑能力，恢复会话后将重新核验。' };
+    if (!current.rows?.some(row => row.moduleName === 'oh-my-dsh/host/tool-workflow' && row.enabled === true && row.fiberState === 2)
+      || typeof presets.acquireScope !== 'function' || typeof tools?.schemas !== 'function') return result;
+    // Inspect the standing preset without hydrating its Agent or admitting a resume.
     const lease = await presets.acquireScope(preset);
     try {
       signal?.throwIfAborted();
       const schemas = tools.schemas(lease.key);
       if (!Array.isArray(schemas)) throw Error('原生 Workflow 工具查询无效');
-      if (!schemas.some(tool => tool.name === 'workflow' && tool.parameters?.properties?.resumeFromRunId)) return unavailable('当前 preset 的公开 Workflow resume schema 不可用；保留已保存模式。');
-      return { eligible: true, capability: 'cold-preset', workflowResumeReady: false, reason: '冷会话尚未 hydration；当前 OMD preset 与公开 Workflow schema 已只读核对，模式将在有意恢复后重新核验，并非已可执行的 resume 能力。' };
+      if (!hasWorkflowResume(schemas)) return result;
+      return { ...result, workflowAvailable: true, reason: '已核对 OMD preset 与 Workflow schema；须恢复会话后才能执行续跑。' };
     } finally { await lease[Symbol.asyncDispose](); }
   }
   async inspect(sessionId, signal) {
@@ -190,7 +204,7 @@ export class UltracodeControl {
     if (agent) return this.view(session, agent);
     if (target.archivedOnly) {
       const { mode: saved, submode } = savedUltraMode(stored?.ultracode);
-      return { selected: null, mode: 'off', submode: submode === 'team' ? 'free' : submode, savedSubmode: submode, teamAvailable: false, savedMode: saved, enabled: false, savedEnabled: saved !== 'off', eligible: false, revision: -1,
+      return { selected: null, mode: 'off', submode: submode === 'team' ? 'free' : submode, savedSubmode: submode, teamAvailable: false, workflowAvailable: false, savedMode: saved, enabled: false, savedEnabled: saved !== 'off', eligible: false, revision: -1,
         cold: true, archivedOnly: true, capability: 'archived-only', workflowResumeReady: false, reason: '仅有 OMD 存档，原生会话不存在；保存模式不代表可恢复的模型选择或 Workflow 能力。' };
     }
     const header = session?.header ?? inspection.meta, events = session ? session.snapshotEvents() : inspection.events;
@@ -201,7 +215,7 @@ export class UltracodeControl {
     const preset = state.preset === undefined ? header.agentPreset : state.preset;
     const capability = await this.coldCapability(preset, signal); signal?.throwIfAborted();
     const route = state.pendingModel ?? state.request?.config ?? this.ctx.get('agentDefaultModel')?.currentSelection();
-    return { ...modeView(state, route, stored?.ultracode, capability.eligible, this.coldTeamAvailable(events)), ...capability, cold: true, archivedOnly: false, preset: preset ?? null };
+    return { ...modeView(state, route, stored?.ultracode, { ...capability, teamAvailable: capability.eligible && this.coldTeamAvailable(events) }), cold: true, archivedOnly: false, preset: preset ?? null };
   }
   select(sessionId, input) { return this.writeSelection(sessionId, input); }
   // Compensation restores intent, including a remembered Team whose native
@@ -230,6 +244,7 @@ export class UltracodeControl {
       this.prepare(agent);
       if (input.expectedRevision !== undefined && input.expectedRevision !== before.revision) throw new Error('模型设置已在另一处更新，请重试');
       if (mode !== 'off' && !before.eligible && !restoring) throw new Error('Ultra 需要当前会话的 OMD 协作能力');
+      if (mode === 'ultra' && submode === 'workflow' && !before.workflowAvailable && !restoring) throw new Error('Ultra Workflow 需要当前会话的 Workflow 续跑能力');
       if (mode === 'ultra' && submode === 'team' && !before.teamAvailable && !restoring) throw new Error('请先在 DSH 中启用 Agent Team');
       const controller = this.ctx.get('sessionController');
       if (!controller) throw new Error('当前宿主未提供模型选择服务');
@@ -268,13 +283,10 @@ export class UltracodeControl {
     return next;
   }
   currentMode(agent) {
-    if (!agent || !this.eligible(agent)) return 'off';
-    return (agent.status === 'running' ? this.active.get(agent)?.mode : undefined) ?? this.view(agent.session, agent).mode;
+    return agent ? this.view(agent.session, agent).currentMode : 'off';
   }
   currentSubmode(agent) {
-    if (!agent) return 'free';
-    const selected = (agent.status === 'running' ? this.active.get(agent)?.submode : undefined) ?? this.view(agent.session, agent).submode;
-    return selected === 'team' && !this.teamAvailable(agent) ? 'free' : selected;
+    return agent ? this.view(agent.session, agent).currentSubmode : 'free';
   }
   /** Pin the requested strategy per turn. DSH alone owns tools and children;
    * a disabled native Team must not leave instructions for unavailable tools. */
@@ -282,16 +294,17 @@ export class UltracodeControl {
     await this.settled(agent.session.id);
     const active = this.prepare(agent), state = this.fold(agent.session);
     const assembly = await next();
-    if (!this.eligible(agent)) return assembly;
+    const capabilities = this.capabilities(agent);
+    if (!capabilities.eligible) return assembly;
     const last = this.store.peek(agent.session.id)?.ultracode?.delivery;
-    const submode = active.submode === 'team' && !this.teamAvailable(agent) ? 'free' : active.submode;
+    const { mode, submode } = effectiveStrategy(active.mode, active.submode, capabilities);
     const guide = this.guides[submode];
     const claim = this.claims.get(agent);
-    const on = active.mode === 'ultra';
+    const on = mode === 'ultra';
     const kind = on ? 'on' : 'off';
     const emit = this.fresh.has(agent) || last?.kind !== kind || last?.submode !== submode || last?.guideHash !== guide.hash
       || Boolean(claim) && state.humans - (last?.humanCount ?? 0) >= 10;
-    this.frames.set(agent, { claim, humanCount: state.humans, kind, mode: active.mode, submode, emit,
+    this.frames.set(agent, { claim, humanCount: state.humans, kind, mode, submode, emit,
       revision: this.fold(agent.session).model?.seq ?? -1, turn: state.turn, guideHash: guide.hash });
     // Fuse the selected Team prompt into DSH's existing policy section. The
     // native identity, tool contracts, registration and UI remain DSH-owned.

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile, rm, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm, readdir, realpath, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -82,6 +82,42 @@ test('other unknown types, torn frames and live writer leases retain original by
   const torn = f.bytes.subarray(0, f.bytes.length - 2); await writeFile(f.path, torn);
   await assert.rejects(repairOptimizationRecords(f.path, args), /尾帧不完整/);
   assert.deepEqual(await readFile(f.path), torn);
+});
+
+test('repair through a configured root alias respects the host writer and physical log', async t => {
+  const f = await fixture(t);
+  const root = join(f.dir, 'session-root-alias');
+  await symlink(f.root, root, 'junction');
+  const hostPath = support.generationLogPath(root, undefined, f.session.id, 4, 'zstd');
+  const physicalPath = await realpath(hostPath);
+  const claimed = [];
+  const trackedSupport = { ...support, SessionWriteLease: { acquire(dir, id) {
+    claimed.push(dir);
+    return support.SessionWriteLease.acquire(dir, id);
+  } } };
+  const args = { root, dataDir: f.dataDir, sessionId: f.session.id, support: trackedSupport };
+
+  for (const owner of [hostPath, physicalPath]) {
+    const writer = await support.SessionWriteLease.acquire(dirname(owner), f.session.id);
+    try {
+      for (const path of [hostPath, physicalPath]) {
+        claimed.length = 0;
+        await assert.rejects(repairOptimizationRecords(path, args), /owned|ownership|another/i);
+        assert.equal(claimed[0], dirname(hostPath));
+        assert.deepEqual(await readFile(path), f.bytes);
+      }
+    } finally { await writer.release(); }
+  }
+  assert.equal((await repairOptimizationRecords(physicalPath, args)).changed, 1);
+});
+
+test('repair refuses a session log outside the configured root before acquiring a lease', async t => {
+  const f = await fixture(t);
+  const root = join(f.dir, 'other-root');
+  await mkdir(root);
+  await assert.rejects(repairOptimizationRecords(f.path, { root, dataDir: f.dataDir, sessionId: f.session.id, support: {} }),
+    /只接受当前宿主目录中的 V4 日志/);
+  assert.deepEqual(await readFile(f.path), f.bytes);
 });
 
 test('strict validation refuses a different required event even alongside a repairable record', async t => {
