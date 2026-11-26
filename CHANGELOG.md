@@ -1,4 +1,4 @@
-# Oh My DSH 1.9.5 · DSH 0.2.2 rc.3 / rc.4 / rc.5（未发布）
+# Oh My DSH 1.9.5 · DSH 0.2.2 rc.3 / rc.4 / rc.5
 
 [中文](#zh-195) · [English](#en-195)
 
@@ -8,7 +8,7 @@
 
 ### 问题修复
 
-- 新草稿完成创建与附件交接后即可打开。模型目录暂时不可用时，保留草稿并提供手动选模入口；晚到的偏好恢复不会覆盖手动选择。
+- 新草稿创建并准备好附件后即可打开。模型目录暂时不可用时，保留草稿并提供手动选模入口；晚到的偏好恢复不会覆盖手动选择。
 - 会话总览独立于电脑操作加载。OpenCU 暂时不可用时，仍可查看任务、来源和输出。
 - Ultra 的 Free 和 Team 模式不再依赖 Workflow 续跑能力。Workflow 暂时不可用时保留原策略偏好，恢复后重新核验。
 - 设置和各提供方的模型列表分别读取。慢请求或失败只影响对应列表；修改费用显示等无关设置不会重新调度上下文处理。
@@ -21,7 +21,7 @@
 
 ### Fixes
 
-- Open new drafts once creation and attachment handoff finish. If the model directory is unavailable, keep the draft and allow manual model selection; late preference restoration does not overwrite manual choices.
+- Open new drafts once created and their attachments are ready. If the model directory is unavailable, keep the draft and allow manual model selection; late preference restoration does not overwrite manual choices.
 - Load the session overview independently of computer use. Tasks, sources and outputs remain available when OpenCU is temporarily unavailable.
 - Ultra Free and Team no longer depend on Workflow resume support. Saved Workflow preferences remain intact and are checked again when that capability returns.
 - Read settings and each provider's model list independently. Slow or failed requests affect only their own list; unrelated display settings no longer reschedule context processing.
@@ -30,9 +30,9 @@
 
 ## 安装 / Installation
 
-此版本尚未发布；当前安装入口见[安装指南](docs/install.md)。
+DSH **0.2.2 rc.3 / rc.4 / rc.5** · Node.js **24.9.0+**
 
-This version is not published yet; see the [installation guide](docs/install_EN.md) for the current release.
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.5/oh-my-dsh-0.2.2-rc.5.omd.1.9.5.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.5/SHA256SUMS)
 
 ---
 
