@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { open, readFile, realpath, stat, mkdir, rename, rm } from 'node:fs/promises';
-import { basename, dirname, join, relative, isAbsolute, resolve } from 'node:path';
+import { basename, dirname, join, relative, isAbsolute, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { constants, zstdCompress, zstdDecompress } from 'node:zlib';
 import { symbols } from '@deepseek-ai/cordis';
@@ -10,7 +10,7 @@ const compress = promisify(zstdCompress), decompress = promisify(zstdDecompress)
 const utf8 = new TextDecoder('utf-8', { fatal: true });
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const identity = value => [value.dev, value.ino, value.size, value.mtimeNs, value.ctimeNs].join(':');
-const inside = (root, path) => { const rel = relative(root, path); return rel && rel !== '..' && !rel.startsWith('../') && !isAbsolute(rel); };
+const inside = (root, path) => { const rel = relative(root, path); return rel && rel !== '..' && !rel.startsWith('..' + sep) && !isAbsolute(rel); };
 async function syncDirectory(path) {
   if (process.platform === 'win32') return;
   const file = await open(path, 'r'); try { await file.sync(); } finally { await file.close(); }
@@ -46,9 +46,19 @@ export async function repairOptimizationRecords(path, { root, dataDir, sessionId
   if (!inside(canonicalRoot, canonicalPath) || !/^session\.v4\.jsonl(?:\.zstd)?$/.test(basename(path)))
     throw Error('工具优化修复只接受当前宿主目录中的 V4 日志');
   const compression = path.endsWith('.zstd') ? 'zstd' : 'none';
-  const lease = await support.SessionWriteLease.acquire(dirname(canonicalPath), sessionId);
+  // The host's Windows semaphore is named from the configured path spelling.
+  // A junction or an 8.3 path can resolve to the same log under another name.
+  const hostPath = inside(root, path) ? resolve(path) : resolve(root, relative(canonicalRoot, canonicalPath));
+  const hostDir = dirname(hostPath), physicalDir = dirname(canonicalPath);
+  const leaseDirs = [hostDir];
+  if (process.platform === 'win32' && hostDir.toLowerCase() !== physicalDir.toLowerCase()) leaseDirs.push(physicalDir);
+  const leases = new AsyncDisposableStack();
   let temporary;
   try {
+    for (const dir of leaseDirs) {
+      const lease = await support.SessionWriteLease.acquire(dir, sessionId);
+      leases.defer(() => lease.release());
+    }
     signal?.throwIfAborted();
     const before = await stat(canonicalPath, { bigint: true }), original = await readFile(canonicalPath, { signal });
     const scan = compression === 'zstd' ? support.scanZstdFrames(original) : { frames: [{ start: 0, end: original.length }] };
@@ -61,8 +71,10 @@ export async function repairOptimizationRecords(path, { root, dataDir, sessionId
       const lines = text.split('\n');
       if (index === 0) {
         header = JSON.parse(lines[0]);
-        if (header.type !== 'session' || header.version !== 4 || header.id !== sessionId
-          || await realpath(support.generationLogPath(root, header.cwd, header.id, 4, compression)) !== canonicalPath)
+        if (header.type !== 'session' || header.version !== 4 || header.id !== sessionId)
+          throw Error('会话身份或存储路径不匹配，原日志保留');
+        const expectedPath = support.generationLogPath(root, header.cwd, header.id, 4, compression);
+        if (relative(hostPath, expectedPath) !== '' || await realpath(expectedPath) !== canonicalPath)
           throw Error('会话身份或存储路径不匹配，原日志保留');
         if (compression === 'zstd' && lines.length !== 2) throw Error('会话头帧结构无效，原日志保留');
       }
@@ -86,13 +98,14 @@ export async function repairOptimizationRecords(path, { root, dataDir, sessionId
     await syncDirectory(backupDir);
     signal?.throwIfAborted();
     if (identity(before) !== identity(await stat(canonicalPath, { bigint: true }))
-      || digest(await readFile(canonicalPath)) !== originalSha256 || await realpath(path) !== canonicalPath)
+      || digest(await readFile(canonicalPath)) !== originalSha256 || await realpath(path) !== canonicalPath
+      || (hostPath !== resolve(path) && await realpath(hostPath) !== canonicalPath))
       throw Error('会话在修复期间发生变化，保留原日志与备份');
     await rename(temporary, canonicalPath); temporary = undefined;
     await syncDirectory(dirname(canonicalPath));
     return { changed: changed.length, sessionId, sequences: changed, backup, originalSha256, sha256: digest(output) };
   } finally {
-    try { if (temporary) await rm(temporary, { force: true }); } finally { await lease.release(); }
+    try { if (temporary) await rm(temporary, { force: true }); } finally { await leases.disposeAsync(); }
   }
 }
 

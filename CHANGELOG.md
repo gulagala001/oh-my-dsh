@@ -13,6 +13,7 @@
 - Ultra 的 Free 和 Team 模式不再依赖 Workflow 续跑能力。Workflow 暂时不可用时保留原策略偏好，恢复后重新核验。
 - 设置和各提供方的模型列表分别读取。慢请求或失败只影响对应列表；修改费用显示等无关设置不会重新调度上下文处理。
 - 验证任务运行期间可以读取最近已提交的任务清单，后续修改仍按顺序执行。
+- Windows 上恢复旧会话时，如果其他写入者仍在使用该会话，会保留原始记录并暂缓修复。
 
 <a id="en-195"></a>
 
@@ -25,6 +26,7 @@
 - Ultra Free and Team no longer depend on Workflow resume support. Saved Workflow preferences remain intact and are checked again when that capability returns.
 - Read settings and each provider's model list independently. Slow or failed requests affect only their own list; unrelated display settings no longer reschedule context processing.
 - Read the latest committed task list while verification runs. Subsequent edits remain serialized.
+- On Windows, recovery leaves the original history intact while another writer has the session open.
 
 ## 安装 / Installation
 
