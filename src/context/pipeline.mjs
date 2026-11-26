@@ -3,8 +3,9 @@ import { forkParentOf } from '../host/session-fork.mjs';
 import { replacementEstimate } from '../metering/estimate.mjs';
 import { catalogPage } from './catalog.mjs';
 import { sourceName } from '../message-source.mjs';
-import { contextConfig } from '../config.mjs';
-export { contextConfig };
+import { pipelineConfig } from '../config.mjs';
+import { isDeepStrictEqual } from 'node:util';
+export { contextConfig } from '../config.mjs';
 import { randomUUID } from 'node:crypto';
 import { preparationRequest, preparationEvents } from './input-budget.mjs';
 import { compactFull } from './full-compaction.mjs';
@@ -41,7 +42,16 @@ export class ContextPipeline {
     this.autoCompact = new AutoCompaction(this);
     this.cachedPreparation = new CachedPreparation(this);
   }
-  config() { return contextConfig(this.hub.config()); }
+  config() { return pipelineConfig(this.hub.config()); }
+  watchSettings(ctx) {
+    let previous = this.config();
+    ctx.on('app-boot/config-reload', () => {
+      const next = this.config();
+      if (isDeepStrictEqual(previous, next)) return;
+      this.reconfigure();
+      previous = next;
+    });
+  }
   mode(session) { return !this.hub.bc?.active(session) && this.store.peek(session.id)?.compressionMode === 'adaptive' ? 'adaptive' : 'pipeline'; }
   setMode(session, mode) {
     if (!['pipeline', 'adaptive'].includes(mode)) throw Error('压缩模式只能是 pipeline 或 adaptive');

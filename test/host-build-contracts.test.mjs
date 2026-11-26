@@ -64,9 +64,39 @@ test('semantic edits reject missing or duplicate anchors and keep replacement te
 });
 
 test('style owner edits reject zero, duplicate and mismatched registrations', () => {
-  const source = 'const tagId = "@fixture/ui/body"; tag.dataset.plugin = "@fixture/ui";';
+  const source = `const renamedId /* style */ = '@fixture/ui/body';
+    if (document) { const sheet = document.createElement('style');
+      sheet . dataset.plugin = '@fixture/ui'; sheet.dataset.pluginCss = renamedId;
+    } // tag.dataset.plugin = "@fixture/ui"`;
   const options = { moduleId: '@fixture/ui', owner: 'omd', namespace: 'omd/body', count: 1 };
-  assert.equal(ownClientStyles(source, options), 'const tagId = "omd/body/body"; tag.dataset.plugin = "omd";');
-  for (const bad of ['', source + source, source.replace('tag.dataset.plugin', 'otherOwner')])
-    assert.throws(() => ownClientStyles(bad, options), /style owner count changed/);
+  assert.equal(ownClientStyles(source, options), source.replace("'@fixture/ui/body'", '"omd/body/body"').replace("'@fixture/ui'", '"omd"'));
+  for (const bad of ['', source + '\n{' + source + '\n}', source.replace('dataset.plugin =', 'dataset.other ='),
+    source.replace('sheet.dataset.pluginCss', 'other.dataset.pluginCss'),
+    source.replace('sheet.dataset.pluginCss', "if (document.head) sheet.dataset.plugin = 'different'; sheet.dataset.pluginCss"),
+    source.replace('= renamedId;', "= renamedId; sheet.dataset['pluginCss'] += '/other';")]) {
+    assert.throws(() => ownClientStyles(bad, options), /style owner count changed|ambiguous style (ID|metadata)/);
+  }
+});
+
+test('host tool edits follow unique operations through formatting and fail on changed semantics', async () => {
+  const { default: ts } = await import('typescript');
+  const { adaptHostTool } = await import('../scripts/host-tool-adapter.mjs');
+  const fixture = name => readFile(new URL('vendor/dsh/' + name + '/src/index.ts', root), 'utf8');
+  for (const name of ['tool-bash', 'tool-pwsh']) {
+    const oldWait = 'registry.wait(attached.id, timeoutMs, owner)';
+    const input = (await fixture(name)).replace(oldWait, 'registry.wait( attached.id, /* grace */ timeoutMs, owner, )');
+    const result = adaptHostTool(ts, name, input);
+    assert.equal(result, input.replace('/* grace */ timeoutMs', '/* grace */ 1000'));
+    assert.throws(() => adaptHostTool(ts, name, input.replace('/* grace */ timeoutMs', 'anotherTimeout')), /expected one match/);
+  }
+  const jobs = (await fixture('tool-jobs')).replace("name: 'job_list'", '"name" /* public tool */: "job_list"');
+  const marked = adaptHostTool(ts, 'tool-jobs', jobs);
+  assert.equal(marked.match(/Symbol\.for\("dsh-rewind-plus\.workspace-independent"\)/g).length, 3);
+  assert.throws(() => adaptHostTool(ts, 'tool-jobs', jobs.replace("name: 'job_kill'", "name: 'job_output'")), /job_output registration: expected one match, found 2/);
+  const local = (await fixture('jobs-local')).replace('throw waitAborted()', '{ throw /* sync */ waitAborted(); }')
+    .replace('reject(waitAborted())', 'reject( /* async */ waitAborted() )');
+  const fixed = adaptHostTool(ts, 'jobs-local', local);
+  assert.match(fixed, /throw \/\* sync \*\/ signal.reason \?\? waitAborted\(\)/);
+  assert.match(fixed, /reject\( \/\* async \*\/ signal\?\.reason \?\? waitAborted\(\) \)/);
+  assert.throws(() => adaptHostTool(ts, 'jobs-local', local.replace('if (signal?.aborted) { throw /* sync */', 'if (signal?.closed) { throw /* sync */')), /abort check: expected one match/);
 });

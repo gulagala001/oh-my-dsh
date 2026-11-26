@@ -14,25 +14,13 @@ export function configSnapshot(config = {}) {
   return Object.fromEntries(Object.entries(config).map(([key, value]) => [key,
     value && typeof value.get === 'function' ? value.get() : value]));
 }
-export const Config = z.object({
-  dataDir: z.string(),
-  projectlessWorkspaceRoot: z.string(),
-  monitorCurrency: z.union(['original', 'USD', 'CNY']).default('original'),
-  monitorUsdCny: z.number().default(DEFAULT_USD_CNY),
-  monitorRateDate: z.string().default(DEFAULT_RATE_DATE),
-  monitorPrices: z.array(z.object({
-    provider: z.string().pattern(/\S/).required(), model: z.string().pattern(/\S/).required(), currency: z.string().pattern(/^[A-Z]{3}$/).required(),
-    inputTokens: z.number().min(0), outputTokens: z.number().min(0), cacheReadTokens: z.number().min(0), cacheWriteTokens: z.number().min(0),
-  })).default([]),
+// The pipeline reads and observes the same schema. Shared background routes and
+// execution limits also belong here because preparation uses them.
+const contextSwitches = {
   contextEnabled: z.boolean().default(true),
   contextOptimizationEnabled: z.boolean().default(true),
-  multiImageFixEnabled: z.boolean().default(true),
-  multiImageFixRules: z.array(z.object({
-    provider: z.string().pattern(/\S/).required(),
-    maxImages: z.number().step(1).min(2).required(),
-    maxBytes: z.number().step(1).min(1).required(),
-    keepImages: z.number().step(1).min(1).required(),
-  })).default(DEFAULT_IMAGE_RULES.map(rule => ({ ...rule }))),
+};
+const contextPreparation = {
   automaticReplace: z.boolean().default(true),
   autoCompactEnabled: z.boolean().default(false),
   autoCompactThreshold: z.number().step(1).min(1).default(400000),
@@ -52,6 +40,54 @@ export const Config = z.object({
   coordinatorRecentEvents: z.number().step(1).min(0).default(12),
   traceEnabled: z.boolean().default(true),
   traceMaxChars: z.number().step(1).min(0).default(0),
+};
+const contextExecution = {
+  backgroundMode: z.union(['unified', 'separate']).default('unified'),
+  unifiedBackground: route.default({}),
+  background: route.default({}),
+  surgeon: route.default({}),
+  jobTimeoutMs: z.number().step(1).min(0).default(600000),
+  digestEvery: z.number().step(1).min(1).default(contextCadence.digestEvery),
+  digestMaxTokens: z.number().step(1).min(0).default(0),
+  idlePreprocessEnabled: z.boolean().default(false),
+  flushIdleMs: z.number().step(1).min(0).default(90000),
+  surgeonMaxTokens: z.number().step(1).min(0).default(0),
+  requireShorter: z.boolean().default(true),
+  keepTailEvents: z.number().step(1).min(0).default(30),
+  surgeryCooldownSteps: z.number().step(1).min(0).default(contextCadence.surgeryCooldownSteps),
+};
+const pipelineSchema = z.object({ ...contextSwitches, ...contextPreparation, ...contextExecution });
+export function pipelineConfig(raw = {}) {
+  const values = Object.fromEntries(Object.keys(pipelineSchema.dict).map(key => [key, raw[key]]));
+  rejectNullScalars(values, pipelineSchema.dict);
+  const config = pipelineSchema(values);
+  // The public settings schema preserves extension fields on stored routes.
+  // Only the declared route options are consumed by background execution.
+  for (const [key, field] of Object.entries(pipelineSchema.dict)) {
+    if (field.type === 'object') config[key] = Object.fromEntries(Object.keys(field.dict).map(option => [option, config[key][option]]));
+  }
+  return structuredClone(config);
+}
+
+export const Config = z.object({
+  dataDir: z.string(),
+  projectlessWorkspaceRoot: z.string(),
+  monitorCurrency: z.union(['original', 'USD', 'CNY']).default('original'),
+  monitorUsdCny: z.number().default(DEFAULT_USD_CNY),
+  monitorRateDate: z.string().default(DEFAULT_RATE_DATE),
+  monitorPrices: z.array(z.object({
+    provider: z.string().pattern(/\S/).required(), model: z.string().pattern(/\S/).required(), currency: z.string().pattern(/^[A-Z]{3}$/).required(),
+    inputTokens: z.number().min(0), outputTokens: z.number().min(0), cacheReadTokens: z.number().min(0), cacheWriteTokens: z.number().min(0),
+  })).default([]),
+  ...contextSwitches,
+  multiImageFixEnabled: z.boolean().default(true),
+  multiImageFixRules: z.array(z.object({
+    provider: z.string().pattern(/\S/).required(),
+    maxImages: z.number().step(1).min(2).required(),
+    maxBytes: z.number().step(1).min(1).required(),
+    keepImages: z.number().step(1).min(1).required(),
+  })).default(DEFAULT_IMAGE_RULES.map(rule => ({ ...rule }))),
+  ...contextPreparation,
   identityPrompt: z.string().default(DEFAULT_IDENTITY),
   identityPreset: z.string().default('custom'),
   identitySavedPresets: z.array(z.object({ id: z.string().required(), name: z.string().required(), text: z.string().required(), description: z.string(), modules: personalityModules })).default([]),
@@ -83,22 +119,17 @@ export const Config = z.object({
   dreamProvider: z.string().default(''),
   dreamModel: z.string().default(''),
   dreamProjects: z.array(z.string()).default([]),
-  backgroundMode: z.union(['unified', 'separate']).default('unified'),
-  unifiedBackground: route.default({}),
-  background: route.default({}),
-  surgeon: route.default({}),
-  jobTimeoutMs: z.number().step(1).min(0).default(600000),
-  digestEvery: z.number().step(1).min(1).default(contextCadence.digestEvery),
-  digestMaxTokens: z.number().step(1).min(0).default(0),
-  idlePreprocessEnabled: z.boolean().default(false),
-  flushIdleMs: z.number().step(1).min(0).default(90000),
-  surgeonMaxTokens: z.number().step(1).min(0).default(0),
-  requireShorter: z.boolean().default(true),
-  keepTailEvents: z.number().step(1).min(0).default(30),
-  surgeryCooldownSteps: z.number().step(1).min(0).default(contextCadence.surgeryCooldownSteps),
+  ...contextExecution,
 });
 
 for (const [key, field] of Object.entries(Config.dict)) if (!['dataDir', 'projectlessWorkspaceRoot'].includes(key)) Config.dict[key] = field.volatile();
+
+function rejectNullScalars(raw, fields) {
+  for (const [key, value] of Object.entries(raw)) {
+    const type = fields[key]?.type;
+    if (value === null && ['number', 'boolean'].includes(type)) throw new Error(key + ' expected ' + type + ', got null');
+  }
+}
 
 // Defaults apply to omitted values. An explicit null is not a numeric or
 // boolean setting; use the same schema for API writes and pipeline options.
@@ -108,10 +139,7 @@ export function contextConfig(raw = {}) {
   if (Object.hasOwn(raw, 'taskVerificationMode') && !TASK_VERIFICATION_MODES.includes(raw.taskVerificationMode)) throw Error('无效的任务验证档位');
   if (Object.hasOwn(raw, 'multiImageFixRules')) validateImageRules(raw.multiImageFixRules);
   personalityPatch(raw, personalityPreset(raw));
-  for (const [key, value] of Object.entries(raw)) {
-    const type = Config.dict[key]?.type;
-    if (value === null && ['number', 'boolean'].includes(type)) throw new Error(key + ' expected ' + type + ', got null');
-  }
+  rejectNullScalars(raw, Config.dict);
   const value = structuredClone(configSnapshot(Config(raw))), routes = new Set();
   validateImageRules(value.multiImageFixRules);
   if (!Number.isFinite(value.monitorUsdCny) || value.monitorUsdCny <= 0) throw Error('美元兑人民币汇率必须为正数');

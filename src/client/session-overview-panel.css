@@ -70,3 +70,6 @@
 }
 html[data-omd-reduce-effects] .omd-overview-layout > .omd-overview-rail,
 html[data-omd-reduce-effects] .omd-overview-resize::after { transition: none !important; }
+
+.omd-overview-content { height: 100%; overflow: auto; box-sizing: border-box; padding: 8px 12px; }
+.omd-overview-content nav { display: grid; justify-items: start; gap: 4px; }

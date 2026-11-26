@@ -1,3 +1,4 @@
+import { ProjectlessDrafts } from '../src/client/projectless-state.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -97,7 +98,9 @@ test('only successful latest native UI choices update preferences and hooks rele
   const directory = { select, store: { getSnapshot: () => ({ current }) } }, original = () => directory, models = { directoryFor: original };
   const ctx = { effect() {}, slots: { inject() {} }, sessions: { scope: () => ({ effect: run => sessionCleanup.push(run()) }) },
     inject(_deps, run) { run({ modelDirectories: models, effect: callback => lifetime.push(callback()) }); } };
-  load('model').applyModelPanel(ctx, { rememberModel: (...args) => remembered.push(args) });
+  const drafts = new ProjectlessDrafts(ctx);
+  drafts.rememberModel = (...args) => remembered.push(args);
+  drafts.observeManualChoices();
   const first = models.directoryFor('draft').select({ provider: 'native', model: 'first' });
   const second = models.directoryFor('draft').select({ provider: 'native', model: 'second' });
   pending[1].resolve({ ok: true }); await second;

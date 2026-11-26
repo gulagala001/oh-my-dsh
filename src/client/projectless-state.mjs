@@ -42,6 +42,7 @@ export async function projectlessApi(path = '', body, signal) {
 export class ProjectlessDrafts {
   constructor(ctx, { request = projectlessApi, modeRequest = modelModeApi, storage = globalThis.localStorage } = {}) {
     this.ctx = ctx; this.request = request; this.modeRequest = modeRequest; this.storage = storage;
+    this.modelRestores = new Map();
     this.listeners = new Set(); this.managed = new Map(); this.inspections = new Map();
     this.lifetime = new AbortController(); this.revision = 0;
     this.subscribe = fn => { this.listeners.add(fn); return () => this.listeners.delete(fn); };
@@ -69,6 +70,7 @@ export class ProjectlessDrafts {
   // the native RPC used to restore a draft.
   rememberModel(id, selected, mode) {
     if (this.lifetime.signal.aborted || !validModel(selected)) return;
+    this.clearModelRestore(id);
     const scope = this.scopeFor(id), previous = this.preferences()[scope];
     const ultra = mode?.mode === 'ultra';
     this.remember(scope, { model: { provider: selected.provider, model: selected.model,
@@ -79,12 +81,100 @@ export class ProjectlessDrafts {
       } } : {}),
     });
   }
+  observeManualChoices() {
+    const drafts = this;
+    // Native /model and other native selectors use directory.select; automatic
+    // transfers use remote.session.selectModel and never enter this UI boundary.
+    this.ctx.inject(['modelDirectories'], scope => {
+      const models = scope.modelDirectories, original = models.directoryFor, restores = new Map();
+      function directoryFor(id) {
+        const directory = original.call(this, id);
+        if (!restores.has(directory)) {
+          const select = directory.select;
+          let revision = 0;
+          async function choose(selection) {
+            const ticket = ++revision;
+            if (drafts.modelRestores.has(id)) await drafts.beforeModelChoice(id);
+            const result = await select.call(this, selection);
+            const current = directory.store?.getSnapshot().current;
+            if (result.ok && ticket === revision && (!current || sameModel(current, selection))) drafts.rememberModel(id, selection);
+            return result;
+          }
+          const restore = () => { if (directory.select === choose) directory.select = select; restores.delete(directory); };
+          directory.select = choose; restores.set(directory, restore);
+          drafts.ctx.sessions.scope(id).effect(() => restore);
+        }
+        return directory;
+      }
+      models.directoryFor = directoryFor;
+      scope.effect(() => () => {
+        if (models.directoryFor === directoryFor) models.directoryFor = original;
+        for (const restore of restores.values()) restore();
+      });
+    });
+  }
   preferredUltraEffort(id, route, model) {
     const preferences = this.preferences(), scope = preferences[this.scopeFor(id)];
     const remembered = (validModel(scope?.model) ? scope : preferences.global)?.ultraEfforts?.[modelKey(route)];
     return model?.reasoning?.efforts?.some(level => level.id === remembered) ? remembered : undefined;
   }
-  async applyModelPreference(id, scope, signal) {
+  clearModelRestore(id) {
+    const restore = this.modelRestores.get(id);
+    if (!restore) return;
+    this.modelRestores.delete(id);
+    restore.controller.abort();
+    restore.release?.();
+    this.emit();
+  }
+  // A manual choice supersedes a pending read immediately. An already dispatched
+  // write must settle before the native selector writes its user's choice.
+  async beforeModelChoice(id) {
+    const restore = this.modelRestores.get(id);
+    if (!restore) return;
+    restore.reason = '请确认模型选择后发送。';
+    restore.manual = true; restore.failed = false;
+    if (!restore.writing) restore.controller.abort();
+    this.emit();
+    if (!restore.writing) return false;
+    await restore.done;
+    return true;
+  }
+  restoreModel(id, scope) {
+    const previous = this.modelRestores.get(id);
+    if (previous && !previous.failed) return previous.done;
+    this.clearModelRestore(id);
+    const controller = new AbortController();
+    const prefs = this.preferences();
+    const hasPreference = validModel(prefs[scope]?.model) || validModel(prefs.global?.model);
+    const restore = { controller, reason: hasPreference ? '正在恢复模型偏好，也可以直接选择模型。' : null };
+    this.modelRestores.set(id, restore);
+    // Releasing a Session invalidates late catalog replies without retaining a
+    // navigation lease (the remote catalog read has no cancellation argument).
+    restore.release = this.ctx.sessions.scope?.(id).effect(() => () => {
+      if (this.modelRestores.get(id) === restore) this.clearModelRestore(id);
+    });
+    this.emit();
+    restore.done = this.applyModelPreference(id, scope, controller.signal, run => {
+      controller.signal.throwIfAborted();
+      restore.writing = true;
+      return run();
+    }).then(() => {
+      if (this.modelRestores.get(id) === restore && !restore.manual) this.clearModelRestore(id);
+    }, error => {
+      if (controller.signal.aborted || restore.manual || this.modelRestores.get(id) !== restore) return;
+      if (!hasPreference) {
+        this.shell(id).notify('error', '未能读取默认模型：' + error.message + '。本会话使用宿主模型设置。');
+        this.clearModelRestore(id);
+        return;
+      }
+      restore.failed = true;
+      restore.reason = '未恢复模型偏好：' + error.message + '。请重试或手动选择模型。';
+      this.shell(id).notify('error', restore.reason);
+      this.emit();
+    }).finally(() => { restore.writing = false; });
+    return restore.done;
+  }
+  async applyModelPreference(id, scope, signal, write) {
     const catalog = checked(await this.ctx.remote.session.modelCatalog());
     signal.throwIfAborted();
     // Snapshot the host default once. Automatic native selection also saves
@@ -97,8 +187,7 @@ export class ProjectlessDrafts {
     if (!validModel(saved?.model)) this.remember(scope, { model: preference, modelMode: settings.modelMode, ultraEfforts: settings.ultraEfforts });
     const available = catalog.groups.some(group => group.id === preference.provider && group.models.some(model => model.id === preference.model));
     if (!available) {
-      this.shell(id).notify('error', `记住的模型渠道 ${preference.provider} / ${preference.model} 当前不可选，请重新选择；草稿已保留`);
-      return;
+      throw Error(`记住的模型渠道 ${preference.provider} / ${preference.model} 当前不可选`);
     }
     const session = this.ctx.sessions.binding(id).session;
     const blank = session.getSnapshot?.().blank ?? this.ctx.sessions.list.getSnapshot().byId[id]?.blank;
@@ -110,13 +199,14 @@ export class ProjectlessDrafts {
       if ((session.getSnapshot?.().blank ?? this.ctx.sessions.list.getSnapshot().byId[id]?.blank) !== true
         || !sameModel(latest?.model, preference) || JSON.stringify(latest?.modelMode) !== JSON.stringify(settings.modelMode)) return;
       if (settings.modelMode.mode === 'off' || before.eligible) {
-        const mode = settings.modelMode.mode;
         const submode = settings.modelMode.submode === 'team' && !before.teamAvailable ? 'free'
           : validSubmode(settings.modelMode.submode) ? settings.modelMode.submode : 'free';
+        // Restore the model without authorizing a different strategy while Workflow is unavailable.
+        const mode = submode === 'workflow' && before.workflowAvailable === false ? 'off' : settings.modelMode.mode;
         if (before.revision < 0 || before.mode !== mode || mode === 'ultra' && before.submode !== submode || !sameModel(before.selected, preference)) {
           const model = catalog.groups.find(group => group.id === preference.provider).models.find(model => model.id === preference.model);
           const reasoningEffort = mode === 'off' || model.reasoning?.efforts?.some(level => level.id === preference.reasoningEffort) ? preference.reasoningEffort : undefined;
-          await this.modeRequest(id, { ...preference, reasoningEffort, mode, submode, expectedRevision: before.revision }, signal);
+          await write(() => this.modeRequest(id, { ...preference, reasoningEffort, mode, submode, expectedRevision: before.revision }, signal));
           signal.throwIfAborted();
         }
         return;
@@ -126,7 +216,7 @@ export class ProjectlessDrafts {
     // Pin even an unchanged default on this draft: another workspace's native
     // selection must not later move a still-unselected draft with the global default.
     if (!sameModel(projection?.next ?? projection?.lastUsed, preference)) {
-      checked(await this.ctx.remote.session.selectModel({ sessionId: id, ...preference }));
+      checked(await write(() => this.ctx.remote.session.selectModel({ sessionId: id, ...preference })));
       signal.throwIfAborted();
     }
   }
@@ -228,8 +318,6 @@ export class ProjectlessDrafts {
         if (allocatedCwd && this.cwdOf(id) === allocatedCwd) {
           this.managed.set(id, { cwd: allocatedCwd, managed: true }); this.emit();
         }
-        await this.applyModelPreference(id, scope, signal);
-        signal.throwIfAborted();
         if (options && initializeDraft(this.ctx.get('conversation'), targetRef.binding, options) === 'blocked') {
           throw Error('草稿正在提交，请稍后重试；现有草稿已保留');
         }
@@ -237,6 +325,7 @@ export class ProjectlessDrafts {
         else if (beforeOpen) await beforeOpen(id);
         signal.throwIfAborted();
         this.ctx.uiWorkspace.openSession(id);
+        void this.restoreModel(id, scope);
       } catch (error) { if (!signal.aborted) {
         if (from) this.shell(from).notify('error', error.message); else throw error;
       } }
@@ -245,5 +334,8 @@ export class ProjectlessDrafts {
     this.newDraft = attempt; this.newDraftScope = scope; this.carryDraft = carryDraft;
     try { await attempt; } finally { if (this.newDraft === attempt) this.newDraft = null; }
   }
-  dispose() { this.lifetime.abort(); this.listeners.clear(); }
+  dispose() {
+    this.lifetime.abort(); this.listeners.clear();
+    for (const id of this.modelRestores.keys()) this.clearModelRestore(id);
+  }
 }

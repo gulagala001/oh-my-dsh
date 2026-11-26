@@ -32,6 +32,10 @@ Separate versions update on their own schedule; the table shows the current ones
 
 Basic chat loads first, and computer use, rewind, Workflow and other features load separately. If one is missing a dependency or fails to start, only that feature shows an error and chat keeps working.
 
+New drafts open once created and their attachments are ready, while model preferences restore in the background. Select a model before sending if its restoration has not been confirmed. OMD owns the overview, so tasks, sources and outputs remain available while computer use is unavailable. Ultra Free, Team and Workflow each check the capabilities they need; saved Workflow preferences survive temporary capability loss.
+
+Settings reads and writes are independent of model discovery, and each provider returns its own models or error. Context processing subscribes only to the settings it uses, so unrelated cost-display changes do not reschedule it.
+
 In the stock DSH desktop app, open **Settings → Computer and browsers** to check the embedded browser and native monitor features available in the current window. Persistent DeepSeek web sign-in and downloads also require the desktop app.
 
 ## Loaded when needed
@@ -41,6 +45,8 @@ Larger fonts and styles, the Glyph animation and the heavier parts of OpenCU loa
 ## Raw records and display stay separate
 
 Task completion is restored from the session's `todo_write` records, so reloading, resuming a session or cancelling verification never overwrites it with an empty list. Monitoring data comes from the real receipt of each call.
+
+Task verification and edits commit in order within each session. Reading the task list returns the latest committed state without waiting for an in-progress verification.
 
 Context optimization only changes what is sent to the model: the original is stored first, then a trimmed version, diff or reference is sent, and the raw session and attachments can always be looked up. OMD and Billion Context only take turns on compaction; Dream, archives and other features keep working.
 

@@ -129,6 +129,34 @@ test('registered verification binds file lookup and every command to one work di
   }
 });
 
+test('todo view reads the committed ledger while a verification is pending and writes remain ordered', async t => {
+  const f = await fixture(t, { count: 1 }), ctx = new Context();
+  t.after(() => ctx.fiber.dispose());
+  ctx.provide('workingDirectory', { get: () => f.cwd });
+  ctx.provide('sessionProjections', { register() {} });
+  ctx.provide('systemPrompt', { tools() {}, section() {}, getSectionOrder() { return 0; } });
+  await installTools(ctx);
+  const entered = Promise.withResolvers(), finish = Promise.withResolvers();
+  ctx.tools.register({ name: process.platform === 'win32' ? 'pwsh' : 'bash', description: 'Blocked verification',
+    parameters: { type: 'object', additionalProperties: true }, output: { schema: { type: 'object' }, render: () => [] },
+    async execute() { entered.resolve(); await finish.promise; return { kind: 'foreground', exitCode: 0 }; } });
+  registerTasks(ctx, f.store);
+  const exec = { agent: { session: f.session }, callId: 'verification-during-view', token: {}, signal: new AbortController().signal };
+  const todo = ctx.tools.get('todo_write');
+  const verifying = ctx.tools.get('verify_link').execute({ op: 'run' }, exec);
+  await entered.promise;
+  const writing = todo.execute({ op: 'check', updates: [{ id: 'T1', done: false }] }, exec);
+  try {
+    const reading = todo.execute({ op: 'view' }, exec);
+    const observed = await Promise.race([reading, new Promise(resolve => setImmediate(() => resolve('view still queued')))]);
+    assert.match(observed, /T1 \[done\] Check 1/);
+    assert.equal(f.store.snapshot(f.session).tasks[0].links[0].lastRun, null);
+    await assert.rejects(todo.execute({ op: 'view' }, { ...exec, signal: AbortSignal.abort(Error('cancelled read')) }), /cancelled read/);
+  } finally { finish.resolve(); await Promise.all([verifying, writing]); }
+  const [task] = f.recovered();
+  assert.equal(task.done, false); assert.equal(task.links[0].lastRun.pass, true);
+});
+
 test('Python uses one native execution deadline and never repeats a terminal result', async t => {
   const f = await fixture(t, { count: 1 }); await writeFile(join(f.cwd, 'check.py'), '');
   const record = f.store.snapshot(f.session); record.tasks[0].links[0].path = 'check.py'; f.session.append('todo/write', record);

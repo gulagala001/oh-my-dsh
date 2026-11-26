@@ -122,6 +122,57 @@ test('Team availability follows existing DSH tools and does not activate or repl
   assert.equal(remembered.savedSubmode, 'team'); assert.equal(remembered.submode, 'free');
 });
 
+test('Workflow resume availability gates only the Workflow strategy, including a running turn', async () => {
+  const f = fixture(undefined, true);
+  await f.select('ultra', 'workflow');
+  f.agent.status = 'running'; f.turn(1);
+  const tools = f.agent.ctx.get('tools'), originalSchemas = tools.schemas;
+  tools.schemas = () => [{ name: 'workflow', parameters: { properties: {} } }, ...teamTools];
+  const suspended = f.control.view(f.session);
+  assert.equal(suspended.eligible, true); assert.equal(suspended.teamAvailable, true); assert.equal(suspended.workflowAvailable, false);
+  assert.equal(suspended.mode, 'off'); assert.equal(suspended.savedMode, 'ultra'); assert.equal(suspended.savedSubmode, 'workflow');
+  assert.equal(f.control.currentMode(f.agent), 'off');
+  const assemble = () => f.control.assemble(f.agent, async () => ({ sections: [] }));
+  assert.match((await assemble()).sections.at(-1).text, /Ultra is off/);
+  await assert.rejects(f.select('ultra', 'workflow'), /Workflow 续跑/);
+  tools.schemas = originalSchemas;
+  assert.equal(f.control.currentMode(f.agent), 'ultra');
+  tools.schemas = () => teamTools;
+  f.agent.status = 'idle';
+  for (const submode of ['free', 'team']) {
+    assert.equal((await f.select('ultra', submode)).mode, 'ultra');
+    assert.match((await assemble()).sections.at(-1).text, submode === 'free' ? /Ultra Free mode/ : /Ultra Agent Team/);
+  }
+  f.session.header.origin = 'subagent';
+  assert.equal(f.control.currentMode(f.agent), 'off');
+  await assert.rejects(f.select('ultra', 'free'), /子代理/);
+});
+
+test('cold OMD inspection separates Workflow capability without hydrating the session', async () => {
+  const f = fixture({ mode: 'ultra', submode: 'free', selectionSeq: 0 }, true);
+  f.ctx.agents.get = () => undefined;
+  f.ctx.sessions.get = () => f.session;
+  f.session.snapshotEvents = () => f.events;
+  f.session.header.agentPreset = 'oh-my-dsh';
+  let workflowEnabled = false, schemas = [], leased = 0, released = 0;
+  const native = f.ctx.get;
+  f.ctx.get = name => name === 'agentPresets' ? {
+    compositionInventory: async () => [{ id: 'oh-my-dsh', rows: [{ moduleName: 'oh-my-dsh/host/tool-workflow', enabled: workflowEnabled, fiberState: 2 }] }],
+    acquireScope: async () => { leased++; return { key: 'preset', [Symbol.asyncDispose]: async () => { released++; } }; },
+  } : name === 'tools' ? { schemas: () => schemas } : native(name);
+  const inspect = () => f.control.inspect(f.session.id);
+  let view = await inspect();
+  assert.equal(view.eligible, true); assert.equal(view.mode, 'ultra'); assert.equal(view.workflowAvailable, false); assert.equal(leased, 0);
+  f.state.ultracode.submode = 'workflow';
+  workflowEnabled = true;
+  view = await inspect();
+  assert.equal(view.mode, 'off'); assert.equal(view.savedSubmode, 'workflow'); assert.equal(view.workflowAvailable, false);
+  schemas = [{ name: 'workflow', parameters: { properties: { resumeFromRunId: {} } } }];
+  view = await inspect();
+  assert.equal(view.mode, 'ultra'); assert.equal(view.workflowAvailable, true); assert.equal(view.workflowResumeReady, false);
+  assert.equal(leased, 2); assert.equal(released, leased);
+});
+
 test('a running turn keeps its strategy until the next turn, including disable', async () => {
   const f = fixture(); await f.select('ultra', 'workflow');
   f.agent.status = 'running'; f.turn(1);

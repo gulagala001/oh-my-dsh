@@ -7,6 +7,8 @@ import { ProjectlessDrafts } from './projectless-state.mjs';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import css from './projectless-workspaces.css';
 
+const absentBlock = { subscribe: () => () => {}, getSnapshot: () => undefined };
+
 // The host has extension slots for session rows. The ungrouped header has no
 // Workspace resource or group-action slot, so attach only to its own action strip.
 function UngroupedCreate({ wide, useRemoteAccess, actions, startSession, t }) {
@@ -30,6 +32,7 @@ function UngroupedCreate({ wide, useRemoteAccess, actions, startSession, t }) {
 
 export function applyProjectlessWorkspaces(ctx, { onError = error => console.error('新会话创建失败', error) } = {}) {
   const drafts = new ProjectlessDrafts(ctx);
+  drafts.observeManualChoices();
   let initialPreset;
   let movingDraft = false;
   function pickWorkspace(pick, workspaceId) {
@@ -98,13 +101,24 @@ export function applyProjectlessWorkspaces(ctx, { onError = error => console.err
   decorate('conversation.composer.bar', Original => function Composer(props) {
     useDrafts();
     const id = props.sessionId, cwd = useCwd(id), active = drafts.isManaged(id);
+    // The host prioritizes its workspace prompt over its model block. When
+    // this chat owns its directory, reveal the underlying native block again.
+    const blocks = active && ctx.get('conversation')?.blocks?.storeFor(id) || absentBlock;
+    const nativeBlock = useSyncExternalStore(blocks.subscribe, blocks.getSnapshot);
     useEffect(() => { void drafts.inspect(id).catch(() => {}); }, [id, cwd]);
     if (drafts.lifetime.signal.aborted) return <Original {...props}/>;
     const next = { ...props };
     if (active && next.onRequestWorkspace) {
       delete next.disabled; delete next.onRequestWorkspace; delete next.workspacePickerOpen; delete next.placeholder;
+      if (nativeBlock) { next.blocked = nativeBlock; next.placeholder = nativeBlock.reason; }
     }
-    return <Original {...next}/>;
+    const restore = drafts.modelRestores.get(id);
+    if (restore?.reason && !next.blocked && !next.disabled) {
+      next.blocked = { reason: restore.reason }; next.placeholder = restore.reason;
+    }
+    return <>{restore?.reason && <div role="status">{restore.reason} {restore.failed &&
+      <Button size="sm" variant="ghost" onClick={() => drafts.restoreModel(id, drafts.scopeFor(id))}>重试</Button>}</div>}
+      <Original {...next}/></>;
   });
   decorate('conversation.hero.workspace', Original => function Picker(props) {
     useDrafts();

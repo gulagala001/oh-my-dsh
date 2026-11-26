@@ -28,7 +28,7 @@ const inUltraMenu = target => Boolean(target?.closest?.('[role="menu"]')?.queryS
 function Chevron({ back = false }) { return <Icon name="chevron" size={14} className={back ? 'omd-model-back' : undefined}/>; }
 function Reset() { return <Icon name="refresh" size={16}/>; }
 
-function ModelPanel({ ctx, sessionId, locked, available, directory, load, select, renderSlot, hasOptions = false, rememberModel, preferredUltraEffort, additive = false }) {
+function ModelPanel({ ctx, sessionId, locked, available, directory, load, select, renderSlot, hasOptions = false, rememberModel, beforeModelChoice, preferredUltraEffort, additive = false }) {
   const state = useStore(directory);
   const faces = useMemo(() => {
     const projections = ctx.sessions.binding(sessionId)?.session.projections;
@@ -76,7 +76,8 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, select
   const effective = selected?.reasoningEffort ?? model?.reasoning?.defaultEffort;
   const ultraEfforts = choices.filter(choice => !choice.mode && choice.id !== undefined);
   const activeMode = modeReady ? mode.mode : 'off';
-  const submodes = ultraSubmodes.filter(item => item.id !== 'team' || mode?.teamAvailable === true);
+  const submodes = ultraSubmodes.filter(item => (item.id !== 'workflow' || mode?.workflowAvailable !== false)
+    && (item.id !== 'team' || mode?.teamAvailable === true));
   const submode = submodes.find(item => item.id === (submodeDraft ?? mode?.submode)) ?? ultraSubmodes[2];
   const selectedIndex = activeMode !== 'off' ? choices.findIndex(item => item.mode === activeMode) : choices.findIndex(item => !item.mode && item.id === effective);
   const value = draft ?? Math.max(0, selectedIndex), level = choices[value] ?? choices[0];
@@ -141,11 +142,12 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, select
     setSaving(true); setError('');
     let reconciled = false;
     try {
+      const waitedForRestore = await beforeModelChoice?.(sessionId);
       if (nextMode === 'ultra' && reasoningEffort === undefined && (activeMode !== 'ultra' || !sameRoute(route, selected))) {
         const nextModel = state.groups.find(group => group.id === route.provider)?.models.find(model => model.id === route.model);
         reasoningEffort = preferredUltraEffort?.(sessionId, route, nextModel);
       }
-      let revision = mode.revision;
+      let revision = waitedForRestore ? (await modeApi(sessionId)).revision : mode.revision;
       while (true) {
         reconciled = false;
         const next = await modeApi(sessionId, { ...route, reasoningEffort, mode: nextMode, submode: nextSubmode, expectedRevision: revision });
@@ -321,36 +323,7 @@ function ModelPanel({ ctx, sessionId, locked, available, directory, load, select
   </>;
 }
 
-export function applyModelPanel(ctx, { rememberModel, preferredUltraEffort } = {}) {
-  // Native /model and other native selectors use directory.select; automatic
-  // transfers use remote.session.selectModel and never enter this UI boundary.
-  ctx.inject?.(['modelDirectories'], scope => {
-    const models = scope.modelDirectories, original = models.directoryFor, restores = new Map();
-    function directoryFor(id) {
-      const directory = original.call(this, id);
-      if (!restores.has(directory)) {
-        const select = directory.select;
-        let revision = 0;
-        async function choose(selection) {
-          const ticket = ++revision;
-          const result = await select.call(this, selection);
-          const current = directory.store?.getSnapshot().current;
-          if (result.ok && ticket === revision && (!current || sameRoute(current, selection)
-            && current.reasoningEffort === selection.reasoningEffort)) rememberModel?.(id, selection);
-          return result;
-        }
-        const restore = () => { if (directory.select === choose) directory.select = select; restores.delete(directory); };
-        directory.select = choose; restores.set(directory, restore);
-        ctx.sessions.scope(id).effect(() => restore);
-      }
-      return directory;
-    }
-    models.directoryFor = directoryFor;
-    scope.effect(() => () => {
-      if (models.directoryFor === directoryFor) models.directoryFor = original;
-      for (const restore of restores.values()) restore();
-    });
-  });
+export function applyModelPanel(ctx, { rememberModel, beforeModelChoice, preferredUltraEffort } = {}) {
   ctx.effect(() => { const style = document.createElement('style'); style.dataset.plugin = 'omd-model-panel'; style.textContent = css; document.head.append(style); return () => style.remove(); });
   const name = 'conversation.input.model';
   const listeners = new Set();
@@ -373,7 +346,7 @@ export function applyModelPanel(ctx, { rememberModel, preferredUltraEffort } = {
         const main = useMainConversation(props);
         const hasOptions = useSyncExternalStore(fn => ctx.slots.subscribe(name + '.options', fn),
           () => ctx.slots.entriesOfSlot(name + '.options').length > 0);
-        return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} hasOptions={hasOptions} rememberModel={rememberModel} preferredUltraEffort={preferredUltraEffort}/> : null;
+        return main ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} hasOptions={hasOptions} rememberModel={rememberModel} beforeModelChoice={beforeModelChoice} preferredUltraEffort={preferredUltraEffort}/> : null;
       };
     });
     const reconcile = () => {
@@ -397,6 +370,6 @@ export function applyModelPanel(ctx, { rememberModel, preferredUltraEffort } = {
     const main = useMainConversation(props);
     const shown = useSyncExternalStore(subscribe, () => additive);
     const removed = props.useSession(s => s.removed) ?? false;
-    return main && shown && props.available ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} locked={removed} rememberModel={rememberModel} preferredUltraEffort={preferredUltraEffort} additive/> : null;
+    return main && shown && props.available ? <ModelPanel key={props.sessionId} ctx={ctx} {...props} locked={removed} rememberModel={rememberModel} beforeModelChoice={beforeModelChoice} preferredUltraEffort={preferredUltraEffort} additive/> : null;
   }));
 }

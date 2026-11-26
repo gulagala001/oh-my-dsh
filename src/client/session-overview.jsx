@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
+import { createPortal } from 'react-dom';
+import { Button, Menu } from './native-controls.jsx';
 import { decorateSlotComponent } from './slot-decoration.mjs';
 import { installOverviewPanel } from './session-overview-panel.jsx';
 import { whalePath } from './brand.mjs';
@@ -12,12 +13,28 @@ const entriesFor = (slots, name, accept) => ({ ctx: slots.ctx,
   entries: key => slots.entries(key).filter(accept), entriesOfSlot: key => slots.entriesOfSlot(key).filter(accept),
   subscribe: (key, listener) => slots.subscribe(key, listener), register: (options, component) => slots.register(options, component) });
 
-export function applySessionOverview(ctx, openCU) {
-  if (!openCU.OverviewSlot) return;
+const sections = { agents: '子智能体与任务', jobs: '后台进程', sources: '来源', outputs: '输出内容' };
+
+function ResourceOverview({ variant = 'summary', overview, panels = [] }) {
+  if (variant === 'summary') return <nav aria-label="会话资源">{Object.entries(sections).map(([section, label]) =>
+    <Button key={section} size="sm" variant="ghost" onClick={() => overview.openPage(section)}>{label} · {
+      section === 'agents' ? overview.rows.length : section === 'jobs' ? overview.allJobs.length : overview[section].length}</Button>)}</nav>;
+  if (variant === 'detail') return <div><Button size="sm" onClick={() => overview.openPage('agents')}>返回子智能体</Button> {overview.detail.label}</div>;
+  if (variant === 'agents') return <>{panels.map(panel => <section key={panel.id}><h3>{panel.title}</h3>{panel.content}</section>)}
+    {overview.rows.map(row => <Button key={row.id} size="sm" variant="ghost" disabled={!row.available || !childAddress(row)} onClick={() => overview.openAgent(row)}>{row.label} · {row.status}</Button>)}
+    {!panels.length && !overview.rows.length && <p>暂无子智能体或任务</p>}</>;
+  const rows = overview[variant] ?? [];
+  return <>{variant === 'sources' && <Button size="sm" onClick={overview.addSources}>添加来源</Button>}
+    <ul>{rows.map(row => <li key={row.id}>{row.path || row.url
+      ? <Button size="sm" variant="ghost" onClick={() => overview.openResource(row)}>{row.label}</Button> : row.label}</li>)}</ul>
+    {!rows.length && <p>暂无{sections[variant]}</p>}</>;
+}
+
+export function applySessionOverview(ctx) {
   const usePanel = installOverviewPanel(ctx);
   // Filter the host guide only: standalone OpenCU and existing resource tabs
   // keep their registrations and behavior.
-  const hiddenGuideKinds = new Set([AGENTS_KIND, JOBS_KIND, SOURCES_KIND, OUTPUTS_KIND, 'opencu-sources']);
+  const hiddenGuideKinds = new Set([AGENTS_KIND, JOBS_KIND, SOURCES_KIND, OUTPUTS_KIND]);
   const filteredGuides = new WeakMap();
   const guideEntries = entries => {
     if (!filteredGuides.has(entries)) filteredGuides.set(entries, entries.filter(entry => !hiddenGuideKinds.has(entry.kind)));
@@ -31,16 +48,21 @@ export function applySessionOverview(ctx, openCU) {
         return <Original {...props} useGuideEntries={useGuideEntries}/>;
       };
     }));
+  // Provider lifetime only changes the renderer. OMD owns the resource index,
+  // navigation and button even when the computer client did not initialize.
+  let presenter = ResourceOverview;
+  const usePresenter = () => useSyncExternalStore(subscribe, () => presenter);
   function Overview(props) {
-    const Component = openCU.getOverviewSlot?.(ctx) ?? openCU.OverviewSlot;
+    const Component = usePresenter();
     return <Component {...props}/>;
   }
   const states = new Map(), listeners = new Set(), composers = new Map(), chatActions = new Map();
+  const activeComputers = new Set();
   const notify = () => { for (const listener of listeners) listener(); };
   const subscribe = listener => { listeners.add(listener); return () => listeners.delete(listener); };
   const useOverview = sessionId => useSyncExternalStore(subscribe, () => states.get(sessionId));
   const pageKinds = { agents: AGENTS_KIND, jobs: JOBS_KIND, sources: SOURCES_KIND, outputs: OUTPUTS_KIND };
-  const pageKind = section => section === 'sources' && ctx.sidebarRightTabs.get('opencu-sources') ? 'opencu-sources' : pageKinds[section];
+  const pageKind = section => section === 'sources' && presenter !== ResourceOverview && ctx.sidebarRightTabs.get('opencu-sources') ? 'opencu-sources' : pageKinds[section];
   const openPage = (sessionId, section, params = {}) => ctx.sidebarRight.openTabIn(sessionId, pageKind(section), { revealIfOpened: true, params: { ...params, nonce: Date.now() } });
   function openAgent(row) {
     const address = childAddress(row);
@@ -92,7 +114,7 @@ export function applySessionOverview(ctx, openCU) {
   ctx.inject(['jobs', 'locale'], scope => {
     scope.effect(() => scope.locale.register('omdOverviewTeam', teamNative.locale));
     scope.effect(() => scope.locale.register('omdOverviewJobs', jobsNative.locale));
-    function Header({ Original, ...props }) {
+    function Header(props) {
       const { sessionId } = props;
       const summaryPanel = usePanel(sessionId);
       const sessions = props.useSessions(value => value), statuses = props.useSessionStatus(value => value);
@@ -127,21 +149,43 @@ export function applySessionOverview(ctx, openCU) {
           },
         };
       }, [agents, jobsState, sessionId, durable, refreshProjection]);
-      const computerActive = props.usePresentation?.(value => value.activeTaskIds.includes(sessionId)) ?? false;
-      const hasContent = Boolean(data.outputs.length || data.sources.length || data.rows.length || data.jobs.length || computerActive);
+      const computerActive = useSyncExternalStore(subscribe, () => activeComputers.has(sessionId));
+      const hasContent = Boolean(data.outputs.length || data.sources.length || data.rows.length || data.teams.length || data.workflows.length || data.allJobs.length || computerActive);
       const blank = sessions.byId?.[sessionId]?.blank === true;
       useLayoutEffect(() => {
         if (summaryPanel.container) summaryPanel.observeContent(blank, data.ready, hasContent, durable?.createdAt);
       }, [summaryPanel.container, summaryPanel.observeContent, blank, data.ready, hasContent, durable?.createdAt]);
       useLayoutEffect(() => { states.set(sessionId, data); notify(); }, [sessionId, data]);
       useEffect(() => () => { states.delete(sessionId); notify(); }, [sessionId]);
-      return <Original {...props} overview={data} summaryPanel={summaryPanel.container ? summaryPanel : undefined}/>;
+      const [popover, setPopover] = useState(false);
+      const docked = Boolean(summaryPanel.container);
+      const open = docked ? summaryPanel.open : popover;
+      useEffect(() => { setPopover(false); }, [sessionId, docked]);
+      const content = <div className="omd-overview-content"><Overview sessionId={sessionId} overview={data}/></div>;
+      const button = <Button size="sm" variant="ghost" aria-label="会话总览" aria-expanded={open}
+        aria-haspopup={docked ? undefined : 'menu'} onClick={() => docked ? summaryPanel.toggle() : setPopover(value => !value)}>会话总览</Button>;
+      return docked ? <>{button}{createPortal(content, summaryPanel.container)}</> : <Menu anchor={button} open={open}
+        items={Object.entries(sections).map(([id, label]) => ({ id, label }))} onSelect={section => { setPopover(false); openPage(sessionId, section); }}
+        onClose={() => setPopover(false)} align="end" portal/>;
     }
+    scope.slots.inject('conversation.session.header.utilities', () => scope.slots.register({
+      name: 'conversation.session.header.utilities', id: 'omd-session-overview', order: 29,
+    }, Header));
     scope.slots.inject('conversation.session.header.utilities', () => {
       const slots = entriesFor(scope.slots, 'conversation.session.header.utilities', entry => entry.options.id === 'opencu.monitoring');
       return decorateSlotComponent(slots, 'conversation.session.header.utilities', () => true, original => {
         const Original = original.component;
-        return props => <Header {...props} Original={Original}/>;
+        // Keep OpenCU's native monitor and controls, including its standalone
+        // fallback. Only active computer work contributes to auto-opening OMD.
+        return function ComputerMonitor(props) {
+          const active = props.usePresentation(value => value.activeTaskIds.includes(props.sessionId));
+          useLayoutEffect(() => {
+            if (!active) return;
+            activeComputers.add(props.sessionId); notify();
+            return () => { activeComputers.delete(props.sessionId); notify(); };
+          }, [active, props.sessionId]);
+          return <Original {...props}/>;
+        };
       });
     });
     // Reversible replacement: only hide duplicate native entries while the
@@ -228,7 +272,8 @@ export function applySessionOverview(ctx, openCU) {
         const data = useOverview(props.sessionId);
         // The overview includes native attachments as well as OpenCU's saved
         // pages, delivered files and WebMCP calls. Preserve standalone fallback.
-        return data ? <OverviewPage {...props} variant="sources"/> : <Original {...props}/>;
+        const renderer = usePresenter();
+        return data && renderer !== ResourceOverview ? <OverviewPage {...props} variant="sources"/> : <Original {...props}/>;
       };
     }));
     // Keep native Conversation and its real composer. Only add the common
@@ -249,5 +294,10 @@ export function applySessionOverview(ctx, openCU) {
       };
     }));
   });
-  ctx.effect(() => () => { states.clear(); composers.clear(); chatActions.clear(); notify(); listeners.clear(); });
+  ctx.effect(() => () => { states.clear(); composers.clear(); chatActions.clear(); activeComputers.clear(); notify(); listeners.clear(); });
+  return function providePresenter(Component) {
+    if (!Component) return;
+    presenter = Component; notify();
+    return () => { if (presenter === Component) { presenter = ResourceOverview; notify(); } };
+  };
 }

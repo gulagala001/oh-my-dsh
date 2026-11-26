@@ -28,7 +28,7 @@ const core = [
   'monitor-aggregate-cache', 'ptc-lifecycle', 'preset-projection', 'reasoning-replay', 'desktop-deny-contract',
   'task-sdk-schema', 'auto-compact-surface-index', 'auto-compact-native-session', 'auto-compact-coordinate',
   'auto-compact-retry', 'auto-compact-native-boundaries', 'recommended-update-native', 'build-opencu-imports',
-  'conversation-controller-readiness',
+  'conversation-controller-readiness', 'model-directory',
 ].map(name => `test/${name}.test.mjs`);
 const builtChecks = ['test/opencu-delivery.test.mjs', 'test/titlebar-clearance.test.mjs', 'test/job-wait-cancel.test.mjs'];
 
