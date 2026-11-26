@@ -2,14 +2,6 @@
   "schema": 1,
   "releases": [
     {
-      "version": "0.2.2-rc.5.omd.1.9.5",
-      "severity": "normal",
-      "unpublished": true,
-      "title": "Oh My DSH 1.9.5",
-      "notes": [],
-      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.5.omd.1.9.5"
-    },
-    {
       "version": "0.2.2-rc.5.omd.1.9.4",
       "severity": "normal",
       "unpublished": false,
@@ -802,6 +794,14 @@
         "其他变更：oh-my-dsh 包名迁移、独立插件架构与共装、按 profile 的人格和独立功能数据、可选组件启动隔离、按需加载及固定工件交付。"
       ],
       "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.1-rc.1.omd.0.99.0"
+    },
+    {
+      "version": "0.2.2-rc.5.omd.1.9.5",
+      "severity": "normal",
+      "unpublished": true,
+      "title": "Oh My DSH 1.9.5",
+      "notes": [],
+      "releaseNotes": "https://github.com/gulagala001/oh-my-dsh/releases/tag/v0.2.2-rc.5.omd.1.9.5"
     },
     {
       "version": "0.2.2-alpha.3.omd.1.3.2",
