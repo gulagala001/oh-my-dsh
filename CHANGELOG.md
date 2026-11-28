@@ -1,3 +1,31 @@
+# Oh My DSH 1.9.7 · DSH 0.2.2-rc.5
+
+[中文](#zh-197) · [English](#en-197)
+
+<a id="zh-197"></a>
+
+## 中文
+
+### 问题修复
+
+- 内置 Workbench 的桌面适配工具可识别接口匹配的旧版标记，策略文件冲突时会在写入前提示。
+
+<a id="en-197"></a>
+
+## English
+
+### Bug fixes
+
+- The bundled Workbench desktop adapter recognizes compatible older markers and reports policy file conflicts before writing.
+
+## 安装 / Installation
+
+DSH **0.2.2 rc.3 / rc.4 / rc.5** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.7/oh-my-dsh-0.2.2-rc.5.omd.1.9.7.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.7/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.9.6 · DSH 0.2.2-rc.5
 
 [中文](#zh-196) · [English](#en-196)

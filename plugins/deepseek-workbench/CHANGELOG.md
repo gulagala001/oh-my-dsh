@@ -1,3 +1,31 @@
+# DeepSeek Workbench 0.1.15 · DSH 0.2.2-rc.3
+
+[中文](#zh-0115) · [English](#en-0115)
+
+<a id="zh-0115"></a>
+
+## 中文
+
+### 问题修复
+
+- 桌面适配工具可识别接口匹配的旧版标记，并在写入前提示策略文件冲突。
+
+<a id="en-0115"></a>
+
+## English
+
+### Bug fixes
+
+- The desktop adapter recognizes compatible older markers and checks for policy file conflicts before writing.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.15-dsh.0.2.2-rc.3/dsh-deepseek-workbench-0.1.15-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-deepseek-workbench/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.15-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DeepSeek Workbench 0.1.14 · DSH 0.2.2-rc.3
 
 [中文](#zh-0114) · [English](#en-0114)

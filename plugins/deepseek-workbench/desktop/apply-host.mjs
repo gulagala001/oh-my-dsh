@@ -14,6 +14,7 @@ const p = 'apps/desktop/src/';
 const pending = new Map();
 async function patch(file, replacements) {
   let value = await readFile(join(root, file), 'utf8');
+  if (file === p + 'browser-guests.ts') value = value.replace('// deepseek-workbench-host:rc2-a3-rc1-v2', marker);
   for (const [before, after] of replacements) {
     if (value.split(after).length === 2) continue;
     if (value.split(before).length !== 2) throw new Error(`Workbench anchor mismatch: ${file}: ${before}`);
@@ -22,7 +23,6 @@ async function patch(file, replacements) {
   pending.set(file, value);
 }
 const guests = await readFile(join(root, p + 'browser-guests.ts'), 'utf8');
-if (guests.includes('// deepseek-workbench-host:rc2-a3-rc1-v2')) throw new Error('Legacy adapter detected. Verify using its matching source version before updating this checkout.');
 const withOpenCU = guests.includes('// opencu-host-adapter:2');
 if (withOpenCU && !guests.includes('try { await work } finally { this.releasing.delete(key); this.leases.delete(key) }')) throw new Error('Unrecognized browser guest release transaction');
 await patch(p + 'browser-guests.ts', [
@@ -170,16 +170,16 @@ await patch(p + 'platform-view.ts', [
 ]);
 await patch('tsconfig.client.json', [['    \"apps/desktop/src/browser-guests.ts\",', '    \"apps/desktop/src/browser-guests.ts\",\n    \"apps/desktop/src/deepseek-browser-policy.ts\",']]);
 pending.set(p + 'deepseek-browser-policy.ts', await readFile(new URL('./deepseek-browser-policy.ts', import.meta.url), 'utf8'));
-for (const file of pending.keys()) {
+for (const [file, text] of pending) {
   const target = join(root, file);
   const actual = await realpath(target).catch(error => { if (error.code === 'ENOENT') return undefined; throw error; });
+  if (file.endsWith('deepseek-browser-policy.ts') && actual !== undefined && await readFile(target, 'utf8') !== text) throw new Error('Existing Workbench policy differs; retain and review the owned checkout');
   if (actual !== undefined ? actual !== target : await realpath(dirname(target)) !== dirname(target)) throw new Error(`Refusing non-owned adapter target: ${file}`);
 }
 for (const [file, text] of pending) {
   const target = join(root, file);
   const original = await readFile(target, 'utf8').catch(error => { if (error.code !== 'ENOENT') throw error; });
   if (original === text) continue;
-  if (file.endsWith('deepseek-browser-policy.ts') && original !== undefined) throw new Error('Existing Workbench policy differs; retain and review the owned checkout');
   const temporary = target + '.' + randomUUID() + '.tmp';
   try {
     const mode = original === undefined ? 0o644 : (await stat(target)).mode;

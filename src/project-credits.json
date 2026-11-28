@@ -117,8 +117,8 @@
       "source": "plugins/deepseek-workbench/package.json",
       "license": "MIT",
       "notice": "plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md",
-      "version": "0.1.14-dsh.0.2.2-rc.3",
-      "sourceSha256": "ea81beb6116df9c3003021573c1776595885ae90b60eb60302bdc4053befcf58",
+      "version": "0.1.15-dsh.0.2.2-rc.3",
+      "sourceSha256": "9c267f5ba178a5965f573d6a2dbc6970de3cbe76307a35c8d82d03f924bcf543",
       "group": "products"
     },
     {

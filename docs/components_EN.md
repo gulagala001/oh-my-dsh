@@ -57,7 +57,7 @@ Manage skills, MCP, instructions, commands and hooks. Bundled extension manageme
 
 DeepSeek web workspace and conversation import. Bundled workspace plugin.
 
-- Pinned source / version: [0.1.14-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
+- Pinned source / version: [0.1.15-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md)
 
 ### DSH BTW
