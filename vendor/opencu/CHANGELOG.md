@@ -1,4 +1,32 @@
-# OpenCU 2.4.5 · DSH 0.2.2-rc.5（未发布）
+# OpenCU 2.4.6 · DSH 0.2.2-rc.5
+
+[中文](#zh-246) · [English](#en-246)
+
+<a id="zh-246"></a>
+
+## 中文
+
+### 问题修复
+
+- 切换资料目录时，设置、历史与批注随当前资料切换。长备注及旧批注保留，可使用页面列出的完整工具集。
+
+<a id="en-246"></a>
+
+## English
+
+### Bug fixes
+
+- Switching data directories isolates preferences, history and annotations. Long notes and older annotations are kept, and all listed page tools are available.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.5** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/opencu/releases/download/v2.4.6-dsh.0.2.2-rc.5/opencu-2.4.6-dsh.0.2.2-rc.5.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/opencu/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.6-dsh.0.2.2-rc.5/SHA256SUMS)
+
+---
+
+# OpenCU 2.4.5 · DSH 0.2.2-rc.3（未发布）
 
 [中文](#zh-245) · [English](#en-245)
 

@@ -52,7 +52,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
     };
     let cursorOwner;
     entry.runtime = createPluginRuntime({ getConfig: browserConfig, dshBrowser: entry.browserHost.backend, onAppApprovalsChanged: () => entry.activity?.invalidate(),
-      readSiteToolsPolicy: async () => (await entry.preferences.read()).values[siteToolsPolicyKey],
+      readSiteToolsPolicy: async directory => (await entry.preferences.read(directory)).values[siteToolsPolicyKey],
       async onCursor(cursor, sessionId) {
         if (!cursor.visible) {
           const previous = cursorOwner; cursorOwner = undefined;
@@ -108,7 +108,7 @@ export function acquireOpenCU(ctx, { namespace = 'opencu', config = {}, getConfi
       }).catch(error => console.error('OpenCU computer session cleanup', error));
     }, { global: true });
     entry.presentation = createPresentationHost({ runtime: entry.runtime, activity: entry.activity, browserHost: entry.browserHost, preferences: entry.preferences });
-    entry.nativePresentation = createNativePresentation(entry.runtime.dataDir);
+    entry.nativePresentation = createNativePresentation(() => entry.runtime.dataDir);
     entry.request = async (endpoint, args = {}, { signal, attachments, sessionKey, modelProjection = false, onApprovalWait, requestSource = 'interface' } = {}) => {
       signal?.throwIfAborted();
       if (endpoint.startsWith('recovery/')) throw new Error('Recovery confirmation is available only in browser connection settings');

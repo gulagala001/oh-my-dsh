@@ -27,15 +27,14 @@ export function createNativePresentation(dataDir) {
     try { await record.helper.close(); }
     finally { if (records.get(id) === record && record.helper.ended) records.delete(id); }
   };
-  async function start(id) {
+  async function start(id, directory) {
     const events = [];
     const options = { timeout: 10000, onEvent: event => {
       if (events.length < 64 && ['hidden', 'focus', 'rendered', 'error'].includes(event.type)) events.push(event);
     } };
     let helper;
     if (process.platform === 'darwin') {
-      const directory = join(dataDir, 'native');
-      const command = await buildMacHelper(directory);
+      const command = await buildMacHelper(join(directory, 'native'));
       await checkMacHelperIdentity(resolve(command, '../../..'));
       const page = desktopResourcePath(new URL('../../lib/presentation.html', import.meta.url));
       helper = createHelperTransport(command, ['--presentation', page], options);
@@ -45,7 +44,7 @@ export function createNativePresentation(dataDir) {
       const source = await readFile(script, 'utf8');
       helper = createHelperTransport(powershell, ['-NoProfile', '-NonInteractive', '-STA', '-Command', `& { ${source} }`], options);
     }
-    const record = { helper, events, frames: [], cursor: null };
+    const record = { helper, events, directory, frames: [], cursor: null };
     records.set(id, record);
     try {
       if (!(await helper.request('hello')).presentation) throw new Error('The native monitor did not initialize');
@@ -61,8 +60,10 @@ export function createNativePresentation(dataDir) {
   return {
     async operate(id, operation, args) {
       if (!supported) throw new Error('Native monitoring is unavailable on this host');
-      if (operation === 'events') return { events: records.get(id)?.events.splice(0) ?? [] };
+      const directory = typeof dataDir === 'function' ? dataDir() : dataDir;
       return serialize(async () => {
+        if (records.has(id) && records.get(id).directory !== directory) await close(id);
+        if (operation === 'events') return { events: records.get(id)?.events.splice(0) ?? [] };
         if (operation === 'close' || operation === 'hide') { await close(id); return { visible: false }; }
         if (operation === 'cursor') {
           const record = records.get(id);
@@ -82,7 +83,7 @@ export function createNativePresentation(dataDir) {
             || !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/u.test(frame.imageDataURL)))) throw new Error('Invalid monitor frame');
         if (!frames.length) { await close(id); return { visible: false }; }
         if (records.get(id)?.helper.ended) await close(id);
-        const record = records.get(id) ?? await start(id);
+        const record = records.get(id) ?? await start(id, directory);
         const cursor = frames.some(frame => frame.presentationID === record.cursor?.targetId
           && frame.visibilityKey === record.cursor.visibilityKey) ? record.cursor : null;
         const result = await record.helper.request('update', { frames, cursor, locale: args.locale, theme: args.theme });

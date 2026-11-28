@@ -1,3 +1,31 @@
+# Oh My DSH 1.9.6 · DSH 0.2.2-rc.5
+
+[中文](#zh-196) · [English](#en-196)
+
+<a id="zh-196"></a>
+
+## 中文
+
+### 问题修复
+
+- 长对话减少重复计算。内置插件更新了账号诊断、Python 错误提示、人格合并、网页批注、侧问和响应续传。
+
+<a id="en-196"></a>
+
+## English
+
+### Bug fixes
+
+- Long conversations avoid repeated history scans. Bundled updates improve account diagnostics, Python errors, preset merging, web annotations, side chat and response continuation.
+
+## 安装 / Installation
+
+DSH **0.2.2 rc.3 / rc.4 / rc.5** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.6/oh-my-dsh-0.2.2-rc.5.omd.1.9.6.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/oh-my-dsh/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/oh-my-dsh/releases/download/v0.2.2-rc.5.omd.1.9.6/SHA256SUMS)
+
+---
+
 # Oh My DSH 1.9.5 · DSH 0.2.2 rc.3 / rc.4 / rc.5
 
 [中文](#zh-195) · [English](#en-195)

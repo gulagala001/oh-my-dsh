@@ -8,13 +8,13 @@ Requires DSH **0.2.2-rc.3 或 rc.5** and Node.js **24.9.0+**.
 
 Open **Plugins → Add plugin** and paste:
 
-使用 **rc.5** 时，复制 [rc.5 安装包链接](https://github.com/gulagala001/opencu/releases/download/v2.4.3-dsh.0.2.2-rc.5/opencu-2.4.3-dsh.0.2.2-rc.5.tgz)（[rc.5 校验文件](https://github.com/gulagala001/opencu/releases/download/v2.4.3-dsh.0.2.2-rc.5/SHA256SUMS)）。使用 **rc.3** 时，复制下面的地址。
+使用 **rc.5** 时，复制 [rc.5 安装包链接](https://github.com/gulagala001/opencu/releases/download/v2.4.6-dsh.0.2.2-rc.5/opencu-2.4.6-dsh.0.2.2-rc.5.tgz)（[rc.5 校验文件](https://github.com/gulagala001/opencu/releases/download/v2.4.6-dsh.0.2.2-rc.5/SHA256SUMS)）。使用 **rc.3** 时，复制下面的地址。
 
 ```text
-https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/opencu-2.4.2-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.4.6-dsh.0.2.2-rc.3/opencu-2.4.6-dsh.0.2.2-rc.3.tgz
 ```
 
-When your current task finishes, enable the plugin or restart DSH when prompted. Checksums: [rc.3 SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/SHA256SUMS).
+When your current task finishes, enable the plugin or restart DSH when prompted. Checksums: [rc.3 SHA256SUMS](https://github.com/gulagala001/opencu/releases/download/v2.4.6-dsh.0.2.2-rc.3/SHA256SUMS).
 
 ## Install from the command line
 
@@ -23,7 +23,7 @@ Use the CLI that belongs to the same DSH, replacing `web` with your profile (`de
 以下命令使用 rc.3。安装到 rc.5 时，将地址替换为上方的 rc.5 安装包链接。
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/opencu-2.4.2-dsh.0.2.2-rc.3.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/opencu/releases/download/v2.4.6-dsh.0.2.2-rc.3/opencu-2.4.6-dsh.0.2.2-rc.3.tgz"
 ```
 
 If you already use OMD, skip this: OMD includes OpenCU. For other DSH versions, find the matching package on [Releases](https://github.com/gulagala001/opencu/releases); do not mix packages built for different versions.
@@ -42,7 +42,7 @@ You can also send this to the AI in DSH and let it do the install:
 
 ```text
 Install OpenCU into the DSH profile I am using now:
-https://github.com/gulagala001/opencu/releases/download/v2.4.2-dsh.0.2.2-rc.3/opencu-2.4.2-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/opencu/releases/download/v2.4.6-dsh.0.2.2-rc.3/opencu-2.4.6-dsh.0.2.2-rc.3.tgz
 First check that DSH is 0.2.2-rc.3 and Node.js is 24.9.0 or later. If OMD is already installed, do not install OpenCU.
 Keep my settings, conversations, browser pairing and other plugins, and do not upgrade DSH. Before restarting, make sure no task is running.
 Afterwards, confirm that Settings → Computer & Browser opens, and tell me which system permissions I still need to grant.

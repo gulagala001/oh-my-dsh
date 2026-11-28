@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 const ranges = { lastHour: 3600000, lastDay: 86400000, lastWeek: 604800000, lastMonth: 2419200000, allTime: Infinity };
 
@@ -8,9 +8,9 @@ export function createBrowserHistory(getDirectory) {
   let tail = Promise.resolve(), cached, generation = 0;
   const path = () => join(getDirectory(), 'browser-history.json');
   const signature = info => `${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}`;
-  async function read(useCache = true) {
+  async function read(file, useCache = true) {
     try {
-      const expected = generation, file = path(), info = useCache ? await stat(file, { bigint: true }) : null;
+      const expected = generation, info = useCache ? await stat(file, { bigint: true }) : null;
       const key = info && `${file}:${signature(info)}`;
       if (useCache && cached?.key === key) return cached.value;
       if (useCache) cached = undefined;
@@ -24,12 +24,13 @@ export function createBrowserHistory(getDirectory) {
     } catch (error) { cached = undefined; if (error.code === 'ENOENT') return []; throw error; }
   }
   function change(update) {
+    const file = path();
     const work = tail.then(async () => {
       generation++; cached = undefined;
-      const rows = await read(false), result = update(rows);
-      await mkdir(getDirectory(), { recursive: true, mode: 0o700 });
-      await writeFile(`${path()}.pending`, JSON.stringify(rows) + '\n', { mode: 0o600 });
-      await rename(`${path()}.pending`, path());
+      const rows = await read(file, false), result = update(rows);
+      await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+      await writeFile(`${file}.pending`, JSON.stringify(rows) + '\n', { mode: 0o600 });
+      await rename(`${file}.pending`, file);
       cached = undefined;
       return result;
     });
@@ -78,8 +79,9 @@ export function createBrowserHistory(getDirectory) {
           return { cleared: true };
         });
       }
+      const file = path();
       await tail;
-      const rows = await read();
+      const rows = await read(file);
       if (method === 'search') {
         const query = String(args.text || '').toLowerCase();
         const offset = Math.max(0, Math.floor(Number(args.offset) || 0));

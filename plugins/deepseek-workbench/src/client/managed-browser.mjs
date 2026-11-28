@@ -33,13 +33,19 @@ export async function createManagedBrowserAdapter({ container, url, api, signal,
   const buttons = new Map();
   element.append(image, input, downloads);
   container.append(element);
-  let disposed = false, busy = false, timer, pendingClose;
+  let disposed = false, busy = false, timer, pendingClose, lastImage, polling = false, interval = 200;
+  function wake() {
+    interval = 200;
+    if (!disposed && !polling) { clearTimeout(timer); timer = setTimeout(poll, 0); }
+  }
   let frame = { ready: true, loading: false, url, title: '', error: '', warnings: [], canGoBack: false, canGoForward: false };
   const publish = patch => { if (!disposed) { frame = { ...frame, ...patch }; onState(frame); } };
   const error = value => publish({ error: value.message, loading: false });
   const invoke = (operation, value) => {
     if (disposed) return Promise.reject(new Error('网页已关闭。'));
-    return send(operation, value, signal);
+    const request = send(operation, value, signal);
+    if (!['frame', 'touch', 'inspect'].includes(operation)) void request.then(wake, () => {});
+    return request;
   };
   async function openDownload(item) {
     const link = new URL('/deepseek-workbench/api/browser/download', location.href);
@@ -67,18 +73,24 @@ export async function createManagedBrowserAdapter({ container, url, api, signal,
     }
   }
   async function poll() {
-    if (disposed) return;
+    if (disposed || polling) return;
+    polling = true;
     try {
       if (!busy && element.getBoundingClientRect().width > 0 && !document.hidden) {
         const result = await invoke('frame');
         if (disposed) return;
-        image.src = 'data:image/jpeg;base64,' + result.image;
+        if (lastImage !== result.image) {
+          interval = 200;
+          lastImage = result.image;
+          image.src = 'data:image/jpeg;base64,' + result.image;
+        } else interval = Math.min(2000, interval * 2);
         updateDownloads(result.downloads);
         publish({ ready: true, loading: false, url: result.url, title: result.title,
           canGoBack: result.canGoBack, canGoForward: result.canGoForward });
       } else if (!busy) publish(await invoke('touch'));
     } catch (failure) { if (!disposed) error(failure); }
-    if (!disposed) timer = setTimeout(poll, element.getBoundingClientRect().width > 0 && !document.hidden ? 200 : 3000);
+    polling = false;
+    if (!disposed) timer = setTimeout(poll, element.getBoundingClientRect().width > 0 && !document.hidden ? interval : 3000);
   }
   image.addEventListener('pointerdown', event => {
     if (!frame.ready || busy || event.button !== 0) return;
@@ -134,7 +146,12 @@ export async function createManagedBrowserAdapter({ container, url, api, signal,
     back: () => void navigate('back').catch(error),
     forward: () => void navigate('forward').catch(error),
     reload: () => void navigate('reload').catch(error),
-    async extract(script) { return (await invoke('inspect', inspect(script))).result; },
+    async extract(script) {
+      const query = inspect(script);
+      const result = await invoke('inspect', query);
+      if (query.method === 'chat' || query.method === 'temporary') wake();
+      return result.result;
+    },
     dispose,
   };
 }

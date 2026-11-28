@@ -41,7 +41,9 @@ export class WorkflowBudget {
     const data = state.workflowBudget ??= { active: null, pools: {} };
     const target = workflowTokenTarget(human);
     const active = data.pools[data.active];
-    if (!active || (step === 1 && active.firstMessageId !== human[0].id)) {
+    const newTurn = !active || (step === 1 && active.firstMessageId !== human[0].id);
+    if (!newTurn && (target === undefined || target === active.total)) return;
+    if (newTurn) {
       const id = createHash('sha256').update(String(human[0].id)).digest('hex');
       data.active = id;
       data.pools[id] ??= { ...empty(), turn, firstMessageId: human[0].id, watermarks: {} };

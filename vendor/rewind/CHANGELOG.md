@@ -1,6 +1,32 @@
-# DSH Undo 0.1.18 · DSH 0.2.2-rc.3
+# DSH Undo 0.1.19 · DSH 0.2.2-rc.3
 
-**未发布 / Unreleased.**
+[中文](#zh-0119) · [English](#en-0119)
+
+<a id="zh-0119"></a>
+
+## 中文
+
+### 问题修复
+
+- 大型工作区越过文件缓存容量后，后续撤回检查点仍可复用已有文件。
+
+<a id="en-0119"></a>
+
+## English
+
+### Bug fixes
+
+- Checkpoints in large workspaces keep reusing previously captured files when the cache fills.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.19-dsh.0.2.2-rc.3/gulagala001-dsh-undo-plugin-0.1.19-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-undo-plugin/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-undo-plugin/releases/download/v0.1.19-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
+# DSH Undo 0.1.18 · DSH 0.2.2-rc.3
 
 [中文](#zh-0118) · [English](#en-0118)
 

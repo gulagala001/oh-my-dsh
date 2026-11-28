@@ -1,3 +1,31 @@
+# DeepSeek Workbench 0.1.14 · DSH 0.2.2-rc.3
+
+[中文](#zh-0114) · [English](#en-0114)
+
+<a id="zh-0114"></a>
+
+## 中文
+
+### 问题修复
+
+- 账号诊断只向登录平台验证凭据。专属浏览器打不开时可继续使用基础视图，静止页面会减少截图。
+
+<a id="en-0114"></a>
+
+## English
+
+### Bug fixes
+
+- Account diagnostics verify credentials only with the issuing platform. Chat can use the host view when the dedicated browser fails, and idle pages capture fewer frames.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.14-dsh.0.2.2-rc.3/dsh-deepseek-workbench-0.1.14-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-deepseek-workbench/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.14-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DeepSeek Workbench 0.1.13 · DSH 0.2.2-rc.3（未发布）
 
 [中文](#zh-0113) · [English](#en-0113)

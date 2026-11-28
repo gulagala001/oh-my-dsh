@@ -29,7 +29,7 @@ async function siteToolOperation(key, request) {
   const revision = state.revision;
   const tools = (await context.getTools()).filter(tool => tool.window === window && tool.origin === location.origin);
   if (location.href !== request.url || revision !== state.revision) return { stale: true };
-  if (request.operation === 'list') return { available: true, document: state.document, revision, tools: tools.slice(0, 128).map(tool => ({
+  if (request.operation === 'list') return { available: true, document: state.document, revision, tools: tools.map(tool => ({
     name: tool.name, title: tool.title, description: tool.description, origin: tool.origin,
     inputSchema: typeof tool.inputSchema === 'string' ? JSON.parse(tool.inputSchema) : tool.inputSchema ?? null,
     annotations: tool.annotations,

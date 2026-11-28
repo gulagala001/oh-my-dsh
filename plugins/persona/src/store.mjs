@@ -68,15 +68,20 @@ export class PersonaStore {
     let current = this.config();
     if (!this.persisted) current = legacy;
     else {
+      const normalizeName = name => name.normalize('NFC').toLowerCase();
+      current.identitySavedPresets = savedPersonalityPresets(current);
+      const byId = new Map(current.identitySavedPresets.map(item => [item.id, item]));
+      const names = new Set(current.identitySavedPresets.map(item => normalizeName(item.name)));
       for (const old of savedPersonalityPresets(legacy)) {
-        const existing = savedPersonalityPresets(current).find(item => item.id === old.id);
+        const existing = byId.get(old.id);
         if (existing && JSON.stringify(existing) === JSON.stringify(old)) continue;
-        if (!existing && !savedPersonalityPresets(current).some(item => item.name.normalize('NFC').toLowerCase() === old.name.normalize('NFC').toLowerCase())) {
-          current.identitySavedPresets = [...savedPersonalityPresets(current), old]; continue;
+        if (!existing && !names.has(normalizeName(old.name))) {
+          current.identitySavedPresets.push(old); byId.set(old.id, old); names.add(normalizeName(old.name)); continue;
         }
         const profile = personalityProfile(legacy, old.id);
         const patch = importPersonalityFile(current, JSON.stringify({ format: 'dsh.persona', version: 1, name: profile.name, description: profile.description, modules: profile.modules }));
         current.identitySavedPresets = patch.identitySavedPresets; ids[old.id] = patch.identityPreset;
+        const added = current.identitySavedPresets.at(-1); byId.set(added.id, added); names.add(normalizeName(added.name));
       }
       const old = personalityProfile(legacy, 'custom'), existing = personalityProfile(current, 'custom');
       if (JSON.stringify(old.modules) !== JSON.stringify(existing.modules) || old.description !== existing.description) {

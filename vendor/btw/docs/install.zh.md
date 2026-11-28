@@ -9,17 +9,17 @@
 打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-btw/releases/download/v0.1.11-dsh.0.2.2-rc.3/gulagala001-dsh-btw-0.1.11-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-btw/releases/download/v0.1.13-dsh.0.2.2-rc.3/gulagala001-dsh-btw-0.1.13-dsh.0.2.2-rc.3.tgz
 ```
 
-等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.11-dsh.0.2.2-rc.3/SHA256SUMS)。
+等手头的任务跑完，按提示启用或重启 DSH。校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.13-dsh.0.2.2-rc.3/SHA256SUMS)。
 
 ## 用命令行安装
 
 用同一个 DSH 自带的命令行，把 `web` 换成你的 profile（桌面版是 `desktop`）：
 
 ```bash
-dsh plugin --profile web add "https://github.com/gulagala001/dsh-btw/releases/download/v0.1.11-dsh.0.2.2-rc.3/gulagala001-dsh-btw-0.1.11-dsh.0.2.2-rc.3.tgz"
+dsh plugin --profile web add "https://github.com/gulagala001/dsh-btw/releases/download/v0.1.13-dsh.0.2.2-rc.3/gulagala001-dsh-btw-0.1.13-dsh.0.2.2-rc.3.tgz"
 ```
 
 ## 复制给 AI
@@ -28,7 +28,7 @@ dsh plugin --profile web add "https://github.com/gulagala001/dsh-btw/releases/do
 
 ```text
 请把 DSH BTW 安装到我现在用的 DSH profile：
-https://github.com/gulagala001/dsh-btw/releases/download/v0.1.11-dsh.0.2.2-rc.3/gulagala001-dsh-btw-0.1.11-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-btw/releases/download/v0.1.13-dsh.0.2.2-rc.3/gulagala001-dsh-btw-0.1.13-dsh.0.2.2-rc.3.tgz
 先确认 DSH 是 0.2.2-rc.3、Node.js 是 24.9.0 以上；保留原来的配置和数据，等当前任务结束再重启。
 ```
 

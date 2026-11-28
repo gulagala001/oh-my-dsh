@@ -1,5 +1,6 @@
-import { readFile, writeFile, realpath } from 'node:fs/promises';
+import { readFile, writeFile, realpath, rename, rm, stat } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { readHostTarget } from './targets.mjs';
 
 if (!process.argv[2]) throw new Error('Usage: node desktop/apply-host.mjs /absolute/owned/dsh-source');
@@ -14,18 +15,14 @@ const pending = new Map();
 async function patch(file, replacements) {
   let value = await readFile(join(root, file), 'utf8');
   for (const [before, after] of replacements) {
+    if (value.split(after).length === 2) continue;
     if (value.split(before).length !== 2) throw new Error(`Workbench anchor mismatch: ${file}: ${before}`);
     value = value.replace(before, after);
   }
   pending.set(file, value);
 }
 const guests = await readFile(join(root, p + 'browser-guests.ts'), 'utf8');
-if (guests.includes(marker) || guests.includes('// deepseek-workbench-host:rc2-a3-rc1-v2')) {
-  const policy = await readFile(join(root, p + 'deepseek-browser-policy.ts'), 'utf8');
-  if (policy !== await readFile(new URL('./deepseek-browser-policy.ts', import.meta.url), 'utf8')) throw new Error('Workbench policy differs; refresh through an owned build');
-  console.log('Workbench host adapter already applied');
-  process.exit(0);
-}
+if (guests.includes('// deepseek-workbench-host:rc2-a3-rc1-v2')) throw new Error('Legacy adapter detected. Verify using its matching source version before updating this checkout.');
 const withOpenCU = guests.includes('// opencu-host-adapter:2');
 if (withOpenCU && !guests.includes('try { await work } finally { this.releasing.delete(key); this.leases.delete(key) }')) throw new Error('Unrecognized browser guest release transaction');
 await patch(p + 'browser-guests.ts', [
@@ -178,5 +175,16 @@ for (const file of pending.keys()) {
   const actual = await realpath(target).catch(error => { if (error.code === 'ENOENT') return undefined; throw error; });
   if (actual !== undefined ? actual !== target : await realpath(dirname(target)) !== dirname(target)) throw new Error(`Refusing non-owned adapter target: ${file}`);
 }
-for (const [file, text] of pending) await writeFile(join(root, file), text);
+for (const [file, text] of pending) {
+  const target = join(root, file);
+  const original = await readFile(target, 'utf8').catch(error => { if (error.code !== 'ENOENT') throw error; });
+  if (original === text) continue;
+  if (file.endsWith('deepseek-browser-policy.ts') && original !== undefined) throw new Error('Existing Workbench policy differs; retain and review the owned checkout');
+  const temporary = target + '.' + randomUUID() + '.tmp';
+  try {
+    const mode = original === undefined ? 0o644 : (await stat(target)).mode;
+    await writeFile(temporary, text, { flag: 'wx', mode });
+    await rename(temporary, target);
+  } finally { await rm(temporary, { force: true }); }
+}
 console.log(JSON.stringify({ root, host, files: [...pending.keys()], revision: 'rc2-v3', strategy: withOpenCU ? 'Product profile added; existing release transaction retained' : 'Native rc.2 product profile; ordinary guest policy retained' }, null, 2));

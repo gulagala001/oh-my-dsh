@@ -35,4 +35,4 @@ Open **Settings → Account → DeepSeek API Platform**. If your DSH supports it
 
 ## Desktop and browser
 
-Embedded chat needs the DSH desktop app. Sign-in that survives restarts and DeepSeek downloads need the [desktop adaptation](desktop-host_EN.md); the panel tells you when these are missing. In the browser version of DSH, DeepSeek's embedding restrictions mean web chat opens in an external browser only.
+Open web chat in DSH desktop. The plugin browser keeps chat sign-in and supports downloads. The panel offers alternatives if that browser is unavailable. See [desktop usage](desktop-host_EN.md). Web clients open DeepSeek in an external browser.

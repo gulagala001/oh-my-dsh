@@ -1,6 +1,32 @@
-# DSH Unharnessed 0.3.0 · DSH 0.2.2-rc.3
+# DSH Unharnessed 0.3.1 · DSH 0.2.2-rc.3
 
-**未发布 / Unreleased.**
+[中文](#zh-031) · [English](#en-031)
+
+<a id="zh-031"></a>
+
+## 中文
+
+### 问题修复
+
+- Python 单元失败时显示错误，长输出也会保留异常原因。检查点会分别报告保存和大变量清理结果。
+
+<a id="en-031"></a>
+
+## English
+
+### Bug fixes
+
+- Failed Python cells report an error even after long output. Checkpoints report persistence and oversized-variable cleanup separately.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.3.1-dsh.0.2.2-rc.3/dsh-unharnessed-0.3.1-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-unharnessed/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.3.1-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
+# DSH Unharnessed 0.3.0 · DSH 0.2.2-rc.3
 
 [中文](#zh-030) · [English](#en-030)
 

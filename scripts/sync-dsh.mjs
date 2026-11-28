@@ -1,10 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { cp, mkdir, readFile, writeFile, readdir, rm, realpath, lstat } from 'node:fs/promises';
-import { resolve, join, relative, isAbsolute } from 'node:path';
+import { cp, mkdir, readFile, writeFile, readdir, rm, realpath, lstat, mkdtemp, rename } from 'node:fs/promises';
+import { resolve, join, relative, isAbsolute, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { devNull } from 'node:os';
+import { DatabaseSync } from 'node:sqlite';
 import { clientRegistration } from './host-build-contracts.mjs';
 import { hostTarget } from './host-targets.mjs';
 
@@ -51,8 +52,31 @@ for (const name of ['commondir', 'objects/info/alternates', 'objects/info/http-a
   try { await lstat(join(gitDir, name)); throw new Error('Use a fully independent clone without shared Git object storage'); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
-const destination = await realpath(join(root, 'vendor/dsh'));
-if (destination !== join(root, 'vendor/dsh')) throw new Error('Refusing symlinked snapshot destination');
+const lockPath = join(root, '.cache/dsh-snapshot.sqlite');
+for (const suffix of ['', '-journal', '-shm', '-wal']) {
+  const file = await lstat(lockPath + suffix).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  if (file && (!file.isFile() || file.nlink !== 1)) throw new Error('Unsafe snapshot lock path');
+}
+const lock = new DatabaseSync(lockPath);
+lock.exec('BEGIN IMMEDIATE');
+process.once('exit', () => lock.close());
+const live = join(root, 'vendor/dsh'), liveManifest = join(root, 'vendor/dsh.json');
+try {
+  if (await realpath(live) !== live) throw new Error('Refusing symlinked snapshot destination');
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+  const cache = join(root, '.cache');
+  const candidates = [];
+  for (const name of await readdir(cache)) {
+    if (!name.startsWith('dsh-snapshot-')) continue;
+    const backup = join(cache, name, 'previous');
+    if (await realpath(backup).catch(() => undefined) === backup) candidates.push(backup);
+  }
+  if (candidates.length !== 1) throw new Error('Cannot identify a unique previous vendor snapshot in ' + cache);
+  const backup = candidates[0];
+  if (!(await readFile(join(backup, '../previous.json'))).equals(await readFile(liveManifest))) throw new Error('Review the saved snapshot and manifest in ' + dirname(backup));
+  await rename(backup, live);
+}
 const previous = JSON.parse(await readFile(join(root, 'vendor/dsh.json'), 'utf8'));
 const commit = values.commit ?? previous.commit;
 if (!/^[0-9a-f]{40}$/.test(commit)) throw new Error('Expected a full DSH commit SHA');
@@ -81,7 +105,12 @@ async function ownedDestination(path) {
   if ((!entry.isFile() && !entry.isDirectory()) || await realpath(path) !== path) throw new Error(`Refusing non-owned snapshot destination ${path}`);
   if (entry.isDirectory()) for (const name of await readdir(path)) await ownedDestination(join(path, name));
 }
-await ownedDestination(destination); await ownedDestination(join(root, 'vendor/dsh.json'));
+function unchanged() {
+  const args = ['status', '--porcelain', '--untracked-files=all', '--ignored=matching', '--', 'vendor/dsh', 'vendor/dsh.json'];
+  if (execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()) throw Error('Snapshot has local changes; preserve them before refreshing');
+}
+unchanged();
+await ownedDestination(live); await ownedDestination(liveManifest);
 for (const name of ['ui-conversation', 'ui-chat']) {
   const directory = join(source, 'packages/client', name);
   if (await realpath(directory) !== directory) throw new Error(`Refusing symlinked browser source ${directory}`);
@@ -114,6 +143,13 @@ const paths = [...Object.values(modules).map(path => 'packages/' + path), 'packa
 const hostPatch = await sourcePatch(paths);
 const chatPatch = await sourcePatch(['packages/client/ui-chat', 'packages/client/tsdown.client.ts']);
 console.warn(`Syncing ${version} (${commit}) from disposable staging ${source}; old projects and vendor/opencu remain untouched.`);
+const transaction = await mkdtemp(join(root, '.cache/dsh-snapshot-'));
+const destination = join(transaction, 'next');
+const nextManifest = join(transaction, 'next.json');
+let backedUp = false, installed = false, completed = false;
+console.warn('Snapshot transaction and recovery copies:', transaction);
+try {
+await cp(live, destination, { recursive: true });
 async function retire(name) {
   const target = join(destination, name);
   if (!['subagent-in-process-driver', ...Object.keys(modules), 'ui-chat'].includes(name)) throw new Error(`Unknown snapshot output ${name}`);
@@ -182,5 +218,24 @@ async function manifest(directory) {
   return { repository: 'https://github.com/deepseek-ai/deepseek-harness', tag, commit, version, files: Object.fromEntries(Object.entries(files).sort()) };
 }
 await writeFile(join(destination, 'ui-chat.json'), JSON.stringify(await manifest(chat), null, 2) + '\n');
-await writeFile(join(root, 'vendor/dsh.json'), JSON.stringify(await manifest(destination), null, 2) + '\n');
+await writeFile(nextManifest, JSON.stringify(await manifest(destination), null, 2) + '\n');
+await cp(liveManifest, join(transaction, 'previous.json'));
+unchanged();
+await rename(live, join(transaction, 'previous'));
+backedUp = true;
+await rename(destination, live);
+installed = true;
+await rename(nextManifest, liveManifest);
 execFileSync(process.execPath, [fileURLToPath(new URL('./build-credits.mjs', import.meta.url)), '--write'], { stdio: 'inherit' });
+completed = true;
+} catch (failure) {
+  if (backedUp) {
+    if (installed) await rename(live, destination);
+    await rename(join(transaction, 'previous'), live);
+    await rename(join(transaction, 'previous.json'), liveManifest);
+    backedUp = false;
+  }
+  throw failure;
+} finally {
+  if (completed || !backedUp) await rm(transaction, { recursive: true, force: true });
+}

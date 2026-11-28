@@ -2,6 +2,8 @@
 
 [English](README_EN.md)
 
+[![GitHub 累计发行下载](https://img.shields.io/github/downloads/gulagala001/dsh-unharnessed/total?label=GitHub%20release%20downloads)](https://github.com/gulagala001/dsh-unharnessed/releases)
+
 在 DeepSeek Harness 中，用一个持久 Python 工具完成编程、后台命令、MCP 调用和图片与文件交付。变量可以跨对话压缩保留，并在相同会话重启后恢复。
 
 ## 安装与选择
@@ -9,7 +11,7 @@
 在 **插件 → 添加插件** 中粘贴安装包地址：
 
 ```text
-https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.2.4-dsh.0.2.2-rc.3/dsh-unharnessed-0.2.4-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-unharnessed/releases/download/v0.3.1-dsh.0.2.2-rc.3/dsh-unharnessed-0.3.1-dsh.0.2.2-rc.3.tgz
 ```
 
 然后在新聊天的 Agent 预设中选择 **Unharnessed**。已有聊天可能沿用启动时的插件修订，更新后新建聊天或正常重启 DSH。

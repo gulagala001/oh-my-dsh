@@ -24,10 +24,21 @@ export async function install(ctx) {
       return engine.close();
     };
   });
+  // The stock pi-ai serializer supplies store:false for every Responses call.
+  // Bind that default to its own adapter dispatch, route and current request.
+  ctx.on('llm-pi-ai/request-headers', (request, _headers, next) => {
+    const call = calls.getStore();
+    if (call && !call.storageForbidden && call.provider === request.provider && call.model === request.model
+      && call.sessionId === request.sessionId) {
+      const base = URL.parse(request.baseURL);
+      if (base) { base.pathname = base.pathname.replace(/\/$/, '') + '/responses'; call.piResponsesURL = base.href; }
+    }
+    return next();
+  });
   ctx.on('llm/stream', function(options, next) {
     const context = { provider: String(options.provider), model: String(options.model),
       sessionId: options.sessionId === undefined ? undefined : String(options.sessionId),
-      replayHistory: nativeReplayHistory(options) };
+      storageForbidden: options.store === false, replayHistory: nativeReplayHistory(options) };
     return {
       async *[Symbol.asyncIterator]() {
         const iterator = calls.run(context, () => next()[Symbol.asyncIterator]());
@@ -47,4 +58,4 @@ export async function install(ctx) {
 }
 
 export const apply = (ctx, config = {}) => config.enabled === false ? undefined
-  : acquireShared(ctx, 'transport', { name: 'dsh-response-id-reuse-runtime', runtimeRevision: 9, inject, apply: install });
+  : acquireShared(ctx, 'transport', { name: 'dsh-response-id-reuse-runtime', runtimeRevision: 10, inject, apply: install });

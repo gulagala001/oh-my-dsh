@@ -83,7 +83,10 @@ export class Files {
       if(info.isDirectory())return;
       if(!info.isFile())throw Error(`无法备份特殊文件：${path}`);
       const signature=[info.dev,info.ino,info.size,info.mtimeMs,info.ctimeMs,info.mode].join(':');const cached=this.cache.get(abs);
-      if(cached?.signature===signature){manifest[path]=cached.entry;this.stats.cacheHits++;return;}
+      if(cached?.signature===signature){
+        this.cache.delete(abs);this.cache.set(abs,cached);
+        manifest[path]=cached.entry;this.stats.cacheHits++;return;
+      }
       let key,chunks;
       if(info.size>this.limits.chunkBytes){
         const digest=createHash('sha256');chunks=[];
@@ -110,7 +113,9 @@ export class Files {
     captureSignal.throwIfAborted();
     // Cache only a complete capture whose blobs are already durably indexed.
     for(const [path,entry] of cacheUpdates)this.cache.set(path,entry);
-    if(this.cache.size>100000)this.cache.clear();
+    // Evict the oldest signatures incrementally after a complete capture.
+    const expired = this.cache.keys();
+    while (this.cache.size > 100000) this.cache.delete(expired.next().value);
     return {root,manifest:Object.fromEntries(Object.entries(manifest).sort(([a],[b])=>a.localeCompare(b))),coverage};
   }
   async ensureStorage(signal){

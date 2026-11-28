@@ -88,12 +88,12 @@ try {
     const command = input => ctx.commands.execute(parent, '/unharnessed-subagents' + (input ? ' ' + input : ''), [], new AbortController().signal)
     assert.match((await command()).result.text, /on/)
     assert.equal((await command('off')).result.kind, 'success')
-    assert.match(await cell(parent, "await agents.spawn('not allowed', 'Check chat preference')"), /mode is off/)
+    await assert.rejects(cell(parent, "await agents.spawn('not allowed', 'Check chat preference')"), /mode is off/)
     assert.match((await command('default')).result.text, /on/)
     assert.deepEqual(ctx.tools.schemas(parent).map(tool => tool.name), ['ipython'])
     const removeGuard = ctx.tools.guard(exec => exec.name === 'subagent' ? 'fixture native delegation denied' : undefined)
     try {
-      assert.match(await cell(parent, "await agents.spawn('not allowed', 'Check native guard')"), /fixture native delegation denied/)
+      await assert.rejects(cell(parent, "await agents.spawn('not allowed', 'Check native guard')"), /fixture native delegation denied/)
     } finally { removeGuard() }
     parent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'PARENT_ONLY_CHAT' }] }))
     await until(() => parentArgs.some(options => JSON.stringify(options.messages).includes('subagent-settled')))
@@ -109,7 +109,7 @@ try {
     assert.match(await cell(parent, "print(parent_only_value, 'child_only_value' in globals())"), /271 False/)
     assert.match(await cell(parent, 'await agents.list()'), /isolation/)
     assert.equal((await command('off')).result.kind, 'success')
-    assert.match(await cell(parent, 'await agents.list()'), /mode is off/)
+    await assert.rejects(cell(parent, 'await agents.list()'), /mode is off/)
     await ctx.sessions.flush(parent.session)
     await delegated.dispose()
     const resumed = await ctx.agents.resume({ resumeSessionId: parent.id,

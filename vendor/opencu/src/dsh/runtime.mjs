@@ -37,8 +37,51 @@ function stripPaths(value) {
 /** Lazy shared controller. Only the extension transport owns a loopback listener. */
 export function createPluginRuntime(options = {}) {
   const getConfig = options.getConfig || (() => options);
+  const directory = () => resolve(getConfig().dataDir || DEFAULT_DATA_DIR);
+  const openDirectory = path => createDirectoryRuntime({ ...options,
+    getConfig: () => ({ ...getConfig(), dataDir: path }),
+    readSiteToolsPolicy: () => options.readSiteToolsPolicy?.(path),
+  });
+  let path = directory(), runtime = openDirectory(path), change, closed = false;
+  async function current(target = directory()) {
+    if (closed) throw new Error('OpenCU plugin is unloading');
+    if (change) { await change; return current(target); }
+    if (target !== path) {
+      const previous = runtime;
+      change = (async () => {
+        await previous.close();
+        if (closed) throw new Error('OpenCU plugin is unloading');
+        runtime = openDirectory(target);
+        path = target;
+      })().finally(() => { change = undefined; });
+      await change;
+    }
+    return runtime;
+  }
+  return {
+    get dataDir() { return directory(); },
+    request: async (...args) => (await current()).request(...args),
+    async uiRecovery(...args) {
+      let owner;
+      try { owner = await current(); }
+      catch (failure) {
+        if (closed || failure.code !== 'RELEASE_FAILED') throw failure;
+        owner = runtime;
+      }
+      return owner.uiRecovery(...args);
+    },
+    pendingAppApprovals: () => path === directory() ? runtime.pendingAppApprovals() : [],
+    forgetSession: id => runtime.forgetSession(id),
+    started: () => runtime.started(),
+    async close() { closed = true; try { await change; } finally { await runtime.close(); } },
+  };
+}
+
+function createDirectoryRuntime(options) {
+  const { getConfig } = options;
   const browserResources = createBrowserResources();
   const cursorContext = new AsyncLocalStorage();
+  const lifetime = new AbortController(), requests = new Set();
   let dataDir, starting, controller, bridge, connection, browserPairing, closing, disposed = false;
   let annotations = [], annotationTail = Promise.resolve(), lastObservation = null, revision = 0, activity = null;
   const files = new Map(), imageRefs = new Map();
@@ -46,7 +89,7 @@ export function createPluginRuntime(options = {}) {
   const deliveryFiles = createDeliveryFiles(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR));
   const appApprovals = createAppApprovals(() => dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR), () => options.onAppApprovalsChanged?.());
   let imageRegistry, startedConfig, reconfiguring, recoveryOffer;
-  const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled, config.managedHeadless === true, config.managedFallback === true]);
+  const configurationKey = config => JSON.stringify([config.browserEnabled, config.nativeEnabled, config.extensionEnabled, config.managedHeadless === true, config.managedFallback === true, config.cdpEndpoint, config.helperPath, config.nativeRequired, config.headless]);
   async function start() {
     if (disposed) throw new Error('OpenCU plugin is unloading');
     if (reconfiguring) { await reconfiguring; return start(); }
@@ -348,9 +391,10 @@ export function createPluginRuntime(options = {}) {
         if (current.ok === false) return current;
         if (!current.state.targets.some(target => target.id === args.targetId)) throw error('TARGET_NOT_SELECTED', 'Select the annotation target first');
         if (!Array.isArray(args.annotations) || args.annotations.length > 100 || args.annotations.some(item => !item || typeof item !== 'object' || Array.isArray(item))) throw error('INVALID_ARGUMENT', 'annotations must be at most 100 JSON objects');
-        const record = { id: randomUUID(), targetId: args.targetId, observationId: args.observationId ?? null, annotations: args.annotations, note: typeof args.note === 'string' ? args.note.slice(0, 10000) : '', createdAt: new Date().toISOString() };
+        const record = { id: randomUUID(), targetId: args.targetId, observationId: args.observationId ?? null, annotations: args.annotations, note: typeof args.note === 'string' ? args.note : '', createdAt: new Date().toISOString() };
         const work = annotationTail.then(async () => {
-          const next = [...annotations, record].slice(-500), temporary = join(dataDir, 'annotations.json.tmp');
+          signal?.throwIfAborted();
+          const next = [...annotations, record], temporary = join(dataDir, 'annotations.json.tmp');
           try {
             await writeFile(temporary, JSON.stringify(next, null, 2), { mode: 0o600 });
             await rename(temporary, join(dataDir, 'annotations.json'));
@@ -413,7 +457,7 @@ export function createPluginRuntime(options = {}) {
   return {
     // Called only by the authenticated settings HTTP handler, never the model dispatcher.
     async uiRecovery(method, args = {}) {
-      const runtime = await start();
+      const runtime = disposed && controller ? controller : await start();
       if (method === 'prepare') {
         const current = await runtime.getState();
         if (current.ok === false) throw Object.assign(new Error(current.error.message), current.error);
@@ -460,9 +504,14 @@ export function createPluginRuntime(options = {}) {
     /** Whether a controller already exists; asking before start() keeps idle sessions from spawning one. */
     started: () => Boolean(controller) && !disposed,
     get dataDir() { return dataDir ?? resolve(getConfig().dataDir || DEFAULT_DATA_DIR); },
-    request: (endpoint, args, context = {}) => cursorContext.run(context.sessionKey, () => request(endpoint, args, context)),
+    request(endpoint, args, context = {}) {
+      const signal = context.signal ? AbortSignal.any([lifetime.signal, context.signal]) : lifetime.signal;
+      const work = cursorContext.run(context.sessionKey, () => request(endpoint, args, { ...context, signal }));
+      requests.add(work);
+      return work.finally(() => requests.delete(work));
+    },
     async close() {
-      disposed = true; browserPairing?.close();
+      disposed = true; lifetime.abort(); browserPairing?.close();
       if (!closing) closing = (async () => {
         const failures = [];
         const settle = async work => { try { return await work(); } catch (error) { failures.push(error); } };
@@ -480,6 +529,7 @@ export function createPluginRuntime(options = {}) {
             }
           }
         } catch (error) { coreFailure = error; failures.push(error); }
+        await Promise.allSettled(requests);
         await settle(() => Promise.all([annotationTail, imageRegistry?.close()]));
         // A failed core close retains its release channel for retry.
         if (!coreFailure && bridge?.listening) await settle(() => new Promise((done, reject) => bridge.close(error => error ? reject(error) : done())));

@@ -12,7 +12,7 @@ This catalog covers independently maintained products, optional integrations, ho
 
 Computer and browser observation, interaction, annotations and previews. Bundled plugin; also distributed independently.
 
-- Pinned source / version: [2.4.5-dsh.0.2.2-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
+- Pinned source / version: [2.4.6-dsh.0.2.2-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/package.json)
 - License / attribution: See component notices · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### DSH Workflow
@@ -21,7 +21,7 @@ Computer and browser observation, interaction, annotations and previews. Bundled
 
 Task planning, execution, budgets and recovery. Bundled workflow plugin.
 
-- Pinned source / version: [0.1.14-dsh.0.2.2-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
+- Pinned source / version: [0.1.15-dsh.0.2.2-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/workflow/THIRD_PARTY_NOTICES.md)
 
 ### DSH Rewind
@@ -30,7 +30,7 @@ Task planning, execution, budgets and recovery. Bundled workflow plugin.
 
 Turn undo and conversation rewind. Bundled undo plugin.
 
-- Pinned source / version: [0.1.18-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
+- Pinned source / version: [0.1.19-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/rewind/THIRD_PARTY_NOTICES.md)
 
 ### DSH Persona
@@ -39,7 +39,7 @@ Turn undo and conversation rewind. Bundled undo plugin.
 
 Personality import, management and global or per-chat selection. Bundled personality plugin.
 
-- Pinned source / version: [0.2.6-dsh.0.2.2-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
+- Pinned source / version: [0.2.7-dsh.0.2.2-rc.5](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/persona/THIRD_PARTY_NOTICES.md)
 
 ### DSH Extensions
@@ -48,7 +48,7 @@ Personality import, management and global or per-chat selection. Bundled persona
 
 Manage skills, MCP, instructions, commands and hooks. Bundled extension management plugin.
 
-- Pinned source / version: [0.1.9-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
+- Pinned source / version: [0.1.10-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/dsh-extensions/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/THIRD_PARTY_NOTICES.md)
 
 ### DeepSeek Workbench
@@ -57,7 +57,7 @@ Manage skills, MCP, instructions, commands and hooks. Bundled extension manageme
 
 DeepSeek web workspace and conversation import. Bundled workspace plugin.
 
-- Pinned source / version: [0.1.13-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
+- Pinned source / version: [0.1.14-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/plugins/deepseek-workbench/THIRD_PARTY_NOTICES.md)
 
 ### DSH BTW
@@ -66,7 +66,7 @@ DeepSeek web workspace and conversation import. Bundled workspace plugin.
 
 Side chats, local history, follow-ups and independent cancellation. Bundled side-chat plugin.
 
-- Pinned source / version: [0.1.12-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
+- Pinned source / version: [0.1.13-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/btw/LICENSE)
 
 ### DSH Theme
@@ -93,7 +93,7 @@ Animated character interface and whale visuals. Theme component distributed with
 
 Automatic Responses ID continuation and full-request fallback. Bundled backend plugin with shared runtime ownership.
 
-- Pinned source / version: [0.1.11-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
+- Pinned source / version: [0.1.12-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/package.json)
 - License / attribution: MIT · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/response-id-reuse/LICENSE)
 
 ## Optional integrations and recommendations
@@ -223,7 +223,7 @@ Host, sessions, tools and UI components. Host, source or asset; scope documented
 
 Original frontend assets used by OpenCU and provenance. Host, source or asset; scope documented in provenance.
 
-- Pinned source / version: [SHA256:f345ab7ed25b73ddf8b29055a5183cd68041e663fe56b2a0fba0ce09df485b96](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
+- Pinned source / version: [SHA256:077d987e97b4647ca2590372d33c8c1cbeb15cecbf18563919a6f7ab121fc4fc](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/lib/rea-assets/manifest.json)
 - License / attribution: Original upstream rights apply · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/opencu/THIRD_PARTY_NOTICES.md)
 
 ### models.dev
@@ -358,7 +358,7 @@ Design tokens and component styling for the Claude Desktop theme. Pinned CDS vis
 
 Experimental persistent Python preset, background commands and checkpoints. Bundled experimental preset, disabled by default.
 
-- Pinned source / version: [0.3.0-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/package.json)
+- Pinned source / version: [0.3.1-dsh.0.2.2-rc.3](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/package.json)
 - License / attribution: MIT; dill: BSD-3-Clause · [Details](https://github.com/gulagala001/oh-my-dsh/blob/main/vendor/unharnessed/THIRD_PARTY_NOTICES.md)
 
 ## Locked dependency inventory

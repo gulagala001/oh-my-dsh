@@ -70,7 +70,8 @@ export class Kernel {
     if (frame.event === 'stdout' || frame.event === 'stderr' || frame.event === 'result') {
       request.text = bounded(request.text + (frame.event === 'stderr' ? '[stderr] ' : '') + frame.text, this.config.maxOutputChars)
     } else if (frame.event === 'error') {
-      request.text = bounded(request.text + (frame.traceback?.join('') || `${frame.ename}: ${frame.evalue}`), this.config.maxOutputChars)
+      const summary = [frame.ename, frame.evalue].filter(Boolean).join(': ')
+      request.failure = bounded([summary, frame.traceback?.join('')].filter(Boolean).join('\n') || 'Python execution failed', this.config.maxOutputChars)
     } else if (frame.event === 'display') {
       const checkpoint = frame.data?.['application/vnd.dsh-unharnessed.snapshot+json']
       if (checkpoint && request.snapshot) { request.snapshot(checkpoint); return }
@@ -79,7 +80,7 @@ export class Kernel {
       if (typeof text === 'string') request.text = bounded(request.text + text, this.config.maxOutputChars)
       request.displays.push(Promise.resolve().then(() => this.onDisplay(frame.data, request.media.signal)).catch(error => {
         request.displayError = true
-        request.text = bounded(request.text + `[display error] ${error.message}`, this.config.maxOutputChars)
+        request.failure ??= bounded(`[display error] ${error.message}`, this.config.maxOutputChars)
       }))
     } else if (frame.event === 'done') {
       request.done = true
@@ -87,7 +88,7 @@ export class Kernel {
       const settle = () => {
         if (this.pending.get(frame.id) !== request) return
         this.pending.delete(frame.id)
-        request.resolve({ ...frame, ...(request.displayError ? { status: 'error' } : {}), text: request.text })
+        request.resolve({ ...frame, ...(request.displayError ? { status: 'error' } : {}), text: [request.failure, request.text].filter(Boolean).join('\n') })
       }
       if (request.displays.length) void Promise.all(request.displays).then(settle)
       else settle()

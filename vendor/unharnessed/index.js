@@ -125,7 +125,15 @@ export async function apply(ctx, input = {}, integration = {}) {
     if (!state.snapshots || !state.kernel || state.kernel.closed) return
     try {
       const saved = await state.snapshots.save(state.kernel, state.binding, signal, prune)
-      if (prune) state.agent.inject(notice(`[python-state] Still defined: ${(await state.kernel.request('list_names', {}, signal)).names?.join(', ') || '(none)'}. Removed oversized values: ${saved.oversized?.join(', ') || '(none)'}.`))
+      if (prune) {
+        const listed = await state.kernel.request('list_names', {}, signal)
+        if (listed.status !== 'ok' || !Array.isArray(listed.names)) {
+          state.agent.inject(notice('[python-state] Checkpoint saved. Live variables could not be verified.'))
+          return
+        }
+        const removed = (saved.oversized ?? []).filter(name => !listed.names.includes(name))
+        state.agent.inject(notice(`[python-state] Still defined: ${listed.names.join(', ') || '(none)'}. Removed oversized values: ${removed.join(', ') || '(none)'}.${saved.pruneError ? ' Cleanup: ' + saved.pruneError : ''}`))
+      }
     } catch (error) {
       if (!signal.aborted) state.stateNotice = `[python-state] Checkpoint failed: ${error.message}. The last successful checkpoint remains; current live values may not survive restart.`
     }
@@ -347,7 +355,8 @@ export async function apply(ctx, input = {}, integration = {}) {
           await checkpoint(state, exec.signal)
           const status = [restored || (reset ? '[Fresh Python kernel: previous variables and tasks are unavailable.]' : ''), state.stateNotice].filter(Boolean).join('\n')
           state.stateNotice = ''
-          return `${status ? status + '\n' : ''}${result.text || (result.status === 'ok' ? '[ok]' : '[Python execution failed]')}`
+          if (result.status !== 'ok') throw new Error([status, result.text || result.reason || 'Python execution failed'].filter(Boolean).join('\n'))
+          return [status, result.text || '[ok]'].filter(Boolean).join('\n')
         } finally {
           clearTimeout(cellTimer); cellControl.abort(); state.execution = undefined; state.cellControl = undefined
           if (exec.signal.aborted) state.notices.clear()

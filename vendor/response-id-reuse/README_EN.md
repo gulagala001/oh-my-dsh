@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-response-id-reuse/releases/tag/v0.1.11-dsh.0.2.2-rc.3"><img alt="DSH Response ID Reuse 0.1.11" src="https://img.shields.io/badge/release-0.1.11-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-response-id-reuse/releases/tag/v0.1.12-dsh.0.2.2-rc.3"><img alt="DSH Response ID Reuse 0.1.12" src="https://img.shields.io/badge/release-0.1.12-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-response-id-reuse/releases"><img alt="GitHub downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-response-id-reuse/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
 </p>
@@ -21,15 +21,16 @@
 In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.11-dsh.0.2.2-rc.3/gulagala001-dsh-response-id-reuse-0.1.11-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.12-dsh.0.2.2-rc.3/gulagala001-dsh-response-id-reuse-0.1.12-dsh.0.2.2-rc.3.tgz
 ```
 
-Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.11-dsh.0.2.2-rc.3/SHA256SUMS). It works as soon as it is installed and has no settings. To go back to the original behavior, disable or remove it on the Plugins page.
+Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.12-dsh.0.2.2-rc.3/SHA256SUMS). It works as soon as it is installed and has no settings. To go back to the original behavior, disable or remove it on the Plugins page.
 
 ## What it does
 
 When your provider uses the OpenAI Responses API and stored the previous response, the plugin adds `previous_response_id` to the next request and sends only the new messages. Long conversations, and conversations with images, resend far less.
 
+- Enabling the plugin asks the provider to store ordinary responses for continuation. Explicit storage opt-outs and zero-retention requests keep their original settings.
 - No provider list to maintain and no test messages. The plugin learns from normal responses whether the provider supports this and only turns it on when it does.
 - The main conversation, background tasks and parallel subagents each keep their own response IDs.
 - If an ID has expired or the provider did not store it, that request sends the full history instead, and the next one tries to continue again.

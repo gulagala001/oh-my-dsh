@@ -35,14 +35,17 @@ export function normalizeServer(name, raw) {
   return server;
 }
 
-export function serializeServer(server) {
+const connectionFields = new Set(['type', 'transport', 'command', 'args', 'env', 'cwd', 'url', 'headers', 'timeout', 'disabled', 'disabledTools']);
+
+export function serializeServer(server, original = {}) {
   const out = server.transport === 'stdio'
     ? { command: server.command, ...server.args?.length ? { args: server.args } : {}, ...Object.keys(server.env ?? {}).length ? { env: server.env } : {}, ...server.cwd ? { cwd: server.cwd } : {} }
     : { type: server.transport === 'sse' ? 'sse' : 'http', url: server.url, ...Object.keys(server.headers ?? {}).length ? { headers: server.headers } : {} };
   if (server.timeoutMs) out.timeout = server.timeoutMs;
   if (server.enabled === false) out.disabled = true;
   if (server.disabledTools?.length) out.disabledTools = [...new Set(server.disabledTools)];
-  return out;
+  const extras = Object.entries(original).filter(([key]) => !connectionFields.has(key));
+  return { ...Object.fromEntries(extras), ...out };
 }
 
 const clientConfig = server => ({
@@ -50,7 +53,7 @@ const clientConfig = server => ({
   ...server.timeoutMs ? { toolCallTimeoutMs: server.timeoutMs } : {},
   ...server.transport === 'stdio'
     ? { transport: 'stdio', command: server.command, args: server.args, env: server.env, cwd: server.cwd }
-    : { transport: 'streamable-http', url: server.url, headers: server.headers },
+    : { transport: server.transport, url: server.url, headers: server.headers },
 });
 const launchKey = server => JSON.stringify(clientConfig(server));
 
@@ -334,7 +337,7 @@ export class Mcp {
       if (previous !== undefined && previous !== name) delete servers[previous];
       // The form edits the connection; the list switches stay as they were.
       servers[name] = serializeServer({ ...normalized, enabled: old ? old.disabled !== true : normalized.enabled,
-        disabledTools: Array.isArray(old?.disabledTools) ? old.disabledTools : normalized.disabledTools });
+        disabledTools: Array.isArray(old?.disabledTools) ? old.disabledTools : normalized.disabledTools }, { ...old, ...server });
     });
   }
   remove(name, revision) { return this.edit(servers => { if (revision !== undefined) checkRevision(revision, configRevision(servers[name])); delete servers[name]; }); }
@@ -365,7 +368,7 @@ export class Mcp {
       for (const server of normalized) {
         if (servers[server.name] !== undefined) fail('server-exists', `A server named ${server.name} already exists`, { name: server.name }, 409);
       }
-      for (const server of normalized) servers[server.name] = serializeServer(server);
+      for (const server of normalized) servers[server.name] = serializeServer(server, entries[server.name]);
     }).then(() => normalized.map(server => server.name));
   }
   async reconnect(name) {

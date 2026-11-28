@@ -1,6 +1,32 @@
-# DSH Extensions 0.1.9 · DSH 0.2.2-rc.3
+# DSH Extensions 0.1.10 · DSH 0.2.2-rc.3
 
-**未发布 / Unreleased.**
+[中文](#zh-0110) · [English](#en-0110)
+
+<a id="zh-0110"></a>
+
+## 中文
+
+### 问题修复
+
+- 将 MCP 服务从 SSE 改为 HTTP 后会重新连接。编辑或导入时会保留自定义配置字段。
+
+<a id="en-0110"></a>
+
+## English
+
+### Bug fixes
+
+- Changing an MCP server from SSE to HTTP reconnects it. Editing or importing a server preserves custom configuration fields.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.10-dsh.0.2.2-rc.3/dsh-extensions-0.1.10-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-extensions/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-extensions/releases/download/v0.1.10-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
+# DSH Extensions 0.1.9 · DSH 0.2.2-rc.3
 
 [中文](#zh-019) · [English](#en-019)
 

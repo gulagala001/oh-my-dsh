@@ -1,6 +1,32 @@
-# DSH BTW 0.1.12 · DSH 0.2.2-rc.3
+# DSH BTW 0.1.13 · DSH 0.2.2-rc.3
 
-**未发布 / Unreleased.**
+[中文](#zh-0113) · [English](#en-0113)
+
+<a id="zh-0113"></a>
+
+## 中文
+
+### 问题修复
+
+- 过长的侧问回答会保留同样长度的完整文字，并标明截断。
+
+<a id="en-0113"></a>
+
+## English
+
+### Bug fixes
+
+- Long side-chat answers retain the same text up to the answer limit across different stream chunk sizes.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.13-dsh.0.2.2-rc.3/gulagala001-dsh-btw-0.1.13-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-btw/blob/main/docs/install.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-btw/releases/download/v0.1.13-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
+# DSH BTW 0.1.12 · DSH 0.2.2-rc.3
 
 [中文](#zh-0112) · [English](#en-0112)
 

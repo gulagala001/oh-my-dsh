@@ -381,6 +381,7 @@ export function candidateInput(session, events, lookback) {
   const all = session.snapshotEvents(), start = all.findIndex(e => e.seq === events[0].seq);
   const prior = lookback > 0 ? all.slice(0, start).filter(e => actualUser(e) || e.type === 'assistant/message' || e.type === 'tool/result').slice(-lookback) : [];
   const segment = (events.windowSeqs || events.map(e => e.seq)).map(seq => session.eventAt(seq));
+  const lastSeq = segment.reduce((last, event) => Math.max(last, event.seq), -1);
   const segmentUsers = segment.filter(actualUser);
   const precedingUser = all.slice(0, start).findLast(actualUser);
   const decisionSources = [...new Map([...(precedingUser ? [precedingUser] : []), ...segmentUsers].map(e => [e.seq, e])).values()]
@@ -388,7 +389,7 @@ export function candidateInput(session, events, lookback) {
   return { summary_scope: { source: 'segment', event_seqs: events.filter(e => !actualUser(e) && !(events.retainedSeqs || []).includes(e.seq) && read(e)).map(e => e.seq), reference_only_fields: ['reference', 'user_messages'] },
     decision_sources: decisionSources,
     reference: prior.filter(e => read(e)).map(e => ({ seq: e.seq, type: e.type, text: materialText(read(e).content, e.seq) })),
-    user_messages: userMessages(session).filter(u => u.seq <= Math.max(...segment.map(e => e.seq))).slice(-8),
+    user_messages: userMessages(session).filter(u => u.seq <= lastSeq).slice(-8),
     segment: segment.filter(e => read(e)).map(e => ({ seq: e.seq, at: eventTime(e), type: e.type,
       protected: (events.retainedSeqs || []).includes(e.seq), reference_only: actualUser(e),
       text: actualUser(e) ? '[User message archived verbatim; see user_messages for reference only.]' : ((events.retainedSeqs || []).includes(e.seq) ? '[Protected host context retained in place.]' : materialText(read(e).content, e.seq)) })) };

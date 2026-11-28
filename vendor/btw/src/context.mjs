@@ -41,7 +41,7 @@ export function sideMessages(source, question, history = [], config = { provider
 /** Consume the independent LLM stream; completion must be explicit. */
 export async function answer(llm, snapshot, messages, signal, emit) {
   signal.throwIfAborted();
-  let terminal, length = 0, hasText = false, thinking = false;
+  let terminal, truncated = false, length = 0, hasText = false, thinking = false;
   // Match the main request's provider projection and cache affinity. Schemas
   // remain cache material; this one-shot consumer has no tool executor.
   for await (const chunk of llm.stream({
@@ -50,10 +50,18 @@ export async function answer(llm, snapshot, messages, signal, emit) {
   })) {
     signal.throwIfAborted();
     if (chunk.type === 'text-delta') {
-      length += chunk.text.length;
-      if (length > MAX_ANSWER) throw Error('回答达到长度上限；已保留已收到的内容');
-      hasText ||= !!chunk.text;
-      emit({ type: 'text', text: chunk.text });
+      const remaining = MAX_ANSWER - length;
+      if (chunk.text.length >= remaining) {
+        const prefix = chunk.text.slice(0, remaining).replace(/[\uD800-\uDBFF]$/u, '');
+        if (prefix) emit({ type: 'text', text: prefix });
+        hasText ||= !!prefix;
+        length = MAX_ANSWER;
+        if (prefix.length !== chunk.text.length) { truncated = true; break; }
+      } else {
+        length += chunk.text.length;
+        hasText ||= !!chunk.text;
+        emit({ type: 'text', text: chunk.text });
+      }
     } else if (chunk.type === 'reasoning-delta' && !thinking && !hasText) {
       thinking = true;
       emit({ type: 'thinking' });
@@ -64,6 +72,7 @@ export async function answer(llm, snapshot, messages, signal, emit) {
     }
   }
   signal.throwIfAborted();
+  if (truncated) { emit({ type: 'done', truncated: true }); return; }
   if (!terminal) throw Error('连接提前结束，回答可能不完整');
   if (terminal.kind === 'error' || terminal.kind === 'aborted') throw Error(terminal.failure?.message || '模型请求未完成');
   if (terminal.kind === 'tool-calls') throw Error('模型请求了工具；旁聊没有执行任何工具');

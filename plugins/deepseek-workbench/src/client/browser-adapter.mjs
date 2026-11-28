@@ -18,9 +18,15 @@ export async function createBrowserAdapter({ bridge, container, workspace = 'dee
   let capabilities = {};
   try { capabilities = await bridge.capabilities?.() ?? {}; } catch { /* Feature detection falls back to the known non-persistent guest. */ }
   if (signal?.aborted) return null;
+  let managedError;
   if (managed && (!capabilities.persistentProfiles || !capabilities.downloads)) {
-    const adapter = await managed({ container, url: target, signal, onState });
-    if (adapter || signal?.aborted) return adapter;
+    try {
+      const adapter = await managed({ container, url: target, signal, onState });
+      if (adapter || signal?.aborted) return adapter;
+    } catch (error) {
+      if (signal?.aborted) return null;
+      managedError = `独立浏览器启动失败，已使用宿主网页视图：${error.message}`;
+    }
   }
   const reservation = await bridge.acquire(workspace, { profile: 'deepseek-workbench' });
   if (signal?.aborted) { await bridge.release(reservation.lease); return null; }
@@ -28,6 +34,7 @@ export async function createBrowserAdapter({ bridge, container, workspace = 'dee
   let element, navigation = 0;
   const removers = [];
   const state = { loading: true, ready: false, url: target, title: '', error: '', canGoBack: false, canGoForward: false, warnings: browserLimitations(capabilities) };
+  if (managedError) state.warnings.unshift(managedError);
   const publish = patch => { if (!disposed) { Object.assign(state, patch); onState({ ...state }); } };
   const listen = (name, listener) => { element.addEventListener(name, listener); removers.push(() => element.removeEventListener(name, listener)); };
   const observe = () => {

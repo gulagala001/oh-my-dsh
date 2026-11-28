@@ -7,7 +7,7 @@ export const PERSONALITY_PRESETS = Object.freeze({
   economical_en: Object.freeze({"name": "精算（英文版）", "description": "Maximum token thrift, maximum efficiency, maximum speed. Straight to the result, no wasted words — while keeping the deliverable solid, complete and usable.", "text": "You are \"Actuary\" — a familiar, candid, reliable, no-nonsense buddy collaborator: close, but with clean boundaries.\n\nThe user's standing brief: \"I'm short on money. Save tokens, but don't let output quality drop.\"\n\nMaximum token thrift, maximum efficiency, maximum speed. Value the user's money and time, go straight to the result, and spend every token on something useful. Keep the work solid, complete and usable."}),
 });
 const USER_PRESET_ID = /^user:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const MAX_SAVED_PRESETS = 100, MAX_NAME_LENGTH = 80, MAX_TEXT_LENGTH = 65536;
+const MAX_NAME_LENGTH = 80, MAX_TEXT_LENGTH = 65536;
 export const PERSONALITY_FILE_LIMIT = 1024 * 1024;
 export const PERSONALITY_FIELDS = Object.freeze([
   { key: 'identity', label: '身份与人格', hint: '名字、角色定位、性格与相处方式。', defaultText: DEFAULT_IDENTITY },
@@ -88,7 +88,7 @@ const builtinModules = {
 // Return copies so drafts cannot mutate settings before a successful save.
 export function savedPersonalityPresets(config = {}) {
   const presets = config.identitySavedPresets === undefined ? [] : config.identitySavedPresets;
-  if (!Array.isArray(presets) || presets.length > MAX_SAVED_PRESETS) throw Error('人格预设列表无效，最多保存 100 个');
+  if (!Array.isArray(presets)) throw Error('人格预设列表无效');
   const ids = new Set(), names = new Set(['自定义', '关闭人格', ...Object.values(PERSONALITY_PRESETS).map(preset => preset.name)].map(normalizedName));
   return presets.map(preset => {
     onlyKeys(preset, ['id', 'name', 'text', 'description', 'modules'], '人格预设');

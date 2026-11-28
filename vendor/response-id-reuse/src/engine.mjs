@@ -156,7 +156,7 @@ export async function createResponsesAuto({ fetchImpl = fetch, now = Date.now,
       if (request.method !== 'POST' || privateOnly(headers)) return baseFetch(request);
       let body, originalText;
       try { originalText = await request.clone().text(); body = JSON.parse(originalText); } catch { return baseFetch(request); }
-      if (!body || body.model !== meta.model || body.previous_response_id || body.conversation || body.background) return baseFetch(request);
+      if (!body || meta.storageForbidden || (body.store === false && meta.piResponsesURL !== url) || body.model !== meta.model || body.previous_response_id || body.conversation || body.background) return baseFetch(request);
       const session = meta.sessionId ?? body.prompt_cache_key;
       if (typeof session !== 'string' || !session.length) return baseFetch(request);
       const originalBody = body;

@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">简体中文</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.12-dsh.0.2.2-rc.3"><img alt="DeepSeek Workbench 0.1.12" src="https://img.shields.io/badge/release-0.1.12-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.14-dsh.0.2.2-rc.3"><img alt="DeepSeek Workbench 0.1.14" src="https://img.shields.io/badge/release-0.1.14-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases"><img alt="GitHub downloads" src="https://img.shields.io/github/downloads/gulagala001/dsh-deepseek-workbench/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-deepseek-workbench/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-deepseek-workbench?style=flat-square&amp;color=0969da"></a>
@@ -28,10 +28,10 @@
 In DSH, open **Plugins → Add plugin** and paste:
 
 ```text
-https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.12-dsh.0.2.2-rc.3/dsh-deepseek-workbench-0.1.12-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.14-dsh.0.2.2-rc.3/dsh-deepseek-workbench-0.1.14-dsh.0.2.2-rc.3.tgz
 ```
 
-When your current task finishes, enable the plugin or restart DSH when prompted. Your settings and conversations stay as they were. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.12-dsh.0.2.2-rc.3/SHA256SUMS).
+When your current task finishes, enable the plugin or restart DSH when prompted. Your settings and conversations stay as they were. For command-line installs, upgrades and removal, see the [installation guide](docs/install_EN.md). Checksums: [SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.14-dsh.0.2.2-rc.3/SHA256SUMS).
 
 ### 2. Try it
 
@@ -52,8 +52,7 @@ The web chat account and the API platform account sign in separately.
 
 | Environment | What works |
 | --- | --- |
-| DSH desktop app | Web chat, temporary sidebar, Continue in DSH, platform entry. You sign in again after each restart, and DeepSeek downloads are unavailable |
-| DSH desktop with the desktop adaptation | All of the above, plus sign-in that survives restarts, DeepSeek downloads and an embedded platform page. See [desktop adaptation](docs/desktop-host_EN.md) |
+| DSH desktop app | Web chat, a temporary sidebar and Continue in DSH. The plugin browser keeps your chat sign-in and supports file downloads. See [desktop usage](docs/desktop-host_EN.md). |
 | DSH in a browser | Opens in an external browser only |
 
 Continue in DSH brings over only what it can read. You are told about attachments it cannot read, and instructions or tool calls in the web chat are never run again.
@@ -63,7 +62,7 @@ Continue in DSH brings over only what it can read. You are told about attachment
 <details>
 <summary>Why do I have to sign in to DeepSeek after every restart?</summary>
 
-The standard DSH desktop app does not keep sign-in state for these pages. To keep it across restarts, use DSH with the [desktop adaptation](docs/desktop-host_EN.md). The web chat and the API platform are separate accounts and need separate sign-ins.
+The plugin browser keeps its own profile. If it cannot start, the panel explains the fallback and the host view may ask you to sign in again. DeepSeek chat and the API platform use separate sign-ins.
 
 </details>
 

@@ -1,6 +1,6 @@
 {
   "name": "dsh-workflow-plus",
-  "version": "0.1.14-dsh.0.2.2-rc.5",
+  "version": "0.1.15-dsh.0.2.2-rc.5",
   "description": "JavaScript workflows for DeepSeek Harness with native subagents and jobs, resumable runs, token targets and worktree isolation.",
   "type": "module",
   "license": "MIT",

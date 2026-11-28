@@ -19,25 +19,25 @@ const validators = {
 
 export function createPreferences(getDirectory) {
   let tail = Promise.resolve();
-  async function read() {
+  async function read(directory) {
     let values;
-    try { values = JSON.parse(await readFile(join(getDirectory(), 'preferences.json'), 'utf8')); }
+    try { values = JSON.parse(await readFile(join(directory, 'preferences.json'), 'utf8')); }
     catch (error) { if (error.code !== 'ENOENT') throw error; values = {}; }
     if (!values || typeof values !== 'object' || Array.isArray(values)) throw new Error('Invalid persisted OpenCU preferences');
     return { values, configuredValues: { ...values } };
   }
   return {
-    async read() { await tail; return read(); },
+    async read(directory = getDirectory()) { await tail; return read(directory); },
     write(key, value) {
       if (!Object.hasOwn(validators, key) || !validators[key](value)) throw new Error(`Unsupported OpenCU preference or value: ${key}`);
+      const directory = getDirectory();
       const work = tail.then(async () => {
-        const { values } = await read();
-        const directory = getDirectory();
+        const { values } = await read(directory);
         await mkdir(directory, { recursive: true, mode: 0o700 });
         const pending = join(directory, 'preferences.json.pending');
         await writeFile(pending, JSON.stringify({ ...values, [key]: value }, null, 2) + '\n', { mode: 0o600 });
         await rename(pending, join(directory, 'preferences.json'));
-        return read();
+        return read(directory);
       });
       tail = work.catch(() => undefined);
       return work;

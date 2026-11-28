@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.12-dsh.0.2.2-rc.3"><img alt="DeepSeek Workbench 0.1.12" src="https://img.shields.io/badge/release-0.1.12-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases/tag/v0.1.14-dsh.0.2.2-rc.3"><img alt="DeepSeek Workbench 0.1.14" src="https://img.shields.io/badge/release-0.1.14-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-deepseek-workbench/releases"><img alt="GitHub 下载量" src="https://img.shields.io/github/downloads/gulagala001/dsh-deepseek-workbench/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-deepseek-workbench/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/gulagala001/dsh-deepseek-workbench?style=flat-square&amp;color=0969da"></a>
@@ -28,10 +28,10 @@
 在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.12-dsh.0.2.2-rc.3/dsh-deepseek-workbench-0.1.12-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.14-dsh.0.2.2-rc.3/dsh-deepseek-workbench-0.1.14-dsh.0.2.2-rc.3.tgz
 ```
 
-等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。命令行安装、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.12-dsh.0.2.2-rc.3/SHA256SUMS)。
+等手头的任务跑完，按提示启用或重启 DSH，原来的设置和会话都还在。命令行安装、升级和卸载见[安装指南](docs/install.md)，校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-deepseek-workbench/releases/download/v0.1.14-dsh.0.2.2-rc.3/SHA256SUMS)。
 
 ### 2. 先试一件事
 
@@ -52,8 +52,7 @@ DSH 会新建一个会话，把这条聊天的消息和附件带过来。要不�
 
 | 环境 | 可用功能 |
 | --- | --- |
-| DSH 桌面版 | 网页聊天、临时侧栏、转成 DSH 会话、平台入口；重启后要重新登录，不能下载官网文件 |
-| 打过桌面适配的 DSH | 以上全部，另外登录跨重启保留、可以下载官网文件、平台页内嵌显示，见[桌面适配](docs/desktop-host.md) |
+| DSH 桌面版 | 网页聊天、临时侧栏、转成 DSH 会话。插件浏览器可保留官网聊天登录并下载文件，见[桌面使用说明](docs/desktop-host.md)。 |
 | 浏览器版 DSH | 只能从外部浏览器打开 |
 
 转成 DSH 会话时，只带过来能读到的内容。读不到的附件会提示你，网页里的指令和工具调用不会被重新执行。
@@ -63,7 +62,7 @@ DSH 会新建一个会话，把这条聊天的消息和附件带过来。要不�
 <details>
 <summary>为什么每次重启都要重新登录官网？</summary>
 
-标准 DSH 桌面版不保存这类网页的登录状态。要跨重启保留，需要打过[桌面适配](docs/desktop-host.md)的 DSH。另外，官网聊天和 API 平台是两个账号，需要分别登录。
+插件浏览器有独立的登录资料。如果它启动失败，面板会说明原因，备用网页视图可能要求重新登录。官网聊天和 API 平台分别登录。
 
 </details>
 

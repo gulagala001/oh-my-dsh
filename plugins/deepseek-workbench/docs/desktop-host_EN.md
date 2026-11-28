@@ -1,29 +1,18 @@
-# DeepSeek Workbench desktop adaptation
+# DeepSeek Workbench on the desktop
 
 [简体中文](desktop-host.md) · [Back to README](../README_EN.md)
 
-With just the plugin installed, the standard DSH desktop app gives you web chat, the temporary sidebar and Continue in DSH. The following three need a matching adaptation applied to the DSH desktop source, which you then build yourself:
-
-- DeepSeek and API platform sign-in that survives restarts.
-- Downloading files from DeepSeek chats.
-- The API Keys platform page embedded in DSH.
-
-The adapter script at `desktop/apply-host.mjs` supports DSH **0.2.2-rc.3, rc.4, and rc.5**, plus **0.2.1-rc.2**. Other versions can use the same adapter when their source interfaces match. See the [source build steps](../desktop/README_EN.md).
+Install and enable the plugin in DSH desktop, then open web chat or the temporary sidebar. Sign in to DeepSeek once and reopen the same desktop profile to continue.
 
 ## What works where
 
-| Environment | What works |
+| Entry | How to use it |
 | --- | --- |
-| DSH desktop with the adaptation | Web chat, temporary sidebar, Continue in DSH and the platform page, with sign-in kept across restarts and DeepSeek downloads |
-| Standard DSH desktop | Web chat, temporary sidebar and Continue in DSH. You sign in again after each restart, and DeepSeek downloads are unavailable |
-| DSH in a browser | DeepSeek's embedding restrictions limit it to an external browser |
-
-The plugin checks what the current DSH can do. When something is missing, the panel says so and offers an external browser link.
+| Desktop web chat | Chat in the plugin browser, save DeepSeek downloads or choose **Continue in DSH**. |
+| Basic web view | If the plugin browser cannot start, the panel explains why. Login persistence and downloads in the fallback view depend on the host. |
+| API platform | Open **Settings → Account**. Hosts with an embedded API Keys page display it directly. Other hosts offer an external browser link. |
+| DSH web client | Open DeepSeek in an external browser. |
 
 ## Sign-in and security
 
-With the adaptation, DeepSeek chat and the API platform use a separately stored browser profile, so closing the page does not sign you out. To sign out, use DeepSeek's own sign-out button.
-
-Pages can only open DeepSeek's official chat and platform addresses. The browser sandbox stays on, and web pages get no access to local Node features. Uploads require you to pick files by hand; downloads are checked for their origin and confirmed in the system save dialog.
-
-macOS, Windows and Linux each need their own build and signing.
+DeepSeek chat and the API platform have separate sign-ins. Use the corresponding site's sign-out button to end a session. Choose the destination when saving a download.

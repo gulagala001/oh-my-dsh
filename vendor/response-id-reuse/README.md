@@ -7,7 +7,7 @@
 <p align="center"><strong>简体中文</strong> · <a href="README_EN.md">English</a></p>
 
 <p align="center">
-  <a href="https://github.com/gulagala001/dsh-response-id-reuse/releases/tag/v0.1.11-dsh.0.2.2-rc.3"><img alt="DSH Response ID Reuse 0.1.11" src="https://img.shields.io/badge/release-0.1.11-0969da?style=flat-square"></a>
+  <a href="https://github.com/gulagala001/dsh-response-id-reuse/releases/tag/v0.1.12-dsh.0.2.2-rc.3"><img alt="DSH Response ID Reuse 0.1.12" src="https://img.shields.io/badge/release-0.1.12-0969da?style=flat-square"></a>
   <a href="https://github.com/gulagala001/dsh-response-id-reuse/releases"><img alt="GitHub 下载量" src="https://img.shields.io/github/downloads/gulagala001/dsh-response-id-reuse/total?style=flat-square&amp;label=GitHub%20downloads&amp;color=0969da"></a>
   <a href="#readme-install"><img alt="DSH 0.2.2-rc.3" src="https://img.shields.io/badge/DSH-0.2.2--rc.3-0969da?style=flat-square"></a>
 </p>
@@ -21,15 +21,16 @@
 在 DSH 里打开 **插件 → ＋ 添加插件**，粘贴：
 
 ```text
-https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.11-dsh.0.2.2-rc.3/gulagala001-dsh-response-id-reuse-0.1.11-dsh.0.2.2-rc.3.tgz
+https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.12-dsh.0.2.2-rc.3/gulagala001-dsh-response-id-reuse-0.1.12-dsh.0.2.2-rc.3.tgz
 ```
 
-校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.11-dsh.0.2.2-rc.3/SHA256SUMS)。装好后自动生效，没有设置项。想恢复原来的行为，在插件页停用或卸载即可。
+校验文件：[SHA256SUMS](https://github.com/gulagala001/dsh-response-id-reuse/releases/download/v0.1.12-dsh.0.2.2-rc.3/SHA256SUMS)。装好后自动生效，没有设置项。想恢复原来的行为，在插件页停用或卸载即可。
 
 ## 它做什么
 
 服务商用 OpenAI Responses 接口并保存了上一次回复时，插件会在下一次请求里带上 `previous_response_id`，只发送新增的消息。长对话和带图片的对话因此少传很多重复内容。
 
+- 启用插件后，普通会话会请服务商保存回复，以便下次续聊。显式禁存和零留存请求保持原有设置。
 - 不用配置服务商名单，也不发测试消息。插件从正常回复里判断服务商是否支持，支持才启用。
 - 主对话、后台任务和并行的子代理各用各的回复 ID，互不干扰。
 - ID 过期或服务商没存上时，这一次请求自动改为发送完整历史，下一次再试着续上。

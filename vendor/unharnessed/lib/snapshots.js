@@ -145,7 +145,12 @@ export class Snapshots {
       try { await out.writeFile(JSON.stringify(metadata)); await out.sync() } finally { await out.close() }
       await rename(manifestTemp, this.manifest)
       if (previous && /^[a-f0-9-]+\.bin$/.test(previous) && previous !== file) await rm(join(this.dir, previous), { force: true })
-      if (prune && summary.oversized?.length) await kernel.request('execute', { code: `for _dsh_name in ${JSON.stringify(summary.oversized)}: globals().pop(_dsh_name, None)` }, signal)
+      if (prune && summary.oversized?.length) {
+        try {
+          const cleanup = await kernel.request('execute', { code: `for _dsh_name in ${JSON.stringify(summary.oversized)}: globals().pop(_dsh_name, None)` }, signal)
+          if (cleanup.status !== 'ok') summary.pruneError = cleanup.text || cleanup.reason || 'Python cleanup failed'
+        } catch (error) { summary.pruneError = error.message }
+      }
       return summary
     } finally { if (fd !== undefined) closeSync(fd); await rm(temporary, { force: true }) }
   }

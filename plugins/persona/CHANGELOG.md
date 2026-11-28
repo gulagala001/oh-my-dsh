@@ -1,3 +1,31 @@
+# DSH Persona 0.2.7 · DSH 0.2.2-rc.3
+
+[中文](#zh-027) · [English](#en-027)
+
+<a id="zh-027"></a>
+
+## 中文
+
+### 问题修复
+
+- 已有与导入的人设合计超过 100 个时，仍能合并、选择和重新打开。
+
+<a id="en-027"></a>
+
+## English
+
+### Bug fixes
+
+- Collections with more than 100 combined presets can be merged, selected and reopened.
+
+## 安装 / Installation
+
+DSH **0.2.2-rc.3** · Node.js **24.9.0+**
+
+[固定安装包 / Install package](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.7-dsh.0.2.2-rc.3/gulagala001-dsh-persona-plugin-0.2.7-dsh.0.2.2-rc.3.tgz) · [安装指南 / Installation guide](https://github.com/gulagala001/dsh-persona-plugin/blob/main/README.md) · [SHA256SUMS](https://github.com/gulagala001/dsh-persona-plugin/releases/download/v0.2.7-dsh.0.2.2-rc.3/SHA256SUMS)
+
+---
+
 # DSH Persona 0.2.6 · DSH 0.2.2-rc.3
 
 **未发布 / Unreleased.**
